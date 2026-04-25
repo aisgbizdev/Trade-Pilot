@@ -10,6 +10,7 @@ import {
   getGetAnalysisQueryKey,
   useSubmitFeedback,
   type Analysis,
+  type Feedback,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -82,7 +83,8 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
     },
   });
 
-  const analysis = data as Analysis | undefined;
+  type AnalysisWithFeedback = Analysis & { feedback?: Feedback | null };
+  const analysis = data as AnalysisWithFeedback | undefined;
 
   const existingFeedback = analysis?.feedback;
 
@@ -91,10 +93,10 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
     try {
       await submitFeedback.mutateAsync({
-        params: { id },
+        id,
         data: {
-          feedbackType: feedbackType ?? existingFeedback?.feedbackType,
-          outcome: outcome ?? existingFeedback?.outcome ?? undefined,
+          feedbackType: (feedbackType ?? existingFeedback?.feedbackType) as "useful" | "not_useful",
+          outcome: (outcome ?? existingFeedback?.outcome ?? undefined) as "correct" | "wrong" | "unknown" | null | undefined,
           note: feedbackNote || existingFeedback?.note || undefined,
         },
       });
@@ -129,8 +131,8 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
     );
   }
 
-  const mc = MARKET_CONDITION_LABELS[analysis.marketCondition];
-  const rl = RISK_LEVEL_LABELS[analysis.riskLevel];
+  const mc = analysis.marketCondition ? MARKET_CONDITION_LABELS[analysis.marketCondition] : undefined;
+  const rl = analysis.riskLevel ? RISK_LEVEL_LABELS[analysis.riskLevel] : undefined;
   const isBeginnerMode = analysis.mode === "beginner";
 
   const displayFeedbackType = feedbackType ?? existingFeedback?.feedbackType ?? null;
@@ -170,7 +172,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             <div>
               <p className="text-xs text-muted-foreground">Tingkat Keyakinan</p>
               <p className="text-base font-bold text-foreground" data-testid="text-confidence">
-                {analysis.confidenceMin}% – {analysis.confidenceMax}%
+                {analysis.confidenceMin ?? "--"}% – {analysis.confidenceMax ?? "--"}%
               </p>
             </div>
             <div className="text-right">
@@ -203,8 +205,8 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               <div
                 className="absolute h-full bg-primary rounded-full"
                 style={{
-                  left: `${analysis.confidenceMin}%`,
-                  width: `${analysis.confidenceMax - analysis.confidenceMin}%`,
+                  left: `${analysis.confidenceMin ?? 0}%`,
+                  width: `${(analysis.confidenceMax ?? 0) - (analysis.confidenceMin ?? 0)}%`,
                 }}
               />
             </div>
