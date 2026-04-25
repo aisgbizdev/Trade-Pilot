@@ -83,10 +83,12 @@ Production gets its own Postgres database (separate `DATABASE_URL` from dev). Tw
 **1. Schema push runs automatically.**
 `artifacts/api-server/.replit-artifact/artifact.toml` is wired so the production build first runs `pnpm --filter @workspace/db run push-force` against the production DB, then bundles the api-server. No manual migration step needed.
 
-**2. Add these secrets in the Publishing → Secrets pane:**
+**2. Add these secrets yourself in the Publishing → Secrets pane:**
 - `OPENAI_API_KEY` — **required**. Without it, every `/api/analyses` request fails (no AI analysis).
 - `VAPID_PRIVATE_KEY` — **required for push notifications**. Without it the server logs a warning and silently skips Web Push (but the app still runs).
-- `DATABASE_URL` — auto-provisioned by Replit when the deployment's database is attached; do not set manually.
+
+Auto-provided by the platform — do not set manually:
+- `DATABASE_URL` — injected automatically when the deployment's database is attached.
 
 Already covered by `[userenv.shared]` in `.replit` and carried into production automatically: `OPENAI_MODEL`, `VAPID_PUBLIC_KEY`, `VAPID_EMAIL`. No action needed for these.
 
