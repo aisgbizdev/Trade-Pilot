@@ -332,6 +332,8 @@ export const id: Translations = {
     disclaimer: "Analisis ini hanya untuk mendukung keputusan. Bukan sinyal trading.",
     copy_analysis: "Salin Analisis",
     copied: "Tersalin!",
+    refresh_btn: "Perbarui Analisis",
+    refresh_failed: "Gagal memperbarui analisis",
     beginner_mode: "Mode Pemula",
     pro_mode: "Mode Pro",
   },

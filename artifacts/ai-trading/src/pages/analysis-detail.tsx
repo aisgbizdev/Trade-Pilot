@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ChevronLeft, Clock, AlertTriangle, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import { ChevronLeft, Clock, AlertTriangle, ThumbsUp, ThumbsDown, Loader2, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,15 +9,19 @@ import {
   useGetAnalysis,
   getGetAnalysisQueryKey,
   useSubmitFeedback,
+  useCreateAnalysis,
   type Analysis,
   type Feedback,
+  type CreateAnalysisBodyTimeframe,
+  type CreateAnalysisBodyMode,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/lib/i18n";
 
 const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
   trending_up: { label: "Tren Naik", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -69,12 +73,29 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const submitFeedback = useSubmitFeedback();
+  const createAnalysis = useCreateAnalysis();
 
   const [feedbackType, setFeedbackType] = useState<"useful" | "not_useful" | null>(null);
   const [outcome, setOutcome] = useState<"correct" | "wrong" | "unknown" | null>(null);
   const [feedbackNote, setFeedbackNote] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshMsgIndex, setRefreshMsgIndex] = useState(0);
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (isRefreshing) {
+      refreshIntervalRef.current = setInterval(() => {
+        setRefreshMsgIndex((i) => (i + 1) % t.analyze.loading.length);
+      }, 1800);
+    } else {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+      setRefreshMsgIndex(0);
+    }
+    return () => { if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current); };
+  }, [isRefreshing, t]);
 
   const { data, isLoading } = useGetAnalysis(id, {
     query: {
@@ -87,6 +108,29 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const analysis = data as AnalysisWithFeedback | undefined;
 
   const existingFeedback = analysis?.feedback;
+
+  const handleRefresh = async () => {
+    if (!analysis) return;
+    setIsRefreshing(true);
+    try {
+      const result = await createAnalysis.mutateAsync({
+        data: {
+          instrument: analysis.instrument,
+          timeframe: analysis.timeframe as CreateAnalysisBodyTimeframe,
+          mode: analysis.mode as CreateAnalysisBodyMode,
+        },
+      });
+      setLocation(`/analyses/${result.id}`);
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
+      toast({
+        title: t.analysis_detail.refresh_failed,
+        description: apiErr?.data?.error ?? t.analyze.failed_desc,
+        variant: "destructive",
+      });
+      setIsRefreshing(false);
+    }
+  };
 
   const handleFeedbackSubmit = async () => {
     if (!feedbackType && !existingFeedback) return;
@@ -134,6 +178,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const mc = analysis.marketCondition ? MARKET_CONDITION_LABELS[analysis.marketCondition] : undefined;
   const rl = analysis.riskLevel ? RISK_LEVEL_LABELS[analysis.riskLevel] : undefined;
   const isBeginnerMode = analysis.mode === "beginner";
+  const isExpired = new Date(analysis.validUntil) <= new Date();
 
   const displayFeedbackType = feedbackType ?? existingFeedback?.feedbackType ?? null;
   const displayOutcome = outcome ?? existingFeedback?.outcome ?? null;
@@ -220,6 +265,27 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             Dianalisis {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", { locale: idLocale })} •{" "}
             Mode {isBeginnerMode ? "Pemula" : "Pro"}
           </div>
+
+          {isExpired && (
+            <Button
+              className="w-full mt-2"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              data-testid="button-refresh-analysis"
+            >
+              {isRefreshing ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">{t.analyze.loading[refreshMsgIndex]}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  <span>{t.analysis_detail.refresh_btn}</span>
+                </div>
+              )}
+            </Button>
+          )}
         </Card>
 
         <Card className="p-4 space-y-4">

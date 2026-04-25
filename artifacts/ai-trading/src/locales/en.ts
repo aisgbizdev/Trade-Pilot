@@ -330,6 +330,8 @@ export const en = {
     disclaimer: "This analysis is for decision support only. Not a trading signal.",
     copy_analysis: "Copy Analysis",
     copied: "Copied!",
+    refresh_btn: "Refresh Analysis",
+    refresh_failed: "Failed to refresh analysis",
     beginner_mode: "Beginner Mode",
     pro_mode: "Pro Mode",
   },
