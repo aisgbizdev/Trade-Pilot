@@ -393,7 +393,9 @@ router.post("/auth/forgot-password/reset", async (req, res) => {
     .limit(1);
 
   if (!tokenRecord) {
-    res.status(400).json({ error: "Token tidak valid atau sudah kadaluarsa" });
+    // Reset tokens are authentication credentials — invalid or expired
+    // tokens are an authn failure (401), not a field-validation error (400).
+    res.status(401).json({ error: "Token tidak valid atau sudah kadaluarsa" });
     return;
   }
 

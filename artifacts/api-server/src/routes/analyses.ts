@@ -413,8 +413,15 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 });
 
 router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
-  const page = Number(req.query["page"] ?? 1);
-  const limit = Number(req.query["limit"] ?? 20);
+  // Clamp pagination so a malicious or malformed `page` / `limit` (negative,
+  // huge, NaN) cannot crash the query, blow up memory, or generate negative
+  // OFFSETs. Mirrors the clamp pattern used by GET /superadmin/users.
+  const rawPage = Number(req.query["page"] ?? 1);
+  const rawLimit = Number(req.query["limit"] ?? 20);
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1;
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(Math.max(Math.floor(rawLimit), 1), 100)
+    : 20;
   const offset = (page - 1) * limit;
   const filterMode = req.query["mode"] as string | undefined;
   const filterInstrument = req.query["instrument"] as string | undefined;
