@@ -174,14 +174,6 @@ async function sendAnalysisExpiryAlerts(): Promise<void> {
       .where(and(gte(analyses.validUntil, now), lte(analyses.validUntil, twoHoursFromNow)));
 
     for (const analysis of expiringAnalyses) {
-      const [hasSub] = await db
-        .select({ id: pushSubscriptions.id })
-        .from(pushSubscriptions)
-        .where(eq(pushSubscriptions.userId, analysis.userId))
-        .limit(1);
-
-      if (!hasSub) continue;
-
       // Deduplicate: check whether we already sent an expiry alert for this
       // specific analysis (keyed by analysis ID in the message) within the last
       // 3 hours. This prevents re-notification on each hourly job run while the
@@ -201,6 +193,8 @@ async function sendAnalysisExpiryAlerts(): Promise<void> {
 
       if (alreadyNotified) continue;
 
+      // Always insert the in-app notification so users see the alert in
+      // /notifications regardless of push subscription status.
       await db.insert(notifications).values({
         userId: analysis.userId,
         title: "Analisis Akan Berakhir",
@@ -208,12 +202,21 @@ async function sendAnalysisExpiryAlerts(): Promise<void> {
         type: "warning",
       });
 
-      await sendPushToUser(analysis.userId, {
-        title: "Analisis Akan Berakhir ⚠️",
-        body: `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam.`,
-        url: "/",
-        tag: `expiry-${analysis.id}`,
-      });
+      // Only send push if the user has an active subscription.
+      const [hasSub] = await db
+        .select({ id: pushSubscriptions.id })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, analysis.userId))
+        .limit(1);
+
+      if (hasSub) {
+        await sendPushToUser(analysis.userId, {
+          title: "Analisis Akan Berakhir ⚠️",
+          body: `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam.`,
+          url: "/",
+          tag: `expiry-${analysis.id}`,
+        });
+      }
 
       logger.info({ userId: analysis.userId, analysisId: analysis.id }, "Sent analysis expiry alert");
     }

@@ -143,10 +143,14 @@ router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) 
     }))
   );
 
-  void sendPushToUsers(
+  sendPushToUsers(
     targetUsers.map((u) => u.id),
     { title, body: message, url: "/notifications", tag: "broadcast" }
-  );
+  ).catch((err) => {
+    // Log but never let push delivery failures break the broadcast response.
+    // Errors here are operational (transient transport, bad endpoint), not auth.
+    console.warn("Broadcast push delivery failed", err);
+  });
 
   res.status(201).json({ message: "Broadcast berhasil dikirim", count: targetUsers.length });
 });
