@@ -245,6 +245,18 @@ export const ListAnalysesResponse = zod.object({
           createdAt: zod.coerce.date(),
         })
         .nullish(),
+      usefulCount: zod
+        .number()
+        .optional()
+        .describe(
+          'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
+        ),
+      notUsefulCount: zod
+        .number()
+        .optional()
+        .describe(
+          'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
+        ),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -305,6 +317,18 @@ export const GetAnalysesSummaryResponse = zod.object({
           createdAt: zod.coerce.date(),
         })
         .nullish(),
+      usefulCount: zod
+        .number()
+        .optional()
+        .describe(
+          'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
+        ),
+      notUsefulCount: zod
+        .number()
+        .optional()
+        .describe(
+          'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
+        ),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -415,6 +439,18 @@ export const GetAnalysisResponse = zod.object({
       createdAt: zod.coerce.date(),
     })
     .nullish(),
+  usefulCount: zod
+    .number()
+    .optional()
+    .describe(
+      'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
+    ),
+  notUsefulCount: zod
+    .number()
+    .optional()
+    .describe(
+      'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
+    ),
   createdAt: zod.coerce.date(),
 });
 
@@ -609,6 +645,18 @@ export const GetAllAnalysesResponse = zod.object({
           createdAt: zod.coerce.date(),
         })
         .nullish(),
+      usefulCount: zod
+        .number()
+        .optional()
+        .describe(
+          'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
+        ),
+      notUsefulCount: zod
+        .number()
+        .optional()
+        .describe(
+          'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
+        ),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -626,6 +674,10 @@ export const getAdminFeedbackQueryLimitDefault = 50;
 export const GetAdminFeedbackQueryParams = zod.object({
   page: zod.coerce.number().default(getAdminFeedbackQueryPageDefault),
   limit: zod.coerce.number().default(getAdminFeedbackQueryLimitDefault),
+  analysisId: zod.coerce
+    .number()
+    .optional()
+    .describe("When set, only return feedback for the given analysis id."),
 });
 
 export const GetAdminFeedbackResponse = zod.object({

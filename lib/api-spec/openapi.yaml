@@ -734,6 +734,11 @@ paths:
           schema:
             type: integer
             default: 50
+        - name: analysisId
+          in: query
+          description: When set, only return feedback for the given analysis id.
+          schema:
+            type: integer
       responses:
         "200":
           description: Feedback rows
@@ -1416,6 +1421,12 @@ components:
         feedback:
           $ref: "#/components/schemas/Feedback"
           nullable: true
+        usefulCount:
+          type: integer
+          description: Number of "useful" feedback rows for this analysis. Only populated by admin endpoints.
+        notUsefulCount:
+          type: integer
+          description: Number of "not_useful" feedback rows for this analysis. Only populated by admin endpoints.
         createdAt:
           type: string
           format: date-time

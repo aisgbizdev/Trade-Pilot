@@ -8,6 +8,8 @@ import {
   Plus,
   Megaphone,
   MessageSquare,
+  ThumbsUp,
+  ThumbsDown,
   Users as UsersIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -649,10 +651,13 @@ function AdminContent() {
               {analyses.map((a) => {
                 const mc = a.marketCondition ? MARKET_CONDITION_LABELS[a.marketCondition] : undefined;
                 const userEmail = (a as Analysis & { userEmail?: string }).userEmail;
+                const usefulCount = (a as Analysis & { usefulCount?: number }).usefulCount ?? 0;
+                const notUsefulCount = (a as Analysis & { notUsefulCount?: number }).notUsefulCount ?? 0;
+                const hasFeedback = usefulCount > 0 || notUsefulCount > 0;
                 return (
                   <Card key={a.id} className="p-3" data-testid={`card-analysis-${a.id}`}>
-                    <div className="flex items-start justify-between">
-                      <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold">{a.instrument}</span>
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">{a.timeframe}</Badge>
@@ -662,9 +667,35 @@ function AdminContent() {
                           {userEmail} • {a.mode === "beginner" ? "Pemula" : "Pro"}
                         </p>
                       </div>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
-                        {format(new Date(a.createdAt), "d MMM")}
-                      </span>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {format(new Date(a.createdAt), "d MMM")}
+                        </span>
+                        {hasFeedback ? (
+                          <Link
+                            href={`/admin/feedback?analysisId=${a.id}`}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded hover:bg-muted transition-colors"
+                            data-testid={`link-analysis-feedback-${a.id}`}
+                            title={t.admin.feedback_signal_tooltip}
+                          >
+                            <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                              <ThumbsUp className="w-3 h-3" />
+                              {usefulCount}
+                            </span>
+                            <span className="inline-flex items-center gap-0.5 text-rose-600 dark:text-rose-400">
+                              <ThumbsDown className="w-3 h-3" />
+                              {notUsefulCount}
+                            </span>
+                          </Link>
+                        ) : (
+                          <span
+                            className="text-[10px] text-muted-foreground/60"
+                            data-testid={`text-analysis-no-feedback-${a.id}`}
+                          >
+                            {t.admin.feedback_signal_none}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import {
   ChevronLeft,
@@ -8,6 +8,7 @@ import {
   MessageSquare,
   ThumbsDown,
   ThumbsUp,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
@@ -51,16 +52,49 @@ function outcomeBadgeClass(outcome: AdminFeedbackRow["outcome"]) {
   return "bg-muted text-muted-foreground border-0";
 }
 
+function readAnalysisIdFromUrl(): number | undefined {
+  if (typeof window === "undefined") return undefined;
+  const raw = new URLSearchParams(window.location.search).get("analysisId");
+  if (raw == null) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : undefined;
+}
+
 function AdminFeedbackContent() {
   const [, setLocation] = useLocation();
   const { t, lang } = useTranslation();
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<FeedbackTypeFilter>("all");
+  const [analysisIdFilter, setAnalysisIdFilter] = useState<number | undefined>(
+    () => readAnalysisIdFromUrl(),
+  );
 
-  const queryParams = { page, limit: PAGE_SIZE };
+  // Keep state in sync if the user uses the back/forward button to a different
+  // ?analysisId= search string within the same page.
+  useEffect(() => {
+    const sync = () => setAnalysisIdFilter(readAnalysisIdFromUrl());
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  const queryParams = {
+    page,
+    limit: PAGE_SIZE,
+    ...(analysisIdFilter !== undefined ? { analysisId: analysisIdFilter } : {}),
+  };
   const { data, isLoading } = useGetAdminFeedback(queryParams, {
     query: { queryKey: getGetAdminFeedbackQueryKey(queryParams) },
   });
+
+  const clearAnalysisFilter = () => {
+    setAnalysisIdFilter(undefined);
+    setPage(1);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("analysisId");
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
 
   const list = (data as AdminFeedbackList | undefined)?.feedback ?? [];
   const total = (data as AdminFeedbackList | undefined)?.total ?? 0;
@@ -101,6 +135,30 @@ function AdminFeedbackContent() {
             </p>
           </div>
         </div>
+
+        {analysisIdFilter !== undefined && (
+          <div
+            className="flex items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2"
+            data-testid="banner-analysis-filter"
+          >
+            <span className="text-xs text-foreground">
+              {t.admin.feedback_filtered_by.replace(
+                "{id}",
+                String(analysisIdFilter),
+              )}
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1 text-xs"
+              onClick={clearAnalysisFilter}
+              data-testid="button-clear-analysis-filter"
+            >
+              <X className="w-3 h-3" />
+              {t.admin.feedback_clear_filter}
+            </Button>
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">

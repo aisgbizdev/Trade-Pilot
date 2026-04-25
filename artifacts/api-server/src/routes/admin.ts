@@ -116,10 +116,37 @@ router.get("/admin/analyses", requireAdmin, async (req: AuthRequest, res) => {
     .limit(limit)
     .offset(offset);
 
+  // Aggregate feedback counts for the current page in a single grouped query
+  // so the response stays O(1) instead of O(N) follow-up queries.
+  const ids = rows.map((r) => r.id);
+  const counts =
+    ids.length > 0
+      ? await db
+          .select({
+            analysisId: feedback.analysisId,
+            usefulCount: sql<number>`COUNT(*) FILTER (WHERE ${feedback.feedbackType} = 'useful')`,
+            notUsefulCount: sql<number>`COUNT(*) FILTER (WHERE ${feedback.feedbackType} = 'not_useful')`,
+          })
+          .from(feedback)
+          .where(inArray(feedback.analysisId, ids))
+          .groupBy(feedback.analysisId)
+      : [];
+  const countMap = new Map(
+    counts.map((c) => [c.analysisId, c]),
+  );
+  const rowsWithCounts = rows.map((r) => {
+    const c = countMap.get(r.id);
+    return {
+      ...r,
+      usefulCount: Number(c?.usefulCount ?? 0),
+      notUsefulCount: Number(c?.notUsefulCount ?? 0),
+    };
+  });
+
   const [total] = await db.select({ count: count(analyses.id) }).from(analyses);
 
   res.json({
-    analyses: rows,
+    analyses: rowsWithCounts,
     total: Number(total.count),
     page,
     limit,
@@ -137,7 +164,23 @@ router.get("/admin/feedback", requireAdmin, async (req: AuthRequest, res) => {
     : 50;
   const offset = (page - 1) * limit;
 
-  const rows = await db
+  // Optional filter: when an admin clicks the feedback signal on an analysis
+  // card, the page navigates here with ?analysisId=N to drill into just that
+  // one analysis's feedback. Bad input collapses to "no filter".
+  const rawAnalysisId = req.query["analysisId"];
+  const parsedAnalysisId =
+    rawAnalysisId !== undefined ? Number(rawAnalysisId) : NaN;
+  const analysisIdFilter =
+    Number.isFinite(parsedAnalysisId) && parsedAnalysisId > 0
+      ? Math.floor(parsedAnalysisId)
+      : undefined;
+
+  const whereClause =
+    analysisIdFilter !== undefined
+      ? eq(feedback.analysisId, analysisIdFilter)
+      : undefined;
+
+  const rowsQuery = db
     .select({
       id: feedback.id,
       analysisId: feedback.analysisId,
@@ -156,7 +199,14 @@ router.get("/admin/feedback", requireAdmin, async (req: AuthRequest, res) => {
     .limit(limit)
     .offset(offset);
 
-  const [total] = await db.select({ count: count(feedback.id) }).from(feedback);
+  const rows = whereClause
+    ? await rowsQuery.where(whereClause)
+    : await rowsQuery;
+
+  const totalQuery = db.select({ count: count(feedback.id) }).from(feedback);
+  const [total] = whereClause
+    ? await totalQuery.where(whereClause)
+    : await totalQuery;
 
   res.json({
     feedback: rows,

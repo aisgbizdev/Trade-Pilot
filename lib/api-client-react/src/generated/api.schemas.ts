@@ -238,6 +238,10 @@ export interface Analysis {
   opportunity?: string | null;
   risk?: string | null;
   feedback?: Feedback | null;
+  /** Number of "useful" feedback rows for this analysis. Only populated by admin endpoints. */
+  usefulCount?: number;
+  /** Number of "not_useful" feedback rows for this analysis. Only populated by admin endpoints. */
+  notUsefulCount?: number;
   createdAt: string;
 }
 
@@ -677,6 +681,10 @@ export type GetAllAnalysesParams = {
 export type GetAdminFeedbackParams = {
   page?: number;
   limit?: number;
+  /**
+   * When set, only return feedback for the given analysis id.
+   */
+  analysisId?: number;
 };
 
 export type GetBroadcastsParams = {
