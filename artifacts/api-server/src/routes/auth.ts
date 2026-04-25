@@ -273,18 +273,27 @@ router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
   });
 });
 
+const changePasswordSchema = z
+  .object({
+    currentPassword: z
+      .string({ invalid_type_error: "Password lama wajib diisi" })
+      .min(1, "Password lama wajib diisi"),
+    newPassword: z
+      .string({ invalid_type_error: "Password baru minimal 6 karakter" })
+      .min(6, "Password baru minimal 6 karakter"),
+  })
+  .strict();
+
 router.patch("/auth/password", requireAuth, async (req: AuthRequest, res) => {
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword) {
-    res.status(400).json({ error: "Password lama dan baru wajib diisi" });
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    res
+      .status(400)
+      .json({ error: first?.message ?? "Password lama dan baru wajib diisi" });
     return;
   }
-
-  if (newPassword.length < 6) {
-    res.status(400).json({ error: "Password baru minimal 6 karakter" });
-    return;
-  }
+  const { currentPassword, newPassword } = parsed.data;
 
   const [user] = await db
     .select()
@@ -307,13 +316,33 @@ router.patch("/auth/password", requireAuth, async (req: AuthRequest, res) => {
   res.json({ message: "Password berhasil diubah" });
 });
 
-router.patch("/auth/security-question", requireAuth, async (req: AuthRequest, res) => {
-  const { currentPassword, securityQuestion, securityAnswer } = req.body;
+const changeSecurityQuestionSchema = z
+  .object({
+    currentPassword: z
+      .string({ invalid_type_error: "Semua field wajib diisi" })
+      .min(1, "Semua field wajib diisi"),
+    securityQuestion: z
+      .string({ invalid_type_error: "Pertanyaan keamanan tidak valid" })
+      .refine(
+        (v) => SECURITY_QUESTIONS.includes(v),
+        "Pertanyaan keamanan tidak valid"
+      ),
+    securityAnswer: z
+      .string({ invalid_type_error: "Semua field wajib diisi" })
+      .min(1, "Semua field wajib diisi"),
+  })
+  .strict();
 
-  if (!currentPassword || !securityQuestion || !securityAnswer) {
-    res.status(400).json({ error: "Semua field wajib diisi" });
+router.patch("/auth/security-question", requireAuth, async (req: AuthRequest, res) => {
+  const parsed = changeSecurityQuestionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    res
+      .status(400)
+      .json({ error: first?.message ?? "Semua field wajib diisi" });
     return;
   }
+  const { currentPassword, securityQuestion, securityAnswer } = parsed.data;
 
   const [user] = await db
     .select()

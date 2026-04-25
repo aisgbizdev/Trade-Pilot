@@ -313,4 +313,78 @@ describe("auth endpoints reject malformed body types without 500", () => {
       .send({ resetToken: 1, newPassword: 2 });
     expect(r.status).toBe(400);
   });
+
+  it("PATCH /auth/password with non-string fields returns 400, not 500", async () => {
+    const u = await createUser();
+
+    const r1 = await request(app)
+      .patch("/api/auth/password")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ currentPassword: 12345, newPassword: "Brandnew1" });
+    expect(r1.status).toBe(400);
+    expect(typeof r1.body.error).toBe("string");
+
+    const r2 = await request(app)
+      .patch("/api/auth/password")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ currentPassword: PASSWORD, newPassword: 99 });
+    expect(r2.status).toBe(400);
+
+    const r3 = await request(app)
+      .patch("/api/auth/password")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ currentPassword: PASSWORD, newPassword: { foo: "bar" } });
+    expect(r3.status).toBe(400);
+
+    const r4 = await request(app)
+      .patch("/api/auth/password")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ currentPassword: PASSWORD, newPassword: "short" });
+    expect(r4.status).toBe(400);
+  });
+
+  it("PATCH /auth/security-question with non-string fields returns 400, not 500", async () => {
+    const u = await createUser();
+
+    const r1 = await request(app)
+      .patch("/api/auth/security-question")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({
+        currentPassword: 1,
+        securityQuestion: SECURITY_QUESTION,
+        securityAnswer: "answer",
+      });
+    expect(r1.status).toBe(400);
+    expect(typeof r1.body.error).toBe("string");
+
+    const r2 = await request(app)
+      .patch("/api/auth/security-question")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({
+        currentPassword: PASSWORD,
+        securityQuestion: 42,
+        securityAnswer: "answer",
+      });
+    expect(r2.status).toBe(400);
+
+    const r3 = await request(app)
+      .patch("/api/auth/security-question")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({
+        currentPassword: PASSWORD,
+        securityQuestion: SECURITY_QUESTION,
+        securityAnswer: { foo: "bar" },
+      });
+    expect(r3.status).toBe(400);
+
+    const r4 = await request(app)
+      .patch("/api/auth/security-question")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({
+        currentPassword: PASSWORD,
+        securityQuestion: "Pertanyaan tidak ada di daftar",
+        securityAnswer: "answer",
+      });
+    expect(r4.status).toBe(400);
+  });
 });
