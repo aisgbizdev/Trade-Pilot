@@ -335,6 +335,43 @@ export interface PersonalAnalytics {
   weeklyData: PersonalAnalyticsWeeklyDataItem[];
 }
 
+export type FeedbackWithDetailsFeedbackType =
+  (typeof FeedbackWithDetailsFeedbackType)[keyof typeof FeedbackWithDetailsFeedbackType];
+
+export const FeedbackWithDetailsFeedbackType = {
+  useful: "useful",
+  not_useful: "not_useful",
+} as const;
+
+export type FeedbackWithDetailsOutcome =
+  | (typeof FeedbackWithDetailsOutcome)[keyof typeof FeedbackWithDetailsOutcome]
+  | null;
+
+export const FeedbackWithDetailsOutcome = {
+  correct: "correct",
+  wrong: "wrong",
+  unknown: "unknown",
+} as const;
+
+export interface FeedbackWithDetails {
+  id: number;
+  analysisId: number;
+  instrument: string;
+  userId: number;
+  userEmail: string;
+  feedbackType: FeedbackWithDetailsFeedbackType;
+  outcome?: FeedbackWithDetailsOutcome;
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface FeedbackList {
+  feedback: FeedbackWithDetails[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export type FeedbackBodyFeedbackType =
   (typeof FeedbackBodyFeedbackType)[keyof typeof FeedbackBodyFeedbackType];
 
@@ -357,6 +394,43 @@ export interface FeedbackBody {
   feedbackType: FeedbackBodyFeedbackType;
   outcome?: FeedbackBodyOutcome;
   note?: string | null;
+}
+
+export type AdminFeedbackRowFeedbackType =
+  (typeof AdminFeedbackRowFeedbackType)[keyof typeof AdminFeedbackRowFeedbackType];
+
+export const AdminFeedbackRowFeedbackType = {
+  useful: "useful",
+  not_useful: "not_useful",
+} as const;
+
+export type AdminFeedbackRowOutcome =
+  | (typeof AdminFeedbackRowOutcome)[keyof typeof AdminFeedbackRowOutcome]
+  | null;
+
+export const AdminFeedbackRowOutcome = {
+  correct: "correct",
+  wrong: "wrong",
+  unknown: "unknown",
+} as const;
+
+export interface AdminFeedbackRow {
+  id: number;
+  analysisId: number;
+  instrument: string;
+  userId: number;
+  userEmail: string;
+  feedbackType: AdminFeedbackRowFeedbackType;
+  outcome?: AdminFeedbackRowOutcome;
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface AdminFeedbackList {
+  feedback: AdminFeedbackRow[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export type NotificationType =
@@ -596,6 +670,11 @@ export type GetNotificationsParams = {
 };
 
 export type GetAllAnalysesParams = {
+  page?: number;
+  limit?: number;
+};
+
+export type GetAdminFeedbackParams = {
   page?: number;
   limit?: number;
 };

@@ -720,9 +720,9 @@ paths:
 
   /admin/feedback:
     get:
-      operationId: getAllFeedback
+      operationId: getAdminFeedback
       tags: [admin]
-      summary: Get all user feedback (admin only)
+      summary: List user feedback rows (admin only)
       parameters:
         - name: page
           in: query
@@ -736,11 +736,11 @@ paths:
             default: 50
       responses:
         "200":
-          description: All feedback
+          description: Feedback rows
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FeedbackList"
+                $ref: "#/components/schemas/AdminFeedbackList"
         "403":
           description: Forbidden
           content:
@@ -1684,6 +1684,60 @@ components:
           nullable: true
       required:
         - feedbackType
+
+    AdminFeedbackRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        analysisId:
+          type: integer
+        instrument:
+          type: string
+        userId:
+          type: integer
+        userEmail:
+          type: string
+        feedbackType:
+          type: string
+          enum: [useful, not_useful]
+        outcome:
+          type: string
+          enum: [correct, wrong, unknown]
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisId
+        - instrument
+        - userId
+        - userEmail
+        - feedbackType
+        - createdAt
+
+    AdminFeedbackList:
+      type: object
+      properties:
+        feedback:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminFeedbackRow"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - feedback
+        - total
+        - page
+        - limit
 
     Notification:
       type: object

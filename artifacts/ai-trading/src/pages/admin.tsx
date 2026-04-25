@@ -7,6 +7,7 @@ import {
   X,
   Plus,
   Megaphone,
+  MessageSquare,
   Users as UsersIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -618,6 +619,19 @@ function AdminContent() {
         )}
 
         <RecentSignupsPanel />
+
+        <Card className="p-4 space-y-2" data-testid="card-feedback-shortcut">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" /> {t.admin.feedback_page_title}
+          </h3>
+          <Link
+            href="/admin/feedback"
+            className="block text-center text-xs text-primary hover:underline pt-1"
+            data-testid="link-admin-feedback"
+          >
+            {t.admin.open_feedback_page}
+          </Link>
+        </Card>
 
         <BroadcastComposer />
 

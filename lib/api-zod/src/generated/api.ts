@@ -618,6 +618,36 @@ export const GetAllAnalysesResponse = zod.object({
 });
 
 /**
+ * @summary List user feedback rows (admin only)
+ */
+export const getAdminFeedbackQueryPageDefault = 1;
+export const getAdminFeedbackQueryLimitDefault = 50;
+
+export const GetAdminFeedbackQueryParams = zod.object({
+  page: zod.coerce.number().default(getAdminFeedbackQueryPageDefault),
+  limit: zod.coerce.number().default(getAdminFeedbackQueryLimitDefault),
+});
+
+export const GetAdminFeedbackResponse = zod.object({
+  feedback: zod.array(
+    zod.object({
+      id: zod.number(),
+      analysisId: zod.number(),
+      instrument: zod.string(),
+      userId: zod.number(),
+      userEmail: zod.string(),
+      feedbackType: zod.enum(["useful", "not_useful"]),
+      outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
+      note: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
+});
+
+/**
  * @summary Broadcast notification to selected audience
  */
 export const broadcastNotificationBodyTypeDefault = `info`;

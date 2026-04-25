@@ -18,6 +18,7 @@ import type {
 
 import type {
   AddUserTagBody,
+  AdminFeedbackList,
   AdminStats,
   AnalysesList,
   AnalysesSummary,
@@ -35,6 +36,7 @@ import type {
   Feedback,
   FeedbackBody,
   ForgotPasswordQuestionBody,
+  GetAdminFeedbackParams,
   GetAllAnalysesParams,
   GetAllUsersParams,
   GetBroadcastsParams,
@@ -2551,6 +2553,103 @@ export function useGetAllAnalyses<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetAllAnalysesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List user feedback rows (admin only)
+ */
+export const getGetAdminFeedbackUrl = (params?: GetAdminFeedbackParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/feedback?${stringifiedParams}`
+    : `/api/admin/feedback`;
+};
+
+export const getAdminFeedback = async (
+  params?: GetAdminFeedbackParams,
+  options?: RequestInit,
+): Promise<AdminFeedbackList> => {
+  return customFetch<AdminFeedbackList>(getGetAdminFeedbackUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminFeedbackQueryKey = (
+  params?: GetAdminFeedbackParams,
+) => {
+  return [`/api/admin/feedback`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAdminFeedbackQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminFeedback>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetAdminFeedbackParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminFeedback>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminFeedbackQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminFeedback>>
+  > = ({ signal }) => getAdminFeedback(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminFeedback>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminFeedbackQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminFeedback>>
+>;
+export type GetAdminFeedbackQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List user feedback rows (admin only)
+ */
+
+export function useGetAdminFeedback<
+  TData = Awaited<ReturnType<typeof getAdminFeedback>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetAdminFeedbackParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminFeedback>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminFeedbackQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

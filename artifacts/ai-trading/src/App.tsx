@@ -20,6 +20,7 @@ import ProfilePage from "@/pages/profile";
 import NotificationsPage from "@/pages/notifications";
 import AdminPage from "@/pages/admin";
 import AdminUsersPage from "@/pages/admin-users";
+import AdminFeedbackPage from "@/pages/admin-feedback";
 import LegalPage from "@/pages/legal";
 import { SplashScreen } from "@/components/splash-screen";
 import { useEffect } from "react";
@@ -121,6 +122,11 @@ function Router() {
         <Route path="/admin/users">
           <ProtectedRoute requiredRole="super_admin">
             <AdminUsersPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/feedback">
+          <ProtectedRoute requiredRole="admin">
+            <AdminFeedbackPage />
           </ProtectedRoute>
         </Route>
         <Route component={NotFound} />
