@@ -1,6 +1,6 @@
 {
-  "name": "AI Trading Assistant",
-  "short_name": "AI Trading",
+  "name": "Trade Pilot",
+  "short_name": "TradePilot",
   "description": "AI-powered trading decision support by Newsmaker.id",
   "start_url": "/",
   "display": "standalone",

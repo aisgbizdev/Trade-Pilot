@@ -1,6 +1,6 @@
 import { Link } from "wouter";
+import { BrandLogo } from "@/components/brand-logo";
 import {
-  TrendingUp,
   BarChart3,
   Clock,
   ChevronRight,
@@ -52,13 +52,11 @@ export default function LandingPage() {
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <header className="sticky top-0 z-40 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between bg-background/80">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <TrendingUp className="w-4 h-4 text-white" />
-          </div>
+          <BrandLogo className="w-8 h-8" />
           <div className="flex flex-col">
             <span className="font-bold text-sm tracking-tight">
-              <span className="gradient-text">AI</span>
-              <span className="text-foreground"> Trading</span>
+              <span className="gradient-text">Trade</span>
+              <span className="text-foreground"> Pilot</span>
             </span>
             <a
               href="https://newsmaker.id"

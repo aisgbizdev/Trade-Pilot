@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
 import {
@@ -103,13 +104,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <ChevronLeft className="w-5 h-5 text-foreground" />
             </button>
           )}
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-md shadow-blue-500/25">
-            <TrendingUp className="w-4 h-4 text-white" />
-          </div>
+          <BrandLogo className="w-8 h-8" />
           <div className="flex flex-col">
             <span className="font-bold text-[13px] leading-none tracking-tight">
-              <span className="gradient-text">AI</span>
-              <span className="text-foreground"> Trading</span>
+              <span className="gradient-text">Trade</span>
+              <span className="text-foreground"> Pilot</span>
             </span>
             <span className="text-[9px] text-muted-foreground leading-none mt-0.5 tracking-wide uppercase">
               {user?.selectedMode === "pro" ? t.common.pro : t.common.beginner} Mode

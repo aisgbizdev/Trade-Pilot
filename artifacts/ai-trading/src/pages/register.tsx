@@ -3,7 +3,8 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
-import { Eye, EyeOff, TrendingUp, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -69,10 +70,8 @@ export default function RegisterPage() {
       <div className="flex flex-col items-center px-6 py-4">
         <div className="w-full max-w-sm">
           <div className="flex items-center justify-center gap-2 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">AI Trading</span>
+            <BrandLogo className="w-10 h-10" />
+            <span className="text-xl font-bold text-foreground">Trade Pilot</span>
           </div>
 
           <div className="mb-5">

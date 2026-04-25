@@ -40,8 +40,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png"],
       manifest: {
-        name: "AI Trading Assistant",
-        short_name: "AI Trading",
+        name: "Trade Pilot",
+        short_name: "TradePilot",
         description: "Pendukung keputusan trading berbasis AI",
         theme_color: "#1e3a5f",
         background_color: "#ffffff",
