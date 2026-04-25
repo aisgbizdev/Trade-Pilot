@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { db } from "../lib/db";
 import { pushSubscriptions } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -6,20 +7,30 @@ import { requireAuth, AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
+const subscribeSchema = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({
+    p256dh: z.string().min(1),
+    auth: z.string().min(1),
+  }),
+});
+
+const unsubscribeSchema = z.object({
+  endpoint: z.string().url(),
+});
+
 router.get("/push/public-key", (_req, res) => {
   res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || "" });
 });
 
 router.post("/push/subscribe", requireAuth, async (req: AuthRequest, res) => {
-  const { endpoint, keys } = req.body as {
-    endpoint: string;
-    keys: { p256dh: string; auth: string };
-  };
-
-  if (!endpoint || !keys?.p256dh || !keys?.auth) {
-    res.status(400).json({ error: "Endpoint dan keys wajib diisi" });
+  const parsed = subscribeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Data langganan tidak valid", details: parsed.error.flatten() });
     return;
   }
+
+  const { endpoint, keys } = parsed.data;
 
   await db
     .insert(pushSubscriptions)
@@ -38,10 +49,9 @@ router.post("/push/subscribe", requireAuth, async (req: AuthRequest, res) => {
 });
 
 router.delete("/push/unsubscribe", requireAuth, async (req: AuthRequest, res) => {
-  const { endpoint } = req.body as { endpoint: string };
-
-  if (!endpoint) {
-    res.status(400).json({ error: "Endpoint wajib diisi" });
+  const parsed = unsubscribeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Endpoint tidak valid" });
     return;
   }
 
@@ -50,7 +60,7 @@ router.delete("/push/unsubscribe", requireAuth, async (req: AuthRequest, res) =>
     .where(
       and(
         eq(pushSubscriptions.userId, req.userId!),
-        eq(pushSubscriptions.endpoint, endpoint)
+        eq(pushSubscriptions.endpoint, parsed.data.endpoint)
       )
     );
 

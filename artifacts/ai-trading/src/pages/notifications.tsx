@@ -25,6 +25,10 @@ const TYPE_STYLE: Record<string, string> = {
   error: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
+function cleanMessage(msg: string): string {
+  return msg.replace(/\s*\[expiry:\d+\]/g, "").trim();
+}
+
 export default function NotificationsPage() {
   const { t, lang } = useTranslation();
   const dateLocale = lang === "id" ? idLocale : enUS;
@@ -202,7 +206,7 @@ export default function NotificationsPage() {
                       {!n.readAt && <div className="w-2 h-2 rounded-full bg-primary" />}
                     </div>
                     <p className="text-sm font-medium text-foreground">{n.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{n.message}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{cleanMessage(n.message)}</p>
                     <p className="text-[10px] text-muted-foreground mt-1.5">
                       {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: dateLocale })}
                     </p>

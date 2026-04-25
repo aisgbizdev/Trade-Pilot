@@ -4,11 +4,18 @@ import { pushSubscriptions } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL || "mailto:admin@aitradingassistant.app",
-  process.env.VAPID_PUBLIC_KEY || "",
-  process.env.VAPID_PRIVATE_KEY || ""
-);
+const vapidEmail = process.env.VAPID_EMAIL || "mailto:admin@aitradingassistant.app";
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "";
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "";
+
+if (!vapidPublicKey || !vapidPrivateKey) {
+  logger.warn(
+    "VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY is missing. Web Push notifications will not be delivered. " +
+      "Set both environment variables to enable push."
+  );
+}
+
+webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
 
 export interface PushPayload {
   title: string;
@@ -18,6 +25,8 @@ export interface PushPayload {
 }
 
 export async function sendPushToUser(userId: number, payload: PushPayload): Promise<void> {
+  if (!vapidPublicKey || !vapidPrivateKey) return;
+
   const subs = await db
     .select()
     .from(pushSubscriptions)
