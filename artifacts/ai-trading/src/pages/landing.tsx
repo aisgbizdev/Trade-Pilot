@@ -1,10 +1,25 @@
 import { Link } from "wouter";
-import { TrendingUp, BarChart3, Clock, Shield, ChevronRight, Brain, Lock } from "lucide-react";
+import {
+  TrendingUp,
+  BarChart3,
+  Clock,
+  ChevronRight,
+  Brain,
+  Lock,
+  Shield,
+  LineChart,
+  Compass,
+  Scale,
+  GitBranch,
+  AlertTriangle,
+  Sparkles,
+  ArrowUpRight,
+} from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { PriceTicker } from "@/components/price-ticker";
 
-const ICON_MAP = [Brain, BarChart3, Clock, Shield];
+const FEATURE_ICON_MAP = [Brain, BarChart3, Clock, Sparkles];
 
 const FEATURE_STYLES = [
   { color: "from-blue-500/20 to-violet-500/20", iconColor: "text-blue-400", glow: "group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]" },
@@ -13,8 +28,18 @@ const FEATURE_STYLES = [
   { color: "from-amber-500/20 to-orange-500/20", iconColor: "text-amber-400", glow: "group-hover:shadow-[0_0_20px_rgba(251,191,36,0.3)]" },
 ];
 
+const WHAT_YOU_GET_ICONS = [LineChart, Compass, Scale, GitBranch, AlertTriangle];
+
+const WHAT_YOU_GET_STYLES = [
+  { color: "from-sky-500/15 to-blue-500/15", iconColor: "text-sky-400" },
+  { color: "from-violet-500/15 to-fuchsia-500/15", iconColor: "text-violet-400" },
+  { color: "from-emerald-500/15 to-amber-500/15", iconColor: "text-emerald-400" },
+  { color: "from-blue-500/15 to-indigo-500/15", iconColor: "text-indigo-400" },
+  { color: "from-rose-500/15 to-orange-500/15", iconColor: "text-rose-400" },
+];
+
 export default function LandingPage() {
-  const { t, lang } = useTranslation();
+  const { t } = useTranslation();
 
   const stats = [
     { value: "AI", label: t.landing.stats_model },
@@ -25,7 +50,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
-
       <header className="sticky top-0 z-40 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between bg-background/80">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
@@ -63,9 +87,9 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1 max-w-lg mx-auto w-full">
-
         <PriceTicker />
 
+        {/* HERO */}
         <section className="hero-gradient px-5 pt-14 pb-10 text-center relative overflow-hidden">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-8 left-1/2 -translate-x-1/2 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
@@ -74,18 +98,14 @@ export default function LandingPage() {
           </div>
 
           <div className="relative z-10">
-            <h1 className="text-[2rem] font-extrabold leading-[1.15] mb-4 text-white">
-              {lang === "id" ? (
-                <>Analisis Pasar yang <span className="gradient-text">Jujur &amp; Terstruktur</span></>
-              ) : (
-                <><span className="gradient-text">Honest &amp; Structured</span> Market Analysis</>
-              )}
+            <h1 className="text-[2rem] font-extrabold leading-[1.15] mb-4 text-white" data-testid="text-hero-headline">
+              <span className="gradient-text">{t.landing.tagline_part1}</span>
+              <br />
+              <span className="text-white">{t.landing.tagline_part2}</span>
             </h1>
 
-            <p className="text-sm text-slate-400 leading-relaxed mb-8 max-w-xs mx-auto">
-              {t.landing.subtitle}{" "}
-              <span className="text-slate-300 font-medium">{t.landing.subtitle_bold}</span>{" "}
-              {t.landing.subtitle_end}
+            <p className="text-sm text-slate-300 leading-relaxed mb-8 max-w-xs mx-auto" data-testid="text-hero-subtitle">
+              {t.landing.subtitle_full}
             </p>
 
             <div className="flex flex-col gap-3 mb-10">
@@ -119,6 +139,133 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* WHAT YOU ACTUALLY GET */}
+        <section className="px-4 py-10" data-testid="section-what-you-get">
+          <div className="text-center mb-6">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">
+              {t.landing.what_you_get_tag}
+            </p>
+            <h2 className="text-xl font-bold text-foreground">{t.landing.what_you_get_title}</h2>
+            <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-xs mx-auto">
+              {t.landing.what_you_get_subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            {t.landing.what_you_get_items.map((item, idx) => {
+              const Icon = WHAT_YOU_GET_ICONS[idx] ?? Sparkles;
+              const style = WHAT_YOU_GET_STYLES[idx] ?? WHAT_YOU_GET_STYLES[0];
+              return (
+                <div
+                  key={idx}
+                  className="flex gap-3.5 p-4 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all"
+                  data-testid={`card-what-you-get-${idx}`}
+                >
+                  <div
+                    className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.color} flex items-center justify-center shrink-0 border border-white/10`}
+                  >
+                    <Icon className={`w-5 h-5 ${style.iconColor}`} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-foreground mb-1">{item.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* SEE HOW IT WORKS — sample analysis card */}
+        <section className="px-4 pb-10" data-testid="section-see-how-it-works">
+          <div className="text-center mb-5">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">
+              {t.landing.see_how_tag}
+            </p>
+            <h2 className="text-xl font-bold text-foreground">{t.landing.see_how_title}</h2>
+            <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-xs mx-auto">
+              {t.landing.see_how_subtitle}
+            </p>
+          </div>
+
+          {/* Sample analysis preview */}
+          <div className="relative rounded-2xl border border-border bg-card overflow-hidden shadow-lg">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative p-4 space-y-4">
+              {/* Instrument header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-violet-500/30 flex items-center justify-center">
+                    <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">{t.landing.sample_instrument}</div>
+                    <div className="text-[10px] text-emerald-400 font-medium">{t.landing.sample_market_condition}</div>
+                  </div>
+                </div>
+                <span className="text-[9px] uppercase tracking-wider text-muted-foreground border border-border rounded-full px-2 py-0.5">
+                  {t.landing.see_how_tag}
+                </span>
+              </div>
+
+              {/* Bias gauge */}
+              <div className="rounded-xl bg-background/40 border border-border/60 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                    {t.landing.sample_bias_label}
+                  </span>
+                  <span className="text-xs font-semibold text-emerald-400">{t.landing.sample_bias_value}</span>
+                </div>
+                <div className="grid grid-cols-5 gap-1">
+                  <div className="h-1.5 rounded-full bg-rose-500/20" />
+                  <div className="h-1.5 rounded-full bg-rose-500/10" />
+                  <div className="h-1.5 rounded-full bg-slate-500/20" />
+                  <div className="h-1.5 rounded-full bg-emerald-500" />
+                  <div className="h-1.5 rounded-full bg-emerald-500/20" />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-[10px] text-muted-foreground">
+                  <span>{t.landing.sample_confidence_label}</span>
+                  <span className="font-semibold text-foreground">{t.landing.sample_confidence_value}</span>
+                </div>
+                <div className="flex items-center justify-between mt-1 text-[10px] text-muted-foreground">
+                  <span>{t.landing.sample_risk_label}</span>
+                  <span className="font-semibold text-amber-400">{t.landing.sample_risk_value}</span>
+                </div>
+              </div>
+
+              {/* Invalidation */}
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-300">
+                    {t.landing.sample_invalidation_label}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">{t.landing.sample_invalidation}</p>
+              </div>
+
+              {/* Opportunity vs Risk */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300 mb-1">
+                    {t.landing.sample_opportunity_label}
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">{t.landing.sample_opportunity}</p>
+                </div>
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-300 mb-1">
+                    {t.landing.sample_risk_section_label}
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-snug">{t.landing.sample_risk_section}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FEATURE CARDS */}
         <section className="px-4 py-8">
           <div className="text-center mb-6">
             <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">{t.landing.section_features_tag}</p>
@@ -129,12 +276,13 @@ export default function LandingPage() {
           </div>
           <div className="space-y-3">
             {t.landing.features.map((feature, idx) => {
-              const Icon = ICON_MAP[idx];
-              const style = FEATURE_STYLES[idx];
+              const Icon = FEATURE_ICON_MAP[idx] ?? Brain;
+              const style = FEATURE_STYLES[idx] ?? FEATURE_STYLES[0];
               return (
                 <div
                   key={idx}
                   className={`group flex gap-3.5 p-4 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all duration-300 ${style.glow}`}
+                  data-testid={`card-feature-${idx}`}
                 >
                   <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.color} flex items-center justify-center shrink-0 border border-white/10`}>
                     <Icon className={`w-5 h-5 ${style.iconColor}`} />
@@ -149,6 +297,7 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* BOTTOM CTA */}
         <section className="px-4 pb-8">
           <div className="relative rounded-2xl overflow-hidden">
             <div className="hero-gradient p-6 text-center">
