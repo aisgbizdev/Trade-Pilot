@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import {
   useCreateAnalysis,
@@ -23,11 +23,13 @@ export function useRefreshAnalysis() {
   const [refreshingIds, setRefreshingIds] = useState<ReadonlySet<number>>(
     () => new Set()
   );
+  const inFlightRef = useRef<Set<number>>(new Set());
 
   const refresh = useCallback(
     async (analysis: RefreshableAnalysis) => {
+      if (inFlightRef.current.has(analysis.id)) return;
+      inFlightRef.current.add(analysis.id);
       setRefreshingIds((prev) => {
-        if (prev.has(analysis.id)) return prev;
         const next = new Set(prev);
         next.add(analysis.id);
         return next;
@@ -49,6 +51,7 @@ export function useRefreshAnalysis() {
           variant: "destructive",
         });
       } finally {
+        inFlightRef.current.delete(analysis.id);
         setRefreshingIds((prev) => {
           if (!prev.has(analysis.id)) return prev;
           const next = new Set(prev);
