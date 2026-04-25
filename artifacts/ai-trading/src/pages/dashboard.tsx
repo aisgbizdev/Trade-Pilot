@@ -1,9 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { TrendingUp, Plus, Clock, Loader2, TrendingDown, Minus, RefreshCw, Brain, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
 import { OnboardingModal } from "@/components/onboarding-modal";
+import { NewsWidget } from "@/components/news-widget";
+import { CalendarWidget } from "@/components/calendar-widget";
 import {
   useGetAnalysesSummary,
   getGetAnalysesSummaryQueryKey,
@@ -353,6 +354,10 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        <CalendarWidget limit={6} />
+
+        <NewsWidget limit={5} />
 
       </div>
     </Layout>

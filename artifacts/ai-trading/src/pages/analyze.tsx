@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +9,7 @@ import { Layout } from "@/components/layout";
 import { useCreateAnalysis } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
+import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -215,6 +215,10 @@ export default function AnalyzePage() {
               ))}
             </div>
           </div>
+
+          {finalInstrument && (
+            <TechnicalIndicatorsPanel instrument={finalInstrument} />
+          )}
 
           <div>
             <div className="flex items-center justify-between mb-2">

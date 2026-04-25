@@ -93,10 +93,15 @@ export async function generateAnalysis(
   instrument: string,
   timeframe: string,
   mode: "beginner" | "pro",
-  notes?: string
+  notes?: string,
+  indicatorContext?: string
 ) {
   const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
-  const userMessage = `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}${cleanNotes ? `\n\nCatatan tambahan dari trader: ${cleanNotes}` : ""}`;
+  const userMessage = [
+    `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}`,
+    indicatorContext ? indicatorContext : "",
+    cleanNotes ? `\nCatatan tambahan dari trader: ${cleanNotes}` : "",
+  ].filter(Boolean).join("\n");
 
   const systemPrompt =
     mode === "beginner" ? BEGINNER_SYSTEM_PROMPT : PRO_SYSTEM_PROMPT;

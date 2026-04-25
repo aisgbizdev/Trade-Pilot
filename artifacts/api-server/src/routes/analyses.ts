@@ -4,6 +4,9 @@ import { analyses, feedback } from "@workspace/db/schema";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { generateAnalysis, getValidUntil } from "../lib/openai";
+import { getIndicators, formatIndicatorsForPrompt } from "../lib/historical";
+import { getRelevantNews, formatNewsForPrompt } from "../lib/news";
+import { getRelevantCalendar, formatCalendarForPrompt } from "../lib/calendar";
 
 const router = Router();
 
@@ -134,7 +137,22 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
 
-  const aiResult = await generateAnalysis(instrument, timeframe, mode, notes);
+  const contextParts: string[] = [];
+
+  await Promise.allSettled([
+    getIndicators(instrument).then((ind) => {
+      if (ind) contextParts.push(formatIndicatorsForPrompt(ind));
+    }),
+    getRelevantNews(instrument).then((news) => {
+      if (news.length) contextParts.push(formatNewsForPrompt(news, instrument));
+    }),
+    getRelevantCalendar(instrument).then((events) => {
+      if (events.length) contextParts.push(formatCalendarForPrompt(events, instrument));
+    }),
+  ]);
+
+  const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
+  const aiResult = await generateAnalysis(instrument, timeframe, mode, notes, indicatorContext);
   const validUntil = getValidUntil(timeframe);
 
   const [analysis] = await db

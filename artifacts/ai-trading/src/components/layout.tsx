@@ -1,9 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
 import { useGetNotifications, getGetNotificationsQueryKey } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+
+const MAIN_NAV_PATHS = ["/dashboard", "/analyze", "/history", "/analytics", "/profile"];
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -28,11 +30,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   const unreadCount = (notifData as any)?.notifications?.length ?? 0;
+  const isMainNav = MAIN_NAV_PATHS.includes(location);
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto relative">
       <header className="sticky top-0 z-40 px-4 py-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="flex items-center gap-2">
+          {!isMainNav && (
+            <button
+              onClick={() => window.history.back()}
+              className="p-1.5 rounded-xl hover:bg-muted transition-colors -ml-1 mr-0.5"
+              aria-label="Kembali"
+              data-testid="button-back-header"
+            >
+              <ChevronLeft className="w-5 h-5 text-foreground" />
+            </button>
+          )}
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-md shadow-blue-500/25">
             <TrendingUp className="w-4 h-4 text-white" />
           </div>
