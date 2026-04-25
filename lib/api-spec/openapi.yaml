@@ -514,6 +514,94 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  /push/public-key:
+    get:
+      operationId: getPushPublicKey
+      tags: [push]
+      summary: Get the VAPID public key for Web Push subscription
+      responses:
+        "200":
+          description: Public key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushPublicKey"
+
+  /push/subscribe:
+    post:
+      operationId: subscribePush
+      tags: [push]
+      summary: Register a Web Push subscription for the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSubscriptionBody"
+      responses:
+        "200":
+          description: Subscription stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /push/unsubscribe:
+    delete:
+      operationId: unsubscribePush
+      tags: [push]
+      summary: Remove a Web Push subscription for the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushUnsubscribeBody"
+      responses:
+        "200":
+          description: Subscription removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /push/subscription-status:
+    get:
+      operationId: getPushSubscriptionStatus
+      tags: [push]
+      summary: Check whether the current user has any active push subscription
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushSubscriptionStatus"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/stats:
     get:
       operationId: getAdminStats
@@ -742,6 +830,54 @@ components:
           type: string
       required:
         - message
+
+    PushPublicKey:
+      type: object
+      properties:
+        publicKey:
+          type: string
+      required:
+        - publicKey
+
+    PushSubscriptionKeys:
+      type: object
+      properties:
+        p256dh:
+          type: string
+        auth:
+          type: string
+      required:
+        - p256dh
+        - auth
+
+    PushSubscriptionBody:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          format: uri
+        keys:
+          $ref: "#/components/schemas/PushSubscriptionKeys"
+      required:
+        - endpoint
+        - keys
+
+    PushUnsubscribeBody:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          format: uri
+      required:
+        - endpoint
+
+    PushSubscriptionStatus:
+      type: object
+      properties:
+        subscribed:
+          type: boolean
+      required:
+        - subscribed
 
     User:
       type: object

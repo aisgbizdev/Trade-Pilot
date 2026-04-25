@@ -17,6 +17,28 @@ export interface MessageResponse {
   message: string;
 }
 
+export interface PushPublicKey {
+  publicKey: string;
+}
+
+export interface PushSubscriptionKeys {
+  p256dh: string;
+  auth: string;
+}
+
+export interface PushSubscriptionBody {
+  endpoint: string;
+  keys: PushSubscriptionKeys;
+}
+
+export interface PushUnsubscribeBody {
+  endpoint: string;
+}
+
+export interface PushSubscriptionStatus {
+  subscribed: boolean;
+}
+
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export const UserRole = {

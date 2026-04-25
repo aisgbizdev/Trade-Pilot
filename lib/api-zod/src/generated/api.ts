@@ -430,6 +430,46 @@ export const MarkAllNotificationsReadResponse = zod.object({
 });
 
 /**
+ * @summary Get the VAPID public key for Web Push subscription
+ */
+export const GetPushPublicKeyResponse = zod.object({
+  publicKey: zod.string(),
+});
+
+/**
+ * @summary Register a Web Push subscription for the current user
+ */
+export const SubscribePushBody = zod.object({
+  endpoint: zod.string().url(),
+  keys: zod.object({
+    p256dh: zod.string(),
+    auth: zod.string(),
+  }),
+});
+
+export const SubscribePushResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Remove a Web Push subscription for the current user
+ */
+export const UnsubscribePushBody = zod.object({
+  endpoint: zod.string().url(),
+});
+
+export const UnsubscribePushResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Check whether the current user has any active push subscription
+ */
+export const GetPushSubscriptionStatusResponse = zod.object({
+  subscribed: zod.boolean(),
+});
+
+/**
  * @summary Get admin statistics
  */
 export const GetAdminStatsResponse = zod.object({
