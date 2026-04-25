@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,14 @@ import { useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
 import { useCreateAnalysis } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
+
+function formatPrice(price: number, instrument: string): string {
+  if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
+  if (instrument === "USD/JPY") return price.toFixed(2);
+  if (price > 1000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  return price.toFixed(4);
+}
 
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
@@ -22,6 +30,26 @@ const LOADING_MESSAGES = [
   "Memvalidasi tingkat keyakinan...",
   "Menyiapkan hasil analisis...",
 ];
+
+function LivePriceChip({ instrument }: { instrument: string }) {
+  const { quote, isLoading } = useQuoteByInstrument(instrument);
+  if (isLoading) return <span className="text-[10px] text-muted-foreground">memuat...</span>;
+  if (!quote) return null;
+  const isUp = quote.direction === "up";
+  const isFlat = quote.changePercent === "+0%" || quote.changePercent === "0%";
+  return (
+    <div className="flex items-center gap-1">
+      <span className="font-bold text-foreground tabular-nums">{formatPrice(quote.price, instrument)}</span>
+      <span className={cn(
+        "text-[10px] font-medium flex items-center gap-0.5",
+        isFlat ? "text-muted-foreground" : isUp ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+      )}>
+        {isFlat ? <Minus className="w-2.5 h-2.5" /> : isUp ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+        {quote.changePercent}
+      </span>
+    </div>
+  );
+}
 
 export default function AnalyzePage() {
   const { user } = useAuth();
@@ -205,6 +233,10 @@ export default function AnalyzePage() {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Instrumen:</span>
                 <span className="font-semibold text-foreground">{finalInstrument}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm mt-1">
+                <span className="text-muted-foreground">Harga saat ini:</span>
+                <LivePriceChip instrument={finalInstrument} />
               </div>
               <div className="flex items-center justify-between text-sm mt-1">
                 <span className="text-muted-foreground">Timeframe:</span>

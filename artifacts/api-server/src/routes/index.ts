@@ -4,6 +4,7 @@ import authRouter from "./auth";
 import analysesRouter from "./analyses";
 import notificationsRouter from "./notifications";
 import adminRouter from "./admin";
+import quotesRouter from "./quotes";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(authRouter);
 router.use(analysesRouter);
 router.use(notificationsRouter);
 router.use(adminRouter);
+router.use(quotesRouter);
 
 export default router;
