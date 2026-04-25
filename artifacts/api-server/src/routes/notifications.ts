@@ -39,7 +39,7 @@ router.patch("/notifications/:id/read", requireAuth, async (req: AuthRequest, re
     return;
   }
 
-  res.json(updated);
+  res.json({ message: "Notifikasi ditandai telah dibaca" });
 });
 
 router.patch("/notifications/read-all", requireAuth, async (req: AuthRequest, res) => {

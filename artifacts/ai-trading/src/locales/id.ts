@@ -131,6 +131,7 @@ export const id: Translations = {
     refresh_price: "Refresh harga",
     price_error: "Tidak dapat memuat harga live",
     last_analyzed: "Terakhir Dianalisis",
+    avg_confidence: "Rata-rata Kepercayaan",
     recent_analyses: "Analisis Terbaru",
     view_all: "Lihat semua →",
     no_analyses_title: "Belum ada analisis",

@@ -53,7 +53,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        navigateFallback: `${basePath}index.html`,
+        additionalManifestEntries: [{ url: `${basePath}offline.html`, revision: null }],
+        navigateFallback: `${basePath}offline.html`,
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {

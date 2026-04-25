@@ -72,7 +72,7 @@ function AdminUsersContent() {
     role: "user",
     selectedMode: "beginner",
     securityQuestion: SECURITY_QUESTIONS[0],
-    securityAnswer: "default",
+    securityAnswer: "",
   });
 
   const { data, isLoading } = useGetAllUsers({
@@ -92,7 +92,7 @@ function AdminUsersContent() {
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       setCreateOpen(false);
       toast({ title: "User berhasil dibuat" });
-      setCreateForm({ email: "", password: "", displayName: "", role: "user", selectedMode: "beginner", securityQuestion: SECURITY_QUESTIONS[0], securityAnswer: "default" });
+      setCreateForm({ email: "", password: "", displayName: "", role: "user", selectedMode: "beginner", securityQuestion: SECURITY_QUESTIONS[0], securityAnswer: "" });
     } catch (err: unknown) {
       toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal membuat user", variant: "destructive" });
     }
@@ -187,6 +187,9 @@ function AdminUsersContent() {
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{u.email}</p>
+                    <p className="text-[10px] text-muted-foreground/70">
+                      {(u as { analysisCount?: number }).analysisCount ?? 0} analisis
+                    </p>
                   </div>
                   <div className="flex gap-1.5 ml-2">
                     <button
@@ -274,6 +277,22 @@ function AdminUsersContent() {
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
+              <select
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
+                value={createForm.securityQuestion}
+                onChange={(e) => setCreateForm({ ...createForm, securityQuestion: e.target.value })}
+                data-testid="select-create-security-question"
+              >
+                {SECURITY_QUESTIONS.map((q) => (
+                  <option key={q} value={q}>{q}</option>
+                ))}
+              </select>
+              <Input
+                placeholder="Jawaban pertanyaan keamanan"
+                value={createForm.securityAnswer}
+                onChange={(e) => setCreateForm({ ...createForm, securityAnswer: e.target.value })}
+                data-testid="input-create-security-answer"
+              />
               <Button
                 className="w-full"
                 onClick={handleCreate}

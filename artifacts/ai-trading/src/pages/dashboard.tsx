@@ -225,6 +225,14 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+        {summaryData?.avgConfidenceMin != null && summaryData.avgConfidenceMax != null && (
+          <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center justify-between" data-testid="stat-avg-confidence">
+            <span className="text-xs text-muted-foreground">{t.dashboard.avg_confidence ?? "Avg. Confidence"}</span>
+            <span className="text-sm font-bold text-primary">
+              {Math.round(summaryData.avgConfidenceMin)}–{Math.round(summaryData.avgConfidenceMax)}%
+            </span>
+          </div>
+        )}
 
         <LivePriceTicker />
 

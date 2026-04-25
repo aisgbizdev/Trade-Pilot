@@ -141,7 +141,7 @@ router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) 
     }))
   );
 
-  res.json({ message: "Broadcast berhasil dikirim", count: targetUsers.length });
+  res.status(201).json({ message: "Broadcast berhasil dikirim", count: targetUsers.length });
 });
 
 router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
@@ -154,8 +154,11 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
       selectedMode: users.selectedMode,
       onboardingCompleted: users.onboardingCompleted,
       createdAt: users.createdAt,
+      analysisCount: count(analyses.id),
     })
     .from(users)
+    .leftJoin(analyses, eq(analyses.userId, users.id))
+    .groupBy(users.id)
     .orderBy(desc(users.createdAt));
 
   res.json({ users: rows });

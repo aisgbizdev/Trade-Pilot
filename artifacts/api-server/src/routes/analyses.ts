@@ -1,12 +1,43 @@
 import { Router } from "express";
 import { db } from "../lib/db";
-import { analyses, feedback, notifications } from "@workspace/db/schema";
+import { analyses, feedback, notifications, users } from "@workspace/db/schema";
 import { eq, and, desc, count, sql, gte, lte, ilike } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { generateAnalysis, getValidUntil, type BeginnerAIOutput, type ProAIOutput } from "../lib/openai";
 import { getIndicators, formatIndicatorsForPrompt } from "../lib/historical";
 import { getRelevantNews, formatNewsForPrompt } from "../lib/news";
 import { getRelevantCalendar, formatCalendarForPrompt } from "../lib/calendar";
+
+let aiErrorCount = 0;
+let aiErrorWindowStart = Date.now();
+const AI_ERROR_THRESHOLD = 3;
+const AI_ERROR_WINDOW_MS = 60 * 60 * 1000;
+
+async function trackAiError(): Promise<void> {
+  const now = Date.now();
+  if (now - aiErrorWindowStart > AI_ERROR_WINDOW_MS) {
+    aiErrorCount = 0;
+    aiErrorWindowStart = now;
+  }
+  aiErrorCount += 1;
+  if (aiErrorCount >= AI_ERROR_THRESHOLD) {
+    aiErrorCount = 0;
+    const admins = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(sql`${users.role} IN ('admin', 'super_admin')`);
+    if (admins.length > 0) {
+      await db.insert(notifications).values(
+        admins.map((a) => ({
+          userId: a.id,
+          title: "Peringatan: Error AI Berulang",
+          message: `Lebih dari ${AI_ERROR_THRESHOLD} kegagalan analisis AI terjadi dalam 1 jam terakhir. Periksa koneksi dan konfigurasi AI.`,
+          type: "error" as const,
+        }))
+      );
+    }
+  }
+}
 
 const router = Router();
 
@@ -161,7 +192,13 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
   const typedMode = mode as "beginner" | "pro";
-  const aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
+  let aiResult: Awaited<ReturnType<typeof generateAnalysis>>;
+  try {
+    aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
+  } catch (aiErr) {
+    void trackAiError();
+    throw aiErr;
+  }
   const validUntil = getValidUntil(timeframe);
 
   const modeSpecificFields =

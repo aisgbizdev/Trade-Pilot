@@ -129,6 +129,7 @@ export const en = {
     refresh_price: "Refresh price",
     price_error: "Unable to load live prices",
     last_analyzed: "Recently Analyzed",
+    avg_confidence: "Avg. Confidence",
     recent_analyses: "Recent Analyses",
     view_all: "View all →",
     no_analyses_title: "No analyses yet",
