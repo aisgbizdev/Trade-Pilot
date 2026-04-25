@@ -22,6 +22,7 @@ import {
 import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/lib/i18n";
 import {
   useGetAllUsers,
   getGetAllUsersQueryKey,
@@ -59,6 +60,7 @@ function AdminUsersContent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -174,7 +176,7 @@ function AdminUsersContent() {
             <div>
               <h1 className="text-xl font-bold text-foreground">Manajemen User</h1>
               <p className="text-xs text-muted-foreground" data-testid="text-user-total">
-                {total} pengguna terdaftar
+                {t.admin.users_total_registered.replace("{count}", String(total))}
               </p>
             </div>
           </div>
@@ -194,7 +196,7 @@ function AdminUsersContent() {
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Cari email atau nama…"
+            placeholder={t.admin.search_users_placeholder}
             className="pl-9 h-9 text-sm"
             data-testid="input-user-search"
           />
@@ -288,10 +290,12 @@ function AdminUsersContent() {
               className="gap-1"
             >
               <ChevronLeftIcon className="w-4 h-4" />
-              Sebelumnya
+              {t.admin.users_prev_page}
             </Button>
             <span className="text-xs text-muted-foreground" data-testid="text-users-page-indicator">
-              Halaman {page} dari {totalPages}
+              {t.admin.users_page_indicator
+                .replace("{page}", String(page))
+                .replace("{total}", String(totalPages))}
             </span>
             <Button
               size="sm"
@@ -301,7 +305,7 @@ function AdminUsersContent() {
               data-testid="button-users-next-page"
               className="gap-1"
             >
-              Berikutnya
+              {t.admin.users_next_page}
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>

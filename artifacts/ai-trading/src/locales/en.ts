@@ -491,6 +491,10 @@ export const en = {
     broadcast_history_audience_tag: "Tag: {value}",
     broadcast_history_sender_unknown: "Unknown sender",
     load_more: "Load more",
+    users_total_registered: "{count} users registered",
+    users_page_indicator: "Page {page} of {total}",
+    users_prev_page: "Previous",
+    users_next_page: "Next",
   },
 };
 

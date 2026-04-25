@@ -493,5 +493,9 @@ export const id: Translations = {
     broadcast_history_audience_tag: "Tag: {value}",
     broadcast_history_sender_unknown: "Pengirim tidak diketahui",
     load_more: "Muat lebih banyak",
+    users_total_registered: "{count} pengguna terdaftar",
+    users_page_indicator: "Halaman {page} dari {total}",
+    users_prev_page: "Sebelumnya",
+    users_next_page: "Berikutnya",
   },
 };
