@@ -525,6 +525,11 @@ router.post("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res
 router.delete("/superadmin/users/:id", requireSuperAdmin, async (req: AuthRequest, res) => {
   const id = Number(req.params["id"]);
 
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "ID tidak valid" });
+    return;
+  }
+
   if (id === req.userId) {
     res.status(400).json({ error: "Tidak bisa menghapus akun sendiri" });
     return;

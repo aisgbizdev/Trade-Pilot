@@ -440,4 +440,14 @@ describe("DELETE /superadmin/users/:id", () => {
       .set(...authHeader(superAdmin));
     expect(res.status).toBe(404);
   });
+
+  it("does not crash on a non-numeric :id and returns a 4xx", async () => {
+    const res = await request(app)
+      .delete(`/api/superadmin/users/not-a-number`)
+      .set(...authHeader(superAdmin));
+    // Hard requirement: NEVER 5xx (no Postgres-leaked error). Either 400
+    // (param validation) or 404 (no row matched) is acceptable.
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+  });
 });
