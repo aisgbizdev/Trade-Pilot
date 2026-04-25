@@ -527,6 +527,8 @@ export interface UserWithStats {
 export interface UsersList {
   users: UserWithStats[];
   total: number;
+  page: number;
+  limit: number;
 }
 
 export type CreateUserBodyRole =

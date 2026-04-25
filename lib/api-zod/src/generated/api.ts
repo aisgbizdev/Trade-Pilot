@@ -703,6 +703,8 @@ export const GetAllUsersResponse = zod.object({
     }),
   ),
   total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
 });
 
 /**

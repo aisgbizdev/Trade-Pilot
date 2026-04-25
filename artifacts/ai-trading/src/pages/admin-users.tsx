@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { ChevronLeft, Plus, Trash2, RotateCcw, Shield, Loader2, Users, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, RotateCcw, Shield, Loader2, Users, Eye, EyeOff, Search, ChevronLeft as ChevronLeftIcon, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,18 @@ function AdminUsersContent() {
   const [newPassword, setNewPassword] = useState("");
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const [createForm, setCreateForm] = useState({
     email: "",
@@ -77,9 +89,10 @@ function AdminUsersContent() {
     securityAnswer: "",
   });
 
+  const queryParams = { search: search.trim() || undefined, page, limit: PAGE_SIZE };
   const { data, isLoading } = useGetAllUsers(
-    { limit: 200 },
-    { query: { queryKey: getGetAllUsersQueryKey({ limit: 200 }) } },
+    queryParams,
+    { query: { queryKey: getGetAllUsersQueryKey(queryParams) } },
   );
 
   const createUser = useCreateUser();
@@ -87,7 +100,16 @@ function AdminUsersContent() {
   const resetUserPassword = useResetUserPassword();
   const updateUserRole = useUpdateUserRole();
 
-  const users = (data as UsersList | undefined)?.users ?? [];
+  const usersList = data as UsersList | undefined;
+  const users = usersList?.users ?? [];
+  const total = usersList?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  useEffect(() => {
+    if (!isLoading && usersList && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [isLoading, usersList, page, totalPages]);
 
   const handleCreate = async () => {
     try {
@@ -151,7 +173,9 @@ function AdminUsersContent() {
             </button>
             <div>
               <h1 className="text-xl font-bold text-foreground">Manajemen User</h1>
-              <p className="text-xs text-muted-foreground">{users.length} pengguna terdaftar</p>
+              <p className="text-xs text-muted-foreground" data-testid="text-user-total">
+                {total} pengguna terdaftar
+              </p>
             </div>
           </div>
           <Button
@@ -165,6 +189,17 @@ function AdminUsersContent() {
           </Button>
         </div>
 
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Cari email atau nama…"
+            className="pl-9 h-9 text-sm"
+            data-testid="input-user-search"
+          />
+        </div>
+
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -172,7 +207,9 @@ function AdminUsersContent() {
         ) : users.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Users className="w-12 h-12 text-muted-foreground opacity-40 mb-3" />
-            <p className="text-sm text-muted-foreground">Belum ada pengguna</p>
+            <p className="text-sm text-muted-foreground">
+              {search.trim() ? "Tidak ada user yang cocok" : "Belum ada pengguna"}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -237,6 +274,36 @@ function AdminUsersContent() {
                 </div>
               </Card>
             ))}
+          </div>
+        )}
+
+        {!isLoading && total > PAGE_SIZE && (
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              data-testid="button-users-prev-page"
+              className="gap-1"
+            >
+              <ChevronLeftIcon className="w-4 h-4" />
+              Sebelumnya
+            </Button>
+            <span className="text-xs text-muted-foreground" data-testid="text-users-page-indicator">
+              Halaman {page} dari {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              data-testid="button-users-next-page"
+              className="gap-1"
+            >
+              Berikutnya
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
         )}
 

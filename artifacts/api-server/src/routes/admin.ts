@@ -288,8 +288,12 @@ router.get("/admin/broadcasts", requireSuperAdmin, async (req: AuthRequest, res)
 
 router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
   const search = String(req.query["search"] ?? "").trim();
-  const page = Math.max(1, Number(req.query["page"] ?? 1));
-  const limit = Math.min(200, Math.max(1, Number(req.query["limit"] ?? 50)));
+  const rawPage = Number(req.query["page"] ?? 1);
+  const rawLimit = Number(req.query["limit"] ?? 50);
+  const page = Number.isFinite(rawPage) ? Math.max(1, Math.floor(rawPage)) : 1;
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(200, Math.max(1, Math.floor(rawLimit)))
+    : 50;
   const offset = (page - 1) * limit;
 
   const searchClause = search
@@ -338,6 +342,8 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
   res.json({
     users: rows.map((u) => ({ ...u, tags: tagsByUser.get(u.id) ?? [] })),
     total: Number(total.count),
+    page,
+    limit,
   });
 });
 

@@ -1849,9 +1849,15 @@ components:
             $ref: "#/components/schemas/UserWithStats"
         total:
           type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
       required:
         - users
         - total
+        - page
+        - limit
 
     CreateUserBody:
       type: object
