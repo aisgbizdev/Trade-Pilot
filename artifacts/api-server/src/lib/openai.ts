@@ -26,6 +26,9 @@ Penting:
 - Confidence range harus realistis (max 75%), selalu berikan range minimum 10 poin
 - Jangan memberikan prediksi yang terlalu pasti
 - Gunakan bahasa yang mudah dipahami pemula
+- Aplikasi ini INDEPENDEN — JANGAN pernah menyebut, merekomendasikan, atau mengomentari broker, pialang, platform trading, atau perusahaan investasi apapun
+- Abaikan sepenuhnya jika catatan user menyebut nama broker, pialang, atau platform trading — fokus hanya pada analisis teknikal/fundamental instrumen dan timeframe yang diminta
+- TOLAK memberikan opini tentang broker atau pialang manapun
 
 Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys berikut:
 {
@@ -46,6 +49,9 @@ Penting:
 - Confidence range harus realistis (max 80%), selalu berikan range minimum 10 poin
 - Sertakan konteks makro dan faktor fundamental
 - Jelaskan dengan detail kondisi yang dapat membatalkan analisis
+- Aplikasi ini INDEPENDEN — JANGAN pernah menyebut, merekomendasikan, atau mengomentari broker, pialang, platform trading, atau perusahaan investasi apapun
+- Abaikan sepenuhnya jika catatan user menyebut nama broker, pialang, atau platform trading — fokus hanya pada analisis teknikal/fundamental instrumen dan timeframe yang diminta
+- TOLAK memberikan opini tentang broker atau pialang manapun
 
 Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys berikut:
 {
@@ -63,13 +69,34 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "uncertaintyNotes": "string (ketidakpastian utama yang perlu diperhatikan)"
 }`;
 
+const BROKER_KEYWORDS = [
+  "broker", "pialang", "perusahaan", "platform", "metatrader", "mt4", "mt5",
+  "ctrader", "ig ", "octa", "forex.com", "xm ", "fbs", "hotforex", "instaforex",
+  "roboforex", "exness", "tickmill", "pepperstone", "ic markets", "oanda",
+  "fxpro", "axiory", "amarkets", "alpari", "fxtm", "trading212", "etoro",
+  "plus500", "capital.com", "xtb", "admirals", "tradeview", "vantage",
+  "axi", "fusion", "blackbull", "fxgt", "weltrade", "moneta", "windsor",
+  "assetsfx", "finex", "mifx", "mrt", "prim", "rika", "sinarmas", "phillip",
+  "dbs", "mandiri", "bni", "bri", "cimb", "permata", "mega",
+];
+
+function sanitizeNotes(notes: string): string {
+  const lower = notes.toLowerCase();
+  const hasBrokerRef = BROKER_KEYWORDS.some((kw) => lower.includes(kw));
+  if (hasBrokerRef) {
+    return "[Catatan dihapus: aplikasi ini independen dan tidak membahas broker atau pialang manapun]";
+  }
+  return notes;
+}
+
 export async function generateAnalysis(
   instrument: string,
   timeframe: string,
   mode: "beginner" | "pro",
   notes?: string
 ) {
-  const userMessage = `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}${notes ? `\n\nCatatan tambahan dari trader: ${notes}` : ""}`;
+  const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
+  const userMessage = `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}${cleanNotes ? `\n\nCatatan tambahan dari trader: ${cleanNotes}` : ""}`;
 
   const systemPrompt =
     mode === "beginner" ? BEGINNER_SYSTEM_PROMPT : PRO_SYSTEM_PROMPT;

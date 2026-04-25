@@ -217,15 +217,21 @@ export default function AnalyzePage() {
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold text-foreground mb-2">Catatan (opsional)</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-foreground">Catatan (opsional)</h2>
+            </div>
             <Textarea
-              placeholder="Tambahkan konteks atau pertanyaan spesifik untuk AI..."
+              placeholder="Contoh: pasar sedang menunggu data NFP, ada sentimen risk-off, atau kondisi teknikal tertentu yang kamu amati..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               className="resize-none"
               data-testid="textarea-notes"
             />
+            <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
+              <span className="text-amber-500 mt-0.5">⚠</span>
+              Aplikasi ini independen. Pertanyaan tentang broker atau perusahaan pialang tidak akan diproses.
+            </p>
           </div>
 
           {finalInstrument && selectedTimeframe && (
