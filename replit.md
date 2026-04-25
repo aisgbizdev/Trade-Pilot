@@ -24,4 +24,50 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
+## Projects
+
+### AI Trading Assistant MVP (`artifacts/ai-trading`)
+Mobile-first PWA (React+Vite) for trading decision-support (NOT a signal generator).
+
+**Features:**
+- Custom auth: register/login with httpOnly cookies, security questions, remember me (30d/24h), show/hide password
+- Two user modes: Pemula (Beginner) and Pro
+- Dark/light mode toggle in header (deep navy #0f172a / white dominant)
+- Dashboard with statistics cards
+- AI Analysis page: GPT-4o analysis, timeframe validity badges, animated loading messages
+- Analysis detail with confidence bar, validity countdown, feedback system
+- History with filtering
+- Personal Analytics with recharts charts
+- Notification system (user/admin/super_admin roles)
+- Onboarding modal for new users (non-dismissable until completed)
+- Admin panel: stats, all analyses, broadcast, user CRUD
+- PWA: vite-plugin-pwa with web manifest and service worker
+
+**Colors:** Primary light `#1e3a5f`, Primary dark `#3b82f6`, Dark bg `#0f172a`
+**Language:** All UI text in Indonesian
+**Users:** DR (main user), Rere (AI agent name)
+
+### API Server (`artifacts/api-server`)
+Express backend serving all APIs.
+
+**Routes:**
+- `/api/auth/*` — register, login, logout, me, forgot-password (3-step via security question), profile, change-password, change-security-question
+- `/api/analyses/*` — CRUD + summary + recent-instruments + personal-analytics + feedback
+- `/api/notifications/*` — list, mark-read, mark-all-read, count
+- `/api/admin/*` — stats, all-analyses, broadcast, user CRUD (admin/super_admin only)
+
+**Key libs:** bcryptjs, openai (gpt-4o), cookie-parser, drizzle-orm, pg
+
+### Database (`lib/db`)
+PostgreSQL with Drizzle ORM. Tables: users, sessions, passwordResetTokens, analyses, feedback, notifications.
+
+**Enums:** user_role (user/admin/super_admin), user_mode (beginner/pro), theme_preference (light/dark/system), market_condition (bullish/bearish/sideways), confidence_level (low/medium/high/very_high).
+
+### API Spec + Codegen (`lib/api-spec`, `lib/api-client-react`, `lib/api-zod`)
+OpenAPI spec → Orval codegen → React Query hooks + Zod schemas.
+After codegen: fix `lib/api-zod/src/index.ts` to only export from `"./generated/api"` (avoids duplicate export error).
+
+## Timeframe Validity Periods
+- 1m: 15 min | 5m: 1h | 15m: 2.5h | 1h: 5h | 4h: 18h | 1D: 36h | 1W: 96h
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

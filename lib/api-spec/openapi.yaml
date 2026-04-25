@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI Trading Assistant API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: analyses
+    description: Analysis operations
+  - name: notifications
+    description: Notification operations
+  - name: admin
+    description: Admin operations
+  - name: superadmin
+    description: Super admin operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,685 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/forgot-password/question:
+    post:
+      operationId: getForgotPasswordQuestion
+      tags: [auth]
+      summary: Get security question for email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordQuestionBody"
+      responses:
+        "200":
+          description: Security question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityQuestionResponse"
+        "404":
+          description: Email not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/forgot-password/verify:
+    post:
+      operationId: verifySecurityAnswer
+      tags: [auth]
+      summary: Verify security answer and get reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifySecurityAnswerBody"
+      responses:
+        "200":
+          description: Answer verified, reset token returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetTokenResponse"
+        "401":
+          description: Wrong answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/forgot-password/reset:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordBody"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/password:
+    patch:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change own password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordBody"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Wrong current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/security-question:
+    patch:
+      operationId: changeSecurityQuestion
+      tags: [auth]
+      summary: Change security question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeSecurityQuestionBody"
+      responses:
+        "200":
+          description: Security question updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analyses:
+    post:
+      operationId: createAnalysis
+      tags: [analyses]
+      summary: Create new analysis (triggers AI)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAnalysisBody"
+      responses:
+        "201":
+          description: Analysis created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: AI service error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: listAnalyses
+      tags: [analyses]
+      summary: List user's analyses with filters
+      parameters:
+        - name: mode
+          in: query
+          schema:
+            type: string
+            enum: [beginner, pro]
+        - name: instrument
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of analyses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysesList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analyses/summary:
+    get:
+      operationId: getAnalysesSummary
+      tags: [analyses]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysesSummary"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analyses/recent-instruments:
+    get:
+      operationId: getRecentInstruments
+      tags: [analyses]
+      summary: Get 3 most recently analyzed instruments
+      responses:
+        "200":
+          description: Recent instruments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecentInstruments"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analyses/personal-analytics:
+    get:
+      operationId: getPersonalAnalytics
+      tags: [analyses]
+      summary: Get personal analytics data
+      responses:
+        "200":
+          description: Personal analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalAnalytics"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analyses/{id}:
+    get:
+      operationId: getAnalysis
+      tags: [analyses]
+      summary: Get single analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analysis detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analyses/{id}/feedback:
+    post:
+      operationId: submitFeedback
+      tags: [analyses]
+      summary: Submit feedback for analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackBody"
+      responses:
+        "201":
+          description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: Get notifications for current user
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark single notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Notification marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /notifications/read-all:
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin statistics
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/analyses:
+    get:
+      operationId: getAllAnalyses
+      tags: [admin]
+      summary: Get all analyses (admin only)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: All analyses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysesList"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/notifications:
+    post:
+      operationId: broadcastNotification
+      tags: [admin]
+      summary: Broadcast notification to all users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BroadcastNotificationBody"
+      responses:
+        "201":
+          description: Notification sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /superadmin/users:
+    get:
+      operationId: getAllUsers
+      tags: [superadmin]
+      summary: Get all users (superadmin only)
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsersList"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createUser
+      tags: [superadmin]
+      summary: Create new user (superadmin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /superadmin/users/{id}:
+    delete:
+      operationId: deleteUser
+      tags: [superadmin]
+      summary: Delete user (superadmin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /superadmin/users/{id}/password:
+    patch:
+      operationId: resetUserPassword
+      tags: [superadmin]
+      summary: Reset user password (superadmin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetUserPasswordBody"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /superadmin/users/{id}/role:
+    patch:
+      operationId: updateUserRole
+      tags: [superadmin]
+      summary: Update user role (superadmin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRoleBody"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +722,655 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+        selectedMode:
+          type: string
+          enum: [beginner, pro]
+        themePreference:
+          type: string
+          enum: [light, dark]
+        securityQuestion:
+          type: string
+        onboardingCompleted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - displayName
+        - role
+        - selectedMode
+        - themePreference
+        - onboardingCompleted
+        - createdAt
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        message:
+          type: string
+      required:
+        - user
+        - message
+
+    RegisterBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        displayName:
+          type: string
+        selectedMode:
+          type: string
+          enum: [beginner, pro]
+          default: beginner
+        securityQuestion:
+          type: string
+        securityAnswer:
+          type: string
+        rememberMe:
+          type: boolean
+          default: false
+      required:
+        - email
+        - password
+        - displayName
+        - securityQuestion
+        - securityAnswer
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        rememberMe:
+          type: boolean
+          default: false
+      required:
+        - email
+        - password
+
+    ForgotPasswordQuestionBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+
+    SecurityQuestionResponse:
+      type: object
+      properties:
+        securityQuestion:
+          type: string
+        email:
+          type: string
+      required:
+        - securityQuestion
+        - email
+
+    VerifySecurityAnswerBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        securityAnswer:
+          type: string
+      required:
+        - email
+        - securityAnswer
+
+    ResetTokenResponse:
+      type: object
+      properties:
+        resetToken:
+          type: string
+        message:
+          type: string
+      required:
+        - resetToken
+        - message
+
+    ResetPasswordBody:
+      type: object
+      properties:
+        resetToken:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+      required:
+        - resetToken
+        - newPassword
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+        selectedMode:
+          type: string
+          enum: [beginner, pro]
+        themePreference:
+          type: string
+          enum: [light, dark]
+        onboardingCompleted:
+          type: boolean
+
+    ChangePasswordBody:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+      required:
+        - currentPassword
+        - newPassword
+
+    ChangeSecurityQuestionBody:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        securityQuestion:
+          type: string
+        securityAnswer:
+          type: string
+      required:
+        - currentPassword
+        - securityQuestion
+        - securityAnswer
+
+    Analysis:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        instrument:
+          type: string
+        timeframe:
+          type: string
+        userInputContext:
+          type: string
+          nullable: true
+        mode:
+          type: string
+          enum: [beginner, pro]
+        validUntil:
+          type: string
+          format: date-time
+        marketCondition:
+          type: string
+          nullable: true
+        riskLevel:
+          type: string
+          nullable: true
+        confidenceMin:
+          type: integer
+          nullable: true
+        confidenceMax:
+          type: integer
+          nullable: true
+        mainScenario:
+          type: string
+          nullable: true
+        alternativeScenario:
+          type: string
+          nullable: true
+        whyReason:
+          type: string
+          nullable: true
+        failureConditions:
+          type: string
+          nullable: true
+        baseCase:
+          type: string
+          nullable: true
+        bullishScenario:
+          type: string
+          nullable: true
+        bearishScenario:
+          type: string
+          nullable: true
+        keyDriversTechnical:
+          type: string
+          nullable: true
+        keyDriversFundamental:
+          type: string
+          nullable: true
+        marketContext:
+          type: string
+          nullable: true
+        invalidationConditions:
+          type: string
+          nullable: true
+        uncertaintyNotes:
+          type: string
+          nullable: true
+        feedback:
+          $ref: "#/components/schemas/Feedback"
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - instrument
+        - timeframe
+        - mode
+        - validUntil
+        - createdAt
+
+    AnalysesList:
+      type: object
+      properties:
+        analyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Analysis"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - analyses
+        - total
+        - page
+        - limit
+
+    CreateAnalysisBody:
+      type: object
+      properties:
+        instrument:
+          type: string
+        timeframe:
+          type: string
+          enum: [1m, 5m, 15m, 1h, 4h, 1D, 1W]
+        userInputContext:
+          type: string
+        mode:
+          type: string
+          enum: [beginner, pro]
+      required:
+        - instrument
+        - timeframe
+        - mode
+
+    AnalysesSummary:
+      type: object
+      properties:
+        totalAnalyses:
+          type: integer
+        beginnerCount:
+          type: integer
+        proCount:
+          type: integer
+        avgConfidenceMin:
+          type: number
+          nullable: true
+        avgConfidenceMax:
+          type: number
+          nullable: true
+        recentAnalyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Analysis"
+      required:
+        - totalAnalyses
+        - beginnerCount
+        - proCount
+        - recentAnalyses
+
+    RecentInstruments:
+      type: object
+      properties:
+        instruments:
+          type: array
+          items:
+            type: object
+            properties:
+              instrument:
+                type: string
+              lastAnalyzedAt:
+                type: string
+                format: date-time
+              mode:
+                type: string
+            required:
+              - instrument
+              - lastAnalyzedAt
+              - mode
+      required:
+        - instruments
+
+    PersonalAnalytics:
+      type: object
+      properties:
+        totalAllTime:
+          type: integer
+        totalThisMonth:
+          type: integer
+        totalThisWeek:
+          type: integer
+        topInstruments:
+          type: array
+          items:
+            type: object
+            properties:
+              instrument:
+                type: string
+              count:
+                type: integer
+            required:
+              - instrument
+              - count
+        dominantMode:
+          type: string
+          nullable: true
+        accuracyRate:
+          type: number
+          nullable: true
+        feedbackCount:
+          type: integer
+        weeklyData:
+          type: array
+          items:
+            type: object
+            properties:
+              week:
+                type: string
+              count:
+                type: integer
+            required:
+              - week
+              - count
+      required:
+        - totalAllTime
+        - totalThisMonth
+        - totalThisWeek
+        - topInstruments
+        - feedbackCount
+        - weeklyData
+
+    Feedback:
+      type: object
+      properties:
+        id:
+          type: integer
+        analysisId:
+          type: integer
+        feedbackType:
+          type: string
+          enum: [useful, not_useful]
+        outcome:
+          type: string
+          enum: [correct, wrong, unknown]
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisId
+        - feedbackType
+        - createdAt
+
+    FeedbackBody:
+      type: object
+      properties:
+        feedbackType:
+          type: string
+          enum: [useful, not_useful]
+        outcome:
+          type: string
+          enum: [correct, wrong, unknown]
+          nullable: true
+        note:
+          type: string
+          nullable: true
+      required:
+        - feedbackType
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+          nullable: true
+        targetRole:
+          type: string
+          nullable: true
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum: [info, warning, error]
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - message
+        - type
+        - createdAt
+
+    NotificationsList:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        unreadCount:
+          type: integer
+      required:
+        - notifications
+        - unreadCount
+
+    BroadcastNotificationBody:
+      type: object
+      properties:
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum: [info, warning, error]
+          default: info
+        targetRole:
+          type: string
+          enum: [user, admin, super_admin]
+          nullable: true
+      required:
+        - title
+        - message
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsersToday:
+          type: integer
+        totalAnalysesToday:
+          type: integer
+        totalAnalysesThisWeek:
+          type: integer
+        totalAnalysesThisMonth:
+          type: integer
+        totalUsers:
+          type: integer
+        instrumentBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              instrument:
+                type: string
+              count:
+                type: integer
+            required:
+              - instrument
+              - count
+        modeBreakdown:
+          type: object
+          properties:
+            beginner:
+              type: integer
+            pro:
+              type: integer
+          required:
+            - beginner
+            - pro
+      required:
+        - totalUsersToday
+        - totalAnalysesToday
+        - totalAnalysesThisWeek
+        - totalAnalysesThisMonth
+        - totalUsers
+        - instrumentBreakdown
+        - modeBreakdown
+
+    UserWithStats:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+        selectedMode:
+          type: string
+          enum: [beginner, pro]
+        analysisCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - displayName
+        - role
+        - selectedMode
+        - analysisCount
+        - createdAt
+
+    UsersList:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserWithStats"
+        total:
+          type: integer
+      required:
+        - users
+        - total
+
+    CreateUserBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+          default: user
+        securityQuestion:
+          type: string
+          default: "Nama hewan peliharaan pertama kamu?"
+        securityAnswer:
+          type: string
+          default: "default"
+      required:
+        - email
+        - password
+        - displayName
+
+    ResetUserPasswordBody:
+      type: object
+      properties:
+        newPassword:
+          type: string
+          minLength: 6
+      required:
+        - newPassword
+
+    UpdateUserRoleBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+      required:
+        - role

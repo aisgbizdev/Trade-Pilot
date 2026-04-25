@@ -1,0 +1,180 @@
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart3, TrendingUp, Loader2, Info } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Layout } from "@/components/layout";
+import { useLocation } from "wouter";
+import {
+  useGetPersonalAnalytics,
+  getGetPersonalAnalyticsQueryKey,
+} from "@workspace/api-client-react";
+
+export default function AnalyticsPage() {
+  const [, setLocation] = useLocation();
+  const { data, isLoading } = useGetPersonalAnalytics({
+    query: { queryKey: getGetPersonalAnalyticsQueryKey() },
+  });
+
+  const analytics = data as any;
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!analytics || analytics.total === 0) {
+    return (
+      <Layout>
+        <div className="px-4 py-5">
+          <h1 className="text-xl font-bold text-foreground mb-1">Statistik Saya</h1>
+          <p className="text-xs text-muted-foreground mb-8">Statistik analisis personal kamu</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <BarChart3 className="w-12 h-12 text-muted-foreground opacity-40 mb-3" />
+            <p className="text-sm font-medium text-foreground">Belum ada data statistik</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Lakukan analisis pertama untuk melihat statistik kamu
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => setLocation("/analyze")}
+              data-testid="button-start-analysis"
+            >
+              Mulai Analisis
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="px-4 py-5 space-y-5">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Statistik Saya</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Statistik analisis personal kamu</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Semua Waktu", value: analytics.total },
+            { label: "Bulan Ini", value: analytics.thisMonth },
+            { label: "Minggu Ini", value: analytics.thisWeek },
+          ].map(({ label, value }) => (
+            <Card key={label} className="p-3 text-center">
+              <div className="text-2xl font-bold text-primary" data-testid={`stat-${label}`}>
+                {value}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
+            </Card>
+          ))}
+        </div>
+
+        {analytics.topInstruments?.length > 0 && (
+          <Card className="p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Instrumen Teratas</h3>
+            <div className="space-y-2">
+              {analytics.topInstruments.map((item: any, i: number) => (
+                <div key={item.instrument} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-muted-foreground w-5">
+                      #{i + 1}
+                    </span>
+                    <span className="text-sm font-medium text-foreground" data-testid={`text-instrument-${i}`}>
+                      {item.instrument}
+                    </span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {item.count}x
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="p-4">
+            <h3 className="text-xs text-muted-foreground mb-1">Mode Dominan</h3>
+            <p className="text-base font-bold text-foreground capitalize" data-testid="text-dominant-mode">
+              {analytics.dominantMode === "beginner" ? "Pemula" : "Pro"}
+            </p>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center gap-1 mb-1">
+              <h3 className="text-xs text-muted-foreground">Akurasi Diri</h3>
+              <Info className="w-3 h-3 text-muted-foreground" />
+            </div>
+            {analytics.accuracyRate !== null ? (
+              <p className="text-base font-bold text-foreground" data-testid="text-accuracy-rate">
+                {analytics.accuracyRate}%
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Belum ada data</p>
+            )}
+          </Card>
+        </div>
+
+        {analytics.accuracyRate !== null && (
+          <Card className="p-3 bg-muted/50 border-dashed">
+            <div className="flex gap-2">
+              <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Akurasi dihitung berdasarkan penilaian kamu sendiri melalui fitur feedback. 
+                Ini bukan ukuran objektif, hanya refleksi dari pengalaman kamu.
+              </p>
+            </div>
+          </Card>
+        )}
+
+        {analytics.weekly?.length > 0 && (
+          <Card className="p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Analisis 7 Minggu Terakhir</h3>
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={analytics.weekly} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <XAxis
+                  dataKey="week"
+                  tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                  formatter={(value: number) => [value, "Analisis"]}
+                />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {analytics.weekly.map((_: any, index: number) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={index === analytics.weekly.length - 1 ? "hsl(var(--primary))" : "hsl(var(--muted))"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
+      </div>
+    </Layout>
+  );
+}

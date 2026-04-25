@@ -1,0 +1,277 @@
+import { Router } from "express";
+import { db } from "../lib/db";
+import { analyses, feedback } from "@workspace/db/schema";
+import { eq, and, desc, count, sql } from "drizzle-orm";
+import { requireAuth, AuthRequest } from "../middleware/auth";
+import { generateAnalysis, getValidUntil } from "../lib/openai";
+
+const router = Router();
+
+router.get("/analyses/summary", requireAuth, async (req: AuthRequest, res) => {
+  const [result] = await db
+    .select({
+      total: count(analyses.id),
+      beginnerCount: sql<number>`sum(case when ${analyses.mode} = 'beginner' then 1 else 0 end)`,
+      proCount: sql<number>`sum(case when ${analyses.mode} = 'pro' then 1 else 0 end)`,
+      avgConfidenceMin: sql<number>`avg(${analyses.confidenceMin})`,
+      avgConfidenceMax: sql<number>`avg(${analyses.confidenceMax})`,
+    })
+    .from(analyses)
+    .where(eq(analyses.userId, req.userId!));
+
+  res.json({
+    total: Number(result.total),
+    beginnerCount: Number(result.beginnerCount ?? 0),
+    proCount: Number(result.proCount ?? 0),
+    avgConfidence:
+      result.avgConfidenceMin && result.avgConfidenceMax
+        ? Math.round(
+            (Number(result.avgConfidenceMin) + Number(result.avgConfidenceMax)) / 2
+          )
+        : null,
+  });
+});
+
+router.get("/analyses/recent-instruments", requireAuth, async (req: AuthRequest, res) => {
+  const rows = await db
+    .selectDistinct({ instrument: analyses.instrument, createdAt: analyses.createdAt })
+    .from(analyses)
+    .where(eq(analyses.userId, req.userId!))
+    .orderBy(desc(analyses.createdAt))
+    .limit(3);
+
+  const seen = new Set<string>();
+  const unique = rows.filter((r) => {
+    if (seen.has(r.instrument)) return false;
+    seen.add(r.instrument);
+    return true;
+  });
+
+  res.json({ instruments: unique.slice(0, 3).map((r) => r.instrument) });
+});
+
+router.get("/analyses/personal-analytics", requireAuth, async (req: AuthRequest, res) => {
+  const all = await db
+    .select({
+      id: analyses.id,
+      mode: analyses.mode,
+      instrument: analyses.instrument,
+      createdAt: analyses.createdAt,
+    })
+    .from(analyses)
+    .where(eq(analyses.userId, req.userId!))
+    .orderBy(desc(analyses.createdAt));
+
+  const now = new Date();
+  const thisWeekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const total = all.length;
+  const thisMonth = all.filter((a) => new Date(a.createdAt) >= thisMonthStart).length;
+  const thisWeek = all.filter((a) => new Date(a.createdAt) >= thisWeekStart).length;
+
+  const instrumentCount: Record<string, number> = {};
+  const modeCount: Record<string, number> = {};
+
+  for (const a of all) {
+    instrumentCount[a.instrument] = (instrumentCount[a.instrument] ?? 0) + 1;
+    modeCount[a.mode] = (modeCount[a.mode] ?? 0) + 1;
+  }
+
+  const topInstruments = Object.entries(instrumentCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([instrument, count]) => ({ instrument, count }));
+
+  const dominantMode =
+    (modeCount["pro"] ?? 0) > (modeCount["beginner"] ?? 0) ? "pro" : "beginner";
+
+  const feedbackRows = await db
+    .select({ feedbackType: feedback.feedbackType, outcome: feedback.outcome })
+    .from(feedback)
+    .where(eq(feedback.userId, req.userId!));
+
+  const totalFeedback = feedbackRows.length;
+  const correctCount = feedbackRows.filter((f) => f.outcome === "correct").length;
+  const accuracyRate =
+    totalFeedback > 0 ? Math.round((correctCount / totalFeedback) * 100) : null;
+
+  const weekly: { week: string; count: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const weekStart = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+    const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+    const c = all.filter(
+      (a) =>
+        new Date(a.createdAt) >= weekStart && new Date(a.createdAt) < weekEnd
+    ).length;
+    weekly.push({
+      week: `${weekStart.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}`,
+      count: c,
+    });
+  }
+
+  res.json({
+    total,
+    thisMonth,
+    thisWeek,
+    topInstruments,
+    dominantMode,
+    accuracyRate,
+    weekly,
+  });
+});
+
+router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
+  const { instrument, timeframe, mode, notes } = req.body;
+
+  if (!instrument || !timeframe || !mode) {
+    res.status(400).json({ error: "Instrumen, timeframe, dan mode wajib diisi" });
+    return;
+  }
+
+  if (!["beginner", "pro"].includes(mode)) {
+    res.status(400).json({ error: "Mode tidak valid" });
+    return;
+  }
+
+  const aiResult = await generateAnalysis(instrument, timeframe, mode, notes);
+  const validUntil = getValidUntil(timeframe);
+
+  const [analysis] = await db
+    .insert(analyses)
+    .values({
+      userId: req.userId!,
+      instrument,
+      timeframe,
+      mode,
+      notes,
+      validUntil,
+      marketCondition: aiResult.marketCondition,
+      riskLevel: aiResult.riskLevel,
+      confidenceMin: aiResult.confidenceMin,
+      confidenceMax: aiResult.confidenceMax,
+      mainScenario: aiResult.mainScenario,
+      alternativeScenario: aiResult.alternativeScenario,
+      whyReason: aiResult.whyReason,
+      failureConditions: aiResult.failureConditions,
+      baseCase: aiResult.baseCase,
+      bullishScenario: aiResult.bullishScenario,
+      bearishScenario: aiResult.bearishScenario,
+      keyDriversTechnical: aiResult.keyDriversTechnical,
+      keyDriversFundamental: aiResult.keyDriversFundamental,
+      marketContext: aiResult.marketContext,
+      invalidationConditions: aiResult.invalidationConditions,
+      uncertaintyNotes: aiResult.uncertaintyNotes,
+    })
+    .returning();
+
+  res.status(201).json(analysis);
+});
+
+router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
+  const page = Number(req.query["page"] ?? 1);
+  const limit = Number(req.query["limit"] ?? 20);
+  const offset = (page - 1) * limit;
+
+  const rows = await db
+    .select()
+    .from(analyses)
+    .where(eq(analyses.userId, req.userId!))
+    .orderBy(desc(analyses.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const [total] = await db
+    .select({ count: count(analyses.id) })
+    .from(analyses)
+    .where(eq(analyses.userId, req.userId!));
+
+  res.json({
+    analyses: rows,
+    total: Number(total.count),
+    page,
+    limit,
+  });
+});
+
+router.get("/analyses/:id", requireAuth, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+
+  const [analysis] = await db
+    .select()
+    .from(analyses)
+    .where(and(eq(analyses.id, id), eq(analyses.userId, req.userId!)))
+    .limit(1);
+
+  if (!analysis) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+
+  const [fb] = await db
+    .select()
+    .from(feedback)
+    .where(
+      and(eq(feedback.analysisId, id), eq(feedback.userId, req.userId!))
+    )
+    .limit(1);
+
+  res.json({ ...analysis, feedback: fb ?? null });
+});
+
+router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res) => {
+  const analysisId = Number(req.params["id"]);
+  const { feedbackType, outcome, note } = req.body;
+
+  if (!feedbackType || !["useful", "not_useful"].includes(feedbackType)) {
+    res.status(400).json({ error: "Feedback type tidak valid" });
+    return;
+  }
+
+  const [analysis] = await db
+    .select({ id: analyses.id })
+    .from(analyses)
+    .where(and(eq(analyses.id, analysisId), eq(analyses.userId, req.userId!)))
+    .limit(1);
+
+  if (!analysis) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+
+  const existing = await db
+    .select({ id: feedback.id })
+    .from(feedback)
+    .where(
+      and(
+        eq(feedback.analysisId, analysisId),
+        eq(feedback.userId, req.userId!)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    const [updated] = await db
+      .update(feedback)
+      .set({ feedbackType, outcome: outcome ?? null, note: note ?? null })
+      .where(eq(feedback.id, existing[0].id))
+      .returning();
+    res.json(updated);
+    return;
+  }
+
+  const [newFeedback] = await db
+    .insert(feedback)
+    .values({
+      analysisId,
+      userId: req.userId!,
+      feedbackType,
+      outcome: outcome ?? null,
+      note: note ?? null,
+    })
+    .returning();
+
+  res.status(201).json(newFeedback);
+});
+
+export default router;
