@@ -70,6 +70,17 @@ export default function LandingPage() {
 
       <main className="flex-1 max-w-lg mx-auto w-full">
 
+        <section className="bg-slate-950 overflow-hidden py-2.5 border-b border-white/10">
+          <div className="flex gap-6 ticker-scroll whitespace-nowrap w-max">
+            {instruments.map((inst, i) => (
+              <span key={i} className="text-xs font-mono text-slate-200 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+                {inst}
+              </span>
+            ))}
+          </div>
+        </section>
+
         <section className="hero-gradient px-5 pt-14 pb-10 text-center relative overflow-hidden">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-8 left-1/2 -translate-x-1/2 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
@@ -120,17 +131,6 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="bg-slate-900/50 overflow-hidden py-3 border-y border-white/5">
-          <div className="flex gap-6 ticker-scroll whitespace-nowrap w-max">
-            {instruments.map((inst, i) => (
-              <span key={i} className="text-xs font-mono text-slate-500 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500/60 inline-block" />
-                {inst}
-              </span>
-            ))}
           </div>
         </section>
 
