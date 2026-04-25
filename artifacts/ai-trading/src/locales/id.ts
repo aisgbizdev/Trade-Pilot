@@ -17,6 +17,8 @@ export const id: Translations = {
     confidence: "keyakinan",
     by: "by",
     data_from: "Data dari Newsmaker.id",
+    all: "Semua",
+    clear_filters: "Hapus filter",
   },
   nav: {
     dashboard: "Dashboard",

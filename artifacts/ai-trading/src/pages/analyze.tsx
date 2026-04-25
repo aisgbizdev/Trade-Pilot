@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
-import { useCreateAnalysis } from "@workspace/api-client-react";
+import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, type RecentInstruments } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
@@ -79,6 +79,11 @@ export default function AnalyzePage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isLoading, t]);
 
+  const { data: recentData } = useGetRecentInstruments({
+    query: { queryKey: getGetRecentInstrumentsQueryKey(), staleTime: 60_000 },
+  });
+  const recentInstruments = (recentData as RecentInstruments | undefined)?.instruments?.slice(0, 3) ?? [];
+
   const finalInstrument = customInstrument.trim() || selectedInstrument;
 
   const handleSubmit = async () => {
@@ -134,6 +139,30 @@ export default function AnalyzePage() {
         </div>
 
         <div className="space-y-5">
+          {recentInstruments.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-2">{t.dashboard.last_analyzed}</h2>
+              <div className="flex gap-2 flex-wrap">
+                {recentInstruments.map((r) => (
+                  <button
+                    key={r.instrument}
+                    onClick={() => { setSelectedInstrument(r.instrument); setCustomInstrument(""); }}
+                    data-testid={`button-recent-${r.instrument}`}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all flex items-center gap-1.5",
+                      selectedInstrument === r.instrument && !customInstrument
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "bg-background border-border text-foreground hover:border-primary/50"
+                    )}
+                  >
+                    <span>{r.instrument}</span>
+                    <span className="text-muted-foreground text-[10px]">{r.mode === "beginner" ? t.common.beginner : t.common.pro}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
             <div className="flex gap-2 mb-3">

@@ -62,6 +62,7 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -73,7 +74,8 @@ export const analyses = pgTable("analyses", {
   instrument: text("instrument").notNull(),
   timeframe: text("timeframe").notNull(),
   mode: modeEnum("mode").notNull(),
-  notes: text("notes"),
+  userInputContext: text("user_input_context"),
+  rawAiOutput: text("raw_ai_output"),
   validUntil: timestamp("valid_until").notNull(),
   marketCondition: marketConditionEnum("market_condition").notNull(),
   riskLevel: riskLevelEnum("risk_level").notNull(),
@@ -110,9 +112,8 @@ export const feedback = pgTable("feedback", {
 
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  targetRole: roleEnum("target_role"),
   title: text("title").notNull(),
   message: text("message").notNull(),
   type: notificationTypeEnum("type").notNull().default("info"),

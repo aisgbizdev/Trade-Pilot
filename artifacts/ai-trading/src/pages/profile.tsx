@@ -39,10 +39,12 @@ export default function ProfilePage() {
   const [showSecuritySection, setShowSecuritySection] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   const [secCurrentPassword, setSecCurrentPassword] = useState("");
+  const [showSecCurrentPassword, setShowSecCurrentPassword] = useState(false);
   const [secQuestion, setSecQuestion] = useState("");
   const [secAnswer, setSecAnswer] = useState("");
   const [showSecAnswer, setShowSecAnswer] = useState(false);
@@ -202,13 +204,23 @@ export default function ProfilePage() {
 
           {showPasswordSection && (
             <div className="space-y-3 pt-1 border-t border-border">
-              <Input
-                type="password"
-                placeholder={t.profile.current_password_placeholder}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                data-testid="input-current-password"
-              />
+              <div className="relative">
+                <Input
+                  type={showCurrentPassword ? "text" : "password"}
+                  placeholder={t.profile.current_password_placeholder}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  data-testid="input-current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  data-testid="button-toggle-current-password"
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               <div className="relative">
                 <Input
                   type={showNewPassword ? "text" : "password"}
@@ -255,13 +267,23 @@ export default function ProfilePage() {
 
           {showSecuritySection && (
             <div className="space-y-3 pt-1 border-t border-border">
-              <Input
-                type="password"
-                placeholder={t.profile.current_password_placeholder}
-                value={secCurrentPassword}
-                onChange={(e) => setSecCurrentPassword(e.target.value)}
-                data-testid="input-sec-current-password"
-              />
+              <div className="relative">
+                <Input
+                  type={showSecCurrentPassword ? "text" : "password"}
+                  placeholder={t.profile.current_password_placeholder}
+                  value={secCurrentPassword}
+                  onChange={(e) => setSecCurrentPassword(e.target.value)}
+                  data-testid="input-sec-current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecCurrentPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  data-testid="button-toggle-sec-current-password"
+                >
+                  {showSecCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               <select
                 className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
                 value={secQuestion}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Plus, Trash2, RotateCcw, Shield, Loader2, Users } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, RotateCcw, Shield, Loader2, Users, Eye, EyeOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
 };
 
-const ROLE_BADGE: Record<string, string> = {
+const ROLE_BADGE: Record<string, "secondary" | "outline" | "destructive"> = {
   user: "secondary",
   admin: "outline",
   super_admin: "destructive",
@@ -62,6 +62,8 @@ function AdminUsersContent() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [resetPasswordId, setResetPasswordId] = useState<number | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   const [createForm, setCreateForm] = useState({
     email: "",
@@ -178,7 +180,7 @@ function AdminUsersContent() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold text-foreground">{u.displayName}</span>
                       <Badge
-                        variant={(ROLE_BADGE[u.role] ?? "secondary") as any}
+                        variant={ROLE_BADGE[u.role] ?? "secondary"}
                         className="text-[10px] px-1.5 py-0"
                       >
                         {ROLE_LABELS[u.role]}
@@ -242,13 +244,23 @@ function AdminUsersContent() {
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 data-testid="input-create-email"
               />
-              <Input
-                type="password"
-                placeholder="Password (min 6 karakter)"
-                value={createForm.password}
-                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                data-testid="input-create-password"
-              />
+              <div className="relative">
+                <Input
+                  type={showCreatePassword ? "text" : "password"}
+                  placeholder="Password (min 6 karakter)"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  data-testid="input-create-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCreatePassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  data-testid="button-toggle-create-password"
+                >
+                  {showCreatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               <Select
                 value={createForm.role}
                 onValueChange={(v) => setCreateForm({ ...createForm, role: v })}
@@ -306,13 +318,23 @@ function AdminUsersContent() {
             <DialogHeader>
               <DialogTitle>Reset Password</DialogTitle>
             </DialogHeader>
-            <Input
-              type="password"
-              placeholder="Password baru (min 6 karakter)"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              data-testid="input-new-reset-password"
-            />
+            <div className="relative">
+              <Input
+                type={showResetPassword ? "text" : "password"}
+                placeholder="Password baru (min 6 karakter)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                data-testid="input-new-reset-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowResetPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                data-testid="button-toggle-reset-password"
+              >
+                {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
             <Button
               className="w-full"
               onClick={() => resetPasswordId && handleResetPassword(resetPasswordId)}

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../lib/db";
 import { analyses, feedback } from "@workspace/db/schema";
-import { eq, and, desc, count, sql } from "drizzle-orm";
+import { eq, and, desc, count, sql, gte, lte, ilike } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { generateAnalysis, getValidUntil, type BeginnerAIOutput, type ProAIOutput } from "../lib/openai";
 import { getIndicators, formatIndicatorsForPrompt } from "../lib/historical";
@@ -190,7 +190,8 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       instrument,
       timeframe,
       mode: typedMode,
-      notes: userInputContext ?? null,
+      userInputContext: userInputContext ?? null,
+      rawAiOutput: JSON.stringify(aiResult),
       validUntil,
       marketCondition: aiResult.marketCondition,
       riskLevel: aiResult.riskLevel,
@@ -207,11 +208,33 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const page = Number(req.query["page"] ?? 1);
   const limit = Number(req.query["limit"] ?? 20);
   const offset = (page - 1) * limit;
+  const filterMode = req.query["mode"] as string | undefined;
+  const filterInstrument = req.query["instrument"] as string | undefined;
+  const filterFrom = req.query["from"] as string | undefined;
+  const filterTo = req.query["to"] as string | undefined;
+
+  const conditions = [eq(analyses.userId, req.userId!)];
+  if (filterMode === "beginner" || filterMode === "pro") {
+    conditions.push(eq(analyses.mode, filterMode));
+  }
+  if (filterInstrument) {
+    conditions.push(ilike(analyses.instrument, `%${filterInstrument}%`));
+  }
+  if (filterFrom) {
+    conditions.push(gte(analyses.createdAt, new Date(filterFrom)));
+  }
+  if (filterTo) {
+    const toDate = new Date(filterTo);
+    toDate.setHours(23, 59, 59, 999);
+    conditions.push(lte(analyses.createdAt, toDate));
+  }
+
+  const whereClause = and(...conditions);
 
   const rows = await db
     .select()
     .from(analyses)
-    .where(eq(analyses.userId, req.userId!))
+    .where(whereClause)
     .orderBy(desc(analyses.createdAt))
     .limit(limit)
     .offset(offset);
@@ -219,7 +242,7 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const [total] = await db
     .select({ count: count(analyses.id) })
     .from(analyses)
-    .where(eq(analyses.userId, req.userId!));
+    .where(whereClause);
 
   res.json({
     analyses: rows,

@@ -128,6 +128,7 @@ router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) 
   await db.insert(notifications).values(
     targetUsers.map((u) => ({
       userId: u.id,
+      targetRole: (targetRole && targetRole !== "all") ? targetRole : null,
       title,
       message,
       type: type ?? "info",
@@ -231,7 +232,7 @@ router.delete("/superadmin/users/:id", requireSuperAdmin, async (req: AuthReques
   res.json({ message: "User berhasil dihapus" });
 });
 
-router.post("/superadmin/users/:id/password", requireSuperAdmin, async (req: AuthRequest, res) => {
+router.patch("/superadmin/users/:id/password", requireSuperAdmin, async (req: AuthRequest, res) => {
   const id = Number(req.params["id"]);
   const { newPassword } = req.body;
 

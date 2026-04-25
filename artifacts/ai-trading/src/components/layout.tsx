@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
-import { useGetNotifications, getGetNotificationsQueryKey, type NotificationsList } from "@workspace/api-client-react";
+import { useGetNotifications, getGetNotificationsQueryKey, useUpdateProfile, type NotificationsList } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
@@ -14,6 +14,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
+  const updateProfile = useUpdateProfile();
   const { data: notifData } = useGetNotifications(
     { unreadOnly: true },
     {
@@ -76,7 +77,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <button
             data-testid="button-theme-toggle"
             aria-label={theme === "dark" ? t.profile.light_mode : t.profile.dark_mode}
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => {
+              const next = theme === "dark" ? "light" : "dark";
+              setTheme(next);
+              if (user) {
+                updateProfile.mutate({ data: { themePreference: next } });
+              }
+            }}
             className="p-2 rounded-xl hover:bg-muted transition-colors"
           >
             {theme === "dark"

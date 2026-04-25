@@ -301,13 +301,8 @@ router.post("/auth/forgot-password/question", async (req, res) => {
     .where(eq(users.email, email.toLowerCase()))
     .limit(1);
 
-  if (!user) {
-    res.status(404).json({ error: "Email tidak ditemukan" });
-    return;
-  }
-
   res.json({
-    securityQuestion: user.securityQuestion,
+    securityQuestion: user ? user.securityQuestion : SECURITY_QUESTIONS[0],
     email: email.toLowerCase(),
   });
 });

@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Clock, TrendingUp, Loader2 } from "lucide-react";
+import { Clock, TrendingUp, Loader2, Filter, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
-import { useListAnalyses, getListAnalysesQueryKey, type AnalysesList } from "@workspace/api-client-react";
+import { useListAnalyses, getListAnalysesQueryKey, type AnalysesList, type ListAnalysesMode } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+
+const ALL_INSTRUMENTS = [
+  "XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY",
+  "AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR",
+];
 
 export default function HistoryPage() {
   const { t, lang } = useTranslation();
@@ -17,15 +22,34 @@ export default function HistoryPage() {
   const [page, setPage] = useState(1);
   const limit = 20;
 
+  const [filterMode, setFilterMode] = useState<ListAnalysesMode | "">("");
+  const [filterInstrument, setFilterInstrument] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+
+  const hasActiveFilters = filterMode !== "" || filterInstrument !== "";
+
+  const params = {
+    page,
+    limit,
+    ...(filterMode ? { mode: filterMode } : {}),
+    ...(filterInstrument ? { instrument: filterInstrument } : {}),
+  };
+
   const { data, isLoading } = useListAnalyses(
-    { page, limit },
-    { query: { queryKey: getListAnalysesQueryKey({ page, limit }) } }
+    params,
+    { query: { queryKey: getListAnalysesQueryKey(params) } }
   );
 
   const listData = data as AnalysesList | undefined;
   const analyses = listData?.analyses ?? [];
   const total = listData?.total ?? 0;
   const hasMore = page * limit < total;
+
+  const handleClearFilters = () => {
+    setFilterMode("");
+    setFilterInstrument("");
+    setPage(1);
+  };
 
   const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
     trending_up: { label: t.dashboard.trending_up, color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -37,11 +61,97 @@ export default function HistoryPage() {
   return (
     <Layout>
       <div className="px-4 py-5">
-        <div className="mb-5">
-          <h1 className="text-xl font-bold text-foreground">{t.history.title}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {total > 0 ? `${total} ${t.history.total_analyses}` : t.history.no_data_yet}
-          </p>
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-foreground">{t.history.title}</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {total > 0 ? `${total} ${t.history.total_analyses}` : t.history.no_data_yet}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              data-testid="button-toggle-filters"
+              className={cn(
+                "p-2 rounded-xl transition-colors relative",
+                showFilters || hasActiveFilters
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-muted text-muted-foreground"
+              )}
+            >
+              <Filter className="w-4 h-4" />
+              {hasActiveFilters && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+              )}
+            </button>
+          </div>
+
+          {showFilters && (
+            <div className="mt-3 p-3 rounded-xl border border-border bg-muted/30 space-y-3" data-testid="filter-panel">
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Mode</p>
+                <div className="flex gap-2">
+                  {(["", "beginner", "pro"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => { setFilterMode(m as ListAnalysesMode | ""); setPage(1); }}
+                      data-testid={`filter-mode-${m || "all"}`}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all",
+                        filterMode === m
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                      )}
+                    >
+                      {m === "" ? t.common.all ?? "All" : m === "beginner" ? t.common.beginner : t.common.pro}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{t.analyze.select_instrument}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => { setFilterInstrument(""); setPage(1); }}
+                    data-testid="filter-instrument-all"
+                    className={cn(
+                      "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all",
+                      filterInstrument === ""
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                    )}
+                  >
+                    {t.common.all ?? "All"}
+                  </button>
+                  {ALL_INSTRUMENTS.map((inst) => (
+                    <button
+                      key={inst}
+                      onClick={() => { setFilterInstrument(inst); setPage(1); }}
+                      data-testid={`filter-instrument-${inst}`}
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all",
+                        filterInstrument === inst
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                      )}
+                    >
+                      {inst}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {hasActiveFilters && (
+                <button
+                  onClick={handleClearFilters}
+                  data-testid="button-clear-filters"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  {t.common.clear_filters ?? "Clear filters"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {isLoading ? (
@@ -53,11 +163,17 @@ export default function HistoryPage() {
             <TrendingUp className="w-12 h-12 text-muted-foreground opacity-40 mb-3" />
             <p className="text-sm font-medium text-foreground">{t.history.no_analyses_title}</p>
             <p className="text-xs text-muted-foreground mt-1">{t.history.no_analyses_subtitle}</p>
-            <Link href="/analyze">
-              <Button variant="outline" size="sm" className="mt-4" data-testid="button-start-analysis">
-                {t.history.start_analysis}
+            {hasActiveFilters ? (
+              <Button variant="outline" size="sm" className="mt-4" onClick={handleClearFilters} data-testid="button-clear-filters-empty">
+                {t.common.clear_filters ?? "Clear filters"}
               </Button>
-            </Link>
+            ) : (
+              <Link href="/analyze">
+                <Button variant="outline" size="sm" className="mt-4" data-testid="button-start-analysis">
+                  {t.history.start_analysis}
+                </Button>
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -66,49 +182,67 @@ export default function HistoryPage() {
               const mc = MARKET_CONDITION_LABELS[a.marketCondition];
               return (
                 <Link key={a.id} href={`/analyses/${a.id}`}>
-                  <Card className="p-3 cursor-pointer hover:border-primary/40 transition-colors" data-testid={`card-analysis-${a.id}`}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                  <Card
+                    className="p-3 hover:border-primary/50 transition-colors cursor-pointer"
+                    data-testid={`card-analysis-${a.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold text-foreground">{a.instrument}</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{a.timeframe}</Badge>
-                          {mc && <Badge className={cn("text-[10px] px-1.5 py-0 border-0", mc.color)}>{mc.label}</Badge>}
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {a.mode === "beginner" ? t.common.beginner : t.common.pro}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <span className="text-xs text-muted-foreground">
-                            {a.confidenceMin}–{a.confidenceMax}% {t.common.confidence}
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                            {a.timeframe}
                           </span>
-                          <span className={cn(
-                            "text-[10px] font-medium flex items-center gap-1",
-                            valid ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                          )}>
-                            <Clock className="w-3 h-3" />
-                            {valid ? t.common.relevant : t.common.expired}
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                            {a.mode === "beginner" ? t.common.beginner : t.common.pro}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {mc && (
+                            <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md font-medium", mc.color)}>
+                              {mc.label}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Clock className="w-2.5 h-2.5" />
+                            {format(new Date(a.createdAt), "dd MMM yyyy HH:mm", { locale: dateLocale })}
                           </span>
                         </div>
                       </div>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
-                        {format(new Date(a.createdAt), "d MMM", { locale: dateLocale })}
-                      </span>
+                      <Badge
+                        variant={valid ? "default" : "secondary"}
+                        className="text-[10px] px-1.5 py-0 shrink-0"
+                      >
+                        {valid ? t.history.valid : t.history.expired}
+                      </Badge>
                     </div>
                   </Card>
                 </Link>
               );
             })}
 
-            {hasMore && (
+            <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
-                className="w-full mt-2"
-                onClick={() => setPage((p) => p + 1)}
-                data-testid="button-load-more"
+                size="sm"
+                className="flex-1"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+                data-testid="button-prev-page"
               >
-                {t.history.load_more}
+                {t.history.prev}
               </Button>
-            )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                disabled={!hasMore}
+                onClick={() => setPage((p) => p + 1)}
+                data-testid="button-next-page"
+              >
+                {t.history.next}
+              </Button>
+            </div>
           </div>
         )}
       </div>

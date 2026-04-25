@@ -21,6 +21,7 @@ import NotificationsPage from "@/pages/notifications";
 import AdminPage from "@/pages/admin";
 import AdminUsersPage from "@/pages/admin-users";
 import { useEffect } from "react";
+import { useTheme } from "@/components/theme-provider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +45,19 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, isLoading, location, setLocation]);
 
   return <>{children}</>;
+}
+
+function ThemeSync() {
+  const { user } = useAuth();
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    if (user?.themePreference === "dark" || user?.themePreference === "light") {
+      setTheme(user.themePreference);
+    }
+  }, [user?.themePreference, setTheme]);
+
+  return null;
 }
 
 function Router() {
@@ -115,6 +129,7 @@ function App() {
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <AuthProvider>
+                <ThemeSync />
                 <Router />
               </AuthProvider>
             </WouterRouter>

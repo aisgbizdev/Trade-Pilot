@@ -15,6 +15,8 @@ export const en = {
     confidence: "confidence",
     by: "by",
     data_from: "Data from Newsmaker.id",
+    all: "All",
+    clear_filters: "Clear filters",
   },
   nav: {
     dashboard: "Dashboard",
