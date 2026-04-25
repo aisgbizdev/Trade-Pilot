@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
-import { Eye, EyeOff, TrendingUp, Loader2, Brain } from "lucide-react";
+import { Eye, EyeOff, TrendingUp, Loader2, Brain, CheckCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -18,6 +18,14 @@ import { LanguageToggle } from "@/components/language-toggle";
 export default function LoginPage() {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
+  const [resetSuccess] = useState(() => {
+    const val = sessionStorage.getItem("password_reset_success");
+    if (val === "1") {
+      sessionStorage.removeItem("password_reset_success");
+      return true;
+    }
+    return false;
+  });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -71,6 +79,19 @@ export default function LoginPage() {
       </div>
 
       <div className="flex-1 px-6 py-8 -mt-4">
+        {resetSuccess && (
+          <div
+            className="flex items-start gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4 mb-4"
+            data-testid="banner-reset-success"
+            role="alert"
+          >
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-green-800 dark:text-green-300">{t.auth.reset_success_title}</p>
+              <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">{t.auth.reset_success_subtitle}</p>
+            </div>
+          </div>
+        )}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-testid="form-login">

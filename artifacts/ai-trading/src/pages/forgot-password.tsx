@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,9 +14,20 @@ import {
   useGetForgotPasswordQuestion,
   useVerifySecurityAnswer,
   useResetPassword,
+  getGetMeQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
+
+const passwordSchema = (mismatchMsg: string) =>
+  z.object({
+    newPassword: z.string().min(6),
+    confirmPassword: z.string().min(6),
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    message: mismatchMsg,
+    path: ["confirmPassword"],
+  });
 
 type Step = "email" | "question" | "reset" | "done";
 
@@ -29,6 +40,7 @@ export default function ForgotPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const getQuestion = useGetForgotPasswordQuestion();
   const verifyAnswer = useVerifySecurityAnswer();
@@ -37,8 +49,8 @@ export default function ForgotPasswordPage() {
   const emailForm = useForm({ defaultValues: { email: "" } });
   const answerForm = useForm({ defaultValues: { answer: "" } });
   const passwordForm = useForm({
-    resolver: zodResolver(z.object({ newPassword: z.string().min(6) })),
-    defaultValues: { newPassword: "" },
+    resolver: zodResolver(passwordSchema(t.auth.password_mismatch)),
+    defaultValues: { newPassword: "", confirmPassword: "" },
   });
 
   const handleEmailSubmit = async (values: { email: string }) => {
@@ -74,11 +86,23 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handlePasswordSubmit = async (values: { newPassword: string }) => {
+  useEffect(() => {
+    if (step === "done") {
+      const timer = setTimeout(() => {
+        sessionStorage.setItem("password_reset_success", "1");
+        setLocation("/login");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [step, setLocation]);
+
+  const handlePasswordSubmit = async (values: { newPassword: string; confirmPassword: string }) => {
     try {
       await resetPasswordMutation.mutateAsync({
         data: { resetToken, newPassword: values.newPassword },
       });
+      queryClient.setQueryData(getGetMeQueryKey(), null);
+      queryClient.removeQueries({ queryKey: getGetMeQueryKey() });
       setStep("done");
     } catch (err: unknown) {
       const apiErr = err as { data?: { error?: string } };
@@ -186,6 +210,26 @@ export default function ForgotPasswordPage() {
                             >
                               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t.auth.confirm_password_label}</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              {...field}
+                              type={showPassword ? "text" : "password"}
+                              placeholder={t.profile.confirm_password_placeholder}
+                              data-testid="input-confirm-password"
+                            />
                           </div>
                         </FormControl>
                         <FormMessage />
