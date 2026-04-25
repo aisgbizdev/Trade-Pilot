@@ -105,7 +105,7 @@ export const id: Translations = {
     sample_risk_label: "Risiko",
     sample_risk_value: "Sedang",
     sample_invalidation_label: "Batal jika:",
-    sample_invalidation: "Close H1 di bawah support 2.318 • DXY break high terbaru dengan volume kuat",
+    sample_invalidation: "Close H1 di bawah support 4.985 • DXY break high terbaru dengan volume kuat",
     sample_opportunity_label: "Peluang",
     sample_opportunity: "Lanjutan ke zona resistance berikutnya jika buyer mempertahankan area pullback.",
     sample_risk_section_label: "Risiko",

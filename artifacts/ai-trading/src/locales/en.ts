@@ -103,7 +103,7 @@ export const en = {
     sample_risk_label: "Risk",
     sample_risk_value: "Medium",
     sample_invalidation_label: "Invalid if:",
-    sample_invalidation: "H1 close below 2,318 support • DXY breaks above recent high with strong volume",
+    sample_invalidation: "H1 close below 4,985 support • DXY breaks above recent high with strong volume",
     sample_opportunity_label: "Opportunity",
     sample_opportunity: "Continuation toward the next resistance zone if buyers defend the pullback area.",
     sample_risk_section_label: "Risk",
