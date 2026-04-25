@@ -172,6 +172,24 @@ describe("requireSuperAdmin gate", () => {
     expect(res.status).toBe(403);
   });
 
+  it("GET /superadmin/tags returns 403 for role=admin and 401 unauth", async () => {
+    const r1 = await request(app).get("/api/superadmin/tags");
+    expect(r1.status).toBe(401);
+
+    const r2 = await request(app)
+      .get("/api/superadmin/tags")
+      .set(...authHeader(admin));
+    expect(r2.status).toBe(403);
+  });
+
+  it("POST /superadmin/users/:id/tags returns 403 for role=admin", async () => {
+    const res = await request(app)
+      .post(`/api/superadmin/users/${regularUser.id}/tags`)
+      .set(...authHeader(admin))
+      .send({ tag: "nope" });
+    expect(res.status).toBe(403);
+  });
+
   it("POST /admin/notifications returns 201 for role=super_admin", async () => {
     const res = await request(app)
       .post("/api/admin/notifications")
