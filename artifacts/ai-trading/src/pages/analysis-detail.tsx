@@ -1,9 +1,17 @@
 import { useLocation } from "wouter";
-import { ChevronLeft, Clock, AlertTriangle, ThumbsUp, ThumbsDown, Loader2, RefreshCw } from "lucide-react";
+import { ChevronLeft, Clock, AlertTriangle, ThumbsUp, ThumbsDown, Loader2, RefreshCw, StickyNote } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
 import {
   useGetAnalysis,
@@ -81,7 +89,12 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [feedbackNote, setFeedbackNote] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [refreshMsgIndex, setRefreshMsgIndex] = useState(0);
+  const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
+  const [refreshNotes, setRefreshNotes] = useState("");
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const carriedOver = typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("carried_over") === "1";
 
   useEffect(() => {
     if (isRefreshing) {
@@ -107,13 +120,26 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
   const existingFeedback = analysis?.feedback;
 
+  const openRefreshDialog = () => {
+    if (!analysis) return;
+    setRefreshNotes(analysis.userInputContext ?? "");
+    setRefreshDialogOpen(true);
+  };
+
   const handleRefresh = () => {
     if (!analysis) return;
+    const trimmedNotes = refreshNotes.trim();
+    const carriedFromOriginal =
+      !!analysis.userInputContext &&
+      trimmedNotes === (analysis.userInputContext ?? "").trim();
+    setRefreshDialogOpen(false);
     refresh({
       id: analysis.id,
       instrument: analysis.instrument,
       timeframe: analysis.timeframe,
       mode: analysis.mode,
+      userInputContext: trimmedNotes ? trimmedNotes : null,
+      carriedOver: carriedFromOriginal,
     });
   };
 
@@ -254,7 +280,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           {isExpired && (
             <Button
               className="w-full mt-2"
-              onClick={handleRefresh}
+              onClick={openRefreshDialog}
               disabled={isRefreshing}
               data-testid="button-refresh-analysis"
             >
@@ -272,6 +298,32 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             </Button>
           )}
         </Card>
+
+        {analysis.userInputContext && (
+          <Card className="p-4 space-y-2" data-testid="card-user-notes">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <StickyNote className="w-3.5 h-3.5" />
+                {t.analysis_detail.your_notes}
+              </h3>
+              {carriedOver && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] border-primary/40 text-primary bg-primary/5"
+                  data-testid="badge-notes-carried-over"
+                >
+                  {t.analysis_detail.notes_carried_over}
+                </Badge>
+              )}
+            </div>
+            <p
+              className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
+              data-testid="text-user-notes"
+            >
+              {analysis.userInputContext}
+            </p>
+          </Card>
+        )}
 
         <Card className="p-4 space-y-4">
           {isBeginnerMode ? (
@@ -387,6 +439,60 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           )}
         </Card>
       </div>
+
+      <Dialog open={refreshDialogOpen} onOpenChange={setRefreshDialogOpen}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-refresh">
+          <DialogHeader>
+            <DialogTitle>{t.analysis_detail.refresh_dialog_title}</DialogTitle>
+            <DialogDescription>
+              {analysis.userInputContext
+                ? t.analysis_detail.refresh_dialog_desc
+                : t.analysis_detail.refresh_dialog_no_notes_desc}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Textarea
+              value={refreshNotes}
+              onChange={(e) => setRefreshNotes(e.target.value)}
+              placeholder={t.analysis_detail.refresh_notes_placeholder}
+              rows={4}
+              className="resize-none text-sm"
+              data-testid="textarea-refresh-notes"
+            />
+            {refreshNotes && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setRefreshNotes("")}
+                className="h-7 px-2 text-xs text-muted-foreground"
+                data-testid="button-clear-refresh-notes"
+              >
+                {t.analysis_detail.refresh_clear_notes}
+              </Button>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRefreshDialogOpen(false)}
+              data-testid="button-cancel-refresh"
+            >
+              {t.analysis_detail.refresh_cancel}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              data-testid="button-confirm-refresh"
+            >
+              {isRefreshing && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {t.analysis_detail.refresh_confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

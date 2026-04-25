@@ -13,6 +13,8 @@ export interface RefreshableAnalysis {
   instrument: string;
   timeframe: string;
   mode: string;
+  userInputContext?: string | null;
+  carriedOver?: boolean;
 }
 
 export function useRefreshAnalysis() {
@@ -35,14 +37,18 @@ export function useRefreshAnalysis() {
         return next;
       });
       try {
+        const trimmedNotes = analysis.userInputContext?.trim() ?? "";
         const result = await createAnalysis.mutateAsync({
           data: {
             instrument: analysis.instrument,
             timeframe: analysis.timeframe as CreateAnalysisBodyTimeframe,
             mode: analysis.mode as CreateAnalysisBodyMode,
+            userInputContext: trimmedNotes ? trimmedNotes : undefined,
           },
         });
-        setLocation(`/analyses/${result.id}`);
+        const suffix =
+          trimmedNotes && analysis.carriedOver ? "?carried_over=1" : "";
+        setLocation(`/analyses/${result.id}${suffix}`);
       } catch (err: unknown) {
         const apiErr = err as { data?: { error?: string } };
         toast({
