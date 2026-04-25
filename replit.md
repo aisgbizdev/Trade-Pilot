@@ -41,7 +41,9 @@ Mobile-first PWA (React+Vite) for trading decision-support (NOT a signal generat
 - Notification system (user/admin/super_admin roles)
 - Onboarding modal for new users (non-dismissable until completed)
 - Admin panel: stats, all analyses, broadcast, user CRUD
-- PWA: vite-plugin-pwa with web manifest and service worker
+- PWA: vite-plugin-pwa with injectManifest strategy, custom service worker (`src/sw.ts`), Workbox caching + push event handler
+- Web Push Notifications: VAPID keys (env: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_EMAIL), push subscription management, opt-in toggle on notifications page
+- Push sent on admin broadcast + analysis expiry alerts (background jobs, hourly)
 
 **Colors:** Primary light `#1e3a5f`, Primary dark `#3b82f6`, Dark bg `#0f172a`
 **Language:** All UI text in Indonesian
@@ -54,12 +56,13 @@ Express backend serving all APIs.
 - `/api/auth/*` — register, login, logout, me, forgot-password (3-step via security question), profile, change-password, change-security-question
 - `/api/analyses/*` — CRUD + summary + recent-instruments + personal-analytics + feedback
 - `/api/notifications/*` — list, mark-read, mark-all-read, count
-- `/api/admin/*` — stats, all-analyses, broadcast, user CRUD (admin/super_admin only)
+- `/api/push/*` — public-key (public), subscribe/unsubscribe/subscription-status (authenticated)
+- `/api/admin/*` — stats, all-analyses, broadcast (now also sends Web Push), user CRUD (admin/super_admin only)
 
-**Key libs:** bcryptjs, openai (gpt-4o), cookie-parser, drizzle-orm, pg
+**Key libs:** bcryptjs, openai (gpt-4o), cookie-parser, drizzle-orm, pg, web-push (VAPID Web Push notifications)
 
 ### Database (`lib/db`)
-PostgreSQL with Drizzle ORM. Tables: users, sessions, passwordResetTokens, analyses, feedback, notifications.
+PostgreSQL with Drizzle ORM. Tables: users, sessions, passwordResetTokens, analyses, feedback, notifications, push_subscriptions.
 
 **Enums:** user_role (user/admin/super_admin), user_mode (beginner/pro), theme_preference (light/dark/system), market_condition (bullish/bearish/sideways), confidence_level (low/medium/high/very_high).
 

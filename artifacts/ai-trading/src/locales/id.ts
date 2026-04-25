@@ -256,6 +256,16 @@ export const id: Translations = {
     type_info: "Info",
     type_warning: "Peringatan",
     type_error: "Penting",
+    push_section_title: "Notifikasi Push",
+    push_section_desc: "Terima peringatan di perangkat ini bahkan saat aplikasi ditutup.",
+    push_enable: "Aktifkan notifikasi push",
+    push_disable: "Nonaktifkan notifikasi push",
+    push_enabled_label: "Aktif",
+    push_disabled_label: "Nonaktif",
+    push_requesting: "Meminta izin…",
+    push_denied: "Browser memblokir notifikasi. Izinkan di pengaturan situs.",
+    push_unsupported: "Notifikasi push tidak didukung di browser ini.",
+    push_error: "Gagal mengaktifkan notifikasi push. Coba lagi.",
   },
   onboarding: {
     steps: [

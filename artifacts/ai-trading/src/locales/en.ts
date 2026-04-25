@@ -254,6 +254,16 @@ export const en = {
     type_info: "Info",
     type_warning: "Warning",
     type_error: "Important",
+    push_section_title: "Push Notifications",
+    push_section_desc: "Receive alerts on this device even when the app is closed.",
+    push_enable: "Enable push notifications",
+    push_disable: "Disable push notifications",
+    push_enabled_label: "Enabled",
+    push_disabled_label: "Disabled",
+    push_requesting: "Requesting permission…",
+    push_denied: "Browser blocked notifications. Please allow them in site settings.",
+    push_unsupported: "Push notifications are not supported in this browser.",
+    push_error: "Could not set up push notifications. Please try again.",
   },
   onboarding: {
     steps: [

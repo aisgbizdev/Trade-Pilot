@@ -8,6 +8,7 @@ import quotesRouter from "./quotes";
 import historicalRouter from "./historical";
 import newsRouter from "./news";
 import calendarRouter from "./calendar";
+import pushRouter from "./push";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(quotesRouter);
 router.use(historicalRouter);
 router.use(newsRouter);
 router.use(calendarRouter);
+router.use(pushRouter);
 
 export default router;

@@ -35,6 +35,9 @@ externalPort = 3000
 
 [userenv.shared]
 OPENAI_MODEL = "gpt-4o"
+VAPID_PUBLIC_KEY = "BAYyTrCwqYPM-cmzWS-QIAlZZP_NzDqJGkjxH50OWQ-o1_BlNxzZDLn80pfSx-D8FzmuiUNAoNWLY-k4111QLzM"
+VAPID_PRIVATE_KEY = "CHbo2k7z3Xcslk6rjPUaeC8x0ZVCTdoFK4ZZ51T_58s"
+VAPID_EMAIL = "mailto:admin@aitradingassistant.app"
 
 [nix]
 channel = "stable-25_05"

@@ -1,7 +1,8 @@
-import { Bell, BellOff, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, BellOff, BellRing, CheckCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Layout } from "@/components/layout";
 import {
   useGetNotifications,
@@ -16,6 +17,7 @@ import { id as idLocale, enUS } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { usePush } from "@/hooks/use-push";
 
 const TYPE_STYLE: Record<string, string> = {
   info: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -30,6 +32,7 @@ export default function NotificationsPage() {
   const { toast } = useToast();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const { state: pushState, subscribe, unsubscribe } = usePush();
 
   const TYPE_LABEL: Record<string, string> = {
     info: t.notifications.type_info,
@@ -46,7 +49,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   const handleMarkRead = async (id: number) => {
-    await markRead.mutateAsync({ params: { id } });
+    await markRead.mutateAsync({ id });
     queryClient.invalidateQueries({ queryKey: getGetNotificationsQueryKey({}) });
     queryClient.invalidateQueries({ queryKey: getGetNotificationsQueryKey({ unreadOnly: true }) });
   };
@@ -57,6 +60,19 @@ export default function NotificationsPage() {
     queryClient.invalidateQueries({ queryKey: getGetNotificationsQueryKey({ unreadOnly: true }) });
     toast({ title: t.notifications.all_read_toast });
   };
+
+  const handlePushToggle = async () => {
+    if (pushState === "subscribed") {
+      await unsubscribe();
+    } else if (pushState === "unsubscribed" || pushState === "error") {
+      await subscribe();
+    }
+  };
+
+  const isPushEnabled = pushState === "subscribed";
+  const isPushPending = pushState === "requesting";
+  const isPushUnavailable = pushState === "unsupported";
+  const isPushDenied = pushState === "denied";
 
   return (
     <Layout>
@@ -84,6 +100,76 @@ export default function NotificationsPage() {
             </Button>
           )}
         </div>
+
+        <Card className="p-4 mb-5">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 mt-0.5">
+              {isPushEnabled ? (
+                <BellRing className="w-4 h-4 text-primary" />
+              ) : (
+                <Bell className="w-4 h-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {t.notifications.push_section_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    {t.notifications.push_section_desc}
+                  </p>
+                </div>
+                {!isPushUnavailable && !isPushDenied && (
+                  <Switch
+                    checked={isPushEnabled}
+                    onCheckedChange={handlePushToggle}
+                    disabled={isPushPending}
+                    data-testid="switch-push-notifications"
+                    aria-label={
+                      isPushEnabled
+                        ? t.notifications.push_disable
+                        : t.notifications.push_enable
+                    }
+                  />
+                )}
+              </div>
+
+              <div className="mt-2">
+                {isPushPending && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    {t.notifications.push_requesting}
+                  </p>
+                )}
+                {isPushDenied && (
+                  <p className="text-xs text-destructive">{t.notifications.push_denied}</p>
+                )}
+                {isPushUnavailable && (
+                  <p className="text-xs text-muted-foreground">{t.notifications.push_unsupported}</p>
+                )}
+                {pushState === "error" && (
+                  <p className="text-xs text-destructive">{t.notifications.push_error}</p>
+                )}
+                {!isPushPending && !isPushDenied && !isPushUnavailable && pushState !== "error" && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] px-1.5 py-0 border-0",
+                      isPushEnabled
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {isPushEnabled
+                      ? t.notifications.push_enabled_label
+                      : t.notifications.push_disabled_label}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">

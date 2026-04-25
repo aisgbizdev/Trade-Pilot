@@ -13,6 +13,7 @@ import {
   AuthRequest,
 } from "../middleware/auth";
 import { notifySuperAdminsUserDeleted, notifyAdminsUserCreated } from "../lib/jobs";
+import { sendPushToUsers } from "../lib/webpush";
 
 const router = Router();
 
@@ -140,6 +141,11 @@ router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) 
       message,
       type: type ?? "info",
     }))
+  );
+
+  void sendPushToUsers(
+    targetUsers.map((u) => u.id),
+    { title, body: message, url: "/notifications", tag: "broadcast" }
   );
 
   res.status(201).json({ message: "Broadcast berhasil dikirim", count: targetUsers.length });

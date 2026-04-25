@@ -1,7 +1,8 @@
 import { db } from "./db";
-import { users, analyses, feedback, notifications } from "@workspace/db/schema";
-import { eq, and, count, sql } from "drizzle-orm";
+import { users, analyses, feedback, notifications, pushSubscriptions } from "@workspace/db/schema";
+import { eq, and, count, sql, gte, lte } from "drizzle-orm";
 import { logger } from "./logger";
+import { sendPushToUser } from "./webpush";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -154,9 +155,69 @@ export async function notifySuperAdminsUserDeleted(displayName: string): Promise
   }
 }
 
+async function sendAnalysisExpiryAlerts(): Promise<void> {
+  try {
+    const now = new Date();
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+    const expiringAnalyses = await db
+      .select({
+        id: analyses.id,
+        userId: analyses.userId,
+        instrument: analyses.instrument,
+        validUntil: analyses.validUntil,
+      })
+      .from(analyses)
+      .where(and(gte(analyses.validUntil, now), lte(analyses.validUntil, twoHoursFromNow)));
+
+    for (const analysis of expiringAnalyses) {
+      const [hasSub] = await db
+        .select({ id: pushSubscriptions.id })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, analysis.userId))
+        .limit(1);
+
+      if (!hasSub) continue;
+
+      const [alreadyNotified] = await db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, analysis.userId),
+            eq(notifications.title, "Analisis Akan Berakhir"),
+            sql`${notifications.createdAt} >= ${now}`
+          )
+        )
+        .limit(1);
+
+      if (alreadyNotified) continue;
+
+      await db.insert(notifications).values({
+        userId: analysis.userId,
+        title: "Analisis Akan Berakhir",
+        message: `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam. Segera ambil keputusan atau buat analisis baru.`,
+        type: "warning",
+      });
+
+      await sendPushToUser(analysis.userId, {
+        title: "Analisis Akan Berakhir ⚠️",
+        body: `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam.`,
+        url: "/",
+        tag: `expiry-${analysis.id}`,
+      });
+
+      logger.info({ userId: analysis.userId, analysisId: analysis.id }, "Sent analysis expiry alert");
+    }
+  } catch (err) {
+    logger.error(err, "Error sending analysis expiry alerts");
+  }
+}
+
 export function startBackgroundJobs(): void {
   const feedbackInterval = 60 * 60 * 1000;
   const dailyInterval = ONE_DAY_MS;
+  const expiryCheckInterval = 60 * 60 * 1000;
 
   setTimeout(() => {
     sendFeedbackReminders();
@@ -167,6 +228,11 @@ export function startBackgroundJobs(): void {
     sendDailySummary();
     setInterval(sendDailySummary, dailyInterval);
   }, 10000);
+
+  setTimeout(() => {
+    sendAnalysisExpiryAlerts();
+    setInterval(sendAnalysisExpiryAlerts, expiryCheckInterval);
+  }, 15000);
 
   logger.info("Background notification jobs started");
 }
