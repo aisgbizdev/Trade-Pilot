@@ -1,7 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { TrendingUp, Plus, Clock, Loader2, TrendingDown, Minus, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { TrendingUp, Plus, Clock, Loader2, TrendingDown, Minus, RefreshCw, Brain, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
@@ -27,10 +25,10 @@ function isValid(validUntil: string | Date) {
 }
 
 const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
-  trending_up: { label: "Tren Naik", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-  trending_down: { label: "Tren Turun", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-  ranging: { label: "Sideways", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  volatile: { label: "Volatil", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
+  trending_up: { label: "Tren Naik", color: "bg-emerald-500/15 text-emerald-500 dark:text-emerald-400" },
+  trending_down: { label: "Tren Turun", color: "bg-red-500/15 text-red-500 dark:text-red-400" },
+  ranging: { label: "Sideways", color: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  volatile: { label: "Volatil", color: "bg-orange-500/15 text-orange-500 dark:text-orange-400" },
 };
 
 const PRIORITY_INSTRUMENTS = ["XAU/USD", "EUR/USD", "GBP/USD", "USD/JPY", "BRENT", "DXY", "USD/IDR"];
@@ -53,31 +51,37 @@ function LivePriceTicker() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-foreground">Harga Live</h2>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-bold text-foreground">Harga Live</h2>
+          <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium">LIVE</span>
+          </div>
+        </div>
         <div className="flex items-center gap-1.5">
           {data?.serverTime && (
-            <span className="text-[10px] text-muted-foreground">{data.serverTime} UTC</span>
+            <span className="text-[10px] text-muted-foreground font-mono">{data.serverTime} UTC</span>
           )}
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="p-1 rounded hover:bg-muted transition-colors"
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
             aria-label="Refresh harga"
           >
-            <RefreshCw className={cn("w-3 h-3 text-muted-foreground", isFetching && "animate-spin")} />
+            <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", isFetching && "animate-spin")} />
           </button>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-6">
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
         </div>
       ) : isError ? (
-        <Card className="p-3 text-center border-dashed">
+        <div className="p-4 rounded-xl border border-dashed border-border text-center">
           <p className="text-xs text-muted-foreground">Tidak dapat memuat harga live</p>
-        </Card>
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {quotes?.map((q) => {
@@ -85,34 +89,53 @@ function LivePriceTicker() {
             const isFlat = q.changePercent === "+0%" || q.changePercent === "0%";
             return (
               <Link key={q.instrument} href={`/analyze?instrument=${q.instrument}`}>
-                <Card
-                  className="p-2.5 cursor-pointer hover:border-primary/40 transition-colors active:scale-[0.98]"
+                <div
+                  className={cn(
+                    "relative p-3 rounded-xl cursor-pointer transition-all duration-200 active:scale-[0.97] border overflow-hidden group",
+                    "bg-card hover:border-primary/30",
+                    isFlat ? "border-border" :
+                    isUp ? "border-emerald-500/20 hover:border-emerald-500/40" :
+                    "border-red-500/20 hover:border-red-500/40"
+                  )}
                   data-testid={`live-quote-${q.instrument}`}
                 >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[11px] font-bold text-foreground">{q.instrument}</span>
-                    {isFlat ? (
-                      <Minus className="w-3 h-3 text-muted-foreground" />
-                    ) : isUp ? (
-                      <TrendingUp className="w-3 h-3 text-green-500" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3 text-red-500" />
-                    )}
+                  <div className={cn(
+                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity",
+                    isUp ? "bg-emerald-500/3" : !isFlat ? "bg-red-500/3" : ""
+                  )} />
+
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-foreground tracking-tight">{q.instrument}</span>
+                    <div className={cn(
+                      "w-6 h-6 rounded-lg flex items-center justify-center",
+                      isFlat ? "bg-muted" : isUp ? "bg-emerald-500/15" : "bg-red-500/15"
+                    )}>
+                      {isFlat ? (
+                        <Minus className="w-3 h-3 text-muted-foreground" />
+                      ) : isUp ? (
+                        <TrendingUp className="w-3 h-3 text-emerald-500" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3 text-red-500" />
+                      )}
+                    </div>
                   </div>
-                  <div className="text-sm font-semibold text-foreground tabular-nums">
+
+                  <div className="text-[15px] font-bold text-foreground tabular-nums leading-none mb-1">
                     {formatPrice(q.price, q.instrument)}
                   </div>
+
                   <div className={cn(
-                    "text-[10px] font-medium mt-0.5",
+                    "text-[10px] font-semibold",
                     isFlat ? "text-muted-foreground" :
-                    isUp ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                    isUp ? "text-emerald-500 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                   )}>
                     {q.changePercent}
                   </div>
-                  <div className="text-[9px] text-muted-foreground mt-0.5">
-                    B: {formatPrice(q.buy, q.instrument)} / S: {formatPrice(q.sell, q.instrument)}
+
+                  <div className="text-[9px] text-muted-foreground mt-1 font-mono">
+                    B:{formatPrice(q.buy, q.instrument)} / S:{formatPrice(q.sell, q.instrument)}
                   </div>
-                </Card>
+                </div>
               </Link>
             );
           })}
@@ -155,57 +178,78 @@ export default function DashboardPage() {
       <OnboardingModal open={!!user && !user.onboardingCompleted} />
 
       <div className="px-4 py-5 space-y-5">
+
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-muted-foreground">Selamat datang kembali</p>
-            <h1 className="text-xl font-bold text-foreground" data-testid="text-display-name">
+            <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-0.5">Selamat datang</p>
+            <h1 className="text-xl font-extrabold text-foreground" data-testid="text-display-name">
               {user?.displayName}
             </h1>
           </div>
-          <Button
-            size="sm"
+          <button
             onClick={() => setLocation("/analyze")}
-            className="gap-1.5"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl btn-premium text-white text-sm font-semibold hover:opacity-90 transition-all shadow-lg"
             data-testid="button-new-analysis"
           >
             <Plus className="w-4 h-4" />
             Analisis
-          </Button>
+          </button>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 p-1 bg-muted rounded-xl">
           {(["beginner", "pro"] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => handleModeToggle(mode)}
               data-testid={`button-mode-${mode}`}
               className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-medium border transition-all",
+                "flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
                 user?.selectedMode === mode
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {mode === "beginner" ? "Pemula" : "Pro"}
+              {mode === "beginner" ? "Pemula" : "⚡ Pro"}
             </button>
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2.5">
           {[
-            { label: "Total Analisis", value: summaryLoading ? "..." : (summaryData?.total ?? 0) },
-            { label: "Mode Pemula", value: summaryLoading ? "..." : (summaryData?.beginnerCount ?? 0) },
-            { label: "Mode Pro", value: summaryLoading ? "..." : (summaryData?.proCount ?? 0) },
-          ].map(({ label, value }) => (
-            <Card key={label} className="p-3 text-center border-border">
+            {
+              label: "Total Analisis",
+              value: summaryLoading ? "—" : (summaryData?.total ?? 0),
+              icon: Brain,
+              gradient: "from-blue-500/20 to-violet-500/20",
+              iconColor: "text-blue-400",
+            },
+            {
+              label: "Mode Pemula",
+              value: summaryLoading ? "—" : (summaryData?.beginnerCount ?? 0),
+              icon: Sparkles,
+              gradient: "from-cyan-500/20 to-blue-500/20",
+              iconColor: "text-cyan-400",
+            },
+            {
+              label: "Mode Pro",
+              value: summaryLoading ? "—" : (summaryData?.proCount ?? 0),
+              icon: TrendingUp,
+              gradient: "from-violet-500/20 to-purple-500/20",
+              iconColor: "text-violet-400",
+            },
+          ].map(({ label, value, icon: Icon, gradient, iconColor }) => (
+            <div key={label} className="bg-card border border-border rounded-2xl p-3 text-center">
+              <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mx-auto mb-2`}>
+                <Icon className={`w-4 h-4 ${iconColor}`} />
+              </div>
               <div
-                className="text-2xl font-bold text-primary"
+                className="text-2xl font-extrabold gradient-text"
                 data-testid={`stat-${label.toLowerCase().replace(/\s/g, "-")}`}
               >
                 {value}
               </div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
-            </Card>
+              <div className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{label}</div>
+            </div>
           ))}
         </div>
 
@@ -213,17 +257,16 @@ export default function DashboardPage() {
 
         {instrumentsData?.instruments?.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-foreground mb-2">Terakhir Dianalisis</h2>
+            <h2 className="text-sm font-bold text-foreground mb-2.5">Terakhir Dianalisis</h2>
             <div className="flex gap-2 flex-wrap">
               {instrumentsData.instruments.map((inst: string) => (
                 <Link key={inst} href={`/analyze?instrument=${inst}`}>
-                  <Badge
-                    variant="secondary"
-                    className="cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors text-sm py-1 px-3"
+                  <span
+                    className="inline-flex items-center px-3 py-1.5 rounded-xl border border-border bg-card text-xs font-mono font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer"
                     data-testid={`badge-instrument-${inst}`}
                   >
                     {inst}
-                  </Badge>
+                  </span>
                 </Link>
               ))}
             </div>
@@ -232,33 +275,36 @@ export default function DashboardPage() {
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground">Analisis Terbaru</h2>
+            <h2 className="text-sm font-bold text-foreground">Analisis Terbaru</h2>
             <Link href="/history">
-              <span className="text-xs text-primary hover:underline cursor-pointer" data-testid="link-view-history">
-                Lihat semua
+              <span className="text-xs text-primary font-medium hover:underline cursor-pointer" data-testid="link-view-history">
+                Lihat semua →
               </span>
             </Link>
           </div>
 
           {listLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : analyses.length === 0 ? (
-            <Card className="p-6 text-center border-dashed">
-              <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
-              <p className="text-sm text-muted-foreground">Belum ada analisis</p>
-              <p className="text-xs text-muted-foreground mt-1">Mulai analisis pertama kamu</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={() => setLocation("/analyze")}
-                data-testid="button-start-first-analysis"
-              >
-                Mulai Analisis
-              </Button>
-            </Card>
+            <div className="relative rounded-2xl border border-dashed border-border overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-violet-500/5" />
+              <div className="relative p-7 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center mx-auto mb-3">
+                  <Brain className="w-7 h-7 text-blue-400" />
+                </div>
+                <p className="text-sm font-semibold text-foreground mb-1">Belum ada analisis</p>
+                <p className="text-xs text-muted-foreground mb-4">Mulai analisis pertama kamu dan biarkan AI bekerja</p>
+                <button
+                  className="px-5 py-2 rounded-xl btn-premium text-white text-sm font-semibold hover:opacity-90 transition-all"
+                  onClick={() => setLocation("/analyze")}
+                  data-testid="button-start-first-analysis"
+                >
+                  Mulai Analisis
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="space-y-2">
               {analyses.map((a: any) => {
@@ -266,43 +312,48 @@ export default function DashboardPage() {
                 const mc = MARKET_CONDITION_LABELS[a.marketCondition];
                 return (
                   <Link key={a.id} href={`/analyses/${a.id}`}>
-                    <Card
-                      className="p-3 cursor-pointer hover:border-primary/40 transition-colors"
+                    <div
+                      className="p-3.5 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-all group"
                       data-testid={`card-analysis-${a.id}`}
                     >
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-foreground">{a.instrument}</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            {a.timeframe}
-                          </Badge>
-                          <Badge className={cn("text-[10px] px-1.5 py-0 border-0", mc?.color)}>
-                            {mc?.label}
-                          </Badge>
+                          <span className="text-sm font-bold text-foreground">{a.instrument}</span>
+                          <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">{a.timeframe}</span>
+                          {mc && (
+                            <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-md", mc.color)}>
+                              {mc.label}
+                            </span>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {a.mode === "beginner" ? "Pemula" : "Pro"} •{" "}
-                          {a.confidenceMin}–{a.confidenceMax}% keyakinan
-                        </span>
                         <span
                           className={cn(
-                            "text-[10px] font-medium",
-                            valid ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                            "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                            valid
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : "bg-muted text-muted-foreground"
                           )}
                           data-testid={`status-validity-${a.id}`}
                         >
                           {valid ? "Relevan" : "Kadaluarsa"}
                         </span>
                       </div>
-                    </Card>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {a.mode === "beginner" ? "Pemula" : "Pro"} · {a.confidenceMin}–{a.confidenceMax}% keyakinan
+                        </span>
+                        <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                          {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: idLocale })}
+                        </span>
+                      </div>
+                    </div>
                   </Link>
                 );
               })}
             </div>
           )}
         </div>
+
       </div>
     </Layout>
   );

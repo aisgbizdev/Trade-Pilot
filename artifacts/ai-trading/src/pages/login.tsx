@@ -3,8 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
-import { Eye, EyeOff, TrendingUp, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Eye, EyeOff, TrendingUp, Loader2, Brain } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -61,22 +60,21 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm">
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">AI Trading</span>
+      <div className="hero-gradient px-6 pt-12 pb-10 text-center relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-48 h-32 bg-blue-500/10 rounded-full blur-3xl" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-xl shadow-blue-500/30 mb-4 float-anim">
+            <TrendingUp className="w-7 h-7 text-white" />
           </div>
+          <h1 className="text-2xl font-extrabold text-white mb-1">Selamat Datang</h1>
+          <p className="text-sm text-slate-400">Masuk untuk melanjutkan analisis</p>
+        </div>
+      </div>
 
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Masuk</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Lanjutkan analisis trading kamu
-            </p>
-          </div>
-
+      <div className="flex-1 px-6 py-8 -mt-4">
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
@@ -88,7 +86,9 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username / Email</FormLabel>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Username / Email
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -96,6 +96,7 @@ export default function LoginPage() {
                         placeholder="Username atau email kamu"
                         autoComplete="username"
                         data-testid="input-email"
+                        className="h-12 rounded-xl"
                       />
                     </FormControl>
                     <FormMessage />
@@ -108,27 +109,26 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Password
+                    </FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
                           {...field}
                           type={showPassword ? "text" : "password"}
-                          placeholder="Minimal 6 karakter"
+                          placeholder="Password kamu"
                           autoComplete="current-password"
                           data-testid="input-password"
+                          className="h-12 rounded-xl pr-12"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                           data-testid="button-toggle-password"
                         >
-                          {showPassword ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </FormControl>
@@ -141,7 +141,7 @@ export default function LoginPage() {
                 control={form.control}
                 name="rememberMe"
                 render={({ field }) => (
-                  <FormItem className="flex items-center gap-2">
+                  <FormItem className="flex items-center gap-2.5">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -149,49 +149,51 @@ export default function LoginPage() {
                         data-testid="checkbox-remember-me"
                       />
                     </FormControl>
-                    <FormLabel className="!mt-0 text-sm font-normal cursor-pointer">
+                    <FormLabel className="!mt-0 text-sm font-normal cursor-pointer text-muted-foreground">
                       Selalu Ingat Saya
                     </FormLabel>
                   </FormItem>
                 )}
               />
 
-              <Button
+              <button
                 type="submit"
-                className="w-full"
+                className="w-full h-12 rounded-xl btn-premium text-white font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-60"
                 disabled={login.isPending}
                 data-testid="button-submit-login"
               >
                 {login.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : null}
-                Masuk
-              </Button>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Brain className="w-4 h-4" />
+                )}
+                {login.isPending ? "Masuk..." : "Masuk ke Dashboard"}
+              </button>
             </form>
           </Form>
 
           <div className="mt-4 text-center">
             <Link href="/forgot-password">
               <button
-                className="text-sm text-primary hover:underline"
+                className="text-sm text-primary hover:underline font-medium"
                 data-testid="link-forgot-password"
               >
                 Lupa password?
               </button>
             </Link>
           </div>
+        </div>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Belum punya akun?{" "}
-            <Link href="/register">
-              <span
-                className="text-primary font-medium hover:underline cursor-pointer"
-                data-testid="link-register"
-              >
-                Daftar sekarang
-              </span>
-            </Link>
-          </div>
+        <div className="mt-6 text-center text-sm text-muted-foreground">
+          Belum punya akun?{" "}
+          <Link href="/register">
+            <span
+              className="text-primary font-semibold hover:underline cursor-pointer"
+              data-testid="link-register"
+            >
+              Daftar gratis
+            </span>
+          </Link>
         </div>
       </div>
     </div>
