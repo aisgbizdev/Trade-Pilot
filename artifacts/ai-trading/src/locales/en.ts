@@ -168,6 +168,7 @@ export const en = {
     error_no_timeframe_desc: "Select an analysis timeframe",
     failed_title: "Analysis failed",
     failed_desc: "An error occurred, please try again",
+    quota_title: "Analysis limit reached",
     loading_price: "loading...",
     signal_buy: "Buy",
     signal_sell: "Sell",

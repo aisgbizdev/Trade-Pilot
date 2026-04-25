@@ -170,6 +170,7 @@ export const id: Translations = {
     error_no_timeframe_desc: "Pilih timeframe analisis",
     failed_title: "Analisis gagal",
     failed_desc: "Terjadi kesalahan, coba lagi",
+    quota_title: "Batas analisis tercapai",
     loading_price: "memuat...",
     signal_buy: "Beli",
     signal_sell: "Jual",

@@ -163,6 +163,25 @@ router.get("/analyses/personal-analytics", requireAuth, async (req: AuthRequest,
   });
 });
 
+function parsePositiveInt(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const ANALYSIS_QUOTA_PER_HOUR = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_HOUR"], 5);
+const ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_DAY"], 20);
+const ANALYSIS_LOCK_NAMESPACE = 4242;
+
+type AIResult = Awaited<ReturnType<typeof generateAnalysis>>;
+type AnalysisRow = typeof analyses.$inferSelect;
+type QuotaOutcome =
+  | { kind: "ok"; analysis: AnalysisRow }
+  | { kind: "busy" }
+  | { kind: "hour"; used: number }
+  | { kind: "day"; used: number }
+  | { kind: "aiError" };
+
 router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const { instrument, timeframe, mode, userInputContext } = req.body;
 
@@ -176,8 +195,12 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
 
-  const contextParts: string[] = [];
+  const userId = req.userId!;
+  const typedMode = mode as "beginner" | "pro";
+  const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
 
+  // External context fetches are pure HTTP — do them outside any transaction.
+  const contextParts: string[] = [];
   await Promise.allSettled([
     getIndicators(instrument).then((ind) => {
       if (ind) contextParts.push(formatIndicatorsForPrompt(ind));
@@ -189,42 +212,31 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       if (events.length) contextParts.push(formatCalendarForPrompt(events, instrument));
     }),
   ]);
-
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
-  const typedMode = mode as "beginner" | "pro";
-  let aiResult: Awaited<ReturnType<typeof generateAnalysis>>;
-  try {
-    aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
-  } catch (aiErr) {
-    void trackAiError();
-    res.status(502).json({ error: "Layanan AI sedang tidak tersedia. Silakan coba lagi dalam beberapa saat." });
-    return;
-  }
+
   const validUntil = getValidUntil(timeframe);
 
-  const modeSpecificFields =
-    typedMode === "beginner"
-      ? {
-          mainScenario: (aiResult as BeginnerAIOutput).mainScenario,
-          alternativeScenario: (aiResult as BeginnerAIOutput).alternativeScenario,
-          whyReason: (aiResult as BeginnerAIOutput).whyReason,
-          failureConditions: (aiResult as BeginnerAIOutput).failureConditions,
-        }
-      : {
-          baseCase: (aiResult as ProAIOutput).baseCase,
-          bullishScenario: (aiResult as ProAIOutput).bullishScenario,
-          bearishScenario: (aiResult as ProAIOutput).bearishScenario,
-          keyDriversTechnical: (aiResult as ProAIOutput).keyDriversTechnical,
-          keyDriversFundamental: (aiResult as ProAIOutput).keyDriversFundamental,
-          marketContext: (aiResult as ProAIOutput).marketContext,
-          invalidationConditions: (aiResult as ProAIOutput).invalidationConditions,
-          uncertaintyNotes: (aiResult as ProAIOutput).uncertaintyNotes,
-        };
-
-  const [analysis] = await db
-    .insert(analyses)
-    .values({
-      userId: req.userId!,
+  const buildInsertValues = (aiResult: AIResult) => {
+    const modeSpecificFields =
+      typedMode === "beginner"
+        ? {
+            mainScenario: (aiResult as BeginnerAIOutput).mainScenario,
+            alternativeScenario: (aiResult as BeginnerAIOutput).alternativeScenario,
+            whyReason: (aiResult as BeginnerAIOutput).whyReason,
+            failureConditions: (aiResult as BeginnerAIOutput).failureConditions,
+          }
+        : {
+            baseCase: (aiResult as ProAIOutput).baseCase,
+            bullishScenario: (aiResult as ProAIOutput).bullishScenario,
+            bearishScenario: (aiResult as ProAIOutput).bearishScenario,
+            keyDriversTechnical: (aiResult as ProAIOutput).keyDriversTechnical,
+            keyDriversFundamental: (aiResult as ProAIOutput).keyDriversFundamental,
+            marketContext: (aiResult as ProAIOutput).marketContext,
+            invalidationConditions: (aiResult as ProAIOutput).invalidationConditions,
+            uncertaintyNotes: (aiResult as ProAIOutput).uncertaintyNotes,
+          };
+    return {
+      userId,
       instrument,
       timeframe,
       mode: typedMode,
@@ -236,8 +248,95 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       confidenceMin: aiResult.confidenceMin,
       confidenceMax: aiResult.confidenceMax,
       ...modeSpecificFields,
-    })
-    .returning();
+    };
+  };
+
+  let outcome: QuotaOutcome;
+
+  if (isPrivilegedRole) {
+    let aiResult: AIResult;
+    try {
+      aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
+    } catch (aiErr) {
+      void trackAiError();
+      res.status(502).json({ error: "Layanan AI sedang tidak tersedia. Silakan coba lagi dalam beberapa saat." });
+      return;
+    }
+    const [analysis] = await db.insert(analyses).values(buildInsertValues(aiResult)).returning();
+    outcome = { kind: "ok", analysis };
+  } else {
+    // Atomically: take a per-user xact-scoped advisory lock, count usage,
+    // call AI, and insert. The lock auto-releases on COMMIT/ROLLBACK so
+    // concurrent requests for the same user cannot bypass the quota.
+    outcome = await db.transaction<QuotaOutcome>(async (tx) => {
+      const lockRow = await tx.execute(
+        sql`SELECT pg_try_advisory_xact_lock(${ANALYSIS_LOCK_NAMESPACE}::int, ${userId}::int) AS acquired`
+      );
+      const acquired = (lockRow.rows?.[0] as { acquired?: boolean } | undefined)?.acquired === true;
+      if (!acquired) return { kind: "busy" };
+
+      const now = new Date();
+      const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      const [usage] = await tx
+        .select({
+          hourly: sql<number>`sum(case when ${analyses.createdAt} >= ${hourAgo} then 1 else 0 end)`,
+          daily: sql<number>`sum(case when ${analyses.createdAt} >= ${dayAgo} then 1 else 0 end)`,
+        })
+        .from(analyses)
+        .where(and(eq(analyses.userId, userId), gte(analyses.createdAt, dayAgo)));
+
+      const hourlyCount = Number(usage?.hourly ?? 0);
+      const dailyCount = Number(usage?.daily ?? 0);
+
+      if (hourlyCount >= ANALYSIS_QUOTA_PER_HOUR) {
+        return { kind: "hour", used: hourlyCount };
+      }
+      if (dailyCount >= ANALYSIS_QUOTA_PER_DAY) {
+        return { kind: "day", used: dailyCount };
+      }
+
+      let aiResult: AIResult;
+      try {
+        aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
+      } catch (aiErr) {
+        return { kind: "aiError" };
+      }
+
+      const [analysis] = await tx.insert(analyses).values(buildInsertValues(aiResult)).returning();
+      return { kind: "ok", analysis };
+    });
+  }
+
+  if (outcome.kind === "busy") {
+    res.status(429).set("Retry-After", "5").json({
+      error: "Permintaan analisis sebelumnya masih diproses. Mohon tunggu sebentar.",
+      quota: { scope: "concurrent" },
+    });
+    return;
+  }
+  if (outcome.kind === "hour") {
+    res.status(429).set("Retry-After", "3600").json({
+      error: `Batas analisis per jam tercapai (${ANALYSIS_QUOTA_PER_HOUR} analisis/jam). Silakan coba lagi dalam beberapa saat.`,
+      quota: { scope: "hour", limit: ANALYSIS_QUOTA_PER_HOUR, used: outcome.used },
+    });
+    return;
+  }
+  if (outcome.kind === "day") {
+    res.status(429).set("Retry-After", "86400").json({
+      error: `Batas analisis harian tercapai (${ANALYSIS_QUOTA_PER_DAY} analisis/hari). Silakan coba lagi besok.`,
+      quota: { scope: "day", limit: ANALYSIS_QUOTA_PER_DAY, used: outcome.used },
+    });
+    return;
+  }
+  if (outcome.kind === "aiError") {
+    void trackAiError();
+    res.status(502).json({ error: "Layanan AI sedang tidak tersedia. Silakan coba lagi dalam beberapa saat." });
+    return;
+  }
+
+  const analysis = outcome.analysis;
 
   await db.insert(notifications).values({
     userId: req.userId!,

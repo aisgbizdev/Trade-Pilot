@@ -108,9 +108,10 @@ export default function AnalyzePage() {
       });
       setLocation(`/analyses/${result.id}`);
     } catch (err: unknown) {
-      const apiErr = err as { data?: { error?: string } };
+      const apiErr = err as { status?: number; data?: { error?: string } };
+      const isQuota = apiErr?.status === 429;
       toast({
-        title: t.analyze.failed_title,
+        title: isQuota ? t.analyze.quota_title : t.analyze.failed_title,
         description: apiErr?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
