@@ -208,12 +208,25 @@
   }
 
   .ticker-scroll {
-    animation: ticker 20s linear infinite;
+    animation: ticker 30s linear infinite;
+  }
+
+  .ticker-scroll-news {
+    animation: ticker 90s linear infinite;
   }
 
   @keyframes ticker {
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
+  }
+
+  .ticker-fade-in {
+    animation: tickerFade 400ms ease-out;
+  }
+
+  @keyframes tickerFade {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
   }
 
   .pulse-glow {

@@ -22,7 +22,9 @@ export function useNews() {
   return useQuery({
     queryKey: ["news"],
     queryFn: fetchNews,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 }
