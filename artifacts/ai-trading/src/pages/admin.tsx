@@ -671,30 +671,28 @@ function AdminContent() {
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                           {format(new Date(a.createdAt), "d MMM")}
                         </span>
-                        {hasFeedback ? (
-                          <Link
-                            href={`/admin/feedback?analysisId=${a.id}`}
-                            className="inline-flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded hover:bg-muted transition-colors"
-                            data-testid={`link-analysis-feedback-${a.id}`}
-                            title={t.admin.feedback_signal_tooltip}
-                          >
-                            <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                              <ThumbsUp className="w-3 h-3" />
-                              {usefulCount}
-                            </span>
-                            <span className="inline-flex items-center gap-0.5 text-rose-600 dark:text-rose-400">
-                              <ThumbsDown className="w-3 h-3" />
-                              {notUsefulCount}
-                            </span>
-                          </Link>
-                        ) : (
-                          <span
-                            className="text-[10px] text-muted-foreground/60"
-                            data-testid={`text-analysis-no-feedback-${a.id}`}
-                          >
-                            {t.admin.feedback_signal_none}
+                        <Link
+                          href={`/admin/feedback?analysisId=${a.id}`}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-[11px] font-medium px-1.5 py-0.5 rounded hover:bg-muted transition-colors",
+                            !hasFeedback && "opacity-60",
+                          )}
+                          data-testid={`link-analysis-feedback-${a.id}`}
+                          title={
+                            hasFeedback
+                              ? t.admin.feedback_signal_tooltip
+                              : t.admin.feedback_signal_none
+                          }
+                        >
+                          <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                            <ThumbsUp className="w-3 h-3" />
+                            {usefulCount}
                           </span>
-                        )}
+                          <span className="inline-flex items-center gap-0.5 text-rose-600 dark:text-rose-400">
+                            <ThumbsDown className="w-3 h-3" />
+                            {notUsefulCount}
+                          </span>
+                        </Link>
                       </div>
                     </div>
                   </Card>
