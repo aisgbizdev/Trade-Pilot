@@ -1,0 +1,176 @@
+Refactor the Analyze page UI and output presentation to remove “signal-like” behavior and align with decision-support positioning.
+
+Goal:
+Transform the page from a signal-style interface (BUY/SELL) into a structured decision-support analysis.
+
+This is CRITICAL:
+The current UI still feels like a signal tool due to BUY/SELL labels.
+
+---
+
+## MAIN ISSUE TO FIX
+
+Current elements like:
+- "SIGNAL SUMMARY"
+- Large "BUY / SELL" labels
+- Red/green command-style indicators
+
+These create a strong perception of:
+→ “this is a signal generator”
+
+This MUST be removed.
+
+---
+
+## REQUIRED CHANGES
+
+### 1. REMOVE SIGNAL LANGUAGE
+
+Remove:
+- "SIGNAL SUMMARY"
+- Large "BUY" / "SELL" text
+- Command-style wording
+
+---
+
+### 2. REPLACE WITH BIAS-BASED LANGUAGE
+
+Instead of:
+BUY / SELL
+
+Use:
+
+- "Market Bias: Bullish tendency"
+- "Market Bias: Bearish tendency"
+- "Market Bias: Neutral / Wait"
+
+For beginner mode:
+- "Cenderung naik"
+- "Cenderung turun"
+- "Tunggu dulu"
+
+---
+
+### 3. CHANGE VISUAL DESIGN
+
+Current:
+- Red/green dominance bars (feels like command)
+
+Replace with:
+- Neutral tone bars (blue / gradient / soft)
+- Label emphasis, not color dominance
+
+Goal:
+→ look informative, not directive
+
+---
+
+### 4. ADD CONTEXT HEADER (IMPORTANT)
+
+At top of analysis result, add:
+
+“Market Context Summary”
+
+Include:
+- Market condition (trend / range / volatile)
+- Bias (bullish / bearish / neutral)
+- Risk level
+
+This should be the FIRST thing user sees.
+
+---
+
+### 5. ADD SCENARIO STRUCTURE
+
+Below context, add:
+
+“Scenario Breakdown”
+
+- Scenario A (dominant)
+- Scenario B (alternative)
+- Scenario C (wait / no-trade)
+
+Keep it concise but structured.
+
+---
+
+### 6. MOVE INVALIDATION UP
+
+Invalidation conditions must be:
+- visible near top
+- not hidden at bottom
+
+Format:
+“This analysis becomes invalid if:”
+- condition 1
+- condition 2
+
+---
+
+### 7. REFRAME TECHNICAL INDICATORS
+
+Current:
+Indicators feel like “votes” for BUY/SELL
+
+Refactor:
+- Show indicators as “supporting signals”
+- Add label:
+  “Indicators currently suggest…”
+
+Avoid:
+- direct conclusions like BUY
+
+---
+
+### 8. KEEP DATA, CHANGE MEANING
+
+DO NOT remove:
+- RSI
+- MACD
+- Moving averages
+
+BUT:
+Change interpretation layer:
+→ from decision → to context
+
+---
+
+### 9. LANGUAGE RULES
+
+DO:
+- use “bias”, “tendency”, “context”
+- emphasize uncertainty
+- show when analysis can fail
+
+DO NOT:
+- use BUY/SELL
+- use command tone
+- imply guaranteed outcome
+
+---
+
+### 10. DESIGN PRINCIPLE
+
+User should feel:
+“I understand the situation”
+
+NOT:
+“I was told what to do”
+
+---
+
+## IMPORTANT CONSTRAINTS
+
+- Do NOT change backend logic
+- Do NOT change API
+- Do NOT remove indicators
+- Only refactor UI + wording + layout
+
+---
+
+## FINAL EXPECTATION
+
+After refactor:
+- Page no longer looks like a signal tool
+- Still feels simple and usable
+- Aligns with landing page messaging
