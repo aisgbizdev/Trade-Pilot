@@ -449,6 +449,14 @@ export type ListAnalysesParams = {
   instrument?: string;
   page?: number;
   limit?: number;
+  /**
+   * Filter analyses created on or after this date (ISO 8601)
+   */
+  from?: string;
+  /**
+   * Filter analyses created on or before this date (ISO 8601)
+   */
+  to?: string;
 };
 
 export type ListAnalysesMode =

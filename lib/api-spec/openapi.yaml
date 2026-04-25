@@ -326,6 +326,18 @@ paths:
           schema:
             type: integer
             default: 20
+        - name: from
+          in: query
+          description: Filter analyses created on or after this date (ISO 8601)
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: Filter analyses created on or before this date (ISO 8601)
+          schema:
+            type: string
+            format: date
       responses:
         "200":
           description: List of analyses

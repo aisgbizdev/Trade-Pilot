@@ -47,13 +47,19 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
     .orderBy(desc(count(analyses.id)))
     .limit(10);
 
-  const modeBreakdown = await db
+  const modeBreakdownRaw = await db
     .select({
       mode: analyses.mode,
       count: count(analyses.id),
     })
     .from(analyses)
     .groupBy(analyses.mode);
+
+  const modeBreakdown: { beginner: number; pro: number } = { beginner: 0, pro: 0 };
+  for (const row of modeBreakdownRaw) {
+    if (row.mode === "beginner") modeBreakdown.beginner = Number(row.count);
+    if (row.mode === "pro") modeBreakdown.pro = Number(row.count);
+  }
 
   res.json({
     total: Number(totalResult.count),

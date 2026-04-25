@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { BarChart3, Users, Loader2, ChevronLeft } from "lucide-react";
+import { BarChart3, Users, Loader2, ChevronLeft, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import {
@@ -11,12 +12,14 @@ import {
   getGetAdminStatsQueryKey,
   useGetAllAnalyses,
   getGetAllAnalysesQueryKey,
+  useBroadcastNotification,
   type AnalysesList,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
   trending_up: { label: "Tren Naik", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -29,6 +32,32 @@ function AdminContent() {
   const [, setLocation] = useLocation();
   const [page, setPage] = useState(1);
   const limit = 20;
+  const { toast } = useToast();
+
+  const [broadcastTitle, setBroadcastTitle] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastTarget, setBroadcastTarget] = useState("all");
+  const [showBroadcastForm, setShowBroadcastForm] = useState(false);
+
+  const broadcastNotification = useBroadcastNotification();
+
+  const handleBroadcast = async () => {
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) {
+      toast({ title: "Error", description: "Judul dan pesan wajib diisi", variant: "destructive" });
+      return;
+    }
+    try {
+      await broadcastNotification.mutateAsync({
+        data: { title: broadcastTitle, message: broadcastMessage, type: "info", targetRole: broadcastTarget as "all" | "user" | "admin" | "super_admin" },
+      });
+      toast({ title: "Berhasil", description: "Broadcast notifikasi telah dikirim" });
+      setBroadcastTitle("");
+      setBroadcastMessage("");
+      setShowBroadcastForm(false);
+    } catch {
+      toast({ title: "Gagal", description: "Broadcast gagal dikirim", variant: "destructive" });
+    }
+  };
 
   const { data: statsData, isLoading: statsLoading } = useGetAdminStats({
     query: { queryKey: getGetAdminStatsQueryKey() },
@@ -114,6 +143,57 @@ function AdminContent() {
             )}
           </>
         )}
+
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Send className="w-4 h-4" /> Broadcast Notifikasi
+            </h3>
+            <button
+              onClick={() => setShowBroadcastForm((v) => !v)}
+              className="text-xs text-primary hover:underline"
+              data-testid="button-toggle-broadcast"
+            >
+              {showBroadcastForm ? "Tutup" : "Buka"}
+            </button>
+          </div>
+          {showBroadcastForm && (
+            <div className="space-y-2" data-testid="broadcast-form">
+              <Input
+                placeholder="Judul notifikasi"
+                value={broadcastTitle}
+                onChange={(e) => setBroadcastTitle(e.target.value)}
+                data-testid="input-broadcast-title"
+              />
+              <Input
+                placeholder="Pesan notifikasi"
+                value={broadcastMessage}
+                onChange={(e) => setBroadcastMessage(e.target.value)}
+                data-testid="input-broadcast-message"
+              />
+              <select
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
+                value={broadcastTarget}
+                onChange={(e) => setBroadcastTarget(e.target.value)}
+                data-testid="select-broadcast-target"
+              >
+                <option value="all">Semua Pengguna</option>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+              <Button
+                className="w-full"
+                onClick={handleBroadcast}
+                disabled={broadcastNotification.isPending}
+                data-testid="button-send-broadcast"
+              >
+                {broadcastNotification.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Kirim Broadcast
+              </Button>
+            </div>
+          )}
+        </Card>
 
         <div>
           <h2 className="text-sm font-semibold text-foreground mb-3">Semua Analisis</h2>

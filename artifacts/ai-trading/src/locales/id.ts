@@ -192,6 +192,9 @@ export const id: Translations = {
     start_analysis: "Mulai Analisis",
     load_more: "Muat Lebih Banyak",
     confidence: "keyakinan",
+    date_range: "Rentang Tanggal",
+    from_date: "Dari",
+    to_date: "Sampai",
   },
   analytics: {
     title: "Statistik Saya",

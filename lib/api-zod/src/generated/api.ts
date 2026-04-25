@@ -191,6 +191,14 @@ export const ListAnalysesQueryParams = zod.object({
   instrument: zod.coerce.string().optional(),
   page: zod.coerce.number().default(listAnalysesQueryPageDefault),
   limit: zod.coerce.number().default(listAnalysesQueryLimitDefault),
+  from: zod
+    .date()
+    .optional()
+    .describe("Filter analyses created on or after this date (ISO 8601)"),
+  to: zod
+    .date()
+    .optional()
+    .describe("Filter analyses created on or before this date (ISO 8601)"),
 });
 
 export const ListAnalysesResponse = zod.object({

@@ -24,15 +24,19 @@ export default function HistoryPage() {
 
   const [filterMode, setFilterMode] = useState<ListAnalysesMode | "">("");
   const [filterInstrument, setFilterInstrument] = useState("");
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  const hasActiveFilters = filterMode !== "" || filterInstrument !== "";
+  const hasActiveFilters = filterMode !== "" || filterInstrument !== "" || filterFrom !== "" || filterTo !== "";
 
   const params = {
     page,
     limit,
     ...(filterMode ? { mode: filterMode } : {}),
     ...(filterInstrument ? { instrument: filterInstrument } : {}),
+    ...(filterFrom ? { from: filterFrom as unknown as Date } : {}),
+    ...(filterTo ? { to: filterTo as unknown as Date } : {}),
   };
 
   const { data, isLoading } = useListAnalyses(
@@ -48,6 +52,8 @@ export default function HistoryPage() {
   const handleClearFilters = () => {
     setFilterMode("");
     setFilterInstrument("");
+    setFilterFrom("");
+    setFilterTo("");
     setPage(1);
   };
 
@@ -140,6 +146,38 @@ export default function HistoryPage() {
                   ))}
                 </div>
               </div>
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                  {t.history.date_range ?? "Date Range"}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground block mb-1">
+                      {t.history.from_date ?? "From"}
+                    </label>
+                    <input
+                      type="date"
+                      value={filterFrom}
+                      onChange={(e) => { setFilterFrom(e.target.value); setPage(1); }}
+                      data-testid="filter-date-from"
+                      className="w-full px-2 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground block mb-1">
+                      {t.history.to_date ?? "To"}
+                    </label>
+                    <input
+                      type="date"
+                      value={filterTo}
+                      onChange={(e) => { setFilterTo(e.target.value); setPage(1); }}
+                      data-testid="filter-date-to"
+                      className="w-full px-2 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {hasActiveFilters && (
                 <button
                   onClick={handleClearFilters}

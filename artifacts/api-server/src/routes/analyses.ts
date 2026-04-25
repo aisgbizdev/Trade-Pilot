@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../lib/db";
-import { analyses, feedback } from "@workspace/db/schema";
+import { analyses, feedback, notifications } from "@workspace/db/schema";
 import { eq, and, desc, count, sql, gte, lte, ilike } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { generateAnalysis, getValidUntil, type BeginnerAIOutput, type ProAIOutput } from "../lib/openai";
@@ -200,6 +200,13 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       ...modeSpecificFields,
     })
     .returning();
+
+  await db.insert(notifications).values({
+    userId: req.userId!,
+    title: "Analisis Selesai",
+    message: `Analisis ${instrument} (${timeframe}, ${typedMode === "beginner" ? "Pemula" : "Pro"}) telah selesai diproses.`,
+    type: "info",
+  });
 
   res.status(201).json(analysis);
 });

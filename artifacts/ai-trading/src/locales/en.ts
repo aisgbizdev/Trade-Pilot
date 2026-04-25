@@ -190,6 +190,9 @@ export const en = {
     start_analysis: "Start Analysis",
     load_more: "Load More",
     confidence: "confidence",
+    date_range: "Date Range",
+    from_date: "From",
+    to_date: "To",
   },
   analytics: {
     title: "My Statistics",
