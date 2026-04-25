@@ -4,7 +4,7 @@ import { TrendingUp, BarChart3, Clock, Shield, ChevronRight, Brain, Lock } from 
 const features = [
   {
     icon: Brain,
-    title: "AI GPT-4o Powered",
+    title: "Didukung AI Generatif",
     description: "Analisis mendalam berbasis large language model terbaru — bukan indikator biasa.",
     color: "from-blue-500/20 to-violet-500/20",
     iconColor: "text-blue-400",
@@ -44,7 +44,7 @@ const instruments = [
 ];
 
 const stats = [
-  { value: "GPT-4o", label: "Model AI" },
+  { value: "AI", label: "Model Terkini" },
   { value: "10+", label: "Instrumen" },
   { value: "7", label: "Timeframe" },
   { value: "100%", label: "Bahasa Indonesia" },
