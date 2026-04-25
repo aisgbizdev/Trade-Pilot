@@ -159,6 +159,9 @@ async function sendAnalysisExpiryAlerts(): Promise<void> {
   try {
     const now = new Date();
     const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    // Look back 3 hours — long enough to cover the entire 2-hour expiry window
+    // so we never send a duplicate alert for the same analysis within one expiry window.
+    const lookbackWindow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
 
     const expiringAnalyses = await db
       .select({
@@ -179,14 +182,19 @@ async function sendAnalysisExpiryAlerts(): Promise<void> {
 
       if (!hasSub) continue;
 
+      // Deduplicate: check whether we already sent an expiry alert for this
+      // specific analysis (keyed by analysis ID in the message) within the last
+      // 3 hours. This prevents re-notification on each hourly job run while the
+      // analysis remains inside the 2-hour expiry window.
+      const expiryMarker = `[expiry:${analysis.id}]`;
       const [alreadyNotified] = await db
         .select({ id: notifications.id })
         .from(notifications)
         .where(
           and(
             eq(notifications.userId, analysis.userId),
-            eq(notifications.title, "Analisis Akan Berakhir"),
-            sql`${notifications.createdAt} >= ${now}`
+            sql`${notifications.message} LIKE ${"%" + expiryMarker + "%"}`,
+            sql`${notifications.createdAt} >= ${lookbackWindow}`
           )
         )
         .limit(1);
@@ -196,7 +204,7 @@ async function sendAnalysisExpiryAlerts(): Promise<void> {
       await db.insert(notifications).values({
         userId: analysis.userId,
         title: "Analisis Akan Berakhir",
-        message: `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam. Segera ambil keputusan atau buat analisis baru.`,
+        message: `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam. Segera ambil keputusan atau buat analisis baru. ${expiryMarker}`,
         type: "warning",
       });
 
