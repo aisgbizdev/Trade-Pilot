@@ -2,11 +2,12 @@ import { useCalendar, type CalendarEvent } from "@/hooks/use-calendar";
 import { Loader2, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n";
 
 const IMPACT_CONFIG: Record<string, { label: string; color: string }> = {
-  "★★★": { label: "Tinggi", color: "text-red-500 bg-red-500/15" },
-  "★★":  { label: "Sedang", color: "text-amber-500 bg-amber-500/15" },
-  "★":   { label: "Rendah", color: "text-muted-foreground bg-muted" },
+  "★★★": { label: "★★★", color: "text-red-500 bg-red-500/15" },
+  "★★":  { label: "★★", color: "text-amber-500 bg-amber-500/15" },
+  "★":   { label: "★", color: "text-muted-foreground bg-muted" },
 };
 
 const CURRENCY_FLAGS: Record<string, string> = {
@@ -16,6 +17,7 @@ const CURRENCY_FLAGS: Record<string, string> = {
 };
 
 function EventRow({ event }: { event: CalendarEvent }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const impact = IMPACT_CONFIG[event.impact] ?? { label: "—", color: "bg-muted text-muted-foreground" };
   const hasResult = !!event.actual;
@@ -41,23 +43,23 @@ function EventRow({ event }: { event: CalendarEvent }) {
                 <span className={cn("text-[9px] font-semibold px-1 py-0.5 rounded",
                   actualBetter ? "bg-emerald-500/15 text-emerald-500" : "bg-red-500/15 text-red-500"
                 )}>
-                  {actualBetter ? "Lebih Baik" : "Lebih Buruk"}
+                  {actualBetter ? t.widgets.calendar_better : t.widgets.calendar_worse}
                 </span>
               )}
             </div>
             <p className="text-xs font-medium text-foreground leading-snug">{event.event}</p>
             <div className="flex items-center gap-3 mt-1">
               <span className="text-[10px] text-muted-foreground">
-                Seb: <span className="text-foreground">{event.previous || "—"}</span>
+                {t.widgets.calendar_prev}: <span className="text-foreground">{event.previous || "—"}</span>
               </span>
               {event.forecast && (
                 <span className="text-[10px] text-muted-foreground">
-                  Prk: <span className="text-foreground">{event.forecast}</span>
+                  {t.widgets.calendar_forecast}: <span className="text-foreground">{event.forecast}</span>
                 </span>
               )}
               {event.actual && (
                 <span className="text-[10px] text-muted-foreground">
-                  Aktual: <span className={cn("font-semibold", actualBetter ? "text-emerald-500" : "text-red-500")}>{event.actual}</span>
+                  {t.widgets.calendar_actual}: <span className={cn("font-semibold", actualBetter ? "text-emerald-500" : "text-red-500")}>{event.actual}</span>
                 </span>
               )}
             </div>
@@ -82,6 +84,7 @@ function EventRow({ event }: { event: CalendarEvent }) {
 }
 
 export function CalendarWidget({ filterCurrency, limit = 10 }: { filterCurrency?: string[]; limit?: number }) {
+  const { t, lang } = useTranslation();
   const { data, isLoading, isError } = useCalendar();
   const [showAll, setShowAll] = useState(false);
 
@@ -102,13 +105,15 @@ export function CalendarWidget({ filterCurrency, limit = 10 }: { filterCurrency?
     byDate[e.date].push(e);
   }
 
+  const locale = lang === "id" ? "id-ID" : "en-US";
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
           <Calendar className="w-3.5 h-3.5 text-amber-500" />
         </div>
-        <h3 className="text-sm font-bold text-foreground">Kalender Ekonomi</h3>
+        <h3 className="text-sm font-bold text-foreground">{t.widgets.calendar_title}</h3>
         <a
           href="https://newsmaker.id"
           target="_blank"
@@ -124,15 +129,15 @@ export function CalendarWidget({ filterCurrency, limit = 10 }: { filterCurrency?
       {isLoading ? (
         <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-xs">Memuat kalender...</span>
+          <span className="text-xs">{t.widgets.loading_calendar}</span>
         </div>
       ) : isError ? (
         <div className="p-4 rounded-xl border border-dashed border-border text-center">
-          <p className="text-xs text-muted-foreground">Tidak dapat memuat kalender ekonomi</p>
+          <p className="text-xs text-muted-foreground">{t.widgets.calendar_error}</p>
         </div>
       ) : events.length === 0 ? (
         <div className="p-4 rounded-xl border border-dashed border-border text-center">
-          <p className="text-xs text-muted-foreground">Tidak ada event mendatang minggu ini</p>
+          <p className="text-xs text-muted-foreground">{t.widgets.calendar_empty}</p>
         </div>
       ) : (
         <div className="bg-card border border-border rounded-2xl px-3">
@@ -140,7 +145,7 @@ export function CalendarWidget({ filterCurrency, limit = 10 }: { filterCurrency?
             <div key={date}>
               <div className="py-2 border-b border-border/50">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                  {new Date(date + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}
+                  {new Date(date + "T00:00:00").toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "short" })}
                 </span>
               </div>
               {evts.map((evt, i) => <EventRow key={i} event={evt} />)}
@@ -151,7 +156,7 @@ export function CalendarWidget({ filterCurrency, limit = 10 }: { filterCurrency?
               onClick={() => setShowAll((v) => !v)}
               className="w-full py-2.5 text-xs text-primary font-medium hover:underline"
             >
-              {showAll ? "Tampilkan lebih sedikit" : `+${events.length - limit} event lainnya`}
+              {showAll ? t.widgets.show_less : `+${events.length - limit} ${t.widgets.more_events}`}
             </button>
           )}
         </div>

@@ -4,21 +4,16 @@ import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
 import { useGetNotifications, getGetNotificationsQueryKey } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageToggle } from "./language-toggle";
 
 const MAIN_NAV_PATHS = ["/dashboard", "/analyze", "/history", "/analytics", "/profile"];
-
-const navItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/analyze", icon: TrendingUp, label: "Analisis" },
-  { href: "/history", icon: Clock, label: "Riwayat" },
-  { href: "/analytics", icon: BarChart3, label: "Statistik" },
-  { href: "/profile", icon: User, label: "Profil" },
-];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
   const { data: notifData } = useGetNotifications(
     { unreadOnly: true },
     {
@@ -32,6 +27,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const unreadCount = (notifData as any)?.notifications?.length ?? 0;
   const isMainNav = MAIN_NAV_PATHS.includes(location);
 
+  const navItems = [
+    { href: "/dashboard", icon: LayoutDashboard, label: t.nav.dashboard },
+    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze },
+    { href: "/history", icon: Clock, label: t.nav.history },
+    { href: "/analytics", icon: BarChart3, label: t.nav.analytics },
+    { href: "/profile", icon: User, label: t.nav.profile },
+  ];
+
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto relative">
       <header className="sticky top-0 z-40 px-4 py-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50">
@@ -40,7 +43,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => window.history.back()}
               className="p-1.5 rounded-xl hover:bg-muted transition-colors -ml-1 mr-0.5"
-              aria-label="Kembali"
+              aria-label={t.common.back}
               data-testid="button-back-header"
             >
               <ChevronLeft className="w-5 h-5 text-foreground" />
@@ -55,14 +58,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-foreground"> Trading</span>
             </span>
             <span className="text-[9px] text-muted-foreground leading-none mt-0.5 tracking-wide uppercase">
-              {user?.selectedMode === "pro" ? "Pro Mode" : "Pemula Mode"}
+              {user?.selectedMode === "pro" ? t.common.pro : t.common.beginner} Mode
             </span>
+            <a
+              href="https://newsmaker.id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-0.5 mt-0.5 hover:opacity-75 transition-opacity"
+            >
+              <span className="text-[8px] text-muted-foreground/60 leading-none">supported by</span>
+              <img src="/newsmaker-logo.png" alt="Newsmaker.id" className="h-2.5 w-auto object-contain bg-white rounded-sm px-0.5" />
+            </a>
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <LanguageToggle />
           <button
             data-testid="button-theme-toggle"
-            aria-label={theme === "dark" ? "Beralih ke mode terang" : "Beralih ke mode gelap"}
+            aria-label={theme === "dark" ? t.profile.light_mode : t.profile.dark_mode}
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="p-2 rounded-xl hover:bg-muted transition-colors"
           >
@@ -101,7 +114,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               return (
                 <Link key={href} href={href}>
                   <button
-                    data-testid={`nav-${label.toLowerCase()}`}
+                    data-testid={`nav-${href.replace("/", "")}`}
                     className={cn(
                       "flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200",
                       active
@@ -111,9 +124,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   >
                     <div className={cn(
                       "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                      active
-                        ? "bg-primary/10 dark:bg-primary/20"
-                        : ""
+                      active ? "bg-primary/10 dark:bg-primary/20" : ""
                     )}>
                       <Icon className={cn("w-4.5 h-4.5", active && "stroke-[2.5]")} style={{ width: '18px', height: '18px' }} />
                     </div>

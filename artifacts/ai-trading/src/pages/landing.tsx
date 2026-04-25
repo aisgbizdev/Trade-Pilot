@@ -1,40 +1,9 @@
 import { Link } from "wouter";
 import { TrendingUp, BarChart3, Clock, Shield, ChevronRight, Brain, Lock } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/language-toggle";
 
-const features = [
-  {
-    icon: Brain,
-    title: "Didukung AI Generatif",
-    description: "Analisis mendalam berbasis large language model terbaru — bukan indikator biasa.",
-    color: "from-blue-500/20 to-violet-500/20",
-    iconColor: "text-blue-400",
-    glow: "group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]",
-  },
-  {
-    icon: BarChart3,
-    title: "Mode Pemula & Pro",
-    description: "Mode Pemula untuk analisis ringkas. Mode Pro untuk breakdown teknikal & fundamental penuh.",
-    color: "from-cyan-500/20 to-blue-500/20",
-    iconColor: "text-cyan-400",
-    glow: "group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)]",
-  },
-  {
-    icon: Clock,
-    title: "Validitas per Timeframe",
-    description: "Analisis 1m berlaku 15 menit. 1D berlaku 36 jam. Selalu tahu kapan analisis masih relevan.",
-    color: "from-emerald-500/20 to-teal-500/20",
-    iconColor: "text-emerald-400",
-    glow: "group-hover:shadow-[0_0_20px_rgba(52,211,153,0.3)]",
-  },
-  {
-    icon: Shield,
-    title: "Bukan Sinyal, Tapi Analisis",
-    description: "Kami tidak jual sinyal. Kami bantu kamu berpikir lebih jernih sebelum eksekusi.",
-    color: "from-amber-500/20 to-orange-500/20",
-    iconColor: "text-amber-400",
-    glow: "group-hover:shadow-[0_0_20px_rgba(251,191,36,0.3)]",
-  },
-];
+const ICON_MAP = [Brain, BarChart3, Clock, Shield];
 
 const instruments = [
   "XAU/USD", "EUR/USD", "GBP/USD", "USD/JPY", "BRENT",
@@ -43,14 +12,23 @@ const instruments = [
   "XAG/USD", "NASDAQ", "DJIA", "DXY", "USD/IDR",
 ];
 
-const stats = [
-  { value: "AI", label: "Model Terkini" },
-  { value: "10+", label: "Instrumen" },
-  { value: "7", label: "Timeframe" },
-  { value: "100%", label: "Bahasa Indonesia" },
+const FEATURE_STYLES = [
+  { color: "from-blue-500/20 to-violet-500/20", iconColor: "text-blue-400", glow: "group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]" },
+  { color: "from-cyan-500/20 to-blue-500/20", iconColor: "text-cyan-400", glow: "group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)]" },
+  { color: "from-emerald-500/20 to-teal-500/20", iconColor: "text-emerald-400", glow: "group-hover:shadow-[0_0_20px_rgba(52,211,153,0.3)]" },
+  { color: "from-amber-500/20 to-orange-500/20", iconColor: "text-amber-400", glow: "group-hover:shadow-[0_0_20px_rgba(251,191,36,0.3)]" },
 ];
 
 export default function LandingPage() {
+  const { t, lang } = useTranslation();
+
+  const stats = [
+    { value: "AI", label: t.landing.stats_model },
+    { value: "10+", label: t.landing.stats_instruments },
+    { value: "7", label: t.landing.stats_timeframes },
+    { value: "EN/ID", label: t.landing.stats_lang },
+  ];
+
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
 
@@ -59,20 +37,32 @@ export default function LandingPage() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
             <TrendingUp className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-sm tracking-tight">
-            <span className="gradient-text">AI</span>
-            <span className="text-foreground"> Trading</span>
-          </span>
+          <div className="flex flex-col">
+            <span className="font-bold text-sm tracking-tight">
+              <span className="gradient-text">AI</span>
+              <span className="text-foreground"> Trading</span>
+            </span>
+            <a
+              href="https://newsmaker.id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-0.5 mt-0.5 hover:opacity-75 transition-opacity"
+            >
+              <span className="text-[8px] text-muted-foreground/60 leading-none">supported by</span>
+              <img src="/newsmaker-logo.png" alt="Newsmaker.id" className="h-2.5 w-auto object-contain bg-white rounded-sm px-0.5" />
+            </a>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <LanguageToggle />
           <Link href="/login">
             <button className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-all" data-testid="link-login">
-              Masuk
+              {t.landing.login}
             </button>
           </Link>
           <Link href="/register">
             <button className="text-sm font-medium px-4 py-1.5 rounded-lg btn-premium text-white transition-all hover:opacity-90" data-testid="link-register">
-              Daftar
+              {t.landing.register}
             </button>
           </Link>
         </div>
@@ -89,13 +79,17 @@ export default function LandingPage() {
 
           <div className="relative z-10">
             <h1 className="text-[2rem] font-extrabold leading-[1.15] mb-4 text-white">
-              Analisis Pasar yang{" "}
-              <span className="gradient-text">Jujur &amp; Terstruktur</span>
+              {lang === "id" ? (
+                <>Analisis Pasar yang <span className="gradient-text">Jujur &amp; Terstruktur</span></>
+              ) : (
+                <><span className="gradient-text">Honest &amp; Structured</span> Market Analysis</>
+              )}
             </h1>
 
             <p className="text-sm text-slate-400 leading-relaxed mb-8 max-w-xs mx-auto">
-              Bukan robot trading. Bukan sinyal ajaib. AI kami membantu kamu
-              <span className="text-slate-300 font-medium"> berpikir lebih tajam</span> sebelum ambil keputusan.
+              {t.landing.subtitle}{" "}
+              <span className="text-slate-300 font-medium">{t.landing.subtitle_bold}</span>{" "}
+              {t.landing.subtitle_end}
             </p>
 
             <div className="flex flex-col gap-3 mb-10">
@@ -104,7 +98,7 @@ export default function LandingPage() {
                   className="w-full h-12 rounded-xl font-semibold text-white btn-premium flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
                   data-testid="button-get-started"
                 >
-                  Mulai Analisis Gratis
+                  {t.landing.cta_start}
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </Link>
@@ -113,7 +107,7 @@ export default function LandingPage() {
                   className="w-full h-11 rounded-xl font-medium text-slate-300 border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
                   data-testid="button-login"
                 >
-                  Sudah punya akun? Masuk
+                  {t.landing.cta_login}
                 </button>
               </Link>
             </div>
@@ -142,27 +136,31 @@ export default function LandingPage() {
 
         <section className="px-4 py-8">
           <div className="text-center mb-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">Kemampuan Platform</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">{t.landing.section_features_tag}</p>
             <h2 className="text-xl font-bold text-foreground">
-              Lebih dari Sekadar{" "}
-              <span className="gradient-text">Indikator Biasa</span>
+              {t.landing.section_features_title}{" "}
+              <span className="gradient-text">{t.landing.section_features_highlight}</span>
             </h2>
           </div>
           <div className="space-y-3">
-            {features.map(({ icon: Icon, title, description, color, iconColor, glow }) => (
-              <div
-                key={title}
-                className={`group flex gap-3.5 p-4 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all duration-300 ${glow}`}
-              >
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shrink-0 border border-white/10`}>
-                  <Icon className={`w-5 h-5 ${iconColor}`} />
+            {t.landing.features.map((feature, idx) => {
+              const Icon = ICON_MAP[idx];
+              const style = FEATURE_STYLES[idx];
+              return (
+                <div
+                  key={idx}
+                  className={`group flex gap-3.5 p-4 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all duration-300 ${style.glow}`}
+                >
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.color} flex items-center justify-center shrink-0 border border-white/10`}>
+                    <Icon className={`w-5 h-5 ${style.iconColor}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-1">{feature.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -177,18 +175,18 @@ export default function LandingPage() {
                   <Brain className="w-6 h-6 text-white" />
                 </div>
                 <h2 className="text-lg font-bold text-white mb-2">
-                  Coba Sekarang — <span className="gradient-text">Gratis</span>
+                  {t.landing.cta_bottom_title} <span className="gradient-text">{t.landing.cta_bottom_highlight}</span>
                 </h2>
                 <p className="text-xs text-slate-400 leading-relaxed mb-5">
-                  Daftar dalam 30 detik. Analisis pertama langsung tersedia.
+                  {t.landing.cta_bottom_subtitle}
                 </p>
                 <div className="flex items-center justify-center gap-4 mb-5 text-xs text-slate-500">
-                  <span className="flex items-center gap-1"><Lock className="w-3 h-3 text-emerald-400" /> Tanpa kartu kredit</span>
-                  <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-blue-400" /> Data aman</span>
+                  <span className="flex items-center gap-1"><Lock className="w-3 h-3 text-emerald-400" /> {t.landing.no_credit_card}</span>
+                  <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-blue-400" /> {t.landing.secure_data}</span>
                 </div>
                 <Link href="/register">
                   <button className="w-full h-11 rounded-xl font-semibold text-white btn-premium hover:opacity-90 transition-all" data-testid="button-signup-bottom">
-                    Daftar Sekarang
+                    {t.landing.cta_signup}
                   </button>
                 </Link>
               </div>
@@ -199,7 +197,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-border/50 px-4 py-4 text-center">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
-          AI Trading Assistant adalah alat pendukung keputusan, bukan saran keuangan atau layanan trading.
+          {t.landing.footer}
         </p>
       </footer>
     </div>

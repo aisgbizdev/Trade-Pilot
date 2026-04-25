@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
@@ -10,6 +11,7 @@ import { useCreateAnalysis } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
+import { useTranslation } from "@/lib/i18n";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -22,18 +24,10 @@ const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJ
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
 const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"];
 
-const LOADING_MESSAGES = [
-  "Menganalisis kondisi pasar...",
-  "Memeriksa faktor teknikal...",
-  "Mengevaluasi sentimen fundamental...",
-  "Menyusun skenario kemungkinan...",
-  "Memvalidasi tingkat keyakinan...",
-  "Menyiapkan hasil analisis...",
-];
-
 function LivePriceChip({ instrument }: { instrument: string }) {
+  const { t } = useTranslation();
   const { quote, isLoading } = useQuoteByInstrument(instrument);
-  if (isLoading) return <span className="text-[10px] text-muted-foreground">memuat...</span>;
+  if (isLoading) return <span className="text-[10px] text-muted-foreground">{t.analyze.loading_price}</span>;
   if (!quote) return null;
   const isUp = quote.direction === "up";
   const isFlat = quote.changePercent === "+0%" || quote.changePercent === "0%";
@@ -53,6 +47,7 @@ function LivePriceChip({ instrument }: { instrument: string }) {
 
 export default function AnalyzePage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
@@ -75,26 +70,24 @@ export default function AnalyzePage() {
   useEffect(() => {
     if (isLoading) {
       intervalRef.current = setInterval(() => {
-        setLoadingMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length);
+        setLoadingMsgIndex((i) => (i + 1) % t.analyze.loading.length);
       }, 1800);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setLoadingMsgIndex(0);
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isLoading]);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isLoading, t]);
 
   const finalInstrument = customInstrument.trim() || selectedInstrument;
 
   const handleSubmit = async () => {
     if (!finalInstrument) {
-      toast({ title: "Pilih instrumen", description: "Pilih atau ketik instrumen yang ingin dianalisis", variant: "destructive" });
+      toast({ title: t.analyze.error_no_instrument, description: t.analyze.error_no_instrument_desc, variant: "destructive" });
       return;
     }
     if (!selectedTimeframe) {
-      toast({ title: "Pilih timeframe", description: "Pilih timeframe analisis", variant: "destructive" });
+      toast({ title: t.analyze.error_no_timeframe, description: t.analyze.error_no_timeframe_desc, variant: "destructive" });
       return;
     }
 
@@ -112,8 +105,8 @@ export default function AnalyzePage() {
       setLocation(`/analyses/${res.id}`);
     } catch (err: any) {
       toast({
-        title: "Analisis gagal",
-        description: err?.data?.error ?? "Terjadi kesalahan, coba lagi",
+        title: t.analyze.failed_title,
+        description: err?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     } finally {
@@ -133,16 +126,16 @@ export default function AnalyzePage() {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-foreground">Analisis Baru</h1>
+            <h1 className="text-lg font-bold text-foreground">{t.analyze.title}</h1>
             <p className="text-xs text-muted-foreground">
-              Mode: {user?.selectedMode === "beginner" ? "Pemula" : "Pro"}
+              {t.analyze.mode_label}: {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
             </p>
           </div>
         </div>
 
         <div className="space-y-5">
           <div>
-            <h2 className="text-sm font-semibold text-foreground mb-3">Pilih Instrumen</h2>
+            <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
             <div className="flex gap-2 mb-3">
               {(["futures", "forex"] as const).map((tab) => (
                 <button
@@ -164,10 +157,7 @@ export default function AnalyzePage() {
               {(activeTab === "futures" ? FUTURES_INSTRUMENTS : FOREX_INSTRUMENTS).map((inst) => (
                 <button
                   key={inst}
-                  onClick={() => {
-                    setSelectedInstrument(inst);
-                    setCustomInstrument("");
-                  }}
+                  onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
                   data-testid={`button-instrument-${inst}`}
                   className={cn(
                     "py-2.5 text-sm font-medium rounded-lg border transition-all",
@@ -183,7 +173,7 @@ export default function AnalyzePage() {
             <div className="mt-3">
               <input
                 type="text"
-                placeholder="Atau ketik instrumen lain..."
+                placeholder={t.analyze.or_type}
                 value={customInstrument}
                 onChange={(e) => {
                   setCustomInstrument(e.target.value);
@@ -196,7 +186,7 @@ export default function AnalyzePage() {
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold text-foreground mb-3">Pilih Timeframe</h2>
+            <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_timeframe}</h2>
             <div className="flex flex-wrap gap-2">
               {TIMEFRAMES.map((tf) => (
                 <button
@@ -222,10 +212,10 @@ export default function AnalyzePage() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold text-foreground">Catatan (opsional)</h2>
+              <h2 className="text-sm font-semibold text-foreground">{t.analyze.notes_label}</h2>
             </div>
             <Textarea
-              placeholder="Contoh: pasar sedang menunggu data NFP, ada sentimen risk-off, atau kondisi teknikal tertentu yang kamu amati..."
+              placeholder={t.analyze.notes_placeholder}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
@@ -234,28 +224,28 @@ export default function AnalyzePage() {
             />
             <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
               <span className="text-amber-500 mt-0.5">⚠</span>
-              Aplikasi ini independen. Pertanyaan tentang broker atau perusahaan pialang tidak akan diproses.
+              {t.analyze.broker_warning}
             </p>
           </div>
 
           {finalInstrument && selectedTimeframe && (
             <Card className="p-3 bg-muted/50 border-dashed">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Instrumen:</span>
+                <span className="text-muted-foreground">{t.analyze.instrument_label}:</span>
                 <span className="font-semibold text-foreground">{finalInstrument}</span>
               </div>
               <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-muted-foreground">Harga saat ini:</span>
+                <span className="text-muted-foreground">{t.analyze.current_price}:</span>
                 <LivePriceChip instrument={finalInstrument} />
               </div>
               <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-muted-foreground">Timeframe:</span>
+                <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
                 <span className="font-semibold text-foreground">{selectedTimeframe}</span>
               </div>
               <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-muted-foreground">Mode:</span>
+                <span className="text-muted-foreground">{t.analyze.mode_label}:</span>
                 <span className="font-semibold text-foreground">
-                  {user?.selectedMode === "beginner" ? "Pemula" : "Pro"}
+                  {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
                 </span>
               </div>
             </Card>
@@ -270,15 +260,13 @@ export default function AnalyzePage() {
             {isLoading ? (
               <div className="flex items-center gap-3">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm">{LOADING_MESSAGES[loadingMsgIndex]}</span>
+                <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
               </div>
-            ) : (
-              "Analisis"
-            )}
+            ) : t.analyze.submit_btn}
           </Button>
 
           <p className="text-xs text-muted-foreground text-center leading-relaxed">
-            Hasil analisis ini hanya untuk mendukung keputusan, bukan saran keuangan atau sinyal trading.
+            {t.analyze.disclaimer}
           </p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useNews } from "@/hooks/use-news";
 import { Loader2, Newspaper, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 const CATEGORY_COLORS: Record<string, string> = {
   GLOBAL: "bg-blue-500/15 text-blue-500",
@@ -11,8 +12,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function NewsWidget({ limit = 5 }: { limit?: number }) {
+  const { t } = useTranslation();
   const { data, isLoading, isError } = useNews();
-
   const articles = data?.articles?.slice(0, limit) ?? [];
 
   return (
@@ -21,7 +22,7 @@ export function NewsWidget({ limit = 5 }: { limit?: number }) {
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
           <Newspaper className="w-3.5 h-3.5 text-cyan-400" />
         </div>
-        <h3 className="text-sm font-bold text-foreground">Berita Pasar</h3>
+        <h3 className="text-sm font-bold text-foreground">{t.widgets.news_title}</h3>
         <a
           href="https://newsmaker.id"
           target="_blank"
@@ -37,11 +38,11 @@ export function NewsWidget({ limit = 5 }: { limit?: number }) {
       {isLoading ? (
         <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-xs">Memuat berita...</span>
+          <span className="text-xs">{t.widgets.loading_news}</span>
         </div>
       ) : isError ? (
         <div className="p-4 rounded-xl border border-dashed border-border text-center">
-          <p className="text-xs text-muted-foreground">Tidak dapat memuat berita</p>
+          <p className="text-xs text-muted-foreground">{t.widgets.news_error}</p>
         </div>
       ) : (
         <div className="space-y-2">

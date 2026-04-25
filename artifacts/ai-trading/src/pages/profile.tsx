@@ -18,19 +18,13 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-
-const SECURITY_QUESTIONS = [
-  "Nama hewan peliharaan pertama kamu?",
-  "Nama kota tempat kamu lahir?",
-  "Nama ibu kandung kamu?",
-  "Nama sekolah dasar kamu?",
-  "Nama teman terbaik masa kecil kamu?",
-];
+import { useTranslation } from "@/lib/i18n";
 
 export default function ProfilePage() {
-  const { user, refetch } = useAuth();
+  const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
@@ -53,9 +47,9 @@ export default function ProfilePage() {
   const [secAnswer, setSecAnswer] = useState("");
   const [showSecAnswer, setShowSecAnswer] = useState(false);
 
-  const handleThemeToggle = async (t: "light" | "dark") => {
-    setTheme(t);
-    await updateProfile.mutateAsync({ data: { themePreference: t } });
+  const handleThemeToggle = async (th: "light" | "dark") => {
+    setTheme(th);
+    await updateProfile.mutateAsync({ data: { themePreference: th } });
   };
 
   const handleSaveName = async () => {
@@ -63,13 +57,13 @@ export default function ProfilePage() {
     await updateProfile.mutateAsync({ data: { displayName: newName.trim() } });
     queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     setEditingName(false);
-    toast({ title: "Nama berhasil diperbarui" });
+    toast({ title: t.profile.name_updated });
   };
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword) return;
     if (newPassword.length < 6) {
-      toast({ title: "Password baru minimal 6 karakter", variant: "destructive" });
+      toast({ title: t.profile.password_min_length, variant: "destructive" });
       return;
     }
     try {
@@ -77,9 +71,9 @@ export default function ProfilePage() {
       setCurrentPassword("");
       setNewPassword("");
       setShowPasswordSection(false);
-      toast({ title: "Password berhasil diubah" });
+      toast({ title: t.profile.password_updated });
     } catch (err: any) {
-      toast({ title: err?.data?.error ?? "Gagal mengubah password", variant: "destructive" });
+      toast({ title: err?.data?.error ?? t.profile.password_failed, variant: "destructive" });
     }
   };
 
@@ -93,9 +87,9 @@ export default function ProfilePage() {
       setSecQuestion("");
       setSecAnswer("");
       setShowSecuritySection(false);
-      toast({ title: "Pertanyaan keamanan berhasil diubah" });
+      toast({ title: t.profile.security_updated });
     } catch (err: any) {
-      toast({ title: err?.data?.error ?? "Gagal mengubah pertanyaan keamanan", variant: "destructive" });
+      toast({ title: err?.data?.error ?? t.profile.security_failed, variant: "destructive" });
     }
   };
 
@@ -108,7 +102,7 @@ export default function ProfilePage() {
   return (
     <Layout>
       <div className="px-4 py-5 space-y-4">
-        <h1 className="text-xl font-bold text-foreground">Profil</h1>
+        <h1 className="text-xl font-bold text-foreground">{t.profile.title}</h1>
 
         <Card className="p-4">
           <div className="flex items-center gap-3 mb-4">
@@ -131,7 +125,7 @@ export default function ProfilePage() {
                     disabled={updateProfile.isPending}
                     data-testid="button-save-name"
                   >
-                    Simpan
+                    {t.common.save}
                   </Button>
                 </div>
               ) : (
@@ -144,7 +138,7 @@ export default function ProfilePage() {
                     className="text-xs text-primary hover:underline"
                     data-testid="button-edit-name"
                   >
-                    Edit
+                    {t.common.edit}
                   </button>
                 </div>
               )}
@@ -159,13 +153,13 @@ export default function ProfilePage() {
               {user?.role === "super_admin" ? "Super Admin" : user?.role === "admin" ? "Admin" : "User"}
             </Badge>
             <Badge variant="outline" className="text-xs">
-              {user?.selectedMode === "beginner" ? "Mode Pemula" : "Mode Pro"}
+              {user?.selectedMode === "beginner" ? `${t.profile.mode_label}: ${t.common.beginner}` : `${t.profile.mode_label}: ${t.common.pro}`}
             </Badge>
           </div>
         </Card>
 
         <Card className="p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Tema Tampilan</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">{t.profile.theme_label}</h3>
           <div className="flex gap-2">
             <button
               onClick={() => handleThemeToggle("light")}
@@ -178,7 +172,7 @@ export default function ProfilePage() {
               )}
             >
               <Sun className="w-4 h-4" />
-              Terang
+              {t.profile.light_mode}
             </button>
             <button
               onClick={() => handleThemeToggle("dark")}
@@ -191,7 +185,7 @@ export default function ProfilePage() {
               )}
             >
               <Moon className="w-4 h-4" />
-              Gelap
+              {t.profile.dark_mode}
             </button>
           </div>
         </Card>
@@ -202,7 +196,7 @@ export default function ProfilePage() {
             onClick={() => setShowPasswordSection((v) => !v)}
             data-testid="button-toggle-password-section"
           >
-            <span className="text-sm font-medium text-foreground">Ubah Password</span>
+            <span className="text-sm font-medium text-foreground">{t.profile.change_password}</span>
             <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", showPasswordSection && "rotate-90")} />
           </button>
 
@@ -210,7 +204,7 @@ export default function ProfilePage() {
             <div className="space-y-3 pt-1 border-t border-border">
               <Input
                 type="password"
-                placeholder="Password saat ini"
+                placeholder={t.profile.current_password_placeholder}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 data-testid="input-current-password"
@@ -218,7 +212,7 @@ export default function ProfilePage() {
               <div className="relative">
                 <Input
                   type={showNewPassword ? "text" : "password"}
-                  placeholder="Password baru (min 6 karakter)"
+                  placeholder={t.profile.new_password_placeholder}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   data-testid="input-new-password"
@@ -240,7 +234,7 @@ export default function ProfilePage() {
                 data-testid="button-save-password"
               >
                 {changePassword.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Simpan Password
+                {t.profile.save_password}
               </Button>
             </div>
           )}
@@ -254,7 +248,7 @@ export default function ProfilePage() {
           >
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">Pertanyaan Keamanan</span>
+              <span className="text-sm font-medium text-foreground">{t.auth.security_question_label}</span>
             </div>
             <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", showSecuritySection && "rotate-90")} />
           </button>
@@ -263,7 +257,7 @@ export default function ProfilePage() {
             <div className="space-y-3 pt-1 border-t border-border">
               <Input
                 type="password"
-                placeholder="Password saat ini"
+                placeholder={t.profile.current_password_placeholder}
                 value={secCurrentPassword}
                 onChange={(e) => setSecCurrentPassword(e.target.value)}
                 data-testid="input-sec-current-password"
@@ -274,15 +268,15 @@ export default function ProfilePage() {
                 onChange={(e) => setSecQuestion(e.target.value)}
                 data-testid="select-security-question"
               >
-                <option value="">Pilih pertanyaan keamanan baru</option>
-                {SECURITY_QUESTIONS.map((q) => (
+                <option value="">{t.auth.security_question_placeholder}</option>
+                {t.profile.security_questions.map((q) => (
                   <option key={q} value={q}>{q}</option>
                 ))}
               </select>
               <div className="relative">
                 <Input
                   type={showSecAnswer ? "text" : "password"}
-                  placeholder="Jawaban baru"
+                  placeholder={t.auth.security_answer_placeholder}
                   value={secAnswer}
                   onChange={(e) => setSecAnswer(e.target.value)}
                   data-testid="input-security-answer"
@@ -303,7 +297,7 @@ export default function ProfilePage() {
                 data-testid="button-save-security-question"
               >
                 {changeSecurityQuestion.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Simpan Pertanyaan
+                {t.profile.save_security}
               </Button>
             </div>
           )}
@@ -311,7 +305,7 @@ export default function ProfilePage() {
 
         {(user?.role === "admin" || user?.role === "super_admin") && (
           <Card className="p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Panel Admin</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-3">{t.profile.admin_panel}</h3>
             <div className="space-y-2">
               <Button
                 variant="outline"
@@ -321,7 +315,7 @@ export default function ProfilePage() {
                 data-testid="button-go-admin"
               >
                 <Shield className="w-4 h-4 mr-2" />
-                Dashboard Admin
+                {t.profile.admin_dashboard}
               </Button>
               {user?.role === "super_admin" && (
                 <Button
@@ -331,7 +325,7 @@ export default function ProfilePage() {
                   onClick={() => setLocation("/admin/users")}
                   data-testid="button-go-admin-users"
                 >
-                  Manajemen Pengguna
+                  {t.profile.user_management}
                 </Button>
               )}
             </div>
@@ -346,7 +340,7 @@ export default function ProfilePage() {
           data-testid="button-logout"
         >
           {logout.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <LogOut className="w-4 h-4 mr-2" />}
-          Keluar
+          {t.profile.logout}
         </Button>
       </div>
     </Layout>

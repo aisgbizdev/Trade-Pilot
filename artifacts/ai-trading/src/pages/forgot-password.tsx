@@ -7,12 +7,7 @@ import { ArrowLeft, Eye, EyeOff, TrendingUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -20,10 +15,13 @@ import {
   useVerifySecurityAnswer,
   useResetPassword,
 } from "@workspace/api-client-react";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/language-toggle";
 
 type Step = "email" | "question" | "reset" | "done";
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>("email");
   const [question, setQuestion] = useState("");
   const [resetToken, setResetToken] = useState("");
@@ -39,9 +37,7 @@ export default function ForgotPasswordPage() {
   const emailForm = useForm({ defaultValues: { email: "" } });
   const answerForm = useForm({ defaultValues: { answer: "" } });
   const passwordForm = useForm({
-    resolver: zodResolver(
-      z.object({ newPassword: z.string().min(6, "Password minimal 6 karakter") })
-    ),
+    resolver: zodResolver(z.object({ newPassword: z.string().min(6) })),
     defaultValues: { newPassword: "" },
   });
 
@@ -54,8 +50,8 @@ export default function ForgotPasswordPage() {
       setStep("question");
     } catch (err: any) {
       toast({
-        title: "Email tidak ditemukan",
-        description: err?.data?.error ?? "Periksa kembali email kamu",
+        title: t.auth.forgot_title,
+        description: err?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     }
@@ -63,16 +59,14 @@ export default function ForgotPasswordPage() {
 
   const handleAnswerSubmit = async (values: { answer: string }) => {
     try {
-      const result = await verifyAnswer.mutateAsync({
-        data: { resetToken, answer: values.answer },
-      });
+      const result = await verifyAnswer.mutateAsync({ data: { resetToken, answer: values.answer } });
       const res = result as any;
       setVerifiedToken(res.verifiedToken);
       setStep("reset");
     } catch (err: any) {
       toast({
-        title: "Jawaban salah",
-        description: err?.data?.error ?? "Jawaban keamanan tidak cocok",
+        title: t.auth.security_answer_label,
+        description: err?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     }
@@ -80,14 +74,12 @@ export default function ForgotPasswordPage() {
 
   const handlePasswordSubmit = async (values: { newPassword: string }) => {
     try {
-      await resetPassword.mutateAsync({
-        data: { verifiedToken, newPassword: values.newPassword },
-      });
+      await resetPassword.mutateAsync({ data: { verifiedToken, newPassword: values.newPassword } });
       setStep("done");
     } catch (err: any) {
       toast({
-        title: "Reset gagal",
-        description: err?.data?.error ?? "Terjadi kesalahan",
+        title: t.analyze.failed_title,
+        description: err?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     }
@@ -95,9 +87,12 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
-      <div className="flex flex-col items-center px-6 py-8">
+      <div className="flex justify-end px-4 pt-4">
+        <LanguageToggle />
+      </div>
+      <div className="flex flex-col items-center px-6 py-4">
         <div className="w-full max-w-sm">
-          <div className="flex items-center justify-center gap-2 mb-6">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -107,36 +102,29 @@ export default function ForgotPasswordPage() {
             <Link href="/login">
               <button className="flex items-center gap-1 text-sm text-muted-foreground mb-6 hover:text-foreground" data-testid="link-back-to-login">
                 <ArrowLeft className="w-4 h-4" />
-                Kembali ke login
+                {t.auth.back_to_login}
               </button>
             </Link>
           )}
 
           {step === "email" && (
             <>
-              <h1 className="text-2xl font-bold text-foreground mb-1">Lupa Password</h1>
-              <p className="text-sm text-muted-foreground mb-6">
-                Masukkan email kamu untuk melanjutkan
-              </p>
+              <h1 className="text-2xl font-bold text-foreground mb-1">{t.auth.forgot_title}</h1>
+              <p className="text-sm text-muted-foreground mb-6">{t.auth.forgot_subtitle}</p>
               <form onSubmit={emailForm.handleSubmit(handleEmailSubmit)} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Email</label>
+                  <label className="text-sm font-medium">{t.auth.email_registered_label}</label>
                   <Input
                     {...emailForm.register("email")}
                     type="email"
-                    placeholder="kamu@email.com"
+                    placeholder={t.auth.email_placeholder}
                     className="mt-1"
                     data-testid="input-email"
                   />
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={getQuestion.isPending}
-                  data-testid="button-find-account"
-                >
+                <Button type="submit" className="w-full" disabled={getQuestion.isPending} data-testid="button-find-account">
                   {getQuestion.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  Cari Akun
+                  {getQuestion.isPending ? t.auth.getting_question : t.auth.get_question_btn}
                 </Button>
               </form>
             </>
@@ -144,28 +132,23 @@ export default function ForgotPasswordPage() {
 
           {step === "question" && (
             <>
-              <h1 className="text-2xl font-bold text-foreground mb-1">Pertanyaan Keamanan</h1>
+              <h1 className="text-2xl font-bold text-foreground mb-3">{t.auth.security_question_label}</h1>
               <div className="bg-muted rounded-lg p-3 mb-6">
                 <p className="text-sm font-medium text-foreground">{question}</p>
               </div>
               <form onSubmit={answerForm.handleSubmit(handleAnswerSubmit)} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Jawaban Kamu</label>
+                  <label className="text-sm font-medium">{t.auth.security_answer_label}</label>
                   <Input
                     {...answerForm.register("answer")}
-                    placeholder="Jawaban pertanyaan keamanan"
+                    placeholder={t.auth.answer_placeholder}
                     className="mt-1"
                     data-testid="input-security-answer"
                   />
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={verifyAnswer.isPending}
-                  data-testid="button-verify-answer"
-                >
+                <Button type="submit" className="w-full" disabled={verifyAnswer.isPending} data-testid="button-verify-answer">
                   {verifyAnswer.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  Verifikasi
+                  {verifyAnswer.isPending ? t.auth.verifying : t.auth.verify_answer_btn}
                 </Button>
               </form>
             </>
@@ -173,10 +156,7 @@ export default function ForgotPasswordPage() {
 
           {step === "reset" && (
             <>
-              <h1 className="text-2xl font-bold text-foreground mb-1">Password Baru</h1>
-              <p className="text-sm text-muted-foreground mb-6">
-                Buat password baru yang kuat
-              </p>
+              <h1 className="text-2xl font-bold text-foreground mb-1">{t.auth.new_password_label}</h1>
               <Form {...passwordForm}>
                 <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-4">
                   <FormField
@@ -184,13 +164,13 @@ export default function ForgotPasswordPage() {
                     name="newPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password Baru</FormLabel>
+                        <FormLabel>{t.auth.new_password_label}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Input
                               {...field}
                               type={showPassword ? "text" : "password"}
-                              placeholder="Minimal 6 karakter"
+                              placeholder={t.auth.password_placeholder}
                               data-testid="input-new-password"
                             />
                             <button
@@ -207,14 +187,9 @@ export default function ForgotPasswordPage() {
                       </FormItem>
                     )}
                   />
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={resetPassword.isPending}
-                    data-testid="button-reset-password"
-                  >
+                  <Button type="submit" className="w-full" disabled={resetPassword.isPending} data-testid="button-reset-password">
                     {resetPassword.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Reset Password
+                    {resetPassword.isPending ? t.auth.resetting : t.auth.reset_btn}
                   </Button>
                 </form>
               </Form>
@@ -228,16 +203,10 @@ export default function ForgotPasswordPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-foreground mb-2">Password Direset!</h1>
-              <p className="text-sm text-muted-foreground mb-6">
-                Password kamu berhasil diubah. Silakan login dengan password baru.
-              </p>
-              <Button
-                onClick={() => setLocation("/login")}
-                className="w-full"
-                data-testid="button-go-to-login"
-              >
-                Kembali ke Login
+              <h1 className="text-2xl font-bold text-foreground mb-2">{t.auth.reset_success_title}</h1>
+              <p className="text-sm text-muted-foreground mb-6">{t.auth.reset_success_subtitle}</p>
+              <Button onClick={() => setLocation("/login")} className="w-full" data-testid="button-go-to-login">
+                {t.auth.back_to_login}
               </Button>
             </div>
           )}

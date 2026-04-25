@@ -1,8 +1,14 @@
 import { useTechnicalIndicators } from "@/hooks/use-technical-indicators";
 import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 function SignalBadge({ signal }: { signal: "Buy" | "Sell" | "Neutral" }) {
+  const { t } = useTranslation();
+  const signalLabel =
+    signal === "Buy" ? t.analyze.signal_buy :
+    signal === "Sell" ? t.analyze.signal_sell :
+    t.analyze.signal_neutral;
   return (
     <span className={cn(
       "text-[10px] font-bold px-1.5 py-0.5 rounded-md",
@@ -10,17 +16,18 @@ function SignalBadge({ signal }: { signal: "Buy" | "Sell" | "Neutral" }) {
       signal === "Sell" ? "bg-red-500/15 text-red-500" :
       "bg-muted text-muted-foreground"
     )}>
-      {signal === "Buy" ? "Beli" : signal === "Sell" ? "Jual" : "Netral"}
+      {signalLabel}
     </span>
   );
 }
 
 function SummaryGauge({ buy, sell, neutral }: { buy: number; sell: number; neutral: number }) {
+  const { t } = useTranslation();
   const total = buy + sell + neutral || 1;
   const buyPct = (buy / total) * 100;
   const sellPct = (sell / total) * 100;
-  const signal = buy > sell * 1.5 ? "Beli" : sell > buy * 1.5 ? "Jual" : "Netral";
-  const signalColor = signal === "Beli" ? "text-emerald-500" : signal === "Jual" ? "text-red-500" : "text-amber-500";
+  const signal = buy > sell * 1.5 ? t.analyze.signal_buy : sell > buy * 1.5 ? t.analyze.signal_sell : t.analyze.signal_neutral;
+  const signalColor = signal === t.analyze.signal_buy ? "text-emerald-500" : signal === t.analyze.signal_sell ? "text-red-500" : "text-amber-500";
 
   return (
     <div className="text-center">
@@ -30,9 +37,9 @@ function SummaryGauge({ buy, sell, neutral }: { buy: number; sell: number; neutr
         <div className="bg-red-500 rounded-full transition-all" style={{ width: `${sellPct}%` }} />
       </div>
       <div className="flex justify-between text-[10px]">
-        <span className="text-emerald-500 font-semibold">{buy} Beli</span>
-        <span className="text-muted-foreground">{neutral} Netral</span>
-        <span className="text-red-500 font-semibold">{sell} Jual</span>
+        <span className="text-emerald-500 font-semibold">{buy} {t.analyze.signal_buy}</span>
+        <span className="text-muted-foreground">{neutral} {t.analyze.signal_neutral}</span>
+        <span className="text-red-500 font-semibold">{sell} {t.analyze.signal_sell}</span>
       </div>
     </div>
   );
@@ -53,18 +60,19 @@ function ChangeChip({ value, suffix = "%" }: { value: number; suffix?: string })
 }
 
 export function TechnicalIndicatorsPanel({ instrument }: { instrument: string }) {
+  const { t } = useTranslation();
   const { data: ind, isLoading, isError } = useTechnicalIndicators(instrument);
 
   if (isLoading) return (
     <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
       <Loader2 className="w-4 h-4 animate-spin" />
-      <span className="text-xs">Memuat indikator teknikal...</span>
+      <span className="text-xs">{t.analyze.loading_indicators}</span>
     </div>
   );
 
   if (isError || !ind) return (
     <div className="p-4 rounded-xl border border-dashed border-border text-center">
-      <p className="text-xs text-muted-foreground">Data teknikal tidak tersedia untuk instrumen ini</p>
+      <p className="text-xs text-muted-foreground">{t.analyze.indicators_error}</p>
     </div>
   );
 
@@ -77,9 +85,9 @@ export function TechnicalIndicatorsPanel({ instrument }: { instrument: string })
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">
           <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
         </div>
-        <h3 className="text-sm font-bold text-foreground">Indikator Teknikal</h3>
+        <h3 className="text-sm font-bold text-foreground">{t.analyze.technical_indicators}</h3>
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground">Data harian · {ind.dataPoints} candle</span>
+          <span className="text-[10px] text-muted-foreground">{t.analyze.daily_data} · {ind.dataPoints} {t.analyze.candles}</span>
           <a
             href="https://newsmaker.id"
             target="_blank"
@@ -95,26 +103,22 @@ export function TechnicalIndicatorsPanel({ instrument }: { instrument: string })
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">Harga</div>
+          <div className="text-[10px] text-muted-foreground mb-1">{t.analyze.price_label}</div>
           <div className="text-sm font-bold text-foreground tabular-nums">{Number(ind.lastClose).toFixed(ind.lastClose > 100 ? 2 : 4)}</div>
         </div>
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">1 Hari</div>
+          <div className="text-[10px] text-muted-foreground mb-1">{t.analyze.change_1d}</div>
           <ChangeChip value={ind.change1dPct} />
         </div>
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">20 Hari</div>
+          <div className="text-[10px] text-muted-foreground mb-1">{t.analyze.change_20d}</div>
           <ChangeChip value={ind.change20dPct} />
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-4">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-3">Ringkasan Sinyal</p>
-        <SummaryGauge
-          buy={ind.overallSummary.buy}
-          sell={ind.overallSummary.sell}
-          neutral={ind.overallSummary.neutral}
-        />
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-3">{t.analyze.signal_summary}</p>
+        <SummaryGauge buy={ind.overallSummary.buy} sell={ind.overallSummary.sell} neutral={ind.overallSummary.neutral} />
         <div className="grid grid-cols-2 gap-2 mt-3">
           <div className="bg-muted/50 rounded-xl p-2 text-center">
             <p className="text-[9px] text-muted-foreground mb-1">Oscillator</p>

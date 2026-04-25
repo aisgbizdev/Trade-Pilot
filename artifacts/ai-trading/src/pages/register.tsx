@@ -7,44 +7,30 @@ import { Eye, EyeOff, TrendingUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useRegister, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-
-const SECURITY_QUESTIONS = [
-  "Nama hewan peliharaan pertama kamu?",
-  "Nama kota tempat kamu lahir?",
-  "Nama ibu kandung kamu?",
-  "Nama sekolah dasar kamu?",
-  "Nama teman terbaik masa kecil kamu?",
-];
+import { useTranslation } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/language-toggle";
 
 const schema = z.object({
-  email: z.string().email("Format email tidak valid"),
-  password: z.string().min(6, "Password minimal 6 karakter"),
-  displayName: z.string().min(2, "Nama minimal 2 karakter"),
+  email: z.string().email(),
+  password: z.string().min(6),
+  displayName: z.string().min(2),
   selectedMode: z.enum(["beginner", "pro"]).default("beginner"),
-  securityQuestion: z.string().min(1, "Pilih pertanyaan keamanan"),
-  securityAnswer: z.string().min(2, "Jawaban minimal 2 karakter"),
+  securityQuestion: z.string().min(1),
+  securityAnswer: z.string().min(2),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [, setLocation] = useLocation();
@@ -55,12 +41,8 @@ export default function RegisterPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      email: "",
-      password: "",
-      displayName: "",
-      selectedMode: "beginner",
-      securityQuestion: "",
-      securityAnswer: "",
+      email: "", password: "", displayName: "",
+      selectedMode: "beginner", securityQuestion: "", securityAnswer: "",
     },
   });
 
@@ -71,8 +53,8 @@ export default function RegisterPage() {
       setLocation("/dashboard");
     } catch (err: any) {
       toast({
-        title: "Pendaftaran gagal",
-        description: err?.data?.error ?? "Terjadi kesalahan, coba lagi",
+        title: t.auth.register_failed,
+        description: err?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     }
@@ -80,36 +62,33 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
-      <div className="flex flex-col items-center px-6 py-8">
+      <div className="flex justify-end px-4 pt-4">
+        <LanguageToggle />
+      </div>
+      <div className="flex flex-col items-center px-6 py-4">
         <div className="w-full max-w-sm">
-          <div className="flex items-center justify-center gap-2 mb-6">
+          <div className="flex items-center justify-center gap-2 mb-5">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold text-foreground">AI Trading</span>
           </div>
 
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Daftar Akun</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Mulai perjalanan analisis trading kamu
-            </p>
+          <div className="mb-5">
+            <h1 className="text-2xl font-bold text-foreground">{t.auth.create_account}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t.auth.register_subtitle}</p>
           </div>
 
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-4"
-              data-testid="form-register"
-            >
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-testid="form-register">
               <FormField
                 control={form.control}
                 name="displayName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nama</FormLabel>
+                    <FormLabel>{t.auth.display_name_label}</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Nama kamu" data-testid="input-display-name" />
+                      <Input {...field} placeholder={t.auth.display_name_placeholder} data-testid="input-display-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -121,15 +100,9 @@ export default function RegisterPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t.auth.email_label}</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        placeholder="kamu@email.com"
-                        autoComplete="email"
-                        data-testid="input-email"
-                      />
+                      <Input {...field} type="email" placeholder={t.auth.email_placeholder} autoComplete="email" data-testid="input-email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -141,13 +114,13 @@ export default function RegisterPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t.auth.password_label}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
                           {...field}
                           type={showPassword ? "text" : "password"}
-                          placeholder="Minimal 6 karakter"
+                          placeholder={t.auth.password_placeholder}
                           data-testid="input-password"
                         />
                         <button
@@ -170,7 +143,7 @@ export default function RegisterPage() {
                 name="selectedMode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mode Trading</FormLabel>
+                    <FormLabel>{t.analyze.mode_label}</FormLabel>
                     <div className="grid grid-cols-2 gap-2">
                       {(["beginner", "pro"] as const).map((mode) => (
                         <button
@@ -184,7 +157,7 @@ export default function RegisterPage() {
                               : "border-border bg-background text-muted-foreground hover:border-primary/50"
                           }`}
                         >
-                          {mode === "beginner" ? "Pemula" : "Pro"}
+                          {mode === "beginner" ? t.common.beginner : t.common.pro}
                         </button>
                       ))}
                     </div>
@@ -198,18 +171,16 @@ export default function RegisterPage() {
                 name="securityQuestion"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pertanyaan Keamanan</FormLabel>
+                    <FormLabel>{t.auth.security_question_label}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-security-question">
-                          <SelectValue placeholder="Pilih pertanyaan" />
+                          <SelectValue placeholder={t.auth.security_question_placeholder} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {SECURITY_QUESTIONS.map((q) => (
-                          <SelectItem key={q} value={q}>
-                            {q}
-                          </SelectItem>
+                        {t.profile.security_questions.map((q) => (
+                          <SelectItem key={q} value={q}>{q}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -223,13 +194,13 @@ export default function RegisterPage() {
                 name="securityAnswer"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Jawaban Keamanan</FormLabel>
+                    <FormLabel>{t.auth.security_answer_label}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
                           {...field}
                           type={showAnswer ? "text" : "password"}
-                          placeholder="Jawaban pertanyaan keamanan"
+                          placeholder={t.auth.security_answer_placeholder}
                           data-testid="input-security-answer"
                         />
                         <button
@@ -247,26 +218,18 @@ export default function RegisterPage() {
                 )}
               />
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={register.isPending}
-                data-testid="button-submit-register"
-              >
+              <Button type="submit" className="w-full" disabled={register.isPending} data-testid="button-submit-register">
                 {register.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Daftar
+                {register.isPending ? t.auth.registering : t.auth.register_btn}
               </Button>
             </form>
           </Form>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Sudah punya akun?{" "}
+            {t.auth.have_account}{" "}
             <Link href="/login">
-              <span
-                className="text-primary font-medium hover:underline cursor-pointer"
-                data-testid="link-login"
-              >
-                Masuk
+              <span className="text-primary font-medium hover:underline cursor-pointer" data-testid="link-login">
+                {t.auth.login_link}
               </span>
             </Link>
           </div>
