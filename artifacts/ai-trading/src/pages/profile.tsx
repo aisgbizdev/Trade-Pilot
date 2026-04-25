@@ -103,9 +103,19 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
-    await logout.mutateAsync();
+    try {
+      await logout.mutateAsync();
+    } catch {
+      // Even if the server call fails (e.g. session already expired),
+      // continue to fully reset client state below.
+    }
+    queryClient.cancelQueries();
     queryClient.clear();
-    setLocation("/login");
+    // Hard navigation to the landing page so every mounted component
+    // (notifications SSE, me query, etc.) is torn down. Avoids the
+    // dev-mode 401 overlay caused by zombie refetches after the
+    // session cookie is cleared.
+    window.location.assign("/");
   };
 
   return (
