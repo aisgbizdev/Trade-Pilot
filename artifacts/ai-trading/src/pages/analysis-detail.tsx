@@ -9,6 +9,7 @@ import {
   useGetAnalysis,
   getGetAnalysisQueryKey,
   useSubmitFeedback,
+  type Analysis,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -81,7 +82,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
     },
   });
 
-  const analysis = data as any;
+  const analysis = data as Analysis | undefined;
 
   const existingFeedback = analysis?.feedback;
 

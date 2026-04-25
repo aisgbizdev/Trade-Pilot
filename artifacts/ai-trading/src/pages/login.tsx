@@ -42,10 +42,10 @@ export default function LoginPage() {
       });
       queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       setLocation("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: t.auth.login_failed,
-        description: err?.data?.error ?? t.auth.login_error,
+        description: ((err as { data?: { error?: string } })?.data?.error) ?? t.auth.login_error,
         variant: "destructive",
       });
     }

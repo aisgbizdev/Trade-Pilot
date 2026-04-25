@@ -8,6 +8,7 @@ import { useLocation } from "wouter";
 import {
   useGetPersonalAnalytics,
   getGetPersonalAnalyticsQueryKey,
+  type PersonalAnalytics,
 } from "@workspace/api-client-react";
 import { useTranslation } from "@/lib/i18n";
 
@@ -18,7 +19,7 @@ export default function AnalyticsPage() {
     query: { queryKey: getGetPersonalAnalyticsQueryKey() },
   });
 
-  const analytics = data as any;
+  const analytics = data as PersonalAnalytics | undefined;
 
   if (isLoading) {
     return (
@@ -30,7 +31,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  if (!analytics || analytics.total === 0) {
+  if (!analytics || analytics.totalAllTime === 0) {
     return (
       <Layout>
         <div className="px-4 py-5">
@@ -65,9 +66,9 @@ export default function AnalyticsPage() {
 
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: t.analytics.all_time, value: analytics.total },
-            { label: t.analytics.this_month, value: analytics.thisMonth },
-            { label: t.analytics.this_week, value: analytics.thisWeek },
+            { label: t.analytics.all_time, value: analytics.totalAllTime },
+            { label: t.analytics.this_month, value: analytics.totalThisMonth },
+            { label: t.analytics.this_week, value: analytics.totalThisWeek },
           ].map(({ label, value }) => (
             <Card key={label} className="p-3 text-center">
               <div className="text-2xl font-bold text-primary" data-testid={`stat-${label}`}>
@@ -82,7 +83,7 @@ export default function AnalyticsPage() {
           <Card className="p-4">
             <h3 className="text-sm font-semibold text-foreground mb-3">{t.analytics.top_instruments}</h3>
             <div className="space-y-2">
-              {analytics.topInstruments.map((item: any, i: number) => (
+              {analytics.topInstruments.map((item, i) => (
                 <div key={item.instrument} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-muted-foreground w-5">#{i + 1}</span>
@@ -110,7 +111,7 @@ export default function AnalyticsPage() {
               <h3 className="text-xs text-muted-foreground">{t.analytics.self_accuracy}</h3>
               <Info className="w-3 h-3 text-muted-foreground" />
             </div>
-            {analytics.accuracyRate !== null ? (
+            {analytics.accuracyRate !== null && analytics.accuracyRate !== undefined ? (
               <p className="text-base font-bold text-foreground" data-testid="text-accuracy-rate">
                 {analytics.accuracyRate}%
               </p>
@@ -120,7 +121,7 @@ export default function AnalyticsPage() {
           </Card>
         </div>
 
-        {analytics.accuracyRate !== null && (
+        {analytics.accuracyRate !== null && analytics.accuracyRate !== undefined && (
           <Card className="p-3 bg-muted/50 border-dashed">
             <div className="flex gap-2">
               <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
@@ -131,11 +132,11 @@ export default function AnalyticsPage() {
           </Card>
         )}
 
-        {analytics.weekly?.length > 0 && (
+        {analytics.weeklyData?.length > 0 && (
           <Card className="p-4">
             <h3 className="text-sm font-semibold text-foreground mb-4">{t.analytics.weekly_chart}</h3>
             <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={analytics.weekly} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <BarChart data={analytics.weeklyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <XAxis
                   dataKey="week"
                   tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
@@ -158,10 +159,10 @@ export default function AnalyticsPage() {
                   formatter={(value: number) => [value, t.analytics.analyses_label]}
                 />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {analytics.weekly.map((_: any, index: number) => (
+                  {analytics.weeklyData.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={index === analytics.weekly.length - 1 ? "hsl(var(--primary))" : "hsl(var(--muted))"}
+                      fill={index === analytics.weeklyData.length - 1 ? "hsl(var(--primary))" : "hsl(var(--muted))"}
                     />
                   ))}
                 </Bar>

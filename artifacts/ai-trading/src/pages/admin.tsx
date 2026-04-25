@@ -11,6 +11,7 @@ import {
   getGetAdminStatsQueryKey,
   useGetAllAnalyses,
   getGetAllAnalysesQueryKey,
+  type AnalysesList,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -38,9 +39,9 @@ function AdminContent() {
     { query: { queryKey: getGetAllAnalysesQueryKey({ page, limit }) } }
   );
 
-  const stats = statsData as any;
-  const analyses = (analysesData as any)?.analyses ?? [];
-  const total = (analysesData as any)?.total ?? 0;
+  const stats = statsData;
+  const analyses = (analysesData as AnalysesList | undefined)?.analyses ?? [];
+  const total = (analysesData as AnalysesList | undefined)?.total ?? 0;
   const hasMore = page * limit < total;
 
   return (
@@ -86,7 +87,7 @@ function AdminContent() {
               <Card className="p-4">
                 <h3 className="text-sm font-semibold text-foreground mb-3">Instrumen Terpopuler</h3>
                 <div className="space-y-2">
-                  {stats.instrumentBreakdown.slice(0, 5).map((item: any) => (
+                  {stats?.instrumentBreakdown?.slice(0, 5).map((item) => (
                     <div key={item.instrument} className="flex items-center justify-between">
                       <span className="text-sm text-foreground">{item.instrument}</span>
                       <Badge variant="secondary" className="text-xs">{item.count}x</Badge>
@@ -96,16 +97,16 @@ function AdminContent() {
               </Card>
             )}
 
-            {stats?.modeBreakdown?.length > 0 && (
+            {stats?.modeBreakdown && Object.keys(stats.modeBreakdown).length > 0 && (
               <Card className="p-4">
                 <h3 className="text-sm font-semibold text-foreground mb-3">Breakdown Mode</h3>
                 <div className="space-y-2">
-                  {stats.modeBreakdown.map((item: any) => (
-                    <div key={item.mode} className="flex items-center justify-between">
+                  {Object.entries(stats?.modeBreakdown ?? {}).map(([mode, count]) => (
+                    <div key={mode} className="flex items-center justify-between">
                       <span className="text-sm text-foreground">
-                        {item.mode === "beginner" ? "Pemula" : "Pro"}
+                        {mode === "beginner" ? "Pemula" : "Pro"}
                       </span>
-                      <Badge variant="secondary" className="text-xs">{item.count}x</Badge>
+                      <Badge variant="secondary" className="text-xs">{count}x</Badge>
                     </div>
                   ))}
                 </div>
@@ -123,7 +124,7 @@ function AdminContent() {
             </div>
           ) : (
             <div className="space-y-2">
-              {analyses.map((a: any) => {
+              {analyses.map((a) => {
                 const mc = MARKET_CONDITION_LABELS[a.marketCondition];
                 return (
                   <Card key={a.id} className="p-3" data-testid={`card-analysis-${a.id}`}>

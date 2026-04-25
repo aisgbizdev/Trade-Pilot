@@ -51,10 +51,10 @@ export default function RegisterPage() {
       await register.mutateAsync({ data: values });
       queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       setLocation("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: t.auth.register_failed,
-        description: err?.data?.error ?? t.analyze.failed_desc,
+        description: ((err as { data?: { error?: string } })?.data?.error) ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     }

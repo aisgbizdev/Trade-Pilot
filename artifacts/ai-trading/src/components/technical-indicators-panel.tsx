@@ -143,7 +143,7 @@ export function TechnicalIndicatorsPanel({ instrument }: { instrument: string })
             <span className="text-xs text-muted-foreground">{row.name}</span>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-foreground">{row.value}</span>
-              <SignalBadge signal={row.signal as any} />
+              <SignalBadge signal={row.signal as "Buy" | "Sell" | "Neutral"} />
             </div>
           </div>
         ))}

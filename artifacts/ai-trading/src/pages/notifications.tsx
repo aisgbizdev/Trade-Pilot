@@ -8,6 +8,7 @@ import {
   getGetNotificationsQueryKey,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+  type NotificationsList,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -41,8 +42,8 @@ export default function NotificationsPage() {
     { query: { queryKey: getGetNotificationsQueryKey({}) } }
   );
 
-  const notifications = (data as any)?.notifications ?? [];
-  const unreadCount = notifications.filter((n: any) => !n.readAt).length;
+  const notifications = (data as NotificationsList | undefined)?.notifications ?? [];
+  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   const handleMarkRead = async (id: number) => {
     await markRead.mutateAsync({ params: { id } });
@@ -96,7 +97,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {notifications.map((n: any) => (
+            {notifications.map((n) => (
               <Card
                 key={n.id}
                 className={cn(

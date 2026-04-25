@@ -194,145 +194,6 @@ router.get("/auth/me", requireAuth, async (req: AuthRequest, res) => {
   });
 });
 
-router.post("/auth/forgot-password/question", async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    res.status(400).json({ error: "Email wajib diisi" });
-    return;
-  }
-
-  const [user] = await db
-    .select({ id: users.id, securityQuestion: users.securityQuestion })
-    .from(users)
-    .where(eq(users.email, email.toLowerCase()))
-    .limit(1);
-
-  if (!user) {
-    res.status(404).json({ error: "Email tidak ditemukan" });
-    return;
-  }
-
-  const resetToken = generateToken();
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-  await db.delete(passwordResetTokens).where(
-    eq(passwordResetTokens.userId, user.id)
-  );
-
-  await db.insert(passwordResetTokens).values({
-    userId: user.id,
-    token: resetToken,
-    expiresAt,
-  });
-
-  res.json({
-    question: user.securityQuestion,
-    resetToken,
-  });
-});
-
-router.post("/auth/forgot-password/verify", async (req, res) => {
-  const { resetToken, answer } = req.body;
-
-  if (!resetToken || !answer) {
-    res.status(400).json({ error: "Token dan jawaban wajib diisi" });
-    return;
-  }
-
-  const [tokenRecord] = await db
-    .select()
-    .from(passwordResetTokens)
-    .where(
-      and(
-        eq(passwordResetTokens.token, resetToken),
-        gt(passwordResetTokens.expiresAt, new Date())
-      )
-    )
-    .limit(1);
-
-  if (!tokenRecord) {
-    res.status(400).json({ error: "Token tidak valid atau sudah kadaluarsa" });
-    return;
-  }
-
-  const [user] = await db
-    .select({ securityAnswerHash: users.securityAnswerHash })
-    .from(users)
-    .where(eq(users.id, tokenRecord.userId))
-    .limit(1);
-
-  if (!user) {
-    res.status(404).json({ error: "User tidak ditemukan" });
-    return;
-  }
-
-  const valid = await bcrypt.compare(
-    answer.toLowerCase().trim(),
-    user.securityAnswerHash
-  );
-
-  if (!valid) {
-    res.status(401).json({ error: "Jawaban keamanan salah" });
-    return;
-  }
-
-  const verifiedToken = generateToken();
-  await db
-    .update(passwordResetTokens)
-    .set({ token: verifiedToken, expiresAt: new Date(Date.now() + 15 * 60 * 1000) })
-    .where(eq(passwordResetTokens.id, tokenRecord.id));
-
-  res.json({ verifiedToken });
-});
-
-router.post("/auth/forgot-password/reset", async (req, res) => {
-  const { verifiedToken, newPassword } = req.body;
-
-  if (!verifiedToken || !newPassword) {
-    res.status(400).json({ error: "Token dan password baru wajib diisi" });
-    return;
-  }
-
-  if (newPassword.length < 6) {
-    res.status(400).json({ error: "Password minimal 6 karakter" });
-    return;
-  }
-
-  const [tokenRecord] = await db
-    .select()
-    .from(passwordResetTokens)
-    .where(
-      and(
-        eq(passwordResetTokens.token, verifiedToken),
-        gt(passwordResetTokens.expiresAt, new Date())
-      )
-    )
-    .limit(1);
-
-  if (!tokenRecord) {
-    res.status(400).json({ error: "Token tidak valid atau sudah kadaluarsa" });
-    return;
-  }
-
-  const passwordHash = await bcrypt.hash(newPassword, 12);
-
-  await db
-    .update(users)
-    .set({ passwordHash, updatedAt: new Date() })
-    .where(eq(users.id, tokenRecord.userId));
-
-  await db
-    .delete(passwordResetTokens)
-    .where(eq(passwordResetTokens.id, tokenRecord.id));
-
-  await db
-    .delete(sessions)
-    .where(eq(sessions.userId, tokenRecord.userId));
-
-  res.json({ message: "Password berhasil direset" });
-});
-
 router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
   const { displayName, selectedMode, themePreference, onboardingCompleted } = req.body;
 
@@ -359,7 +220,7 @@ router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
   });
 });
 
-router.post("/auth/change-password", requireAuth, async (req: AuthRequest, res) => {
+router.patch("/auth/password", requireAuth, async (req: AuthRequest, res) => {
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
@@ -393,7 +254,7 @@ router.post("/auth/change-password", requireAuth, async (req: AuthRequest, res) 
   res.json({ message: "Password berhasil diubah" });
 });
 
-router.post("/auth/change-security-question", requireAuth, async (req: AuthRequest, res) => {
+router.patch("/auth/security-question", requireAuth, async (req: AuthRequest, res) => {
   const { currentPassword, securityQuestion, securityAnswer } = req.body;
 
   if (!currentPassword || !securityQuestion || !securityAnswer) {
@@ -424,6 +285,123 @@ router.post("/auth/change-security-question", requireAuth, async (req: AuthReque
     .where(eq(users.id, req.userId!));
 
   res.json({ message: "Pertanyaan keamanan berhasil diubah" });
+});
+
+router.post("/auth/forgot-password/question", async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400).json({ error: "Email wajib diisi" });
+    return;
+  }
+
+  const [user] = await db
+    .select({ id: users.id, securityQuestion: users.securityQuestion })
+    .from(users)
+    .where(eq(users.email, email.toLowerCase()))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ error: "Email tidak ditemukan" });
+    return;
+  }
+
+  res.json({
+    securityQuestion: user.securityQuestion,
+    email: email.toLowerCase(),
+  });
+});
+
+router.post("/auth/forgot-password/verify", async (req, res) => {
+  const { email, securityAnswer } = req.body;
+
+  if (!email || !securityAnswer) {
+    res.status(400).json({ error: "Email dan jawaban wajib diisi" });
+    return;
+  }
+
+  const [user] = await db
+    .select({ id: users.id, securityAnswerHash: users.securityAnswerHash })
+    .from(users)
+    .where(eq(users.email, email.toLowerCase()))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ error: "Email tidak ditemukan" });
+    return;
+  }
+
+  const valid = await bcrypt.compare(
+    securityAnswer.toLowerCase().trim(),
+    user.securityAnswerHash
+  );
+
+  if (!valid) {
+    res.status(401).json({ error: "Jawaban keamanan salah" });
+    return;
+  }
+
+  await db.delete(passwordResetTokens).where(
+    eq(passwordResetTokens.userId, user.id)
+  );
+
+  const resetToken = generateToken();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  await db.insert(passwordResetTokens).values({
+    userId: user.id,
+    token: resetToken,
+    expiresAt,
+  });
+
+  res.json({ resetToken, message: "Jawaban benar. Silakan reset password." });
+});
+
+router.post("/auth/forgot-password/reset", async (req, res) => {
+  const { resetToken, newPassword } = req.body;
+
+  if (!resetToken || !newPassword) {
+    res.status(400).json({ error: "Token dan password baru wajib diisi" });
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "Password minimal 6 karakter" });
+    return;
+  }
+
+  const [tokenRecord] = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(
+      and(
+        eq(passwordResetTokens.token, resetToken),
+        gt(passwordResetTokens.expiresAt, new Date())
+      )
+    )
+    .limit(1);
+
+  if (!tokenRecord) {
+    res.status(400).json({ error: "Token tidak valid atau sudah kadaluarsa" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  await db
+    .update(users)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(users.id, tokenRecord.userId));
+
+  await db
+    .delete(passwordResetTokens)
+    .where(eq(passwordResetTokens.id, tokenRecord.id));
+
+  await db
+    .delete(sessions)
+    .where(eq(sessions.userId, tokenRecord.userId));
+
+  res.json({ message: "Password berhasil direset" });
 });
 
 export default router;

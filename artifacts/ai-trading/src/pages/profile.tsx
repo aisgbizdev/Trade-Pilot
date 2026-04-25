@@ -72,8 +72,8 @@ export default function ProfilePage() {
       setNewPassword("");
       setShowPasswordSection(false);
       toast({ title: t.profile.password_updated });
-    } catch (err: any) {
-      toast({ title: err?.data?.error ?? t.profile.password_failed, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.profile.password_failed, variant: "destructive" });
     }
   };
 
@@ -88,8 +88,8 @@ export default function ProfilePage() {
       setSecAnswer("");
       setShowSecuritySection(false);
       toast({ title: t.profile.security_updated });
-    } catch (err: any) {
-      toast({ title: err?.data?.error ?? t.profile.security_failed, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.profile.security_failed, variant: "destructive" });
     }
   };
 

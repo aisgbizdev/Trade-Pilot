@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
-import { useGetNotifications, getGetNotificationsQueryKey } from "@workspace/api-client-react";
+import { useGetNotifications, getGetNotificationsQueryKey, type NotificationsList } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
@@ -24,7 +24,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
   );
 
-  const unreadCount = (notifData as any)?.notifications?.length ?? 0;
+  const unreadCount = (notifData as NotificationsList | undefined)?.notifications?.length ?? 0;
   const isMainNav = MAIN_NAV_PATHS.includes(location);
 
   const navItems = [

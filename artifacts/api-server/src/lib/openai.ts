@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { z } from "zod";
 
 export const openai = new OpenAI({
   apiKey: process.env["OPENAI_API_KEY"],
@@ -18,6 +19,39 @@ export function getValidUntil(timeframe: string): Date {
   const durationMs = TIMEFRAME_VALIDITY[timeframe] ?? 60 * 60 * 1000;
   return new Date(Date.now() + durationMs);
 }
+
+const MarketCondition = z.enum(["trending_up", "trending_down", "ranging", "volatile"]);
+const RiskLevel = z.enum(["low", "medium", "high"]);
+
+const BeginnerAIOutputSchema = z.object({
+  marketCondition: MarketCondition,
+  riskLevel: RiskLevel,
+  confidenceMin: z.number().int().min(1).max(65),
+  confidenceMax: z.number().int().min(11).max(75),
+  mainScenario: z.string().min(1),
+  alternativeScenario: z.string().min(1),
+  whyReason: z.string().min(1),
+  failureConditions: z.string().min(1),
+});
+
+const ProAIOutputSchema = z.object({
+  marketCondition: MarketCondition,
+  riskLevel: RiskLevel,
+  confidenceMin: z.number().int().min(1).max(70),
+  confidenceMax: z.number().int().min(11).max(80),
+  baseCase: z.string().min(1),
+  bullishScenario: z.string().min(1),
+  bearishScenario: z.string().min(1),
+  keyDriversTechnical: z.string().min(1),
+  keyDriversFundamental: z.string().min(1),
+  marketContext: z.string().min(1),
+  invalidationConditions: z.string().min(1),
+  uncertaintyNotes: z.string().min(1),
+});
+
+export type BeginnerAIOutput = z.infer<typeof BeginnerAIOutputSchema>;
+export type ProAIOutput = z.infer<typeof ProAIOutputSchema>;
+export type AIOutput = BeginnerAIOutput | ProAIOutput;
 
 const BEGINNER_SYSTEM_PROMPT = `Kamu adalah analis pasar senior yang membantu trader pemula memahami kondisi pasar. Berikan analisis pendukung keputusan (BUKAN sinyal trading otomatis) dalam Bahasa Indonesia.
 
@@ -95,7 +129,7 @@ export async function generateAnalysis(
   mode: "beginner" | "pro",
   notes?: string,
   indicatorContext?: string
-) {
+): Promise<AIOutput> {
   const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
   const userMessage = [
     `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}`,
@@ -119,5 +153,14 @@ export async function generateAnalysis(
   const content = response.choices[0]?.message?.content;
   if (!content) throw new Error("No response from AI");
 
-  return JSON.parse(content);
+  const raw: unknown = JSON.parse(content);
+
+  const schema = mode === "beginner" ? BeginnerAIOutputSchema : ProAIOutputSchema;
+  const parsed = schema.safeParse(raw);
+
+  if (!parsed.success) {
+    throw new Error(`AI output validation failed: ${parsed.error.message}`);
+  }
+
+  return parsed.data;
 }

@@ -98,15 +98,15 @@ export default function AnalyzePage() {
           instrument: finalInstrument,
           timeframe: selectedTimeframe,
           mode: user?.selectedMode ?? "beginner",
-          notes: notes || undefined,
+          userInputContext: notes || undefined,
         },
       });
-      const res = result as any;
-      setLocation(`/analyses/${res.id}`);
-    } catch (err: any) {
+      setLocation(`/analyses/${result.id}`);
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
       toast({
         title: t.analyze.failed_title,
-        description: err?.data?.error ?? t.analyze.failed_desc,
+        description: apiErr?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     } finally {

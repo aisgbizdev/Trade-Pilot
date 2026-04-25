@@ -2,20 +2,11 @@ import { createContext, useContext } from "react";
 import {
   useGetMe,
   getGetMeQueryKey,
+  type User,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
-export type UserRole = "user" | "admin" | "super_admin";
-
-export interface AuthUser {
-  id: number;
-  email: string;
-  displayName: string;
-  role: UserRole;
-  selectedMode: "beginner" | "pro";
-  themePreference: string;
-  onboardingCompleted: boolean;
-}
+export type AuthUser = Omit<User, "createdAt" | "securityQuestion">;
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -47,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: (user as unknown as AuthUser) ?? null,
+        user: user ?? null,
         isLoading,
         isAuthenticated: !!user && !isError,
         refetch,

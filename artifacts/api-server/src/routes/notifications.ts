@@ -42,7 +42,7 @@ router.patch("/notifications/:id/read", requireAuth, async (req: AuthRequest, re
   res.json(updated);
 });
 
-router.patch("/notifications/mark-all-read", requireAuth, async (req: AuthRequest, res) => {
+router.patch("/notifications/read-all", requireAuth, async (req: AuthRequest, res) => {
   await db
     .update(notifications)
     .set({ readAt: new Date() })

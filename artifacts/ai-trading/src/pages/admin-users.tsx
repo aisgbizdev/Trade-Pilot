@@ -28,6 +28,8 @@ import {
   useDeleteUser,
   useResetUserPassword,
   useUpdateUserRole,
+  type UsersList,
+  type CreateUserBody,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -80,17 +82,17 @@ function AdminUsersContent() {
   const resetUserPassword = useResetUserPassword();
   const updateUserRole = useUpdateUserRole();
 
-  const users = (data as any)?.users ?? [];
+  const users = (data as UsersList | undefined)?.users ?? [];
 
   const handleCreate = async () => {
     try {
-      await createUser.mutateAsync({ data: createForm as any });
+      await createUser.mutateAsync({ data: createForm as CreateUserBody });
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       setCreateOpen(false);
       toast({ title: "User berhasil dibuat" });
       setCreateForm({ email: "", password: "", displayName: "", role: "user", selectedMode: "beginner", securityQuestion: SECURITY_QUESTIONS[0], securityAnswer: "default" });
-    } catch (err: any) {
-      toast({ title: err?.data?.error ?? "Gagal membuat user", variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal membuat user", variant: "destructive" });
     }
   };
 
@@ -100,8 +102,8 @@ function AdminUsersContent() {
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       setDeleteId(null);
       toast({ title: "User berhasil dihapus" });
-    } catch (err: any) {
-      toast({ title: err?.data?.error ?? "Gagal menghapus user", variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal menghapus user", variant: "destructive" });
     }
   };
 
@@ -115,8 +117,8 @@ function AdminUsersContent() {
       setResetPasswordId(null);
       setNewPassword("");
       toast({ title: "Password berhasil direset" });
-    } catch (err: any) {
-      toast({ title: err?.data?.error ?? "Gagal mereset password", variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal mereset password", variant: "destructive" });
     }
   };
 
@@ -125,8 +127,8 @@ function AdminUsersContent() {
       await updateUserRole.mutateAsync({ params: { id }, data: { role } });
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       toast({ title: "Role berhasil diubah" });
-    } catch (err: any) {
-      toast({ title: err?.data?.error ?? "Gagal mengubah role", variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal mengubah role", variant: "destructive" });
     }
   };
 
@@ -169,7 +171,7 @@ function AdminUsersContent() {
           </div>
         ) : (
           <div className="space-y-2">
-            {users.map((u: any) => (
+            {users.map((u) => (
               <Card key={u.id} className="p-3" data-testid={`card-user-${u.id}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

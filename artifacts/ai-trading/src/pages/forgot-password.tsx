@@ -23,16 +23,16 @@ type Step = "email" | "question" | "reset" | "done";
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
   const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
   const [question, setQuestion] = useState("");
   const [resetToken, setResetToken] = useState("");
-  const [verifiedToken, setVerifiedToken] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const getQuestion = useGetForgotPasswordQuestion();
   const verifyAnswer = useVerifySecurityAnswer();
-  const resetPassword = useResetPassword();
+  const resetPasswordMutation = useResetPassword();
 
   const emailForm = useForm({ defaultValues: { email: "" } });
   const answerForm = useForm({ defaultValues: { answer: "" } });
@@ -43,15 +43,15 @@ export default function ForgotPasswordPage() {
 
   const handleEmailSubmit = async (values: { email: string }) => {
     try {
-      const result = await getQuestion.mutateAsync({ data: { email: values.email } });
-      const res = result as any;
-      setQuestion(res.question);
-      setResetToken(res.resetToken);
+      const res = await getQuestion.mutateAsync({ data: { email: values.email } });
+      setEmail(values.email);
+      setQuestion(res.securityQuestion);
       setStep("question");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
       toast({
         title: t.auth.forgot_title,
-        description: err?.data?.error ?? t.analyze.failed_desc,
+        description: apiErr?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     }
@@ -59,14 +59,16 @@ export default function ForgotPasswordPage() {
 
   const handleAnswerSubmit = async (values: { answer: string }) => {
     try {
-      const result = await verifyAnswer.mutateAsync({ data: { resetToken, answer: values.answer } });
-      const res = result as any;
-      setVerifiedToken(res.verifiedToken);
+      const res = await verifyAnswer.mutateAsync({
+        data: { email, securityAnswer: values.answer },
+      });
+      setResetToken(res.resetToken);
       setStep("reset");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
       toast({
         title: t.auth.security_answer_label,
-        description: err?.data?.error ?? t.analyze.failed_desc,
+        description: apiErr?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     }
@@ -74,12 +76,15 @@ export default function ForgotPasswordPage() {
 
   const handlePasswordSubmit = async (values: { newPassword: string }) => {
     try {
-      await resetPassword.mutateAsync({ data: { verifiedToken, newPassword: values.newPassword } });
+      await resetPasswordMutation.mutateAsync({
+        data: { resetToken, newPassword: values.newPassword },
+      });
       setStep("done");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
       toast({
         title: t.analyze.failed_title,
-        description: err?.data?.error ?? t.analyze.failed_desc,
+        description: apiErr?.data?.error ?? t.analyze.failed_desc,
         variant: "destructive",
       });
     }
@@ -187,9 +192,9 @@ export default function ForgotPasswordPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={resetPassword.isPending} data-testid="button-reset-password">
-                    {resetPassword.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    {resetPassword.isPending ? t.auth.resetting : t.auth.reset_btn}
+                  <Button type="submit" className="w-full" disabled={resetPasswordMutation.isPending} data-testid="button-reset-password">
+                    {resetPasswordMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    {resetPasswordMutation.isPending ? t.auth.resetting : t.auth.reset_btn}
                   </Button>
                 </form>
               </Form>

@@ -3,7 +3,7 @@ import { db } from "../lib/db";
 import { analyses, feedback } from "@workspace/db/schema";
 import { eq, and, desc, count, sql } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
-import { generateAnalysis, getValidUntil } from "../lib/openai";
+import { generateAnalysis, getValidUntil, type BeginnerAIOutput, type ProAIOutput } from "../lib/openai";
 import { getIndicators, formatIndicatorsForPrompt } from "../lib/historical";
 import { getRelevantNews, formatNewsForPrompt } from "../lib/news";
 import { getRelevantCalendar, formatCalendarForPrompt } from "../lib/calendar";
@@ -23,34 +23,41 @@ router.get("/analyses/summary", requireAuth, async (req: AuthRequest, res) => {
     .where(eq(analyses.userId, req.userId!));
 
   res.json({
-    total: Number(result.total),
+    totalAnalyses: Number(result.total),
     beginnerCount: Number(result.beginnerCount ?? 0),
     proCount: Number(result.proCount ?? 0),
-    avgConfidence:
-      result.avgConfidenceMin && result.avgConfidenceMax
-        ? Math.round(
-            (Number(result.avgConfidenceMin) + Number(result.avgConfidenceMax)) / 2
-          )
-        : null,
+    avgConfidenceMin: result.avgConfidenceMin ? Number(result.avgConfidenceMin) : null,
+    avgConfidenceMax: result.avgConfidenceMax ? Number(result.avgConfidenceMax) : null,
+    recentAnalyses: [],
   });
 });
 
 router.get("/analyses/recent-instruments", requireAuth, async (req: AuthRequest, res) => {
   const rows = await db
-    .selectDistinct({ instrument: analyses.instrument, createdAt: analyses.createdAt })
+    .selectDistinct({
+      instrument: analyses.instrument,
+      createdAt: analyses.createdAt,
+      mode: analyses.mode,
+    })
     .from(analyses)
     .where(eq(analyses.userId, req.userId!))
     .orderBy(desc(analyses.createdAt))
-    .limit(3);
+    .limit(10);
 
   const seen = new Set<string>();
   const unique = rows.filter((r) => {
     if (seen.has(r.instrument)) return false;
     seen.add(r.instrument);
     return true;
-  });
+  }).slice(0, 3);
 
-  res.json({ instruments: unique.slice(0, 3).map((r) => r.instrument) });
+  res.json({
+    instruments: unique.map((r) => ({
+      instrument: r.instrument,
+      lastAnalyzedAt: r.createdAt.toISOString(),
+      mode: r.mode,
+    })),
+  });
 });
 
 router.get("/analyses/personal-analytics", requireAuth, async (req: AuthRequest, res) => {
@@ -114,18 +121,19 @@ router.get("/analyses/personal-analytics", requireAuth, async (req: AuthRequest,
   }
 
   res.json({
-    total,
-    thisMonth,
-    thisWeek,
+    totalAllTime: total,
+    totalThisMonth: thisMonth,
+    totalThisWeek: thisWeek,
     topInstruments,
     dominantMode,
     accuracyRate,
-    weekly,
+    feedbackCount: totalFeedback,
+    weeklyData: weekly,
   });
 });
 
 router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
-  const { instrument, timeframe, mode, notes } = req.body;
+  const { instrument, timeframe, mode, userInputContext } = req.body;
 
   if (!instrument || !timeframe || !mode) {
     res.status(400).json({ error: "Instrumen, timeframe, dan mode wajib diisi" });
@@ -152,8 +160,28 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   ]);
 
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
-  const aiResult = await generateAnalysis(instrument, timeframe, mode, notes, indicatorContext);
+  const typedMode = mode as "beginner" | "pro";
+  const aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
   const validUntil = getValidUntil(timeframe);
+
+  const modeSpecificFields =
+    typedMode === "beginner"
+      ? {
+          mainScenario: (aiResult as BeginnerAIOutput).mainScenario,
+          alternativeScenario: (aiResult as BeginnerAIOutput).alternativeScenario,
+          whyReason: (aiResult as BeginnerAIOutput).whyReason,
+          failureConditions: (aiResult as BeginnerAIOutput).failureConditions,
+        }
+      : {
+          baseCase: (aiResult as ProAIOutput).baseCase,
+          bullishScenario: (aiResult as ProAIOutput).bullishScenario,
+          bearishScenario: (aiResult as ProAIOutput).bearishScenario,
+          keyDriversTechnical: (aiResult as ProAIOutput).keyDriversTechnical,
+          keyDriversFundamental: (aiResult as ProAIOutput).keyDriversFundamental,
+          marketContext: (aiResult as ProAIOutput).marketContext,
+          invalidationConditions: (aiResult as ProAIOutput).invalidationConditions,
+          uncertaintyNotes: (aiResult as ProAIOutput).uncertaintyNotes,
+        };
 
   const [analysis] = await db
     .insert(analyses)
@@ -161,25 +189,14 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       userId: req.userId!,
       instrument,
       timeframe,
-      mode,
-      notes,
+      mode: typedMode,
+      notes: userInputContext ?? null,
       validUntil,
       marketCondition: aiResult.marketCondition,
       riskLevel: aiResult.riskLevel,
       confidenceMin: aiResult.confidenceMin,
       confidenceMax: aiResult.confidenceMax,
-      mainScenario: aiResult.mainScenario,
-      alternativeScenario: aiResult.alternativeScenario,
-      whyReason: aiResult.whyReason,
-      failureConditions: aiResult.failureConditions,
-      baseCase: aiResult.baseCase,
-      bullishScenario: aiResult.bullishScenario,
-      bearishScenario: aiResult.bearishScenario,
-      keyDriversTechnical: aiResult.keyDriversTechnical,
-      keyDriversFundamental: aiResult.keyDriversFundamental,
-      marketContext: aiResult.marketContext,
-      invalidationConditions: aiResult.invalidationConditions,
-      uncertaintyNotes: aiResult.uncertaintyNotes,
+      ...modeSpecificFields,
     })
     .returning();
 

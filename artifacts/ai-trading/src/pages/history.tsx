@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
-import { useListAnalyses, getListAnalysesQueryKey } from "@workspace/api-client-react";
+import { useListAnalyses, getListAnalysesQueryKey, type AnalysesList } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ export default function HistoryPage() {
     { query: { queryKey: getListAnalysesQueryKey({ page, limit }) } }
   );
 
-  const listData = data as any;
+  const listData = data as AnalysesList | undefined;
   const analyses = listData?.analyses ?? [];
   const total = listData?.total ?? 0;
   const hasMore = page * limit < total;
@@ -61,7 +61,7 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {analyses.map((a: any) => {
+            {analyses.map((a) => {
               const valid = new Date(a.validUntil) > new Date();
               const mc = MARKET_CONDITION_LABELS[a.marketCondition];
               return (

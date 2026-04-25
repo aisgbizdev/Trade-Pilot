@@ -38,7 +38,7 @@ async function fetchIndicators(instrument: string): Promise<TechnicalIndicators>
   const res = await fetch(`/api/historical/indicators?instrument=${encodeURIComponent(instrument)}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).error ?? "Gagal mengambil data indikator");
+    throw new Error((err as { error?: string }).error ?? "Gagal mengambil data indikator");
   }
   const data = await res.json();
   return data.indicators;

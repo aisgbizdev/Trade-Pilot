@@ -102,7 +102,7 @@ router.get("/admin/analyses", requireAdmin, async (req: AuthRequest, res) => {
   });
 });
 
-router.post("/admin/broadcast", requireAdmin, async (req: AuthRequest, res) => {
+router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) => {
   const { title, message, type, targetRole } = req.body;
 
   if (!title || !message) {
@@ -113,10 +113,6 @@ router.post("/admin/broadcast", requireAdmin, async (req: AuthRequest, res) => {
   let targetUsers = await db.select({ id: users.id }).from(users);
 
   if (targetRole && targetRole !== "all") {
-    targetUsers = targetUsers.filter((u) => {
-      if (targetRole === "user") return true;
-      return true;
-    });
     const rows = await db
       .select({ id: users.id })
       .from(users)
@@ -141,7 +137,7 @@ router.post("/admin/broadcast", requireAdmin, async (req: AuthRequest, res) => {
   res.json({ message: "Broadcast berhasil dikirim", count: targetUsers.length });
 });
 
-router.get("/admin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
+router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
   const rows = await db
     .select({
       id: users.id,
@@ -158,7 +154,7 @@ router.get("/admin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
   res.json({ users: rows });
 });
 
-router.post("/admin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
+router.post("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
   const {
     email,
     password,
@@ -214,7 +210,7 @@ router.post("/admin/users", requireSuperAdmin, async (req: AuthRequest, res) => 
   res.status(201).json(user);
 });
 
-router.delete("/admin/users/:id", requireSuperAdmin, async (req: AuthRequest, res) => {
+router.delete("/superadmin/users/:id", requireSuperAdmin, async (req: AuthRequest, res) => {
   const id = Number(req.params["id"]);
 
   if (id === req.userId) {
@@ -235,7 +231,7 @@ router.delete("/admin/users/:id", requireSuperAdmin, async (req: AuthRequest, re
   res.json({ message: "User berhasil dihapus" });
 });
 
-router.post("/admin/users/:id/reset-password", requireSuperAdmin, async (req: AuthRequest, res) => {
+router.post("/superadmin/users/:id/password", requireSuperAdmin, async (req: AuthRequest, res) => {
   const id = Number(req.params["id"]);
   const { newPassword } = req.body;
 
@@ -260,7 +256,7 @@ router.post("/admin/users/:id/reset-password", requireSuperAdmin, async (req: Au
   res.json({ message: "Password berhasil direset" });
 });
 
-router.patch("/admin/users/:id/role", requireSuperAdmin, async (req: AuthRequest, res) => {
+router.patch("/superadmin/users/:id/role", requireSuperAdmin, async (req: AuthRequest, res) => {
   const id = Number(req.params["id"]);
   const { role } = req.body;
 

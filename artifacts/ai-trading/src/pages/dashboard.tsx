@@ -10,6 +10,7 @@ import {
   useGetRecentInstruments, getGetRecentInstrumentsQueryKey,
   useListAnalyses, getListAnalysesQueryKey,
   useUpdateProfile, getGetMeQueryKey,
+  type AnalysesSummary, type AnalysesList, type RecentInstruments,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -155,9 +156,9 @@ export default function DashboardPage() {
     queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
   };
 
-  const summaryData = summary as any;
-  const instrumentsData = recentInstruments as any;
-  const analyses = (listData as any)?.analyses ?? [];
+  const summaryData = summary as AnalysesSummary | undefined;
+  const instrumentsData = recentInstruments as RecentInstruments | undefined;
+  const analyses = (listData as AnalysesList | undefined)?.analyses ?? [];
 
   const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
     trending_up: { label: t.dashboard.trending_up, color: "bg-emerald-500/15 text-emerald-500 dark:text-emerald-400" },
@@ -209,7 +210,7 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-3 gap-2.5">
           {[
-            { label: t.dashboard.total_analyses, value: summaryLoading ? "—" : (summaryData?.total ?? 0), icon: Brain, gradient: "from-blue-500/20 to-violet-500/20", iconColor: "text-blue-400" },
+            { label: t.dashboard.total_analyses, value: summaryLoading ? "—" : (summaryData?.totalAnalyses ?? 0), icon: Brain, gradient: "from-blue-500/20 to-violet-500/20", iconColor: "text-blue-400" },
             { label: t.dashboard.beginner_mode, value: summaryLoading ? "—" : (summaryData?.beginnerCount ?? 0), icon: Sparkles, gradient: "from-cyan-500/20 to-blue-500/20", iconColor: "text-cyan-400" },
             { label: t.dashboard.pro_mode, value: summaryLoading ? "—" : (summaryData?.proCount ?? 0), icon: TrendingUp, gradient: "from-violet-500/20 to-purple-500/20", iconColor: "text-violet-400" },
           ].map(({ label, value, icon: Icon, gradient, iconColor }) => (
@@ -231,13 +232,13 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-sm font-bold text-foreground mb-2.5">{t.dashboard.last_analyzed}</h2>
             <div className="flex gap-2 flex-wrap">
-              {instrumentsData.instruments.map((inst: string) => (
-                <Link key={inst} href={`/analyze?instrument=${inst}`}>
+              {instrumentsData.instruments.map((inst) => (
+                <Link key={inst.instrument} href={`/analyze?instrument=${inst.instrument}`}>
                   <span
                     className="inline-flex items-center px-3 py-1.5 rounded-xl border border-border bg-card text-xs font-mono font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer"
-                    data-testid={`badge-instrument-${inst}`}
+                    data-testid={`badge-instrument-${inst.instrument}`}
                   >
-                    {inst}
+                    {inst.instrument}
                   </span>
                 </Link>
               ))}
@@ -279,7 +280,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {analyses.map((a: any) => {
+              {analyses.map((a) => {
                 const valid = isValid(a.validUntil);
                 const mc = MARKET_CONDITION_LABELS[a.marketCondition];
                 return (
