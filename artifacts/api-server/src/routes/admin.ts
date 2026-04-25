@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "../lib/db";
 import {
@@ -408,28 +408,46 @@ router.post("/superadmin/users/:id/tags", requireSuperAdmin, async (req: AuthReq
   res.json({ tags: tags.map((t) => t.tag) });
 });
 
+async function removeUserTag(
+  id: number,
+  tag: string,
+  res: Response,
+): Promise<void> {
+  if (!Number.isFinite(id) || !tag) {
+    res.status(400).json({ error: "Parameter tidak valid" });
+    return;
+  }
+
+  await db
+    .delete(userTags)
+    .where(and(eq(userTags.userId, id), eq(userTags.tag, tag)));
+
+  const tags = await db
+    .select({ tag: userTags.tag })
+    .from(userTags)
+    .where(eq(userTags.userId, id))
+    .orderBy(userTags.tag);
+
+  res.json({ tags: tags.map((t) => t.tag) });
+}
+
 router.delete(
   "/superadmin/users/:id/tags/:tag",
   requireSuperAdmin,
   async (req: AuthRequest, res) => {
     const id = Number(req.params["id"]);
     const tag = String(req.params["tag"] ?? "");
-    if (!Number.isFinite(id) || !tag) {
-      res.status(400).json({ error: "Parameter tidak valid" });
-      return;
-    }
+    await removeUserTag(id, tag, res);
+  },
+);
 
-    await db
-      .delete(userTags)
-      .where(and(eq(userTags.userId, id), eq(userTags.tag, tag)));
-
-    const tags = await db
-      .select({ tag: userTags.tag })
-      .from(userTags)
-      .where(eq(userTags.userId, id))
-      .orderBy(userTags.tag);
-
-    res.json({ tags: tags.map((t) => t.tag) });
+router.delete(
+  "/superadmin/users/:id/tags",
+  requireSuperAdmin,
+  async (req: AuthRequest, res) => {
+    const id = Number(req.params["id"]);
+    const tag = String(req.body?.tag ?? req.query["tag"] ?? "").trim();
+    await removeUserTag(id, tag, res);
   },
 );
 

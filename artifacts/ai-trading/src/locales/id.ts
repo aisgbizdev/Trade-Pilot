@@ -497,5 +497,7 @@ export const id: Translations = {
     users_page_indicator: "Halaman {page} dari {total}",
     users_prev_page: "Sebelumnya",
     users_next_page: "Berikutnya",
+    users_no_search_results: "Tidak ada user yang cocok",
+    users_empty: "Belum ada pengguna",
   },
 };

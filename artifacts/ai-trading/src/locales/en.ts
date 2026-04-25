@@ -495,6 +495,8 @@ export const en = {
     users_page_indicator: "Page {page} of {total}",
     users_prev_page: "Previous",
     users_next_page: "Next",
+    users_no_search_results: "No users match this search",
+    users_empty: "No users yet",
   },
 };
 

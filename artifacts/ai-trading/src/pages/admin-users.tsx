@@ -210,7 +210,7 @@ function AdminUsersContent() {
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Users className="w-12 h-12 text-muted-foreground opacity-40 mb-3" />
             <p className="text-sm text-muted-foreground">
-              {search.trim() ? "Tidak ada user yang cocok" : "Belum ada pengguna"}
+              {search.trim() ? t.admin.users_no_search_results : t.admin.users_empty}
             </p>
           </div>
         ) : (
