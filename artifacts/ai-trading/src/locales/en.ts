@@ -476,6 +476,7 @@ export const en = {
     audience_role_picker: "Select role",
     audience_tag_picker: "Select tag",
     audience_tag_empty: "No tags yet — add tags to users above",
+    audience_tag_custom_placeholder: "Type a tag (e.g. vip, beta, paid)",
     send_broadcast_btn: "Send Broadcast",
     sending_broadcast: "Sending broadcast…",
     broadcast_sent_title: "Broadcast sent",

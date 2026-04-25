@@ -377,22 +377,37 @@ function BroadcastComposer() {
           </Select>
         )}
         {audienceType === "tag" && (
-          tags.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">{t.admin.audience_tag_empty}</p>
-          ) : (
-            <Select value={audienceValue} onValueChange={setAudienceValue}>
-              <SelectTrigger className="h-9 text-sm" data-testid="select-audience-tag">
-                <SelectValue placeholder={t.admin.audience_tag_picker} />
-              </SelectTrigger>
-              <SelectContent>
+          <div className="space-y-2">
+            <Input
+              value={audienceValue}
+              onChange={(e) => setAudienceValue(e.target.value)}
+              placeholder={t.admin.audience_tag_custom_placeholder}
+              className="h-9 text-sm"
+              data-testid="input-audience-tag-custom"
+            />
+            {tags.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">{t.admin.audience_tag_empty}</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
-                  <SelectItem key={tag} value={tag}>
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setAudienceValue(tag)}
+                    className={cn(
+                      "px-2 py-0.5 text-xs rounded-full border transition-colors",
+                      audienceValue === tag
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:bg-muted",
+                    )}
+                    data-testid={`button-audience-tag-${tag}`}
+                  >
                     {tag}
-                  </SelectItem>
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
-          )
+              </div>
+            )}
+          </div>
         )}
       </div>
       <Button

@@ -478,6 +478,7 @@ export const id: Translations = {
     audience_role_picker: "Pilih role",
     audience_tag_picker: "Pilih tag",
     audience_tag_empty: "Belum ada tag — tambahkan tag ke user di atas",
+    audience_tag_custom_placeholder: "Ketik tag (mis. vip, beta, paid)",
     send_broadcast_btn: "Kirim Broadcast",
     sending_broadcast: "Mengirim broadcast…",
     broadcast_sent_title: "Broadcast terkirim",
