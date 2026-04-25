@@ -105,9 +105,21 @@ export default function LegalPage({ kind }: LegalPageProps) {
         </nav>
       </main>
 
-      <footer className="border-t border-border/50 px-4 py-4 text-center">
+      <footer className="border-t border-border/50 px-4 py-4 text-center space-y-2">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           {t.landing.footer}
+        </p>
+        <p className="text-[10px] text-muted-foreground/70">
+          {t.landing.powered_by_prefix}{" "}
+          <a
+            href="https://newsmaker.id"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+            data-testid="link-footer-powered-by"
+          >
+            {t.landing.powered_by_brand}
+          </a>
         </p>
       </footer>
     </div>

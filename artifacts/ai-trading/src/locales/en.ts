@@ -44,6 +44,8 @@ export const en = {
     secure_data: "Secure data",
     cta_signup: "Register Now",
     footer: "Trade Pilot is a decision-support tool, not financial advice or a trading service.",
+    powered_by_prefix: "Powered by",
+    powered_by_brand: "newsmaker.id",
     stats_model: "Latest AI",
     stats_instruments: "Instruments",
     stats_timeframes: "Timeframes",

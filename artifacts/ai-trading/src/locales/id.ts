@@ -46,6 +46,8 @@ export const id: Translations = {
     secure_data: "Data aman",
     cta_signup: "Daftar Sekarang",
     footer: "Trade Pilot adalah alat pendukung keputusan, bukan saran keuangan atau layanan trading.",
+    powered_by_prefix: "Didukung oleh",
+    powered_by_brand: "newsmaker.id",
     stats_model: "Model Terkini",
     stats_instruments: "Instrumen",
     stats_timeframes: "Timeframe",

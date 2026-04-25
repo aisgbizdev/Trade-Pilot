@@ -348,6 +348,18 @@ export default function LandingPage() {
             {t.legal.terms_link}
           </Link>
         </div>
+        <p className="text-[10px] text-muted-foreground/70">
+          {t.landing.powered_by_prefix}{" "}
+          <a
+            href="https://newsmaker.id"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+            data-testid="link-footer-powered-by"
+          >
+            {t.landing.powered_by_brand}
+          </a>
+        </p>
       </footer>
     </div>
   );
