@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { format } from "date-fns";
 import { ChevronLeft, Plus, Trash2, RotateCcw, Shield, Loader2, Users, Eye, EyeOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -185,10 +186,19 @@ function AdminUsersContent() {
                       >
                         {ROLE_LABELS[u.role]}
                       </Badge>
+                      <Badge
+                        variant={(u as { analysisCount?: number }).analysisCount ?? 0 > 0 ? "default" : "outline"}
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {(u as { analysisCount?: number }).analysisCount ?? 0 > 0 ? "Aktif" : "Inaktif"}
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{u.email}</p>
                     <p className="text-[10px] text-muted-foreground/70">
                       {(u as { analysisCount?: number }).analysisCount ?? 0} analisis
+                      {(u as { createdAt?: string }).createdAt
+                        ? ` · Daftar ${format(new Date((u as { createdAt: string }).createdAt), "dd MMM yyyy")}`
+                        : ""}
                     </p>
                   </div>
                   <div className="flex gap-1.5 ml-2">

@@ -138,7 +138,7 @@ export default function DashboardPage() {
   const updateProfile = useUpdateProfile();
   const [, setLocation] = useLocation();
   const dateLocale = lang === "id" ? idLocale : enUS;
-  const [onboardingDone, setOnboardingDone] = useState(isOnboardingDone);
+  const [onboardingDone, setOnboardingDone] = useState(() => isOnboardingDone(user?.id));
 
   useEffect(() => {
     const handler = () => setOnboardingDone(true);
@@ -177,7 +177,7 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <OnboardingModal open={!!user && !onboardingDone} />
+      {user && !onboardingDone && <OnboardingModal open userId={user.id} />}
 
       <div className="px-4 py-5 space-y-5">
 

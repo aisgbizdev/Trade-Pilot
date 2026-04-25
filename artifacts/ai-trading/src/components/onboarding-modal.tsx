@@ -7,13 +7,16 @@ import { useTranslation } from "@/lib/i18n";
 
 const ICONS = [TrendingUp, BookOpen, BarChart3, CheckCircle];
 
-export const ONBOARDING_STORAGE_KEY = "ai_trading_onboarding_done";
-
-export function isOnboardingDone(): boolean {
-  return !!localStorage.getItem(ONBOARDING_STORAGE_KEY);
+export function getOnboardingKey(userId: number): string {
+  return `ai_trading_onboarding_done_${userId}`;
 }
 
-export function OnboardingModal({ open }: { open: boolean }) {
+export function isOnboardingDone(userId: number | undefined): boolean {
+  if (!userId) return false;
+  return !!localStorage.getItem(getOnboardingKey(userId));
+}
+
+export function OnboardingModal({ open, userId }: { open: boolean; userId: number }) {
   const { t } = useTranslation();
   const [step, setStep] = useState(0);
 
@@ -23,7 +26,7 @@ export function OnboardingModal({ open }: { open: boolean }) {
   const Icon = ICONS[step];
 
   const handleComplete = () => {
-    localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+    localStorage.setItem(getOnboardingKey(userId), "1");
     window.dispatchEvent(new Event("onboarding-complete"));
   };
 
