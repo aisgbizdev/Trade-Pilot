@@ -1,8 +1,9 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { TrendingUp, Plus, Clock, Loader2, TrendingDown, Minus, RefreshCw, Brain, Sparkles } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
-import { OnboardingModal } from "@/components/onboarding-modal";
+import { OnboardingModal, isOnboardingDone } from "@/components/onboarding-modal";
 import { NewsWidget } from "@/components/news-widget";
 import { CalendarWidget } from "@/components/calendar-widget";
 import {
@@ -137,6 +138,13 @@ export default function DashboardPage() {
   const updateProfile = useUpdateProfile();
   const [, setLocation] = useLocation();
   const dateLocale = lang === "id" ? idLocale : enUS;
+  const [onboardingDone, setOnboardingDone] = useState(isOnboardingDone);
+
+  useEffect(() => {
+    const handler = () => setOnboardingDone(true);
+    window.addEventListener("onboarding-complete", handler);
+    return () => window.removeEventListener("onboarding-complete", handler);
+  }, []);
 
   const { data: summary, isLoading: summaryLoading } = useGetAnalysesSummary({
     query: { queryKey: getGetAnalysesSummaryQueryKey() },
@@ -169,7 +177,7 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <OnboardingModal open={!!user && !user.onboardingCompleted} />
+      <OnboardingModal open={!!user && !onboardingDone} />
 
       <div className="px-4 py-5 space-y-5">
 

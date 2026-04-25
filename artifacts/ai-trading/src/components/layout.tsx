@@ -1,11 +1,24 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
-import { useGetNotifications, getGetNotificationsQueryKey, useUpdateProfile, type NotificationsList } from "@workspace/api-client-react";
+import {
+  useGetNotifications,
+  getGetNotificationsQueryKey,
+  useMarkAllNotificationsRead,
+  useUpdateProfile,
+  type NotificationsList,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDistanceToNow } from "date-fns";
+import { id as idLocale, enUS } from "date-fns/locale";
 
 const MAIN_NAV_PATHS = ["/dashboard", "/analyze", "/history", "/analytics", "/profile"];
 
@@ -13,19 +26,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const updateProfile = useUpdateProfile();
+  const queryClient = useQueryClient();
+  const dateLocale = lang === "id" ? idLocale : enUS;
+  const [bellOpen, setBellOpen] = useState(false);
+
   const { data: notifData } = useGetNotifications(
     { unreadOnly: true },
     {
       query: {
         enabled: !!user,
         queryKey: getGetNotificationsQueryKey({ unreadOnly: true }),
+        refetchInterval: 60_000,
       },
     }
   );
 
-  const unreadCount = (notifData as NotificationsList | undefined)?.notifications?.length ?? 0;
+  const markAll = useMarkAllNotificationsRead();
+
+  const notifications = (notifData as NotificationsList | undefined)?.notifications ?? [];
+  const unreadCount = notifications.length;
   const isMainNav = MAIN_NAV_PATHS.includes(location);
 
   const navItems = [
@@ -35,6 +56,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/analytics", icon: BarChart3, label: t.nav.analytics },
     { href: "/profile", icon: User, label: t.nav.profile },
   ];
+
+  const handleMarkAllRead = () => {
+    markAll.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetNotificationsQueryKey({ unreadOnly: true }) });
+      },
+    });
+  };
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto relative">
@@ -92,19 +121,78 @@ export function Layout({ children }: { children: React.ReactNode }) {
             }
           </button>
           {user && (
-            <Link href="/notifications">
-              <button
-                data-testid="button-notifications"
-                className="relative p-2 rounded-xl hover:bg-muted transition-colors"
+            <Popover open={bellOpen} onOpenChange={setBellOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  data-testid="button-notifications"
+                  className="relative p-2 rounded-xl hover:bg-muted transition-colors"
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-4 h-4 text-muted-foreground" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 bg-blue-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-lg shadow-blue-500/40">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="w-80 p-0 rounded-2xl overflow-hidden border border-border/60 shadow-2xl"
               >
-                <Bell className="w-4 h-4 text-muted-foreground" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-blue-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-lg shadow-blue-500/40">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Notifikasi</p>
+                    {unreadCount > 0 && (
+                      <p className="text-[11px] text-muted-foreground">{unreadCount} belum dibaca</p>
+                    )}
+                  </div>
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1 text-blue-500 hover:text-blue-600"
+                      onClick={handleMarkAllRead}
+                      data-testid="button-mark-all-read"
+                      disabled={markAll.isPending}
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      Tandai semua
+                    </Button>
+                  )}
+                </div>
+
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Tidak ada notifikasi baru</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="max-h-72">
+                    <div className="divide-y divide-border/40">
+                      {notifications.slice(0, 5).map((n) => (
+                        <div key={n.id} className="px-4 py-3 hover:bg-muted/40 transition-colors">
+                          <p className="text-[13px] font-medium text-foreground leading-snug">{n.title}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">{n.message}</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">
+                            {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: dateLocale })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 )}
-              </button>
-            </Link>
+
+                <div className="border-t border-border/50 px-4 py-2.5">
+                  <Link href="/notifications" onClick={() => setBellOpen(false)}>
+                    <button className="flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 font-medium w-full justify-center" data-testid="link-view-all-notifications">
+                      <ExternalLink className="w-3 h-3" />
+                      Lihat semua notifikasi
+                    </button>
+                  </Link>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
       </header>

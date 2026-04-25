@@ -2,27 +2,29 @@ import { useState } from "react";
 import { TrendingUp, BookOpen, BarChart3, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useUpdateProfile, getGetMeQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 const ICONS = [TrendingUp, BookOpen, BarChart3, CheckCircle];
 
+export const ONBOARDING_STORAGE_KEY = "ai_trading_onboarding_done";
+
+export function isOnboardingDone(): boolean {
+  return !!localStorage.getItem(ONBOARDING_STORAGE_KEY);
+}
+
 export function OnboardingModal({ open }: { open: boolean }) {
   const { t } = useTranslation();
   const [step, setStep] = useState(0);
-  const queryClient = useQueryClient();
-  const updateProfile = useUpdateProfile();
 
   const steps = t.onboarding.steps;
   const current = steps[step];
   const isLast = step === steps.length - 1;
   const Icon = ICONS[step];
 
-  const handleComplete = async () => {
-    await updateProfile.mutateAsync({ data: { onboardingCompleted: true } });
-    queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+  const handleComplete = () => {
+    localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+    window.dispatchEvent(new Event("onboarding-complete"));
   };
 
   return (

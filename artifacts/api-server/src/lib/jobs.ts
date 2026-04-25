@@ -65,7 +65,7 @@ async function sendFeedbackReminders(): Promise<void> {
   }
 }
 
-async function sendDailySuperAdminSummary(): Promise<void> {
+async function sendDailySummary(): Promise<void> {
   try {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -75,10 +75,65 @@ async function sendDailySuperAdminSummary(): Promise<void> {
       .from(analyses)
       .where(sql`${analyses.createdAt} >= ${todayStart}`);
 
+    const activeUsersRows = await db
+      .selectDistinct({ userId: analyses.userId })
+      .from(analyses)
+      .where(sql`${analyses.createdAt} >= ${todayStart}`);
+    const activeCount = activeUsersRows.length;
+
     const [totalUsers] = await db
       .select({ count: count(users.id) })
       .from(users);
 
+    const admins = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(sql`${users.role} IN ('admin', 'super_admin')`);
+
+    if (admins.length === 0) return;
+
+    await db.insert(notifications).values(
+      admins.map((a) => ({
+        userId: a.id,
+        title: "Ringkasan Harian",
+        message:
+          a.role === "super_admin"
+            ? `Sistem hari ini: ${todayAnalyses.count} analisis, ${activeCount} pengguna aktif, ${totalUsers.count} total pengguna terdaftar.`
+            : `Hari ini: ${todayAnalyses.count} analisis baru, ${activeCount} pengguna aktif.`,
+        type: "info" as const,
+      }))
+    );
+
+    logger.info("Sent daily summary to admins and super-admins");
+  } catch (err) {
+    logger.error(err, "Error sending daily summary");
+  }
+}
+
+export async function notifyAdminsUserCreated(displayName: string): Promise<void> {
+  try {
+    const admins = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(sql`${users.role} IN ('admin', 'super_admin')`);
+
+    if (admins.length === 0) return;
+
+    await db.insert(notifications).values(
+      admins.map((a) => ({
+        userId: a.id,
+        title: "Pengguna Baru Terdaftar",
+        message: `Pengguna baru "${displayName}" telah mendaftar ke sistem.`,
+        type: "info" as const,
+      }))
+    );
+  } catch (err) {
+    logger.error(err, "Error sending user-created notification");
+  }
+}
+
+export async function notifySuperAdminsUserDeleted(displayName: string): Promise<void> {
+  try {
     const superAdmins = await db
       .select({ id: users.id })
       .from(users)
@@ -89,15 +144,13 @@ async function sendDailySuperAdminSummary(): Promise<void> {
     await db.insert(notifications).values(
       superAdmins.map((sa) => ({
         userId: sa.id,
-        title: "Ringkasan Harian Sistem",
-        message: `Hari ini: ${todayAnalyses.count} analisis baru. Total pengguna terdaftar: ${totalUsers.count}.`,
-        type: "info" as const,
+        title: "Pengguna Dihapus",
+        message: `Pengguna "${displayName}" telah dihapus dari sistem.`,
+        type: "warning" as const,
       }))
     );
-
-    logger.info("Sent daily super-admin summary");
   } catch (err) {
-    logger.error(err, "Error sending daily summary");
+    logger.error(err, "Error sending user-deleted notification");
   }
 }
 
@@ -111,8 +164,8 @@ export function startBackgroundJobs(): void {
   }, 5000);
 
   setTimeout(() => {
-    sendDailySuperAdminSummary();
-    setInterval(sendDailySuperAdminSummary, dailyInterval);
+    sendDailySummary();
+    setInterval(sendDailySummary, dailyInterval);
   }, 10000);
 
   logger.info("Background notification jobs started");

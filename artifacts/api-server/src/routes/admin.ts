@@ -12,6 +12,7 @@ import {
   requireSuperAdmin,
   AuthRequest,
 } from "../middleware/auth";
+import { notifySuperAdminsUserDeleted, notifyAdminsUserCreated } from "../lib/jobs";
 
 const router = Router();
 
@@ -217,6 +218,8 @@ router.post("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res
       createdAt: users.createdAt,
     });
 
+  void notifyAdminsUserCreated(user.displayName);
+
   res.status(201).json(user);
 });
 
@@ -228,15 +231,20 @@ router.delete("/superadmin/users/:id", requireSuperAdmin, async (req: AuthReques
     return;
   }
 
-  const [deleted] = await db
-    .delete(users)
+  const [target] = await db
+    .select({ id: users.id, displayName: users.displayName })
+    .from(users)
     .where(eq(users.id, id))
-    .returning({ id: users.id });
+    .limit(1);
 
-  if (!deleted) {
+  if (!target) {
     res.status(404).json({ error: "User tidak ditemukan" });
     return;
   }
+
+  await db.delete(users).where(eq(users.id, id));
+
+  void notifySuperAdminsUserDeleted(target.displayName);
 
   res.json({ message: "User berhasil dihapus" });
 });

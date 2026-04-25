@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { notifyAdminsUserCreated } from "../lib/jobs";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { db } from "../lib/db";
@@ -94,6 +95,8 @@ router.post("/auth/register", async (req, res) => {
     sameSite: "lax",
     expires: expiresAt,
   });
+
+  void notifyAdminsUserCreated(user.displayName);
 
   res.status(201).json({
     user: {
@@ -321,8 +324,11 @@ router.post("/auth/forgot-password/verify", async (req, res) => {
     .where(eq(users.email, email.toLowerCase()))
     .limit(1);
 
+  const INVALID_MSG = "Jawaban keamanan tidak valid";
+
   if (!user) {
-    res.status(404).json({ error: "Email tidak ditemukan" });
+    await bcrypt.hash("dummy_answer_to_prevent_timing_attack", 10);
+    res.status(401).json({ error: INVALID_MSG });
     return;
   }
 
@@ -332,7 +338,7 @@ router.post("/auth/forgot-password/verify", async (req, res) => {
   );
 
   if (!valid) {
-    res.status(401).json({ error: "Jawaban keamanan salah" });
+    res.status(401).json({ error: INVALID_MSG });
     return;
   }
 
