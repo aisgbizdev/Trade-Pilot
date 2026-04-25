@@ -327,10 +327,27 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-border/50 px-4 py-4 text-center">
+      <footer className="border-t border-border/50 px-4 py-4 text-center space-y-2">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           {t.landing.footer}
         </p>
+        <div className="flex justify-center items-center gap-4 text-[11px]">
+          <Link
+            href="/privacy"
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="link-footer-privacy"
+          >
+            {t.legal.privacy_link}
+          </Link>
+          <span className="text-muted-foreground/50">·</span>
+          <Link
+            href="/terms"
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="link-footer-terms"
+          >
+            {t.legal.terms_link}
+          </Link>
+        </div>
       </footer>
     </div>
   );

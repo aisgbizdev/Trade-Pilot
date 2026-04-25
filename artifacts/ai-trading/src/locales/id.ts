@@ -535,4 +535,14 @@ export const id: Translations = {
     feedback_prev_page: "Sebelumnya",
     feedback_next_page: "Berikutnya",
   },
+  brand: {
+    tagline: "Lihat Pasar dengan Jernih. Putuskan dengan Yakin.",
+    supported_by: "Didukung oleh",
+  },
+  legal: {
+    privacy_link: "Kebijakan Privasi",
+    terms_link: "Syarat Layanan",
+    back_to_home: "Kembali ke beranda",
+    consent_register: "Dengan membuat akun, Anda menyetujui {terms} dan {privacy} kami.",
+  },
 };

@@ -20,6 +20,8 @@ import ProfilePage from "@/pages/profile";
 import NotificationsPage from "@/pages/notifications";
 import AdminPage from "@/pages/admin";
 import AdminUsersPage from "@/pages/admin-users";
+import LegalPage from "@/pages/legal";
+import { SplashScreen } from "@/components/splash-screen";
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
 
@@ -68,6 +70,12 @@ function Router() {
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={RegisterPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/privacy">
+          <LegalPage kind="privacy" />
+        </Route>
+        <Route path="/terms">
+          <LegalPage kind="terms" />
+        </Route>
         <Route path="/dashboard">
           <ProtectedRoute>
             <DashboardPage />
@@ -133,6 +141,7 @@ function App() {
                 <Router />
               </AuthProvider>
             </WouterRouter>
+            <SplashScreen />
             <Toaster />
           </TooltipProvider>
         </LanguageProvider>

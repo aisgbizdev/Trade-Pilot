@@ -222,6 +222,42 @@ export default function RegisterPage() {
                 {register.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 {register.isPending ? t.auth.registering : t.auth.register_btn}
               </Button>
+
+              <p
+                className="text-[11px] text-muted-foreground text-center leading-relaxed"
+                data-testid="text-consent"
+              >
+                {t.legal.consent_register
+                  .split(/\{terms\}|\{privacy\}/)
+                  .flatMap((part, idx, arr) => {
+                    if (idx === arr.length - 1) return [part];
+                    const isTerms = t.legal.consent_register
+                      .split(part)[1]
+                      ?.startsWith("{terms}");
+                    return [
+                      part,
+                      isTerms ? (
+                        <Link key={`t-${idx}`} href="/terms">
+                          <a
+                            className="text-primary hover:underline"
+                            data-testid="link-consent-terms"
+                          >
+                            {t.legal.terms_link}
+                          </a>
+                        </Link>
+                      ) : (
+                        <Link key={`p-${idx}`} href="/privacy">
+                          <a
+                            className="text-primary hover:underline"
+                            data-testid="link-consent-privacy"
+                          >
+                            {t.legal.privacy_link}
+                          </a>
+                        </Link>
+                      ),
+                    ];
+                  })}
+              </p>
             </form>
           </Form>
 

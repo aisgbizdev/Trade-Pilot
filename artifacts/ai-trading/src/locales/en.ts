@@ -533,6 +533,16 @@ export const en = {
     feedback_prev_page: "Previous",
     feedback_next_page: "Next",
   },
+  brand: {
+    tagline: "See the Market Clearly. Decide with Confidence.",
+    supported_by: "Supported by",
+  },
+  legal: {
+    privacy_link: "Privacy Policy",
+    terms_link: "Terms of Service",
+    back_to_home: "Back to home",
+    consent_register: "By creating an account you agree to our {terms} and {privacy}.",
+  },
 };
 
 export type Translations = typeof en;
