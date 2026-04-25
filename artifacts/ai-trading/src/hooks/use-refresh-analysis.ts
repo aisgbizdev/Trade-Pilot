@@ -1,0 +1,69 @@
+import { useCallback, useState } from "react";
+import { useLocation } from "wouter";
+import {
+  useCreateAnalysis,
+  type CreateAnalysisBodyMode,
+  type CreateAnalysisBodyTimeframe,
+} from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/lib/i18n";
+
+export interface RefreshableAnalysis {
+  id: number;
+  instrument: string;
+  timeframe: string;
+  mode: string;
+}
+
+export function useRefreshAnalysis() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const { t } = useTranslation();
+  const createAnalysis = useCreateAnalysis();
+  const [refreshingIds, setRefreshingIds] = useState<ReadonlySet<number>>(
+    () => new Set()
+  );
+
+  const refresh = useCallback(
+    async (analysis: RefreshableAnalysis) => {
+      setRefreshingIds((prev) => {
+        if (prev.has(analysis.id)) return prev;
+        const next = new Set(prev);
+        next.add(analysis.id);
+        return next;
+      });
+      try {
+        const result = await createAnalysis.mutateAsync({
+          data: {
+            instrument: analysis.instrument,
+            timeframe: analysis.timeframe as CreateAnalysisBodyTimeframe,
+            mode: analysis.mode as CreateAnalysisBodyMode,
+          },
+        });
+        setLocation(`/analyses/${result.id}`);
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { error?: string } };
+        toast({
+          title: t.analysis_detail.refresh_failed,
+          description: apiErr?.data?.error ?? t.analyze.failed_desc,
+          variant: "destructive",
+        });
+      } finally {
+        setRefreshingIds((prev) => {
+          if (!prev.has(analysis.id)) return prev;
+          const next = new Set(prev);
+          next.delete(analysis.id);
+          return next;
+        });
+      }
+    },
+    [createAnalysis, setLocation, toast, t]
+  );
+
+  const isRefreshing = useCallback(
+    (id: number) => refreshingIds.has(id),
+    [refreshingIds]
+  );
+
+  return { refresh, isRefreshing };
+}

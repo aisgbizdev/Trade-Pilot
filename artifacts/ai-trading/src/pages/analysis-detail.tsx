@@ -9,11 +9,8 @@ import {
   useGetAnalysis,
   getGetAnalysisQueryKey,
   useSubmitFeedback,
-  useCreateAnalysis,
   type Analysis,
   type Feedback,
-  type CreateAnalysisBodyTimeframe,
-  type CreateAnalysisBodyMode,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -22,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
+import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 
 const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
   trending_up: { label: "Tren Naik", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -75,13 +73,13 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const { toast } = useToast();
   const { t } = useTranslation();
   const submitFeedback = useSubmitFeedback();
-  const createAnalysis = useCreateAnalysis();
+  const { refresh, isRefreshing: isRowRefreshing } = useRefreshAnalysis();
+  const isRefreshing = isRowRefreshing(id);
 
   const [feedbackType, setFeedbackType] = useState<"useful" | "not_useful" | null>(null);
   const [outcome, setOutcome] = useState<"correct" | "wrong" | "unknown" | null>(null);
   const [feedbackNote, setFeedbackNote] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshMsgIndex, setRefreshMsgIndex] = useState(0);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -109,27 +107,14 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
   const existingFeedback = analysis?.feedback;
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     if (!analysis) return;
-    setIsRefreshing(true);
-    try {
-      const result = await createAnalysis.mutateAsync({
-        data: {
-          instrument: analysis.instrument,
-          timeframe: analysis.timeframe as CreateAnalysisBodyTimeframe,
-          mode: analysis.mode as CreateAnalysisBodyMode,
-        },
-      });
-      setLocation(`/analyses/${result.id}`);
-    } catch (err: unknown) {
-      const apiErr = err as { data?: { error?: string } };
-      toast({
-        title: t.analysis_detail.refresh_failed,
-        description: apiErr?.data?.error ?? t.analyze.failed_desc,
-        variant: "destructive",
-      });
-      setIsRefreshing(false);
-    }
+    refresh({
+      id: analysis.id,
+      instrument: analysis.instrument,
+      timeframe: analysis.timeframe,
+      mode: analysis.mode,
+    });
   };
 
   const handleFeedbackSubmit = async () => {

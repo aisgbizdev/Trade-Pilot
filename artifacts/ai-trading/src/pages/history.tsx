@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Clock, TrendingUp, Loader2, Filter, X } from "lucide-react";
+import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 
 const ALL_INSTRUMENTS = [
   "XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY",
@@ -21,6 +22,7 @@ export default function HistoryPage() {
   const dateLocale = lang === "id" ? idLocale : enUS;
   const [page, setPage] = useState(1);
   const limit = 20;
+  const { refresh, isRefreshing } = useRefreshAnalysis();
 
   const [filterMode, setFilterMode] = useState<ListAnalysesMode | "">("");
   const [filterInstrument, setFilterInstrument] = useState("");
@@ -218,44 +220,76 @@ export default function HistoryPage() {
             {analyses.map((a) => {
               const valid = new Date(a.validUntil) > new Date();
               const mc = MARKET_CONDITION_LABELS[a.marketCondition];
+              const refreshing = isRefreshing(a.id);
               return (
-                <Link key={a.id} href={`/analyses/${a.id}`}>
-                  <Card
-                    className="p-3 hover:border-primary/50 transition-colors cursor-pointer"
-                    data-testid={`card-analysis-${a.id}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-foreground">{a.instrument}</span>
-                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
-                            {a.timeframe}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
-                            {a.mode === "beginner" ? t.common.beginner : t.common.pro}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          {mc && (
-                            <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md font-medium", mc.color)}>
-                              {mc.label}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                            <Clock className="w-2.5 h-2.5" />
-                            {format(new Date(a.createdAt), "dd MMM yyyy HH:mm", { locale: dateLocale })}
-                          </span>
-                        </div>
+                <Card
+                  key={a.id}
+                  className="p-3 hover:border-primary/50 transition-colors"
+                  data-testid={`card-analysis-${a.id}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <Link href={`/analyses/${a.id}`} className="flex-1 min-w-0 cursor-pointer">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-foreground">{a.instrument}</span>
+                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                          {a.timeframe}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                          {a.mode === "beginner" ? t.common.beginner : t.common.pro}
+                        </span>
                       </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {mc && (
+                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md font-medium", mc.color)}>
+                            {mc.label}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                          <Clock className="w-2.5 h-2.5" />
+                          {format(new Date(a.createdAt), "dd MMM yyyy HH:mm", { locale: dateLocale })}
+                        </span>
+                      </div>
+                    </Link>
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <Badge
                         variant={valid ? "default" : "secondary"}
-                        className="text-[10px] px-1.5 py-0 shrink-0"
+                        className="text-[10px] px-1.5 py-0"
                       >
                         {valid ? t.history.valid : t.history.expired}
                       </Badge>
+                      {!valid && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (refreshing) return;
+                            refresh({
+                              id: a.id,
+                              instrument: a.instrument,
+                              timeframe: a.timeframe,
+                              mode: a.mode,
+                            });
+                          }}
+                          disabled={refreshing}
+                          aria-label={t.analysis_detail.refresh_btn}
+                          title={t.analysis_detail.refresh_btn}
+                          data-testid={`button-refresh-row-${a.id}`}
+                          className={cn(
+                            "p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors",
+                            refreshing && "opacity-60 cursor-not-allowed"
+                          )}
+                        >
+                          {refreshing ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      )}
                     </div>
-                  </Card>
-                </Link>
+                  </div>
+                </Card>
               );
             })}
 
