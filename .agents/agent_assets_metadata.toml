@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "tv67OriJkrO8mKu4bofgz"
+uri = "file://docs/TECHNICAL.md"
+type = "text"
+title = "Technical Documentation"
+
+[[outputs]]
+id = "hV8G6zgBcKoRjxHsc6dGi"
+uri = "file://docs/USER_MANUAL.md"
+type = "text"
+title = "Buku Panduan Pengguna (User Manual)"
