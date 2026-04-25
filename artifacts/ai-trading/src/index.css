@@ -215,6 +215,10 @@
     animation: ticker 90s linear infinite;
   }
 
+  .ticker-scroll-mixed {
+    animation: ticker 55s linear infinite;
+  }
+
   @keyframes ticker {
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }

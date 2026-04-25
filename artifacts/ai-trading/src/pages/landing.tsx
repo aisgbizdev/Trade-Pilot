@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
-import { RotatingTicker } from "@/components/rotating-ticker";
+import { ContinuousTicker } from "@/components/continuous-ticker";
 
 const FEATURE_ICON_MAP = [Brain, BarChart3, Clock, Sparkles];
 
@@ -85,7 +85,7 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1 max-w-lg mx-auto w-full">
-        <RotatingTicker />
+        <ContinuousTicker />
 
         {/* HERO */}
         <section className="hero-gradient px-5 pt-14 pb-10 text-center relative overflow-hidden">

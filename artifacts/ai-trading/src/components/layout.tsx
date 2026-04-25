@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
-import { RotatingTicker } from "./rotating-ticker";
+import { ContinuousTicker } from "./continuous-ticker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -220,7 +220,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <RotatingTicker />
+      <ContinuousTicker />
 
       <main className="flex-1 pb-[72px] overflow-y-auto">
         {children}
