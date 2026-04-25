@@ -41,6 +41,8 @@ export const users = pgTable("users", {
     .default(false),
   securityQuestion: text("security_question").notNull(),
   securityAnswerHash: text("security_answer_hash").notNull(),
+  pushExpiry: boolean("push_expiry").notNull().default(true),
+  pushBroadcast: boolean("push_broadcast").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

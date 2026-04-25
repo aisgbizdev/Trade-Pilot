@@ -219,7 +219,7 @@ export default function HistoryPage() {
           <div className="space-y-2">
             {analyses.map((a) => {
               const valid = new Date(a.validUntil) > new Date();
-              const mc = MARKET_CONDITION_LABELS[a.marketCondition];
+              const mc = a.marketCondition ? MARKET_CONDITION_LABELS[a.marketCondition] : undefined;
               const refreshing = isRefreshing(a.id);
               return (
                 <Card

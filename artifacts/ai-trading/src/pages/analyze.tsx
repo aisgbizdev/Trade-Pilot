@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
-import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
+import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
@@ -51,6 +52,10 @@ export default function AnalyzePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
+  const queryClient = useQueryClient();
+  const { data: quota } = useGetAnalysisQuota({
+    query: { queryKey: getGetAnalysisQuotaQueryKey(), staleTime: 30_000 },
+  });
 
   const [activeTab, setActiveTab] = useState<"futures" | "forex">("futures");
   const [selectedInstrument, setSelectedInstrument] = useState("");
@@ -106,10 +111,14 @@ export default function AnalyzePage() {
           userInputContext: notes || undefined,
         },
       });
+      queryClient.invalidateQueries({ queryKey: getGetAnalysisQuotaQueryKey() });
       setLocation(`/analyses/${result.id}`);
     } catch (err: unknown) {
       const apiErr = err as { status?: number; data?: { error?: string } };
       const isQuota = apiErr?.status === 429;
+      if (isQuota) {
+        queryClient.invalidateQueries({ queryKey: getGetAnalysisQuotaQueryKey() });
+      }
       toast({
         title: isQuota ? t.analyze.quota_title : t.analyze.failed_title,
         description: apiErr?.data?.error ?? t.analyze.failed_desc,
@@ -131,12 +140,28 @@ export default function AnalyzePage() {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-bold text-foreground">{t.analyze.title}</h1>
             <p className="text-xs text-muted-foreground">
               {t.analyze.mode_label}: {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
             </p>
           </div>
+          {quota && !quota.unlimited && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
+                quota.hourly.remaining === 0 || quota.daily.remaining === 0
+                  ? "bg-destructive/10 border-destructive/40 text-destructive"
+                  : quota.hourly.remaining <= 1 || quota.daily.remaining <= 3
+                  ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
+                  : "bg-primary/10 border-primary/30 text-primary",
+              )}
+              data-testid="chip-quota"
+              title={`${t.analyze.quota_hour}: ${quota.hourly.remaining}/${quota.hourly.limit} • ${t.analyze.quota_day}: ${quota.daily.remaining}/${quota.daily.limit}`}
+            >
+              {quota.hourly.remaining}/{quota.hourly.limit} {t.analyze.quota_hour_short} · {quota.daily.remaining}/{quota.daily.limit} {t.analyze.quota_day_short}
+            </span>
+          )}
         </div>
 
         <div className="space-y-5">

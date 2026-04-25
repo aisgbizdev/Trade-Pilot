@@ -3,8 +3,37 @@ import { db } from "../lib/db";
 import { notifications } from "@workspace/db/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { notificationsEmitter } from "../lib/notifications-emitter";
 
 const router = Router();
+
+router.get("/notifications/stream", requireAuth, (req: AuthRequest, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+
+  res.write(`event: ready\ndata: {"ok":true}\n\n`);
+
+  const send = (event: string, data: unknown) => {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  const unsubscribe = notificationsEmitter.subscribeForUser(req.userId!, (ev) => {
+    send("notification", ev.notification);
+  });
+
+  const heartbeat = setInterval(() => {
+    res.write(`: heartbeat ${Date.now()}\n\n`);
+  }, 25_000);
+
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+  });
+});
 
 router.get("/notifications", requireAuth, async (req: AuthRequest, res) => {
   const unreadOnly = req.query["unreadOnly"] === "true";

@@ -9,7 +9,12 @@ import {
   passwordResetTokens,
 } from "@workspace/db/schema";
 import { eq, and, gt } from "drizzle-orm";
+import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import {
+  forgotPasswordQuestionLimiter,
+  forgotPasswordVerifyLimiter,
+} from "../middleware/rate-limit";
 
 const router = Router();
 
@@ -20,6 +25,20 @@ const SECURITY_QUESTIONS = [
   "Nama sekolah dasar kamu?",
   "Nama teman terbaik masa kecil kamu?",
 ];
+
+const registerSchema = z.object({
+  email: z.string().email("Format email tidak valid"),
+  password: z.string().min(6, "Password minimal 6 karakter"),
+  displayName: z.string().min(1, "Nama wajib diisi").max(80, "Nama terlalu panjang"),
+  selectedMode: z.enum(["beginner", "pro"], {
+    errorMap: () => ({ message: "Mode harus 'beginner' atau 'pro'" }),
+  }),
+  securityQuestion: z
+    .string()
+    .refine((v) => SECURITY_QUESTIONS.includes(v), "Pertanyaan keamanan tidak valid"),
+  securityAnswer: z.string().min(1, "Jawaban keamanan wajib diisi"),
+  rememberMe: z.boolean().optional(),
+});
 
 function generateToken(): string {
   return randomBytes(32).toString("hex");
@@ -33,23 +52,14 @@ function getSessionExpiry(rememberMe: boolean): Date {
 }
 
 router.post("/auth/register", async (req, res) => {
+  const parsed = registerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    res.status(400).json({ error: first?.message ?? "Data registrasi tidak valid" });
+    return;
+  }
   const { email, password, displayName, selectedMode, securityQuestion, securityAnswer, rememberMe } =
-    req.body;
-
-  if (!email || !password || !displayName || !securityQuestion || !securityAnswer) {
-    res.status(400).json({ error: "Semua field wajib diisi" });
-    return;
-  }
-
-  if (password.length < 6) {
-    res.status(400).json({ error: "Password minimal 6 karakter" });
-    return;
-  }
-
-  if (!SECURITY_QUESTIONS.includes(securityQuestion)) {
-    res.status(400).json({ error: "Pertanyaan keamanan tidak valid" });
-    return;
-  }
+    parsed.data;
 
   const [existing] = await db
     .select({ id: users.id })
@@ -290,7 +300,7 @@ router.patch("/auth/security-question", requireAuth, async (req: AuthRequest, re
   res.json({ message: "Pertanyaan keamanan berhasil diubah" });
 });
 
-router.post("/auth/forgot-password/question", async (req, res) => {
+router.post("/auth/forgot-password/question", forgotPasswordQuestionLimiter, async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
@@ -310,7 +320,7 @@ router.post("/auth/forgot-password/question", async (req, res) => {
   });
 });
 
-router.post("/auth/forgot-password/verify", async (req, res) => {
+router.post("/auth/forgot-password/verify", forgotPasswordVerifyLimiter, async (req, res) => {
   const { email, securityAnswer } = req.body;
 
   if (!email || !securityAnswer) {

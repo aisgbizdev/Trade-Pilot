@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
   const emailForm = useForm({ defaultValues: { email: "" } });
   const answerForm = useForm({ defaultValues: { answer: "" } });
   const passwordForm = useForm({
-    resolver: zodResolver(passwordSchema(t.auth.password_mismatch)),
+    resolver: zodResolver(passwordSchema(t.auth.password_mismatch) as any),
     defaultValues: { newPassword: "", confirmPassword: "" },
   });
 
@@ -87,13 +87,12 @@ export default function ForgotPasswordPage() {
   };
 
   useEffect(() => {
-    if (step === "done") {
-      const timer = setTimeout(() => {
-        sessionStorage.setItem("password_reset_success", "1");
-        setLocation("/login");
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
+    if (step !== "done") return undefined;
+    const timer = setTimeout(() => {
+      sessionStorage.setItem("password_reset_success", "1");
+      setLocation("/login");
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [step, setLocation]);
 
   const handlePasswordSubmit = async (values: { newPassword: string; confirmPassword: string }) => {

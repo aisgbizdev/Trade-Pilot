@@ -9,6 +9,9 @@ import {
   getGetNotificationsQueryKey,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+  useGetPushPrefs,
+  useUpdatePushPrefs,
+  getGetPushPrefsQueryKey,
   type NotificationsList,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +40,19 @@ export default function NotificationsPage() {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const { state: pushState, subscribe, unsubscribe } = usePush();
+  const { data: pushPrefs } = useGetPushPrefs({
+    query: { queryKey: getGetPushPrefsQueryKey(), staleTime: 60_000 },
+  });
+  const updatePushPrefs = useUpdatePushPrefs();
+
+  const handlePrefToggle = async (key: "pushExpiry" | "pushBroadcast", value: boolean) => {
+    try {
+      await updatePushPrefs.mutateAsync({ data: { [key]: value } });
+      queryClient.invalidateQueries({ queryKey: getGetPushPrefsQueryKey() });
+    } catch {
+      toast({ title: t.notifications.push_prefs_error, variant: "destructive" });
+    }
+  };
 
   const TYPE_LABEL: Record<string, string> = {
     info: t.notifications.type_info,
@@ -174,6 +190,53 @@ export default function NotificationsPage() {
             </div>
           </div>
         </Card>
+
+        {pushPrefs && (
+          <Card className="p-4 mb-5">
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-foreground">
+                {t.notifications.push_prefs_title}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                {t.notifications.push_prefs_desc}
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_expiry_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_expiry_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushExpiry}
+                  onCheckedChange={(v) => handlePrefToggle("pushExpiry", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-expiry"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_broadcast_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_broadcast_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushBroadcast}
+                  onCheckedChange={(v) => handlePrefToggle("pushBroadcast", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-broadcast"
+                />
+              </div>
+            </div>
+          </Card>
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">

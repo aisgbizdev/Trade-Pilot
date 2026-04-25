@@ -31,6 +31,7 @@ import {
   useUpdateUserRole,
   type UsersList,
   type CreateUserBody,
+  type UpdateUserRoleBodyRole,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -127,7 +128,7 @@ function AdminUsersContent() {
 
   const handleRoleChange = async (id: number, role: string) => {
     try {
-      await updateUserRole.mutateAsync({ id, data: { role } });
+      await updateUserRole.mutateAsync({ id, data: { role: role as UpdateUserRoleBodyRole } });
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       toast({ title: "Role berhasil diubah" });
     } catch (err: unknown) {

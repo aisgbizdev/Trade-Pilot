@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink } from "lucide-react";
 import { useAuth } from "./auth-provider";
@@ -44,6 +44,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   const markAll = useMarkAllNotificationsRead();
+
+  useEffect(() => {
+    if (!user) return;
+    const base = (import.meta.env["BASE_URL"] || "/").replace(/\/$/, "");
+    const url = `${base}/api/notifications/stream`;
+    const es = new EventSource(url, { withCredentials: true });
+    const onNotification = () => {
+      queryClient.invalidateQueries({
+        queryKey: getGetNotificationsQueryKey({ unreadOnly: true }),
+      });
+      queryClient.invalidateQueries({
+        queryKey: getGetNotificationsQueryKey(),
+      });
+    };
+    es.addEventListener("notification", onNotification);
+    es.onerror = () => {
+      // Browser auto-reconnects; nothing to do.
+    };
+    return () => {
+      es.removeEventListener("notification", onNotification);
+      es.close();
+    };
+  }, [user, queryClient]);
 
   const notifications = (notifData as NotificationsList | undefined)?.notifications ?? [];
   const unreadCount = notifications.length;

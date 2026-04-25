@@ -244,7 +244,7 @@ export default function DashboardPage() {
 
         <LivePriceTicker />
 
-        {instrumentsData?.instruments?.length > 0 && (
+        {instrumentsData?.instruments && instrumentsData.instruments.length > 0 && (
           <div>
             <h2 className="text-sm font-bold text-foreground mb-2.5">{t.dashboard.last_analyzed}</h2>
             <div className="flex gap-2 flex-wrap">
@@ -298,7 +298,7 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {analyses.map((a) => {
                 const valid = isValid(a.validUntil);
-                const mc = MARKET_CONDITION_LABELS[a.marketCondition];
+                const mc = a.marketCondition ? MARKET_CONDITION_LABELS[a.marketCondition] : undefined;
                 return (
                   <Link key={a.id} href={`/analyses/${a.id}`}>
                     <div

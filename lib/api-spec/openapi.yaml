@@ -383,6 +383,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /analyses/quota:
+    get:
+      operationId: getAnalysisQuota
+      tags: [analyses]
+      summary: Get current user's analysis quota usage
+      responses:
+        "200":
+          description: Quota usage
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisQuota"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /analyses/personal-analytics:
     get:
       operationId: getPersonalAnalytics
@@ -595,6 +614,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PushSubscriptionStatus"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /push/prefs:
+    get:
+      operationId: getPushPrefs
+      tags: [push]
+      summary: Get current user's push notification preferences
+      responses:
+        "200":
+          description: Preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushPrefs"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updatePushPrefs
+      tags: [push]
+      summary: Update push notification preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushPrefsUpdate"
+      responses:
+        "200":
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushPrefs"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Not authenticated
           content:
@@ -878,6 +945,25 @@ components:
           type: boolean
       required:
         - subscribed
+
+    PushPrefs:
+      type: object
+      properties:
+        pushExpiry:
+          type: boolean
+        pushBroadcast:
+          type: boolean
+      required:
+        - pushExpiry
+        - pushBroadcast
+
+    PushPrefsUpdate:
+      type: object
+      properties:
+        pushExpiry:
+          type: boolean
+        pushBroadcast:
+          type: boolean
 
     User:
       type: object
@@ -1230,6 +1316,34 @@ components:
               - mode
       required:
         - instruments
+
+    AnalysisQuota:
+      type: object
+      properties:
+        unlimited:
+          type: boolean
+          description: True for admin/super_admin, who bypass quota
+        hourly:
+          type: object
+          properties:
+            limit:
+              type: integer
+            used:
+              type: integer
+            remaining:
+              type: integer
+          required: [limit, used, remaining]
+        daily:
+          type: object
+          properties:
+            limit:
+              type: integer
+            used:
+              type: integer
+            remaining:
+              type: integer
+          required: [limit, used, remaining]
+      required: [unlimited, hourly, daily]
 
     PersonalAnalytics:
       type: object

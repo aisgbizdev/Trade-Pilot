@@ -14,6 +14,7 @@ import {
 } from "../middleware/auth";
 import { notifySuperAdminsUserDeleted, notifyAdminsUserCreated } from "../lib/jobs";
 import { sendPushToUsers } from "../lib/webpush";
+import { notificationsEmitter } from "../lib/notifications-emitter";
 
 const router = Router();
 
@@ -23,7 +24,6 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
   const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [totalResult] = await db.select({ count: count(analyses.id) }).from(analyses);
   const [todayResult] = await db
     .select({ count: count(analyses.id) })
     .from(analyses)
@@ -38,6 +38,10 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
     .where(sql`${analyses.createdAt} >= ${monthStart}`);
 
   const [totalUsers] = await db.select({ count: count(users.id) }).from(users);
+  const [usersTodayResult] = await db
+    .select({ count: count(users.id) })
+    .from(users)
+    .where(sql`${users.createdAt} >= ${todayStart}`);
 
   const instrumentBreakdown = await db
     .select({
@@ -64,10 +68,10 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
   }
 
   res.json({
-    total: Number(totalResult.count),
-    today: Number(todayResult.count),
-    thisWeek: Number(weekResult.count),
-    thisMonth: Number(monthResult.count),
+    totalUsersToday: Number(usersTodayResult.count),
+    totalAnalysesToday: Number(todayResult.count),
+    totalAnalysesThisWeek: Number(weekResult.count),
+    totalAnalysesThisMonth: Number(monthResult.count),
     totalUsers: Number(totalUsers.count),
     instrumentBreakdown,
     modeBreakdown,
@@ -118,11 +122,13 @@ router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) 
     return;
   }
 
-  let targetUsers = await db.select({ id: users.id }).from(users);
+  let targetUsers = await db
+    .select({ id: users.id, pushBroadcast: users.pushBroadcast })
+    .from(users);
 
   if (targetRole && targetRole !== "all") {
     const rows = await db
-      .select({ id: users.id })
+      .select({ id: users.id, pushBroadcast: users.pushBroadcast })
       .from(users)
       .where(eq(users.role, targetRole));
     targetUsers = rows;
@@ -143,8 +149,22 @@ router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) 
     }))
   );
 
+  const broadcastNowIso = new Date().toISOString();
+  for (const u of targetUsers) {
+    notificationsEmitter.emitForUser(u.id, {
+      title,
+      message,
+      type: type ?? "info",
+      createdAt: broadcastNowIso,
+    });
+  }
+
+  // Honor per-user push preferences: only push to users who haven't opted out
+  // of broadcasts. The in-app notification is still inserted for everyone.
+  const pushTargets = targetUsers.filter((u) => u.pushBroadcast !== false).map((u) => u.id);
+
   sendPushToUsers(
-    targetUsers.map((u) => u.id),
+    pushTargets,
     { title, body: message, url: "/notifications", tag: "broadcast" }
   ).catch((err) => {
     // Log but never let push delivery failures break the broadcast response.

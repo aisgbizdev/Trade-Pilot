@@ -56,8 +56,8 @@ Express backend serving all APIs.
 **Routes:**
 - `/api/auth/*` — register, login, logout, me, forgot-password (3-step via security question), profile, change-password, change-security-question
 - `/api/analyses/*` — CRUD + summary + recent-instruments + personal-analytics + feedback
-- `/api/notifications/*` — list, mark-read, mark-all-read, count
-- `/api/push/*` — public-key (public), subscribe/unsubscribe/subscription-status (authenticated)
+- `/api/notifications/*` — list, mark-read, mark-all-read, count, **stream (SSE realtime push)**
+- `/api/push/*` — public-key (public), subscribe/unsubscribe/subscription-status (authenticated), **prefs (GET/PATCH per-channel toggles: pushExpiry, pushBroadcast)**
 - `/api/admin/*` — stats, all-analyses, broadcast (now also sends Web Push), user CRUD (admin/super_admin only)
 
 **Key libs:** bcryptjs, openai (gpt-4o), cookie-parser, drizzle-orm, pg, web-push (VAPID Web Push notifications)

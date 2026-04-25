@@ -39,6 +39,16 @@ export interface PushSubscriptionStatus {
   subscribed: boolean;
 }
 
+export interface PushPrefs {
+  pushExpiry: boolean;
+  pushBroadcast: boolean;
+}
+
+export interface PushPrefsUpdate {
+  pushExpiry?: boolean;
+  pushBroadcast?: boolean;
+}
+
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export const UserRole = {
@@ -279,6 +289,25 @@ export type RecentInstrumentsInstrumentsItem = {
 
 export interface RecentInstruments {
   instruments: RecentInstrumentsInstrumentsItem[];
+}
+
+export type AnalysisQuotaHourly = {
+  limit: number;
+  used: number;
+  remaining: number;
+};
+
+export type AnalysisQuotaDaily = {
+  limit: number;
+  used: number;
+  remaining: number;
+};
+
+export interface AnalysisQuota {
+  /** True for admin/super_admin, who bypass quota */
+  unlimited: boolean;
+  hourly: AnalysisQuotaHourly;
+  daily: AnalysisQuotaDaily;
 }
 
 export type PersonalAnalyticsTopInstrumentsItem = {

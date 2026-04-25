@@ -21,6 +21,7 @@ import type {
   AnalysesList,
   AnalysesSummary,
   Analysis,
+  AnalysisQuota,
   AuthResponse,
   BroadcastNotificationBody,
   ChangePasswordBody,
@@ -39,6 +40,8 @@ import type {
   MessageResponse,
   NotificationsList,
   PersonalAnalytics,
+  PushPrefs,
+  PushPrefsUpdate,
   PushPublicKey,
   PushSubscriptionBody,
   PushSubscriptionStatus,
@@ -1309,6 +1312,81 @@ export function useGetRecentInstruments<
 }
 
 /**
+ * @summary Get current user's analysis quota usage
+ */
+export const getGetAnalysisQuotaUrl = () => {
+  return `/api/analyses/quota`;
+};
+
+export const getAnalysisQuota = async (
+  options?: RequestInit,
+): Promise<AnalysisQuota> => {
+  return customFetch<AnalysisQuota>(getGetAnalysisQuotaUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAnalysisQuotaQueryKey = () => {
+  return [`/api/analyses/quota`] as const;
+};
+
+export const getGetAnalysisQuotaQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalysisQuota>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisQuota>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAnalysisQuotaQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAnalysisQuota>>
+  > = ({ signal }) => getAnalysisQuota({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisQuota>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAnalysisQuotaQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalysisQuota>>
+>;
+export type GetAnalysisQuotaQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get current user's analysis quota usage
+ */
+
+export function useGetAnalysisQuota<
+  TData = Awaited<ReturnType<typeof getAnalysisQuota>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisQuota>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAnalysisQuotaQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Get personal analytics data
  */
 export const getGetPersonalAnalyticsUrl = () => {
@@ -2144,6 +2222,167 @@ export function useGetPushSubscriptionStatus<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get current user's push notification preferences
+ */
+export const getGetPushPrefsUrl = () => {
+  return `/api/push/prefs`;
+};
+
+export const getPushPrefs = async (
+  options?: RequestInit,
+): Promise<PushPrefs> => {
+  return customFetch<PushPrefs>(getGetPushPrefsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPushPrefsQueryKey = () => {
+  return [`/api/push/prefs`] as const;
+};
+
+export const getGetPushPrefsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPushPrefs>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPushPrefs>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPushPrefsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPushPrefs>>> = ({
+    signal,
+  }) => getPushPrefs({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPushPrefs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPushPrefsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPushPrefs>>
+>;
+export type GetPushPrefsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get current user's push notification preferences
+ */
+
+export function useGetPushPrefs<
+  TData = Awaited<ReturnType<typeof getPushPrefs>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPushPrefs>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPushPrefsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update push notification preferences
+ */
+export const getUpdatePushPrefsUrl = () => {
+  return `/api/push/prefs`;
+};
+
+export const updatePushPrefs = async (
+  pushPrefsUpdate: PushPrefsUpdate,
+  options?: RequestInit,
+): Promise<PushPrefs> => {
+  return customFetch<PushPrefs>(getUpdatePushPrefsUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(pushPrefsUpdate),
+  });
+};
+
+export const getUpdatePushPrefsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePushPrefs>>,
+    TError,
+    { data: BodyType<PushPrefsUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePushPrefs>>,
+  TError,
+  { data: BodyType<PushPrefsUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updatePushPrefs"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePushPrefs>>,
+    { data: BodyType<PushPrefsUpdate> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updatePushPrefs(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePushPrefsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePushPrefs>>
+>;
+export type UpdatePushPrefsMutationBody = BodyType<PushPrefsUpdate>;
+export type UpdatePushPrefsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update push notification preferences
+ */
+export const useUpdatePushPrefs = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePushPrefs>>,
+    TError,
+    { data: BodyType<PushPrefsUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePushPrefs>>,
+  TError,
+  { data: BodyType<PushPrefsUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdatePushPrefsMutationOptions(options));
+};
 
 /**
  * @summary Get admin statistics

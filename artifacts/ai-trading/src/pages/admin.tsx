@@ -14,6 +14,7 @@ import {
   getGetAllAnalysesQueryKey,
   useBroadcastNotification,
   type AnalysesList,
+  type Analysis,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -48,7 +49,14 @@ function AdminContent() {
     }
     try {
       await broadcastNotification.mutateAsync({
-        data: { title: broadcastTitle, message: broadcastMessage, type: "info", targetRole: broadcastTarget as "all" | "user" | "admin" | "super_admin" },
+        data: {
+          title: broadcastTitle,
+          message: broadcastMessage,
+          type: "info",
+          ...(broadcastTarget !== "all"
+            ? { targetRole: broadcastTarget as "user" | "admin" | "super_admin" }
+            : {}),
+        },
       });
       toast({ title: "Berhasil", description: "Broadcast notifikasi telah dikirim" });
       setBroadcastTitle("");
@@ -99,10 +107,10 @@ function AdminContent() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: "Total User", value: stats?.totalUsers ?? 0 },
-                { label: "Total Analisis", value: stats?.total ?? 0 },
-                { label: "Hari Ini", value: stats?.today ?? 0 },
-                { label: "Minggu Ini", value: stats?.thisWeek ?? 0 },
-                { label: "Bulan Ini", value: stats?.thisMonth ?? 0 },
+                { label: "User Hari Ini", value: stats?.totalUsersToday ?? 0 },
+                { label: "Analisis Hari Ini", value: stats?.totalAnalysesToday ?? 0 },
+                { label: "Minggu Ini", value: stats?.totalAnalysesThisWeek ?? 0 },
+                { label: "Bulan Ini", value: stats?.totalAnalysesThisMonth ?? 0 },
               ].map(({ label, value }) => (
                 <Card key={label} className="p-3 text-center">
                   <div className="text-2xl font-bold text-primary" data-testid={`stat-${label.toLowerCase().replace(/\s/g, "-")}`}>
@@ -113,7 +121,7 @@ function AdminContent() {
               ))}
             </div>
 
-            {stats?.instrumentBreakdown?.length > 0 && (
+            {stats?.instrumentBreakdown && stats.instrumentBreakdown.length > 0 && (
               <Card className="p-4">
                 <h3 className="text-sm font-semibold text-foreground mb-3">Instrumen Terpopuler</h3>
                 <div className="space-y-2">
@@ -206,7 +214,8 @@ function AdminContent() {
           ) : (
             <div className="space-y-2">
               {analyses.map((a) => {
-                const mc = MARKET_CONDITION_LABELS[a.marketCondition];
+                const mc = a.marketCondition ? MARKET_CONDITION_LABELS[a.marketCondition] : undefined;
+                const userEmail = (a as Analysis & { userEmail?: string }).userEmail;
                 return (
                   <Card key={a.id} className="p-3" data-testid={`card-analysis-${a.id}`}>
                     <div className="flex items-start justify-between">
@@ -217,7 +226,7 @@ function AdminContent() {
                           <Badge className={cn("text-[10px] px-1.5 py-0 border-0", mc?.color)}>{mc?.label}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {a.userEmail} • {a.mode === "beginner" ? "Pemula" : "Pro"}
+                          {userEmail} • {a.mode === "beginner" ? "Pemula" : "Pro"}
                         </p>
                       </div>
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">

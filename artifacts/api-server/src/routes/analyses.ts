@@ -7,6 +7,7 @@ import { generateAnalysis, getValidUntil, type BeginnerAIOutput, type ProAIOutpu
 import { getIndicators, formatIndicatorsForPrompt } from "../lib/historical";
 import { getRelevantNews, formatNewsForPrompt } from "../lib/news";
 import { getRelevantCalendar, formatCalendarForPrompt } from "../lib/calendar";
+import { notificationsEmitter } from "../lib/notifications-emitter";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -27,14 +28,25 @@ async function trackAiError(): Promise<void> {
       .from(users)
       .where(sql`${users.role} IN ('admin', 'super_admin')`);
     if (admins.length > 0) {
+      const errorTitle = "Peringatan: Error AI Berulang";
+      const errorMessage = `Lebih dari ${AI_ERROR_THRESHOLD} kegagalan analisis AI terjadi dalam 1 jam terakhir. Periksa koneksi dan konfigurasi AI.`;
       await db.insert(notifications).values(
         admins.map((a) => ({
           userId: a.id,
-          title: "Peringatan: Error AI Berulang",
-          message: `Lebih dari ${AI_ERROR_THRESHOLD} kegagalan analisis AI terjadi dalam 1 jam terakhir. Periksa koneksi dan konfigurasi AI.`,
+          title: errorTitle,
+          message: errorMessage,
           type: "error" as const,
         }))
       );
+      const nowIso = new Date().toISOString();
+      for (const a of admins) {
+        notificationsEmitter.emitForUser(a.id, {
+          title: errorTitle,
+          message: errorMessage,
+          type: "error",
+          createdAt: nowIso,
+        });
+      }
     }
   }
 }
@@ -88,6 +100,47 @@ router.get("/analyses/recent-instruments", requireAuth, async (req: AuthRequest,
       lastAnalyzedAt: r.createdAt.toISOString(),
       mode: r.mode,
     })),
+  });
+});
+
+router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
+  const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
+  if (isPrivilegedRole) {
+    res.json({
+      unlimited: true,
+      hourly: { limit: ANALYSIS_QUOTA_PER_HOUR, used: 0, remaining: ANALYSIS_QUOTA_PER_HOUR },
+      daily: { limit: ANALYSIS_QUOTA_PER_DAY, used: 0, remaining: ANALYSIS_QUOTA_PER_DAY },
+    });
+    return;
+  }
+
+  const now = new Date();
+  const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  const [usage] = await db
+    .select({
+      hourly: sql<number>`sum(case when ${analyses.createdAt} >= ${hourAgo} then 1 else 0 end)`,
+      daily: sql<number>`sum(case when ${analyses.createdAt} >= ${dayAgo} then 1 else 0 end)`,
+    })
+    .from(analyses)
+    .where(and(eq(analyses.userId, req.userId!), gte(analyses.createdAt, dayAgo)));
+
+  const hourlyUsed = Number(usage?.hourly ?? 0);
+  const dailyUsed = Number(usage?.daily ?? 0);
+
+  res.json({
+    unlimited: false,
+    hourly: {
+      limit: ANALYSIS_QUOTA_PER_HOUR,
+      used: hourlyUsed,
+      remaining: Math.max(0, ANALYSIS_QUOTA_PER_HOUR - hourlyUsed),
+    },
+    daily: {
+      limit: ANALYSIS_QUOTA_PER_DAY,
+      used: dailyUsed,
+      remaining: Math.max(0, ANALYSIS_QUOTA_PER_DAY - dailyUsed),
+    },
   });
 });
 
@@ -338,11 +391,19 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
   const analysis = outcome.analysis;
 
+  const completeTitle = "Analisis Selesai";
+  const completeMessage = `Analisis ${instrument} (${timeframe}, ${typedMode === "beginner" ? "Pemula" : "Pro"}) telah selesai diproses.`;
   await db.insert(notifications).values({
     userId: req.userId!,
-    title: "Analisis Selesai",
-    message: `Analisis ${instrument} (${timeframe}, ${typedMode === "beginner" ? "Pemula" : "Pro"}) telah selesai diproses.`,
+    title: completeTitle,
+    message: completeMessage,
     type: "info",
+  });
+  notificationsEmitter.emitForUser(req.userId!, {
+    title: completeTitle,
+    message: completeMessage,
+    type: "info",
+    createdAt: new Date().toISOString(),
   });
 
   res.status(201).json(analysis);

@@ -308,6 +308,25 @@ export const GetRecentInstrumentsResponse = zod.object({
 });
 
 /**
+ * @summary Get current user's analysis quota usage
+ */
+export const GetAnalysisQuotaResponse = zod.object({
+  unlimited: zod
+    .boolean()
+    .describe("True for admin\/super_admin, who bypass quota"),
+  hourly: zod.object({
+    limit: zod.number(),
+    used: zod.number(),
+    remaining: zod.number(),
+  }),
+  daily: zod.object({
+    limit: zod.number(),
+    used: zod.number(),
+    remaining: zod.number(),
+  }),
+});
+
+/**
  * @summary Get personal analytics data
  */
 export const GetPersonalAnalyticsResponse = zod.object({
@@ -467,6 +486,27 @@ export const UnsubscribePushResponse = zod.object({
  */
 export const GetPushSubscriptionStatusResponse = zod.object({
   subscribed: zod.boolean(),
+});
+
+/**
+ * @summary Get current user's push notification preferences
+ */
+export const GetPushPrefsResponse = zod.object({
+  pushExpiry: zod.boolean(),
+  pushBroadcast: zod.boolean(),
+});
+
+/**
+ * @summary Update push notification preferences
+ */
+export const UpdatePushPrefsBody = zod.object({
+  pushExpiry: zod.boolean().optional(),
+  pushBroadcast: zod.boolean().optional(),
+});
+
+export const UpdatePushPrefsResponse = zod.object({
+  pushExpiry: zod.boolean(),
+  pushBroadcast: zod.boolean(),
 });
 
 /**

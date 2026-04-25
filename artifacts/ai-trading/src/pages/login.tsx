@@ -39,7 +39,7 @@ export default function LoginPage() {
   type FormValues = z.infer<typeof schema>;
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as any),
     defaultValues: { email: "", password: "", rememberMe: false },
   });
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../lib/db";
-import { pushSubscriptions } from "@workspace/db/schema";
+import { pushSubscriptions, users } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 
@@ -74,6 +74,52 @@ router.get("/push/subscription-status", requireAuth, async (req: AuthRequest, re
     .where(eq(pushSubscriptions.userId, req.userId!));
 
   res.json({ subscribed: subs.length > 0, count: subs.length });
+});
+
+const prefsSchema = z.object({
+  pushExpiry: z.boolean().optional(),
+  pushBroadcast: z.boolean().optional(),
+});
+
+router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
+  const [row] = await db
+    .select({
+      pushExpiry: users.pushExpiry,
+      pushBroadcast: users.pushBroadcast,
+    })
+    .from(users)
+    .where(eq(users.id, req.userId!))
+    .limit(1);
+
+  if (!row) {
+    res.status(404).json({ error: "User tidak ditemukan" });
+    return;
+  }
+  res.json(row);
+});
+
+router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
+  const parsed = prefsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Preferensi tidak valid" });
+    return;
+  }
+  const updates: Record<string, boolean> = {};
+  if (typeof parsed.data.pushExpiry === "boolean") updates["pushExpiry"] = parsed.data.pushExpiry;
+  if (typeof parsed.data.pushBroadcast === "boolean") updates["pushBroadcast"] = parsed.data.pushBroadcast;
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "Tidak ada perubahan" });
+    return;
+  }
+  const [updated] = await db
+    .update(users)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(users.id, req.userId!))
+    .returning({
+      pushExpiry: users.pushExpiry,
+      pushBroadcast: users.pushBroadcast,
+    });
+  res.json(updated);
 });
 
 export default router;

@@ -23,7 +23,7 @@ async function fetchAllHistorical(): Promise<any[]> {
   const dateFrom = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const res = await fetch(`${HISTORICAL_API}?dateFrom=${dateFrom}`);
   if (!res.ok) throw new Error("Failed to fetch historical data");
-  const json = await res.json();
+  const json = (await res.json()) as { data: any };
   cache = { data: json.data, fetchedAt: Date.now() };
   return json.data;
 }
