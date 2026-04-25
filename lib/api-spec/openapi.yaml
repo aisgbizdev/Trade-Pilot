@@ -1221,7 +1221,7 @@ components:
         tradingBias:
           type: string
           nullable: true
-          description: "One of: strong_sell, sell, neutral, buy, strong_buy"
+          description: "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side."
         opportunity:
           type: string
           nullable: true

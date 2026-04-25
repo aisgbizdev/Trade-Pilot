@@ -1,0 +1,158 @@
+Refactor the AI analysis output and user interface of the existing AI Trading Assistant MVP.
+
+Goal:
+Maintain clear directional insight while ensuring the system remains a decision-support tool, not a signal generator.
+
+This is a HYBRID approach:
+- Keep directional clarity (bullish / bearish / wait)
+- Keep opportunity and risk
+- Remove command-style outputs (BUY/SELL)
+- Remove exact execution numbers (entry, SL, TP)
+
+---
+
+## IMPLEMENTATION DECISIONS (FIXED)
+
+1. Step 2 must be implemented as:
+   → Collapsible accordion in the SAME page (not modal, not new page)
+
+2. Use existing database fields:
+   - `uncertaintyNotes` → used as "confidence reason"
+   - `invalidationConditions` → used as "invalidation list" (move to top of UI)
+
+DO NOT create new fields.
+DO NOT modify database schema.
+
+---
+
+## STEP 1 — MAIN ANALYSIS VIEW (DEFAULT)
+
+Display:
+
+1. Market Condition
+   - trend / range / volatile
+
+2. Directional Bias
+   - Beginner:
+     "Cenderung naik / Cenderung turun / Tunggu dulu"
+   - Pro:
+     "Bullish bias / Bearish bias / Neutral"
+
+   DO NOT use BUY / SELL
+
+3. Invalidation (HIGH PRIORITY — MUST BE NEAR TOP)
+   Display clearly:
+   "This analysis becomes invalid if:"
+   - condition 1
+   - condition 2
+
+   (use existing invalidationConditions field)
+
+4. Scenario Breakdown
+   - Scenario A (dominant)
+   - Scenario B (alternative)
+   - Scenario C (wait / no-trade)
+
+5. Opportunity vs Risk
+   - Show relative upside vs downside
+   - Keep neutral tone
+
+6. Confidence Range
+   - Example: 52%–60%
+   - Include reason from `uncertaintyNotes`
+   - Explain why it is not certain
+
+7. Explanation
+   - Beginner: simple, guided
+   - Pro: structured + technical + fundamental drivers
+
+---
+
+## STEP 2 — EXECUTION INSIGHT (ACCORDION)
+
+Add collapsible section:
+
+Label:
+“View Execution Insight”
+
+Default state:
+Collapsed
+
+When expanded, show:
+
+1. Conceptual execution guidance ONLY
+   Example:
+   "If Scenario A continues, traders often watch areas near recent support/resistance"
+
+2. Scenario-based explanation:
+   - Scenario A: how traders might approach
+   - Scenario B: alternative behavior
+
+3. MUST NOT include:
+   - exact entry price
+   - stop loss number
+   - take profit number
+
+4. Add disclaimer:
+   "These are conceptual examples, not fixed trading instructions."
+
+---
+
+## LANGUAGE RULES (CRITICAL)
+
+DO:
+- Use “bias”, “tendency”, “scenario”
+- Emphasize uncertainty
+- Explain when analysis can fail
+
+DO NOT:
+- Use “BUY” / “SELL”
+- Use command tone
+- Imply guaranteed outcome
+- Provide exact trading numbers
+
+---
+
+## BEGINNER VS PRO MODE
+
+Beginner:
+- Natural language
+- More explanation
+- Highlight risk clearly
+
+Pro:
+- Compact
+- Structured
+- Include technical + fundamental reasoning
+
+---
+
+## DO NOT TOUCH
+
+- Database schema
+- API contracts
+- Analysis history
+- Feedback system
+- Statistics
+- Quota system
+- Notifications
+
+---
+
+## DESIGN PRINCIPLE
+
+The system must:
+Feel as clear as a signal
+BUT behave like a thinking assistant
+
+---
+
+## FINAL EXPECTATION
+
+User should feel:
+“I understand the situation better”
+
+NOT:
+“I was told exactly what to do”
+
+Implement this refactor cleanly without breaking existing functionality.

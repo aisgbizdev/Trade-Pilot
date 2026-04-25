@@ -233,7 +233,7 @@ export interface Analysis {
   marketContext?: string | null;
   invalidationConditions?: string | null;
   uncertaintyNotes?: string | null;
-  /** One of: strong_sell, sell, neutral, buy, strong_buy */
+  /** Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side. */
   tradingBias?: string | null;
   opportunity?: string | null;
   risk?: string | null;

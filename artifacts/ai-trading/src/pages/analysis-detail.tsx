@@ -1,9 +1,32 @@
 import { useLocation } from "wouter";
-import { ChevronLeft, Clock, AlertTriangle, ThumbsUp, ThumbsDown, Loader2, RefreshCw, StickyNote } from "lucide-react";
+import {
+  ChevronLeft,
+  Clock,
+  AlertTriangle,
+  ThumbsUp,
+  ThumbsDown,
+  Loader2,
+  RefreshCw,
+  StickyNote,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ChevronDown,
+  ChevronRight,
+  ShieldAlert,
+  Target,
+  AlertOctagon,
+  HelpCircle,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +65,148 @@ const RISK_LEVEL_LABELS: Record<string, { label: string; color: string; bars: nu
   high: { label: "Risiko Tinggi", color: "text-red-600 dark:text-red-400", bars: 3 },
 };
 
+type BiasKey =
+  | "bearish_strong"
+  | "bearish"
+  | "neutral"
+  | "bullish"
+  | "bullish_strong";
+
+const LEGACY_BIAS_MAP: Record<string, BiasKey> = {
+  strong_sell: "bearish_strong",
+  sell: "bearish",
+  neutral: "neutral",
+  buy: "bullish",
+  strong_buy: "bullish_strong",
+};
+
+function normalizeBias(raw: string | null | undefined): BiasKey | null {
+  if (!raw) return null;
+  if (raw in LEGACY_BIAS_MAP) return LEGACY_BIAS_MAP[raw]!;
+  const valid: BiasKey[] = ["bearish_strong", "bearish", "neutral", "bullish", "bullish_strong"];
+  return valid.includes(raw as BiasKey) ? (raw as BiasKey) : null;
+}
+
+const BIAS_ORDER: BiasKey[] = ["bearish_strong", "bearish", "neutral", "bullish", "bullish_strong"];
+
+function biasIndex(bias: BiasKey): number {
+  return BIAS_ORDER.indexOf(bias);
+}
+
+function biasColor(bias: BiasKey): string {
+  switch (bias) {
+    case "bearish_strong":
+      return "text-red-700 dark:text-red-400";
+    case "bearish":
+      return "text-red-600 dark:text-red-400";
+    case "neutral":
+      return "text-yellow-600 dark:text-yellow-400";
+    case "bullish":
+      return "text-green-600 dark:text-green-400";
+    case "bullish_strong":
+      return "text-green-700 dark:text-green-400";
+  }
+}
+
+function biasFillColor(bias: BiasKey): string {
+  switch (bias) {
+    case "bearish_strong":
+      return "bg-red-600";
+    case "bearish":
+      return "bg-red-400";
+    case "neutral":
+      return "bg-yellow-400";
+    case "bullish":
+      return "bg-green-400";
+    case "bullish_strong":
+      return "bg-green-600";
+  }
+}
+
+function biasLabel(bias: BiasKey, mode: string, t: ReturnType<typeof useTranslation>["t"]): string {
+  const isBeginner = mode === "beginner";
+  const dict = t.analysis_detail;
+  if (isBeginner) {
+    switch (bias) {
+      case "bearish_strong":
+        return dict.bias_beginner_bearish_strong;
+      case "bearish":
+        return dict.bias_beginner_bearish;
+      case "neutral":
+        return dict.bias_beginner_neutral;
+      case "bullish":
+        return dict.bias_beginner_bullish;
+      case "bullish_strong":
+        return dict.bias_beginner_bullish_strong;
+    }
+  }
+  switch (bias) {
+    case "bearish_strong":
+      return dict.bias_bearish_strong;
+    case "bearish":
+      return dict.bias_bearish;
+    case "neutral":
+      return dict.bias_neutral;
+    case "bullish":
+      return dict.bias_bullish;
+    case "bullish_strong":
+      return dict.bias_bullish_strong;
+  }
+}
+
+function BiasIcon({ bias, className }: { bias: BiasKey; className?: string }) {
+  if (bias === "bullish" || bias === "bullish_strong") {
+    return <TrendingUp className={className} />;
+  }
+  if (bias === "bearish" || bias === "bearish_strong") {
+    return <TrendingDown className={className} />;
+  }
+  return <Minus className={className} />;
+}
+
+function BiasIndicator({ bias, mode }: { bias: BiasKey; mode: string }) {
+  const { t } = useTranslation();
+  const idx = biasIndex(bias);
+  const color = biasColor(bias);
+  const fill = biasFillColor(bias);
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+            {t.analysis_detail.bias_title}
+          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <BiasIcon bias={bias} className={cn("w-5 h-5", color)} />
+            <span className={cn("text-lg font-bold", color)} data-testid="text-bias-label">
+              {biasLabel(bias, mode, t)}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-1" data-testid="bias-gauge">
+        {BIAS_ORDER.map((b, i) => (
+          <div
+            key={b}
+            className={cn(
+              "h-1.5 flex-1 rounded-full transition-opacity",
+              i === idx ? fill : "bg-muted"
+            )}
+          />
+        ))}
+      </div>
+      <div className="flex justify-between text-[10px] text-muted-foreground">
+        <span>{t.analysis_detail.bias_bearish_strong}</span>
+        <span>{t.analysis_detail.bias_neutral}</span>
+        <span>{t.analysis_detail.bias_bullish_strong}</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground italic leading-snug">
+        {t.analysis_detail.bias_subtitle}
+      </p>
+    </div>
+  );
+}
+
 function ValidityBadge({ validUntil }: { validUntil: string }) {
   const date = new Date(validUntil);
   const valid = date > new Date();
@@ -69,9 +234,37 @@ function Section({ title, content }: { title: string; content?: string | null })
   return (
     <div>
       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{title}</h3>
-      <p className="text-sm text-foreground leading-relaxed">{content}</p>
+      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{content}</p>
     </div>
   );
+}
+
+function parseConditions(raw?: string | null): string[] {
+  if (!raw) return [];
+  // Split only on real list delimiters: newlines, "; " (semicolon followed by whitespace),
+  // or bullet markers (• or " - " surrounded by spaces). Avoids splitting URLs/numbers
+  // that contain bare semicolons or ampersands.
+  return raw
+    .split(/\n+|;\s+|(?:^|\s)[•]\s+|(?:\s)-\s+/g)
+    .map((s) => s.trim().replace(/^[-*•]\s*/, ""))
+    .filter((s) => s.length > 0);
+}
+
+function scenarioCText(bias: BiasKey, t: ReturnType<typeof useTranslation>["t"]): string {
+  if (bias === "neutral") {
+    return t.analysis_detail.scenario_c_template_neutral;
+  }
+  return t.analysis_detail.scenario_c_template_directional;
+}
+
+function executionScenarioAText(bias: BiasKey, t: ReturnType<typeof useTranslation>["t"]): string {
+  if (bias === "bullish" || bias === "bullish_strong") {
+    return t.analysis_detail.execution_scenario_a_template_bullish;
+  }
+  if (bias === "bearish" || bias === "bearish_strong") {
+    return t.analysis_detail.execution_scenario_a_template_bearish;
+  }
+  return t.analysis_detail.execution_scenario_a_template_neutral;
 }
 
 export default function AnalysisDetailPage({ params }: { params: { id: string } }) {
@@ -91,6 +284,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [refreshMsgIndex, setRefreshMsgIndex] = useState(0);
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
   const [refreshNotes, setRefreshNotes] = useState("");
+  const [executionOpen, setExecutionOpen] = useState(false);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const carriedOver = typeof window !== "undefined" &&
@@ -190,9 +384,26 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const rl = analysis.riskLevel ? RISK_LEVEL_LABELS[analysis.riskLevel] : undefined;
   const isBeginnerMode = analysis.mode === "beginner";
   const isExpired = new Date(analysis.validUntil) <= new Date();
+  const bias = normalizeBias(analysis.tradingBias);
 
   const displayFeedbackType = feedbackType ?? existingFeedback?.feedbackType ?? null;
   const displayOutcome = outcome ?? existingFeedback?.outcome ?? null;
+
+  const invalidationRaw = isBeginnerMode
+    ? analysis.failureConditions
+    : analysis.invalidationConditions;
+  const invalidationItems = parseConditions(invalidationRaw);
+
+  const confidenceReason = isBeginnerMode
+    ? analysis.whyReason
+    : analysis.uncertaintyNotes;
+
+  const scenarioAContent = isBeginnerMode ? analysis.mainScenario : analysis.baseCase;
+  const scenarioBContent = isBeginnerMode
+    ? analysis.alternativeScenario
+    : (bias === "bearish" || bias === "bearish_strong"
+        ? analysis.bullishScenario
+        : analysis.bearishScenario);
 
   return (
     <Layout>
@@ -206,16 +417,18 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg font-bold text-foreground" data-testid="text-instrument">
                 {analysis.instrument}
               </h1>
               <Badge variant="outline" className="text-xs">
                 {analysis.timeframe}
               </Badge>
-              <Badge className={cn("text-xs border-0", mc?.color)}>
-                {mc?.label}
-              </Badge>
+              {mc && (
+                <Badge className={cn("text-xs border-0", mc.color)}>
+                  {mc.label}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-1">
               <ValidityBadge validUntil={analysis.validUntil} />
@@ -223,7 +436,12 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </div>
         </div>
 
-        <Card className="p-4 space-y-3">
+        {/* PRIMARY METRICS: Bias + Confidence + Risk */}
+        <Card className="p-4 space-y-4" data-testid="card-primary-metrics">
+          {bias && <BiasIndicator bias={bias} mode={analysis.mode} />}
+
+          {bias && <div className="border-t border-border" />}
+
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Tingkat Keyakinan</p>
@@ -271,6 +489,18 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               <span>100%</span>
             </div>
           </div>
+
+          {confidenceReason && (
+            <div className="bg-muted/40 rounded-md p-2.5 flex gap-2" data-testid="card-confidence-reason">
+              <HelpCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
+                  {t.analysis_detail.confidence_reason_label}
+                </p>
+                <p className="text-xs text-foreground leading-relaxed">{confidenceReason}</p>
+              </div>
+            </div>
+          )}
 
           <div className="text-xs text-muted-foreground">
             Dianalisis {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", { locale: idLocale })} •{" "}
@@ -325,33 +555,164 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </Card>
         )}
 
-        <Card className="p-4 space-y-4">
-          {isBeginnerMode ? (
-            <>
-              <Section title="Skenario Utama" content={analysis.mainScenario} />
-              <Section title="Skenario Alternatif" content={analysis.alternativeScenario} />
-              <Section title="Alasan" content={analysis.whyReason} />
-              <Section title="Kondisi yang Membatalkan" content={analysis.failureConditions} />
-            </>
-          ) : (
-            <>
-              <Section title="Skenario Dasar" content={analysis.baseCase} />
-              <Section title="Skenario Bullish" content={analysis.bullishScenario} />
-              <Section title="Skenario Bearish" content={analysis.bearishScenario} />
-              <Section title="Faktor Teknikal" content={analysis.keyDriversTechnical} />
-              <Section title="Faktor Fundamental" content={analysis.keyDriversFundamental} />
-              <Section title="Konteks Pasar" content={analysis.marketContext} />
-              <Section title="Kondisi yang Membatalkan" content={analysis.invalidationConditions} />
-              <Section title="Catatan Ketidakpastian" content={analysis.uncertaintyNotes} />
-            </>
+        {/* HIGH PRIORITY: Invalidation conditions */}
+        {invalidationItems.length > 0 && (
+          <Card
+            className="p-4 border-l-4 border-l-red-500 dark:border-l-red-400 bg-red-50/40 dark:bg-red-950/20"
+            data-testid="card-invalidation"
+          >
+            <div className="flex gap-2.5">
+              <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div>
+                  <h3 className="text-sm font-bold text-red-700 dark:text-red-400">
+                    {t.analysis_detail.invalidation_title}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {t.analysis_detail.invalidation_subtitle}
+                  </p>
+                </div>
+                <ul className="space-y-1.5" data-testid="list-invalidation">
+                  {invalidationItems.map((item, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-foreground">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      <span className="leading-snug">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* OPPORTUNITY vs RISK */}
+        {(analysis.opportunity || analysis.risk) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="grid-opp-risk">
+            {analysis.opportunity && (
+              <Card
+                className="p-4 border-l-4 border-l-emerald-500 dark:border-l-emerald-400"
+                data-testid="card-opportunity"
+              >
+                <div className="flex gap-2 mb-2">
+                  <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                    {t.analysis_detail.opportunity_title}
+                  </h3>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">{analysis.opportunity}</p>
+              </Card>
+            )}
+            {analysis.risk && (
+              <Card
+                className="p-4 border-l-4 border-l-amber-500 dark:border-l-amber-400"
+                data-testid="card-risk"
+              >
+                <div className="flex gap-2 mb-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                    {t.analysis_detail.risk_title}
+                  </h3>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">{analysis.risk}</p>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* SCENARIOS A / B / C */}
+        <Card className="p-4 space-y-4" data-testid="card-scenarios">
+          {scenarioAContent && (
+            <Section title={t.analysis_detail.scenario_a} content={scenarioAContent} />
           )}
+          {scenarioBContent && (
+            <Section title={t.analysis_detail.scenario_b} content={scenarioBContent} />
+          )}
+          <div data-testid="section-scenario-c">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+              {t.analysis_detail.scenario_c}
+            </h3>
+            <p className="text-sm text-foreground leading-relaxed">
+              {scenarioCText(bias ?? "neutral", t)}
+            </p>
+          </div>
+        </Card>
+
+        {/* PRO MODE: Technical + Fundamental + Market context */}
+        {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
+          <Card className="p-4 space-y-4" data-testid="card-pro-details">
+            <Section title="Faktor Teknikal" content={analysis.keyDriversTechnical} />
+            <Section title="Faktor Fundamental" content={analysis.keyDriversFundamental} />
+            <Section title="Konteks Pasar" content={analysis.marketContext} />
+          </Card>
+        )}
+
+        {/* EXECUTION INSIGHT (Step 2 — collapsible) */}
+        <Card className="overflow-hidden" data-testid="card-execution-insight">
+          <Collapsible open={executionOpen} onOpenChange={setExecutionOpen}>
+            <CollapsibleTrigger
+              className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+              data-testid="button-toggle-execution"
+            >
+              <div className="flex items-center gap-2 text-left">
+                {executionOpen ? (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {t.analysis_detail.execution_insight_title}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t.analysis_detail.execution_insight_intro}
+                  </p>
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="p-4 pt-0 space-y-3 border-t border-border">
+                <div className="space-y-3 pt-3">
+                  <div data-testid="exec-scenario-a">
+                    <h4 className="text-xs font-semibold text-foreground mb-1">
+                      {t.analysis_detail.execution_scenario_a_label}
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {executionScenarioAText(bias ?? "neutral", t)}
+                    </p>
+                  </div>
+                  <div data-testid="exec-scenario-b">
+                    <h4 className="text-xs font-semibold text-foreground mb-1">
+                      {t.analysis_detail.execution_scenario_b_label}
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {t.analysis_detail.execution_scenario_b_template}
+                    </p>
+                  </div>
+                  <div data-testid="exec-scenario-c">
+                    <h4 className="text-xs font-semibold text-foreground mb-1">
+                      {t.analysis_detail.execution_scenario_c_label}
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {t.analysis_detail.execution_scenario_c_template}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md p-3 flex gap-2 mt-3">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                    {t.analysis_detail.execution_insight_disclaimer}
+                  </p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         <Card className="p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
           <div className="flex gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
             <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-              Analisis ini adalah alat pendukung keputusan, bukan saran keuangan atau sinyal trading otomatis. 
+              Analisis ini adalah alat pendukung keputusan, bukan saran keuangan atau sinyal trading otomatis.
               Selalu lakukan riset sendiri dan kelola risiko dengan bijak.
             </p>
           </div>

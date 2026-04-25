@@ -230,7 +230,9 @@ export const ListAnalysesResponse = zod.object({
       tradingBias: zod
         .string()
         .nullish()
-        .describe("One of: strong_sell, sell, neutral, buy, strong_buy"),
+        .describe(
+          "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
+        ),
       opportunity: zod.string().nullish(),
       risk: zod.string().nullish(),
       feedback: zod
@@ -288,7 +290,9 @@ export const GetAnalysesSummaryResponse = zod.object({
       tradingBias: zod
         .string()
         .nullish()
-        .describe("One of: strong_sell, sell, neutral, buy, strong_buy"),
+        .describe(
+          "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
+        ),
       opportunity: zod.string().nullish(),
       risk: zod.string().nullish(),
       feedback: zod
@@ -396,7 +400,9 @@ export const GetAnalysisResponse = zod.object({
   tradingBias: zod
     .string()
     .nullish()
-    .describe("One of: strong_sell, sell, neutral, buy, strong_buy"),
+    .describe(
+      "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
+    ),
   opportunity: zod.string().nullish(),
   risk: zod.string().nullish(),
   feedback: zod
@@ -588,7 +594,9 @@ export const GetAllAnalysesResponse = zod.object({
       tradingBias: zod
         .string()
         .nullish()
-        .describe("One of: strong_sell, sell, neutral, buy, strong_buy"),
+        .describe(
+          "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
+        ),
       opportunity: zod.string().nullish(),
       risk: zod.string().nullish(),
       feedback: zod
