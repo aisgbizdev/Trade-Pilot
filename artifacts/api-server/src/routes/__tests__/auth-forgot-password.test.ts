@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import request from "supertest";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
@@ -11,6 +11,11 @@ import {
   sessions,
   passwordResetTokens,
 } from "@workspace/db/schema";
+import {
+  forgotPasswordQuestionLimiter,
+  forgotPasswordVerifyLimiter,
+  forgotPasswordResetLimiter,
+} from "../../middleware/rate-limit";
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `auth-fp-test-${RUN_ID}`;
@@ -46,6 +51,16 @@ async function createUser(): Promise<SeedUser> {
 beforeAll(async () => {
   // Sanity row so the suite always has at least one user with our marker.
   await createUser();
+});
+
+beforeEach(() => {
+  // Limiter stores are module-scoped Maps. Supertest always connects from
+  // 127.0.0.1, so the per-IP `forgotPasswordResetLimiter` budget would
+  // otherwise accumulate across tests in this file and falsely 429 the
+  // success-path tests. Clear before every test for a clean budget.
+  forgotPasswordQuestionLimiter.store.clear();
+  forgotPasswordVerifyLimiter.store.clear();
+  forgotPasswordResetLimiter.store.clear();
 });
 
 afterAll(async () => {

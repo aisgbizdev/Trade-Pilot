@@ -14,6 +14,9 @@ import { requireAuth, AuthRequest } from "../middleware/auth";
 import {
   forgotPasswordQuestionLimiter,
   forgotPasswordVerifyLimiter,
+  loginLimiter,
+  registerLimiter,
+  forgotPasswordResetLimiter,
 } from "../middleware/rate-limit";
 
 const router = Router();
@@ -51,7 +54,7 @@ function getSessionExpiry(rememberMe: boolean): Date {
   return new Date(Date.now() + ms);
 }
 
-router.post("/auth/register", async (req, res) => {
+router.post("/auth/register", registerLimiter, async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     const first = parsed.error.errors[0];
@@ -121,13 +124,20 @@ router.post("/auth/register", async (req, res) => {
   });
 });
 
-router.post("/auth/login", async (req, res) => {
-  const { email, password, rememberMe } = req.body;
+const loginSchema = z.object({
+  email: z.string().email("Format email tidak valid"),
+  password: z.string().min(1, "Password wajib diisi"),
+  rememberMe: z.boolean().optional(),
+});
 
-  if (!email || !password) {
-    res.status(400).json({ error: "Email dan password wajib diisi" });
+router.post("/auth/login", loginLimiter, async (req, res) => {
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    res.status(400).json({ error: first?.message ?? "Email dan password wajib diisi" });
     return;
   }
+  const { email, password, rememberMe } = parsed.data;
 
   const [user] = await db
     .select()
@@ -207,8 +217,38 @@ router.get("/auth/me", requireAuth, async (req: AuthRequest, res) => {
   });
 });
 
+const profileUpdateSchema = z
+  .object({
+    displayName: z
+      .string()
+      .min(1, "Nama wajib diisi")
+      .max(80, "Nama terlalu panjang")
+      .optional(),
+    selectedMode: z
+      .enum(["beginner", "pro"], {
+        errorMap: () => ({ message: "Mode harus 'beginner' atau 'pro'" }),
+      })
+      .optional(),
+    themePreference: z
+      .enum(["light", "dark"], {
+        errorMap: () => ({ message: "Tema harus 'light' atau 'dark'" }),
+      })
+      .optional(),
+    onboardingCompleted: z
+      .boolean({ invalid_type_error: "onboardingCompleted harus boolean" })
+      .optional(),
+  })
+  .strict();
+
 router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
-  const { displayName, selectedMode, themePreference, onboardingCompleted } = req.body;
+  const parsed = profileUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    res.status(400).json({ error: first?.message ?? "Data profil tidak valid" });
+    return;
+  }
+  const { displayName, selectedMode, themePreference, onboardingCompleted } =
+    parsed.data;
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (displayName !== undefined) updateData["displayName"] = displayName;
@@ -300,13 +340,28 @@ router.patch("/auth/security-question", requireAuth, async (req: AuthRequest, re
   res.json({ message: "Pertanyaan keamanan berhasil diubah" });
 });
 
-router.post("/auth/forgot-password/question", forgotPasswordQuestionLimiter, async (req, res) => {
-  const { email } = req.body;
+const forgotPasswordQuestionSchema = z.object({
+  email: z.string().email("Format email tidak valid"),
+});
 
-  if (!email) {
-    res.status(400).json({ error: "Email wajib diisi" });
+const forgotPasswordVerifySchema = z.object({
+  email: z.string().email("Format email tidak valid"),
+  securityAnswer: z.string().min(1, "Jawaban keamanan wajib diisi"),
+});
+
+const forgotPasswordResetSchema = z.object({
+  resetToken: z.string().min(1, "Token wajib diisi"),
+  newPassword: z.string().min(6, "Password minimal 6 karakter"),
+});
+
+router.post("/auth/forgot-password/question", forgotPasswordQuestionLimiter, async (req, res) => {
+  const parsed = forgotPasswordQuestionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    res.status(400).json({ error: first?.message ?? "Email wajib diisi" });
     return;
   }
+  const { email } = parsed.data;
 
   const [user] = await db
     .select({ id: users.id, securityQuestion: users.securityQuestion })
@@ -321,12 +376,13 @@ router.post("/auth/forgot-password/question", forgotPasswordQuestionLimiter, asy
 });
 
 router.post("/auth/forgot-password/verify", forgotPasswordVerifyLimiter, async (req, res) => {
-  const { email, securityAnswer } = req.body;
-
-  if (!email || !securityAnswer) {
-    res.status(400).json({ error: "Email dan jawaban wajib diisi" });
+  const parsed = forgotPasswordVerifySchema.safeParse(req.body);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    res.status(400).json({ error: first?.message ?? "Email dan jawaban wajib diisi" });
     return;
   }
+  const { email, securityAnswer } = parsed.data;
 
   const [user] = await db
     .select({ id: users.id, securityAnswerHash: users.securityAnswerHash })
@@ -368,18 +424,16 @@ router.post("/auth/forgot-password/verify", forgotPasswordVerifyLimiter, async (
   res.json({ resetToken, message: "Jawaban benar. Silakan reset password." });
 });
 
-router.post("/auth/forgot-password/reset", async (req, res) => {
-  const { resetToken, newPassword } = req.body;
-
-  if (!resetToken || !newPassword) {
-    res.status(400).json({ error: "Token dan password baru wajib diisi" });
+router.post("/auth/forgot-password/reset", forgotPasswordResetLimiter, async (req, res) => {
+  const parsed = forgotPasswordResetSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    res
+      .status(400)
+      .json({ error: first?.message ?? "Token dan password baru wajib diisi" });
     return;
   }
-
-  if (newPassword.length < 6) {
-    res.status(400).json({ error: "Password minimal 6 karakter" });
-    return;
-  }
+  const { resetToken, newPassword } = parsed.data;
 
   const [tokenRecord] = await db
     .select()
