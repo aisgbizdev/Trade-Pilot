@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
 
-import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
+import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching";
 import { clientsClaim } from "workbox-core";
-import { registerRoute } from "workbox-routing";
+import { NavigationRoute, registerRoute } from "workbox-routing";
 import { NetworkFirst, CacheFirst } from "workbox-strategies";
 
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
@@ -23,6 +23,13 @@ registerRoute(
   new CacheFirst({ cacheName: "static-assets" })
 );
 
+const offlineHandler = createHandlerBoundToURL(import.meta.env.BASE_URL + "offline.html");
+registerRoute(
+  new NavigationRoute(offlineHandler, {
+    denylist: [/^\/api\//],
+  })
+);
+
 self.addEventListener("push", (event: PushEvent) => {
   if (!event.data) return;
   const data = event.data.json() as {
@@ -34,17 +41,18 @@ self.addEventListener("push", (event: PushEvent) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "./icon-192.png",
-      badge: "./icon-192.png",
+      icon: import.meta.env.BASE_URL + "icon-192.png",
+      badge: import.meta.env.BASE_URL + "icon-192.png",
       tag: data.tag ?? "ai-trading",
-      data: { url: data.url ?? "./" },
+      data: { url: data.url ?? import.meta.env.BASE_URL },
     })
   );
 });
 
 self.addEventListener("notificationclick", (event: NotificationEvent) => {
   event.notification.close();
-  const notifUrl: string = (event.notification.data as { url?: string })?.url ?? "./";
+  const notifUrl: string =
+    (event.notification.data as { url?: string })?.url ?? import.meta.env.BASE_URL;
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })

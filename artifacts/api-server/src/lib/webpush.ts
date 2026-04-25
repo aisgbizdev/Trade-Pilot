@@ -8,14 +8,21 @@ const vapidEmail = process.env.VAPID_EMAIL || "mailto:admin@aitradingassistant.a
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "";
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "";
 
-if (!vapidPublicKey || !vapidPrivateKey) {
-  logger.warn(
-    "VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY is missing. Web Push notifications will not be delivered. " +
-      "Set both environment variables to enable push."
-  );
-}
+const vapidConfigured = Boolean(vapidPublicKey && vapidPrivateKey);
 
-webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+if (!vapidConfigured) {
+  logger.warn(
+    "VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY is missing. " +
+      "Web Push notifications are disabled. Set both env vars to enable push delivery."
+  );
+} else {
+  try {
+    webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+    logger.info("Web Push (VAPID) configured successfully");
+  } catch (err) {
+    logger.error({ err }, "Failed to configure VAPID details — push notifications disabled");
+  }
+}
 
 export interface PushPayload {
   title: string;
@@ -25,7 +32,7 @@ export interface PushPayload {
 }
 
 export async function sendPushToUser(userId: number, payload: PushPayload): Promise<void> {
-  if (!vapidPublicKey || !vapidPrivateKey) return;
+  if (!vapidConfigured) return;
 
   const subs = await db
     .select()
