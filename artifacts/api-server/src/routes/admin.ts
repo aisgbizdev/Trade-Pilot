@@ -21,6 +21,12 @@ import { notificationsEmitter } from "../lib/notifications-emitter";
 type AudienceType = "all" | "role" | "tag";
 type Role = "user" | "admin" | "super_admin";
 
+// Per-process advisory-lock namespace used to serialize any operation that
+// could reduce the number of super_admins. Combined with a count(*) check
+// inside the same transaction, this prevents two concurrent peer demotes /
+// deletes from racing the count down to zero. See pg_advisory_xact_lock.
+const SUPER_ADMIN_GUARD_LOCK = 0x5a5ad317;
+
 const router = Router();
 
 router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
@@ -535,20 +541,48 @@ router.delete("/superadmin/users/:id", requireSuperAdmin, async (req: AuthReques
     return;
   }
 
-  const [target] = await db
-    .select({ id: users.id, displayName: users.displayName })
-    .from(users)
-    .where(eq(users.id, id))
-    .limit(1);
+  type DeleteOutcome =
+    | { kind: "ok"; displayName: string }
+    | { kind: "notFound" }
+    | { kind: "lastSuperAdmin" };
 
-  if (!target) {
+  const outcome = await db.transaction<DeleteOutcome>(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_GUARD_LOCK}::int, 0::int)`,
+    );
+
+    const [target] = await tx
+      .select({ id: users.id, displayName: users.displayName, role: users.role })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    if (!target) return { kind: "notFound" };
+
+    if (target.role === "super_admin") {
+      const [{ c }] = await tx
+        .select({ c: count() })
+        .from(users)
+        .where(eq(users.role, "super_admin"));
+      if (Number(c) <= 1) return { kind: "lastSuperAdmin" };
+    }
+
+    await tx.delete(users).where(eq(users.id, id));
+    return { kind: "ok", displayName: target.displayName };
+  });
+
+  if (outcome.kind === "notFound") {
     res.status(404).json({ error: "User tidak ditemukan" });
     return;
   }
+  if (outcome.kind === "lastSuperAdmin") {
+    res.status(400).json({
+      error: "Tidak bisa menghapus super admin terakhir",
+    });
+    return;
+  }
 
-  await db.delete(users).where(eq(users.id, id));
-
-  void notifySuperAdminsUserDeleted(target.displayName);
+  void notifySuperAdminsUserDeleted(outcome.displayName);
 
   res.json({ message: "User berhasil dihapus" });
 });
@@ -582,6 +616,11 @@ router.patch("/superadmin/users/:id/role", requireSuperAdmin, async (req: AuthRe
   const id = Number(req.params["id"]);
   const { role } = req.body;
 
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "ID tidak valid" });
+    return;
+  }
+
   if (!["user", "admin", "super_admin"].includes(role)) {
     res.status(400).json({ error: "Role tidak valid" });
     return;
@@ -592,18 +631,53 @@ router.patch("/superadmin/users/:id/role", requireSuperAdmin, async (req: AuthRe
     return;
   }
 
-  const [updated] = await db
-    .update(users)
-    .set({ role, updatedAt: new Date() })
-    .where(eq(users.id, id))
-    .returning({ id: users.id, role: users.role });
+  type RoleOutcome =
+    | { kind: "ok"; row: { id: number; role: Role } }
+    | { kind: "notFound" }
+    | { kind: "lastSuperAdmin" };
 
-  if (!updated) {
+  const outcome = await db.transaction<RoleOutcome>(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(${SUPER_ADMIN_GUARD_LOCK}::int, 0::int)`,
+    );
+
+    const [target] = await tx
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    if (!target) return { kind: "notFound" };
+
+    if (target.role === "super_admin" && role !== "super_admin") {
+      const [{ c }] = await tx
+        .select({ c: count() })
+        .from(users)
+        .where(eq(users.role, "super_admin"));
+      if (Number(c) <= 1) return { kind: "lastSuperAdmin" };
+    }
+
+    const [updated] = await tx
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning({ id: users.id, role: users.role });
+
+    return { kind: "ok", row: updated as { id: number; role: Role } };
+  });
+
+  if (outcome.kind === "notFound") {
     res.status(404).json({ error: "User tidak ditemukan" });
     return;
   }
+  if (outcome.kind === "lastSuperAdmin") {
+    res.status(400).json({
+      error: "Tidak bisa menurunkan super admin terakhir",
+    });
+    return;
+  }
 
-  res.json(updated);
+  res.json(outcome.row);
 });
 
 export default router;

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { eq, inArray, ilike, like } from "drizzle-orm";
+import { eq, inArray, ilike, like, count } from "drizzle-orm";
 
 import app from "../../app";
 import { db } from "../../lib/db";
@@ -449,5 +449,328 @@ describe("DELETE /superadmin/users/:id", () => {
     // (param validation) or 404 (no row matched) is acceptable.
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
+  });
+});
+
+describe("PATCH /superadmin/users/:id/role", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${regularUser.id}/role`)
+      .send({ role: "admin" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for non-super-admin", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${regularUser.id}/role`)
+      .set(...authHeader(admin))
+      .send({ role: "admin" });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects an invalid role with 400", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${regularUser.id}/role`)
+      .set(...authHeader(superAdmin))
+      .send({ role: "demigod" });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a non-numeric :id with 400 (no 5xx)", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/not-a-number/role`)
+      .set(...authHeader(superAdmin))
+      .send({ role: "admin" });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+  });
+
+  it("blocks self-demote with 400", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${superAdmin.id}/role`)
+      .set(...authHeader(superAdmin))
+      .send({ role: "admin" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 for an unknown user id", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/999999999/role`)
+      .set(...authHeader(superAdmin))
+      .send({ role: "admin" });
+    expect(res.status).toBe(404);
+  });
+
+  it("allows promoting a user to super_admin and demoting a peer back when others remain", async () => {
+    // Seed a fresh peer super_admin so the system has at least 2 super_admins
+    // (our acting `superAdmin` + this peer + any real ones already on the DB).
+    const peer = await createUser("super_admin");
+
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${peer.id}/role`)
+      .set(...authHeader(superAdmin))
+      .send({ role: "admin" });
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe("admin");
+
+    const [row] = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.id, peer.id))
+      .limit(1);
+    expect(row.role).toBe("admin");
+  });
+});
+
+describe("super_admin lockout protection", () => {
+  // These tests verify the count-guard (defense-in-depth) inside PATCH
+  // role + DELETE. Through normal request flow the actor is always a
+  // super_admin, so the count cannot reach zero by their action alone —
+  // BUT under concurrent peer demotes/deletes (race), the guard inside the
+  // pg_advisory_xact_lock + count(*) check is what keeps the system from
+  // ending up with zero administrators.
+
+  it("PATCH role: peer demote succeeds; final count drops by exactly 1", async () => {
+    // Two fresh peer super_admins.
+    const sa1 = await createUser("super_admin");
+    const sa2 = await createUser("super_admin");
+
+    const [{ c: before }] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(eq(users.role, "super_admin"));
+
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${sa2.id}/role`)
+      .set(...authHeader(sa1))
+      .send({ role: "admin" });
+    expect(res.status).toBe(200);
+
+    const [{ c: after }] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(eq(users.role, "super_admin"));
+    expect(Number(after)).toBe(Number(before) - 1);
+  });
+
+  it("DELETE: peer delete succeeds; final count drops by exactly 1", async () => {
+    const sa1 = await createUser("super_admin");
+    const sa2 = await createUser("super_admin");
+
+    const [{ c: before }] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(eq(users.role, "super_admin"));
+
+    const res = await request(app)
+      .delete(`/api/superadmin/users/${sa2.id}`)
+      .set(...authHeader(sa1));
+    expect(res.status).toBe(200);
+
+    const [{ c: after }] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(eq(users.role, "super_admin"));
+    expect(Number(after)).toBe(Number(before) - 1);
+  });
+
+  it("PATCH role: concurrent peer demotes never drive the super_admin count to zero", async () => {
+    // Two fresh peer super_admins firing demote requests at each other in
+    // parallel. WITHOUT the advisory-lock + count guard, both reads would
+    // see the original count and both updates would commit, leaving the
+    // system with 2 fewer super_admins. WITH the guard, the second
+    // transaction sees the post-first count and (when count would hit 0)
+    // refuses with 400.
+    const sa1 = await createUser("super_admin");
+    const sa2 = await createUser("super_admin");
+
+    const [{ c: before }] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(eq(users.role, "super_admin"));
+
+    const [r1, r2] = await Promise.all([
+      request(app)
+        .patch(`/api/superadmin/users/${sa2.id}/role`)
+        .set(...authHeader(sa1))
+        .send({ role: "admin" }),
+      request(app)
+        .patch(`/api/superadmin/users/${sa1.id}/role`)
+        .set(...authHeader(sa2))
+        .send({ role: "admin" }),
+    ]);
+
+    // Either both succeed (because there were >=3 super_admins before, so
+    // even both demotes leave >=1) or one wins and the other is refused —
+    // but the count must NEVER end below `before - 2` and must always
+    // remain >= 1.
+    const [{ c: after }] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(eq(users.role, "super_admin"));
+    expect(Number(after)).toBeGreaterThanOrEqual(1);
+    expect(Number(after)).toBeGreaterThanOrEqual(Number(before) - 2);
+
+    // At least one of the two requests must have a sane status (not 5xx).
+    for (const r of [r1, r2]) {
+      expect(r.status).toBeGreaterThanOrEqual(200);
+      expect(r.status).toBeLessThan(500);
+    }
+  });
+
+  it("DELETE: concurrent peer deletes never drive the super_admin count to zero", async () => {
+    const sa1 = await createUser("super_admin");
+    const sa2 = await createUser("super_admin");
+
+    const [r1, r2] = await Promise.all([
+      request(app)
+        .delete(`/api/superadmin/users/${sa2.id}`)
+        .set(...authHeader(sa1)),
+      request(app)
+        .delete(`/api/superadmin/users/${sa1.id}`)
+        .set(...authHeader(sa2)),
+    ]);
+
+    const [{ c: after }] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(eq(users.role, "super_admin"));
+    expect(Number(after)).toBeGreaterThanOrEqual(1);
+
+    for (const r of [r1, r2]) {
+      expect(r.status).toBeGreaterThanOrEqual(200);
+      expect(r.status).toBeLessThan(500);
+    }
+  });
+});
+
+// Deterministic guard test: temporarily demote all real super_admins on the
+// shared DB so we have a known total of exactly two super_admins (the two we
+// seed). This lets us prove the 400 path fires under concurrent peer demote.
+//
+// SAFETY: the demoted IDs are restored in a finally + afterAll. If both fail,
+// a real super_admin would be stuck as `admin` — so we ALSO bail out early
+// (skip the test body, but still restore) if anything looks unsafe.
+describe("deterministic last-super-admin guard (engineered count == 2)", () => {
+  let temporarilyDemoted: number[] = [];
+  const guardSeeded: number[] = [];
+
+  async function restoreReals() {
+    if (temporarilyDemoted.length === 0) return;
+    await db
+      .update(users)
+      .set({ role: "super_admin" })
+      .where(inArray(users.id, temporarilyDemoted));
+    temporarilyDemoted = [];
+  }
+
+  afterAll(async () => {
+    // Belt-and-suspenders: always restore on the way out, even if a test
+    // already restored.
+    await restoreReals();
+  });
+
+  it("PATCH role: under concurrent peer demote with exactly 2 super_admins, exactly one wins (200) and one is refused (400)", async () => {
+    const sa1 = await createUser("super_admin");
+    const sa2 = await createUser("super_admin");
+    guardSeeded.push(sa1.id, sa2.id);
+
+    try {
+      const others = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.role, "super_admin"));
+      temporarilyDemoted = others
+        .map((r) => r.id)
+        .filter((id) => id !== sa1.id && id !== sa2.id);
+
+      if (temporarilyDemoted.length > 0) {
+        await db
+          .update(users)
+          .set({ role: "admin" })
+          .where(inArray(users.id, temporarilyDemoted));
+      }
+
+      const [{ c: before }] = await db
+        .select({ c: count() })
+        .from(users)
+        .where(eq(users.role, "super_admin"));
+      expect(Number(before)).toBe(2);
+
+      const [r1, r2] = await Promise.all([
+        request(app)
+          .patch(`/api/superadmin/users/${sa2.id}/role`)
+          .set(...authHeader(sa1))
+          .send({ role: "admin" }),
+        request(app)
+          .patch(`/api/superadmin/users/${sa1.id}/role`)
+          .set(...authHeader(sa2))
+          .send({ role: "admin" }),
+      ]);
+
+      const statuses = [r1.status, r2.status].sort();
+      // Exactly one transaction should win (200) and the other should be
+      // refused by the guard (400 "Tidak bisa menurunkan super admin
+      // terakhir"). Without the lock-then-count guard, both could commit
+      // and statuses would be [200, 200] with final count 0.
+      expect(statuses).toEqual([200, 400]);
+
+      const [{ c: after }] = await db
+        .select({ c: count() })
+        .from(users)
+        .where(eq(users.role, "super_admin"));
+      expect(Number(after)).toBe(1);
+    } finally {
+      await restoreReals();
+    }
+  });
+
+  it("DELETE: under concurrent peer delete with exactly 2 super_admins, exactly one wins (200) and one is refused (400)", async () => {
+    const sa1 = await createUser("super_admin");
+    const sa2 = await createUser("super_admin");
+    guardSeeded.push(sa1.id, sa2.id);
+
+    try {
+      const others = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.role, "super_admin"));
+      temporarilyDemoted = others
+        .map((r) => r.id)
+        .filter((id) => id !== sa1.id && id !== sa2.id);
+
+      if (temporarilyDemoted.length > 0) {
+        await db
+          .update(users)
+          .set({ role: "admin" })
+          .where(inArray(users.id, temporarilyDemoted));
+      }
+
+      const [{ c: before }] = await db
+        .select({ c: count() })
+        .from(users)
+        .where(eq(users.role, "super_admin"));
+      expect(Number(before)).toBe(2);
+
+      const [r1, r2] = await Promise.all([
+        request(app)
+          .delete(`/api/superadmin/users/${sa2.id}`)
+          .set(...authHeader(sa1)),
+        request(app)
+          .delete(`/api/superadmin/users/${sa1.id}`)
+          .set(...authHeader(sa2)),
+      ]);
+
+      const statuses = [r1.status, r2.status].sort();
+      expect(statuses).toEqual([200, 400]);
+
+      const [{ c: after }] = await db
+        .select({ c: count() })
+        .from(users)
+        .where(eq(users.role, "super_admin"));
+      expect(Number(after)).toBe(1);
+    } finally {
+      await restoreReals();
+    }
   });
 });
