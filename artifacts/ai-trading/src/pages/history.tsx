@@ -35,8 +35,8 @@ export default function HistoryPage() {
     limit,
     ...(filterMode ? { mode: filterMode } : {}),
     ...(filterInstrument ? { instrument: filterInstrument } : {}),
-    ...(filterFrom ? { from: filterFrom as unknown as Date } : {}),
-    ...(filterTo ? { to: filterTo as unknown as Date } : {}),
+    ...(filterFrom ? { from: filterFrom } : {}),
+    ...(filterTo ? { to: filterTo } : {}),
   };
 
   const { data, isLoading } = useListAnalyses(

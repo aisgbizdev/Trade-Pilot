@@ -101,7 +101,7 @@ function AdminUsersContent() {
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteUser.mutateAsync({ params: { id } });
+      await deleteUser.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       setDeleteId(null);
       toast({ title: "User berhasil dihapus" });
@@ -116,7 +116,7 @@ function AdminUsersContent() {
       return;
     }
     try {
-      await resetUserPassword.mutateAsync({ params: { id }, data: { newPassword } });
+      await resetUserPassword.mutateAsync({ id, data: { newPassword } });
       setResetPasswordId(null);
       setNewPassword("");
       toast({ title: "Password berhasil direset" });
@@ -127,7 +127,7 @@ function AdminUsersContent() {
 
   const handleRoleChange = async (id: number, role: string) => {
     try {
-      await updateUserRole.mutateAsync({ params: { id }, data: { role } });
+      await updateUserRole.mutateAsync({ id, data: { role } });
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       toast({ title: "Role berhasil diubah" });
     } catch (err: unknown) {

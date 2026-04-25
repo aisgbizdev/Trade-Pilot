@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
-import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, type RecentInstruments } from "@workspace/api-client-react";
+import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
@@ -101,7 +101,7 @@ export default function AnalyzePage() {
       const result = await createAnalysis.mutateAsync({
         data: {
           instrument: finalInstrument,
-          timeframe: selectedTimeframe,
+          timeframe: selectedTimeframe as CreateAnalysisBodyTimeframe,
           mode: user?.selectedMode ?? "beginner",
           userInputContext: notes || undefined,
         },
