@@ -1,10 +1,25 @@
-import { useState } from "react";
-import { Link } from "wouter";
-import { BarChart3, Users, Loader2, ChevronLeft, Send } from "lucide-react";
+import { useState, useMemo } from "react";
+import {
+  Loader2,
+  ChevronLeft,
+  Send,
+  Search,
+  X,
+  Plus,
+  Megaphone,
+  Users as UsersIcon,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import {
@@ -13,14 +28,29 @@ import {
   useGetAllAnalyses,
   getGetAllAnalysesQueryKey,
   useBroadcastNotification,
+  useGetAllUsers,
+  getGetAllUsersQueryKey,
+  useGetAllTags,
+  getGetAllTagsQueryKey,
+  useAddUserTag,
+  useRemoveUserTag,
+  useGetBroadcasts,
+  getGetBroadcastsQueryKey,
   type AnalysesList,
   type Analysis,
+  type UsersList,
+  type UserWithStats,
+  type BroadcastsList,
+  type BroadcastNotificationBodyAudienceType,
+  type BroadcastAudienceType,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { id as idLocale } from "date-fns/locale";
-import { useLocation } from "wouter";
+import { id as idLocale, enUS } from "date-fns/locale";
+import { useLocation, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/lib/i18n";
+import { useQueryClient } from "@tanstack/react-query";
 
 const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
   trending_up: { label: "Tren Naik", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -29,43 +59,406 @@ const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> 
   volatile: { label: "Volatil", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
 };
 
-function AdminContent() {
-  const [, setLocation] = useLocation();
-  const [page, setPage] = useState(1);
-  const limit = 20;
+function UserTagEditor({ user }: { user: UserWithStats }) {
+  const { t, lang } = useTranslation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState("");
+  const addTag = useAddUserTag();
+  const removeTag = useRemoveUserTag();
 
-  const [broadcastTitle, setBroadcastTitle] = useState("");
-  const [broadcastMessage, setBroadcastMessage] = useState("");
-  const [broadcastTarget, setBroadcastTarget] = useState("all");
-  const [showBroadcastForm, setShowBroadcastForm] = useState(false);
+  const invalidateUserAndTagLists = () => {
+    queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetAllTagsQueryKey() });
+  };
 
-  const broadcastNotification = useBroadcastNotification();
-
-  const handleBroadcast = async () => {
-    if (!broadcastTitle.trim() || !broadcastMessage.trim()) {
-      toast({ title: "Error", description: "Judul dan pesan wajib diisi", variant: "destructive" });
+  const handleAdd = async () => {
+    const tag = draft.trim();
+    if (!tag) return;
+    if (!/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/.test(tag)) {
+      toast({ title: t.admin.tag_invalid, variant: "destructive" });
       return;
     }
     try {
-      await broadcastNotification.mutateAsync({
-        data: {
-          title: broadcastTitle,
-          message: broadcastMessage,
-          type: "info",
-          ...(broadcastTarget !== "all"
-            ? { targetRole: broadcastTarget as "user" | "admin" | "super_admin" }
-            : {}),
-        },
-      });
-      toast({ title: "Berhasil", description: "Broadcast notifikasi telah dikirim" });
-      setBroadcastTitle("");
-      setBroadcastMessage("");
-      setShowBroadcastForm(false);
+      await addTag.mutateAsync({ id: user.id, data: { tag } });
+      setDraft("");
+      invalidateUserAndTagLists();
     } catch {
-      toast({ title: "Gagal", description: "Broadcast gagal dikirim", variant: "destructive" });
+      toast({ title: t.admin.tag_add_failed, variant: "destructive" });
     }
   };
+
+  const handleRemove = async (tag: string) => {
+    try {
+      await removeTag.mutateAsync({ id: user.id, tag });
+      invalidateUserAndTagLists();
+    } catch {
+      toast({ title: t.admin.tag_remove_failed, variant: "destructive" });
+    }
+  };
+
+  const dateLocale = lang === "id" ? idLocale : enUS;
+
+  return (
+    <div className="space-y-2" data-testid={`tag-editor-${user.id}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground truncate" data-testid={`text-user-name-${user.id}`}>
+            {user.displayName}
+          </p>
+          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          <p className="text-[10px] text-muted-foreground/80">
+            {user.role} · {format(new Date(user.createdAt), "d MMM yyyy", { locale: dateLocale })}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {user.tags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+            data-testid={`tag-${user.id}-${tag}`}
+          >
+            {tag}
+            <button
+              onClick={() => handleRemove(tag)}
+              disabled={removeTag.isPending}
+              className="hover:text-destructive"
+              aria-label={`Remove ${tag}`}
+              data-testid={`button-remove-tag-${user.id}-${tag}`}
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          placeholder={t.admin.add_tag_placeholder}
+          className="h-8 text-xs"
+          data-testid={`input-add-tag-${user.id}`}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-2.5 text-xs"
+          onClick={handleAdd}
+          disabled={addTag.isPending || !draft.trim()}
+          data-testid={`button-add-tag-${user.id}`}
+        >
+          {addTag.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function RecentSignupsPanel() {
+  const { t } = useTranslation();
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading } = useGetAllUsers(
+    { search: search || undefined, page: 1, limit: 10 },
+    { query: { queryKey: getGetAllUsersQueryKey({ search: search || undefined, page: 1, limit: 10 }) } },
+  );
+  const users = (data as UsersList | undefined)?.users ?? [];
+
+  return (
+    <Card className="p-4 space-y-3" data-testid="card-recent-signups">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <UsersIcon className="w-4 h-4" /> {t.admin.recent_signups_title}
+        </h3>
+        <p className="text-[11px] text-muted-foreground">{t.admin.recent_signups_subtitle}</p>
+      </div>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t.admin.search_users_placeholder}
+          className="h-9 pl-8 text-sm"
+          data-testid="input-search-users"
+        />
+      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : users.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4">{t.admin.no_users_found}</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {users.map((u) => (
+            <div key={u.id} className="py-3 first:pt-0 last:pb-0">
+              <UserTagEditor user={u} />
+            </div>
+          ))}
+        </div>
+      )}
+      <Link
+        href="/admin/users"
+        className="block text-center text-xs text-primary hover:underline pt-1"
+        data-testid="link-full-users"
+      >
+        {t.admin.open_full_users}
+      </Link>
+    </Card>
+  );
+}
+
+function BroadcastComposer() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [audienceType, setAudienceType] =
+    useState<BroadcastNotificationBodyAudienceType>("all");
+  const [audienceValue, setAudienceValue] = useState<string>("");
+
+  const { data: tagsData } = useGetAllTags({
+    query: { queryKey: getGetAllTagsQueryKey() },
+  });
+  const tags = useMemo(() => tagsData?.tags ?? [], [tagsData]);
+
+  const broadcast = useBroadcastNotification();
+
+  const handleSend = async () => {
+    if (!title.trim() || !message.trim()) {
+      toast({ title: t.admin.broadcast_validation, variant: "destructive" });
+      return;
+    }
+    if (audienceType !== "all" && !audienceValue) {
+      toast({ title: t.admin.broadcast_validation, variant: "destructive" });
+      return;
+    }
+    try {
+      const result = await broadcast.mutateAsync({
+        data: {
+          title,
+          message,
+          type: "info",
+          audienceType,
+          audienceValue: audienceType === "all" ? null : audienceValue,
+        },
+      });
+      const count = (result as { recipientCount?: number } | undefined)?.recipientCount ?? 0;
+      toast({
+        title: t.admin.broadcast_sent_title,
+        description: t.admin.broadcast_sent_desc.replace("{n}", String(count)),
+      });
+      setTitle("");
+      setMessage("");
+      setAudienceType("all");
+      setAudienceValue("");
+      queryClient.invalidateQueries({ queryKey: getGetBroadcastsQueryKey() });
+    } catch {
+      toast({ title: t.admin.broadcast_failed, variant: "destructive" });
+    }
+  };
+
+  return (
+    <Card className="p-4 space-y-3" data-testid="card-broadcast-composer">
+      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <Send className="w-4 h-4" /> {t.admin.broadcast_compose_title}
+      </h3>
+      <Input
+        placeholder={t.admin.broadcast_title_placeholder}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        data-testid="input-broadcast-title"
+      />
+      <textarea
+        rows={3}
+        placeholder={t.admin.broadcast_message_placeholder}
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground resize-none"
+        data-testid="textarea-broadcast-message"
+      />
+      <div className="space-y-2">
+        <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
+          {t.admin.audience_label}
+        </p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {([
+            ["all", t.admin.audience_all],
+            ["role", t.admin.audience_role],
+            ["tag", t.admin.audience_tag],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => {
+                setAudienceType(value);
+                setAudienceValue("");
+              }}
+              className={cn(
+                "py-1.5 text-xs rounded-lg border transition-colors",
+                audienceType === value
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-foreground border-border hover:bg-muted",
+              )}
+              data-testid={`button-audience-${value}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {audienceType === "role" && (
+          <Select value={audienceValue} onValueChange={setAudienceValue}>
+            <SelectTrigger className="h-9 text-sm" data-testid="select-audience-role">
+              <SelectValue placeholder={t.admin.audience_role_picker} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">user</SelectItem>
+              <SelectItem value="admin">admin</SelectItem>
+              <SelectItem value="super_admin">super_admin</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        {audienceType === "tag" && (
+          tags.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">{t.admin.audience_tag_empty}</p>
+          ) : (
+            <Select value={audienceValue} onValueChange={setAudienceValue}>
+              <SelectTrigger className="h-9 text-sm" data-testid="select-audience-tag">
+                <SelectValue placeholder={t.admin.audience_tag_picker} />
+              </SelectTrigger>
+              <SelectContent>
+                {tags.map((tag) => (
+                  <SelectItem key={tag} value={tag}>
+                    {tag}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )
+        )}
+      </div>
+      <Button
+        className="w-full"
+        onClick={handleSend}
+        disabled={broadcast.isPending}
+        data-testid="button-send-broadcast"
+      >
+        {broadcast.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+        {broadcast.isPending ? t.admin.sending_broadcast : t.admin.send_broadcast_btn}
+      </Button>
+    </Card>
+  );
+}
+
+function BroadcastHistoryPanel() {
+  const { t, lang } = useTranslation();
+  const [page, setPage] = useState(1);
+  const limit = 10;
+
+  const { data, isLoading } = useGetBroadcasts(
+    { page, limit },
+    { query: { queryKey: getGetBroadcastsQueryKey({ page, limit }) } },
+  );
+  const list = (data as BroadcastsList | undefined)?.broadcasts ?? [];
+  const total = (data as BroadcastsList | undefined)?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const hasNext = page < totalPages;
+  const hasPrev = page > 1;
+
+  const dateLocale = lang === "id" ? idLocale : enUS;
+
+  const audienceLabel = (audienceType: BroadcastAudienceType, value: string | null | undefined) => {
+    if (audienceType === "all") return t.admin.broadcast_history_audience_all;
+    if (audienceType === "role")
+      return t.admin.broadcast_history_audience_role.replace("{value}", value ?? "?");
+    return t.admin.broadcast_history_audience_tag.replace("{value}", value ?? "?");
+  };
+
+  return (
+    <Card className="p-4 space-y-3" data-testid="card-broadcast-history">
+      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <Megaphone className="w-4 h-4" /> {t.admin.broadcast_history_title}
+      </h3>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : list.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4">
+          {t.admin.broadcast_history_empty}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {list.map((b) => (
+            <div
+              key={b.id}
+              className="rounded-lg border border-border p-2.5 space-y-1"
+              data-testid={`broadcast-row-${b.id}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-foreground truncate flex-1">{b.title}</p>
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                  {format(new Date(b.createdAt), "d MMM HH:mm", { locale: dateLocale })}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-2">{b.message}</p>
+              <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  {audienceLabel(b.audienceType, b.audienceValue)}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">
+                  {t.admin.broadcast_history_recipients.replace("{n}", String(b.recipientCount))}
+                </span>
+                <span className="text-[10px] text-muted-foreground/80 ml-auto">
+                  {b.senderName ?? t.admin.broadcast_history_sender_unknown}
+                </span>
+              </div>
+            </div>
+          ))}
+          {(hasNext || hasPrev) && (
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={!hasPrev}
+                data-testid="button-prev-broadcasts"
+              >
+                ← {page - 1 || 1}
+              </Button>
+              <span className="text-[11px] text-muted-foreground">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!hasNext}
+                data-testid="button-next-broadcasts"
+              >
+                {page + 1} →
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function AdminContent() {
+  const [, setLocation] = useLocation();
+  const { t } = useTranslation();
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
   const { data: statsData, isLoading: statsLoading } = useGetAdminStats({
     query: { queryKey: getGetAdminStatsQueryKey() },
@@ -73,7 +466,7 @@ function AdminContent() {
 
   const { data: analysesData, isLoading: analysesLoading } = useGetAllAnalyses(
     { page, limit },
-    { query: { queryKey: getGetAllAnalysesQueryKey({ page, limit }) } }
+    { query: { queryKey: getGetAllAnalysesQueryKey({ page, limit }) } },
   );
 
   const stats = statsData;
@@ -93,8 +486,8 @@ function AdminContent() {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-foreground">Dashboard Admin</h1>
-            <p className="text-xs text-muted-foreground">Monitoring seluruh analisis</p>
+            <h1 className="text-xl font-bold text-foreground">{t.admin.command_center_title}</h1>
+            <p className="text-xs text-muted-foreground">{t.admin.command_center_subtitle}</p>
           </div>
         </div>
 
@@ -134,78 +527,17 @@ function AdminContent() {
                 </div>
               </Card>
             )}
-
-            {stats?.modeBreakdown && Object.keys(stats.modeBreakdown).length > 0 && (
-              <Card className="p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Breakdown Mode</h3>
-                <div className="space-y-2">
-                  {Object.entries(stats?.modeBreakdown ?? {}).map(([mode, count]) => (
-                    <div key={mode} className="flex items-center justify-between">
-                      <span className="text-sm text-foreground">
-                        {mode === "beginner" ? "Pemula" : "Pro"}
-                      </span>
-                      <Badge variant="secondary" className="text-xs">{count}x</Badge>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
           </>
         )}
 
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Send className="w-4 h-4" /> Broadcast Notifikasi
-            </h3>
-            <button
-              onClick={() => setShowBroadcastForm((v) => !v)}
-              className="text-xs text-primary hover:underline"
-              data-testid="button-toggle-broadcast"
-            >
-              {showBroadcastForm ? "Tutup" : "Buka"}
-            </button>
-          </div>
-          {showBroadcastForm && (
-            <div className="space-y-2" data-testid="broadcast-form">
-              <Input
-                placeholder="Judul notifikasi"
-                value={broadcastTitle}
-                onChange={(e) => setBroadcastTitle(e.target.value)}
-                data-testid="input-broadcast-title"
-              />
-              <Input
-                placeholder="Pesan notifikasi"
-                value={broadcastMessage}
-                onChange={(e) => setBroadcastMessage(e.target.value)}
-                data-testid="input-broadcast-message"
-              />
-              <select
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground"
-                value={broadcastTarget}
-                onChange={(e) => setBroadcastTarget(e.target.value)}
-                data-testid="select-broadcast-target"
-              >
-                <option value="all">Semua Pengguna</option>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-                <option value="super_admin">Super Admin</option>
-              </select>
-              <Button
-                className="w-full"
-                onClick={handleBroadcast}
-                disabled={broadcastNotification.isPending}
-                data-testid="button-send-broadcast"
-              >
-                {broadcastNotification.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Kirim Broadcast
-              </Button>
-            </div>
-          )}
-        </Card>
+        <RecentSignupsPanel />
+
+        <BroadcastComposer />
+
+        <BroadcastHistoryPanel />
 
         <div>
-          <h2 className="text-sm font-semibold text-foreground mb-3">Semua Analisis</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-3">{t.admin.all_analyses}</h2>
 
           {analysesLoading ? (
             <div className="flex items-center justify-center py-8">
@@ -230,7 +562,7 @@ function AdminContent() {
                         </p>
                       </div>
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
-                        {format(new Date(a.createdAt), "d MMM", { locale: idLocale })}
+                        {format(new Date(a.createdAt), "d MMM")}
                       </span>
                     </div>
                   </Card>
@@ -243,7 +575,7 @@ function AdminContent() {
                   onClick={() => setPage((p) => p + 1)}
                   data-testid="button-load-more"
                 >
-                  Muat Lebih Banyak
+                  {t.admin.load_more}
                 </Button>
               )}
             </div>
@@ -256,7 +588,7 @@ function AdminContent() {
 
 export default function AdminPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute requiredRole="super_admin">
       <AdminContent />
     </ProtectedRoute>
   );

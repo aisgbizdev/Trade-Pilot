@@ -393,6 +393,19 @@ export const BroadcastNotificationBodyType = {
   error: "error",
 } as const;
 
+export type BroadcastNotificationBodyAudienceType =
+  (typeof BroadcastNotificationBodyAudienceType)[keyof typeof BroadcastNotificationBodyAudienceType];
+
+export const BroadcastNotificationBodyAudienceType = {
+  all: "all",
+  role: "role",
+  tag: "tag",
+} as const;
+
+/**
+ * Deprecated: use audienceType=role + audienceValue instead
+ * @deprecated
+ */
 export type BroadcastNotificationBodyTargetRole =
   | (typeof BroadcastNotificationBodyTargetRole)[keyof typeof BroadcastNotificationBodyTargetRole]
   | null;
@@ -407,7 +420,60 @@ export interface BroadcastNotificationBody {
   title: string;
   message: string;
   type?: BroadcastNotificationBodyType;
+  audienceType?: BroadcastNotificationBodyAudienceType;
+  /** Role name when audienceType=role; tag name when audienceType=tag */
+  audienceValue?: string | null;
+  /**
+   * Deprecated: use audienceType=role + audienceValue instead
+   * @deprecated
+   */
   targetRole?: BroadcastNotificationBodyTargetRole;
+}
+
+export interface BroadcastSendResult {
+  broadcastId: number;
+  recipientCount: number;
+  message: string;
+}
+
+export type BroadcastAudienceType =
+  (typeof BroadcastAudienceType)[keyof typeof BroadcastAudienceType];
+
+export const BroadcastAudienceType = {
+  all: "all",
+  role: "role",
+  tag: "tag",
+} as const;
+
+export interface Broadcast {
+  id: number;
+  senderId?: number | null;
+  senderName?: string | null;
+  title: string;
+  message: string;
+  audienceType: BroadcastAudienceType;
+  audienceValue?: string | null;
+  recipientCount: number;
+  createdAt: string;
+}
+
+export interface BroadcastsList {
+  broadcasts: Broadcast[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface TagsList {
+  tags: string[];
+}
+
+export interface AddUserTagBody {
+  /**
+   * @minLength 1
+   * @maxLength 40
+   */
+  tag: string;
 }
 
 export type AdminStatsInstrumentBreakdownItem = {
@@ -454,6 +520,7 @@ export interface UserWithStats {
   role: UserWithStatsRole;
   selectedMode: UserWithStatsSelectedMode;
   analysisCount: number;
+  tags: string[];
   createdAt: string;
 }
 
@@ -527,6 +594,20 @@ export type GetNotificationsParams = {
 };
 
 export type GetAllAnalysesParams = {
+  page?: number;
+  limit?: number;
+};
+
+export type GetBroadcastsParams = {
+  page?: number;
+  limit?: number;
+};
+
+export type GetAllUsersParams = {
+  /**
+   * ILIKE filter on email or display name
+   */
+  search?: string;
   page?: number;
   limit?: number;
 };

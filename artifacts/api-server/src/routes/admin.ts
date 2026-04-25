@@ -5,8 +5,10 @@ import {
   users,
   analyses,
   notifications,
+  userTags,
+  broadcasts,
 } from "@workspace/db/schema";
-import { eq, count, desc, sql } from "drizzle-orm";
+import { eq, and, count, desc, sql, ilike, or, inArray } from "drizzle-orm";
 import {
   requireAdmin,
   requireSuperAdmin,
@@ -15,6 +17,9 @@ import {
 import { notifySuperAdminsUserDeleted, notifyAdminsUserCreated } from "../lib/jobs";
 import { sendPushToUsers } from "../lib/webpush";
 import { notificationsEmitter } from "../lib/notifications-emitter";
+
+type AudienceType = "all" | "role" | "tag";
+type Role = "user" | "admin" | "super_admin";
 
 const router = Router();
 
@@ -114,46 +119,115 @@ router.get("/admin/analyses", requireAdmin, async (req: AuthRequest, res) => {
   });
 });
 
-router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) => {
-  const { title, message, type, targetRole } = req.body;
+router.post("/admin/notifications", requireSuperAdmin, async (req: AuthRequest, res) => {
+  const { title, message, type, audienceType, audienceValue, targetRole } = req.body as {
+    title?: string;
+    message?: string;
+    type?: "info" | "warning" | "error";
+    audienceType?: AudienceType;
+    audienceValue?: string | null;
+    targetRole?: Role | "all" | null;
+  };
 
-  if (!title || !message) {
+  const trimmedTitle = typeof title === "string" ? title.trim() : "";
+  const trimmedMessage = typeof message === "string" ? message.trim() : "";
+  if (!trimmedTitle || !trimmedMessage) {
     res.status(400).json({ error: "Judul dan pesan wajib diisi" });
     return;
   }
 
-  let targetUsers = await db
-    .select({ id: users.id, pushBroadcast: users.pushBroadcast })
-    .from(users);
+  if (audienceType !== undefined && !["all", "role", "tag"].includes(audienceType)) {
+    res.status(400).json({ error: "audienceType tidak valid" });
+    return;
+  }
 
-  if (targetRole && targetRole !== "all") {
+  if (type !== undefined && !["info", "warning", "error"].includes(type)) {
+    res.status(400).json({ error: "type tidak valid" });
+    return;
+  }
+
+  // Resolve audience (back-compat with legacy `targetRole`).
+  let resolvedType: AudienceType = audienceType ?? "all";
+  let resolvedValue: string | null =
+    typeof audienceValue === "string" ? audienceValue.trim() || null : audienceValue ?? null;
+  if (!audienceType && targetRole) {
+    if (targetRole === "all") {
+      resolvedType = "all";
+      resolvedValue = null;
+    } else {
+      resolvedType = "role";
+      resolvedValue = targetRole;
+    }
+  }
+
+  if (resolvedType !== "all" && !resolvedValue) {
+    res.status(400).json({ error: "audienceValue wajib diisi untuk role/tag" });
+    return;
+  }
+
+  if (resolvedType === "role" && !["user", "admin", "super_admin"].includes(resolvedValue!)) {
+    res.status(400).json({ error: "Role tidak valid" });
+    return;
+  }
+
+  // Resolve target user list per audience.
+  let targetUsers: { id: number; pushBroadcast: boolean }[];
+  if (resolvedType === "all") {
+    targetUsers = await db
+      .select({ id: users.id, pushBroadcast: users.pushBroadcast })
+      .from(users);
+  } else if (resolvedType === "role") {
+    targetUsers = await db
+      .select({ id: users.id, pushBroadcast: users.pushBroadcast })
+      .from(users)
+      .where(eq(users.role, resolvedValue as Role));
+  } else {
+    // tag
     const rows = await db
       .select({ id: users.id, pushBroadcast: users.pushBroadcast })
       .from(users)
-      .where(eq(users.role, targetRole));
+      .innerJoin(userTags, eq(userTags.userId, users.id))
+      .where(eq(userTags.tag, resolvedValue!));
     targetUsers = rows;
   }
 
+  // Always record the broadcast in history, even when zero recipients.
+  const [broadcastRow] = await db
+    .insert(broadcasts)
+    .values({
+      senderId: req.userId ?? null,
+      title: trimmedTitle,
+      message: trimmedMessage,
+      audienceType: resolvedType,
+      audienceValue: resolvedValue,
+      recipientCount: targetUsers.length,
+    })
+    .returning({ id: broadcasts.id });
+
   if (targetUsers.length === 0) {
-    res.json({ message: "Tidak ada user yang menjadi target", count: 0 });
+    res.status(201).json({
+      broadcastId: broadcastRow.id,
+      recipientCount: 0,
+      message: "Tidak ada user yang menjadi target",
+    });
     return;
   }
 
   await db.insert(notifications).values(
     targetUsers.map((u) => ({
       userId: u.id,
-      targetRole: (targetRole && targetRole !== "all") ? targetRole : null,
-      title,
-      message,
+      targetRole: resolvedType === "role" ? (resolvedValue as Role) : null,
+      title: trimmedTitle,
+      message: trimmedMessage,
       type: type ?? "info",
-    }))
+    })),
   );
 
   const broadcastNowIso = new Date().toISOString();
   for (const u of targetUsers) {
     notificationsEmitter.emitForUser(u.id, {
-      title,
-      message,
+      title: trimmedTitle,
+      message: trimmedMessage,
       type: type ?? "info",
       createdAt: broadcastNowIso,
     });
@@ -165,18 +239,64 @@ router.post("/admin/notifications", requireAdmin, async (req: AuthRequest, res) 
 
   sendPushToUsers(
     pushTargets,
-    { title, body: message, url: "/notifications", tag: "broadcast" }
+    { title: trimmedTitle, body: trimmedMessage, url: "/notifications", tag: "broadcast" },
   ).catch((err) => {
     // Log but never let push delivery failures break the broadcast response.
     // Errors here are operational (transient transport, bad endpoint), not auth.
     console.warn("Broadcast push delivery failed", err);
   });
 
-  res.status(201).json({ message: "Broadcast berhasil dikirim", count: targetUsers.length });
+  res.status(201).json({
+    broadcastId: broadcastRow.id,
+    recipientCount: targetUsers.length,
+    message: "Broadcast berhasil dikirim",
+  });
+});
+
+router.get("/admin/broadcasts", requireSuperAdmin, async (req: AuthRequest, res) => {
+  const page = Math.max(1, Number(req.query["page"] ?? 1));
+  const limit = Math.min(100, Math.max(1, Number(req.query["limit"] ?? 20)));
+  const offset = (page - 1) * limit;
+
+  const rows = await db
+    .select({
+      id: broadcasts.id,
+      senderId: broadcasts.senderId,
+      senderName: users.displayName,
+      title: broadcasts.title,
+      message: broadcasts.message,
+      audienceType: broadcasts.audienceType,
+      audienceValue: broadcasts.audienceValue,
+      recipientCount: broadcasts.recipientCount,
+      createdAt: broadcasts.createdAt,
+    })
+    .from(broadcasts)
+    .leftJoin(users, eq(users.id, broadcasts.senderId))
+    .orderBy(desc(broadcasts.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const [total] = await db.select({ count: count(broadcasts.id) }).from(broadcasts);
+
+  res.json({
+    broadcasts: rows,
+    total: Number(total.count),
+    page,
+    limit,
+  });
 });
 
 router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
-  const rows = await db
+  const search = String(req.query["search"] ?? "").trim();
+  const page = Math.max(1, Number(req.query["page"] ?? 1));
+  const limit = Math.min(200, Math.max(1, Number(req.query["limit"] ?? 50)));
+  const offset = (page - 1) * limit;
+
+  const searchClause = search
+    ? or(ilike(users.email, `%${search}%`), ilike(users.displayName, `%${search}%`))
+    : undefined;
+
+  const baseQuery = db
     .select({
       id: users.id,
       email: users.email,
@@ -190,10 +310,103 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
     .from(users)
     .leftJoin(analyses, eq(analyses.userId, users.id))
     .groupBy(users.id)
-    .orderBy(desc(users.createdAt));
+    .orderBy(desc(users.createdAt))
+    .limit(limit)
+    .offset(offset);
 
-  res.json({ users: rows });
+  const rows = await (searchClause ? baseQuery.where(searchClause) : baseQuery);
+
+  // Fetch tags for the returned users in a single query, then group in memory.
+  const userIds = rows.map((r) => r.id);
+  const tagRows = userIds.length
+    ? await db
+        .select({ userId: userTags.userId, tag: userTags.tag })
+        .from(userTags)
+        .where(inArray(userTags.userId, userIds))
+        .orderBy(userTags.tag)
+    : [];
+  const tagsByUser = new Map<number, string[]>();
+  for (const r of tagRows) {
+    const arr = tagsByUser.get(r.userId) ?? [];
+    arr.push(r.tag);
+    tagsByUser.set(r.userId, arr);
+  }
+
+  const totalQuery = db.select({ count: count(users.id) }).from(users);
+  const [total] = await (searchClause ? totalQuery.where(searchClause) : totalQuery);
+
+  res.json({
+    users: rows.map((u) => ({ ...u, tags: tagsByUser.get(u.id) ?? [] })),
+    total: Number(total.count),
+  });
 });
+
+router.get("/superadmin/tags", requireSuperAdmin, async (_req: AuthRequest, res) => {
+  const rows = await db
+    .selectDistinct({ tag: userTags.tag })
+    .from(userTags)
+    .orderBy(userTags.tag);
+  res.json({ tags: rows.map((r) => r.tag) });
+});
+
+const TAG_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/;
+
+router.post("/superadmin/users/:id/tags", requireSuperAdmin, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  const tagRaw = String((req.body?.tag ?? "")).trim();
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "ID tidak valid" });
+    return;
+  }
+  if (!tagRaw || !TAG_PATTERN.test(tagRaw)) {
+    res.status(400).json({ error: "Tag tidak valid" });
+    return;
+  }
+
+  const [target] = await db.select({ id: users.id }).from(users).where(eq(users.id, id)).limit(1);
+  if (!target) {
+    res.status(404).json({ error: "User tidak ditemukan" });
+    return;
+  }
+
+  await db
+    .insert(userTags)
+    .values({ userId: id, tag: tagRaw })
+    .onConflictDoNothing();
+
+  const tags = await db
+    .select({ tag: userTags.tag })
+    .from(userTags)
+    .where(eq(userTags.userId, id))
+    .orderBy(userTags.tag);
+
+  res.json({ tags: tags.map((t) => t.tag) });
+});
+
+router.delete(
+  "/superadmin/users/:id/tags/:tag",
+  requireSuperAdmin,
+  async (req: AuthRequest, res) => {
+    const id = Number(req.params["id"]);
+    const tag = String(req.params["tag"] ?? "");
+    if (!Number.isFinite(id) || !tag) {
+      res.status(400).json({ error: "Parameter tidak valid" });
+      return;
+    }
+
+    await db
+      .delete(userTags)
+      .where(and(eq(userTags.userId, id), eq(userTags.tag, tag)));
+
+    const tags = await db
+      .select({ tag: userTags.tag })
+      .from(userTags)
+      .where(eq(userTags.userId, id))
+      .orderBy(userTags.tag);
+
+    res.json({ tags: tags.map((t) => t.tag) });
+  },
+);
 
 router.post("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
   const {

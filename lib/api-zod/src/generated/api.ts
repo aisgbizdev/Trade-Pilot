@@ -618,9 +618,10 @@ export const GetAllAnalysesResponse = zod.object({
 });
 
 /**
- * @summary Broadcast notification to all users
+ * @summary Broadcast notification to selected audience
  */
 export const broadcastNotificationBodyTypeDefault = `info`;
+export const broadcastNotificationBodyAudienceTypeDefault = `all`;
 
 export const BroadcastNotificationBody = zod.object({
   title: zod.string(),
@@ -628,12 +629,66 @@ export const BroadcastNotificationBody = zod.object({
   type: zod
     .enum(["info", "warning", "error"])
     .default(broadcastNotificationBodyTypeDefault),
-  targetRole: zod.enum(["user", "admin", "super_admin"]).nullish(),
+  audienceType: zod
+    .enum(["all", "role", "tag"])
+    .default(broadcastNotificationBodyAudienceTypeDefault),
+  audienceValue: zod
+    .string()
+    .nullish()
+    .describe(
+      "Role name when audienceType=role; tag name when audienceType=tag",
+    ),
+  targetRole: zod
+    .enum(["user", "admin", "super_admin"])
+    .nullish()
+    .describe("Deprecated: use audienceType=role + audienceValue instead"),
+});
+
+/**
+ * @summary Broadcast history
+ */
+export const getBroadcastsQueryPageDefault = 1;
+export const getBroadcastsQueryLimitDefault = 20;
+
+export const GetBroadcastsQueryParams = zod.object({
+  page: zod.coerce.number().default(getBroadcastsQueryPageDefault),
+  limit: zod.coerce.number().default(getBroadcastsQueryLimitDefault),
+});
+
+export const GetBroadcastsResponse = zod.object({
+  broadcasts: zod.array(
+    zod.object({
+      id: zod.number(),
+      senderId: zod.number().nullish(),
+      senderName: zod.string().nullish(),
+      title: zod.string(),
+      message: zod.string(),
+      audienceType: zod.enum(["all", "role", "tag"]),
+      audienceValue: zod.string().nullish(),
+      recipientCount: zod.number(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
 });
 
 /**
  * @summary Get all users (superadmin only)
  */
+export const getAllUsersQueryPageDefault = 1;
+export const getAllUsersQueryLimitDefault = 50;
+
+export const GetAllUsersQueryParams = zod.object({
+  search: zod.coerce
+    .string()
+    .optional()
+    .describe("ILIKE filter on email or display name"),
+  page: zod.coerce.number().default(getAllUsersQueryPageDefault),
+  limit: zod.coerce.number().default(getAllUsersQueryLimitDefault),
+});
+
 export const GetAllUsersResponse = zod.object({
   users: zod.array(
     zod.object({
@@ -643,6 +698,7 @@ export const GetAllUsersResponse = zod.object({
       role: zod.enum(["user", "admin", "super_admin"]),
       selectedMode: zod.enum(["beginner", "pro"]),
       analysisCount: zod.number(),
+      tags: zod.array(zod.string()),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -695,6 +751,42 @@ export const ResetUserPasswordBody = zod.object({
 
 export const ResetUserPasswordResponse = zod.object({
   message: zod.string(),
+});
+
+/**
+ * @summary List all distinct tags assigned to users
+ */
+export const GetAllTagsResponse = zod.object({
+  tags: zod.array(zod.string()),
+});
+
+/**
+ * @summary Add a tag to a user
+ */
+export const AddUserTagParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const addUserTagBodyTagMax = 40;
+
+export const AddUserTagBody = zod.object({
+  tag: zod.string().min(1).max(addUserTagBodyTagMax),
+});
+
+export const AddUserTagResponse = zod.object({
+  tags: zod.array(zod.string()),
+});
+
+/**
+ * @summary Remove a tag from a user
+ */
+export const RemoveUserTagParams = zod.object({
+  id: zod.coerce.number(),
+  tag: zod.coerce.string(),
+});
+
+export const RemoveUserTagResponse = zod.object({
+  tags: zod.array(zod.string()),
 });
 
 /**

@@ -722,7 +722,7 @@ paths:
     post:
       operationId: broadcastNotification
       tags: [admin]
-      summary: Broadcast notification to all users
+      summary: Broadcast notification to selected audience
       requestBody:
         required: true
         content:
@@ -735,7 +735,37 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: "#/components/schemas/BroadcastSendResult"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/broadcasts:
+    get:
+      operationId: getBroadcasts
+      tags: [admin]
+      summary: Broadcast history
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Broadcast history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BroadcastsList"
         "403":
           description: Forbidden
           content:
@@ -748,6 +778,22 @@ paths:
       operationId: getAllUsers
       tags: [superadmin]
       summary: Get all users (superadmin only)
+      parameters:
+        - name: search
+          in: query
+          description: ILIKE filter on email or display name
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
       responses:
         "200":
           description: All users
@@ -834,6 +880,86 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /superadmin/tags:
+    get:
+      operationId: getAllTags
+      tags: [superadmin]
+      summary: List all distinct tags assigned to users
+      responses:
+        "200":
+          description: Tag list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagsList"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /superadmin/users/{id}/tags:
+    post:
+      operationId: addUserTag
+      tags: [superadmin]
+      summary: Add a tag to a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddUserTagBody"
+      responses:
+        "200":
+          description: Updated tag list for user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagsList"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /superadmin/users/{id}/tags/{tag}:
+    delete:
+      operationId: removeUserTag
+      tags: [superadmin]
+      summary: Remove a tag from a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated tag list for user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagsList"
         "403":
           description: Forbidden
           content:
@@ -1502,13 +1628,110 @@ components:
           type: string
           enum: [info, warning, error]
           default: info
+        audienceType:
+          type: string
+          enum: [all, role, tag]
+          default: all
+        audienceValue:
+          type: string
+          nullable: true
+          description: Role name when audienceType=role; tag name when audienceType=tag
         targetRole:
           type: string
           enum: [user, admin, super_admin]
           nullable: true
+          deprecated: true
+          description: "Deprecated: use audienceType=role + audienceValue instead"
       required:
         - title
         - message
+
+    BroadcastSendResult:
+      type: object
+      properties:
+        broadcastId:
+          type: integer
+        recipientCount:
+          type: integer
+        message:
+          type: string
+      required:
+        - broadcastId
+        - recipientCount
+        - message
+
+    Broadcast:
+      type: object
+      properties:
+        id:
+          type: integer
+        senderId:
+          type: integer
+          nullable: true
+        senderName:
+          type: string
+          nullable: true
+        title:
+          type: string
+        message:
+          type: string
+        audienceType:
+          type: string
+          enum: [all, role, tag]
+        audienceValue:
+          type: string
+          nullable: true
+        recipientCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - message
+        - audienceType
+        - recipientCount
+        - createdAt
+
+    BroadcastsList:
+      type: object
+      properties:
+        broadcasts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Broadcast"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - broadcasts
+        - total
+        - page
+        - limit
+
+    TagsList:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+        - tags
+
+    AddUserTagBody:
+      type: object
+      properties:
+        tag:
+          type: string
+          minLength: 1
+          maxLength: 40
+      required:
+        - tag
 
     AdminStats:
       type: object
@@ -1571,6 +1794,10 @@ components:
           enum: [beginner, pro]
         analysisCount:
           type: integer
+        tags:
+          type: array
+          items:
+            type: string
         createdAt:
           type: string
           format: date-time
@@ -1581,6 +1808,7 @@ components:
         - role
         - selectedMode
         - analysisCount
+        - tags
         - createdAt
 
     UsersList:

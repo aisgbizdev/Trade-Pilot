@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddUserTagBody,
   AdminStats,
   AnalysesList,
   AnalysesSummary,
@@ -24,6 +25,8 @@ import type {
   AnalysisQuota,
   AuthResponse,
   BroadcastNotificationBody,
+  BroadcastSendResult,
+  BroadcastsList,
   ChangePasswordBody,
   ChangeSecurityQuestionBody,
   CreateAnalysisBody,
@@ -33,6 +36,8 @@ import type {
   FeedbackBody,
   ForgotPasswordQuestionBody,
   GetAllAnalysesParams,
+  GetAllUsersParams,
+  GetBroadcastsParams,
   GetNotificationsParams,
   HealthStatus,
   ListAnalysesParams,
@@ -52,6 +57,7 @@ import type {
   ResetTokenResponse,
   ResetUserPasswordBody,
   SecurityQuestionResponse,
+  TagsList,
   UpdateProfileBody,
   UpdateUserRoleBody,
   User,
@@ -2554,7 +2560,7 @@ export function useGetAllAnalyses<
 }
 
 /**
- * @summary Broadcast notification to all users
+ * @summary Broadcast notification to selected audience
  */
 export const getBroadcastNotificationUrl = () => {
   return `/api/admin/notifications`;
@@ -2563,8 +2569,8 @@ export const getBroadcastNotificationUrl = () => {
 export const broadcastNotification = async (
   broadcastNotificationBody: BroadcastNotificationBody,
   options?: RequestInit,
-): Promise<MessageResponse> => {
-  return customFetch<MessageResponse>(getBroadcastNotificationUrl(), {
+): Promise<BroadcastSendResult> => {
+  return customFetch<BroadcastSendResult>(getBroadcastNotificationUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -2618,7 +2624,7 @@ export type BroadcastNotificationMutationBody =
 export type BroadcastNotificationMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Broadcast notification to all users
+ * @summary Broadcast notification to selected audience
  */
 export const useBroadcastNotification = <
   TError = ErrorType<ErrorResponse>,
@@ -2641,43 +2647,153 @@ export const useBroadcastNotification = <
 };
 
 /**
- * @summary Get all users (superadmin only)
+ * @summary Broadcast history
  */
-export const getGetAllUsersUrl = () => {
-  return `/api/superadmin/users`;
+export const getGetBroadcastsUrl = (params?: GetBroadcastsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/broadcasts?${stringifiedParams}`
+    : `/api/admin/broadcasts`;
 };
 
-export const getAllUsers = async (
+export const getBroadcasts = async (
+  params?: GetBroadcastsParams,
   options?: RequestInit,
-): Promise<UsersList> => {
-  return customFetch<UsersList>(getGetAllUsersUrl(), {
+): Promise<BroadcastsList> => {
+  return customFetch<BroadcastsList>(getGetBroadcastsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetAllUsersQueryKey = () => {
-  return [`/api/superadmin/users`] as const;
+export const getGetBroadcastsQueryKey = (params?: GetBroadcastsParams) => {
+  return [`/api/admin/broadcasts`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetBroadcastsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBroadcasts>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetBroadcastsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBroadcasts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBroadcastsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBroadcasts>>> = ({
+    signal,
+  }) => getBroadcasts(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBroadcasts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBroadcastsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBroadcasts>>
+>;
+export type GetBroadcastsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Broadcast history
+ */
+
+export function useGetBroadcasts<
+  TData = Awaited<ReturnType<typeof getBroadcasts>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetBroadcastsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBroadcasts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBroadcastsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get all users (superadmin only)
+ */
+export const getGetAllUsersUrl = (params?: GetAllUsersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/superadmin/users?${stringifiedParams}`
+    : `/api/superadmin/users`;
+};
+
+export const getAllUsers = async (
+  params?: GetAllUsersParams,
+  options?: RequestInit,
+): Promise<UsersList> => {
+  return customFetch<UsersList>(getGetAllUsersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAllUsersQueryKey = (params?: GetAllUsersParams) => {
+  return [`/api/superadmin/users`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetAllUsersQueryOptions = <
   TData = Awaited<ReturnType<typeof getAllUsers>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getAllUsers>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetAllUsersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAllUsers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetAllUsersQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetAllUsersQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllUsers>>> = ({
     signal,
-  }) => getAllUsers({ signal, ...requestOptions });
+  }) => getAllUsers(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getAllUsers>>,
@@ -2698,15 +2814,18 @@ export type GetAllUsersQueryError = ErrorType<ErrorResponse>;
 export function useGetAllUsers<
   TData = Awaited<ReturnType<typeof getAllUsers>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getAllUsers>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetAllUsersQueryOptions(options);
+>(
+  params?: GetAllUsersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAllUsers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAllUsersQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -2970,6 +3089,251 @@ export const useResetUserPassword = <
   TContext
 > => {
   return useMutation(getResetUserPasswordMutationOptions(options));
+};
+
+/**
+ * @summary List all distinct tags assigned to users
+ */
+export const getGetAllTagsUrl = () => {
+  return `/api/superadmin/tags`;
+};
+
+export const getAllTags = async (options?: RequestInit): Promise<TagsList> => {
+  return customFetch<TagsList>(getGetAllTagsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAllTagsQueryKey = () => {
+  return [`/api/superadmin/tags`] as const;
+};
+
+export const getGetAllTagsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAllTags>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAllTags>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAllTagsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllTags>>> = ({
+    signal,
+  }) => getAllTags({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAllTags>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAllTagsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAllTags>>
+>;
+export type GetAllTagsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List all distinct tags assigned to users
+ */
+
+export function useGetAllTags<
+  TData = Awaited<ReturnType<typeof getAllTags>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAllTags>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAllTagsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a tag to a user
+ */
+export const getAddUserTagUrl = (id: number) => {
+  return `/api/superadmin/users/${id}/tags`;
+};
+
+export const addUserTag = async (
+  id: number,
+  addUserTagBody: AddUserTagBody,
+  options?: RequestInit,
+): Promise<TagsList> => {
+  return customFetch<TagsList>(getAddUserTagUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addUserTagBody),
+  });
+};
+
+export const getAddUserTagMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addUserTag>>,
+    TError,
+    { id: number; data: BodyType<AddUserTagBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addUserTag>>,
+  TError,
+  { id: number; data: BodyType<AddUserTagBody> },
+  TContext
+> => {
+  const mutationKey = ["addUserTag"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addUserTag>>,
+    { id: number; data: BodyType<AddUserTagBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addUserTag(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddUserTagMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addUserTag>>
+>;
+export type AddUserTagMutationBody = BodyType<AddUserTagBody>;
+export type AddUserTagMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Add a tag to a user
+ */
+export const useAddUserTag = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addUserTag>>,
+    TError,
+    { id: number; data: BodyType<AddUserTagBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addUserTag>>,
+  TError,
+  { id: number; data: BodyType<AddUserTagBody> },
+  TContext
+> => {
+  return useMutation(getAddUserTagMutationOptions(options));
+};
+
+/**
+ * @summary Remove a tag from a user
+ */
+export const getRemoveUserTagUrl = (id: number, tag: string) => {
+  return `/api/superadmin/users/${id}/tags/${tag}`;
+};
+
+export const removeUserTag = async (
+  id: number,
+  tag: string,
+  options?: RequestInit,
+): Promise<TagsList> => {
+  return customFetch<TagsList>(getRemoveUserTagUrl(id, tag), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveUserTagMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeUserTag>>,
+    TError,
+    { id: number; tag: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeUserTag>>,
+  TError,
+  { id: number; tag: string },
+  TContext
+> => {
+  const mutationKey = ["removeUserTag"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeUserTag>>,
+    { id: number; tag: string }
+  > = (props) => {
+    const { id, tag } = props ?? {};
+
+    return removeUserTag(id, tag, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveUserTagMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeUserTag>>
+>;
+
+export type RemoveUserTagMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Remove a tag from a user
+ */
+export const useRemoveUserTag = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeUserTag>>,
+    TError,
+    { id: number; tag: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeUserTag>>,
+  TError,
+  { id: number; tag: string },
+  TContext
+> => {
+  return useMutation(getRemoveUserTagMutationOptions(options));
 };
 
 /**

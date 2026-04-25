@@ -77,9 +77,10 @@ function AdminUsersContent() {
     securityAnswer: "",
   });
 
-  const { data, isLoading } = useGetAllUsers({
-    query: { queryKey: getGetAllUsersQueryKey() },
-  });
+  const { data, isLoading } = useGetAllUsers(
+    {},
+    { query: { queryKey: getGetAllUsersQueryKey() } },
+  );
 
   const createUser = useCreateUser();
   const deleteUser = useDeleteUser();

@@ -6,6 +6,7 @@ import {
   boolean,
   integer,
   pgEnum,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["user", "admin", "super_admin"]);
@@ -26,6 +27,11 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "info",
   "warning",
   "error",
+]);
+export const audienceTypeEnum = pgEnum("audience_type", [
+  "all",
+  "role",
+  "tag",
 ]);
 
 export const users = pgTable("users", {
@@ -135,6 +141,34 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const userTags = pgTable(
+  "user_tags",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    userTagUnique: uniqueIndex("user_tags_user_tag_unique").on(t.userId, t.tag),
+  }),
+);
+
+export const broadcasts = pgTable("broadcasts", {
+  id: serial("id").primaryKey(),
+  senderId: integer("sender_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  audienceType: audienceTypeEnum("audience_type").notNull(),
+  audienceValue: text("audience_value"),
+  recipientCount: integer("recipient_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -143,3 +177,6 @@ export type NewAnalysis = typeof analyses.$inferInsert;
 export type Feedback = typeof feedback.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type UserTag = typeof userTags.$inferSelect;
+export type Broadcast = typeof broadcasts.$inferSelect;
+export type NewBroadcast = typeof broadcasts.$inferInsert;
