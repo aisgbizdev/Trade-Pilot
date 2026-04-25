@@ -734,6 +734,29 @@ paths:
           schema:
             type: integer
             default: 50
+        - name: search
+          in: query
+          description: Free-text ILIKE filter matched against the user's email or the analysis instrument
+          schema:
+            type: string
+        - name: feedbackType
+          in: query
+          description: Restrict to a single feedback reaction
+          schema:
+            type: string
+            enum: [useful, not_useful]
+        - name: from
+          in: query
+          description: Only include feedback created on or after this date (ISO 8601 date)
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day)
+          schema:
+            type: string
+            format: date
         - name: analysisId
           in: query
           description: When set, only return feedback for the given analysis id.

@@ -342,6 +342,155 @@ describe("GET /admin/feedback", () => {
     }
   });
 
+  it("filters by feedbackType server-side (only matching reactions are returned, total reflects the filter)", async () => {
+    const onlyUseful = await request(app)
+      .get("/api/admin/feedback?feedbackType=useful&limit=200")
+      .set(...authHeader(adminUser));
+    expect(onlyUseful.status).toBe(200);
+    const usefulOurs = onlyUseful.body.feedback.filter(
+      (f: { analysisId: number }) =>
+        f.analysisId === aliceAnalysisId || f.analysisId === bobAnalysisId,
+    );
+    // Bob's row is the only one of ours that's still "useful" after the
+    // happy-path block updated alice's row to "not_useful".
+    expect(usefulOurs.length).toBeGreaterThanOrEqual(1);
+    for (const row of onlyUseful.body.feedback) {
+      expect(row.feedbackType).toBe("useful");
+    }
+
+    const onlyNotUseful = await request(app)
+      .get("/api/admin/feedback?feedbackType=not_useful&limit=200")
+      .set(...authHeader(adminUser));
+    expect(onlyNotUseful.status).toBe(200);
+    for (const row of onlyNotUseful.body.feedback) {
+      expect(row.feedbackType).toBe("not_useful");
+    }
+
+    // Bogus enum values must be ignored, not 500 — the route falls back to
+    // "no feedbackType filter".
+    const garbage = await request(app)
+      .get("/api/admin/feedback?feedbackType=amazing&limit=200")
+      .set(...authHeader(adminUser));
+    expect(garbage.status).toBe(200);
+    expect(garbage.body.total).toBeGreaterThanOrEqual(onlyUseful.body.total);
+  });
+
+  it("free-text search ILIKEs over user email AND analysis instrument", async () => {
+    // Search by alice's email — must include alice's row, exclude bob's.
+    const byEmail = await request(app)
+      .get(`/api/admin/feedback?search=${encodeURIComponent(alice.email)}&limit=200`)
+      .set(...authHeader(adminUser));
+    expect(byEmail.status).toBe(200);
+    expect(
+      byEmail.body.feedback.some(
+        (f: { analysisId: number }) => f.analysisId === aliceAnalysisId,
+      ),
+    ).toBe(true);
+    expect(
+      byEmail.body.feedback.every(
+        (f: { userEmail: string; instrument: string }) =>
+          f.userEmail.includes(alice.email) ||
+          f.instrument.toLowerCase().includes(alice.email.toLowerCase()),
+      ),
+    ).toBe(true);
+
+    // Search by the shared instrument prefix — must match BOTH our analyses.
+    const byInstrument = await request(app)
+      .get(`/api/admin/feedback?search=${INSTRUMENT_PREFIX}&limit=200`)
+      .set(...authHeader(adminUser));
+    expect(byInstrument.status).toBe(200);
+    const ours = byInstrument.body.feedback.filter(
+      (f: { analysisId: number }) =>
+        f.analysisId === aliceAnalysisId || f.analysisId === bobAnalysisId,
+    );
+    expect(ours.length).toBeGreaterThanOrEqual(2);
+
+    // Total in the response must reflect the filter, not the unfiltered count.
+    expect(byInstrument.body.total).toBeGreaterThanOrEqual(ours.length);
+    expect(byInstrument.body.total).toBeLessThanOrEqual(
+      byInstrument.body.feedback.length + 1,
+    );
+
+    // A search that can't possibly match returns an empty page.
+    const miss = await request(app)
+      .get(
+        `/api/admin/feedback?search=${encodeURIComponent("zzz-no-such-thing-" + RUN_ID)}&limit=200`,
+      )
+      .set(...authHeader(adminUser));
+    expect(miss.status).toBe(200);
+    expect(miss.body.feedback.length).toBe(0);
+    expect(miss.body.total).toBe(0);
+  });
+
+  it("date range from/to is inclusive end-of-day and excludes feedback outside the window", async () => {
+    // All seeded rows were created during this test run, so a future "from"
+    // must yield zero rows for them.
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const future = await request(app)
+      .get(`/api/admin/feedback?from=${tomorrow}&search=${INSTRUMENT_PREFIX}&limit=200`)
+      .set(...authHeader(adminUser));
+    expect(future.status).toBe(200);
+    expect(future.body.total).toBe(0);
+    expect(future.body.feedback.length).toBe(0);
+
+    // A "to" of yesterday excludes today's seeded rows too.
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const past = await request(app)
+      .get(`/api/admin/feedback?to=${yesterday}&search=${INSTRUMENT_PREFIX}&limit=200`)
+      .set(...authHeader(adminUser));
+    expect(past.status).toBe(200);
+    const oursPast = past.body.feedback.filter(
+      (f: { analysisId: number }) =>
+        f.analysisId === aliceAnalysisId || f.analysisId === bobAnalysisId,
+    );
+    expect(oursPast.length).toBe(0);
+
+    // A from..to window covering today is inclusive and matches our rows
+    // (proving the end-of-day snap on `to`).
+    const today = new Date().toISOString().slice(0, 10);
+    const window = await request(app)
+      .get(
+        `/api/admin/feedback?from=${today}&to=${today}&search=${INSTRUMENT_PREFIX}&limit=200`,
+      )
+      .set(...authHeader(adminUser));
+    expect(window.status).toBe(200);
+    const oursWindow = window.body.feedback.filter(
+      (f: { analysisId: number }) =>
+        f.analysisId === aliceAnalysisId || f.analysisId === bobAnalysisId,
+    );
+    expect(oursWindow.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("ignores malformed date params instead of crashing", async () => {
+    const res = await request(app)
+      .get("/api/admin/feedback?from=not-a-date&to=also-not&limit=200")
+      .set(...authHeader(adminUser));
+    expect(res.status).toBe(200);
+    // With both dates ignored, total should equal the unfiltered total.
+    const baseline = await request(app)
+      .get("/api/admin/feedback?limit=200")
+      .set(...authHeader(adminUser));
+    expect(res.body.total).toBe(baseline.body.total);
+  });
+
+  it("filters compose: search + feedbackType + date range together", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await request(app)
+      .get(
+        `/api/admin/feedback?search=${INSTRUMENT_PREFIX}&feedbackType=useful&from=${today}&to=${today}&limit=200`,
+      )
+      .set(...authHeader(adminUser));
+    expect(res.status).toBe(200);
+    for (const row of res.body.feedback) {
+      expect(row.feedbackType).toBe("useful");
+      expect(row.instrument.startsWith(INSTRUMENT_PREFIX)).toBe(true);
+    }
+  });
+
   it("clamps page and limit just like /superadmin/users (page>=1, limit 1..200)", async () => {
     const negPage = await request(app)
       .get("/api/admin/feedback?page=-5&limit=20")

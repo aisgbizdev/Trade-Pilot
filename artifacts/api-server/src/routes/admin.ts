@@ -9,7 +9,7 @@ import {
   broadcasts,
   feedback,
 } from "@workspace/db/schema";
-import { eq, and, count, desc, sql, ilike, or, inArray } from "drizzle-orm";
+import { eq, and, count, desc, sql, ilike, or, inArray, gte, lte } from "drizzle-orm";
 import {
   requireAdmin,
   requireSuperAdmin,
@@ -164,9 +164,18 @@ router.get("/admin/feedback", requireAdmin, async (req: AuthRequest, res) => {
     : 50;
   const offset = (page - 1) * limit;
 
-  // Optional filter: when an admin clicks the feedback signal on an analysis
-  // card, the page navigates here with ?analysisId=N to drill into just that
-  // one analysis's feedback. Bad input collapses to "no filter".
+  // Server-side filters. All optional, all stack with AND. Free-text `search`
+  // ILIKEs over the joined user email and analysis instrument so an admin can
+  // find "everything from foo@bar" or "everything on EURUSD". Date range is
+  // inclusive on both ends; `to` snaps to end-of-day so a same-day from/to
+  // still matches rows from later in that day. `analysisId` is the drill-down
+  // target the analysis-list page links to (?analysisId=N) — bad input
+  // collapses to "no filter" rather than returning an error.
+  const search = String(req.query["search"] ?? "").trim();
+  const feedbackTypeRaw = String(req.query["feedbackType"] ?? "").trim();
+  const fromRaw = String(req.query["from"] ?? "").trim();
+  const toRaw = String(req.query["to"] ?? "").trim();
+
   const rawAnalysisId = req.query["analysisId"];
   const parsedAnalysisId =
     rawAnalysisId !== undefined ? Number(rawAnalysisId) : NaN;
@@ -175,12 +184,44 @@ router.get("/admin/feedback", requireAdmin, async (req: AuthRequest, res) => {
       ? Math.floor(parsedAnalysisId)
       : undefined;
 
-  const whereClause =
-    analysisIdFilter !== undefined
-      ? eq(feedback.analysisId, analysisIdFilter)
-      : undefined;
+  const conditions: NonNullable<ReturnType<typeof and>>[] = [];
 
-  const rowsQuery = db
+  if (search) {
+    // Drizzle parameterizes %…% safely; we don't need to escape % or _ here
+    // because admins typing "foo_bar@x.com" expect substring semantics.
+    const pattern = `%${search}%`;
+    const clause = or(ilike(users.email, pattern), ilike(analyses.instrument, pattern));
+    if (clause) conditions.push(clause);
+  }
+
+  if (feedbackTypeRaw === "useful" || feedbackTypeRaw === "not_useful") {
+    conditions.push(eq(feedback.feedbackType, feedbackTypeRaw));
+  }
+
+  if (fromRaw) {
+    const fromDate = new Date(fromRaw);
+    if (!Number.isNaN(fromDate.getTime())) {
+      conditions.push(gte(feedback.createdAt, fromDate));
+    }
+  }
+
+  if (toRaw) {
+    const toDate = new Date(toRaw);
+    if (!Number.isNaN(toDate.getTime())) {
+      // Inclusive end-of-day so `to=2026-04-25` matches feedback submitted at
+      // 23:59 on that date.
+      toDate.setHours(23, 59, 59, 999);
+      conditions.push(lte(feedback.createdAt, toDate));
+    }
+  }
+
+  if (analysisIdFilter !== undefined) {
+    conditions.push(eq(feedback.analysisId, analysisIdFilter));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const baseQuery = db
     .select({
       id: feedback.id,
       analysisId: feedback.analysisId,
@@ -194,19 +235,24 @@ router.get("/admin/feedback", requireAdmin, async (req: AuthRequest, res) => {
     })
     .from(feedback)
     .innerJoin(users, eq(feedback.userId, users.id))
-    .innerJoin(analyses, eq(feedback.analysisId, analyses.id))
+    .innerJoin(analyses, eq(feedback.analysisId, analyses.id));
+
+  const rows = await (whereClause ? baseQuery.where(whereClause) : baseQuery)
     .orderBy(desc(feedback.createdAt))
     .limit(limit)
     .offset(offset);
 
-  const rows = whereClause
-    ? await rowsQuery.where(whereClause)
-    : await rowsQuery;
+  // Total must be filtered the same way; otherwise pagination math is wrong
+  // (admin sees "Page 1 of 12" with three rows visible). Joins must mirror
+  // the rows query so the search ILIKE on users.email / analyses.instrument
+  // can resolve.
+  const totalQuery = db
+    .select({ count: count(feedback.id) })
+    .from(feedback)
+    .innerJoin(users, eq(feedback.userId, users.id))
+    .innerJoin(analyses, eq(feedback.analysisId, analyses.id));
 
-  const totalQuery = db.select({ count: count(feedback.id) }).from(feedback);
-  const [total] = whereClause
-    ? await totalQuery.where(whereClause)
-    : await totalQuery;
+  const [total] = await (whereClause ? totalQuery.where(whereClause) : totalQuery);
 
   res.json({
     feedback: rows,

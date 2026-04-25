@@ -674,6 +674,28 @@ export const getAdminFeedbackQueryLimitDefault = 50;
 export const GetAdminFeedbackQueryParams = zod.object({
   page: zod.coerce.number().default(getAdminFeedbackQueryPageDefault),
   limit: zod.coerce.number().default(getAdminFeedbackQueryLimitDefault),
+  search: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "Free-text ILIKE filter matched against the user's email or the analysis instrument",
+    ),
+  feedbackType: zod
+    .enum(["useful", "not_useful"])
+    .optional()
+    .describe("Restrict to a single feedback reaction"),
+  from: zod
+    .date()
+    .optional()
+    .describe(
+      "Only include feedback created on or after this date (ISO 8601 date)",
+    ),
+  to: zod
+    .date()
+    .optional()
+    .describe(
+      "Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day)",
+    ),
   analysisId: zod.coerce
     .number()
     .optional()

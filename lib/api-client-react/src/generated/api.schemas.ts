@@ -682,10 +682,34 @@ export type GetAdminFeedbackParams = {
   page?: number;
   limit?: number;
   /**
+   * Free-text ILIKE filter matched against the user's email or the analysis instrument
+   */
+  search?: string;
+  /**
+   * Restrict to a single feedback reaction
+   */
+  feedbackType?: GetAdminFeedbackFeedbackType;
+  /**
+   * Only include feedback created on or after this date (ISO 8601 date)
+   */
+  from?: string;
+  /**
+   * Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day)
+   */
+  to?: string;
+  /**
    * When set, only return feedback for the given analysis id.
    */
   analysisId?: number;
 };
+
+export type GetAdminFeedbackFeedbackType =
+  (typeof GetAdminFeedbackFeedbackType)[keyof typeof GetAdminFeedbackFeedbackType];
+
+export const GetAdminFeedbackFeedbackType = {
+  useful: "useful",
+  not_useful: "not_useful",
+} as const;
 
 export type GetBroadcastsParams = {
   page?: number;
