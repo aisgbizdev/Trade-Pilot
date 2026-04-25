@@ -42,6 +42,8 @@ export default function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [secCurrentPassword, setSecCurrentPassword] = useState("");
   const [showSecCurrentPassword, setShowSecCurrentPassword] = useState(false);
@@ -63,15 +65,20 @@ export default function ProfilePage() {
   };
 
   const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword) return;
+    if (!currentPassword || !newPassword || !confirmPassword) return;
     if (newPassword.length < 6) {
       toast({ title: t.profile.password_min_length, variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: t.profile.password_mismatch ?? "Konfirmasi password tidak cocok", variant: "destructive" });
       return;
     }
     try {
       await changePassword.mutateAsync({ data: { currentPassword, newPassword } });
       setCurrentPassword("");
       setNewPassword("");
+      setConfirmPassword("");
       setShowPasswordSection(false);
       toast({ title: t.profile.password_updated });
     } catch (err: unknown) {
@@ -238,6 +245,27 @@ export default function ProfilePage() {
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <div className="relative">
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder={t.profile.confirm_password_placeholder ?? "Konfirmasi password baru"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  data-testid="input-confirm-password"
+                  className={confirmPassword && newPassword && confirmPassword !== newPassword ? "border-red-400" : ""}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  data-testid="button-toggle-confirm-password"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {confirmPassword && newPassword && confirmPassword !== newPassword && (
+                <p className="text-xs text-red-500 -mt-1">{t.profile.password_mismatch ?? "Konfirmasi password tidak cocok"}</p>
+              )}
               <Button
                 size="sm"
                 className="w-full"

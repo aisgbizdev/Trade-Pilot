@@ -213,6 +213,7 @@ export const id: Translations = {
     start_analysis: "Mulai Analisis",
     no_data_yet: "Belum ada data",
     accuracy_note: "Akurasi dihitung berdasarkan penilaian kamu sendiri melalui fitur feedback. Ini bukan ukuran objektif, hanya refleksi dari pengalaman kamu.",
+    based_on_feedback: "Berdasarkan {n} feedback",
   },
   profile: {
     title: "Profil",
@@ -223,6 +224,8 @@ export const id: Translations = {
     change_password: "Ubah Password",
     current_password_placeholder: "Password saat ini",
     new_password_placeholder: "Password baru (min 6 karakter)",
+    confirm_password_placeholder: "Konfirmasi password baru",
+    password_mismatch: "Konfirmasi password tidak cocok",
     save_password: "Simpan Password",
     save_security: "Simpan Pertanyaan Keamanan",
     admin_panel: "Panel Admin",

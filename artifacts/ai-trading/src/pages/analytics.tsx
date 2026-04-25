@@ -12,6 +12,40 @@ import {
 } from "@workspace/api-client-react";
 import { useTranslation } from "@/lib/i18n";
 
+function AccuracyGauge({ value }: { value: number }) {
+  const clamp = Math.max(0, Math.min(100, value));
+  const radius = 28;
+  const strokeWidth = 6;
+  const circumference = Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - clamp / 100);
+  const color = clamp >= 60 ? "#22c55e" : clamp >= 40 ? "#f59e0b" : "#ef4444";
+  return (
+    <div className="flex flex-col items-center" data-testid="accuracy-gauge">
+      <svg width="72" height="40" viewBox="0 0 72 40">
+        <path
+          d={`M 6 36 A ${radius} ${radius} 0 0 1 66 36`}
+          fill="none"
+          stroke="hsl(var(--muted))"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+        />
+        <path
+          d={`M 6 36 A ${radius} ${radius} 0 0 1 66 36`}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+        />
+      </svg>
+      <p className="text-base font-bold text-foreground -mt-3" data-testid="text-accuracy-rate" style={{ color }}>
+        {clamp}%
+      </p>
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
@@ -106,17 +140,20 @@ export default function AnalyticsPage() {
             </p>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center gap-1 mb-1">
+          <Card className="p-4 flex flex-col items-center">
+            <div className="flex items-center gap-1 mb-2 self-start">
               <h3 className="text-xs text-muted-foreground">{t.analytics.self_accuracy}</h3>
               <Info className="w-3 h-3 text-muted-foreground" />
             </div>
             {analytics.accuracyRate !== null && analytics.accuracyRate !== undefined ? (
-              <p className="text-base font-bold text-foreground" data-testid="text-accuracy-rate">
-                {analytics.accuracyRate}%
-              </p>
+              <>
+                <AccuracyGauge value={analytics.accuracyRate} />
+                <p className="text-[10px] text-muted-foreground mt-1 text-center">
+                  {t.analytics.based_on_feedback?.replace("{n}", String(analytics.feedbackCount ?? 0)) ?? `Based on ${analytics.feedbackCount ?? 0} feedback`}
+                </p>
+              </>
             ) : (
-              <p className="text-xs text-muted-foreground">{t.analytics.no_data_yet}</p>
+              <p className="text-xs text-muted-foreground mt-4">{t.analytics.no_data_yet}</p>
             )}
           </Card>
         </div>

@@ -197,7 +197,8 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
   } catch (aiErr) {
     void trackAiError();
-    throw aiErr;
+    res.status(503).json({ error: "Layanan AI sedang tidak tersedia. Silakan coba lagi dalam beberapa saat." });
+    return;
   }
   const validUntil = getValidUntil(timeframe);
 

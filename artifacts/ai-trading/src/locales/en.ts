@@ -211,6 +211,7 @@ export const en = {
     start_analysis: "Start Analysis",
     no_data_yet: "No data yet",
     accuracy_note: "Accuracy is calculated based on your own ratings through the feedback feature. This is not an objective measure, just a reflection of your experience.",
+    based_on_feedback: "Based on {n} feedback",
   },
   profile: {
     title: "Profile",
@@ -221,6 +222,8 @@ export const en = {
     change_password: "Change Password",
     current_password_placeholder: "Current password",
     new_password_placeholder: "New password (min 6 chars)",
+    confirm_password_placeholder: "Confirm new password",
+    password_mismatch: "Password confirmation does not match",
     save_password: "Save Password",
     save_security: "Save Security Question",
     admin_panel: "Admin Panel",

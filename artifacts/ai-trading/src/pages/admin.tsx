@@ -101,6 +101,7 @@ function AdminContent() {
                 { label: "Total User", value: stats?.totalUsers ?? 0 },
                 { label: "Total Analisis", value: stats?.total ?? 0 },
                 { label: "Hari Ini", value: stats?.today ?? 0 },
+                { label: "Minggu Ini", value: stats?.thisWeek ?? 0 },
                 { label: "Bulan Ini", value: stats?.thisMonth ?? 0 },
               ].map(({ label, value }) => (
                 <Card key={label} className="p-3 text-center">
