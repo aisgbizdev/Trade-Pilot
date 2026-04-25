@@ -300,6 +300,9 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       riskLevel: aiResult.riskLevel,
       confidenceMin: aiResult.confidenceMin,
       confidenceMax: aiResult.confidenceMax,
+      tradingBias: aiResult.tradingBias,
+      opportunity: aiResult.opportunity,
+      risk: aiResult.risk,
       ...modeSpecificFields,
     };
   };

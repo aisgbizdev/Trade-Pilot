@@ -1218,6 +1218,16 @@ components:
         uncertaintyNotes:
           type: string
           nullable: true
+        tradingBias:
+          type: string
+          nullable: true
+          description: "One of: strong_sell, sell, neutral, buy, strong_buy"
+        opportunity:
+          type: string
+          nullable: true
+        risk:
+          type: string
+          nullable: true
         feedback:
           $ref: "#/components/schemas/Feedback"
           nullable: true

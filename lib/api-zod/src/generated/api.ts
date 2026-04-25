@@ -227,6 +227,12 @@ export const ListAnalysesResponse = zod.object({
       marketContext: zod.string().nullish(),
       invalidationConditions: zod.string().nullish(),
       uncertaintyNotes: zod.string().nullish(),
+      tradingBias: zod
+        .string()
+        .nullish()
+        .describe("One of: strong_sell, sell, neutral, buy, strong_buy"),
+      opportunity: zod.string().nullish(),
+      risk: zod.string().nullish(),
       feedback: zod
         .object({
           id: zod.number(),
@@ -279,6 +285,12 @@ export const GetAnalysesSummaryResponse = zod.object({
       marketContext: zod.string().nullish(),
       invalidationConditions: zod.string().nullish(),
       uncertaintyNotes: zod.string().nullish(),
+      tradingBias: zod
+        .string()
+        .nullish()
+        .describe("One of: strong_sell, sell, neutral, buy, strong_buy"),
+      opportunity: zod.string().nullish(),
+      risk: zod.string().nullish(),
       feedback: zod
         .object({
           id: zod.number(),
@@ -381,6 +393,12 @@ export const GetAnalysisResponse = zod.object({
   marketContext: zod.string().nullish(),
   invalidationConditions: zod.string().nullish(),
   uncertaintyNotes: zod.string().nullish(),
+  tradingBias: zod
+    .string()
+    .nullish()
+    .describe("One of: strong_sell, sell, neutral, buy, strong_buy"),
+  opportunity: zod.string().nullish(),
+  risk: zod.string().nullish(),
   feedback: zod
     .object({
       id: zod.number(),
@@ -567,6 +585,12 @@ export const GetAllAnalysesResponse = zod.object({
       marketContext: zod.string().nullish(),
       invalidationConditions: zod.string().nullish(),
       uncertaintyNotes: zod.string().nullish(),
+      tradingBias: zod
+        .string()
+        .nullish()
+        .describe("One of: strong_sell, sell, neutral, buy, strong_buy"),
+      opportunity: zod.string().nullish(),
+      risk: zod.string().nullish(),
       feedback: zod
         .object({
           id: zod.number(),

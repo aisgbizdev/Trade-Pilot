@@ -22,12 +22,16 @@ export function getValidUntil(timeframe: string): Date {
 
 const MarketCondition = z.enum(["trending_up", "trending_down", "ranging", "volatile"]);
 const RiskLevel = z.enum(["low", "medium", "high"]);
+const TradingBias = z.enum(["strong_sell", "sell", "neutral", "buy", "strong_buy"]);
 
 const BeginnerAIOutputSchema = z.object({
   marketCondition: MarketCondition,
   riskLevel: RiskLevel,
   confidenceMin: z.number().int().min(1).max(65),
   confidenceMax: z.number().int().min(11).max(75),
+  tradingBias: TradingBias,
+  opportunity: z.string().min(1),
+  risk: z.string().min(1),
   mainScenario: z.string().min(1),
   alternativeScenario: z.string().min(1),
   whyReason: z.string().min(1),
@@ -39,6 +43,9 @@ const ProAIOutputSchema = z.object({
   riskLevel: RiskLevel,
   confidenceMin: z.number().int().min(1).max(70),
   confidenceMax: z.number().int().min(11).max(80),
+  tradingBias: TradingBias,
+  opportunity: z.string().min(1),
+  risk: z.string().min(1),
   baseCase: z.string().min(1),
   bullishScenario: z.string().min(1),
   bearishScenario: z.string().min(1),
@@ -70,6 +77,9 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "riskLevel": "low" | "medium" | "high",
   "confidenceMin": number (1-65),
   "confidenceMax": number (confidenceMin+10 sampai 75),
+  "tradingBias": "strong_sell" | "sell" | "neutral" | "buy" | "strong_buy" (kecenderungan arah berdasarkan analisis — gunakan "neutral" jika sinyalnya seimbang),
+  "opportunity": "string (peluang/upside utama jika analisis berjalan sesuai harapan, 1-2 kalimat — jelaskan ke mana harga BERPELUANG bergerak dan kenapa, jangan janjikan profit)",
+  "risk": "string (risiko utama yang harus diwaspadai trader: skenario merugikan, kondisi yang bisa berlawanan, dan tingkat ketidakpastian, 1-2 kalimat)",
   "mainScenario": "string (skenario utama yang paling mungkin, 2-3 kalimat)",
   "alternativeScenario": "string (skenario alternatif, 1-2 kalimat)",
   "whyReason": "string (mengapa skenario ini kemungkinan terjadi, 2-3 kalimat)",
@@ -93,6 +103,9 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "riskLevel": "low" | "medium" | "high",
   "confidenceMin": number (1-70),
   "confidenceMax": number (confidenceMin+10 sampai 80),
+  "tradingBias": "strong_sell" | "sell" | "neutral" | "buy" | "strong_buy" (kecenderungan arah berdasarkan konfluensi sinyal — gunakan "neutral" jika sinyalnya seimbang atau ranging),
+  "opportunity": "string (peluang/upside utama: ke mana harga BERPELUANG bergerak, area entry/target potensial secara konseptual, dan kenapa, 1-2 kalimat — jangan janjikan profit)",
+  "risk": "string (risiko utama: skenario merugikan, level invalidasi, dan ketidakpastian yang harus diwaspadai trader, 1-2 kalimat)",
   "baseCase": "string (skenario dasar yang paling mungkin, 2-3 kalimat)",
   "bullishScenario": "string (skenario bullish, 1-2 kalimat)",
   "bearishScenario": "string (skenario bearish, 1-2 kalimat)",

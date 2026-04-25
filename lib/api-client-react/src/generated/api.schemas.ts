@@ -233,6 +233,10 @@ export interface Analysis {
   marketContext?: string | null;
   invalidationConditions?: string | null;
   uncertaintyNotes?: string | null;
+  /** One of: strong_sell, sell, neutral, buy, strong_buy */
+  tradingBias?: string | null;
+  opportunity?: string | null;
+  risk?: string | null;
   feedback?: Feedback | null;
   createdAt: string;
 }

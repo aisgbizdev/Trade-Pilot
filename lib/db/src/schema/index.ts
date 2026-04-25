@@ -95,6 +95,9 @@ export const analyses = pgTable("analyses", {
   marketContext: text("market_context"),
   invalidationConditions: text("invalidation_conditions"),
   uncertaintyNotes: text("uncertainty_notes"),
+  tradingBias: text("trading_bias"),
+  opportunity: text("opportunity"),
+  risk: text("risk"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
