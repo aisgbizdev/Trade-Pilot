@@ -715,6 +715,11 @@ describe("deterministic last-super-admin guard (engineered count == 2)", () => {
       // and statuses would be [200, 200] with final count 0.
       expect(statuses).toEqual([200, 400]);
 
+      const refused = r1.status === 400 ? r1 : r2;
+      expect(refused.body.error).toBe(
+        "Tidak bisa menurunkan super admin terakhir",
+      );
+
       const [{ c: after }] = await db
         .select({ c: count() })
         .from(users)
@@ -763,6 +768,11 @@ describe("deterministic last-super-admin guard (engineered count == 2)", () => {
 
       const statuses = [r1.status, r2.status].sort();
       expect(statuses).toEqual([200, 400]);
+
+      const refused = r1.status === 400 ? r1 : r2;
+      expect(refused.body.error).toBe(
+        "Tidak bisa menghapus super admin terakhir",
+      );
 
       const [{ c: after }] = await db
         .select({ c: count() })
