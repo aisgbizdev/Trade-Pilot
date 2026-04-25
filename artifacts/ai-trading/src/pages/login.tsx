@@ -20,8 +20,8 @@ import { useLogin, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 const schema = z.object({
-  email: z.string().email("Format email tidak valid"),
-  password: z.string().min(6, "Password minimal 6 karakter"),
+  email: z.string().min(1, "Username atau email wajib diisi"),
+  password: z.string().min(1, "Password wajib diisi"),
   rememberMe: z.boolean().default(false),
 });
 
@@ -88,13 +88,13 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Username / Email</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        type="email"
-                        placeholder="kamu@email.com"
-                        autoComplete="email"
+                        type="text"
+                        placeholder="Username atau email kamu"
+                        autoComplete="username"
                         data-testid="input-email"
                       />
                     </FormControl>
