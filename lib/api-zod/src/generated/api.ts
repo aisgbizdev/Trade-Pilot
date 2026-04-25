@@ -803,23 +803,6 @@ export const RemoveUserTagResponse = zod.object({
 });
 
 /**
- * @summary Remove a tag from a user (tag in request body — compat path)
- */
-export const RemoveUserTagByBodyParams = zod.object({
-  id: zod.coerce.number(),
-});
-
-export const removeUserTagByBodyBodyTagMax = 40;
-
-export const RemoveUserTagByBodyBody = zod.object({
-  tag: zod.string().min(1).max(removeUserTagByBodyBodyTagMax),
-});
-
-export const RemoveUserTagByBodyResponse = zod.object({
-  tags: zod.array(zod.string()),
-});
-
-/**
  * @summary Update user role (superadmin only)
  */
 export const UpdateUserRoleParams = zod.object({
