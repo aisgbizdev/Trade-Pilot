@@ -3165,6 +3165,93 @@ export function useGetAllTags<
 }
 
 /**
+ * @summary Get all tags for a specific user
+ */
+export const getGetUserTagsUrl = (id: number) => {
+  return `/api/superadmin/users/${id}/tags`;
+};
+
+export const getUserTags = async (
+  id: number,
+  options?: RequestInit,
+): Promise<TagsList> => {
+  return customFetch<TagsList>(getGetUserTagsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetUserTagsQueryKey = (id: number) => {
+  return [`/api/superadmin/users/${id}/tags`] as const;
+};
+
+export const getGetUserTagsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUserTags>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getUserTags>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetUserTagsQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserTags>>> = ({
+    signal,
+  }) => getUserTags(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUserTags>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetUserTagsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUserTags>>
+>;
+export type GetUserTagsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get all tags for a specific user
+ */
+
+export function useGetUserTags<
+  TData = Awaited<ReturnType<typeof getUserTags>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getUserTags>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUserTagsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Add a tag to a user
  */
 export const getAddUserTagUrl = (id: number) => {

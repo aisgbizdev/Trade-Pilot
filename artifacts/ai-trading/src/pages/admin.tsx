@@ -44,7 +44,7 @@ import {
   type BroadcastNotificationBodyAudienceType,
   type BroadcastAudienceType,
 } from "@workspace/api-client-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 import { useLocation, Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -59,34 +59,52 @@ const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> 
   volatile: { label: "Volatil", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
 };
 
-function UserTagEditor({ user }: { user: UserWithStats }) {
+function UserTagEditor({
+  user,
+  knownTags,
+}: {
+  user: UserWithStats;
+  knownTags: string[];
+}) {
   const { t, lang } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const addTag = useAddUserTag();
   const removeTag = useRemoveUserTag();
+
+  const ownedTagSet = useMemo(() => new Set(user.tags), [user.tags]);
+  const suggestions = useMemo(() => {
+    const q = draft.trim().toLowerCase();
+    return knownTags
+      .filter((tag) => !ownedTagSet.has(tag) && (!q || tag.toLowerCase().includes(q)))
+      .slice(0, 6);
+  }, [draft, knownTags, ownedTagSet]);
 
   const invalidateUserAndTagLists = () => {
     queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetAllTagsQueryKey() });
   };
 
-  const handleAdd = async () => {
-    const tag = draft.trim();
-    if (!tag) return;
-    if (!/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/.test(tag)) {
+  const submitTag = async (tag: string) => {
+    const clean = tag.trim();
+    if (!clean) return;
+    if (!/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/.test(clean)) {
       toast({ title: t.admin.tag_invalid, variant: "destructive" });
       return;
     }
     try {
-      await addTag.mutateAsync({ id: user.id, data: { tag } });
+      await addTag.mutateAsync({ id: user.id, data: { tag: clean } });
       setDraft("");
+      setShowSuggestions(false);
       invalidateUserAndTagLists();
     } catch {
       toast({ title: t.admin.tag_add_failed, variant: "destructive" });
     }
   };
+
+  const handleAdd = () => submitTag(draft);
 
   const handleRemove = async (tag: string) => {
     try {
@@ -132,30 +150,60 @@ function UserTagEditor({ user }: { user: UserWithStats }) {
           </span>
         ))}
       </div>
-      <div className="flex gap-1.5">
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAdd();
-            }
-          }}
-          placeholder={t.admin.add_tag_placeholder}
-          className="h-8 text-xs"
-          data-testid={`input-add-tag-${user.id}`}
-        />
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 px-2.5 text-xs"
-          onClick={handleAdd}
-          disabled={addTag.isPending || !draft.trim()}
-          data-testid={`button-add-tag-${user.id}`}
-        >
-          {addTag.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-        </Button>
+      <div className="relative">
+        <div className="flex gap-1.5">
+          <Input
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => {
+              window.setTimeout(() => setShowSuggestions(false), 120);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAdd();
+              }
+            }}
+            placeholder={t.admin.add_tag_placeholder}
+            className="h-8 text-xs"
+            data-testid={`input-add-tag-${user.id}`}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2.5 text-xs"
+            onClick={handleAdd}
+            disabled={addTag.isPending || !draft.trim()}
+            data-testid={`button-add-tag-${user.id}`}
+          >
+            {addTag.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+          </Button>
+        </div>
+        {showSuggestions && suggestions.length > 0 && (
+          <div
+            className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-popover shadow-md max-h-44 overflow-y-auto"
+            data-testid={`tag-suggestions-${user.id}`}
+          >
+            {suggestions.map((sug) => (
+              <button
+                key={sug}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  void submitTag(sug);
+                }}
+                className="block w-full text-left px-2.5 py-1.5 text-xs hover:bg-muted"
+                data-testid={`tag-suggestion-${user.id}-${sug}`}
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -170,6 +218,8 @@ function RecentSignupsPanel() {
     { query: { queryKey: getGetAllUsersQueryKey({ search: search || undefined, page: 1, limit: 10 }) } },
   );
   const users = (data as UsersList | undefined)?.users ?? [];
+  const { data: tagsData } = useGetAllTags({ query: { queryKey: getGetAllTagsQueryKey() } });
+  const knownTags = tagsData?.tags ?? [];
 
   return (
     <Card className="p-4 space-y-3" data-testid="card-recent-signups">
@@ -199,7 +249,7 @@ function RecentSignupsPanel() {
         <div className="divide-y divide-border">
           {users.map((u) => (
             <div key={u.id} className="py-3 first:pt-0 last:pb-0">
-              <UserTagEditor user={u} />
+              <UserTagEditor user={u} knownTags={knownTags} />
             </div>
           ))}
         </div>
@@ -405,8 +455,14 @@ function BroadcastHistoryPanel() {
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold text-foreground truncate flex-1">{b.title}</p>
-                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                  {format(new Date(b.createdAt), "d MMM HH:mm", { locale: dateLocale })}
+                <span
+                  className="text-[10px] text-muted-foreground whitespace-nowrap"
+                  title={format(new Date(b.createdAt), "d MMM yyyy HH:mm", { locale: dateLocale })}
+                >
+                  {formatDistanceToNow(new Date(b.createdAt), {
+                    addSuffix: true,
+                    locale: dateLocale,
+                  })}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground line-clamp-2">{b.message}</p>
@@ -522,6 +578,22 @@ function AdminContent() {
                     <div key={item.instrument} className="flex items-center justify-between">
                       <span className="text-sm text-foreground">{item.instrument}</span>
                       <Badge variant="secondary" className="text-xs">{item.count}x</Badge>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {stats?.modeBreakdown && Object.keys(stats.modeBreakdown).length > 0 && (
+              <Card className="p-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Breakdown Mode</h3>
+                <div className="space-y-2">
+                  {Object.entries(stats?.modeBreakdown ?? {}).map(([mode, count]) => (
+                    <div key={mode} className="flex items-center justify-between">
+                      <span className="text-sm text-foreground">
+                        {mode === "beginner" ? "Pemula" : "Pro"}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">{count}x</Badge>
                     </div>
                   ))}
                 </div>

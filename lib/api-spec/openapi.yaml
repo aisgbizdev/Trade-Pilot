@@ -907,6 +907,35 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /superadmin/users/{id}/tags:
+    get:
+      operationId: getUserTags
+      tags: [superadmin]
+      summary: Get all tags for a specific user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User's tag list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagsList"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     post:
       operationId: addUserTag
       tags: [superadmin]

@@ -351,6 +351,25 @@ router.get("/superadmin/tags", requireSuperAdmin, async (_req: AuthRequest, res)
 
 const TAG_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/;
 
+router.get("/superadmin/users/:id/tags", requireSuperAdmin, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "ID tidak valid" });
+    return;
+  }
+  const [target] = await db.select({ id: users.id }).from(users).where(eq(users.id, id)).limit(1);
+  if (!target) {
+    res.status(404).json({ error: "User tidak ditemukan" });
+    return;
+  }
+  const rows = await db
+    .select({ tag: userTags.tag })
+    .from(userTags)
+    .where(eq(userTags.userId, id))
+    .orderBy(userTags.tag);
+  res.json({ tags: rows.map((r) => r.tag) });
+});
+
 router.post("/superadmin/users/:id/tags", requireSuperAdmin, async (req: AuthRequest, res) => {
   const id = Number(req.params["id"]);
   const tagRaw = String((req.body?.tag ?? "")).trim();

@@ -78,8 +78,8 @@ function AdminUsersContent() {
   });
 
   const { data, isLoading } = useGetAllUsers(
-    {},
-    { query: { queryKey: getGetAllUsersQueryKey() } },
+    { limit: 200 },
+    { query: { queryKey: getGetAllUsersQueryKey({ limit: 200 }) } },
   );
 
   const createUser = useCreateUser();

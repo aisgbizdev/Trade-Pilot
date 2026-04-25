@@ -761,6 +761,17 @@ export const GetAllTagsResponse = zod.object({
 });
 
 /**
+ * @summary Get all tags for a specific user
+ */
+export const GetUserTagsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetUserTagsResponse = zod.object({
+  tags: zod.array(zod.string()),
+});
+
+/**
  * @summary Add a tag to a user
  */
 export const AddUserTagParams = zod.object({
