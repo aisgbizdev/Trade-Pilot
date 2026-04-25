@@ -262,7 +262,10 @@ export default function AnalyzePage() {
           </div>
 
           {finalInstrument && (
-            <TechnicalIndicatorsPanel instrument={finalInstrument} />
+            <TechnicalIndicatorsPanel
+              instrument={finalInstrument}
+              mode={user?.selectedMode === "pro" ? "pro" : "beginner"}
+            />
           )}
 
           <div>

@@ -1,65 +1,180 @@
 import { useTechnicalIndicators } from "@/hooks/use-technical-indicators";
-import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
-function SignalBadge({ signal }: { signal: "Buy" | "Sell" | "Neutral" }) {
+type RawSignal = "Buy" | "Sell" | "Neutral";
+type Lean = "bullish" | "bearish" | "neutral";
+
+function leanFromCounts(buy: number, sell: number): Lean {
+  if (buy > sell * 1.5) return "bullish";
+  if (sell > buy * 1.5) return "bearish";
+  return "neutral";
+}
+
+function leanFromSignal(signal: RawSignal): Lean {
+  if (signal === "Buy") return "bullish";
+  if (signal === "Sell") return "bearish";
+  return "neutral";
+}
+
+function SignalBadge({ signal, mode }: { signal: RawSignal; mode: "beginner" | "pro" }) {
   const { t } = useTranslation();
-  const signalLabel =
+  const lean = leanFromSignal(signal);
+  const descriptiveLabel =
+    lean === "bullish" ? t.analyze.leaning_bullish :
+    lean === "bearish" ? t.analyze.leaning_bearish :
+    t.analyze.leaning_neutral;
+  const rawLabel =
     signal === "Buy" ? t.analyze.signal_buy :
     signal === "Sell" ? t.analyze.signal_sell :
     t.analyze.signal_neutral;
+
   return (
-    <span className={cn(
-      "text-[10px] font-bold px-1.5 py-0.5 rounded-md",
-      signal === "Buy" ? "bg-emerald-500/15 text-emerald-500" :
-      signal === "Sell" ? "bg-red-500/15 text-red-500" :
-      "bg-muted text-muted-foreground"
-    )}>
-      {signalLabel}
-    </span>
+    <div className="flex items-center gap-1.5">
+      <span className={cn(
+        "text-[10px] font-bold px-1.5 py-0.5 rounded-md",
+        lean === "bullish" ? "bg-emerald-500/15 text-emerald-500" :
+        lean === "bearish" ? "bg-red-500/15 text-red-500" :
+        "bg-muted text-muted-foreground"
+      )}>
+        {descriptiveLabel}
+      </span>
+      {mode === "pro" && (
+        <span className="text-[9px] text-muted-foreground uppercase tracking-wide tabular-nums">
+          ({rawLabel})
+        </span>
+      )}
+    </div>
   );
 }
 
-function SummaryGauge({ buy, sell, neutral }: { buy: number; sell: number; neutral: number }) {
+function SummaryGauge({ buy, sell, neutral, mode }: { buy: number; sell: number; neutral: number; mode: "beginner" | "pro" }) {
   const { t } = useTranslation();
   const total = buy + sell + neutral || 1;
   const buyPct = (buy / total) * 100;
   const sellPct = (sell / total) * 100;
-  const signal = buy > sell * 1.5 ? t.analyze.signal_buy : sell > buy * 1.5 ? t.analyze.signal_sell : t.analyze.signal_neutral;
-  const signalColor = signal === t.analyze.signal_buy ? "text-emerald-500" : signal === t.analyze.signal_sell ? "text-red-500" : "text-amber-500";
+  const lean = leanFromCounts(buy, sell);
+  const headingLabel =
+    lean === "bullish" ? t.analyze.leaning_bullish :
+    lean === "bearish" ? t.analyze.leaning_bearish :
+    t.analyze.leaning_neutral;
+  const rawLabel =
+    lean === "bullish" ? t.analyze.signal_buy :
+    lean === "bearish" ? t.analyze.signal_sell :
+    t.analyze.signal_neutral;
+  const headingColor =
+    lean === "bullish" ? "text-emerald-500" :
+    lean === "bearish" ? "text-red-500" :
+    "text-amber-500";
 
   return (
     <div className="text-center">
-      <div className={cn("text-2xl font-extrabold mb-1", signalColor)}>{signal}</div>
+      <div className={cn("text-2xl font-extrabold mb-0.5", headingColor)}>{headingLabel}</div>
+      {mode === "pro" && (
+        <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-1">
+          ({rawLabel})
+        </div>
+      )}
       <div className="h-2 rounded-full bg-muted overflow-hidden flex gap-0.5 mb-2">
         <div className="bg-emerald-500 rounded-full transition-all" style={{ width: `${buyPct}%` }} />
         <div className="bg-red-500 rounded-full transition-all" style={{ width: `${sellPct}%` }} />
       </div>
       <div className="flex justify-between text-[10px]">
-        <span className="text-emerald-500 font-semibold">{buy} {t.analyze.signal_buy}</span>
-        <span className="text-muted-foreground">{neutral} {t.analyze.signal_neutral}</span>
-        <span className="text-red-500 font-semibold">{sell} {t.analyze.signal_sell}</span>
+        <span className="text-emerald-500 font-semibold">{buy} {t.analyze.count_bullish}</span>
+        <span className="text-muted-foreground">{neutral} {t.analyze.leaning_neutral}</span>
+        <span className="text-red-500 font-semibold">{sell} {t.analyze.count_bearish}</span>
       </div>
     </div>
   );
 }
 
-function ChangeChip({ value, suffix = "%" }: { value: number; suffix?: string }) {
-  const isUp = value > 0;
-  const isFlat = Math.abs(value) < 0.001;
+function MarketContextSummary({
+  buy,
+  sell,
+  neutral,
+  mode,
+}: {
+  buy: number;
+  sell: number;
+  neutral: number;
+  mode: "beginner" | "pro";
+}) {
+  const { t } = useTranslation();
+  const total = buy + sell + neutral;
+  const lean = leanFromCounts(buy, sell);
+
+  const template =
+    lean === "bullish" ? t.analyze.market_context_bullish :
+    lean === "bearish" ? t.analyze.market_context_bearish :
+    t.analyze.market_context_neutral;
+
+  const sentence = template
+    .replace("{buy}", String(buy))
+    .replace("{sell}", String(sell))
+    .replace("{neutral}", String(neutral))
+    .replace("{total}", String(total));
+
+  const accent =
+    lean === "bullish" ? "from-emerald-500/15 to-emerald-500/5 border-emerald-500/30" :
+    lean === "bearish" ? "from-red-500/15 to-red-500/5 border-red-500/30" :
+    "from-amber-500/15 to-amber-500/5 border-amber-500/30";
+
+  const iconColor =
+    lean === "bullish" ? "text-emerald-500" :
+    lean === "bearish" ? "text-red-500" :
+    "text-amber-500";
+
+  const headingLabel =
+    lean === "bullish" ? t.analyze.leaning_bullish :
+    lean === "bearish" ? t.analyze.leaning_bearish :
+    t.analyze.leaning_neutral;
+
+  const rawLabel =
+    lean === "bullish" ? t.analyze.signal_buy :
+    lean === "bearish" ? t.analyze.signal_sell :
+    t.analyze.signal_neutral;
+
   return (
-    <span className={cn(
-      "text-[10px] font-semibold flex items-center gap-0.5",
-      isFlat ? "text-muted-foreground" : isUp ? "text-emerald-500" : "text-red-500"
-    )}>
-      {isFlat ? <Minus className="w-3 h-3" /> : isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-      {isUp ? "+" : ""}{value.toFixed(2)}{suffix}
-    </span>
+    <div
+      className={cn(
+        "bg-gradient-to-br border rounded-2xl p-4 space-y-2",
+        accent,
+      )}
+      data-testid="card-market-context"
+    >
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-lg bg-background/60 flex items-center justify-center">
+          <Compass className={cn("w-4 h-4", iconColor)} />
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+            {t.analyze.market_context_title}
+          </p>
+          <p className={cn("text-sm font-bold", iconColor)} data-testid="text-market-context-lean">
+            {headingLabel}
+            {mode === "pro" && (
+              <span className="ml-1.5 text-[9px] font-medium text-muted-foreground uppercase tracking-wide">
+                ({rawLabel})
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+      <p className="text-xs text-foreground leading-relaxed" data-testid="text-market-context-summary">
+        {sentence}
+      </p>
+    </div>
   );
 }
 
-export function TechnicalIndicatorsPanel({ instrument }: { instrument: string }) {
+export function TechnicalIndicatorsPanel({
+  instrument,
+  mode = "beginner",
+}: {
+  instrument: string;
+  mode?: "beginner" | "pro";
+}) {
   const { t } = useTranslation();
   const { data: ind, isLoading, isError } = useTechnicalIndicators(instrument);
 
@@ -81,6 +196,13 @@ export function TechnicalIndicatorsPanel({ instrument }: { instrument: string })
 
   return (
     <div className="space-y-3">
+      <MarketContextSummary
+        buy={ind.overallSummary.buy}
+        sell={ind.overallSummary.sell}
+        neutral={ind.overallSummary.neutral}
+        mode={mode}
+      />
+
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">
           <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
@@ -118,15 +240,15 @@ export function TechnicalIndicatorsPanel({ instrument }: { instrument: string })
 
       <div className="bg-card border border-border rounded-2xl p-4">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-3">{t.analyze.signal_summary}</p>
-        <SummaryGauge buy={ind.overallSummary.buy} sell={ind.overallSummary.sell} neutral={ind.overallSummary.neutral} />
+        <SummaryGauge buy={ind.overallSummary.buy} sell={ind.overallSummary.sell} neutral={ind.overallSummary.neutral} mode={mode} />
         <div className="grid grid-cols-2 gap-2 mt-3">
           <div className="bg-muted/50 rounded-xl p-2 text-center">
             <p className="text-[9px] text-muted-foreground mb-1">Oscillator</p>
-            <SummaryGauge buy={ind.oscillatorSummary.buy} sell={ind.oscillatorSummary.sell} neutral={ind.oscillatorSummary.neutral} />
+            <SummaryGauge buy={ind.oscillatorSummary.buy} sell={ind.oscillatorSummary.sell} neutral={ind.oscillatorSummary.neutral} mode={mode} />
           </div>
           <div className="bg-muted/50 rounded-xl p-2 text-center">
             <p className="text-[9px] text-muted-foreground mb-1">Moving Avg</p>
-            <SummaryGauge buy={ind.maSummary.buy} sell={ind.maSummary.sell} neutral={ind.maSummary.neutral} />
+            <SummaryGauge buy={ind.maSummary.buy} sell={ind.maSummary.sell} neutral={ind.maSummary.neutral} mode={mode} />
           </div>
         </div>
       </div>
@@ -143,7 +265,7 @@ export function TechnicalIndicatorsPanel({ instrument }: { instrument: string })
             <span className="text-xs text-muted-foreground">{row.name}</span>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-foreground">{row.value}</span>
-              <SignalBadge signal={row.signal as "Buy" | "Sell" | "Neutral"} />
+              <SignalBadge signal={row.signal as RawSignal} mode={mode} />
             </div>
           </div>
         ))}
@@ -156,11 +278,25 @@ export function TechnicalIndicatorsPanel({ instrument }: { instrument: string })
             <span className="text-xs text-muted-foreground">{ma.type} ({ma.period})</span>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-foreground">{Number(ma.value).toFixed(ma.value > 100 ? 2 : 4)}</span>
-              <SignalBadge signal={ma.signal} />
+              <SignalBadge signal={ma.signal} mode={mode} />
             </div>
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+function ChangeChip({ value, suffix = "%" }: { value: number; suffix?: string }) {
+  const isUp = value > 0;
+  const isFlat = Math.abs(value) < 0.001;
+  return (
+    <span className={cn(
+      "text-[10px] font-semibold flex items-center gap-0.5",
+      isFlat ? "text-muted-foreground" : isUp ? "text-emerald-500" : "text-red-500"
+    )}>
+      {isFlat ? <Minus className="w-3 h-3" /> : isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+      {isUp ? "+" : ""}{value.toFixed(2)}{suffix}
+    </span>
   );
 }
