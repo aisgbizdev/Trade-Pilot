@@ -1,16 +1,49 @@
 import { Link } from "wouter";
-import { TrendingUp, BarChart3, Clock, Shield, ChevronRight, Brain, Lock } from "lucide-react";
+import { TrendingUp, BarChart3, Clock, Shield, ChevronRight, Brain, Lock, ArrowUp, ArrowDown } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
+import { useLiveQuotes, type LiveQuote } from "@/hooks/use-live-quotes";
 
 const ICON_MAP = [Brain, BarChart3, Clock, Shield];
 
-const instruments = [
-  "XAU/USD", "EUR/USD", "GBP/USD", "USD/JPY", "BRENT",
-  "XAG/USD", "NASDAQ", "DJIA", "DXY", "USD/IDR",
+const FALLBACK_INSTRUMENTS = [
   "XAU/USD", "EUR/USD", "GBP/USD", "USD/JPY", "BRENT",
   "XAG/USD", "NASDAQ", "DJIA", "DXY", "USD/IDR",
 ];
+
+function formatPrice(price: number, instrument: string): string {
+  if (instrument === "USD/IDR") return price.toFixed(0);
+  if (instrument === "USD/JPY" || instrument.includes("BRENT") || instrument === "XAU/USD" || instrument === "XAG/USD") {
+    return price.toFixed(2);
+  }
+  if (instrument === "DXY") return price.toFixed(3);
+  return price.toFixed(4);
+}
+
+function TickerItem({ quote }: { quote: LiveQuote }) {
+  const isUp = quote.direction === "up";
+  const colorClass = isUp ? "text-emerald-400" : "text-red-400";
+  const Arrow = isUp ? ArrowUp : ArrowDown;
+  return (
+    <span className="text-xs font-mono text-slate-200 flex items-center gap-1.5">
+      <span className="font-semibold">{quote.instrument}</span>
+      <span className="text-slate-300">{formatPrice(quote.price, quote.instrument)}</span>
+      <span className={`flex items-center gap-0.5 ${colorClass}`}>
+        <Arrow className="w-3 h-3" strokeWidth={3} />
+        {quote.changePercent.replace(/^\+/, "")}
+      </span>
+    </span>
+  );
+}
+
+function FallbackTickerItem({ instrument }: { instrument: string }) {
+  return (
+    <span className="text-xs font-mono text-slate-200 flex items-center gap-1.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+      {instrument}
+    </span>
+  );
+}
 
 const FEATURE_STYLES = [
   { color: "from-blue-500/20 to-violet-500/20", iconColor: "text-blue-400", glow: "group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]" },
@@ -21,6 +54,9 @@ const FEATURE_STYLES = [
 
 export default function LandingPage() {
   const { t, lang } = useTranslation();
+  const { data: liveQuotesData } = useLiveQuotes();
+  const liveQuotes = liveQuotesData?.data ?? [];
+  const hasLive = liveQuotes.length > 0;
 
   const stats = [
     { value: "AI", label: t.landing.stats_model },
@@ -72,12 +108,13 @@ export default function LandingPage() {
 
         <section className="bg-slate-950 overflow-hidden py-2.5 border-b border-white/10">
           <div className="flex gap-6 ticker-scroll whitespace-nowrap w-max">
-            {instruments.map((inst, i) => (
-              <span key={i} className="text-xs font-mono text-slate-200 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
-                {inst}
-              </span>
-            ))}
+            {hasLive
+              ? [...liveQuotes, ...liveQuotes].map((q, i) => (
+                  <TickerItem key={`${q.symbol}-${i}`} quote={q} />
+                ))
+              : [...FALLBACK_INSTRUMENTS, ...FALLBACK_INSTRUMENTS].map((inst, i) => (
+                  <FallbackTickerItem key={`${inst}-${i}`} instrument={inst} />
+                ))}
           </div>
         </section>
 
