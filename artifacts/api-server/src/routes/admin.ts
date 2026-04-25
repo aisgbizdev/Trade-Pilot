@@ -7,6 +7,7 @@ import {
   notifications,
   userTags,
   broadcasts,
+  feedback,
 } from "@workspace/db/schema";
 import { eq, and, count, desc, sql, ilike, or, inArray } from "drizzle-orm";
 import {
@@ -119,6 +120,46 @@ router.get("/admin/analyses", requireAdmin, async (req: AuthRequest, res) => {
 
   res.json({
     analyses: rows,
+    total: Number(total.count),
+    page,
+    limit,
+  });
+});
+
+router.get("/admin/feedback", requireAdmin, async (req: AuthRequest, res) => {
+  // Pagination is clamped the same way as /superadmin/users so a hostile or
+  // typo'd `?page=-5&limit=99999` query can never blow up the database.
+  const rawPage = Number(req.query["page"] ?? 1);
+  const rawLimit = Number(req.query["limit"] ?? 50);
+  const page = Number.isFinite(rawPage) ? Math.max(1, Math.floor(rawPage)) : 1;
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(200, Math.max(1, Math.floor(rawLimit)))
+    : 50;
+  const offset = (page - 1) * limit;
+
+  const rows = await db
+    .select({
+      id: feedback.id,
+      analysisId: feedback.analysisId,
+      instrument: analyses.instrument,
+      userId: feedback.userId,
+      userEmail: users.email,
+      feedbackType: feedback.feedbackType,
+      outcome: feedback.outcome,
+      note: feedback.note,
+      createdAt: feedback.createdAt,
+    })
+    .from(feedback)
+    .innerJoin(users, eq(feedback.userId, users.id))
+    .innerJoin(analyses, eq(feedback.analysisId, analyses.id))
+    .orderBy(desc(feedback.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const [total] = await db.select({ count: count(feedback.id) }).from(feedback);
+
+  res.json({
+    feedback: rows,
     total: Number(total.count),
     page,
     limit,

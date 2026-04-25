@@ -23,16 +23,20 @@ interface SeedUser {
   token: string;
 }
 
+type Role = "user" | "admin" | "super_admin";
+
 const seededUserIds: number[] = [];
 const seededAnalysisIds: number[] = [];
 
 let alice: SeedUser;
 let bob: SeedUser;
+let adminUser: SeedUser;
+let superAdminUser: SeedUser;
 
 let aliceAnalysisId: number;
 let bobAnalysisId: number;
 
-async function createUser(): Promise<SeedUser> {
+async function createUser(role: Role = "user"): Promise<SeedUser> {
   const suffix = randomBytes(6).toString("hex");
   const email = `${EMAIL_PREFIX}-${suffix}@example.test`;
   const passwordHash = await bcrypt.hash("not-used", 4);
@@ -45,6 +49,7 @@ async function createUser(): Promise<SeedUser> {
       displayName: `Feedback Test ${RUN_ID} ${suffix}`,
       securityQuestion: "test?",
       securityAnswerHash,
+      role,
     })
     .returning({ id: users.id });
 
@@ -84,6 +89,8 @@ async function seedAnalysis(userId: number): Promise<number> {
 beforeAll(async () => {
   alice = await createUser();
   bob = await createUser();
+  adminUser = await createUser("admin");
+  superAdminUser = await createUser("super_admin");
   aliceAnalysisId = await seedAnalysis(alice.id);
   bobAnalysisId = await seedAnalysis(bob.id);
 });
@@ -260,5 +267,106 @@ describe("POST /analyses/:id/feedback happy path", () => {
     for (const r of aliceRows) {
       expect(r.userId).toBe(alice.id);
     }
+  });
+});
+
+describe("GET /admin/feedback", () => {
+  it("returns 401 without an Authorization header", async () => {
+    const res = await request(app).get("/api/admin/feedback");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 with a bogus bearer token", async () => {
+    const res = await request(app)
+      .get("/api/admin/feedback")
+      .set("Authorization", "Bearer not-a-real-token");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a regular (role=user) caller", async () => {
+    const res = await request(app)
+      .get("/api/admin/feedback")
+      .set(...authHeader(alice));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 for an admin caller", async () => {
+    const res = await request(app)
+      .get("/api/admin/feedback")
+      .set(...authHeader(adminUser));
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.feedback)).toBe(true);
+    expect(typeof res.body.total).toBe("number");
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(50);
+  });
+
+  it("returns 200 for a super_admin caller", async () => {
+    const res = await request(app)
+      .get("/api/admin/feedback")
+      .set(...authHeader(superAdminUser));
+    expect(res.status).toBe(200);
+  });
+
+  it("includes the user email and instrument joined onto each feedback row", async () => {
+    const res = await request(app)
+      .get("/api/admin/feedback?limit=200")
+      .set(...authHeader(adminUser));
+    expect(res.status).toBe(200);
+
+    // The earlier "happy path" tests already created feedback for our two
+    // seeded analyses. Find ours and confirm the join columns are present.
+    const ours = res.body.feedback.filter(
+      (f: { analysisId: number }) =>
+        f.analysisId === aliceAnalysisId || f.analysisId === bobAnalysisId,
+    );
+    expect(ours.length).toBeGreaterThanOrEqual(2);
+    for (const row of ours) {
+      expect(typeof row.userEmail).toBe("string");
+      expect(row.userEmail).toMatch(/@example\.test$/);
+      expect(typeof row.instrument).toBe("string");
+      expect(row.instrument.startsWith(INSTRUMENT_PREFIX)).toBe(true);
+    }
+  });
+
+  it("orders rows by createdAt DESC (most recent first)", async () => {
+    const res = await request(app)
+      .get("/api/admin/feedback?limit=200")
+      .set(...authHeader(adminUser));
+    expect(res.status).toBe(200);
+    const ts = res.body.feedback.map((f: { createdAt: string }) =>
+      new Date(f.createdAt).getTime(),
+    );
+    for (let i = 1; i < ts.length; i++) {
+      expect(ts[i - 1]).toBeGreaterThanOrEqual(ts[i]);
+    }
+  });
+
+  it("clamps page and limit just like /superadmin/users (page>=1, limit 1..200)", async () => {
+    const negPage = await request(app)
+      .get("/api/admin/feedback?page=-5&limit=20")
+      .set(...authHeader(adminUser));
+    expect(negPage.status).toBe(200);
+    expect(negPage.body.page).toBe(1);
+    expect(negPage.body.limit).toBe(20);
+
+    const zeroLimit = await request(app)
+      .get("/api/admin/feedback?page=1&limit=0")
+      .set(...authHeader(adminUser));
+    expect(zeroLimit.status).toBe(200);
+    expect(zeroLimit.body.limit).toBe(1);
+
+    const hugeLimit = await request(app)
+      .get("/api/admin/feedback?page=1&limit=999999")
+      .set(...authHeader(adminUser));
+    expect(hugeLimit.status).toBe(200);
+    expect(hugeLimit.body.limit).toBe(200);
+
+    const garbage = await request(app)
+      .get("/api/admin/feedback?page=abc&limit=xyz")
+      .set(...authHeader(adminUser));
+    expect(garbage.status).toBe(200);
+    expect(garbage.body.page).toBe(1);
+    expect(garbage.body.limit).toBe(50);
   });
 });
