@@ -61,7 +61,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center">
+      <div className="w-full max-w-md flex flex-col flex-1">
       <div className="flex justify-end px-4 pt-4">
         <LanguageToggle />
       </div>
@@ -234,6 +235,7 @@ export default function RegisterPage() {
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

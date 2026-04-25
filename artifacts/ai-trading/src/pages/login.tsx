@@ -60,7 +60,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center">
+      <div className="w-full max-w-md flex flex-col flex-1">
       <div className="flex justify-end px-4 pt-4">
         <LanguageToggle />
       </div>
@@ -199,6 +200,7 @@ export default function LoginPage() {
             </span>
           </Link>
         </div>
+      </div>
       </div>
     </div>
   );
