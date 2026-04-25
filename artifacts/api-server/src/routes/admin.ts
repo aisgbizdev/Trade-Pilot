@@ -467,6 +467,19 @@ router.post("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res
     return;
   }
 
+  if (role !== undefined && !["user", "admin", "super_admin"].includes(role)) {
+    res.status(400).json({ error: "Role tidak valid" });
+    return;
+  }
+
+  if (
+    selectedMode !== undefined &&
+    !["beginner", "pro"].includes(selectedMode)
+  ) {
+    res.status(400).json({ error: "Mode tidak valid" });
+    return;
+  }
+
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
