@@ -92,6 +92,40 @@ function Separator() {
   return <span className="text-amber-500/40 text-xs select-none">|</span>;
 }
 
+function LiveQuoteBadge() {
+  return (
+    <span
+      className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-gradient-to-r from-amber-400 to-yellow-300 shadow-[0_0_14px_rgba(245,197,24,0.45)] shrink-0"
+      data-testid="ticker-live-quote-badge"
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-80" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-600" />
+      </span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-black">
+        Live Quote
+      </span>
+    </span>
+  );
+}
+
+function BreakingNewsBadge() {
+  return (
+    <span
+      className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-gradient-to-r from-red-600 to-red-500 shadow-[0_0_14px_rgba(220,38,38,0.55)] shrink-0"
+      data-testid="ticker-breaking-news-badge"
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-80" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+      </span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white">
+        Breaking News
+      </span>
+    </span>
+  );
+}
+
 export function ContinuousTicker({ newsLimit = 3 }: { newsLimit?: number }) {
   const { t } = useTranslation();
   const { data: liveQuotesData } = useLiveQuotes();
@@ -106,6 +140,7 @@ export function ContinuousTicker({ newsLimit = 3 }: { newsLimit?: number }) {
   const items: React.ReactNode[] = [];
 
   if (hasLive) {
+    items.push(<LiveQuoteBadge key="badge-live" />);
     liveQuotes.forEach((q, i) => {
       items.push(<PriceItem key={`p-${q.symbol}-${i}`} quote={q} />);
     });
@@ -117,6 +152,7 @@ export function ContinuousTicker({ newsLimit = 3 }: { newsLimit?: number }) {
 
   if (hasNews) {
     items.push(<Separator key="sep-1" />);
+    items.push(<BreakingNewsBadge key="badge-breaking" />);
     articles.forEach((a, i) => {
       items.push(<NewsItem key={`n-${a.id}-${i}`} article={a} />);
     });
