@@ -23,16 +23,42 @@ export function isSupportedIndicatorTimeframe(tf: string): tf is IndicatorTimefr
 let cache: { data: any; fetchedAt: number } | null = null;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
-async function fetchAllHistorical(): Promise<any[]> {
+async function fetchAllHistorical(): Promise<{ data: any[]; fetchedAt: number }> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL) {
-    return cache.data;
+    return { data: cache.data, fetchedAt: cache.fetchedAt };
   }
   const dateFrom = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const res = await fetch(`${HISTORICAL_API}?dateFrom=${dateFrom}`);
   if (!res.ok) throw new Error("Failed to fetch historical data");
   const json = (await res.json()) as { data: any };
   cache = { data: json.data, fetchedAt: Date.now() };
-  return json.data;
+  return { data: cache.data, fetchedAt: cache.fetchedAt };
+}
+
+// Per-(instrument, timeframe) cache for the resampled candles + computed
+// indicators. Keyed by the upstream `fetchedAt` so that whenever the underlying
+// daily-candle cache refreshes, all derived indicator entries are implicitly
+// invalidated (we never serve indicators computed from older raw data).
+type CachedIndicators = {
+  indicators: TechnicalIndicators;
+  computedAt: number;
+  sourceFetchedAt: number;
+};
+const indicatorsCache = new Map<string, CachedIndicators>();
+// Short TTL keeps the toggle feeling instant while bounding staleness well
+// below the 1-hour upstream refresh cycle.
+const INDICATORS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+// Public so the route can derive a matching Cache-Control max-age.
+export const INDICATORS_CACHE_TTL_SECONDS = Math.floor(INDICATORS_CACHE_TTL / 1000);
+
+function indicatorsCacheKey(instrument: string, timeframe: IndicatorTimeframe): string {
+  return `${instrument}|${timeframe}`;
+}
+
+// Exposed for tests / manual cache busting.
+export function clearIndicatorsCache(): void {
+  indicatorsCache.clear();
+  cache = null;
 }
 
 // Aggregate daily candles into ISO-week (Mon–Sun) candles. Each weekly bar uses
@@ -83,7 +109,21 @@ export async function getIndicators(
   const apiSymbol = SYMBOL_MAP[instrument];
   if (!apiSymbol) return null;
 
-  const allData = await fetchAllHistorical();
+  const { data: allData, fetchedAt: sourceFetchedAt } = await fetchAllHistorical();
+
+  // Serve from the per-(instrument, timeframe) cache when fresh AND derived
+  // from the same upstream snapshot. The sourceFetchedAt check guarantees we
+  // never return indicators computed from raw data that has since refreshed.
+  const cacheKey = indicatorsCacheKey(instrument, timeframe);
+  const cached = indicatorsCache.get(cacheKey);
+  if (
+    cached &&
+    cached.sourceFetchedAt === sourceFetchedAt &&
+    Date.now() - cached.computedAt < INDICATORS_CACHE_TTL
+  ) {
+    return cached.indicators;
+  }
+
   const symbolData = allData.find((s: any) => s.symbol === apiSymbol);
   if (!symbolData || !symbolData.data?.length) return null;
 
@@ -100,7 +140,13 @@ export async function getIndicators(
 
   if (!candles.length) return null;
 
-  return calculateIndicators(instrument, candles);
+  const indicators = calculateIndicators(instrument, candles);
+  indicatorsCache.set(cacheKey, {
+    indicators,
+    computedAt: Date.now(),
+    sourceFetchedAt,
+  });
+  return indicators;
 }
 
 export function formatIndicatorsForPrompt(

@@ -3,6 +3,7 @@ import {
   getIndicators,
   isSupportedIndicatorTimeframe,
   SUPPORTED_INDICATOR_TIMEFRAMES,
+  INDICATORS_CACHE_TTL_SECONDS,
 } from "../lib/historical.js";
 
 const router = Router();
@@ -26,6 +27,13 @@ router.get("/historical/indicators", async (req, res) => {
     if (!indicators) {
       return res.status(404).json({ error: "Data historis tidak tersedia untuk instrumen ini" });
     }
+    // Mirror the server-side TTL so browsers/proxies can also serve fast
+    // toggles between 1D/1W from their own cache. `private` because per-user
+    // auth contexts shouldn't be shared across users via shared caches.
+    res.setHeader(
+      "Cache-Control",
+      `private, max-age=${INDICATORS_CACHE_TTL_SECONDS}`,
+    );
     return res.json({ status: "success", timeframe: tfRaw, indicators });
   } catch (err: any) {
     return res.status(502).json({ error: "Gagal mengambil data historis", detail: err.message });
