@@ -125,7 +125,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
 });
 
 const loginSchema = z.object({
-  email: z.string().email("Format email tidak valid"),
+  email: z.string().min(1, "Username atau email wajib diisi"),
   password: z.string().min(1, "Password wajib diisi"),
   rememberMe: z.boolean().optional(),
 });

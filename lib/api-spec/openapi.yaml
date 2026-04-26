@@ -1258,7 +1258,7 @@ components:
       properties:
         email:
           type: string
-          format: email
+          description: Username or email used to identify the account
         password:
           type: string
         rememberMe:

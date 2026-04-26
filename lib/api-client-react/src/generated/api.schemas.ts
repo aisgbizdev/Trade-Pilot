@@ -110,6 +110,7 @@ export interface RegisterBody {
 }
 
 export interface LoginBody {
+  /** Username or email used to identify the account */
   email: string;
   password: string;
   rememberMe?: boolean;

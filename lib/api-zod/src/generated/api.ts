@@ -40,7 +40,9 @@ export const RegisterBody = zod.object({
 export const loginBodyRememberMeDefault = false;
 
 export const LoginBody = zod.object({
-  email: zod.string().email(),
+  email: zod
+    .string()
+    .describe("Username or email used to identify the account"),
   password: zod.string(),
   rememberMe: zod.boolean().default(loginBodyRememberMeDefault),
 });
