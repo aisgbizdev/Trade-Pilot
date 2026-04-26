@@ -33,6 +33,29 @@ function profileHandlers(opts: { updatedUser?: typeof TEST_USER }): FetchHandler
       if (!url.includes("/api/auth/profile")) return null;
       return jsonResponse(opts.updatedUser ?? TEST_USER);
     },
+    // Profile renders inside <Layout>, which mounts the
+    // <ContinuousTicker> widget — that ticker fetches /api/quotes/live
+    // and /api/news on mount. Stub both with empty payloads so the
+    // strict harness does not flag them as unhandled.
+    (url) => {
+      if (url.includes("/api/quotes/live")) {
+        return jsonResponse({
+          status: "ok",
+          updatedAt: new Date().toISOString(),
+          serverTime: "00:00:00",
+          data: [],
+        });
+      }
+      return null;
+    },
+    (url) => {
+      // The bell-poll handler in test-helpers matches `unreadOnly=true`
+      // first; this fall-through covers the news ticker only.
+      if (url.includes("/api/news")) {
+        return jsonResponse({ articles: [], total: 0 });
+      }
+      return null;
+    },
   ];
 }
 
@@ -56,8 +79,14 @@ describe("ProfilePage: happy-path render", () => {
       </Wrapper>,
     );
 
-    const displayName = await screen.findByTestId("text-display-name");
-    expect(displayName.textContent).toBe(TEST_USER.displayName);
+    // The identity text mounts immediately as empty `<span>`s while
+    // `/api/auth/me` is in flight; wait until the resolved name +
+    // email actually paint.
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("text-display-name").textContent,
+      ).toBe(TEST_USER.displayName);
+    });
 
     expect(screen.getByTestId("text-email").textContent).toBe(TEST_USER.email);
 
@@ -122,7 +151,13 @@ describe("ProfilePage: user actions", () => {
       </Wrapper>,
     );
 
-    await screen.findByTestId("text-display-name");
+    // Wait for `/api/auth/me` to settle (so the edit button reads the
+    // user's current display name, not an empty string).
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("text-display-name").textContent,
+      ).toBe(TEST_USER.displayName);
+    });
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-edit-name"));
@@ -131,7 +166,9 @@ describe("ProfilePage: user actions", () => {
     const input = (await screen.findByTestId(
       "input-display-name",
     )) as HTMLInputElement;
-    expect(input.value).toBe(TEST_USER.displayName);
+    await waitFor(() => {
+      expect(input.value).toBe(TEST_USER.displayName);
+    });
 
     await act(async () => {
       fireEvent.change(input, { target: { value: NEW_NAME } });

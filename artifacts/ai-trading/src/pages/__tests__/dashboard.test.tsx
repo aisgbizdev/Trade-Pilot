@@ -158,9 +158,14 @@ describe("DashboardPage: happy-path render", () => {
       </Wrapper>,
     );
 
-    // Welcome strip pulls the display name from `/api/auth/me`.
-    const displayName = await screen.findByTestId("text-display-name");
-    expect(displayName.textContent).toBe(TEST_USER.displayName);
+    // Welcome strip pulls the display name from `/api/auth/me`. The
+    // `<h1>` mounts immediately as an empty element while the auth
+    // query is in flight, so wait until the name actually paints
+    // before asserting.
+    await waitFor(async () => {
+      const node = await screen.findByTestId("text-display-name");
+      expect(node.textContent).toBe(TEST_USER.displayName);
+    });
 
     // The "new analysis" CTA renders unconditionally.
     expect(screen.getByTestId("button-new-analysis")).toBeInTheDocument();
