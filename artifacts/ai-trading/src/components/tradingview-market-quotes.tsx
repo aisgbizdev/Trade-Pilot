@@ -61,7 +61,13 @@ export function TradingViewMarketQuotes({
       showSymbolLogo: true,
       isTransparent: true,
       colorTheme,
-      locale: widgetLang === "id" ? "id_ID" : "en",
+      // TradingView's external embed widgets accept ISO 639-1 short codes
+      // (e.g. "en", "id", "ja"); only languages with regional variants use
+      // the `xx_XX` form (e.g. "zh_CN", "zh_TW"). Indonesian is just "id" —
+      // passing "id_ID" silently falls back to English in the rendered
+      // table headers/tooltips. Default English locale stays as "en".
+      // Reference: https://www.tradingview.com/widget-docs/widgets/tickers/market-quotes/
+      locale: widgetLang === "id" ? "id" : "en",
     };
 
     hostEl.innerHTML = "";
