@@ -76,6 +76,7 @@ Aturan output:
 - failureConditions HARUS berisi minimum 2 kondisi konkret (pisahkan dengan "; " atau bullet "• ") yang membuat analisis batal
 - whyReason HARUS menjelaskan KENAPA confidence tidak lebih tinggi (faktor ketidakpastian)
 - Gunakan bahasa sederhana yang mudah dipahami pemula
+- WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Untuk timeframe 1W...") di mainScenario, alternativeScenario, opportunity, dan risk — supaya pengguna tahu sinyal ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
 
 Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys berikut:
 {
@@ -108,6 +109,7 @@ Aturan output:
 - invalidationConditions HARUS berisi minimum 2 kondisi konkret (pisahkan dengan "; " atau bullet "• ") yang membuat tesis batal
 - uncertaintyNotes HARUS menjelaskan KENAPA confidence tidak lebih tinggi (faktor ketidakpastian utama)
 - Sertakan konteks makro dan faktor fundamental relevan
+- WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Bias bullish pada 1W...") di baseCase, bullishScenario, bearishScenario, opportunity, dan risk — supaya pengguna tahu bias ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
 
 Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys berikut:
 {
@@ -158,6 +160,7 @@ export async function generateAnalysis(
   const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
   const userMessage = [
     `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}`,
+    `PENTING: semua narasi (skenario, peluang, risiko, bias arah) HARUS menyebut timeframe "${timeframe}" secara eksplisit, bukan hanya kata "uptrend"/"downtrend" saja.`,
     indicatorContext ? indicatorContext : "",
     cleanNotes ? `\nCatatan tambahan dari trader: ${cleanNotes}` : "",
   ].filter(Boolean).join("\n");

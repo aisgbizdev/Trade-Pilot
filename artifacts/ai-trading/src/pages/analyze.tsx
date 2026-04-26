@@ -23,7 +23,12 @@ function formatPrice(price: number, instrument: string): string {
 
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
-const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"];
+const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"] as const;
+const INTRADAY_TIMEFRAMES = new Set(["1m", "5m", "15m", "1h", "4h"]);
+type IndicatorTf = "1D" | "1W";
+function isIndicatorTf(tf: string): tf is IndicatorTf {
+  return tf === "1D" || tf === "1W";
+}
 
 function LivePriceChip({ instrument }: { instrument: string }) {
   const { t } = useTranslation();
@@ -60,7 +65,7 @@ export default function AnalyzePage() {
   const [activeTab, setActiveTab] = useState<"futures" | "forex">("futures");
   const [selectedInstrument, setSelectedInstrument] = useState("");
   const [customInstrument, setCustomInstrument] = useState("");
-  const [selectedTimeframe, setSelectedTimeframe] = useState("");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1D");
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
@@ -243,28 +248,41 @@ export default function AnalyzePage() {
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_timeframe}</h2>
             <div className="flex flex-wrap gap-2">
-              {TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setSelectedTimeframe(tf)}
-                  data-testid={`button-timeframe-${tf}`}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium rounded-lg border transition-all",
-                    selectedTimeframe === tf
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:border-primary/50"
-                  )}
-                >
-                  {tf}
-                </button>
-              ))}
+              {TIMEFRAMES.map((tf) => {
+                const isIntraday = INTRADAY_TIMEFRAMES.has(tf);
+                const disabled = isIntraday;
+                const tooltip = isIntraday ? t.analyze.timeframe_intraday_unavailable : undefined;
+                return (
+                  <button
+                    key={tf}
+                    onClick={() => { if (!disabled) setSelectedTimeframe(tf); }}
+                    disabled={disabled}
+                    title={tooltip}
+                    data-testid={`button-timeframe-${tf}`}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium rounded-lg border transition-all",
+                      disabled
+                        ? "bg-muted text-muted-foreground border-border opacity-50 cursor-not-allowed"
+                        : selectedTimeframe === tf
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:border-primary/50"
+                    )}
+                  >
+                    {tf}
+                  </button>
+                );
+              })}
             </div>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              {t.analyze.timeframe_intraday_unavailable}
+            </p>
           </div>
 
-          {finalInstrument && (
+          {finalInstrument && isIndicatorTf(selectedTimeframe) && (
             <TechnicalIndicatorsPanel
               instrument={finalInstrument}
               mode={user?.selectedMode === "pro" ? "pro" : "beginner"}
+              timeframe={selectedTimeframe}
             />
           )}
 

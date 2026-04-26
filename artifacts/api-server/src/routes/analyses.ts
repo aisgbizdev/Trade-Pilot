@@ -4,7 +4,7 @@ import { analyses, feedback, notifications, users } from "@workspace/db/schema";
 import { eq, and, desc, count, sql, gte, lte, ilike } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { generateAnalysis, getValidUntil, type BeginnerAIOutput, type ProAIOutput } from "../lib/openai";
-import { getIndicators, formatIndicatorsForPrompt } from "../lib/historical";
+import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
 import { getRelevantNews, formatNewsForPrompt } from "../lib/news";
 import { getRelevantCalendar, formatCalendarForPrompt } from "../lib/calendar";
 import { notificationsEmitter } from "../lib/notifications-emitter";
@@ -253,11 +253,16 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
 
   // External context fetches are pure HTTP — do them outside any transaction.
+  // Indicators only support daily/weekly today; skip them for intraday timeframes
+  // so the AI is not fed stale daily data labelled as e.g. "1h".
+  const indicatorTf = isSupportedIndicatorTimeframe(timeframe) ? timeframe : null;
   const contextParts: string[] = [];
   await Promise.allSettled([
-    getIndicators(instrument).then((ind) => {
-      if (ind) contextParts.push(formatIndicatorsForPrompt(ind));
-    }),
+    indicatorTf
+      ? getIndicators(instrument, indicatorTf).then((ind) => {
+          if (ind) contextParts.push(formatIndicatorsForPrompt(ind, indicatorTf));
+        })
+      : Promise.resolve(),
     getRelevantNews(instrument).then((news) => {
       if (news.length) contextParts.push(formatNewsForPrompt(news, instrument));
     }),

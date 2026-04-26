@@ -13,6 +13,13 @@ const SYMBOL_MAP: Record<string, string> = {
   "HSI": "HSI Daily",
 };
 
+export type IndicatorTimeframe = "1D" | "1W";
+export const SUPPORTED_INDICATOR_TIMEFRAMES: IndicatorTimeframe[] = ["1D", "1W"];
+
+export function isSupportedIndicatorTimeframe(tf: string): tf is IndicatorTimeframe {
+  return (SUPPORTED_INDICATOR_TIMEFRAMES as string[]).includes(tf);
+}
+
 let cache: { data: any; fetchedAt: number } | null = null;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
@@ -28,7 +35,51 @@ async function fetchAllHistorical(): Promise<any[]> {
   return json.data;
 }
 
-export async function getIndicators(instrument: string): Promise<TechnicalIndicators | null> {
+// Aggregate daily candles into ISO-week (Mon–Sun) candles. Each weekly bar uses
+// the first day's open, highest high, lowest low, and last day's close.
+function resampleDailyToWeekly(daily: Candle[]): Candle[] {
+  if (daily.length === 0) return [];
+  const sorted = [...daily].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+
+  const weekKeyOf = (iso: string): string => {
+    const d = new Date(iso);
+    // Find Monday of this date's ISO week (UTC to avoid TZ drift).
+    const day = d.getUTCDay(); // 0=Sun..6=Sat
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(Date.UTC(
+      d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diffToMonday,
+    ));
+    return monday.toISOString().slice(0, 10);
+  };
+
+  const buckets = new Map<string, Candle[]>();
+  for (const c of sorted) {
+    const key = weekKeyOf(c.date);
+    const arr = buckets.get(key) ?? [];
+    arr.push(c);
+    buckets.set(key, arr);
+  }
+
+  const weeks: Candle[] = [];
+  for (const key of [...buckets.keys()].sort()) {
+    const group = buckets.get(key)!;
+    weeks.push({
+      date: group[group.length - 1].date,
+      open: group[0].open,
+      high: Math.max(...group.map((c) => c.high)),
+      low: Math.min(...group.map((c) => c.low)),
+      close: group[group.length - 1].close,
+    });
+  }
+  return weeks;
+}
+
+export async function getIndicators(
+  instrument: string,
+  timeframe: IndicatorTimeframe = "1D",
+): Promise<TechnicalIndicators | null> {
   const apiSymbol = SYMBOL_MAP[instrument];
   if (!apiSymbol) return null;
 
@@ -36,7 +87,7 @@ export async function getIndicators(instrument: string): Promise<TechnicalIndica
   const symbolData = allData.find((s: any) => s.symbol === apiSymbol);
   if (!symbolData || !symbolData.data?.length) return null;
 
-  const candles: Candle[] = symbolData.data.map((d: any) => ({
+  const dailyCandles: Candle[] = symbolData.data.map((d: any) => ({
     date: d.date,
     open: d.open,
     high: d.high,
@@ -44,10 +95,18 @@ export async function getIndicators(instrument: string): Promise<TechnicalIndica
     close: d.close,
   }));
 
+  const candles =
+    timeframe === "1W" ? resampleDailyToWeekly(dailyCandles) : dailyCandles;
+
+  if (!candles.length) return null;
+
   return calculateIndicators(instrument, candles);
 }
 
-export function formatIndicatorsForPrompt(ind: TechnicalIndicators): string {
+export function formatIndicatorsForPrompt(
+  ind: TechnicalIndicators,
+  timeframe: IndicatorTimeframe = "1D",
+): string {
   const r = (n: number, decimals = 2) => n.toFixed(decimals);
   const sign = (n: number) => (n >= 0 ? "+" : "") + r(n);
 
@@ -56,23 +115,26 @@ export function formatIndicatorsForPrompt(ind: TechnicalIndicators): string {
     .map((m) => `  ${m.type}(${m.period}): ${r(m.value, 4)} → ${m.signal}`)
     .join("\n");
 
-  return `
-=== DATA TEKNIKAL (${ind.symbol}, berdasarkan ${ind.dataPoints} candle harian) ===
-Harga terakhir: ${r(ind.lastClose, 4)} (${ind.lastDate})
-Perubahan: 1H=${sign(ind.change1dPct)}% | 5H=${sign(ind.change5dPct)}% | 20H=${sign(ind.change20dPct)}%
+  const candleUnit = timeframe === "1W" ? "candle mingguan" : "candle harian";
+  const periodLabel = timeframe === "1W" ? "minggu" : "hari";
 
-RINGKASAN SINYAL:
+  return `
+=== DATA TEKNIKAL (${ind.symbol}, timeframe ${timeframe}, berdasarkan ${ind.dataPoints} ${candleUnit}) ===
+Harga terakhir: ${r(ind.lastClose, 4)} (${ind.lastDate})
+Perubahan (per ${periodLabel}): 1=${sign(ind.change1dPct)}% | 5=${sign(ind.change5dPct)}% | 20=${sign(ind.change20dPct)}%
+
+RINGKASAN SINYAL (timeframe ${timeframe}):
   Oscillator: ${ind.oscillatorSummary.buy} Beli / ${ind.oscillatorSummary.sell} Jual / ${ind.oscillatorSummary.neutral} Netral
   Moving Average: ${ind.maSummary.buy} Beli / ${ind.maSummary.sell} Jual / ${ind.maSummary.neutral} Netral
   KESELURUHAN: ${ind.overallSummary.buy} Beli / ${ind.overallSummary.sell} Jual / ${ind.overallSummary.neutral} Netral → ${ind.overallSummary.signal.toUpperCase()}
 
-OSCILLATOR:
+OSCILLATOR (timeframe ${timeframe}):
   RSI(14): ${r(ind.rsi14.value)} → ${ind.rsi14.signal}
   MACD(12,26,9): garis=${r(ind.macd.macd, 4)} signal=${r(ind.macd.signal, 4)} histogram=${r(ind.macd.histogram, 4)} → ${ind.macd.action}
   Stochastic(14,3,3): %K=${r(ind.stochastic.k)} %D=${r(ind.stochastic.d)} → ${ind.stochastic.signal}
   Bollinger Bands(20,2): upper=${r(ind.bollinger.upper, 4)} mid=${r(ind.bollinger.middle, 4)} lower=${r(ind.bollinger.lower, 4)} → ${ind.bollinger.signal}
 
-MOVING AVERAGES:
+MOVING AVERAGES (timeframe ${timeframe}):
 ${maLines}
 ===`;
 }

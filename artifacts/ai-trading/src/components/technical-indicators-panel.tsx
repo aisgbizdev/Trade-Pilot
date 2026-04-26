@@ -1,4 +1,4 @@
-import { useTechnicalIndicators } from "@/hooks/use-technical-indicators";
+import { useTechnicalIndicators, type IndicatorTimeframe } from "@/hooks/use-technical-indicators";
 import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -171,12 +171,14 @@ function MarketContextSummary({
 export function TechnicalIndicatorsPanel({
   instrument,
   mode = "beginner",
+  timeframe = "1D",
 }: {
   instrument: string;
   mode?: "beginner" | "pro";
+  timeframe?: IndicatorTimeframe;
 }) {
   const { t } = useTranslation();
-  const { data: ind, isLoading, isError } = useTechnicalIndicators(instrument);
+  const { data: ind, isLoading, isError } = useTechnicalIndicators(instrument, timeframe);
 
   if (isLoading) return (
     <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
@@ -207,9 +209,13 @@ export function TechnicalIndicatorsPanel({
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">
           <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
         </div>
-        <h3 className="text-sm font-bold text-foreground">{t.analyze.technical_indicators}</h3>
+        <h3 className="text-sm font-bold text-foreground" data-testid="text-indicator-header">
+          {t.analyze.technical_indicators} — {timeframe}
+        </h3>
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground">{t.analyze.daily_data} · {ind.dataPoints} {t.analyze.candles}</span>
+          <span className="text-[10px] text-muted-foreground">
+            {timeframe === "1W" ? t.analyze.weekly_data : t.analyze.daily_data} · {ind.dataPoints} {t.analyze.candles}
+          </span>
           <a
             href="https://newsmaker.id"
             target="_blank"
@@ -229,11 +235,11 @@ export function TechnicalIndicatorsPanel({
           <div className="text-sm font-bold text-foreground tabular-nums">{Number(ind.lastClose).toFixed(ind.lastClose > 100 ? 2 : 4)}</div>
         </div>
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">{t.analyze.change_1d}</div>
+          <div className="text-[10px] text-muted-foreground mb-1">{timeframe === "1W" ? t.analyze.change_1w : t.analyze.change_1d}</div>
           <ChangeChip value={ind.change1dPct} />
         </div>
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">{t.analyze.change_20d}</div>
+          <div className="text-[10px] text-muted-foreground mb-1">{timeframe === "1W" ? t.analyze.change_20w : t.analyze.change_20d}</div>
           <ChangeChip value={ind.change20dPct} />
         </div>
       </div>

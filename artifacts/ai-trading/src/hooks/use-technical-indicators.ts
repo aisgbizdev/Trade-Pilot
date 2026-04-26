@@ -34,8 +34,16 @@ export interface TechnicalIndicators {
   overallSummary: { buy: number; sell: number; neutral: number; signal: "Buy" | "Sell" | "Neutral" };
 }
 
-async function fetchIndicators(instrument: string): Promise<TechnicalIndicators> {
-  const res = await fetch(`/api/historical/indicators?instrument=${encodeURIComponent(instrument)}`);
+export type IndicatorTimeframe = "1D" | "1W";
+
+async function fetchIndicators(
+  instrument: string,
+  timeframe: IndicatorTimeframe,
+): Promise<TechnicalIndicators> {
+  const url =
+    `/api/historical/indicators?instrument=${encodeURIComponent(instrument)}` +
+    `&timeframe=${encodeURIComponent(timeframe)}`;
+  const res = await fetch(url);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error ?? "Gagal mengambil data indikator");
@@ -44,10 +52,13 @@ async function fetchIndicators(instrument: string): Promise<TechnicalIndicators>
   return data.indicators;
 }
 
-export function useTechnicalIndicators(instrument: string | undefined) {
+export function useTechnicalIndicators(
+  instrument: string | undefined,
+  timeframe: IndicatorTimeframe = "1D",
+) {
   return useQuery({
-    queryKey: ["technical-indicators", instrument],
-    queryFn: () => fetchIndicators(instrument!),
+    queryKey: ["technical-indicators", instrument, timeframe],
+    queryFn: () => fetchIndicators(instrument!, timeframe),
     enabled: !!instrument,
     staleTime: 60 * 60 * 1000,
     retry: false,

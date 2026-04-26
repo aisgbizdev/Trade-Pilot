@@ -164,7 +164,7 @@ function BiasIcon({ bias, className }: { bias: BiasKey; className?: string }) {
   return <Minus className={className} />;
 }
 
-function BiasIndicator({ bias, mode }: { bias: BiasKey; mode: string }) {
+function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string; timeframe: string }) {
   const { t } = useTranslation();
   const idx = biasIndex(bias);
   const color = biasColor(bias);
@@ -176,12 +176,21 @@ function BiasIndicator({ bias, mode }: { bias: BiasKey; mode: string }) {
           <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
             {t.analysis_detail.bias_title}
           </p>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <BiasIcon bias={bias} className={cn("w-5 h-5", color)} />
             <span className={cn("text-lg font-bold", color)} data-testid="text-bias-label">
               {biasLabel(bias, mode, t)}
             </span>
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground uppercase tracking-wide"
+              data-testid="text-bias-timeframe"
+            >
+              {timeframe}
+            </span>
           </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {t.analysis_detail.bias_for_timeframe.replace("{timeframe}", timeframe)}
+          </p>
         </div>
       </div>
       <div className="flex gap-1" data-testid="bias-gauge">
@@ -438,7 +447,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
         {/* PRIMARY METRICS: Bias + Confidence + Risk */}
         <Card className="p-4 space-y-4" data-testid="card-primary-metrics">
-          {bias && <BiasIndicator bias={bias} mode={analysis.mode} />}
+          {bias && <BiasIndicator bias={bias} mode={analysis.mode} timeframe={analysis.timeframe} />}
 
           {bias && <div className="border-t border-border" />}
 

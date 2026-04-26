@@ -1,19 +1,32 @@
 import { Router } from "express";
-import { getIndicators } from "../lib/historical.js";
+import {
+  getIndicators,
+  isSupportedIndicatorTimeframe,
+  SUPPORTED_INDICATOR_TIMEFRAMES,
+} from "../lib/historical.js";
 
 const router = Router();
 
 router.get("/historical/indicators", async (req, res) => {
-  const { instrument } = req.query;
+  const { instrument, timeframe } = req.query;
   if (!instrument || typeof instrument !== "string") {
     return res.status(400).json({ error: "Parameter instrument wajib diisi" });
   }
+
+  const tfRaw = (typeof timeframe === "string" && timeframe.length > 0) ? timeframe : "1D";
+  if (!isSupportedIndicatorTimeframe(tfRaw)) {
+    return res.status(400).json({
+      error: `Timeframe "${tfRaw}" belum didukung untuk indikator. Hanya tersedia: ${SUPPORTED_INDICATOR_TIMEFRAMES.join(", ")}. Data intraday belum tersedia.`,
+      supportedTimeframes: SUPPORTED_INDICATOR_TIMEFRAMES,
+    });
+  }
+
   try {
-    const indicators = await getIndicators(instrument);
+    const indicators = await getIndicators(instrument, tfRaw);
     if (!indicators) {
       return res.status(404).json({ error: "Data historis tidak tersedia untuk instrumen ini" });
     }
-    return res.json({ status: "success", indicators });
+    return res.json({ status: "success", timeframe: tfRaw, indicators });
   } catch (err: any) {
     return res.status(502).json({ error: "Gagal mengambil data historis", detail: err.message });
   }
