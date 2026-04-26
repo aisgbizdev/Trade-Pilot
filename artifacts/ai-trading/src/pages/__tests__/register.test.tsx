@@ -12,6 +12,63 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import * as React from "react";
+
+// Replace the Radix-based Select with a plain native <select> for the
+// duration of this test file. Radix Select renders to a portal,
+// listens for pointer events with the `[data-pointer-events: none]`
+// guard, and is essentially impossible to drive deterministically in
+// jsdom. The component under test only depends on the public
+// `onValueChange(value: string)` contract, which a native <select>
+// satisfies.
+vi.mock("@/components/ui/select", () => {
+  type Ctx = { onValueChange?: (v: string) => void };
+  const SelectCtx = React.createContext<Ctx>({});
+  return {
+    Select: ({
+      children,
+      onValueChange,
+    }: {
+      children: React.ReactNode;
+      onValueChange?: (v: string) => void;
+    }) => (
+      <SelectCtx.Provider value={{ onValueChange }}>
+        {children}
+      </SelectCtx.Provider>
+    ),
+    SelectTrigger: ({
+      children,
+      ...rest
+    }: React.HTMLAttributes<HTMLDivElement>) => {
+      const ctx = React.useContext(SelectCtx);
+      return (
+        <div {...rest}>
+          {children}
+          <select
+            data-testid="native-security-question"
+            onChange={(e) => ctx.onValueChange?.(e.target.value)}
+          >
+            <option value="">--</option>
+            <option value="first_pet">first_pet</option>
+          </select>
+        </div>
+      );
+    },
+    SelectValue: ({ placeholder }: { placeholder?: string }) => (
+      <span>{placeholder}</span>
+    ),
+    SelectContent: ({ children }: { children: React.ReactNode }) => (
+      <>{children}</>
+    ),
+    SelectItem: ({
+      children,
+      value,
+    }: {
+      children: React.ReactNode;
+      value: string;
+    }) => <option value={value}>{children}</option>,
+  };
+});
 
 import RegisterPage from "../register";
 import {
@@ -80,7 +137,41 @@ describe("RegisterPage: happy-path render", () => {
 });
 
 describe("RegisterPage: validation-error branch", () => {
-  it("never fires POST /api/auth/register when the form is submitted blank", async () => {
+  it("renders inline FormMessage errors and never fires POST /api/auth/register when the form is submitted blank", async () => {
+    const { calls } = installFetchMock([registerHandler({})]);
+    const { Wrapper } = makeWrapper();
+
+    const { container } = render(
+      <Wrapper>
+        <RegisterPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.submit(screen.getByTestId("form-register"));
+    });
+
+    // RHF + the v5 zod-v4 resolver should now map the schema errors
+    // into per-field FormMessage nodes (`<p id="…-form-item-message">`).
+    await waitFor(() => {
+      const messages = container.querySelectorAll(
+        '[id$="-form-item-message"]',
+      );
+      expect(messages.length).toBeGreaterThan(0);
+    });
+
+    // The security invariant: validation must short-circuit before
+    // the mutation fires, so no POST went out.
+    expect(
+      calls.find(
+        (c) => c.method === "POST" && c.url.includes("/api/auth/register"),
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe("RegisterPage: success submit", () => {
+  it("POSTs valid registration data to /api/auth/register and navigates to /dashboard", async () => {
     const { calls } = installFetchMock([registerHandler({})]);
     const { Wrapper } = makeWrapper();
 
@@ -90,35 +181,52 @@ describe("RegisterPage: validation-error branch", () => {
       </Wrapper>,
     );
 
-    // The page resolver may throw an unhandled `ZodError` from
-    // react-hook-form's async submit pipeline when zod-v4 schemas are
-    // wired through `@hookform/resolvers/zod`. Swallow it here so the
-    // unhandled-rejection guard in the global setup does not red-flag
-    // this assertion; the only behaviour we care about is whether
-    // POST went out.
-    const onUnhandled = (e: PromiseRejectionEvent) => {
-      e.preventDefault();
-    };
-    window.addEventListener("unhandledrejection", onUnhandled);
+    const displayName = screen.getByTestId(
+      "input-display-name",
+    ) as HTMLInputElement;
+    const email = screen.getByTestId("input-email") as HTMLInputElement;
+    const password = screen.getByTestId("input-password") as HTMLInputElement;
+    const securityAnswer = screen.getByTestId(
+      "input-security-answer",
+    ) as HTMLInputElement;
 
-    try {
-      await act(async () => {
-        fireEvent.submit(screen.getByTestId("form-register"));
+    await act(async () => {
+      fireEvent.change(displayName, { target: { value: "Jane Trader" } });
+      fireEvent.change(email, { target: { value: "jane@example.com" } });
+      fireEvent.change(password, { target: { value: "supersecret123" } });
+      fireEvent.change(securityAnswer, { target: { value: "Fluffy" } });
+    });
+
+    // The security-question Select is mocked at the top of this file
+    // to render a plain native <select> that exposes the same
+    // `onValueChange` contract — pick the only valid option to
+    // satisfy the `securityQuestion: z.string().min(1)` schema.
+    await act(async () => {
+      fireEvent.change(screen.getByTestId("native-security-question"), {
+        target: { value: "first_pet" },
       });
+    });
 
-      // Give RHF a tick to walk the resolver before asserting.
-      await new Promise((r) => setTimeout(r, 50));
+    await act(async () => {
+      fireEvent.submit(screen.getByTestId("form-register"));
+    });
 
-      // The security invariant: validation must short-circuit before
-      // the mutation fires, so no POST went out.
-      expect(
-        calls.find(
-          (c) => c.method === "POST" && c.url.includes("/api/auth/register"),
-        ),
-      ).toBeUndefined();
-    } finally {
-      window.removeEventListener("unhandledrejection", onUnhandled);
-    }
+    await waitFor(() => {
+      const post = calls.find(
+        (c) => c.method === "POST" && c.url.includes("/api/auth/register"),
+      );
+      expect(post).toBeDefined();
+      const payload = post?.body ? JSON.parse(post.body) : null;
+      expect(payload?.email).toBe("jane@example.com");
+      expect(payload?.displayName).toBe("Jane Trader");
+      expect(payload?.password).toBe("supersecret123");
+    });
+
+    // wouter writes navigations into the HTML5 history API; after a
+    // successful submit the page should have pushed `/dashboard`.
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/dashboard");
+    });
   });
 });
 

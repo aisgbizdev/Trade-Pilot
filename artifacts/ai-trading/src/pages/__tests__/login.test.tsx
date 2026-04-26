@@ -108,6 +108,40 @@ describe("LoginPage: reset-success banner branch", () => {
   });
 });
 
+describe("LoginPage: validation-error branch", () => {
+  it("renders inline FormMessage errors and never fires POST /api/auth/login when the form is submitted blank", async () => {
+    const { calls } = installFetchMock([loginHandler({})]);
+    const { Wrapper } = makeWrapper();
+
+    const { container } = render(
+      <Wrapper>
+        <LoginPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.submit(screen.getByTestId("form-login"));
+    });
+
+    // RHF + the v5 zod-v4 resolver should map the empty-field schema
+    // errors into per-field FormMessage nodes
+    // (`<p id="…-form-item-message">`).
+    await waitFor(() => {
+      const messages = container.querySelectorAll(
+        '[id$="-form-item-message"]',
+      );
+      expect(messages.length).toBeGreaterThan(0);
+    });
+
+    // Validation must short-circuit before the mutation fires.
+    expect(
+      calls.find(
+        (c) => c.method === "POST" && c.url.includes("/api/auth/login"),
+      ),
+    ).toBeUndefined();
+  });
+});
+
 describe("LoginPage: user actions", () => {
   it("POSTs to /api/auth/login with the typed-in email + password when the form is submitted", async () => {
     const { calls } = installFetchMock([loginHandler({})]);
@@ -139,6 +173,36 @@ describe("LoginPage: user actions", () => {
       const payload = post?.body ? JSON.parse(post.body) : null;
       expect(payload?.email).toBe("trader@example.com");
       expect(payload?.password).toBe("supersecret");
+    });
+  });
+
+  it("navigates to /dashboard after a successful login response", async () => {
+    installFetchMock([loginHandler({})]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <LoginPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId("input-email"), {
+        target: { value: "trader@example.com" },
+      });
+      fireEvent.change(screen.getByTestId("input-password"), {
+        target: { value: "supersecret" },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.submit(screen.getByTestId("form-login"));
+    });
+
+    // wouter pushes the new path onto the HTML5 history stack; after
+    // login.mutateAsync resolves the page should land on /dashboard.
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/dashboard");
     });
   });
 });

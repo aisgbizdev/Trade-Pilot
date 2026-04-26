@@ -8,44 +8,6 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-// `@hookform/resolvers/zod@3.10` bundles the v3 zod adapter, but the
-// app schemas import `zod/v4`. The v4 `ZodError` shape is not
-// recognised by the v3 adapter, so the resolver re-throws the
-// `ZodError` instead of mapping it into RHF's `errors` map. The
-// rejection escapes through React's synthetic-event dispatcher and
-// surfaces as an "Unhandled Rejection" — vitest then exits with a
-// non-zero status even when every individual `it()` block passes.
-// Swallow that specific error class globally so the test runner is
-// not derailed by a known production-side incompatibility that lives
-// outside the scope of these component regression tests.
-function isZodError(reason: unknown): boolean {
-  if (!reason || typeof reason !== "object") return false;
-  const ctorName = (reason as { constructor?: { name?: string } }).constructor?.name;
-  if (ctorName === "ZodError") return true;
-  // Fallback: v4 ZodError carries an `issues` array and a `_zod`
-  // brand on the prototype; sniff both to be safe across minor
-  // versions.
-  return (
-    Array.isArray((reason as { issues?: unknown }).issues) &&
-    "_zod" in (reason as Record<string, unknown>)
-  );
-}
-
-if (typeof process !== "undefined" && typeof process.on === "function") {
-  process.on("unhandledRejection", (reason) => {
-    if (isZodError(reason)) return;
-    throw reason;
-  });
-}
-
-if (typeof window !== "undefined") {
-  window.addEventListener("unhandledrejection", (event) => {
-    if (isZodError(event.reason)) {
-      event.preventDefault();
-    }
-  });
-}
-
 if (typeof window !== "undefined" && !window.matchMedia) {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
@@ -71,6 +33,36 @@ if (typeof window !== "undefined" && !window.matchMedia) {
 // `@radix-ui/react-use-size`. Without a stub the very first render
 // throws `ReferenceError: ResizeObserver is not defined` and the test
 // fails before it can run a single assertion.
+// jsdom does not implement Element.scrollIntoView, but Radix Select
+// calls it on the highlighted item every time the listbox opens. Stub
+// it to a no-op so tests that drive Select via user-event do not crash.
+if (
+  typeof Element !== "undefined" &&
+  typeof (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView !==
+    "function"
+) {
+  (Element.prototype as { scrollIntoView: () => void }).scrollIntoView =
+    function () {};
+}
+
+// jsdom does not implement Element.hasPointerCapture / setPointerCapture
+// either, both of which Radix Select calls on the trigger when it
+// opens. Stub them so user-event keyboard interactions do not throw.
+if (
+  typeof Element !== "undefined" &&
+  typeof (Element.prototype as { hasPointerCapture?: unknown })
+    .hasPointerCapture !== "function"
+) {
+  (Element.prototype as { hasPointerCapture: () => boolean }).hasPointerCapture =
+    function () {
+      return false;
+    };
+  (Element.prototype as { setPointerCapture: () => void }).setPointerCapture =
+    function () {};
+  (Element.prototype as { releasePointerCapture: () => void }).releasePointerCapture =
+    function () {};
+}
+
 if (typeof globalThis !== "undefined" && typeof (globalThis as { ResizeObserver?: unknown }).ResizeObserver === "undefined") {
   class StubResizeObserver {
     observe(): void {}
