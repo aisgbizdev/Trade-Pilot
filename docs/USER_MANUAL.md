@@ -1,6 +1,6 @@
 # Buku Panduan Pengguna — AI Trading Assistant
 
-> Versi: MVP — 25 April 2026
+> Versi: MVP — 26 April 2026
 > Pengguna utama: **DR**  ·  Asisten AI: **Rere**
 
 ---
@@ -71,6 +71,12 @@ Ini halaman pertama yang kamu lihat setelah login. Yang ada di sana:
 - **Sapaan singkat** dari Rere ("Halo, DR…").
 - **Ringkasan analisismu hari ini** — total analisis, instrumen yang aktif,
   performa terakhir.
+- **Live Market Quotes** — papan harga real-time dari TradingView untuk
+  pasangan/komoditas yang paling sering kamu pakai. Kalau widget gagal
+  dimuat (mis. ada ad-blocker), aplikasi otomatis switch ke mini-ticker
+  cadangan.
+- **Sticky ticker** di bawah header — geser-geser sendiri menampilkan
+  harga + headline berita terbaru.
 - **Tombol cepat**: *Buat Analisis Baru*, *Riwayat*, *Statistik*.
 - **Bell notifikasi** di kanan atas — angka merah = ada notifikasi belum
   dibaca. Klik untuk membuka popover berisi pesan terbaru.
@@ -84,11 +90,32 @@ Ini halaman pertama yang kamu lihat setelah login. Yang ada di sana:
 ## 4. Membuat Analisis Baru
 
 1. Tekan **Analyze** / **Analisis** di bottom bar.
-2. Pilih **Instrumen** (mis. XAU/USD, EUR/USD, BTC/USD…).
-3. Pilih **Timeframe** (1m, 5m, 15m, 1h, 4h, 1D, 1W).
-4. **Upload screenshot chart** (atau ambil foto langsung dari kamera HP).
+2. Pilih **Instrumen**. Halaman dibagi dua tab:
+   - **Futures / Komoditas / Indeks** — XAU/USD, XAG/USD, BRENT, HSI,
+     NIKKEI, DJIA, NASDAQ, DXY.
+   - **Forex** — AUD/USD, EUR/USD, GBP/USD, USD/CHF, USD/JPY, USD/IDR.
+   Kalau instrumen yang kamu mau tidak ada di daftar, pakai field
+   **Custom Instrument** di bagian bawah.
+3. Pilih **Timeframe**:
+   - **Intraday** (1m, 5m, 15m, 1h, 4h) — data OHLC diambil dari Yahoo
+     Finance dan dipadukan dengan indikator teknikal yang dituning untuk
+     timeframe pendek.
+   - **Swing/posisi** (1D, 1W) — pakai data harian/mingguan standar.
+4. (Opsional) Tambah **Notes** — konteks tambahan untuk Rere, mis.
+   "fokus ke level psikologis 2350" atau "abaikan candle wick di 09:30
+   karena rolling kontrak".
 5. Tekan **Generate Analysis** / **Mulai Analisis**.
-6. Tunggu beberapa detik — Rere akan membaca chart-mu dan menyusun rekomendasi.
+6. Tunggu beberapa detik — Rere akan membaca data live + indikator teknikal,
+   menggabungkan dengan berita & kalender, lalu menyusun rekomendasi.
+
+> Halaman Analyze **tidak** menerima upload screenshot chart maupun foto
+> kamera. Rere bekerja murni dari data harga real-time + indikator teknikal
+> + konteks berita/kalender — kamu cukup pilih instrumen, timeframe, dan
+> (opsional) tulis catatan singkat.
+
+> Kalau ada field wajib yang belum diisi (misal instrumen belum dipilih),
+> aplikasi memunculkan **toast** notifikasi di pojok dan tombol Generate
+> tidak akan jalan sampai inputnya valid.
 
 ### Chip Kuota
 
@@ -111,7 +138,7 @@ Setiap hasil analisis berisi:
 
 | Bagian                        | Arti                                                                                  |
 |-------------------------------|---------------------------------------------------------------------------------------|
-| **Market Condition**          | Kondisi pasar: Bullish / Bearish / Sideways                                           |
+| **Market Condition**          | Kondisi pasar: Trending Up / Trending Down / Ranging / Volatile                       |
 | **Confidence**                | Tingkat keyakinan AI: Low / Medium / High / Very High (dengan bar visual)             |
 | **Bias / Direction**          | Arah yang lebih disukai (Long / Short / Wait)                                         |
 | **Key Levels**                | Support, resistance, dan area menarik di chart                                        |
@@ -138,13 +165,15 @@ masih bisa melihatnya di Riwayat, tapi disarankan membuat analisis baru.
 ### Memberi Feedback
 
 Setelah trading dieksekusi (atau diputuskan untuk skip), kembalilah ke
-analisis-nya dan tekan **Tambah Feedback**. Pilih:
+analisis-nya dan tekan **Tambah Feedback**. Pilih dulu apakah analisisnya
+**Useful** atau **Not Useful**, lalu pilih outcome:
 
-- **Win** — sesuai prediksi
-- **Loss** — meleset
-- **Break Even** — tidak rugi tidak untung
+- **Correct / Benar** — analisis terbukti akurat
+- **Wrong / Salah** — analisis meleset
+- **Unknown / Belum Tahu** — kamu tidak meng-eksekusi atau hasilnya belum jelas
 
-Catatan opsionalnya bebas. Feedback ini dipakai untuk statistik personalmu.
+Catatan opsionalnya bebas. Feedback ini dipakai untuk statistik personalmu
+di halaman Analytics.
 
 ---
 
@@ -153,19 +182,27 @@ Catatan opsionalnya bebas. Feedback ini dipakai untuk statistik personalmu.
 ### Riwayat (`/history`)
 
 - Daftar semua analisismu, terbaru di atas.
-- Filter: instrumen, timeframe, status (Valid / Expired), outcome
-  (Win/Loss/BE).
+- Tombol **Filter** (ikon corong di kanan atas) membuka panel dengan tiga
+  filter: **Mode** (Beginner / Pro), **Instrumen**, dan rentang **Tanggal**
+  (From / To).
+- Status (Valid vs Expired) dan badge market-condition tampil otomatis di
+  setiap kartu — tidak perlu di-filter manual.
 - Klik salah satu kartu untuk melihat detail penuh + feedback.
 
 ### Statistik Pribadi (`/analytics`)
 
-- **Win-rate** keseluruhan dan per-instrumen.
-- **Distribusi confidence vs outcome** (apakah analisis high-confidence-mu
-  beneran lebih sering menang?).
-- **Tren mingguan**.
-- **Instrumen favorit**.
+Halaman menampilkan:
 
-> Semakin sering kamu mengisi feedback, semakin akurat statistikmu.
+- **Total analisis** (all-time / bulan ini / minggu ini).
+- **Top instruments** — instrumen yang paling sering kamu analisis.
+- **Dominant mode** — apakah kamu lebih sering pakai Beginner atau Pro.
+- **Self-accuracy gauge** — persentase analisis yang kamu tandai `correct`
+  dibanding total feedback yang sudah diisi (plus jumlah feedback yang
+  jadi basis perhitungan).
+- **Weekly chart** — jumlah analisis per minggu (bar terakhir = minggu
+  ini, di-highlight).
+
+> Semakin sering kamu mengisi feedback, semakin akurat angka self-accuracy.
 
 ---
 
@@ -203,14 +240,22 @@ Tab default menampilkan semua notifikasi (terbaru di atas). Tekan
 
 Halaman **Profile** (`/profile`) memungkinkan kamu untuk:
 
-- Mengubah nama tampilan.
-- Mengubah mode (Pemula ↔ Pro) — kapan pun, langsung berlaku.
-- Mengubah tema (Light / Dark / System).
-- Mengubah bahasa default (EN / ID).
+- Melihat nama, email, role (User / Admin / Super Admin), dan mode aktif
+  (Beginner / Pro) di kartu profil teratas.
+- Mengubah **nama tampilan** lewat tombol *Edit* di sebelah nama.
+- Mengubah **tema** — hanya tersedia dua pilihan: **Light** atau **Dark**.
+  (Mengikuti tema sistem otomatis belum ada di MVP.)
 - **Ganti Password** — minta password lama + dua kali password baru.
 - **Ganti Pertanyaan Keamanan** — minta password sekarang + pertanyaan
   baru + jawaban baru.
-- **Logout** dari semua sesi di perangkat ini.
+- Pintasan ke **Admin Dashboard** & **User Management** (muncul kalau
+  role-mu admin/super-admin).
+- **Logout** dari sesi perangkat ini.
+
+> Pengaturan **Bahasa (EN/ID)** tidak ada di halaman Profile — pakai
+> tombol toggle EN/ID di header. Pengaturan **Mode (Beginner/Pro)** juga
+> tidak bisa diubah dari Profile; pakai toggle Beginner/Pro di kartu mode
+> yang ada di **Dashboard** (lihat §10).
 
 ---
 
@@ -240,8 +285,17 @@ Halaman **Profile** (`/profile`) memungkinkan kamu untuk:
 | Entry / SL / TP        | Diberikan + dijelaskan kenapa           | Diberikan dalam format trader        |
 | Visual                 | Penekanan pada bar confidence & emoji   | Tabel padat, detail indikator        |
 
-Kamu bisa pindah mode kapan pun di halaman Profile. Mode hanya mempengaruhi
-*tampilan* output baru — analisis lama tetap dengan format saat dibuat.
+Mode dipilih saat kamu daftar. Untuk mengubahnya kapan pun, buka
+**Dashboard** dan tekan tombol **Beginner** / **Pro** di kartu mode
+(tepat di bawah sapaan Rere) — perubahan langsung berlaku untuk analisis
+berikutnya.
+
+> Catatan: halaman **Profile** hanya menampilkan mode aktif sebagai badge
+> dan tidak punya toggle mode tersendiri di MVP ini. Pakai toggle di
+> Dashboard.
+
+Mode hanya mempengaruhi *tampilan* output baru — analisis lama tetap
+dengan format saat dibuat.
 
 ---
 
@@ -270,21 +324,36 @@ Setelah di-install, app berjalan **fullscreen tanpa address bar** dan dapat
 
 ## 12. Untuk Admin & Super Admin
 
-Akses panel Admin lewat avatar di header (jika role-mu `admin` atau
-`super_admin`).
+Akses panel Admin lewat tombol di halaman **Profile** (muncul kalau
+role-mu `admin` atau `super_admin`).
 
-### Yang Bisa Dilakukan Admin
+### Yang Bisa Dilakukan Admin Biasa
 
-- **Statistik Sistem** — total user hari ini, total analisis hari ini /
-  minggu ini / bulan ini, breakdown instrumen, breakdown mode.
-- **Lihat Semua Analisis** — paginasi seluruh user.
-- **Broadcast Notifikasi** — kirim pengumuman ke semua user atau role
-  tertentu (juga otomatis dikirim sebagai Web Push ke yang mengaktifkan).
+- **Lihat Semua Feedback** (`/admin/feedback`) — paginasi feedback dari
+  semua user untuk keperluan QA / kurasi.
+
+> Catatan: di MVP saat ini, halaman **Admin Dashboard** utama (statistik
+> sistem + daftar semua analisis) hanya bisa dibuka oleh **super-admin**.
+> Admin biasa yang membuka link tersebut akan diarahkan keluar. Endpoint
+> backend-nya sendiri menerima admin (boleh dibuka via API), tapi UI-nya
+> super-admin only.
 
 ### Yang Hanya Super Admin
 
+- **Admin Dashboard** (`/admin`) — statistik sistem (total user hari ini,
+  total analisis hari ini / minggu ini / bulan ini, breakdown instrumen,
+  breakdown mode) + daftar semua analisis seluruh user.
+- **Broadcast Notifikasi** — kirim pengumuman + Web Push ke audience yang
+  dipilih:
+  - **All** — semua user
+  - **Role** — hanya `user`, hanya `admin`, atau hanya `super_admin`
+  - **Tag** — hanya user dengan tag tertentu (mis. `vip`, `beta-tester`)
+  Setiap broadcast dicatat di **Broadcast History** lengkap dengan jumlah
+  recipient final.
 - **Manajemen User** — lihat semua user, buat user baru, reset password,
   ubah role, hapus user.
+- **Manajemen Tag User** — pasang/lepas tag pada user (untuk audience
+  broadcast).
 - **Notifikasi Penghapusan User** otomatis dikirim ke seluruh super-admin.
 
 > Admin dan Super Admin **tidak terkena batas kuota analisis**.
@@ -316,25 +385,48 @@ home screen (PWA).
 Belum tersedia di MVP — hubungi admin/super-admin untuk perubahan email.
 
 **Q: Bahasa berubah sendiri.**
-Bahasa mengikuti pilihan terakhir di profilmu. Cek **Profile → Language**.
+Bahasa mengikuti pilihan terakhir lewat tombol **EN/ID** di header (atas
+kanan) — pilihan disimpan di browser ini. Kalau kamu buka di browser /
+device lain, set ulang lewat tombol tersebut.
 
 **Q: Apakah analisis lama saya hilang setelah kadaluarsa?**
-Tidak. Analisis tetap tersimpan di **Riwayat** seumur akunmu — hanya
-labelnya berubah jadi *Expired*.
+Status berubah jadi *Expired* tapi tetap kebaca di **Riwayat**. Demi
+ringan-nya database, sistem **otomatis menghapus analisis yang lebih
+tua dari 90 hari** (kamu akan dapat notifikasi peringatan 7 hari sebelum
+deadline supaya bisa screenshot kalau memang perlu disimpan).
+
+**Q: Pesan validasi form (mis. "Email wajib") tidak muncul di bawah field
+di halaman Login / Register / Profile.**
+Ini bug lama yang sudah diperbaiki di versi 26 April 2026. Pastikan kamu
+hard-refresh browser (Ctrl/Cmd + Shift + R) supaya bundle terbaru
+terpasang. Catatan: halaman **Analyze** memang sengaja memakai toast
+notifikasi (bukan pesan inline) untuk validasi.
+
+**Q: Harga di kotak "Live Market Quotes" tidak muncul.**
+Widget berasal dari TradingView; biasanya kena ad-blocker atau ekstensi
+privasi. Kalau widget tidak menampilkan iframe dalam beberapa detik,
+sistem otomatis switch ke ticker mini cadangan yang menarik harga dari
+server kami. Kalau masih kosong, matikan ad-blocker untuk domain ini lalu
+refresh halaman.
 
 ---
 
 ## 14. Aturan Main & Disclaimer
 
 - **Bukan saran finansial.** Output Rere adalah opini AI berdasarkan data
-  publik dan chart yang kamu unggah. Bukan rekomendasi resmi dari
+  harga publik (Yahoo Finance untuk intraday, sumber harian/mingguan
+  standar untuk swing), berita & kalender ekonomi dari Newsmaker.id, plus
+  catatan opsional yang kamu tulis sendiri. Bukan rekomendasi resmi dari
   penasihat keuangan berlisensi.
 - **Trading mengandung risiko.** Hanya gunakan dana yang siap kamu
   rugikan. Aplikasi ini *tidak* menjamin profit.
-- **Privasi.** Screenshot chart hanya digunakan untuk menghasilkan
-  analisismu sendiri dan tidak dibagikan ke pengguna lain.
+- **Privasi.** Catatan (Notes) yang kamu isi di halaman Analyze hanya
+  dipakai sebagai konteks tambahan untuk analisismu sendiri dan tidak
+  dibagikan ke pengguna lain. Aplikasi tidak menerima upload screenshot
+  chart maupun foto kamera.
 - **Data partner.** Berita & kalender ekonomi disediakan oleh
-  **Newsmaker.id**. Akurasi mengikuti sumber asli.
+  **Newsmaker.id**, harga intraday oleh **Yahoo Finance**, papan harga
+  Dashboard oleh **TradingView**. Akurasi mengikuti sumber asli.
 
 ---
 
