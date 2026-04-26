@@ -10,6 +10,9 @@ const YAHOO_USER_AGENT =
   "Mozilla/5.0 (compatible; AITradingAssistant/1.0; +https://aitradingassistant.app)";
 
 // Daily upstream symbol map (used for 1D / 1W).
+// Note: the upstream daily feed only carries the symbols below. Other
+// instruments (XAG/USD, USD/IDR, DXY, DJIA, NASDAQ) have intraday-only
+// coverage via Yahoo Finance — selecting 1D/1W for them returns null.
 const SYMBOL_MAP: Record<string, string> = {
   "XAU/USD": "LGD Daily",
   "BRENT": "BCO Daily",
@@ -19,23 +22,36 @@ const SYMBOL_MAP: Record<string, string> = {
   "USD/CHF": "USD/CHF",
   "AUD/USD": "AUD/USD",
   "HSI": "HSI Daily",
+  "NIKKEI": "SNI Daily",
 };
 
 // Per-instrument Yahoo Finance symbol used for intraday OHLC. Choose the most
 // liquid contract available so the candles reflect real intraday price action:
 //   - XAU/USD → COMEX gold futures (GC=F)
+//   - XAG/USD → COMEX silver futures (SI=F)
 //   - BRENT   → ICE Brent crude futures (BZ=F)
 //   - HSI     → Hang Seng Index spot (^HSI)
-//   - Forex   → Yahoo's spot FX symbols (e.g. EURUSD=X, JPY=X)
+//   - NIKKEI  → CME yen-denominated Nikkei 225 futures (NIY=F) — trades during
+//               US hours, gives Yahoo a usable intraday series
+//   - DJIA    → CME E-mini Dow futures (YM=F)
+//   - NASDAQ  → CME E-mini Nasdaq 100 futures (NQ=F)
+//   - DXY     → ICE US Dollar Index spot (DX-Y.NYB)
+//   - Forex   → Yahoo's spot FX symbols (e.g. EURUSD=X, JPY=X, IDR=X)
 const YAHOO_SYMBOL_MAP: Record<string, string> = {
   "XAU/USD": "GC=F",
+  "XAG/USD": "SI=F",
   "BRENT": "BZ=F",
   "EUR/USD": "EURUSD=X",
   "GBP/USD": "GBPUSD=X",
   "USD/JPY": "JPY=X",
   "USD/CHF": "CHF=X",
   "AUD/USD": "AUDUSD=X",
+  "USD/IDR": "IDR=X",
   "HSI": "^HSI",
+  "NIKKEI": "NIY=F",
+  "DJIA": "YM=F",
+  "NASDAQ": "NQ=F",
+  "DXY": "DX-Y.NYB",
 };
 
 export type IntradayTimeframe = "1m" | "5m" | "15m" | "1h" | "4h";

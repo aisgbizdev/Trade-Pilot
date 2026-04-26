@@ -27,8 +27,12 @@ const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"] as const;
 // Instruments wired up to the intraday OHLC source. The Technical Indicators
 // panel only renders for these on intraday timeframes; daily/weekly still
 // uses the broader upstream feed and works for additional symbols.
+// Must stay in sync with `YAHOO_SYMBOL_MAP` in
+// `artifacts/api-server/src/lib/historical.ts`.
 const INTRADAY_SUPPORTED_INSTRUMENTS = new Set([
-  "XAU/USD", "BRENT", "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "HSI",
+  "XAU/USD", "XAG/USD", "BRENT",
+  "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "USD/IDR",
+  "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY",
 ]);
 type IndicatorTf = "1m" | "5m" | "15m" | "1h" | "4h" | "1D" | "1W";
 const INDICATOR_TIMEFRAMES = new Set<IndicatorTf>(["1m", "5m", "15m", "1h", "4h", "1D", "1W"]);
