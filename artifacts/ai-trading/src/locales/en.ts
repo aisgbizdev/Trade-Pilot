@@ -171,6 +171,7 @@ export const en = {
     live_price: "Live Price",
     refresh_price: "Refresh price",
     price_error: "Unable to load live prices",
+    live_price_fallback_label: "Source: Newsmaker (fallback)",
     last_analyzed: "Recently Analyzed",
     avg_confidence: "Avg. Confidence",
     recent_analyses: "Recent Analyses",
