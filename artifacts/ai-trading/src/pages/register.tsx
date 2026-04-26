@@ -237,22 +237,22 @@ export default function RegisterPage() {
                     return [
                       part,
                       isTerms ? (
-                        <Link key={`t-${idx}`} href="/terms">
-                          <a
-                            className="text-primary hover:underline"
-                            data-testid="link-consent-terms"
-                          >
-                            {t.legal.terms_link}
-                          </a>
+                        <Link
+                          key={`t-${idx}`}
+                          href="/terms"
+                          className="text-primary hover:underline"
+                          data-testid="link-consent-terms"
+                        >
+                          {t.legal.terms_link}
                         </Link>
                       ) : (
-                        <Link key={`p-${idx}`} href="/privacy">
-                          <a
-                            className="text-primary hover:underline"
-                            data-testid="link-consent-privacy"
-                          >
-                            {t.legal.privacy_link}
-                          </a>
+                        <Link
+                          key={`p-${idx}`}
+                          href="/privacy"
+                          className="text-primary hover:underline"
+                          data-testid="link-consent-privacy"
+                        >
+                          {t.legal.privacy_link}
                         </Link>
                       ),
                     ];
