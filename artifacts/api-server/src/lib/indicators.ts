@@ -205,7 +205,30 @@ function overallSignal(buy: number, sell: number): Signal {
   return "Neutral";
 }
 
-export function calculateIndicators(symbol: string, candles: Candle[]): TechnicalIndicators {
+// Period sets for the moving-average panel. Intraday uses a shorter horizon
+// because a 200-period SMA on 4h candles spans ~33 days, which dominates the
+// "Buy/Sell" tally with a long-horizon trend that has nothing to do with the
+// intraday signal the user is actually looking at. Daily/weekly keep the
+// classic Investing.com-style ladder so the saved-analysis view (which users
+// already understand) is unchanged.
+const MA_PERIODS_INTRADAY = {
+  sma: [10, 20, 50, 100],
+  ema: [9, 21, 50],
+} as const;
+const MA_PERIODS_DAILY = {
+  sma: [5, 10, 20, 50, 100, 200],
+  ema: [10, 20, 50],
+} as const;
+
+// Timeframes treated as "intraday" for the MA-period selection. We accept the
+// raw string so this module doesn't need to depend on `historical.ts`.
+const INTRADAY_TF_KEYS = new Set(["1m", "5m", "15m", "1h", "4h"]);
+
+export function calculateIndicators(
+  symbol: string,
+  candles: Candle[],
+  timeframe?: string,
+): TechnicalIndicators {
   const sorted = [...candles].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const closes = sorted.map((c) => c.close);
   const n = closes.length;
@@ -225,14 +248,14 @@ export function calculateIndicators(symbol: string, candles: Candle[]): Technica
   const stochResult = calcStochastic(sorted);
   const bollResult = calcBollinger(closes);
 
-  const maPeriods = [5, 10, 20, 50, 100, 200];
-  const emaPeriods = [10, 20, 50];
+  const periods =
+    timeframe && INTRADAY_TF_KEYS.has(timeframe) ? MA_PERIODS_INTRADAY : MA_PERIODS_DAILY;
   const movingAverages: MAResult[] = [];
-  for (const p of maPeriods) {
+  for (const p of periods.sma) {
     const r = calcSMA(closes, p);
     if (r) movingAverages.push(r);
   }
-  for (const p of emaPeriods) {
+  for (const p of periods.ema) {
     const r = calcEMA(closes, p);
     if (r) movingAverages.push(r);
   }

@@ -424,7 +424,7 @@ export async function getIndicators(
       // Empty result is treated like a soft failure — same fallback policy.
       return staleFallback(cached, timeframe);
     }
-    const indicators = calculateIndicators(instrument, candles);
+    const indicators = calculateIndicators(instrument, candles, timeframe);
     indicatorsCache.set(cacheKey, { indicators, computedAt: Date.now() });
     return indicators;
   }
@@ -453,7 +453,7 @@ export async function getIndicators(
   }
 
   if (!candles.length) return staleFallback(cached, timeframe);
-  const indicators = calculateIndicators(instrument, candles);
+  const indicators = calculateIndicators(instrument, candles, timeframe);
   indicatorsCache.set(cacheKey, {
     indicators,
     computedAt: Date.now(),
