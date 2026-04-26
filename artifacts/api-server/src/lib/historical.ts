@@ -114,6 +114,14 @@ const INDICATORS_CACHE_TTL_MS: Record<IndicatorTimeframe, number> = {
   "1W": 10 * 60 * 1000,
 };
 
+// When the upstream OHLC source (Yahoo Finance / daily feed) is failing, we
+// keep serving the most recently computed indicators rather than collapsing
+// to "no data" in the UI. This caps how stale that fallback is allowed to be:
+// 6× the normal TTL (e.g. ~3 min for 1m, ~30 min for 5m, ~30 min for 1h, ~1h
+// for 4h/daily). Beyond this we treat the data as too old to be useful and
+// surface the failure as null so the UI can show a fresh-data error state.
+const STALE_FALLBACK_MULTIPLIER = 6;
+
 export function indicatorsCacheTtlSeconds(timeframe: IndicatorTimeframe): number {
   return Math.floor(INDICATORS_CACHE_TTL_MS[timeframe] / 1000);
 }
@@ -228,7 +236,13 @@ interface YahooChartResult {
   };
 }
 
-async function fetchYahooCandles(
+// Marker class for failures we should retry once. We treat network errors,
+// timeouts (AbortError), and Yahoo 5xx / 429 responses as transient. Anything
+// else (4xx, malformed JSON, chart.error) is treated as terminal because a
+// retry won't change the outcome.
+class TransientYahooError extends Error {}
+
+async function fetchYahooCandlesOnce(
   yahooSymbol: string,
   interval: string,
   range: string,
@@ -246,10 +260,20 @@ async function fetchYahooCandles(
       headers: { "User-Agent": YAHOO_USER_AGENT, Accept: "application/json" },
       signal: controller.signal,
     });
+  } catch (err: any) {
+    // Network errors and timeouts are always retryable.
+    throw new TransientYahooError(
+      `Yahoo Finance fetch failed for ${yahooSymbol}: ${err?.name ?? "Error"} ${err?.message ?? ""}`.trim(),
+    );
   } finally {
     clearTimeout(timer);
   }
   if (!res.ok) {
+    if (res.status >= 500 || res.status === 429) {
+      throw new TransientYahooError(
+        `Yahoo Finance returned ${res.status} for ${yahooSymbol}`,
+      );
+    }
     throw new Error(`Yahoo Finance returned ${res.status} for ${yahooSymbol}`);
   }
   const json = (await res.json()) as {
@@ -283,6 +307,41 @@ async function fetchYahooCandles(
     });
   }
   return candles;
+}
+
+// Tunable retry knobs. Exported so tests can shrink the backoff and avoid
+// adding seconds of wall-clock time to the suite.
+export const YAHOO_RETRY_CONFIG = {
+  maxRetries: 1,
+  backoffMs: 500,
+};
+
+async function fetchYahooCandles(
+  yahooSymbol: string,
+  interval: string,
+  range: string,
+): Promise<Candle[]> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= YAHOO_RETRY_CONFIG.maxRetries; attempt++) {
+    try {
+      return await fetchYahooCandlesOnce(yahooSymbol, interval, range);
+    } catch (err) {
+      lastErr = err;
+      if (!(err instanceof TransientYahooError)) {
+        throw err;
+      }
+      if (attempt < YAHOO_RETRY_CONFIG.maxRetries) {
+        // Tiny jittered backoff so a burst of failures doesn't all retry in
+        // lockstep. Backoff is short on purpose — Yahoo errors are usually
+        // either instantly recoverable or persistent for many seconds.
+        const jitter = Math.floor(Math.random() * 100);
+        await new Promise((r) => setTimeout(r, YAHOO_RETRY_CONFIG.backoffMs + jitter));
+      }
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(`Yahoo Finance fetch failed for ${yahooSymbol}`);
 }
 
 async function getIntradayCandles(
@@ -324,6 +383,19 @@ async function getDailyCandles(
   return { candles, sourceFetchedAt };
 }
 
+// If the upstream is unavailable but we still have a "recent enough" cached
+// indicator entry, return it instead of surfacing null. Recent enough = within
+// STALE_FALLBACK_MULTIPLIER × the timeframe's normal TTL.
+function staleFallback(
+  cached: CachedIndicators | undefined,
+  timeframe: IndicatorTimeframe,
+): TechnicalIndicators | null {
+  if (!cached) return null;
+  const maxAge = INDICATORS_CACHE_TTL_MS[timeframe] * STALE_FALLBACK_MULTIPLIER;
+  if (Date.now() - cached.computedAt > maxAge) return null;
+  return cached.indicators;
+}
+
 export async function getIndicators(
   instrument: string,
   timeframe: IndicatorTimeframe = "1D",
@@ -338,8 +410,20 @@ export async function getIndicators(
     if (cached && Date.now() - cached.computedAt < ttl) {
       return cached.indicators;
     }
-    const candles = await getIntradayCandles(instrument, timeframe);
-    if (!candles || !candles.length) return null;
+    let candles: Candle[] | null;
+    try {
+      candles = await getIntradayCandles(instrument, timeframe);
+    } catch (err) {
+      console.warn(
+        `[historical] intraday fetch failed for ${instrument} ${timeframe}; using stale cache if available`,
+        err instanceof Error ? err.message : err,
+      );
+      return staleFallback(cached, timeframe);
+    }
+    if (!candles || !candles.length) {
+      // Empty result is treated like a soft failure — same fallback policy.
+      return staleFallback(cached, timeframe);
+    }
     const indicators = calculateIndicators(instrument, candles);
     indicatorsCache.set(cacheKey, { indicators, computedAt: Date.now() });
     return indicators;
@@ -347,7 +431,16 @@ export async function getIndicators(
 
   // Daily / weekly path — pin cache entries to the upstream snapshot so we
   // never serve indicators computed from raw data that has since refreshed.
-  const dailyResult = await getDailyCandles(instrument, timeframe);
+  let dailyResult: Awaited<ReturnType<typeof getDailyCandles>>;
+  try {
+    dailyResult = await getDailyCandles(instrument, timeframe);
+  } catch (err) {
+    console.warn(
+      `[historical] daily fetch failed for ${instrument} ${timeframe}; using stale cache if available`,
+      err instanceof Error ? err.message : err,
+    );
+    return staleFallback(cached, timeframe);
+  }
   if (!dailyResult) return null;
   const { candles, sourceFetchedAt } = dailyResult;
 
@@ -359,7 +452,7 @@ export async function getIndicators(
     return cached.indicators;
   }
 
-  if (!candles.length) return null;
+  if (!candles.length) return staleFallback(cached, timeframe);
   const indicators = calculateIndicators(instrument, candles);
   indicatorsCache.set(cacheKey, {
     indicators,
