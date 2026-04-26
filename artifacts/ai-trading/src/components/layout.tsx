@@ -92,7 +92,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto relative">
-      <header className="sticky top-0 z-40 px-4 py-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50">
+      <header className="sticky top-0 z-40 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="flex items-center gap-2">
           {!isMainNav && (
             <button
@@ -222,12 +222,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <ContinuousTicker />
 
-      <main className="flex-1 pb-[72px] overflow-y-auto">
+      <main className="flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+72px)] overflow-y-auto">
         {children}
       </main>
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40">
-        <div className="mx-3 mb-2 rounded-2xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-2xl shadow-black/20">
+        <div className="mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] rounded-2xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-2xl shadow-black/20">
           <div className="flex items-center justify-around py-2 px-1">
             {navItems.map(({ href, icon: Icon, label }) => {
               const active = location === href || location.startsWith(href + "/");

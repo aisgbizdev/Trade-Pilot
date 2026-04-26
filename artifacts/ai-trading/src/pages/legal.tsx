@@ -19,7 +19,7 @@ export default function LegalPage({ kind }: LegalPageProps) {
       className="min-h-[100dvh] flex flex-col bg-background"
       data-testid={testIdPrefix}
     >
-      <header className="sticky top-0 z-40 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between bg-background/80">
+      <header className="sticky top-0 z-40 backdrop-blur-xl border-b border-white/10 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between bg-background/80">
         <Link
           href="/"
           className="flex items-center gap-2"
