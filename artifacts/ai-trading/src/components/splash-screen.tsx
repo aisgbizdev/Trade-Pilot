@@ -134,10 +134,39 @@ export function SplashScreen() {
           fontSize: dims.footer,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
-          color: "rgba(255,255,255,0.45)",
+          color: "rgba(255,255,255,0.55)",
+          textAlign: "center",
+          lineHeight: 1.5,
         }}
       >
-        {t.brand.supported_by} Newsmaker.id
+        <div>
+          {t.brand.sponsored_by}{" "}
+          <a
+            href="https://www.sg-berjangka.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="link-splash-sponsor"
+            style={{
+              color: "#f5c518",
+              fontWeight: 700,
+              textDecoration: "none",
+              pointerEvents: "auto",
+            }}
+          >
+            SOLID PRIME
+          </a>
+        </div>
+        <div
+          style={{
+            fontSize: Math.max(dims.footer - 2, 9),
+            opacity: 0.6,
+            textTransform: "none",
+            letterSpacing: "0.02em",
+            marginTop: 4,
+          }}
+        >
+          {t.brand.news_data_via}
+        </div>
       </div>
     </div>
   );

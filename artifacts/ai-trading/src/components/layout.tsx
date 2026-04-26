@@ -245,16 +245,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
           <p className="text-[10px] text-muted-foreground/70">
-            {t.landing.powered_by_prefix}{" "}
+            {t.brand.sponsored_by}{" "}
             <a
-              href="https://newsmaker.id"
+              href="https://www.sg-berjangka.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-              data-testid="link-footer-powered-by"
+              className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
+              data-testid="link-footer-sponsor"
             >
-              {t.landing.powered_by_brand}
+              SOLID PRIME
             </a>
+          </p>
+          <p className="text-[9px] text-muted-foreground/50">
+            {t.brand.news_data_via}
           </p>
         </footer>
       </main>

@@ -635,6 +635,15 @@ export const en = {
   brand: {
     tagline: "See the Market Clearly. Decide with Confidence.",
     supported_by: "Supported by",
+    sponsored_by: "Sponsored by",
+    news_data_via: "News data via newsmaker.id",
+    solid_prime_subline: "Futures mini-account by PT Solid Gold Berjangka",
+    solid_prime_regulated: "BAPPEBTI-regulated · Member JFX & ICH",
+    open_account_cta: "Open a SOLID PRIME Demo Account",
+    open_account_subtitle: "Try a free demo account with a BAPPEBTI-regulated futures broker — no deposit required. Trade Pilot does not handle accounts or trade execution.",
+    live_analisa_badge: "LIVE",
+    live_analisa_title: "Live Market Analysis with SOLID PRIME",
+    live_analisa_subtitle: "Every weekday at 09:00 WIB on TikTok @solid.prime",
   },
   legal: {
     privacy_link: "Privacy Policy",

@@ -50,6 +50,8 @@ Mobile-first PWA (React+Vite) for trading decision-support (NOT a signal generat
 **Language:** All UI text in Indonesian
 **Users:** DR (main user), Rere (AI agent name)
 
+**Brand sponsor (SOLID PRIME).** Trade Pilot is co-branded with **SOLID PRIME**, the mini-account product of PT Solid Gold Berjangka (BAPPEBTI-regulated futures broker, Member JFX & ICH) — the actual revenue source. SP appears as the sponsor in the chrome (splash footer, layout footer, landing header badge & footer) with the link `https://www.sg-berjangka.com`, plus dedicated CTA cards on `landing.tsx` (`section-solid-prime-cta`) and `profile.tsx` (`card-solid-prime-cta`), and a "Live Analisa" banner on the dashboard linking to `https://www.tiktok.com/@solid.prime`. New locale keys live under `t.brand.*` (sponsored_by, news_data_via, solid_prime_subline, solid_prime_regulated, open_account_cta, open_account_subtitle, live_analisa_*). **Newsmaker.id is now content-source attribution only** (news widget, calendar widget, technical-indicators panel, dashboard live-prices fallback) and is referenced in chrome via the secondary "News data via newsmaker.id" line; the operator-of-record reference in legal intros and `CONTACT_EMAIL=support@newsmaker.id` are unchanged. A "Sponsorship Disclosure" paragraph is appended to **section 6 of the Terms** (EN + ID) describing the SP relationship and editorial independence. The `.btn-premium` button class already bakes a dark text color (`#1a1208`) — never combine it with `text-white`. SP CTAs use `btn-premium` with an `ArrowUpRight` icon.
+
 ### API Server (`artifacts/api-server`)
 Express backend serving all APIs.
 

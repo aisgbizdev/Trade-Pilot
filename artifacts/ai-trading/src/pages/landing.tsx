@@ -70,13 +70,14 @@ export default function LandingPage() {
                 <span className="text-foreground"> Pilot</span>
               </span>
               <a
-                href="https://newsmaker.id"
+                href="https://www.sg-berjangka.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-0.5 mt-0.5 hover:opacity-75 transition-opacity"
+                className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
+                data-testid="link-header-sponsor"
               >
-                <span className="text-[8px] text-muted-foreground/60 leading-none">supported by</span>
-                <img src="/newsmaker-logo.png" alt="Newsmaker.id" className="h-2.5 w-auto object-contain bg-white rounded-sm px-0.5" />
+                <span className="text-[8px] text-muted-foreground/70 leading-none lowercase">{t.brand.sponsored_by}</span>
+                <span className="text-[9px] font-bold leading-none text-amber-400 tracking-wide">SOLID PRIME</span>
               </a>
             </div>
           </div>
@@ -315,6 +316,38 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* SOLID PRIME SPONSOR CTA — separates the AI tool (free) from
+            the regulated broker product (real-money). Never bundled with
+            the "Try Trade Pilot" CTAs above so it's clear they're distinct. */}
+        <section className="px-4 pb-8" data-testid="section-solid-prime-cta">
+          <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t.brand.sponsored_by}
+              </span>
+              <span className="text-base font-extrabold tracking-wide text-amber-400">
+                SOLID PRIME
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground/80 mb-3 leading-snug">
+              {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
+            </p>
+            <p className="text-xs text-foreground/85 leading-relaxed mb-4">
+              {t.brand.open_account_subtitle}
+            </p>
+            <a
+              href="https://www.sg-berjangka.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-open-solid-prime-account"
+              className="w-full h-11 rounded-xl font-semibold btn-premium hover:opacity-90 transition-all flex items-center justify-center gap-2"
+            >
+              {t.brand.open_account_cta}
+              <ArrowUpRight className="w-4 h-4" />
+            </a>
+          </div>
+        </section>
+
         {/* BOTTOM CTA */}
         <section className="px-4 pb-8">
           <div className="relative rounded-2xl overflow-hidden">
@@ -369,16 +402,19 @@ export default function LandingPage() {
           </Link>
         </div>
         <p className="text-[10px] text-muted-foreground/70">
-          {t.landing.powered_by_prefix}{" "}
+          {t.brand.sponsored_by}{" "}
           <a
-            href="https://newsmaker.id"
+            href="https://www.sg-berjangka.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-            data-testid="link-footer-powered-by"
+            className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
+            data-testid="link-footer-sponsor"
           >
-            {t.landing.powered_by_brand}
+            SOLID PRIME
           </a>
+        </p>
+        <p className="text-[9px] text-muted-foreground/50">
+          {t.brand.news_data_via}
         </p>
       </footer>
     </div>

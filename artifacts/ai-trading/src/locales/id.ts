@@ -637,6 +637,15 @@ export const id: Translations = {
   brand: {
     tagline: "Lihat Pasar dengan Jernih. Putuskan dengan Yakin.",
     supported_by: "Didukung oleh",
+    sponsored_by: "Disponsori oleh",
+    news_data_via: "Data berita via newsmaker.id",
+    solid_prime_subline: "Mini akun futures dari PT Solid Gold Berjangka",
+    solid_prime_regulated: "Diawasi BAPPEBTI · Member JFX & ICH",
+    open_account_cta: "Buka Akun Demo SOLID PRIME",
+    open_account_subtitle: "Coba akun demo gratis di broker futures berizin BAPPEBTI — tanpa deposit. Trade Pilot tidak menerima akun atau eksekusi trading.",
+    live_analisa_badge: "LIVE",
+    live_analisa_title: "Live Analisa Pasar bareng SOLID PRIME",
+    live_analisa_subtitle: "Setiap hari kerja jam 09.00 WIB di TikTok @solid.prime",
   },
   legal: {
     privacy_link: "Kebijakan Privasi",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { TrendingUp, Plus, Clock, Loader2, Brain, Sparkles } from "lucide-react";
+import { TrendingUp, Plus, Clock, Loader2, Brain, Sparkles, Radio, ArrowUpRight } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
 import { OnboardingModal, isOnboardingDone } from "@/components/onboarding-modal";
@@ -158,6 +158,39 @@ export default function DashboardPage() {
         )}
 
         <DashboardLivePrices />
+
+        <a
+          href="https://www.tiktok.com/@solid.prime"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+          data-testid="link-live-analisa-tiktok"
+        >
+          <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-orange-500/10 p-3.5 active:scale-[0.99] transition-transform">
+            <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30">
+                <Radio className="w-5 h-5 text-[#1a1208]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-red-500/90 text-white text-[8px] font-bold uppercase tracking-wider">
+                    <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
+                    {t.brand.live_analisa_badge}
+                  </span>
+                  <span className="text-[10px] text-amber-300 font-semibold tracking-wide">SOLID PRIME</span>
+                </div>
+                <p className="text-xs font-bold text-foreground leading-tight">
+                  {t.brand.live_analisa_title}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                  {t.brand.live_analisa_subtitle}
+                </p>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-amber-400 shrink-0" />
+            </div>
+          </div>
+        </a>
 
         {instrumentsData?.instruments && instrumentsData.instruments.length > 0 && (
           <div>
