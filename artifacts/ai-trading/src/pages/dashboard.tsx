@@ -142,7 +142,13 @@ export default function DashboardPage() {
                       {t.brand.live_analisa_subtitle}
                     </p>
                   </div>
-                  <ArrowUpRight className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span
+                    className="flex items-center gap-1 text-[11px] font-bold text-amber-300 shrink-0"
+                    data-testid="text-live-analisa-cta"
+                  >
+                    {t.brand.live_analisa_cta}
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </span>
                 </div>
               </div>
             </a>

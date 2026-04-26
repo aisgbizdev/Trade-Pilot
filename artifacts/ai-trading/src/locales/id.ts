@@ -649,6 +649,7 @@ export const id: Translations = {
     live_analisa_badge: "LIVE",
     live_analisa_title: "Live Analisa Pasar bareng SOLID PRIME",
     live_analisa_subtitle: "Setiap hari kerja jam 09.00 WIB di TikTok @solid.prime",
+    live_analisa_cta: "Tonton",
   },
   legal: {
     privacy_link: "Kebijakan Privasi",

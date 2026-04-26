@@ -647,6 +647,7 @@ export const en = {
     live_analisa_badge: "LIVE",
     live_analisa_title: "Live Market Analysis with SOLID PRIME",
     live_analisa_subtitle: "Every weekday at 09:00 WIB on TikTok @solid.prime",
+    live_analisa_cta: "Watch",
   },
   legal: {
     privacy_link: "Privacy Policy",
