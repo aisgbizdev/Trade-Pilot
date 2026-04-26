@@ -122,7 +122,7 @@ export function ContinuousTicker({ newsLimit = 3 }: { newsLimit?: number }) {
 
   return (
     <section
-      className="bg-slate-950 overflow-hidden py-2 border-b border-white/10"
+      className="bg-slate-950 overflow-hidden py-2 border-b border-white/10 pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]"
       data-testid="continuous-ticker"
       aria-label={t.widgets.news_title}
     >
