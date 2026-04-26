@@ -104,25 +104,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <ChevronLeft className="w-5 h-5 text-foreground" />
             </button>
           )}
-          <BrandLogo className="w-8 h-8" />
-          <div className="flex flex-col">
-            <span className="font-bold text-[13px] leading-none tracking-tight">
-              <span className="gradient-text">Trade</span>
-              <span className="text-foreground"> Pilot</span>
-            </span>
-            <span className="text-[9px] text-muted-foreground leading-none mt-0.5 tracking-wide uppercase">
-              {user?.selectedMode === "pro" ? t.common.pro : t.common.beginner} Mode
-            </span>
-            <a
-              href="https://newsmaker.id"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-0.5 mt-0.5 hover:opacity-75 transition-opacity"
-            >
-              <span className="text-[8px] text-muted-foreground/60 leading-none">supported by</span>
-              <img src="/newsmaker-logo.png" alt="Newsmaker.id" className="h-2.5 w-auto object-contain bg-white rounded-sm px-0.5" />
-            </a>
-          </div>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 -m-1 p-1 rounded-lg hover:bg-muted/40 transition-colors"
+            data-testid="link-brand-home"
+            aria-label={t.nav.dashboard}
+          >
+            <BrandLogo className="w-8 h-8" />
+            <div className="flex flex-col">
+              <span className="font-bold text-[13px] leading-none tracking-tight">
+                <span className="gradient-text">Trade</span>
+                <span className="text-foreground"> Pilot</span>
+              </span>
+              <span className="text-[9px] text-muted-foreground leading-none mt-0.5 tracking-wide uppercase">
+                {user?.selectedMode === "pro" ? t.common.pro : t.common.beginner} Mode
+              </span>
+            </div>
+          </Link>
         </div>
         <div className="flex items-center gap-1">
           <LanguageToggle />
@@ -224,6 +222,41 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+72px)] overflow-y-auto">
         {children}
+
+        <footer className="border-t border-border/50 px-4 py-4 mt-6 text-center space-y-2">
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            {t.landing.footer}
+          </p>
+          <div className="flex justify-center items-center gap-4 text-[11px]">
+            <Link
+              href="/privacy"
+              className="text-muted-foreground hover:text-foreground"
+              data-testid="link-footer-privacy"
+            >
+              {t.legal.privacy_link}
+            </Link>
+            <span className="text-muted-foreground/50">·</span>
+            <Link
+              href="/terms"
+              className="text-muted-foreground hover:text-foreground"
+              data-testid="link-footer-terms"
+            >
+              {t.legal.terms_link}
+            </Link>
+          </div>
+          <p className="text-[10px] text-muted-foreground/70">
+            {t.landing.powered_by_prefix}{" "}
+            <a
+              href="https://newsmaker.id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+              data-testid="link-footer-powered-by"
+            >
+              {t.landing.powered_by_brand}
+            </a>
+          </p>
+        </footer>
       </main>
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40">
