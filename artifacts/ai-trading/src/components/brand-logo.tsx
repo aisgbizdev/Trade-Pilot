@@ -17,8 +17,8 @@ export function BrandLogo({
     >
       <defs>
         <linearGradient id="tpBrandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#7c3aed" />
+          <stop offset="0%" stopColor="#f5c518" />
+          <stop offset="100%" stopColor="#ff9f1c" />
         </linearGradient>
       </defs>
       <g fill="url(#tpBrandGrad)">

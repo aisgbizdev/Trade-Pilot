@@ -105,7 +105,7 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => setLocation("/analyze")}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl btn-premium text-white text-sm font-semibold hover:opacity-90 transition-all shadow-lg"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl btn-premium text-sm font-semibold hover:opacity-90 transition-all shadow-lg"
             data-testid="button-new-analysis"
           >
             <Plus className="w-4 h-4" />
@@ -133,9 +133,9 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-3 gap-2.5">
           {[
-            { label: t.dashboard.total_analyses, value: summaryLoading ? "—" : (summaryData?.totalAnalyses ?? 0), icon: Brain, gradient: "from-blue-500/20 to-violet-500/20", iconColor: "text-blue-400" },
-            { label: t.dashboard.beginner_mode, value: summaryLoading ? "—" : (summaryData?.beginnerCount ?? 0), icon: Sparkles, gradient: "from-cyan-500/20 to-blue-500/20", iconColor: "text-cyan-400" },
-            { label: t.dashboard.pro_mode, value: summaryLoading ? "—" : (summaryData?.proCount ?? 0), icon: TrendingUp, gradient: "from-violet-500/20 to-purple-500/20", iconColor: "text-violet-400" },
+            { label: t.dashboard.total_analyses, value: summaryLoading ? "—" : (summaryData?.totalAnalyses ?? 0), icon: Brain, gradient: "from-amber-400/20 to-yellow-500/20", iconColor: "text-amber-300" },
+            { label: t.dashboard.beginner_mode, value: summaryLoading ? "—" : (summaryData?.beginnerCount ?? 0), icon: Sparkles, gradient: "from-yellow-400/20 to-amber-500/20", iconColor: "text-yellow-300" },
+            { label: t.dashboard.pro_mode, value: summaryLoading ? "—" : (summaryData?.proCount ?? 0), icon: TrendingUp, gradient: "from-amber-500/20 to-orange-500/20", iconColor: "text-amber-400" },
           ].map(({ label, value, icon: Icon, gradient, iconColor }) => (
             <div key={label} className="bg-card border border-border rounded-2xl p-3 text-center">
               <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mx-auto mb-2`}>
@@ -193,15 +193,15 @@ export default function DashboardPage() {
             </div>
           ) : analyses.length === 0 ? (
             <div className="relative rounded-2xl border border-dashed border-border overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-violet-500/5" />
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 to-yellow-500/5" />
               <div className="relative p-7 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center mx-auto mb-3">
-                  <Brain className="w-7 h-7 text-blue-400" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 to-yellow-500/20 border border-amber-400/20 flex items-center justify-center mx-auto mb-3">
+                  <Brain className="w-7 h-7 text-amber-300" />
                 </div>
                 <p className="text-sm font-semibold text-foreground mb-1">{t.dashboard.no_analyses_title}</p>
                 <p className="text-xs text-muted-foreground mb-4">{t.dashboard.no_analyses_subtitle}</p>
                 <button
-                  className="px-5 py-2 rounded-xl btn-premium text-white text-sm font-semibold hover:opacity-90 transition-all"
+                  className="px-5 py-2 rounded-xl btn-premium text-sm font-semibold hover:opacity-90 transition-all"
                   onClick={() => setLocation("/analyze")}
                   data-testid="button-start-first-analysis"
                 >

@@ -9,12 +9,15 @@ const FALLBACK_INSTRUMENTS = [
   "XAG/USD", "NASDAQ", "DJIA", "DXY", "USD/IDR",
 ];
 
+// News category dots — used purely for visual differentiation between
+// rss feeds in the marquee. Avoid red/emerald (they read as Buy/Sell)
+// and stay within a warm gold-leaning palette to match the brand.
 const CATEGORY_DOT: Record<string, string> = {
-  GLOBAL: "bg-blue-400",
-  FOREX: "bg-violet-400",
-  KOMODITAS: "bg-amber-400",
-  SAHAM: "bg-emerald-400",
-  EKONOMI: "bg-cyan-400",
+  GLOBAL: "bg-amber-300",
+  FOREX: "bg-yellow-400",
+  KOMODITAS: "bg-orange-400",
+  SAHAM: "bg-amber-500",
+  EKONOMI: "bg-yellow-200",
 };
 
 function formatPrice(price: number, instrument: string): string {
@@ -52,7 +55,7 @@ function PriceItem({ quote }: { quote: LiveQuote }) {
 function FallbackPriceItem({ instrument }: { instrument: string }) {
   return (
     <span className="text-xs font-mono text-slate-200 flex items-center gap-1.5">
-      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-300 inline-block" />
       {instrument}
     </span>
   );
@@ -67,7 +70,7 @@ function NewsItem({ article }: { article: NewsArticle }) {
       className="flex items-center gap-2 group"
       data-testid={`ticker-news-item-${article.id}`}
     >
-      <Newspaper className="w-3 h-3 text-cyan-400 shrink-0" />
+      <Newspaper className="w-3 h-3 text-amber-300 shrink-0" />
       {article.category && (
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${

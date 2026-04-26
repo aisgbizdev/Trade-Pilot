@@ -3,12 +3,14 @@ import { Loader2, Newspaper, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
+// Category badge colors — kept inside the warm gold/amber family so news
+// tags don't compete visually with bullish/bearish signals on the page.
 const CATEGORY_COLORS: Record<string, string> = {
-  GLOBAL: "bg-blue-500/15 text-blue-500",
-  FOREX: "bg-violet-500/15 text-violet-500",
-  KOMODITAS: "bg-amber-500/15 text-amber-600",
-  SAHAM: "bg-emerald-500/15 text-emerald-500",
-  EKONOMI: "bg-cyan-500/15 text-cyan-500",
+  GLOBAL: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  FOREX: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-300",
+  KOMODITAS: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
+  SAHAM: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  EKONOMI: "bg-yellow-500/15 text-yellow-800 dark:text-yellow-200",
 };
 
 export function NewsWidget({ limit = 5 }: { limit?: number }) {
@@ -19,8 +21,8 @@ export function NewsWidget({ limit = 5 }: { limit?: number }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
-          <Newspaper className="w-3.5 h-3.5 text-cyan-400" />
+        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400/20 to-yellow-500/20 flex items-center justify-center">
+          <Newspaper className="w-3.5 h-3.5 text-amber-300" />
         </div>
         <h3 className="text-sm font-bold text-foreground">{t.widgets.news_title}</h3>
         <a

@@ -141,8 +141,8 @@ export function TechnicalIndicatorsPanel({
       />
 
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center">
-          <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
+        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400/20 to-yellow-500/20 flex items-center justify-center">
+          <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
         </div>
         <h3 className="text-sm font-bold text-foreground" data-testid="text-indicator-header">
           {t.analyze.technical_indicators} — {timeframe}

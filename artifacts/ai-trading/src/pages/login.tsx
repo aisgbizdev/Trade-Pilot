@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
-import { Eye, EyeOff, TrendingUp, Loader2, Brain, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, Brain, CheckCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -14,6 +14,7 @@ import { useLogin, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -68,14 +69,14 @@ export default function LoginPage() {
 
       <div className="hero-gradient px-6 pt-8 pb-10 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-48 h-32 bg-blue-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-48 h-32 bg-amber-400/12 rounded-full blur-3xl" />
         </div>
         <div className="relative z-10 flex flex-col items-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-xl shadow-blue-500/30 mb-4 float-anim">
-            <TrendingUp className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 to-yellow-500/15 border border-amber-400/30 flex items-center justify-center shadow-xl shadow-amber-500/30 mb-4 float-anim">
+            <BrandLogo className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-extrabold text-white mb-1">{t.auth.welcome_back}</h1>
-          <p className="text-sm text-slate-400">{t.auth.welcome_subtitle}</p>
+          <p className="text-sm text-slate-200">{t.auth.welcome_subtitle}</p>
         </div>
       </div>
 
@@ -173,7 +174,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="w-full h-12 rounded-xl btn-premium text-white font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-60"
+                className="w-full h-12 rounded-xl btn-premium font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-60"
                 disabled={login.isPending}
                 data-testid="button-submit-login"
               >

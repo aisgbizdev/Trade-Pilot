@@ -53,88 +53,111 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* =========================================================================
+   Brand palette: black + gold/amber.
+   - Primary brand accent: warm gold (#F5C518 in dark / deeper amber in light)
+   - Secondary accent: deep amber/orange for highlights
+   - Body text: warm off-white (dark) / warm near-black (light)
+   - Bullish/bearish signal colors are NOT defined here — they live as
+     direct Tailwind utilities (text-emerald-*, text-rose-*, etc.) so
+     trader-safety colors stay decoupled from brand identity.
+   ========================================================================= */
+
 :root {
-  --background: 220 20% 97%;
-  --foreground: 222 47% 8%;
+  --background: 45 30% 98%;
+  --foreground: 30 30% 10%;
 
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --card-border: 214 32% 88%;
+  --card-foreground: 30 30% 10%;
+  --card-border: 45 30% 88%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --popover-border: 214 32% 88%;
+  --popover-foreground: 30 30% 10%;
+  --popover-border: 45 30% 88%;
 
-  --primary: 214 52% 24%;
-  --primary-foreground: 210 40% 98%;
+  /* Deep amber/gold so primary text & buttons hit WCAG AA on white. */
+  --primary: 38 90% 35%;
+  --primary-foreground: 45 50% 98%;
 
-  --secondary: 210 40% 94%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 45 50% 94%;
+  --secondary-foreground: 30 30% 12%;
 
-  --muted: 210 40% 94%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 45 30% 95%;
+  --muted-foreground: 30 15% 35%;
 
-  --accent: 210 40% 94%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 38 90% 50%;
+  --accent-foreground: 30 30% 10%;
 
+  /* Destructive is a trader-safety signal — kept at the original value
+     so destructive states (delete confirmations, error toasts) remain
+     unmistakably "danger red" regardless of brand identity changes. */
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
 
-  --border: 214.3 31.8% 89%;
-  --input: 214.3 31.8% 89%;
-  --ring: 214 52% 24%;
+  --border: 45 25% 88%;
+  --input: 45 25% 88%;
+  --ring: 38 90% 35%;
 
   --radius: 0.875rem;
 
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-border: 240 5.9% 90%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --sidebar: 45 30% 97%;
+  --sidebar-foreground: 30 25% 25%;
+  --sidebar-border: 45 25% 88%;
+  --sidebar-primary: 38 90% 35%;
+  --sidebar-primary-foreground: 45 50% 98%;
+  --sidebar-accent: 45 50% 94%;
+  --sidebar-accent-foreground: 30 30% 12%;
+  --sidebar-ring: 46 92% 53%;
 }
 
 .dark {
-  --background: 222 47% 5%;
-  --foreground: 210 40% 95%;
+  /* Near-black with the slightest warm undertone so gold accents harmonize
+     instead of fighting a cold/blue-tinted neutral. */
+  --background: 30 8% 5%;
+  --foreground: 45 30% 96%;
 
-  --card: 222 40% 8%;
-  --card-foreground: 210 40% 95%;
-  --card-border: 217 32% 14%;
+  --card: 30 8% 8%;
+  --card-foreground: 45 30% 96%;
+  --card-border: 40 25% 16%;
 
-  --popover: 222 40% 8%;
-  --popover-foreground: 210 40% 95%;
-  --popover-border: 217 32% 14%;
+  --popover: 30 8% 8%;
+  --popover-foreground: 45 30% 96%;
+  --popover-border: 40 25% 16%;
 
-  --primary: 217 91% 60%;
-  --primary-foreground: 210 40% 98%;
+  /* Rich gold (#F5C518). Used as accent on near-black surfaces;
+     primary-foreground is intentionally near-black so text on gold
+     buttons reads at WCAG AAA. */
+  --primary: 46 92% 53%;
+  --primary-foreground: 30 30% 8%;
 
-  --secondary: 217.2 32.6% 13%;
-  --secondary-foreground: 210 40% 95%;
+  --secondary: 30 10% 12%;
+  --secondary-foreground: 45 30% 96%;
 
-  --muted: 217.2 32.6% 13%;
-  --muted-foreground: 215 20.2% 55%;
+  --muted: 30 10% 12%;
+  /* Bumped from the previous 55% L cool grey to a warmer 72% L so secondary
+     text on the new near-black surface stays comfortably above WCAG AA. */
+  --muted-foreground: 40 12% 72%;
 
-  --accent: 217.2 32.6% 13%;
-  --accent-foreground: 210 40% 95%;
+  --accent: 38 100% 55%;
+  --accent-foreground: 30 30% 8%;
 
+  /* Destructive — preserved as a semantic trader-safety signal,
+     decoupled from brand identity. */
   --destructive: 0 62.8% 50%;
   --destructive-foreground: 210 40% 98%;
 
-  --border: 217.2 32.6% 14%;
-  --input: 217.2 32.6% 14%;
-  --ring: 217 91% 60%;
+  --border: 40 20% 16%;
+  --input: 40 20% 16%;
+  --ring: 46 92% 53%;
 
-  --sidebar: 240 5.9% 10%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-primary: 224.3 76.3% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --sidebar: 30 8% 7%;
+  --sidebar-foreground: 45 25% 90%;
+  --sidebar-border: 40 20% 16%;
+  --sidebar-primary: 46 92% 53%;
+  --sidebar-primary-foreground: 30 30% 8%;
+  --sidebar-accent: 30 10% 12%;
+  --sidebar-accent-foreground: 45 30% 96%;
+  --sidebar-ring: 46 92% 53%;
 }
 
 @layer base {
@@ -146,28 +169,30 @@
   }
 
   /* Desktop-only "phone preview" framing: outside the centered mobile-width
-     app, paint a darker page bg so the centered shell looks intentional —
-     a deliberate mobile preview, not a broken responsive layout. */
+     app, paint a near-black page bg with subtle warm gold/amber radials so
+     the centered shell looks intentional and on-brand. */
   @media (min-width: 768px) {
     body {
-      background-color: #060912;
+      background-color: #0a0807;
       background-image:
-        radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 100%, rgba(124, 58, 237, 0.08) 0%, transparent 50%);
+        radial-gradient(circle at 20% 0%, rgba(245, 197, 24, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 100%, rgba(255, 159, 28, 0.07) 0%, transparent 50%);
     }
   }
 }
 
 @layer utilities {
+  /* Brand wordmark gradient — gold spectrum. */
   .gradient-text {
-    background: linear-gradient(135deg, #3b82f6 0%, #a78bfa 50%, #06b6d4 100%);
+    background: linear-gradient(135deg, #f5c518 0%, #ffd24a 50%, #e8b73d 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
+  /* Kept as an alias so any explicit "gold" caller still works. */
   .gradient-text-gold {
-    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%);
+    background: linear-gradient(135deg, #f5c518 0%, #ffd24a 50%, #e8b73d 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -187,10 +212,21 @@
     border: 1px solid rgba(255, 255, 255, 0.9);
   }
 
+  /* Brand-accent glow. The legacy class name is kept (.glow-blue) to avoid
+     touching every consumer; the implementation is now gold-tinted. */
   .glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+    box-shadow:
+      0 0 20px rgba(245, 197, 24, 0.3),
+      0 0 40px rgba(245, 197, 24, 0.1);
   }
 
+  .glow-gold {
+    box-shadow:
+      0 0 20px rgba(245, 197, 24, 0.3),
+      0 0 40px rgba(245, 197, 24, 0.1);
+  }
+
+  /* Trading signal glows — kept as-is, NOT brand-tinted. */
   .glow-green {
     box-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
   }
@@ -199,24 +235,31 @@
     box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
   }
 
+  /* Hero / marketing surface: deep near-black with warm amber undertone
+     so the gold CTA on top reads premium, not cold-tech. */
   .hero-gradient {
-    background: linear-gradient(160deg, #020817 0%, #0a1628 30%, #0f1f3d 60%, #0d1b35 100%);
+    background: linear-gradient(160deg, #050403 0%, #0d0a07 30%, #1a1308 60%, #0d0905 100%);
   }
 
   .card-premium {
-    background: linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(145deg, rgba(245, 197, 24, 0.04) 0%, rgba(245, 197, 24, 0.01) 100%);
+    border: 1px solid rgba(245, 197, 24, 0.08);
     backdrop-filter: blur(8px);
   }
 
+  /* Primary CTA button. Text on .btn-premium MUST stay near-black
+     (e.g. text-[#1a1208]) — using white on this gradient drops below
+     WCAG AA. Component call sites are updated accordingly. */
   .btn-premium {
-    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-    box-shadow: 0 4px 24px rgba(37, 99, 235, 0.4);
+    background: linear-gradient(135deg, #b07300 0%, #f5c518 100%);
+    box-shadow: 0 4px 24px rgba(245, 197, 24, 0.35);
+    color: #1a1208;
   }
 
   .dark .btn-premium {
-    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-    box-shadow: 0 4px 24px rgba(37, 99, 235, 0.5);
+    background: linear-gradient(135deg, #f5c518 0%, #ff9f1c 100%);
+    box-shadow: 0 4px 24px rgba(245, 197, 24, 0.45);
+    color: #1a1208;
   }
 
   .ticker-scroll {
@@ -250,8 +293,8 @@
   }
 
   @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); }
-    50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+    0%, 100% { box-shadow: 0 0 8px rgba(245, 197, 24, 0.3); }
+    50%      { box-shadow: 0 0 20px rgba(245, 197, 24, 0.6); }
   }
 
   .float-anim {

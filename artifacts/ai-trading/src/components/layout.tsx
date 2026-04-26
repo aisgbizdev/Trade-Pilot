@@ -151,7 +151,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 >
                   <Bell className="w-4 h-4 text-muted-foreground" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-blue-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-lg shadow-blue-500/40">
+                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-lg shadow-amber-500/40">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
@@ -172,7 +172,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs gap-1 text-blue-500 hover:text-blue-600"
+                      className="h-7 text-xs gap-1 text-primary hover:text-primary/80"
                       onClick={handleMarkAllRead}
                       data-testid="button-mark-all-read"
                       disabled={markAll.isPending}
@@ -206,7 +206,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
                 <div className="border-t border-border/50 px-4 py-2.5">
                   <Link href="/notifications" onClick={() => setBellOpen(false)}>
-                    <button className="flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 font-medium w-full justify-center" data-testid="link-view-all-notifications">
+                    <button className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium w-full justify-center" data-testid="link-view-all-notifications">
                       <ExternalLink className="w-3 h-3" />
                       Lihat semua notifikasi
                     </button>

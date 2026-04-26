@@ -81,7 +81,7 @@ export function SplashScreen() {
         paddingTop: "max(24px, env(safe-area-inset-top))",
         paddingBottom: "max(24px, env(safe-area-inset-bottom))",
         background:
-          "linear-gradient(135deg, #0b1220 0%, #1a1f3a 60%, #0b1220 100%)",
+          "linear-gradient(135deg, #050403 0%, #1a1308 60%, #0d0905 100%)",
         color: "#ffffff",
         opacity: fading ? 0 : 1,
         transition: `opacity ${FADE_MS}ms ease-out`,
@@ -104,7 +104,7 @@ export function SplashScreen() {
           <span
             style={{
               background:
-                "linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%)",
+                "linear-gradient(90deg, #f5c518 0%, #ffd24a 50%, #ff9f1c 100%)",
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               color: "transparent",

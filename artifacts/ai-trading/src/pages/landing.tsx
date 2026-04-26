@@ -21,20 +21,25 @@ import { ContinuousTicker } from "@/components/continuous-ticker";
 
 const FEATURE_ICON_MAP = [Brain, BarChart3, Clock, Sparkles];
 
+// Feature accent palette: gold/amber family for brand-aligned cards.
+// The third entry intentionally keeps emerald (signal/safe), and the
+// fourth keeps amber+orange for warm variation — matches the brand.
 const FEATURE_STYLES = [
-  { color: "from-blue-500/20 to-violet-500/20", iconColor: "text-blue-400", glow: "group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]" },
-  { color: "from-cyan-500/20 to-blue-500/20", iconColor: "text-cyan-400", glow: "group-hover:shadow-[0_0_20px_rgba(34,211,238,0.3)]" },
+  { color: "from-amber-400/20 to-yellow-500/20", iconColor: "text-amber-300", glow: "group-hover:shadow-[0_0_20px_rgba(245,197,24,0.35)]" },
+  { color: "from-yellow-400/20 to-amber-500/20", iconColor: "text-yellow-300", glow: "group-hover:shadow-[0_0_20px_rgba(255,210,74,0.35)]" },
   { color: "from-emerald-500/20 to-teal-500/20", iconColor: "text-emerald-400", glow: "group-hover:shadow-[0_0_20px_rgba(52,211,153,0.3)]" },
   { color: "from-amber-500/20 to-orange-500/20", iconColor: "text-amber-400", glow: "group-hover:shadow-[0_0_20px_rgba(251,191,36,0.3)]" },
 ];
 
 const WHAT_YOU_GET_ICONS = [LineChart, Compass, Scale, GitBranch, AlertTriangle];
 
+// "What you get" tiles — gold/amber variations except where a semantic
+// color carries meaning (emerald = bullish, rose = risk).
 const WHAT_YOU_GET_STYLES = [
-  { color: "from-sky-500/15 to-blue-500/15", iconColor: "text-sky-400" },
-  { color: "from-violet-500/15 to-fuchsia-500/15", iconColor: "text-violet-400" },
+  { color: "from-amber-400/15 to-yellow-500/15", iconColor: "text-amber-300" },
+  { color: "from-yellow-400/15 to-amber-500/15", iconColor: "text-yellow-300" },
   { color: "from-emerald-500/15 to-amber-500/15", iconColor: "text-emerald-400" },
-  { color: "from-blue-500/15 to-indigo-500/15", iconColor: "text-indigo-400" },
+  { color: "from-amber-500/15 to-orange-500/15", iconColor: "text-amber-400" },
   { color: "from-rose-500/15 to-orange-500/15", iconColor: "text-rose-400" },
 ];
 
@@ -83,7 +88,7 @@ export default function LandingPage() {
               </button>
             </Link>
             <Link href="/register">
-              <button className="text-sm font-medium px-4 py-1.5 rounded-lg btn-premium text-white transition-all hover:opacity-90" data-testid="link-register">
+              <button className="text-sm font-medium px-4 py-1.5 rounded-lg btn-premium transition-all hover:opacity-90" data-testid="link-register">
                 {t.landing.register}
               </button>
             </Link>
@@ -97,9 +102,9 @@ export default function LandingPage() {
         {/* HERO */}
         <section className="hero-gradient px-5 pt-14 pb-10 text-center relative overflow-hidden">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-8 left-1/2 -translate-x-1/2 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
-            <div className="absolute top-20 right-4 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl" />
-            <div className="absolute bottom-0 left-4 w-40 h-40 bg-cyan-500/8 rounded-full blur-2xl" />
+            <div className="absolute top-8 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-400/12 rounded-full blur-3xl" />
+            <div className="absolute top-20 right-4 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl" />
+            <div className="absolute bottom-0 left-4 w-40 h-40 bg-orange-500/8 rounded-full blur-2xl" />
           </div>
 
           <div className="relative z-10">
@@ -109,14 +114,14 @@ export default function LandingPage() {
               <span className="text-white">{t.landing.tagline_part2}</span>
             </h1>
 
-            <p className="text-sm text-slate-300 leading-relaxed mb-8 max-w-xs mx-auto" data-testid="text-hero-subtitle">
+            <p className="text-sm text-slate-200 leading-relaxed mb-8 max-w-xs mx-auto" data-testid="text-hero-subtitle">
               {t.landing.subtitle_full}
             </p>
 
             <div className="flex flex-col gap-3 mb-10">
               <Link href="/register" className="block">
                 <button
-                  className="w-full h-12 rounded-xl font-semibold text-white btn-premium flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
+                  className="w-full h-12 rounded-xl font-semibold btn-premium flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
                   data-testid="button-get-started"
                 >
                   {t.landing.cta_start}
@@ -125,7 +130,7 @@ export default function LandingPage() {
               </Link>
               <Link href="/login" className="block">
                 <button
-                  className="w-full h-11 rounded-xl font-medium text-slate-300 border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
+                  className="w-full h-11 rounded-xl font-medium text-amber-100 border border-amber-400/30 bg-amber-400/5 hover:bg-amber-400/10 transition-all"
                   data-testid="button-login"
                 >
                   {t.landing.cta_login}
@@ -135,20 +140,20 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-4 gap-3">
               {stats.map(({ value, label }) => (
-                <div key={label} className="bg-white/5 rounded-xl p-2.5 border border-white/8">
+                <div key={label} className="bg-white/5 rounded-xl p-2.5 border border-amber-400/15">
                   <div className="text-base font-bold gradient-text">{value}</div>
-                  <div className="text-[9px] text-slate-500 mt-0.5 leading-tight">{label}</div>
+                  <div className="text-[9px] text-slate-300 mt-0.5 leading-tight">{label}</div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Bridge: smooth fade from hero's dark end (#0d1b35) into the
+        {/* Bridge: smooth fade from hero's dark end (#0d0905) into the
             page's bg-background so the dark→light transition doesn't
             land as a hard seam. */}
         <div
-          className="h-20 bg-gradient-to-b from-[#0d1b35] to-background -mt-px"
+          className="h-20 bg-gradient-to-b from-[#0d0905] to-background -mt-px"
           aria-hidden="true"
         />
 
@@ -203,14 +208,14 @@ export default function LandingPage() {
 
           {/* Sample analysis preview */}
           <div className="relative rounded-2xl border border-border bg-card overflow-hidden shadow-lg">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-400/12 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative p-4 space-y-4">
               {/* Instrument header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-violet-500/30 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400/30 to-yellow-500/30 flex items-center justify-center">
                     <ArrowUpRight className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div>
@@ -256,7 +261,7 @@ export default function LandingPage() {
                     {t.landing.sample_invalidation_label}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">{t.landing.sample_invalidation}</p>
+                <p className="text-[11px] text-foreground/85 leading-relaxed">{t.landing.sample_invalidation}</p>
               </div>
 
               {/* Opportunity vs Risk */}
@@ -265,13 +270,13 @@ export default function LandingPage() {
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300 mb-1">
                     {t.landing.sample_opportunity_label}
                   </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">{t.landing.sample_opportunity}</p>
+                  <p className="text-[11px] text-foreground/85 leading-snug">{t.landing.sample_opportunity}</p>
                 </div>
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-300 mb-1">
                     {t.landing.sample_risk_section_label}
                   </div>
-                  <p className="text-[11px] text-slate-300 leading-snug">{t.landing.sample_risk_section}</p>
+                  <p className="text-[11px] text-foreground/85 leading-snug">{t.landing.sample_risk_section}</p>
                 </div>
               </div>
             </div>
@@ -315,24 +320,24 @@ export default function LandingPage() {
           <div className="relative rounded-2xl overflow-hidden">
             <div className="hero-gradient p-6 text-center">
               <div className="absolute inset-0">
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-48 h-24 bg-blue-500/15 rounded-full blur-2xl" />
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-48 h-24 bg-amber-400/18 rounded-full blur-2xl" />
               </div>
               <div className="relative z-10">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/40 float-anim">
-                  <Brain className="w-6 h-6 text-white" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 to-yellow-500/15 border border-amber-400/30 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/30 float-anim">
+                  <BrandLogo className="w-8 h-8" />
                 </div>
                 <h2 className="text-lg font-bold text-white mb-2">
                   {t.landing.cta_bottom_title} <span className="gradient-text">{t.landing.cta_bottom_highlight}</span>
                 </h2>
-                <p className="text-xs text-slate-400 leading-relaxed mb-5">
+                <p className="text-xs text-slate-200 leading-relaxed mb-5">
                   {t.landing.cta_bottom_subtitle}
                 </p>
-                <div className="flex items-center justify-center gap-4 mb-5 text-xs text-slate-500">
+                <div className="flex items-center justify-center gap-4 mb-5 text-xs text-slate-300">
                   <span className="flex items-center gap-1"><Lock className="w-3 h-3 text-emerald-400" /> {t.landing.no_credit_card}</span>
-                  <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-blue-400" /> {t.landing.secure_data}</span>
+                  <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-amber-300" /> {t.landing.secure_data}</span>
                 </div>
                 <Link href="/register">
-                  <button className="w-full h-11 rounded-xl font-semibold text-white btn-premium hover:opacity-90 transition-all" data-testid="button-signup-bottom">
+                  <button className="w-full h-11 rounded-xl font-semibold btn-premium hover:opacity-90 transition-all" data-testid="button-signup-bottom">
                     {t.landing.cta_signup}
                   </button>
                 </Link>
