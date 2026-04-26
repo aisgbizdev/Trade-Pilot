@@ -55,11 +55,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
 
-const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
-  trending_up: { label: "Tren Naik", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-  trending_down: { label: "Tren Turun", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-  ranging: { label: "Sideways", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  volatile: { label: "Volatil", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
+const MARKET_CONDITION_COLORS: Record<string, string> = {
+  trending_up: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  trending_down: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  ranging: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  volatile: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
 };
 
 function UserTagEditor({
@@ -530,9 +530,27 @@ function BroadcastHistoryPanel() {
 
 function AdminContent() {
   const [, setLocation] = useLocation();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [page, setPage] = useState(1);
   const limit = 20;
+  const dateLocale = lang === "id" ? idLocale : enUS;
+  const marketConditionLabel = (key: string | null | undefined): string => {
+    if (!key) return "";
+    switch (key) {
+      case "trending_up":
+        return t.admin.market_condition_trending_up;
+      case "trending_down":
+        return t.admin.market_condition_trending_down;
+      case "ranging":
+        return t.admin.market_condition_ranging;
+      case "volatile":
+        return t.admin.market_condition_volatile;
+      default:
+        return key;
+    }
+  };
+  const modeLabel = (mode: string): string =>
+    mode === "beginner" ? t.admin.mode_beginner_label : t.admin.mode_pro_label;
 
   const { data: statsData, isLoading: statsLoading } = useGetAdminStats({
     query: { queryKey: getGetAdminStatsQueryKey() },
@@ -573,14 +591,14 @@ function AdminContent() {
           <>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: "Total User", value: stats?.totalUsers ?? 0 },
-                { label: "User Hari Ini", value: stats?.totalUsersToday ?? 0 },
-                { label: "Analisis Hari Ini", value: stats?.totalAnalysesToday ?? 0 },
-                { label: "Minggu Ini", value: stats?.totalAnalysesThisWeek ?? 0 },
-                { label: "Bulan Ini", value: stats?.totalAnalysesThisMonth ?? 0 },
-              ].map(({ label, value }) => (
-                <Card key={label} className="p-3 text-center">
-                  <div className="text-2xl font-bold text-primary" data-testid={`stat-${label.toLowerCase().replace(/\s/g, "-")}`}>
+                { key: "total-users", label: t.admin.stats_total_users, value: stats?.totalUsers ?? 0 },
+                { key: "users-today", label: t.admin.stats_users_today, value: stats?.totalUsersToday ?? 0 },
+                { key: "analyses-today", label: t.admin.stats_analyses_today, value: stats?.totalAnalysesToday ?? 0 },
+                { key: "this-week", label: t.admin.stats_this_week, value: stats?.totalAnalysesThisWeek ?? 0 },
+                { key: "this-month", label: t.admin.stats_this_month, value: stats?.totalAnalysesThisMonth ?? 0 },
+              ].map(({ key, label, value }) => (
+                <Card key={key} className="p-3 text-center">
+                  <div className="text-2xl font-bold text-primary" data-testid={`stat-${key}`}>
                     {value}
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
@@ -590,7 +608,7 @@ function AdminContent() {
 
             {stats?.instrumentBreakdown && stats.instrumentBreakdown.length > 0 && (
               <Card className="p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Instrumen Terpopuler</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">{t.admin.popular_instruments_title}</h3>
                 <div className="space-y-2">
                   {stats?.instrumentBreakdown?.slice(0, 5).map((item) => (
                     <div key={item.instrument} className="flex items-center justify-between">
@@ -604,13 +622,11 @@ function AdminContent() {
 
             {stats?.modeBreakdown && Object.keys(stats.modeBreakdown).length > 0 && (
               <Card className="p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Breakdown Mode</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">{t.admin.mode_breakdown_title}</h3>
                 <div className="space-y-2">
                   {Object.entries(stats?.modeBreakdown ?? {}).map(([mode, count]) => (
                     <div key={mode} className="flex items-center justify-between">
-                      <span className="text-sm text-foreground">
-                        {mode === "beginner" ? "Pemula" : "Pro"}
-                      </span>
+                      <span className="text-sm text-foreground">{modeLabel(mode)}</span>
                       <Badge variant="secondary" className="text-xs">{count}x</Badge>
                     </div>
                   ))}
@@ -649,7 +665,8 @@ function AdminContent() {
           ) : (
             <div className="space-y-2">
               {analyses.map((a) => {
-                const mc = a.marketCondition ? MARKET_CONDITION_LABELS[a.marketCondition] : undefined;
+                const mcColor = a.marketCondition ? MARKET_CONDITION_COLORS[a.marketCondition] : undefined;
+                const mcLabel = marketConditionLabel(a.marketCondition);
                 const userEmail = (a as Analysis & { userEmail?: string }).userEmail;
                 const usefulCount = (a as Analysis & { usefulCount?: number }).usefulCount ?? 0;
                 const notUsefulCount = (a as Analysis & { notUsefulCount?: number }).notUsefulCount ?? 0;
@@ -661,15 +678,15 @@ function AdminContent() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold">{a.instrument}</span>
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">{a.timeframe}</Badge>
-                          <Badge className={cn("text-[10px] px-1.5 py-0 border-0", mc?.color)}>{mc?.label}</Badge>
+                          <Badge className={cn("text-[10px] px-1.5 py-0 border-0", mcColor)}>{mcLabel}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {userEmail} • {a.mode === "beginner" ? "Pemula" : "Pro"}
+                          {userEmail} • {modeLabel(a.mode)}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                          {format(new Date(a.createdAt), "d MMM")}
+                          {format(new Date(a.createdAt), "d MMM", { locale: dateLocale })}
                         </span>
                         <Link
                           href={`/admin/feedback?analysisId=${a.id}`}

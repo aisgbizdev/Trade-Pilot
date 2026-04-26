@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
+import { id as idLocale, enUS } from "date-fns/locale";
 import { ChevronLeft, Plus, Trash2, RotateCcw, Shield, Loader2, Users, Eye, EyeOff, Search, ChevronLeft as ChevronLeftIcon, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ import {
 import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useToast } from "@/hooks/use-toast";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import {
   useGetAllUsers,
   getGetAllUsersQueryKey,
@@ -36,20 +37,6 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
-const SECURITY_QUESTIONS = [
-  "Nama hewan peliharaan pertama kamu?",
-  "Nama kota tempat kamu lahir?",
-  "Nama ibu kandung kamu?",
-  "Nama sekolah dasar kamu?",
-  "Nama teman terbaik masa kecil kamu?",
-];
-
-const ROLE_LABELS: Record<string, string> = {
-  user: "User",
-  admin: "Admin",
-  super_admin: "Super Admin",
-};
-
 const ROLE_BADGE: Record<string, "secondary" | "outline" | "destructive"> = {
   user: "secondary",
   admin: "outline",
@@ -60,7 +47,17 @@ function AdminUsersContent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const dateLocale = lang === "id" ? idLocale : enUS;
+
+  const securityQuestionOptions = useMemo(() => getSecurityQuestionOptions(lang), [lang]);
+  const defaultSecurityQuestion = securityQuestionOptions[0]?.value ?? "";
+
+  const ROLE_LABELS: Record<string, string> = {
+    user: t.profile.role_user,
+    admin: t.profile.role_admin,
+    super_admin: t.profile.role_super_admin,
+  };
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -87,7 +84,7 @@ function AdminUsersContent() {
     displayName: "",
     role: "user",
     selectedMode: "beginner",
-    securityQuestion: SECURITY_QUESTIONS[0],
+    securityQuestion: defaultSecurityQuestion,
     securityAnswer: "",
   });
 
@@ -118,10 +115,10 @@ function AdminUsersContent() {
       await createUser.mutateAsync({ data: createForm as CreateUserBody });
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       setCreateOpen(false);
-      toast({ title: "User berhasil dibuat" });
-      setCreateForm({ email: "", password: "", displayName: "", role: "user", selectedMode: "beginner", securityQuestion: SECURITY_QUESTIONS[0], securityAnswer: "" });
+      toast({ title: t.admin.user_create_success });
+      setCreateForm({ email: "", password: "", displayName: "", role: "user", selectedMode: "beginner", securityQuestion: defaultSecurityQuestion, securityAnswer: "" });
     } catch (err: unknown) {
-      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal membuat user", variant: "destructive" });
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.user_create_failed, variant: "destructive" });
     }
   };
 
@@ -130,24 +127,24 @@ function AdminUsersContent() {
       await deleteUser.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       setDeleteId(null);
-      toast({ title: "User berhasil dihapus" });
+      toast({ title: t.admin.user_delete_success });
     } catch (err: unknown) {
-      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal menghapus user", variant: "destructive" });
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.user_delete_failed, variant: "destructive" });
     }
   };
 
   const handleResetPassword = async (id: number) => {
     if (!newPassword || newPassword.length < 6) {
-      toast({ title: "Password minimal 6 karakter", variant: "destructive" });
+      toast({ title: t.admin.password_min_length_error, variant: "destructive" });
       return;
     }
     try {
       await resetUserPassword.mutateAsync({ id, data: { newPassword } });
       setResetPasswordId(null);
       setNewPassword("");
-      toast({ title: "Password berhasil direset" });
+      toast({ title: t.admin.password_reset_success });
     } catch (err: unknown) {
-      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal mereset password", variant: "destructive" });
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.password_reset_failed, variant: "destructive" });
     }
   };
 
@@ -155,9 +152,9 @@ function AdminUsersContent() {
     try {
       await updateUserRole.mutateAsync({ id, data: { role: role as UpdateUserRoleBodyRole } });
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
-      toast({ title: "Role berhasil diubah" });
+      toast({ title: t.admin.role_update_success });
     } catch (err: unknown) {
-      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? "Gagal mengubah role", variant: "destructive" });
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.role_update_failed, variant: "destructive" });
     }
   };
 
@@ -174,7 +171,7 @@ function AdminUsersContent() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Manajemen User</h1>
+              <h1 className="text-xl font-bold text-foreground">{t.admin.users_page_title}</h1>
               <p className="text-xs text-muted-foreground" data-testid="text-user-total">
                 {t.admin.users_total_registered.replace("{count}", String(total))}
               </p>
@@ -187,7 +184,7 @@ function AdminUsersContent() {
             data-testid="button-create-user"
           >
             <Plus className="w-4 h-4" />
-            Tambah
+            {t.admin.users_add_btn}
           </Button>
         </div>
 
@@ -231,14 +228,20 @@ function AdminUsersContent() {
                         variant={(u as { analysisCount?: number }).analysisCount ?? 0 > 0 ? "default" : "outline"}
                         className="text-[10px] px-1.5 py-0"
                       >
-                        {(u as { analysisCount?: number }).analysisCount ?? 0 > 0 ? "Aktif" : "Inaktif"}
+                        {(u as { analysisCount?: number }).analysisCount ?? 0 > 0 ? t.admin.users_active : t.admin.users_inactive}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{u.email}</p>
                     <p className="text-[10px] text-muted-foreground/70">
-                      {(u as { analysisCount?: number }).analysisCount ?? 0} analisis
+                      {t.admin.users_analyses_count.replace(
+                        "{count}",
+                        String((u as { analysisCount?: number }).analysisCount ?? 0),
+                      )}
                       {(u as { createdAt?: string }).createdAt
-                        ? ` · Daftar ${format(new Date((u as { createdAt: string }).createdAt), "dd MMM yyyy")}`
+                        ? ` · ${t.admin.users_registered_on.replace(
+                            "{date}",
+                            format(new Date((u as { createdAt: string }).createdAt), "dd MMM yyyy", { locale: dateLocale }),
+                          )}`
                         : ""}
                     </p>
                   </div>
@@ -268,9 +271,9 @@ function AdminUsersContent() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="super_admin">Super Admin</SelectItem>
+                      <SelectItem value="user">{t.profile.role_user}</SelectItem>
+                      <SelectItem value="admin">{t.profile.role_admin}</SelectItem>
+                      <SelectItem value="super_admin">{t.profile.role_super_admin}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -314,18 +317,18 @@ function AdminUsersContent() {
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Tambah User Baru</DialogTitle>
+              <DialogTitle>{t.admin.create_user_dialog_title}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <Input
-                placeholder="Nama"
+                placeholder={t.admin.create_user_name_placeholder}
                 value={createForm.displayName}
                 onChange={(e) => setCreateForm({ ...createForm, displayName: e.target.value })}
                 data-testid="input-create-display-name"
               />
               <Input
                 type="email"
-                placeholder="Email"
+                placeholder={t.admin.create_user_email_placeholder}
                 value={createForm.email}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 data-testid="input-create-email"
@@ -333,7 +336,7 @@ function AdminUsersContent() {
               <div className="relative">
                 <Input
                   type={showCreatePassword ? "text" : "password"}
-                  placeholder="Password (min 6 karakter)"
+                  placeholder={t.admin.create_user_password_placeholder}
                   value={createForm.password}
                   onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                   data-testid="input-create-password"
@@ -355,9 +358,9 @@ function AdminUsersContent() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="user">{t.profile.role_user}</SelectItem>
+                  <SelectItem value="admin">{t.profile.role_admin}</SelectItem>
+                  <SelectItem value="super_admin">{t.profile.role_super_admin}</SelectItem>
                 </SelectContent>
               </Select>
               <select
@@ -366,12 +369,12 @@ function AdminUsersContent() {
                 onChange={(e) => setCreateForm({ ...createForm, securityQuestion: e.target.value })}
                 data-testid="select-create-security-question"
               >
-                {SECURITY_QUESTIONS.map((q) => (
-                  <option key={q} value={q}>{q}</option>
+                {securityQuestionOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
               <Input
-                placeholder="Jawaban pertanyaan keamanan"
+                placeholder={t.admin.create_user_security_answer_placeholder}
                 value={createForm.securityAnswer}
                 onChange={(e) => setCreateForm({ ...createForm, securityAnswer: e.target.value })}
                 data-testid="input-create-security-answer"
@@ -383,7 +386,7 @@ function AdminUsersContent() {
                 data-testid="button-confirm-create-user"
               >
                 {createUser.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Buat User
+                {t.admin.create_user_submit}
               </Button>
             </div>
           </DialogContent>
@@ -392,14 +395,14 @@ function AdminUsersContent() {
         <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Hapus User</DialogTitle>
+              <DialogTitle>{t.admin.delete_user_dialog_title}</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              Yakin ingin menghapus user ini? Semua data analisisnya akan ikut terhapus.
+              {t.admin.delete_user_confirm}
             </p>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setDeleteId(null)}>
-                Batal
+                {t.admin.cancel_btn}
               </Button>
               <Button
                 variant="destructive"
@@ -409,7 +412,7 @@ function AdminUsersContent() {
                 data-testid="button-confirm-delete-user"
               >
                 {deleteUser.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Hapus
+                {t.admin.delete_btn}
               </Button>
             </div>
           </DialogContent>
@@ -418,12 +421,12 @@ function AdminUsersContent() {
         <Dialog open={resetPasswordId !== null} onOpenChange={() => setResetPasswordId(null)}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Reset Password</DialogTitle>
+              <DialogTitle>{t.admin.reset_password_dialog_title}</DialogTitle>
             </DialogHeader>
             <div className="relative">
               <Input
                 type={showResetPassword ? "text" : "password"}
-                placeholder="Password baru (min 6 karakter)"
+                placeholder={t.admin.reset_password_input_placeholder}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 data-testid="input-new-reset-password"
@@ -444,7 +447,7 @@ function AdminUsersContent() {
               data-testid="button-confirm-reset-password"
             >
               {resetUserPassword.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Reset Password
+              {t.admin.reset_password_submit}
             </Button>
           </DialogContent>
         </Dialog>
