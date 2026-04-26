@@ -252,7 +252,6 @@ export default function HistoryPage() {
                           <MarketContextChip
                             buy={a.techBuyCount}
                             sell={a.techSellCount}
-                            neutral={a.techNeutralCount ?? 0}
                           />
                         )}
                         <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">

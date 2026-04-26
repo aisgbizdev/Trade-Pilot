@@ -13,9 +13,11 @@ export function leanFromCounts(buy: number, sell: number): MarketContextLean {
 /**
  * Compact at-a-glance variant of the Market Context Summary intended for
  * dense list rows (e.g. the History page). Shows just an icon + short label
- * coloured by lean. Takes the same buy/sell/neutral snapshot persisted on
- * each saved analysis so users can scan their history without opening each
- * detail view.
+ * coloured by lean. Takes the same buy/sell snapshot persisted on each saved
+ * analysis so users can scan their history without opening each detail view.
+ *
+ * Uses the same light-bg / deep-text pattern as the neighbouring market
+ * condition badges so contrast clears WCAG AA at 10px in both themes.
  */
 export function MarketContextChip({
   buy,
@@ -23,7 +25,6 @@ export function MarketContextChip({
 }: {
   buy: number;
   sell: number;
-  neutral?: number;
 }) {
   const { t } = useTranslation();
   const lean = leanFromCounts(buy, sell);
@@ -39,9 +40,9 @@ export function MarketContextChip({
     Minus;
 
   const styles =
-    lean === "bullish" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" :
-    lean === "bearish" ? "bg-red-500/15 text-red-600 dark:text-red-400" :
-    "bg-amber-500/15 text-amber-600 dark:text-amber-400";
+    lean === "bullish" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+    lean === "bearish" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
 
   return (
     <span
@@ -51,7 +52,7 @@ export function MarketContextChip({
       )}
       data-testid={`chip-market-context-${lean}`}
     >
-      <Icon className="w-2.5 h-2.5" />
+      <Icon className="w-2.5 h-2.5" aria-hidden="true" />
       {label}
     </span>
   );
