@@ -1,0 +1,251 @@
+/**
+ * Component test for the Notifications panel
+ * (`src/pages/notifications.tsx`).
+ *
+ * Covers happy-path render of the notification cards (with type badge
+ * and the unread highlight), the unread counter + "mark all as read"
+ * affordance in the header, the empty state when the API returns no
+ * notifications, the push-prefs card with its two toggles, and the user
+ * action of clicking an unread card to PATCH `/api/notifications/:id/read`.
+ *
+ * `usePush()` checks `navigator.serviceWorker` / `window.PushManager`,
+ * neither of which exist in jsdom, so its state always resolves to
+ * `unsupported`. That hides the master push toggle but keeps the rest of
+ * the panel rendering, which is exactly what we want to assert here.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+
+import NotificationsPage from "../notifications";
+import {
+  installFetchMock,
+  jsonResponse,
+  makeWrapper,
+  type FetchHandler,
+} from "./test-helpers";
+
+const NOTIFICATIONS_PAYLOAD = {
+  notifications: [
+    {
+      id: 11,
+      type: "info",
+      title: "Welcome to Trade Pilot",
+      message: "Your account is ready.",
+      readAt: null,
+      createdAt: new Date(Date.now() - 60_000).toISOString(),
+    },
+    {
+      id: 12,
+      type: "warning",
+      title: "Analysis expiring",
+      message: "Your XAU/USD analysis expires soon. [expiry:7]",
+      readAt: new Date(Date.now() - 30_000).toISOString(),
+      createdAt: new Date(Date.now() - 3_600_000).toISOString(),
+    },
+  ],
+  total: 2,
+};
+
+const PUSH_PREFS_PAYLOAD = {
+  pushExpiry: true,
+  pushBroadcast: false,
+};
+
+function notificationsHandler(payload: typeof NOTIFICATIONS_PAYLOAD): FetchHandler {
+  return (url, init) => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (method !== "GET") return null;
+    if (!url.includes("/api/notifications")) return null;
+    // Layout query (unreadOnly=true) is served by the default handler in
+    // installFetchMock — only respond to the page-level "all" fetch here.
+    if (url.includes("unreadOnly=true")) return null;
+    return jsonResponse(payload);
+  };
+}
+
+function pushPrefsHandler(payload: typeof PUSH_PREFS_PAYLOAD): FetchHandler {
+  return (url, init) => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (method === "GET" && url.includes("/api/push/prefs")) {
+      return jsonResponse(payload);
+    }
+    return null;
+  };
+}
+
+function markReadHandler(): FetchHandler {
+  return (url, init) => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (method !== "PATCH") return null;
+    if (/\/api\/notifications\/\d+\/read$/.test(url)) {
+      return jsonResponse({ message: "ok" });
+    }
+    if (url.endsWith("/api/notifications/read-all")) {
+      return jsonResponse({ message: "ok" });
+    }
+    return null;
+  };
+}
+
+beforeEach(() => {
+  localStorage.clear();
+  window.history.replaceState({}, "", "/notifications");
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("NotificationsPage: happy-path render", () => {
+  it("renders one card per notification, highlights the unread one, exposes the unread counter and the 'mark all as read' button", async () => {
+    installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    const unread = await screen.findByTestId("card-notification-11");
+    const read = screen.getByTestId("card-notification-12");
+
+    // Unread row carries the highlight classes; read row does not.
+    expect(unread.className).toMatch(/border-primary/);
+    expect(read.className).not.toMatch(/border-primary\/30/);
+
+    // The unread counter (1) and "mark all as read" button render once
+    // the notifications list resolves.
+    expect(
+      await screen.findByTestId("button-mark-all-read"),
+    ).toBeInTheDocument();
+
+    // The `[expiry:N]` marker is stripped from the displayed message.
+    expect(read.textContent).not.toMatch(/\[expiry:/);
+  });
+});
+
+describe("NotificationsPage: empty branch", () => {
+  it("renders the empty state when the API returns no notifications and hides the 'mark all as read' button", async () => {
+    installFetchMock([
+      notificationsHandler({ notifications: [], total: 0 }),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    const { container } = render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    // Positive assertion: the empty-state copy actually renders. Picking
+    // up the EN locale here (LanguageProvider defaults to "en") keeps the
+    // test resilient to incidental copy reflow but still requires the
+    // empty branch to commit.
+    await waitFor(() => {
+      expect(screen.getByText(/No notifications/i)).toBeInTheDocument();
+    });
+
+    // The list-loading spinner must be gone — otherwise the empty branch
+    // never actually rendered and the previous assertion is a false
+    // positive on a still-pending query.
+    expect(container.querySelector(".animate-spin")).toBeNull();
+
+    // And the negative assertions: no notification cards, no mark-all CTA.
+    expect(
+      screen.queryByTestId("card-notification-11"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("card-notification-12"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("button-mark-all-read"),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("NotificationsPage: user actions", () => {
+  it("renders both push-pref switches reflecting the API payload", async () => {
+    installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    const expirySwitch = await screen.findByTestId("switch-pref-expiry");
+    const broadcastSwitch = screen.getByTestId("switch-pref-broadcast");
+
+    // Radix Switch reflects state via aria-checked / data-state.
+    expect(expirySwitch.getAttribute("aria-checked")).toBe("true");
+    expect(broadcastSwitch.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("PATCHes /api/notifications/:id/read when an unread card is clicked", async () => {
+    const { calls } = installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    const unread = await screen.findByTestId("card-notification-11");
+
+    await act(async () => {
+      fireEvent.click(unread);
+    });
+
+    await waitFor(() => {
+      const patched = calls.find(
+        (c) => c.method === "PATCH" && c.url.endsWith("/api/notifications/11/read"),
+      );
+      expect(patched).toBeDefined();
+    });
+  });
+
+  it("PATCHes /api/notifications/read-all when the header 'mark all as read' button is clicked", async () => {
+    const { calls } = installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    const markAll = await screen.findByTestId("button-mark-all-read");
+
+    await act(async () => {
+      fireEvent.click(markAll);
+    });
+
+    await waitFor(() => {
+      const patched = calls.find(
+        (c) => c.method === "PATCH" && c.url.endsWith("/api/notifications/read-all"),
+      );
+      expect(patched).toBeDefined();
+    });
+  });
+});
