@@ -1,0 +1,21 @@
+{
+  "name": "@workspace/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build-deps": "pnpm --filter @workspace/api-server run build && PORT=20853 BASE_PATH=/ pnpm --filter @workspace/ai-trading run build",
+    "install-browsers": "../../scripts/install-e2e-browsers.sh",
+    "start-test-server": "node ./server/test-server.mjs",
+    "test": "pnpm run install-browsers && pnpm run build-deps && playwright test",
+    "test:no-build": "playwright test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:",
+    "express": "^5",
+    "typescript": "~5.9.2"
+  }
+}

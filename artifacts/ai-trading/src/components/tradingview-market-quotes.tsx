@@ -28,6 +28,25 @@ function resolveColorTheme(theme: string): "light" | "dark" {
   return "light";
 }
 
+// Test-only override: when set, the widget waits this many ms for the
+// TradingView script to populate the inner container before treating it
+// as failed. Used by the e2e suite (tests/e2e) because Chromium running
+// inside the Replit sandbox needs more time than a real desktop browser
+// to render the embed. Setting it from production code or the UI is
+// neither expected nor supported.
+declare global {
+  interface Window {
+    __TV_LOAD_TIMEOUT_MS_OVERRIDE__?: number;
+  }
+}
+
+function resolveLoadTimeout(propValue: number): number {
+  if (typeof window === "undefined") return propValue;
+  const override = window.__TV_LOAD_TIMEOUT_MS_OVERRIDE__;
+  if (typeof override === "number" && override > 0) return override;
+  return propValue;
+}
+
 export function TradingViewMarketQuotes({
   symbols,
   height = 410,
@@ -37,6 +56,7 @@ export function TradingViewMarketQuotes({
   const { theme } = useTheme();
   const { lang } = useTranslation();
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const effectiveLoadTimeoutMs = resolveLoadTimeout(loadTimeoutMs);
 
   useEffect(() => {
     const hostEl = hostRef.current;
@@ -133,7 +153,16 @@ export function TradingViewMarketQuotes({
       hostEl.dataset["loadState"] = "loaded";
     };
 
-    const isPopulated = () => widgetInner.childElementCount > 0;
+    // The TradingView embed loader does not always populate the inner
+    // widget div — depending on browser/CDN it sometimes REPLACES the
+    // `.tradingview-widget-container__widget` element entirely with an
+    // <iframe>. When that happens, `widgetInner` becomes detached and its
+    // childElementCount stays 0, even though the widget rendered fine.
+    // We therefore consider the widget "populated" if EITHER the inner
+    // div has children OR the host now contains a TradingView iframe.
+    const isPopulated = () =>
+      widgetInner.childElementCount > 0 ||
+      hostEl.querySelector("iframe") !== null;
 
     script.onload = () => {
       hostEl.dataset["scriptLoaded"] = "true";
@@ -160,7 +189,7 @@ export function TradingViewMarketQuotes({
       } else {
         markLoaded();
       }
-    }, loadTimeoutMs);
+    }, effectiveLoadTimeoutMs);
 
     return () => {
       cancelled = true;
@@ -170,7 +199,7 @@ export function TradingViewMarketQuotes({
     // Re-injecting on theme/lang/symbols change is intentional so the widget
     // reflects user toggles. The cleanup above clears the pending failTimeout,
     // so a dep change mid-load cannot trigger a spurious fallback.
-  }, [height, loadTimeoutMs, onLoadFailed, theme, lang, symbols]);
+  }, [height, effectiveLoadTimeoutMs, onLoadFailed, theme, lang, symbols]);
 
   return (
     <div

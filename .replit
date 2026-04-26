@@ -24,6 +24,10 @@ args = "api-server-test"
 task = "workflow.run"
 args = "ai-trading-test"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "e2e-test"
+
 [[workflows.workflow]]
 name = "api-server-test"
 author = "agent"
@@ -46,13 +50,32 @@ args = "pnpm --filter @workspace/ai-trading run test"
 [workflows.workflow.metadata]
 isValidation = true
 
+[[workflows.workflow]]
+name = "e2e-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/e2e run test"
+
+[workflows.workflow.metadata]
+isValidation = true
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
 
 [postMerge]
 path = "scripts/post-merge.sh"
-timeoutMs = 20000
+timeoutMs = 180000
+
+[[ports]]
+localPort = 4380
+externalPort = 3002
+
+[[ports]]
+localPort = 4381
+externalPort = 3001
 
 [[ports]]
 localPort = 8080

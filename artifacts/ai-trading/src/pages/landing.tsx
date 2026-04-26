@@ -50,42 +50,49 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
-      <header className="sticky top-0 z-40 backdrop-blur-xl border-b border-white/10 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between bg-background/80">
-        <div className="flex items-center gap-2">
-          <BrandLogo className="w-8 h-8" />
-          <div className="flex flex-col">
-            <span className="font-bold text-sm tracking-tight">
-              <span className="gradient-text">Trade</span>
-              <span className="text-foreground"> Pilot</span>
-            </span>
-            <a
-              href="https://newsmaker.id"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-0.5 mt-0.5 hover:opacity-75 transition-opacity"
-            >
-              <span className="text-[8px] text-muted-foreground/60 leading-none">supported by</span>
-              <img src="/newsmaker-logo.png" alt="Newsmaker.id" className="h-2.5 w-auto object-contain bg-white rounded-sm px-0.5" />
-            </a>
+      {/* Sticky group: header + ContinuousTicker stay pinned to the top
+          together while the page scrolls. Wrapping them in a single sticky
+          container is what keeps the ticker from disappearing on scroll —
+          making each child sticky independently would stack them on top
+          of one another at top:0. */}
+      <div className="sticky top-0 z-40">
+        <header className="backdrop-blur-xl border-b border-white/10 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between bg-background/80">
+          <div className="flex items-center gap-2">
+            <BrandLogo className="w-8 h-8" />
+            <div className="flex flex-col">
+              <span className="font-bold text-sm tracking-tight">
+                <span className="gradient-text">Trade</span>
+                <span className="text-foreground"> Pilot</span>
+              </span>
+              <a
+                href="https://newsmaker.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-0.5 mt-0.5 hover:opacity-75 transition-opacity"
+              >
+                <span className="text-[8px] text-muted-foreground/60 leading-none">supported by</span>
+                <img src="/newsmaker-logo.png" alt="Newsmaker.id" className="h-2.5 w-auto object-contain bg-white rounded-sm px-0.5" />
+              </a>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <LanguageToggle />
-          <Link href="/login">
-            <button className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-all" data-testid="link-login">
-              {t.landing.login}
-            </button>
-          </Link>
-          <Link href="/register">
-            <button className="text-sm font-medium px-4 py-1.5 rounded-lg btn-premium text-white transition-all hover:opacity-90" data-testid="link-register">
-              {t.landing.register}
-            </button>
-          </Link>
-        </div>
-      </header>
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
+            <Link href="/login">
+              <button className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-all" data-testid="link-login">
+                {t.landing.login}
+              </button>
+            </Link>
+            <Link href="/register">
+              <button className="text-sm font-medium px-4 py-1.5 rounded-lg btn-premium text-white transition-all hover:opacity-90" data-testid="link-register">
+                {t.landing.register}
+              </button>
+            </Link>
+          </div>
+        </header>
+        <ContinuousTicker />
+      </div>
 
       <main className="flex-1 max-w-lg mx-auto w-full">
-        <ContinuousTicker />
 
         {/* HERO */}
         <section className="hero-gradient px-5 pt-14 pb-10 text-center relative overflow-hidden">
