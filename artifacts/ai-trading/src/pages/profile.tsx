@@ -19,12 +19,14 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
+import { useTrackOutbound } from "@/hooks/use-track-outbound";
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const { t, lang } = useTranslation();
+  const trackOutbound = useTrackOutbound();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
@@ -421,6 +423,7 @@ export default function ProfilePage() {
               rel="noopener noreferrer"
               data-testid="link-profile-open-solid-prime-account"
               className="flex items-center justify-center gap-2"
+              onClick={() => trackOutbound("profile-cta", "sg-berjangka")}
             >
               {t.brand.open_account_cta}
               <ArrowUpRight className="w-4 h-4" />

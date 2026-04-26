@@ -647,6 +647,65 @@ export const GetAdminStatsResponse = zod.object({
 });
 
 /**
+ * @summary Aggregated counts of sponsor / partner outbound link clicks
+ */
+export const getOutboundClickStatsQueryDaysDefault = 30;
+
+export const GetOutboundClickStatsQueryParams = zod.object({
+  days: zod.coerce
+    .number()
+    .default(getOutboundClickStatsQueryDaysDefault)
+    .describe(
+      'Window size for the \"recent\" totals. Defaults to 30. Clamped 1..365.',
+    ),
+});
+
+export const GetOutboundClickStatsResponse = zod.object({
+  windowDays: zod.number(),
+  totalAllTime: zod.number(),
+  totalInWindow: zod.number(),
+  byPlacement: zod.array(
+    zod.object({
+      placement: zod.string(),
+      target: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  byTarget: zod.array(
+    zod.object({
+      target: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * Fire-and-forget telemetry. Auth is optional — most surfaces are
+reachable while signed out (splash, landing). Always returns 204
+even when validation rejects the body so a malformed beacon never
+blocks the user's outbound navigation.
+
+ * @summary Record a sponsor / partner outbound link click
+ */
+export const RecordOutboundClickBody = zod.object({
+  placement: zod
+    .enum([
+      "splash",
+      "landing-header",
+      "landing-cta",
+      "landing-footer",
+      "layout-footer",
+      "profile-cta",
+      "dashboard-tiktok",
+    ])
+    .describe("Stable slug describing where the link was clicked"),
+  target: zod
+    .enum(["sg-berjangka", "tiktok"])
+    .describe("Partner the click was directed to"),
+  lang: zod.enum(["en", "id"]).optional().describe("UI language at click time"),
+});
+
+/**
  * @summary Get all analyses (admin only)
  */
 export const getAllAnalysesQueryPageDefault = 1;

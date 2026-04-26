@@ -28,6 +28,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import {
   useGetAdminStats,
   getGetAdminStatsQueryKey,
+  useGetOutboundClickStats,
   useGetAllAnalyses,
   getGetAllAnalysesQueryKey,
   useBroadcastNotification,
@@ -209,6 +210,82 @@ function UserTagEditor({
         )}
       </div>
     </div>
+  );
+}
+
+// Compact dashboard panel summarizing sponsor / partner outbound clicks
+// (SOLID PRIME demo CTA + TikTok @solid.prime live-analysis link). Window is
+// fixed at 30 days here — admins who need to slice differently can hit the
+// underlying endpoint with `?days=N`. Hidden when there's nothing to show
+// so the dashboard doesn't grow an empty card on day one.
+function SponsorClicksPanel() {
+  const { t } = useTranslation();
+  const { data } = useGetOutboundClickStats({ days: 30 });
+
+  if (!data || data.totalAllTime === 0) return null;
+
+  return (
+    <Card className="p-4 space-y-3" data-testid="card-sponsor-clicks">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">
+          {t.admin.sponsor_clicks_title}
+        </h3>
+        <p className="text-[11px] text-muted-foreground">
+          {t.admin.sponsor_clicks_subtitle.replace(
+            "{days}",
+            String(data.windowDays),
+          )}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-border/60 p-2.5 text-center">
+          <div
+            className="text-2xl font-bold text-amber-500 dark:text-amber-400"
+            data-testid="stat-sponsor-clicks-window"
+          >
+            {data.totalInWindow}
+          </div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">
+            {t.admin.sponsor_clicks_in_window}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border/60 p-2.5 text-center">
+          <div
+            className="text-2xl font-bold text-foreground"
+            data-testid="stat-sponsor-clicks-all-time"
+          >
+            {data.totalAllTime}
+          </div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">
+            {t.admin.sponsor_clicks_all_time}
+          </div>
+        </div>
+      </div>
+
+      {data.byPlacement.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+            {t.admin.sponsor_clicks_by_placement}
+          </div>
+          {data.byPlacement.map((row) => (
+            <div
+              key={`${row.placement}-${row.target}`}
+              className="flex items-center justify-between text-sm"
+              data-testid={`row-sponsor-clicks-${row.placement}-${row.target}`}
+            >
+              <span className="text-foreground">
+                {row.placement}
+                <span className="text-muted-foreground"> · {row.target}</span>
+              </span>
+              <Badge variant="secondary" className="text-xs">
+                {row.count}x
+              </Badge>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -633,6 +710,8 @@ function AdminContent() {
                 </div>
               </Card>
             )}
+
+            <SponsorClicksPanel />
           </>
         )}
 

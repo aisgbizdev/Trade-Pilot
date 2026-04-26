@@ -20,6 +20,7 @@ import { formatDistanceToNow } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { useTrackOutbound } from "@/hooks/use-track-outbound";
 
 function isValid(validUntil: string | Date) {
   return new Date(validUntil) > new Date();
@@ -28,6 +29,7 @@ function isValid(validUntil: string | Date) {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { t, lang } = useTranslation();
+  const trackOutbound = useTrackOutbound();
   const queryClient = useQueryClient();
   const updateProfile = useUpdateProfile();
   const [, setLocation] = useLocation();
@@ -120,6 +122,7 @@ export default function DashboardPage() {
               rel="noopener noreferrer"
               className="block"
               data-testid="link-live-analisa-tiktok"
+              onClick={() => trackOutbound("dashboard-tiktok", "tiktok")}
             >
               <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-orange-500/10 p-3.5 active:scale-[0.99] transition-transform">
                 <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />

@@ -14,6 +14,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { LanguageToggle } from "./language-toggle";
 import { ContinuousTicker } from "./continuous-ticker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -29,6 +30,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { t, lang } = useTranslation();
+  const trackOutbound = useTrackOutbound();
   const updateProfile = useUpdateProfile();
   const queryClient = useQueryClient();
   const dateLocale = lang === "id" ? idLocale : enUS;
@@ -251,7 +253,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
-              data-testid="link-footer-sponsor"
+              data-testid="link-layout-footer-sponsor"
+              onClick={() => trackOutbound("layout-footer", "sg-berjangka")}
             >
               SOLID PRIME
             </a>

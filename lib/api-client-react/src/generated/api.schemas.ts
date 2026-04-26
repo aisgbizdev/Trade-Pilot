@@ -581,6 +581,72 @@ export interface AdminStats {
   modeBreakdown: AdminStatsModeBreakdown;
 }
 
+/**
+ * Stable slug describing where the link was clicked
+ */
+export type OutboundClickBodyPlacement =
+  (typeof OutboundClickBodyPlacement)[keyof typeof OutboundClickBodyPlacement];
+
+export const OutboundClickBodyPlacement = {
+  splash: "splash",
+  "landing-header": "landing-header",
+  "landing-cta": "landing-cta",
+  "landing-footer": "landing-footer",
+  "layout-footer": "layout-footer",
+  "profile-cta": "profile-cta",
+  "dashboard-tiktok": "dashboard-tiktok",
+} as const;
+
+/**
+ * Partner the click was directed to
+ */
+export type OutboundClickBodyTarget =
+  (typeof OutboundClickBodyTarget)[keyof typeof OutboundClickBodyTarget];
+
+export const OutboundClickBodyTarget = {
+  "sg-berjangka": "sg-berjangka",
+  tiktok: "tiktok",
+} as const;
+
+/**
+ * UI language at click time
+ */
+export type OutboundClickBodyLang =
+  (typeof OutboundClickBodyLang)[keyof typeof OutboundClickBodyLang];
+
+export const OutboundClickBodyLang = {
+  en: "en",
+  id: "id",
+} as const;
+
+export interface OutboundClickBody {
+  /** Stable slug describing where the link was clicked */
+  placement: OutboundClickBodyPlacement;
+  /** Partner the click was directed to */
+  target: OutboundClickBodyTarget;
+  /** UI language at click time */
+  lang?: OutboundClickBodyLang;
+}
+
+export type OutboundClickStatsByPlacementItem = {
+  placement: string;
+  target: string;
+  count: number;
+};
+
+export type OutboundClickStatsByTargetItem = {
+  target: string;
+  count: number;
+};
+
+export interface OutboundClickStats {
+  windowDays: number;
+  totalAllTime: number;
+  totalInWindow: number;
+  byPlacement: OutboundClickStatsByPlacementItem[];
+  byTarget: OutboundClickStatsByTargetItem[];
+}
+
 export type UserWithStatsRole =
   (typeof UserWithStatsRole)[keyof typeof UserWithStatsRole];
 
@@ -678,6 +744,13 @@ export const ListAnalysesMode = {
 
 export type GetNotificationsParams = {
   unreadOnly?: boolean;
+};
+
+export type GetOutboundClickStatsParams = {
+  /**
+   * Window size for the "recent" totals. Defaults to 30. Clamped 1..365.
+   */
+  days?: number;
 };
 
 export type GetAllAnalysesParams = {

@@ -170,6 +170,23 @@ export const userTags = pgTable(
   }),
 );
 
+// Outbound click telemetry for sponsor / partner links (SOLID PRIME demo
+// account CTA, TikTok @solid.prime live-analysis link, etc). userId is
+// nullable because most surfaces — splash, landing header/footer/CTA — are
+// reachable while signed out. `placement` is a stable slug (e.g.
+// `landing-cta`) so the admin breakdown stays meaningful even after copy
+// changes; `target` is the partner key (`sg-berjangka` or `tiktok`).
+export const outboundClicks = pgTable("outbound_clicks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  placement: text("placement").notNull(),
+  target: text("target").notNull(),
+  lang: text("lang"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").references(() => users.id, {
@@ -194,3 +211,5 @@ export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type UserTag = typeof userTags.$inferSelect;
 export type Broadcast = typeof broadcasts.$inferSelect;
 export type NewBroadcast = typeof broadcasts.$inferInsert;
+export type OutboundClick = typeof outboundClicks.$inferSelect;
+export type NewOutboundClick = typeof outboundClicks.$inferInsert;

@@ -16,6 +16,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ContinuousTicker } from "@/components/continuous-ticker";
 
@@ -45,6 +46,7 @@ const WHAT_YOU_GET_STYLES = [
 
 export default function LandingPage() {
   const { t } = useTranslation();
+  const trackOutbound = useTrackOutbound();
 
   const stats = [
     { value: "AI", label: t.landing.stats_model },
@@ -75,6 +77,7 @@ export default function LandingPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
                 data-testid="link-header-sponsor"
+                onClick={() => trackOutbound("landing-header", "sg-berjangka")}
               >
                 <span className="text-[8px] text-muted-foreground/70 leading-none lowercase">{t.brand.sponsored_by}</span>
                 <span className="text-[9px] font-bold leading-none text-amber-400 tracking-wide">SOLID PRIME</span>
@@ -341,6 +344,7 @@ export default function LandingPage() {
               rel="noopener noreferrer"
               data-testid="link-open-solid-prime-account"
               className="w-full h-11 rounded-xl font-semibold btn-premium hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              onClick={() => trackOutbound("landing-cta", "sg-berjangka")}
             >
               {t.brand.open_account_cta}
               <ArrowUpRight className="w-4 h-4" />
@@ -408,7 +412,8 @@ export default function LandingPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
-            data-testid="link-footer-sponsor"
+            data-testid="link-landing-footer-sponsor"
+            onClick={() => trackOutbound("landing-footer", "sg-berjangka")}
           >
             SOLID PRIME
           </a>

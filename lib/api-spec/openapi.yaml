@@ -20,6 +20,8 @@ tags:
     description: Admin operations
   - name: superadmin
     description: Super admin operations
+  - name: events
+    description: Lightweight client telemetry events
 paths:
   /healthz:
     get:
@@ -687,6 +689,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/outbound-clicks/stats:
+    get:
+      operationId: getOutboundClickStats
+      tags: [admin]
+      summary: Aggregated counts of sponsor / partner outbound link clicks
+      parameters:
+        - name: days
+          in: query
+          description: Window size for the "recent" totals. Defaults to 30. Clamped 1..365.
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Outbound click stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutboundClickStats"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/outbound-click:
+    post:
+      operationId: recordOutboundClick
+      tags: [events]
+      summary: Record a sponsor / partner outbound link click
+      description: |
+        Fire-and-forget telemetry. Auth is optional — most surfaces are
+        reachable while signed out (splash, landing). Always returns 204
+        even when validation rejects the body so a malformed beacon never
+        blocks the user's outbound navigation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutboundClickBody"
+      responses:
+        "204":
+          description: Recorded (or silently dropped)
 
   /admin/analyses:
     get:
@@ -1989,6 +2037,70 @@ components:
         - totalUsers
         - instrumentBreakdown
         - modeBreakdown
+
+    OutboundClickBody:
+      type: object
+      properties:
+        placement:
+          type: string
+          description: Stable slug describing where the link was clicked
+          enum:
+            - splash
+            - landing-header
+            - landing-cta
+            - landing-footer
+            - layout-footer
+            - profile-cta
+            - dashboard-tiktok
+        target:
+          type: string
+          description: Partner the click was directed to
+          enum: [sg-berjangka, tiktok]
+        lang:
+          type: string
+          description: UI language at click time
+          enum: [en, id]
+      required:
+        - placement
+        - target
+
+    OutboundClickStats:
+      type: object
+      properties:
+        windowDays:
+          type: integer
+        totalAllTime:
+          type: integer
+        totalInWindow:
+          type: integer
+        byPlacement:
+          type: array
+          items:
+            type: object
+            properties:
+              placement:
+                type: string
+              target:
+                type: string
+              count:
+                type: integer
+            required: [placement, target, count]
+        byTarget:
+          type: array
+          items:
+            type: object
+            properties:
+              target:
+                type: string
+              count:
+                type: integer
+            required: [target, count]
+      required:
+        - windowDays
+        - totalAllTime
+        - totalInWindow
+        - byPlacement
+        - byTarget
 
     UserWithStats:
       type: object

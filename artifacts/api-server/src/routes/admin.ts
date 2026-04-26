@@ -8,6 +8,7 @@ import {
   userTags,
   broadcasts,
   feedback,
+  outboundClicks,
 } from "@workspace/db/schema";
 import { eq, and, count, desc, sql, ilike, or, inArray, gte, lte } from "drizzle-orm";
 import {
@@ -89,6 +90,66 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
     modeBreakdown,
   });
 });
+
+router.get(
+  "/admin/outbound-clicks/stats",
+  requireAdmin,
+  async (req: AuthRequest, res) => {
+    // Window is clamped (1..365) so a typo'd `?days=-1` or `?days=999999`
+    // can't return an empty / oversized window. Default 30 matches the
+    // "monthly partner report" cadence we expect SOLID PRIME to ask for.
+    const rawDays = Number(req.query["days"] ?? 30);
+    const windowDays = Number.isFinite(rawDays)
+      ? Math.min(365, Math.max(1, Math.floor(rawDays)))
+      : 30;
+    const windowStart = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+
+    const [{ count: allTime }] = await db
+      .select({ count: count(outboundClicks.id) })
+      .from(outboundClicks);
+
+    const [{ count: inWindow }] = await db
+      .select({ count: count(outboundClicks.id) })
+      .from(outboundClicks)
+      .where(gte(outboundClicks.createdAt, windowStart));
+
+    const byPlacementRaw = await db
+      .select({
+        placement: outboundClicks.placement,
+        target: outboundClicks.target,
+        count: count(outboundClicks.id),
+      })
+      .from(outboundClicks)
+      .where(gte(outboundClicks.createdAt, windowStart))
+      .groupBy(outboundClicks.placement, outboundClicks.target)
+      .orderBy(desc(count(outboundClicks.id)));
+
+    const byTargetRaw = await db
+      .select({
+        target: outboundClicks.target,
+        count: count(outboundClicks.id),
+      })
+      .from(outboundClicks)
+      .where(gte(outboundClicks.createdAt, windowStart))
+      .groupBy(outboundClicks.target)
+      .orderBy(desc(count(outboundClicks.id)));
+
+    res.json({
+      windowDays,
+      totalAllTime: Number(allTime),
+      totalInWindow: Number(inWindow),
+      byPlacement: byPlacementRaw.map((r) => ({
+        placement: r.placement,
+        target: r.target,
+        count: Number(r.count),
+      })),
+      byTarget: byTargetRaw.map((r) => ({
+        target: r.target,
+        count: Number(r.count),
+      })),
+    });
+  },
+);
 
 router.get("/admin/analyses", requireAdmin, async (req: AuthRequest, res) => {
   const page = Number(req.query["page"] ?? 1);

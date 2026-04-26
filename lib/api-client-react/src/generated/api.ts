@@ -41,11 +41,14 @@ import type {
   GetAllUsersParams,
   GetBroadcastsParams,
   GetNotificationsParams,
+  GetOutboundClickStatsParams,
   HealthStatus,
   ListAnalysesParams,
   LoginBody,
   MessageResponse,
   NotificationsList,
+  OutboundClickBody,
+  OutboundClickStats,
   PersonalAnalytics,
   PushPrefs,
   PushPrefsUpdate,
@@ -2466,6 +2469,200 @@ export function useGetAdminStats<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Aggregated counts of sponsor / partner outbound link clicks
+ */
+export const getGetOutboundClickStatsUrl = (
+  params?: GetOutboundClickStatsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/outbound-clicks/stats?${stringifiedParams}`
+    : `/api/admin/outbound-clicks/stats`;
+};
+
+export const getOutboundClickStats = async (
+  params?: GetOutboundClickStatsParams,
+  options?: RequestInit,
+): Promise<OutboundClickStats> => {
+  return customFetch<OutboundClickStats>(getGetOutboundClickStatsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOutboundClickStatsQueryKey = (
+  params?: GetOutboundClickStatsParams,
+) => {
+  return [
+    `/api/admin/outbound-clicks/stats`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetOutboundClickStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOutboundClickStats>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetOutboundClickStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOutboundClickStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOutboundClickStatsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOutboundClickStats>>
+  > = ({ signal }) =>
+    getOutboundClickStats(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOutboundClickStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOutboundClickStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOutboundClickStats>>
+>;
+export type GetOutboundClickStatsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Aggregated counts of sponsor / partner outbound link clicks
+ */
+
+export function useGetOutboundClickStats<
+  TData = Awaited<ReturnType<typeof getOutboundClickStats>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetOutboundClickStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOutboundClickStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOutboundClickStatsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Fire-and-forget telemetry. Auth is optional — most surfaces are
+reachable while signed out (splash, landing). Always returns 204
+even when validation rejects the body so a malformed beacon never
+blocks the user's outbound navigation.
+
+ * @summary Record a sponsor / partner outbound link click
+ */
+export const getRecordOutboundClickUrl = () => {
+  return `/api/events/outbound-click`;
+};
+
+export const recordOutboundClick = async (
+  outboundClickBody: OutboundClickBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getRecordOutboundClickUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(outboundClickBody),
+  });
+};
+
+export const getRecordOutboundClickMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordOutboundClick>>,
+    TError,
+    { data: BodyType<OutboundClickBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordOutboundClick>>,
+  TError,
+  { data: BodyType<OutboundClickBody> },
+  TContext
+> => {
+  const mutationKey = ["recordOutboundClick"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordOutboundClick>>,
+    { data: BodyType<OutboundClickBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return recordOutboundClick(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordOutboundClickMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordOutboundClick>>
+>;
+export type RecordOutboundClickMutationBody = BodyType<OutboundClickBody>;
+export type RecordOutboundClickMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Record a sponsor / partner outbound link click
+ */
+export const useRecordOutboundClick = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordOutboundClick>>,
+    TError,
+    { data: BodyType<OutboundClickBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordOutboundClick>>,
+  TError,
+  { data: BodyType<OutboundClickBody> },
+  TContext
+> => {
+  return useMutation(getRecordOutboundClickMutationOptions(options));
+};
 
 /**
  * @summary Get all analyses (admin only)
