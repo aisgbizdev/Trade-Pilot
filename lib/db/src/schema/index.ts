@@ -49,6 +49,13 @@ export const users = pgTable("users", {
   securityAnswerHash: text("security_answer_hash").notNull(),
   pushExpiry: boolean("push_expiry").notNull().default(true),
   pushBroadcast: boolean("push_broadcast").notNull().default(true),
+  // Persistent brute-force protection for /auth/forgot-password/verify.
+  // The IP+email rate limiter is in-memory (resets on restart) and
+  // bypassable via IP rotation; these columns layer a per-account
+  // counter + temporary lockout that survives restarts and applies no
+  // matter where the wrong-answer attempts come from.
+  failedResetAttempts: integer("failed_reset_attempts").notNull().default(0),
+  resetLockedUntil: timestamp("reset_locked_until"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
