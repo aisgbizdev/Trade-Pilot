@@ -766,13 +766,26 @@ describe("deterministic last-super-admin guard (engineered count == 2)", () => {
           .set(...authHeader(sa2)),
       ]);
 
-      const statuses = [r1.status, r2.status].sort();
-      expect(statuses).toEqual([200, 400]);
+      // Exactly one delete must succeed.
+      const successes = [r1, r2].filter((r) => r.status === 200);
+      const losers = [r1, r2].filter((r) => r.status !== 200);
+      expect(successes).toHaveLength(1);
+      expect(losers).toHaveLength(1);
+      const loser = losers[0]!;
 
-      const refused = r1.status === 400 ? r1 : r2;
-      expect(refused.body.error).toBe(
-        "Tidak bisa menghapus super admin terakhir",
-      );
+      // The loser is either:
+      //  - 400 "Tidak bisa menghapus super admin terakhir" when its
+      //    transaction acquired the advisory lock after the winner
+      //    committed and the guard fired correctly, OR
+      //  - 401 when the cascade-deleted session caused the auth middleware
+      //    to reject the in-flight request before the route ran. Both are
+      //    acceptable real-world outcomes for a true peer-delete race.
+      expect([400, 401]).toContain(loser.status);
+      if (loser.status === 400) {
+        expect(loser.body.error).toBe(
+          "Tidak bisa menghapus super admin terakhir",
+        );
+      }
 
       const [{ c: after }] = await db
         .select({ c: count() })

@@ -1,12 +1,24 @@
 import { db } from "./db";
 import { users, analyses, feedback, notifications, pushSubscriptions } from "@workspace/db/schema";
-import { eq, and, count, sql, gte, lte } from "drizzle-orm";
+import { eq, and, count, sql, gte, lte, lt } from "drizzle-orm";
 import { logger } from "./logger";
 import { sendPushToUser } from "./webpush";
 import { notificationsEmitter } from "./notifications-emitter";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// Retention window for historical analyses. 90 days strikes a balance:
+// long enough for quarterly retrospectives and pattern learning, short
+// enough to keep the database from growing unbounded in production.
+// Override via ANALYSES_RETENTION_DAYS env var if needed (min 30, max 365).
+const RAW_RETENTION = Number(process.env["ANALYSES_RETENTION_DAYS"] ?? 90);
+const ANALYSES_RETENTION_DAYS = Math.min(
+  365,
+  Math.max(30, Number.isFinite(RAW_RETENTION) ? RAW_RETENTION : 90),
+);
+// Notify the owner this many days before their analysis is auto-deleted.
+const RETENTION_WARNING_DAYS = 7;
 
 async function sendFeedbackReminders(): Promise<void> {
   try {
@@ -272,25 +284,153 @@ async function sendAnalysisExpiryAlerts(): Promise<void> {
   }
 }
 
+async function sendRetentionWarnings(): Promise<void> {
+  try {
+    const now = Date.now();
+    // An analysis is "about to expire" when its createdAt is older than
+    // (RETENTION - WARNING) days but newer than RETENTION days.
+    const warningCutoff = new Date(
+      now - (ANALYSES_RETENTION_DAYS - RETENTION_WARNING_DAYS) * ONE_DAY_MS,
+    );
+    const deletionCutoff = new Date(now - ANALYSES_RETENTION_DAYS * ONE_DAY_MS);
+
+    const expiringSoon = await db
+      .select({
+        id: analyses.id,
+        userId: analyses.userId,
+        instrument: analyses.instrument,
+        createdAt: analyses.createdAt,
+      })
+      .from(analyses)
+      .where(
+        and(lte(analyses.createdAt, warningCutoff), gte(analyses.createdAt, deletionCutoff)),
+      );
+
+    for (const a of expiringSoon) {
+      const retentionMarker = `[retention:${a.id}]`;
+      const lookbackWindow = new Date(now - 8 * ONE_DAY_MS);
+      const [alreadyWarned] = await db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, a.userId),
+            sql`${notifications.message} LIKE ${"%" + retentionMarker + "%"}`,
+            sql`${notifications.createdAt} >= ${lookbackWindow}`,
+          ),
+        )
+        .limit(1);
+      if (alreadyWarned) continue;
+
+      const daysLeft = Math.max(
+        1,
+        Math.ceil(
+          (a.createdAt.getTime() + ANALYSES_RETENTION_DAYS * ONE_DAY_MS - now) / ONE_DAY_MS,
+        ),
+      );
+      const title = "Riwayat Analisis Akan Dihapus";
+      const message = `Analisis ${a.instrument} kamu akan dihapus otomatis dalam ${daysLeft} hari karena sudah lebih dari ${ANALYSES_RETENTION_DAYS} hari. Simpan catatan jika perlu. ${retentionMarker}`;
+      await db.insert(notifications).values({
+        userId: a.userId,
+        title,
+        message,
+        type: "info",
+      });
+      notificationsEmitter.emitForUser(a.userId, {
+        title,
+        message,
+        type: "info",
+        createdAt: new Date().toISOString(),
+      });
+    }
+  } catch (err) {
+    logger.error(err, "Error sending retention warnings");
+  }
+}
+
+async function deleteOldAnalyses(): Promise<void> {
+  try {
+    const cutoff = new Date(Date.now() - ANALYSES_RETENTION_DAYS * ONE_DAY_MS);
+    const deleted = await db
+      .delete(analyses)
+      .where(lt(analyses.createdAt, cutoff))
+      .returning({ id: analyses.id });
+    if (deleted.length > 0) {
+      logger.info(
+        { count: deleted.length, retentionDays: ANALYSES_RETENTION_DAYS },
+        "Deleted analyses past retention window",
+      );
+    }
+  } catch (err) {
+    logger.error(err, "Error deleting old analyses");
+  }
+}
+
+// Track all timers/intervals so a shutdown signal can cancel them cleanly
+// before the DB pool drains. Without this, a job tick mid-shutdown would
+// fire a query against an ending pool and produce noisy errors.
+const scheduledTimers: Set<NodeJS.Timeout> = new Set();
+// Track every in-flight job execution so shutdown can wait for active
+// queries to settle before draining the pool. This avoids the "query on
+// ended pool" class of errors when SIGTERM lands mid-tick.
+const inFlightJobs: Set<Promise<unknown>> = new Set();
+let jobsStopped = false;
+
+function track(timer: NodeJS.Timeout): NodeJS.Timeout {
+  scheduledTimers.add(timer);
+  return timer;
+}
+
+function runTracked(fn: () => Promise<void>): void {
+  if (jobsStopped) return;
+  const p = fn().catch((err) => {
+    logger.error(err, "Background job tick failed");
+  });
+  inFlightJobs.add(p);
+  void p.finally(() => inFlightJobs.delete(p));
+}
+
+function schedule(fn: () => Promise<void>, intervalMs: number, delayMs: number): void {
+  track(
+    setTimeout(() => {
+      if (jobsStopped) return;
+      runTracked(fn);
+      track(
+        setInterval(() => {
+          runTracked(fn);
+        }, intervalMs),
+      );
+    }, delayMs),
+  );
+}
+
+export async function stopBackgroundJobs(timeoutMs = 5000): Promise<void> {
+  jobsStopped = true;
+  for (const t of scheduledTimers) {
+    clearTimeout(t as unknown as NodeJS.Timeout);
+    clearInterval(t as unknown as NodeJS.Timeout);
+  }
+  scheduledTimers.clear();
+  if (inFlightJobs.size === 0) return;
+  // Wait for in-flight ticks, but cap at timeoutMs so a hung job can't block
+  // process shutdown indefinitely.
+  await Promise.race([
+    Promise.allSettled(Array.from(inFlightJobs)),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 export function startBackgroundJobs(): void {
   const feedbackInterval = 60 * 60 * 1000;
   const dailyInterval = ONE_DAY_MS;
   const expiryCheckInterval = 60 * 60 * 1000;
+  const retentionInterval = ONE_DAY_MS;
 
-  setTimeout(() => {
-    sendFeedbackReminders();
-    setInterval(sendFeedbackReminders, feedbackInterval);
-  }, 5000);
+  schedule(sendFeedbackReminders, feedbackInterval, 5000);
+  schedule(sendDailySummary, dailyInterval, 10000);
+  schedule(sendAnalysisExpiryAlerts, expiryCheckInterval, 15000);
+  schedule(sendRetentionWarnings, retentionInterval, 20000);
+  schedule(deleteOldAnalyses, retentionInterval, 25000);
 
-  setTimeout(() => {
-    sendDailySummary();
-    setInterval(sendDailySummary, dailyInterval);
-  }, 10000);
-
-  setTimeout(() => {
-    sendAnalysisExpiryAlerts();
-    setInterval(sendAnalysisExpiryAlerts, expiryCheckInterval);
-  }, 15000);
-
-  logger.info("Background notification jobs started");
+  logger.info({ retentionDays: ANALYSES_RETENTION_DAYS }, "Background notification jobs started");
 }

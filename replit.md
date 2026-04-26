@@ -74,6 +74,17 @@ After codegen: fix `lib/api-zod/src/index.ts` to only export from `"./generated/
 ## Timeframe Validity Periods
 - 1m: 15 min | 5m: 1h | 15m: 2.5h | 1h: 5h | 4h: 18h | 1D: 36h | 1W: 96h
 
+## Historical Data Retention
+- **Analyses**: 90-day retention (env-overridable via `ANALYSES_RETENTION_DAYS`, clamped 30–365). A daily background job deletes analyses older than the window; `feedback` rows cascade automatically. A second daily job sends an in-app notification 7 days before deletion.
+- **Sessions / password reset tokens**: pruned by their own `expiresAt` columns (no TTL job needed).
+- **Notifications**: kept indefinitely (user-driven cleanup via mark-read / delete UI).
+
+## Production Database Resilience
+- Single shared `pg.Pool` lives in `lib/db/src/index.ts` (api-server re-exports it). No duplicate pools.
+- `pool.on('error')` handler swallows idle-client TCP drops from managed Postgres providers (Neon etc.) so Node never crashes from an unhandled error event.
+- TLS: strict cert verification by default whenever `sslmode=require/verify-*` is in `DATABASE_URL` or in production. Set `PGSSL_INSECURE=true` ONLY for self-signed dev DBs (logs a loud warning if used in production).
+- Graceful shutdown: SIGTERM/SIGINT stops background jobs first, then closes the HTTP server, then drains the pool (10s force-exit fallback). Prevents lingering connections after deploy restarts.
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
 
 ## Before You Publish

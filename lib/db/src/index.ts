@@ -10,7 +10,47 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const connectionString = process.env.DATABASE_URL;
+
+const sslMode = (process.env.PGSSLMODE ?? "").toLowerCase();
+const needsSsl =
+  /[?&]sslmode=(require|verify-ca|verify-full)/i.test(connectionString) ||
+  ["require", "verify-ca", "verify-full"].includes(sslMode) ||
+  process.env.NODE_ENV === "production";
+
+// SSL safety: default to strict certificate verification. Only disable it
+// when the operator explicitly opts in via PGSSL_INSECURE=true (e.g. for a
+// self-signed dev DB). Disabling verification in production opens the door
+// to MITM on the database transport, so we log loudly when it happens.
+const sslInsecure = process.env.PGSSL_INSECURE === "true";
+if (sslInsecure && process.env.NODE_ENV === "production") {
+  console.warn(
+    "[db] PGSSL_INSECURE=true in production — TLS certificate verification is DISABLED. This is unsafe; only use it with a trusted private network.",
+  );
+}
+
+export const pool = new Pool({
+  connectionString,
+  ...(needsSsl
+    ? { ssl: { rejectUnauthorized: sslInsecure ? false : true } }
+    : {}),
+  max: Number(process.env.PGPOOL_MAX ?? 10),
+  // Keep idle timeout at the pg default (10s) so we don't hold idle
+  // connections longer than necessary and so behavior matches what the
+  // existing test suite was tuned against.
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 10_000,
+});
+
+pool.on("error", (err) => {
+  // Managed Postgres providers (Neon, etc.) drop idle TCP connections
+  // periodically. Without a listener, the unhandled `error` event would
+  // crash the Node process. Logging keeps the pool resilient — `pg` will
+  // transparently open a new connection on the next query.
+  console.error("[db] idle pool client error:", err.message);
+});
+
 export const db = drizzle(pool, { schema });
+export type DB = typeof db;
 
 export * from "./schema";
