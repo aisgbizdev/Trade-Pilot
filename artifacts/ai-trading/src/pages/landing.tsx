@@ -144,8 +144,16 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Bridge: smooth fade from hero's dark end (#0d1b35) into the
+            page's bg-background so the dark→light transition doesn't
+            land as a hard seam. */}
+        <div
+          className="h-20 bg-gradient-to-b from-[#0d1b35] to-background -mt-px"
+          aria-hidden="true"
+        />
+
         {/* WHAT YOU ACTUALLY GET */}
-        <section className="px-4 py-10" data-testid="section-what-you-get">
+        <section className="px-4 pt-2 pb-10" data-testid="section-what-you-get">
           <div className="text-center mb-6">
             <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">
               {t.landing.what_you_get_tag}
