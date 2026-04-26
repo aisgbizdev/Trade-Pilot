@@ -132,7 +132,7 @@ describe("AnalysisDetailPage: happy-path render", () => {
 });
 
 describe("AnalysisDetailPage: not-found branch", () => {
-  it("renders the 'back to history' CTA when the API responds with a 404", async () => {
+  it("renders the localized not-found copy and the 'back to history' CTA when the API responds with a 404", async () => {
     installFetchMock([getAnalysisHandler({ status: 404 }), feedbackHandler()]);
     const { Wrapper } = makeWrapper();
 
@@ -142,17 +142,21 @@ describe("AnalysisDetailPage: not-found branch", () => {
       </Wrapper>,
     );
 
-    // The not-found branch has no testid, but it is the only place
-    // that renders an outline-variant button with the back-to-history
-    // copy. Wait for that branch to commit.
-    await waitFor(() => {
-      // The instrument header from the happy branch must be gone.
-      expect(screen.queryByTestId("text-instrument")).not.toBeInTheDocument();
-      // And the feedback CTAs must be gone too.
-      expect(
-        screen.queryByTestId("button-feedback-useful"),
-      ).not.toBeInTheDocument();
-    });
+    // Positive assertions: the not-found view should render BOTH the
+    // localized copy and the outline-variant CTA back to /history.
+    // (English is the default language in the test wrapper.)
+    expect(
+      await screen.findByText(/Analysis not found/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Back to History/i }),
+    ).toBeInTheDocument();
+
+    // And the happy-path widgets should NOT render in this branch.
+    expect(screen.queryByTestId("text-instrument")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("button-feedback-useful"),
+    ).not.toBeInTheDocument();
   });
 });
 
