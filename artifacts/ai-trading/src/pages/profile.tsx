@@ -71,7 +71,7 @@ export default function ProfilePage() {
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ title: t.profile.password_mismatch ?? "Konfirmasi password tidak cocok", variant: "destructive" });
+      toast({ title: t.profile.password_mismatch, variant: "destructive" });
       return;
     }
     try {
@@ -169,7 +169,11 @@ export default function ProfilePage() {
 
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-xs">
-              {user?.role === "super_admin" ? "Super Admin" : user?.role === "admin" ? "Admin" : "User"}
+              {user?.role === "super_admin"
+                ? t.profile.role_super_admin
+                : user?.role === "admin"
+                ? t.profile.role_admin
+                : t.profile.role_user}
             </Badge>
             <Badge variant="outline" className="text-xs">
               {user?.selectedMode === "beginner" ? `${t.profile.mode_label}: ${t.common.beginner}` : `${t.profile.mode_label}: ${t.common.pro}`}
@@ -258,7 +262,7 @@ export default function ProfilePage() {
               <div className="relative">
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder={t.profile.confirm_password_placeholder ?? "Konfirmasi password baru"}
+                  placeholder={t.profile.confirm_password_placeholder}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   data-testid="input-confirm-password"
@@ -274,7 +278,7 @@ export default function ProfilePage() {
                 </button>
               </div>
               {confirmPassword && newPassword && confirmPassword !== newPassword && (
-                <p className="text-xs text-red-500 -mt-1">{t.profile.password_mismatch ?? "Konfirmasi password tidak cocok"}</p>
+                <p className="text-xs text-red-500 -mt-1">{t.profile.password_mismatch}</p>
               )}
               <Button
                 size="sm"

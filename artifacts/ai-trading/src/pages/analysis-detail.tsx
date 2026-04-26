@@ -52,18 +52,43 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 
-const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
-  trending_up: { label: "Tren Naik", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-  trending_down: { label: "Tren Turun", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-  ranging: { label: "Sideways", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  volatile: { label: "Volatil", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
-};
+type T = ReturnType<typeof useTranslation>["t"];
 
-const RISK_LEVEL_LABELS: Record<string, { label: string; color: string; bars: number }> = {
-  low: { label: "Risiko Rendah", color: "text-green-600 dark:text-green-400", bars: 1 },
-  medium: { label: "Risiko Sedang", color: "text-yellow-600 dark:text-yellow-400", bars: 2 },
-  high: { label: "Risiko Tinggi", color: "text-red-600 dark:text-red-400", bars: 3 },
-};
+function getMarketConditionMeta(
+  key: string | null | undefined,
+  t: T,
+): { label: string; color: string } | undefined {
+  if (!key) return undefined;
+  const colorMap: Record<string, string> = {
+    trending_up: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    trending_down: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    ranging: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    volatile: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  };
+  const labelMap: Record<string, string> = {
+    trending_up: t.dashboard.trending_up,
+    trending_down: t.dashboard.trending_down,
+    ranging: t.dashboard.ranging,
+    volatile: t.dashboard.volatile,
+  };
+  const color = colorMap[key];
+  const label = labelMap[key];
+  if (!color || !label) return undefined;
+  return { label, color };
+}
+
+function getRiskLevelMeta(
+  key: string | null | undefined,
+  t: T,
+): { label: string; color: string; bars: number } | undefined {
+  if (!key) return undefined;
+  const meta: Record<string, { color: string; bars: number; label: string }> = {
+    low: { color: "text-green-600 dark:text-green-400", bars: 1, label: t.analysis_detail.risk_level_low },
+    medium: { color: "text-yellow-600 dark:text-yellow-400", bars: 2, label: t.analysis_detail.risk_level_medium },
+    high: { color: "text-red-600 dark:text-red-400", bars: 3, label: t.analysis_detail.risk_level_high },
+  };
+  return meta[key];
+}
 
 type BiasKey =
   | "bearish_strong"
@@ -123,7 +148,7 @@ function biasFillColor(bias: BiasKey): string {
   }
 }
 
-function biasLabel(bias: BiasKey, mode: string, t: ReturnType<typeof useTranslation>["t"]): string {
+function biasLabel(bias: BiasKey, mode: string, t: T): string {
   const isBeginner = mode === "beginner";
   const dict = t.analysis_detail;
   if (isBeginner) {
@@ -217,15 +242,18 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
 }
 
 function ValidityBadge({ validUntil }: { validUntil: string }) {
+  const { t, lang } = useTranslation();
   const date = new Date(validUntil);
   const valid = date > new Date();
+  const dateLocale = lang === "id" ? idLocale : undefined;
   if (valid) {
     return (
       <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
         <Clock className="w-4 h-4" />
         <span className="text-xs font-medium">
-          Relevan hingga{" "}
-          {formatDistanceToNow(date, { addSuffix: false, locale: idLocale })} lagi
+          {t.analysis_detail.validity_active_prefix}{" "}
+          {formatDistanceToNow(date, { addSuffix: false, locale: dateLocale })}{" "}
+          {t.analysis_detail.validity_active_suffix}
         </span>
       </div>
     );
@@ -233,7 +261,7 @@ function ValidityBadge({ validUntil }: { validUntil: string }) {
   return (
     <div className="flex items-center gap-1.5 text-muted-foreground">
       <Clock className="w-4 h-4" />
-      <span className="text-xs font-medium">Analisis ini mungkin sudah tidak relevan</span>
+      <span className="text-xs font-medium">{t.analysis_detail.validity_expired}</span>
     </div>
   );
 }
@@ -259,14 +287,14 @@ function parseConditions(raw?: string | null): string[] {
     .filter((s) => s.length > 0);
 }
 
-function scenarioCText(bias: BiasKey, t: ReturnType<typeof useTranslation>["t"]): string {
+function scenarioCText(bias: BiasKey, t: T): string {
   if (bias === "neutral") {
     return t.analysis_detail.scenario_c_template_neutral;
   }
   return t.analysis_detail.scenario_c_template_directional;
 }
 
-function executionScenarioAText(bias: BiasKey, t: ReturnType<typeof useTranslation>["t"]): string {
+function executionScenarioAText(bias: BiasKey, t: T): string {
   if (bias === "bullish" || bias === "bullish_strong") {
     return t.analysis_detail.execution_scenario_a_template_bullish;
   }
@@ -281,7 +309,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const submitFeedback = useSubmitFeedback();
   const { refresh, isRefreshing: isRowRefreshing } = useRefreshAnalysis();
   const isRefreshing = isRowRefreshing(id);
@@ -360,9 +388,9 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQueryKey(id) });
       setFeedbackSubmitted(true);
-      toast({ title: "Feedback tersimpan" });
+      toast({ title: t.analysis_detail.feedback_saved });
     } catch {
-      toast({ title: "Gagal menyimpan feedback", variant: "destructive" });
+      toast({ title: t.analysis_detail.feedback_save_error, variant: "destructive" });
     }
   };
 
@@ -380,17 +408,17 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center h-64 px-4">
-          <p className="text-muted-foreground mb-4">Analisis tidak ditemukan</p>
+          <p className="text-muted-foreground mb-4">{t.analysis_detail.not_found}</p>
           <Button variant="outline" onClick={() => setLocation("/history")}>
-            Kembali ke Riwayat
+            {t.analysis_detail.back_to_history}
           </Button>
         </div>
       </Layout>
     );
   }
 
-  const mc = analysis.marketCondition ? MARKET_CONDITION_LABELS[analysis.marketCondition] : undefined;
-  const rl = analysis.riskLevel ? RISK_LEVEL_LABELS[analysis.riskLevel] : undefined;
+  const mc = getMarketConditionMeta(analysis.marketCondition, t);
+  const rl = getRiskLevelMeta(analysis.riskLevel, t);
   const isBeginnerMode = analysis.mode === "beginner";
   const isExpired = new Date(analysis.validUntil) <= new Date();
   const bias = normalizeBias(analysis.tradingBias);
@@ -453,13 +481,13 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground">Tingkat Keyakinan</p>
+              <p className="text-xs text-muted-foreground">{t.analysis_detail.confidence}</p>
               <p className="text-base font-bold text-foreground" data-testid="text-confidence">
                 {analysis.confidenceMin ?? "--"}% – {analysis.confidenceMax ?? "--"}%
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">Risiko</p>
+              <p className="text-xs text-muted-foreground">{t.analysis_detail.risk_title}</p>
               <p className={cn("text-sm font-bold", rl?.color)} data-testid="text-risk-level">
                 {rl?.label}
               </p>
@@ -512,8 +540,12 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           )}
 
           <div className="text-xs text-muted-foreground">
-            Dianalisis {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", { locale: idLocale })} •{" "}
-            Mode {isBeginnerMode ? "Pemula" : "Pro"}
+            {t.analysis_detail.analyzed_prefix}{" "}
+            {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
+              locale: lang === "id" ? idLocale : undefined,
+            })}{" "}
+            • {t.analysis_detail.mode_prefix}{" "}
+            {isBeginnerMode ? t.analysis_detail.beginner_mode : t.analysis_detail.pro_mode}
           </div>
 
           {isExpired && (
@@ -649,9 +681,9 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         {/* PRO MODE: Technical + Fundamental + Market context */}
         {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
           <Card className="p-4 space-y-4" data-testid="card-pro-details">
-            <Section title="Faktor Teknikal" content={analysis.keyDriversTechnical} />
-            <Section title="Faktor Fundamental" content={analysis.keyDriversFundamental} />
-            <Section title="Konteks Pasar" content={analysis.marketContext} />
+            <Section title={t.analysis_detail.pro_factor_technical} content={analysis.keyDriversTechnical} />
+            <Section title={t.analysis_detail.pro_factor_fundamental} content={analysis.keyDriversFundamental} />
+            <Section title={t.analysis_detail.pro_factor_market_context} content={analysis.marketContext} />
           </Card>
         )}
 
@@ -721,15 +753,16 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           <div className="flex gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
             <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-              Analisis ini adalah alat pendukung keputusan, bukan saran keuangan atau sinyal trading otomatis.
-              Selalu lakukan riset sendiri dan kelola risiko dengan bijak.
+              {t.analysis_detail.disclaimer_full}
             </p>
           </div>
         </Card>
 
         <Card className="p-4">
           <h3 className="text-sm font-semibold text-foreground mb-3">
-            {existingFeedback || feedbackSubmitted ? "Feedback Kamu" : "Bagaimana Analisis Ini?"}
+            {existingFeedback || feedbackSubmitted
+              ? t.analysis_detail.feedback_your
+              : t.analysis_detail.feedback_title}
           </h3>
 
           <div className="flex gap-2 mb-3">
@@ -744,7 +777,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               )}
             >
               <ThumbsUp className="w-4 h-4" />
-              Berguna
+              {t.analysis_detail.feedback_useful}
             </button>
             <button
               onClick={() => setFeedbackType("not_useful")}
@@ -757,14 +790,14 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               )}
             >
               <ThumbsDown className="w-4 h-4" />
-              Tidak Berguna
+              {t.analysis_detail.feedback_not_useful}
             </button>
           </div>
 
           {(feedbackType || existingFeedback) && (
             <div className="space-y-3">
               <div>
-                <p className="text-xs text-muted-foreground mb-2">Hasil Sebenarnya (opsional)</p>
+                <p className="text-xs text-muted-foreground mb-2">{t.analysis_detail.feedback_outcome_label}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {(["correct", "wrong", "unknown"] as const).map((o) => (
                     <button
@@ -778,14 +811,18 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                           : "border-border text-muted-foreground"
                       )}
                     >
-                      {o === "correct" ? "Terbukti Benar" : o === "wrong" ? "Analisis Salah" : "Belum Tahu"}
+                      {o === "correct"
+                        ? t.analysis_detail.feedback_outcome_correct
+                        : o === "wrong"
+                        ? t.analysis_detail.feedback_outcome_wrong
+                        : t.analysis_detail.feedback_outcome_unknown}
                     </button>
                   ))}
                 </div>
               </div>
 
               <Textarea
-                placeholder="Catatan tambahan (opsional)"
+                placeholder={t.analysis_detail.feedback_note_placeholder}
                 value={feedbackNote || existingFeedback?.note || ""}
                 onChange={(e) => setFeedbackNote(e.target.value)}
                 rows={2}
@@ -802,7 +839,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                   data-testid="button-submit-feedback"
                 >
                   {submitFeedback.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  Simpan Feedback
+                  {t.analysis_detail.feedback_submit}
                 </Button>
               )}
             </div>

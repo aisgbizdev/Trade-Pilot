@@ -216,7 +216,7 @@ export default function AnalyzePage() {
                       : "bg-background text-muted-foreground border-border"
                   )}
                 >
-                  {tab === "futures" ? "Futures" : "Forex"}
+                  {tab === "futures" ? t.analyze.tab_futures : t.analyze.tab_forex}
                 </button>
               ))}
             </div>

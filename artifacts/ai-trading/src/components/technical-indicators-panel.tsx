@@ -265,18 +265,18 @@ export function TechnicalIndicatorsPanel({
         <SummaryGauge buy={ind.overallSummary.buy} sell={ind.overallSummary.sell} neutral={ind.overallSummary.neutral} mode={mode} />
         <div className="grid grid-cols-2 gap-2 mt-3">
           <div className="bg-muted/50 rounded-xl p-2 text-center">
-            <p className="text-[9px] text-muted-foreground mb-1">Oscillator</p>
+            <p className="text-[9px] text-muted-foreground mb-1">{t.analyze.oscillator_section}</p>
             <SummaryGauge buy={ind.oscillatorSummary.buy} sell={ind.oscillatorSummary.sell} neutral={ind.oscillatorSummary.neutral} mode={mode} />
           </div>
           <div className="bg-muted/50 rounded-xl p-2 text-center">
-            <p className="text-[9px] text-muted-foreground mb-1">Moving Avg</p>
+            <p className="text-[9px] text-muted-foreground mb-1">{t.analyze.moving_avg_short}</p>
             <SummaryGauge buy={ind.maSummary.buy} sell={ind.maSummary.sell} neutral={ind.maSummary.neutral} mode={mode} />
           </div>
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Oscillator</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t.analyze.oscillator_section}</p>
         {[
           { name: "RSI (14)", value: r(ind.rsi14.value), signal: ind.rsi14.signal },
           { name: `MACD (12,26)`, value: r(ind.macd.macd, 4), signal: ind.macd.action },
@@ -294,7 +294,7 @@ export function TechnicalIndicatorsPanel({
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Moving Averages</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t.analyze.moving_averages_section}</p>
         {sortedMAs.map((ma) => (
           <div key={`${ma.type}-${ma.period}`} className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{ma.type} ({ma.period})</span>
