@@ -238,6 +238,12 @@ export interface Analysis {
   tradingBias?: string | null;
   opportunity?: string | null;
   risk?: string | null;
+  /** Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page. */
+  techBuyCount?: number | null;
+  /** Snapshot of the technical-indicator sell tally captured at analysis time. */
+  techSellCount?: number | null;
+  /** Snapshot of the technical-indicator neutral tally captured at analysis time. */
+  techNeutralCount?: number | null;
   feedback?: Feedback | null;
   /** Number of "useful" feedback rows for this analysis. Only populated by admin endpoints. */
   usefulCount?: number;

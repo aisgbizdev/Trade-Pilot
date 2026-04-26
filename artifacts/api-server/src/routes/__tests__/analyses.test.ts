@@ -58,7 +58,13 @@ function authHeader(u: SeedUser): [string, string] {
   return ["Authorization", `Bearer ${u.token}`];
 }
 
-async function seedAnalysis(userId: number, opts: { instrument: string; daysAgo?: number } = { instrument: INSTRUMENT_PREFIX }) {
+async function seedAnalysis(userId: number, opts: {
+  instrument: string;
+  daysAgo?: number;
+  techBuyCount?: number | null;
+  techSellCount?: number | null;
+  techNeutralCount?: number | null;
+} = { instrument: INSTRUMENT_PREFIX }) {
   const created = opts.daysAgo
     ? new Date(Date.now() - opts.daysAgo * 24 * 60 * 60 * 1000)
     : new Date();
@@ -74,6 +80,9 @@ async function seedAnalysis(userId: number, opts: { instrument: string; daysAgo?
       riskLevel: "low",
       confidenceMin: 50,
       confidenceMax: 70,
+      techBuyCount: opts.techBuyCount ?? null,
+      techSellCount: opts.techSellCount ?? null,
+      techNeutralCount: opts.techNeutralCount ?? null,
       createdAt: created,
     })
     .returning({ id: analyses.id });
@@ -244,5 +253,36 @@ describe("GET /analyses/:id ownership", () => {
       .get(`/api/analyses/999999999`)
       .set(...authHeader(alice));
     expect(res.status).toBe(404);
+  });
+
+  it("round-trips the technical-indicator snapshot used by the saved Market Context Summary card", async () => {
+    // Snapshot the indicator tally the user saw on the Analyze tab so the
+    // saved analysis page can render the same Market Context Summary card.
+    const id = await seedAnalysis(alice.id, {
+      instrument: `${INSTRUMENT_PREFIX}-MCS`,
+      techBuyCount: 7,
+      techSellCount: 2,
+      techNeutralCount: 3,
+    });
+    const res = await request(app)
+      .get(`/api/analyses/${id}`)
+      .set(...authHeader(alice));
+    expect(res.status).toBe(200);
+    expect(res.body.techBuyCount).toBe(7);
+    expect(res.body.techSellCount).toBe(2);
+    expect(res.body.techNeutralCount).toBe(3);
+  });
+
+  it("leaves the snapshot null when no indicators were captured (back-compat for legacy rows)", async () => {
+    const id = await seedAnalysis(alice.id, {
+      instrument: `${INSTRUMENT_PREFIX}-NO-MCS`,
+    });
+    const res = await request(app)
+      .get(`/api/analyses/${id}`)
+      .set(...authHeader(alice));
+    expect(res.status).toBe(200);
+    expect(res.body.techBuyCount).toBeNull();
+    expect(res.body.techSellCount).toBeNull();
+    expect(res.body.techNeutralCount).toBeNull();
   });
 });

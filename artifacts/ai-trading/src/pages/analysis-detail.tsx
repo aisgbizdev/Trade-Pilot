@@ -36,6 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
+import { MarketContextSummary } from "@/components/market-context-summary";
 import {
   useGetAnalysis,
   getGetAnalysisQueryKey,
@@ -569,6 +570,19 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             </Button>
           )}
         </Card>
+
+        {/* Market Context Summary — same card the user saw on the Analyze tab,
+            rendered from the indicator-tally snapshot stored at analysis time. */}
+        {analysis.techBuyCount != null &&
+          analysis.techSellCount != null &&
+          analysis.techNeutralCount != null && (
+            <MarketContextSummary
+              buy={analysis.techBuyCount}
+              sell={analysis.techSellCount}
+              neutral={analysis.techNeutralCount}
+              mode={isBeginnerMode ? "beginner" : "pro"}
+            />
+          )}
 
         {analysis.userInputContext && (
           <Card className="p-4 space-y-2" data-testid="card-user-notes">

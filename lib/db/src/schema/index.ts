@@ -111,6 +111,13 @@ export const analyses = pgTable("analyses", {
   tradingBias: text("trading_bias"),
   opportunity: text("opportunity"),
   risk: text("risk"),
+  // Snapshot of the technical-indicator tally at analysis time so the saved
+  // analysis page can render the same Market Context Summary card the user
+  // saw on the Analyze tab. Nullable: legacy rows + intraday timeframes
+  // without indicator support won't have these.
+  techBuyCount: integer("tech_buy_count"),
+  techSellCount: integer("tech_sell_count"),
+  techNeutralCount: integer("tech_neutral_count"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

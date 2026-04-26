@@ -257,10 +257,21 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   // so the AI is not fed stale daily data labelled as e.g. "1h".
   const indicatorTf = isSupportedIndicatorTimeframe(timeframe) ? timeframe : null;
   const contextParts: string[] = [];
+  // Snapshot the overall buy/sell/neutral tally that drives the Market Context
+  // Summary card on the Analyze tab so the saved analysis page can render the
+  // same card later. Stays null when indicators were unavailable.
+  let techCounts: { buy: number; sell: number; neutral: number } | null = null;
   await Promise.allSettled([
     indicatorTf
       ? getIndicators(instrument, indicatorTf).then((ind) => {
-          if (ind) contextParts.push(formatIndicatorsForPrompt(ind, indicatorTf));
+          if (ind) {
+            contextParts.push(formatIndicatorsForPrompt(ind, indicatorTf));
+            techCounts = {
+              buy: ind.overallSummary.buy,
+              sell: ind.overallSummary.sell,
+              neutral: ind.overallSummary.neutral,
+            };
+          }
         })
       : Promise.resolve(),
     getRelevantNews(instrument).then((news) => {
@@ -308,6 +319,9 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       tradingBias: aiResult.tradingBias,
       opportunity: aiResult.opportunity,
       risk: aiResult.risk,
+      techBuyCount: techCounts?.buy ?? null,
+      techSellCount: techCounts?.sell ?? null,
+      techNeutralCount: techCounts?.neutral ?? null,
       ...modeSpecificFields,
     };
   };

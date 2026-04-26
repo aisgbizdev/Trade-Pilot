@@ -1441,6 +1441,18 @@ components:
         risk:
           type: string
           nullable: true
+        techBuyCount:
+          type: integer
+          nullable: true
+          description: "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page."
+        techSellCount:
+          type: integer
+          nullable: true
+          description: "Snapshot of the technical-indicator sell tally captured at analysis time."
+        techNeutralCount:
+          type: integer
+          nullable: true
+          description: "Snapshot of the technical-indicator neutral tally captured at analysis time."
         feedback:
           $ref: "#/components/schemas/Feedback"
           nullable: true

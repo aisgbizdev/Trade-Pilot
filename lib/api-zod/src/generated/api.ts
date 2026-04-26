@@ -237,6 +237,24 @@ export const ListAnalysesResponse = zod.object({
         ),
       opportunity: zod.string().nullish(),
       risk: zod.string().nullish(),
+      techBuyCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
+        ),
+      techSellCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator sell tally captured at analysis time.",
+        ),
+      techNeutralCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator neutral tally captured at analysis time.",
+        ),
       feedback: zod
         .object({
           id: zod.number(),
@@ -309,6 +327,24 @@ export const GetAnalysesSummaryResponse = zod.object({
         ),
       opportunity: zod.string().nullish(),
       risk: zod.string().nullish(),
+      techBuyCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
+        ),
+      techSellCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator sell tally captured at analysis time.",
+        ),
+      techNeutralCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator neutral tally captured at analysis time.",
+        ),
       feedback: zod
         .object({
           id: zod.number(),
@@ -431,6 +467,24 @@ export const GetAnalysisResponse = zod.object({
     ),
   opportunity: zod.string().nullish(),
   risk: zod.string().nullish(),
+  techBuyCount: zod
+    .number()
+    .nullish()
+    .describe(
+      "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
+    ),
+  techSellCount: zod
+    .number()
+    .nullish()
+    .describe(
+      "Snapshot of the technical-indicator sell tally captured at analysis time.",
+    ),
+  techNeutralCount: zod
+    .number()
+    .nullish()
+    .describe(
+      "Snapshot of the technical-indicator neutral tally captured at analysis time.",
+    ),
   feedback: zod
     .object({
       id: zod.number(),
@@ -637,6 +691,24 @@ export const GetAllAnalysesResponse = zod.object({
         ),
       opportunity: zod.string().nullish(),
       risk: zod.string().nullish(),
+      techBuyCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
+        ),
+      techSellCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator sell tally captured at analysis time.",
+        ),
+      techNeutralCount: zod
+        .number()
+        .nullish()
+        .describe(
+          "Snapshot of the technical-indicator neutral tally captured at analysis time.",
+        ),
       feedback: zod
         .object({
           id: zod.number(),
