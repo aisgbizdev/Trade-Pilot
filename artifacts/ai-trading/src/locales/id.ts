@@ -174,6 +174,7 @@ export const id: Translations = {
     refresh_price: "Refresh harga",
     price_error: "Tidak dapat memuat harga live",
     live_price_fallback_label: "Sumber: Newsmaker (cadangan)",
+    live_price_retrying: "Mencoba muat ulang harga…",
     last_analyzed: "Terakhir Dianalisis",
     avg_confidence: "Rata-rata Kepercayaan",
     recent_analyses: "Analisis Terbaru",

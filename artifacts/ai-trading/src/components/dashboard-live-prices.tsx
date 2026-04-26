@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import {
   Loader2,
@@ -185,20 +185,64 @@ function NewsmakerFallbackTicker() {
   );
 }
 
+const RETRY_DELAY_MS = 2000;
+const MAX_ATTEMPTS = 2;
+const WIDGET_HEIGHT = 410;
+
+type LoadPhase = "loading" | "waiting-retry" | "fallback";
+
 export function DashboardLivePrices() {
   const { t } = useTranslation();
+  const [attempt, setAttempt] = useState(1);
+  const [phase, setPhase] = useState<LoadPhase>("loading");
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  const attemptRef = useRef(1);
+  const phaseRef = useRef<LoadPhase>("loading");
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleLoadFailed = useCallback((reason: string) => {
-    setFallbackReason(reason);
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
   }, []);
 
-  const fallback = fallbackReason !== null;
+  // Refs are the single source of truth for the state machine. State setters
+  // only trigger re-renders. handleLoadFailed avoids running side effects
+  // inside a state-updater function (which React may invoke more than once
+  // under StrictMode/concurrent rendering), and short-circuits noisy
+  // duplicate failure callbacks that arrive after we already moved out of
+  // the "loading" phase.
+  const handleLoadFailed = useCallback((reason: string) => {
+    if (phaseRef.current !== "loading") return;
+
+    if (attemptRef.current < MAX_ATTEMPTS) {
+      phaseRef.current = "waiting-retry";
+      setPhase("waiting-retry");
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        attemptRef.current += 1;
+        phaseRef.current = "loading";
+        setAttempt(attemptRef.current);
+        setPhase("loading");
+      }, RETRY_DELAY_MS);
+      return;
+    }
+
+    phaseRef.current = "fallback";
+    setFallbackReason(reason);
+    setPhase("fallback");
+  }, []);
 
   return (
     <div
       data-testid="dashboard-live-prices"
       data-fallback-reason={fallbackReason ?? ""}
+      data-retry-attempt={attempt}
+      data-load-phase={phase}
     >
       <div className="flex items-center gap-2 mb-3">
         <h2 className="text-sm font-bold text-foreground">
@@ -212,12 +256,26 @@ export function DashboardLivePrices() {
         </div>
       </div>
 
-      {fallback ? (
+      {phase === "fallback" ? (
         <NewsmakerFallbackTicker />
+      ) : phase === "waiting-retry" ? (
+        <div
+          className="flex items-center justify-center rounded-xl border border-dashed border-border bg-card/40"
+          style={{ height: WIDGET_HEIGHT }}
+          data-testid="live-prices-retry-indicator"
+        >
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="text-[10px] text-muted-foreground">
+              {t.dashboard.live_price_retrying}
+            </span>
+          </div>
+        </div>
       ) : (
         <TradingViewMarketQuotes
+          key={attempt}
           symbols={TRADINGVIEW_SYMBOLS}
-          height={410}
+          height={WIDGET_HEIGHT}
           onLoadFailed={handleLoadFailed}
         />
       )}
