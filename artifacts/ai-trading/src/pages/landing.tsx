@@ -142,7 +142,7 @@ export default function LandingPage() {
               {stats.map(({ value, label }) => (
                 <div key={label} className="bg-white/5 rounded-xl p-2.5 border border-amber-400/15">
                   <div className="text-base font-bold gradient-text">{value}</div>
-                  <div className="text-[9px] text-slate-300 mt-0.5 leading-tight">{label}</div>
+                  <div className="text-[9px] text-amber-100/80 mt-0.5 leading-tight">{label}</div>
                 </div>
               ))}
             </div>
@@ -332,7 +332,7 @@ export default function LandingPage() {
                 <p className="text-xs text-slate-200 leading-relaxed mb-5">
                   {t.landing.cta_bottom_subtitle}
                 </p>
-                <div className="flex items-center justify-center gap-4 mb-5 text-xs text-slate-300">
+                <div className="flex items-center justify-center gap-4 mb-5 text-xs text-slate-200">
                   <span className="flex items-center gap-1"><Lock className="w-3 h-3 text-emerald-400" /> {t.landing.no_credit_card}</span>
                   <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-amber-300" /> {t.landing.secure_data}</span>
                 </div>

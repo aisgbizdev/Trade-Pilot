@@ -41,7 +41,7 @@ function PriceItem({ quote }: { quote: LiveQuote }) {
   return (
     <span className="text-xs font-mono text-slate-200 flex items-center gap-1.5">
       <span className="font-semibold">{quote.instrument}</span>
-      <span className="text-slate-300">
+      <span className="text-slate-100">
         {formatPrice(quote.price, quote.instrument)}
       </span>
       <span className={`flex items-center gap-0.5 ${colorClass}`}>
@@ -74,14 +74,14 @@ function NewsItem({ article }: { article: NewsArticle }) {
       {article.category && (
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            CATEGORY_DOT[article.category] ?? "bg-slate-400"
+            CATEGORY_DOT[article.category] ?? "bg-amber-300/70"
           }`}
         />
       )}
       <span className="text-xs text-slate-200 group-hover:text-white transition-colors max-w-[420px] truncate">
         {article.title}
       </span>
-      <span className="text-[10px] text-slate-500">
+      <span className="text-[10px] text-slate-400">
         · {article.sourceName}
       </span>
     </a>
@@ -89,7 +89,7 @@ function NewsItem({ article }: { article: NewsArticle }) {
 }
 
 function Separator() {
-  return <span className="text-slate-700 text-xs select-none">|</span>;
+  return <span className="text-amber-500/40 text-xs select-none">|</span>;
 }
 
 export function ContinuousTicker({ newsLimit = 3 }: { newsLimit?: number }) {
