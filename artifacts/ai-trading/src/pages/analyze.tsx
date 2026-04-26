@@ -311,8 +311,8 @@ export default function AnalyzePage() {
               className="resize-none"
               data-testid="textarea-notes"
             />
-            <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
-              <span className="text-amber-500 mt-0.5">⚠</span>
+            <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed">
+              <span className="text-primary mt-0.5" aria-hidden="true">ℹ</span>
               {t.analyze.broker_warning}
             </p>
           </div>
