@@ -199,6 +199,7 @@ export const en = {
     timeframe_label: "Timeframe",
     submit_btn: "Analyze",
     disclaimer: "This analysis is for decision support only, not financial advice or a trading signal.",
+    risk_disclaimer_short: "Not investment advice. Trading involves risk.",
     loading: [
       "Analyzing market conditions...",
       "Checking technical factors...",
@@ -388,6 +389,7 @@ export const en = {
     calendar_actual: "Actual",
     show_less: "Show less",
     more_events: "more events",
+    source_newsmaker: "Source: Newsmaker.id",
   },
   analysis_detail: {
     loading: "Loading analysis...",
@@ -483,6 +485,7 @@ export const en = {
     pro_factor_fundamental: "Fundamental Factors",
     pro_factor_market_context: "Market Context",
     disclaimer_full: "This analysis is a decision-support tool, not financial advice or an automated trading signal. Always do your own research and manage risk wisely.",
+    risk_disclaimer_short: "Not investment advice. Trading involves risk.",
     validity_active_prefix: "Relevant for",
     validity_active_suffix: "more",
     validity_expired: "This analysis may no longer be relevant",

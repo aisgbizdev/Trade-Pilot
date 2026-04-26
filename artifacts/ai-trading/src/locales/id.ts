@@ -201,6 +201,7 @@ export const id: Translations = {
     timeframe_label: "Timeframe",
     submit_btn: "Analisis",
     disclaimer: "Hasil analisis ini hanya untuk mendukung keputusan, bukan saran keuangan atau sinyal trading.",
+    risk_disclaimer_short: "Bukan rekomendasi investasi. Trading mengandung risiko.",
     loading: [
       "Menganalisis kondisi pasar...",
       "Memeriksa faktor teknikal...",
@@ -390,6 +391,7 @@ export const id: Translations = {
     calendar_actual: "Aktual",
     show_less: "Tampilkan lebih sedikit",
     more_events: "event lainnya",
+    source_newsmaker: "Sumber: Newsmaker.id",
   },
   analysis_detail: {
     loading: "Memuat analisis...",
@@ -485,6 +487,7 @@ export const id: Translations = {
     pro_factor_fundamental: "Faktor Fundamental",
     pro_factor_market_context: "Konteks Pasar",
     disclaimer_full: "Analisis ini adalah alat pendukung keputusan, bukan saran keuangan atau sinyal trading otomatis. Selalu lakukan riset sendiri dan kelola risiko dengan bijak.",
+    risk_disclaimer_short: "Bukan rekomendasi investasi. Trading mengandung risiko.",
     validity_active_prefix: "Relevan hingga",
     validity_active_suffix: "lagi",
     validity_expired: "Analisis ini mungkin sudah tidak relevan",

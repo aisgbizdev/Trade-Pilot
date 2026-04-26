@@ -118,11 +118,10 @@ export function CalendarWidget({ filterCurrency, limit = 10 }: { filterCurrency?
           href="https://newsmaker.id"
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-auto flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-          title="Data dari Newsmaker.id"
+          className="ml-auto text-[10px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+          data-testid="link-calendar-source-newsmaker"
         >
-          <span className="text-[10px] text-muted-foreground">by</span>
-          <img src="/newsmaker-logo.png" alt="Newsmaker.id" className="h-4 w-auto object-contain bg-white rounded px-1 py-0.5" />
+          {t.widgets.source_newsmaker}
         </a>
       </div>
 
