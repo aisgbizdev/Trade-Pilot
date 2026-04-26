@@ -196,6 +196,22 @@ export function TechnicalIndicatorsPanel({
   const r = (n: number, d = 2) => Number(n).toFixed(d);
   const sortedMAs = [...ind.movingAverages].sort((a, b) => a.period - b.period || a.type.localeCompare(b.type));
 
+  // Pick the right "data freshness" pill, "1-bar change" label, and
+  // "20-bar change" label based on the active timeframe so intraday users
+  // don't see "Daily data" copy under their 5-minute candles.
+  const dataLabel =
+    timeframe === "1W" ? t.analyze.weekly_data :
+    timeframe === "1D" ? t.analyze.daily_data :
+    t.analyze.intraday_data.replace("{tf}", timeframe);
+  const change1Label =
+    timeframe === "1W" ? t.analyze.change_1w :
+    timeframe === "1D" ? t.analyze.change_1d :
+    t.analyze.change_1bar;
+  const change20Label =
+    timeframe === "1W" ? t.analyze.change_20w :
+    timeframe === "1D" ? t.analyze.change_20d :
+    t.analyze.change_20bar;
+
   return (
     <div className="space-y-3">
       <MarketContextSummary
@@ -214,7 +230,7 @@ export function TechnicalIndicatorsPanel({
         </h3>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[10px] text-muted-foreground">
-            {timeframe === "1W" ? t.analyze.weekly_data : t.analyze.daily_data} · {ind.dataPoints} {t.analyze.candles}
+            {dataLabel} · {ind.dataPoints} {t.analyze.candles}
           </span>
           <a
             href="https://newsmaker.id"
@@ -235,11 +251,11 @@ export function TechnicalIndicatorsPanel({
           <div className="text-sm font-bold text-foreground tabular-nums">{Number(ind.lastClose).toFixed(ind.lastClose > 100 ? 2 : 4)}</div>
         </div>
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">{timeframe === "1W" ? t.analyze.change_1w : t.analyze.change_1d}</div>
+          <div className="text-[10px] text-muted-foreground mb-1">{change1Label}</div>
           <ChangeChip value={ind.change1dPct} />
         </div>
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">{timeframe === "1W" ? t.analyze.change_20w : t.analyze.change_20d}</div>
+          <div className="text-[10px] text-muted-foreground mb-1">{change20Label}</div>
           <ChangeChip value={ind.change20dPct} />
         </div>
       </div>

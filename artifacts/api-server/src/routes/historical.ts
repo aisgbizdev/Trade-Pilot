@@ -3,7 +3,7 @@ import {
   getIndicators,
   isSupportedIndicatorTimeframe,
   SUPPORTED_INDICATOR_TIMEFRAMES,
-  INDICATORS_CACHE_TTL_SECONDS,
+  indicatorsCacheTtlSeconds,
 } from "../lib/historical.js";
 
 const router = Router();
@@ -17,7 +17,7 @@ router.get("/historical/indicators", async (req, res) => {
   const tfRaw = (typeof timeframe === "string" && timeframe.length > 0) ? timeframe : "1D";
   if (!isSupportedIndicatorTimeframe(tfRaw)) {
     return res.status(400).json({
-      error: `Timeframe "${tfRaw}" belum didukung untuk indikator. Hanya tersedia: ${SUPPORTED_INDICATOR_TIMEFRAMES.join(", ")}. Data intraday belum tersedia.`,
+      error: `Timeframe "${tfRaw}" belum didukung untuk indikator. Hanya tersedia: ${SUPPORTED_INDICATOR_TIMEFRAMES.join(", ")}.`,
       supportedTimeframes: SUPPORTED_INDICATOR_TIMEFRAMES,
     });
   }
@@ -27,12 +27,13 @@ router.get("/historical/indicators", async (req, res) => {
     if (!indicators) {
       return res.status(404).json({ error: "Data historis tidak tersedia untuk instrumen ini" });
     }
-    // Mirror the server-side TTL so browsers/proxies can also serve fast
-    // toggles between 1D/1W from their own cache. `private` because per-user
+    // Mirror the server-side TTL (which varies per timeframe — short for 1m,
+    // longer for 1D/1W) so browsers/proxies can also serve fast toggles
+    // between timeframes from their own cache. `private` because per-user
     // auth contexts shouldn't be shared across users via shared caches.
     res.setHeader(
       "Cache-Control",
-      `private, max-age=${INDICATORS_CACHE_TTL_SECONDS}`,
+      `private, max-age=${indicatorsCacheTtlSeconds(tfRaw)}`,
     );
     return res.json({ status: "success", timeframe: tfRaw, indicators });
   } catch (err: any) {

@@ -34,7 +34,7 @@ export interface TechnicalIndicators {
   overallSummary: { buy: number; sell: number; neutral: number; signal: "Buy" | "Sell" | "Neutral" };
 }
 
-export type IndicatorTimeframe = "1D" | "1W";
+export type IndicatorTimeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1D" | "1W";
 
 async function fetchIndicators(
   instrument: string,
@@ -60,7 +60,10 @@ export function useTechnicalIndicators(
     queryKey: ["technical-indicators", instrument, timeframe],
     queryFn: () => fetchIndicators(instrument!, timeframe),
     enabled: !!instrument,
-    staleTime: 60 * 60 * 1000,
+    // Match the lowest server-side cache TTL (1m timeframe → 30s) so the UI
+    // refetches roughly in step with the server's freshest snapshot. Daily
+    // and weekly callers still benefit from the server's longer cache.
+    staleTime: 30 * 1000,
     retry: false,
   });
 }
