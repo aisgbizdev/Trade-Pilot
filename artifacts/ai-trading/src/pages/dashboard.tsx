@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { TrendingUp, Plus, Clock, Loader2, Brain, Sparkles } from "lucide-react";
 import { Layout } from "@/components/layout";
@@ -13,6 +13,7 @@ import {
   useListAnalyses, getListAnalysesQueryKey,
   useUpdateProfile, getGetMeQueryKey,
   type AnalysesSummary, type AnalysesList, type RecentInstruments,
+  type User, type UserSelectedMode,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -52,9 +53,30 @@ export default function DashboardPage() {
     { query: { queryKey: getListAnalysesQueryKey({ page: 1, limit: 5 }) } }
   );
 
-  const handleModeToggle = async (mode: "beginner" | "pro") => {
-    await updateProfile.mutateAsync({ data: { selectedMode: mode } });
-    queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+  const intendedModeRef = useRef<UserSelectedMode | null>(null);
+
+  const handleModeToggle = (mode: UserSelectedMode) => {
+    if (user?.selectedMode === mode) return;
+    intendedModeRef.current = mode;
+    const queryKey = getGetMeQueryKey();
+    queryClient.cancelQueries({ queryKey }).then(() => {
+      const previous = queryClient.getQueryData<User>(queryKey);
+      queryClient.setQueryData<User>(queryKey, (old) =>
+        old ? { ...old, selectedMode: mode } : old
+      );
+      updateProfile.mutate(
+        { data: { selectedMode: mode } },
+        {
+          onError: () => {
+            if (intendedModeRef.current !== mode) return;
+            queryClient.setQueryData(queryKey, previous);
+          },
+          onSettled: () => {
+            queryClient.invalidateQueries({ queryKey });
+          },
+        }
+      );
+    });
   };
 
   const summaryData = summary as AnalysesSummary | undefined;

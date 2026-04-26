@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useDeferredValue } from "react";
 import { useTheme } from "@/components/theme-provider";
 import { useTranslation } from "@/lib/i18n";
 
@@ -54,6 +54,7 @@ export function TradingViewMarketQuotes({
   loadTimeoutMs = 6000,
 }: TradingViewMarketQuotesProps) {
   const { theme } = useTheme();
+  const deferredTheme = useDeferredValue(theme);
   const { lang } = useTranslation();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const effectiveLoadTimeoutMs = resolveLoadTimeout(loadTimeoutMs);
@@ -62,7 +63,7 @@ export function TradingViewMarketQuotes({
     const hostEl = hostRef.current;
     if (!hostEl) return;
 
-    const colorTheme = resolveColorTheme(theme);
+    const colorTheme = resolveColorTheme(deferredTheme);
     const widgetLang = lang;
 
     const config = {
@@ -199,7 +200,7 @@ export function TradingViewMarketQuotes({
     // Re-injecting on theme/lang/symbols change is intentional so the widget
     // reflects user toggles. The cleanup above clears the pending failTimeout,
     // so a dep change mid-load cannot trigger a spurious fallback.
-  }, [height, effectiveLoadTimeoutMs, onLoadFailed, theme, lang, symbols]);
+  }, [height, effectiveLoadTimeoutMs, onLoadFailed, deferredTheme, lang, symbols]);
 
   return (
     <div
