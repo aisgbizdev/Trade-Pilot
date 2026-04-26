@@ -49,7 +49,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background">
+    <div className="min-h-[100dvh] flex flex-col bg-background max-w-lg mx-auto w-full relative md:shadow-2xl md:shadow-black/40 md:border-x md:border-border/50">
       {/* Sticky group: header + ContinuousTicker stay pinned to the top
           together while the page scrolls. Wrapping them in a single sticky
           container is what keeps the ticker from disappearing on scroll —
@@ -92,7 +92,7 @@ export default function LandingPage() {
         <ContinuousTicker />
       </div>
 
-      <main className="flex-1 max-w-lg mx-auto w-full">
+      <main className="flex-1 w-full">
 
         {/* HERO */}
         <section className="hero-gradient px-5 pt-14 pb-10 text-center relative overflow-hidden">

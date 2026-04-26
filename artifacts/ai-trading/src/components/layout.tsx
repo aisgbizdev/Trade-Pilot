@@ -91,7 +91,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto relative">
+    <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto relative md:shadow-2xl md:shadow-black/40 md:border-x md:border-border/50">
       <header className="sticky top-0 z-40 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="flex items-center gap-2">
           {!isMainNav && (
