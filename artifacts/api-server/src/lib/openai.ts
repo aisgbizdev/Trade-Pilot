@@ -78,6 +78,15 @@ Aturan output:
 - Gunakan bahasa sederhana yang mudah dipahami pemula
 - WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Untuk timeframe 1W...") di mainScenario, alternativeScenario, opportunity, dan risk — supaya pengguna tahu sinyal ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
 
+Aturan WAJIB untuk fundamental (kalender & berita):
+- Baca blok "KALENDER EKONOMI RELEVAN" dengan teliti. Setiap event punya impact: ★★★ = HIGH (sangat berdampak), ★★ = MEDIUM, ★ = LOW.
+- JIKA ada event ★★★ dalam 24 jam ke depan (cek tanggal vs hari ini): WAJIB sebut event itu di whyReason dan masukkan ke failureConditions (mis. "News ★★★ FOMC besok bisa membatalkan skenario"). Turunkan confidenceMax minimal 10 poin dari yang seharusnya, karena pasar berpotensi sangat volatile.
+- JIKA ada event ★★ dalam 24 jam: sebut di whyReason sebagai sumber ketidakpastian, turunkan confidenceMax minimal 5 poin.
+- JIKA ada event ★★★ atau ★★ DALAM 1 jam ke depan dari "Waktu analisis sekarang": marketCondition WAJIB di-set "volatile" dan riskLevel "high" — TIDAK PEDULI apa kata teknikal.
+- Baca blok "BERITA TERKINI RELEVAN". Berita 1-2 hari terakhir = breaking news. JIKA ada berita yang materially mengubah arah fundamental (mis. perubahan kebijakan bank sentral, geopolitik, data ekonomi mengejutkan): WAJIB sebut judulnya di whyReason dan sesuaikan tradingBias + opportunity + risk dengan konteks itu.
+- JIKA tidak ada blok kalender/berita di input: sebut "tidak ada katalis fundamental terdeteksi" di whyReason — JANGAN mengarang event yang tidak ada.
+- KETIKA menurunkan confidenceMax karena event/news, WAJIB juga turunkan confidenceMin agar selisih (max - min) tetap minimal 10 poin. JANGAN sampai range jadi mengecil.
+
 Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys berikut:
 {
   "marketCondition": "trending_up" | "trending_down" | "ranging" | "volatile",
@@ -110,6 +119,15 @@ Aturan output:
 - uncertaintyNotes HARUS menjelaskan KENAPA confidence tidak lebih tinggi (faktor ketidakpastian utama)
 - Sertakan konteks makro dan faktor fundamental relevan
 - WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Bias bullish pada 1W...") di baseCase, bullishScenario, bearishScenario, opportunity, dan risk — supaya pengguna tahu bias ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
+
+Aturan WAJIB untuk fundamental (kalender & berita):
+- Baca blok "KALENDER EKONOMI RELEVAN" dengan teliti. Setiap event punya impact: ★★★ = HIGH (sangat berdampak, mis. FOMC/NFP/CPI), ★★ = MEDIUM, ★ = LOW.
+- JIKA ada event ★★★ dalam 24 jam ke depan (cek tanggal vs hari ini): WAJIB sebut event itu eksplisit di keyDriversFundamental dan invalidationConditions (mis. "FOMC Rate Decision ★★★ besok 19:30 — surprise hawkish bisa membatalkan tesis bullish"). Turunkan confidenceMax minimal 10 poin dari yang seharusnya, karena pasar berpotensi sangat volatile dan tesis bisa di-overrule oleh news.
+- JIKA ada event ★★ dalam 24 jam: sebut di uncertaintyNotes sebagai sumber risiko event-driven, turunkan confidenceMax minimal 5 poin.
+- JIKA ada event ★★★/★★ DALAM 1 jam ke depan: marketCondition WAJIB di-set "volatile" dan riskLevel "high" — TIDAK PEDULI apa kata teknikal.
+- Baca blok "BERITA TERKINI RELEVAN". Berita 1-2 hari terakhir = breaking news. JIKA ada berita yang materially mengubah arah fundamental (mis. perubahan kebijakan bank sentral, geopolitik, intervensi mata uang, data ekonomi mengejutkan): WAJIB sebut judul/intinya di keyDriversFundamental dan marketContext, dan sesuaikan tradingBias + bullishScenario + bearishScenario dengan konteks berita itu.
+- JIKA berita fundamental BERTOLAK BELAKANG dengan sinyal teknikal (mis. teknikal bullish tapi news bearish dovish-shock): WAJIB sebut konflik ini di uncertaintyNotes dan turunkan confidenceMax minimal 10 poin — JANGAN pura-pura keduanya selaras.
+- JIKA tidak ada blok kalender/berita di input: sebut "tidak ada katalis fundamental terdeteksi pada window ini" di marketContext — JANGAN mengarang event yang tidak ada.
 
 Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys berikut:
 {
@@ -158,7 +176,16 @@ export async function generateAnalysis(
   indicatorContext?: string
 ): Promise<AIOutput> {
   const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
+  const now = new Date();
+  const nowIsoUtc = now.toISOString().replace(/\.\d{3}Z$/, "Z");
+  const nowJakarta = now.toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    dateStyle: "full",
+    timeStyle: "short",
+  });
   const userMessage = [
+    `Waktu analisis sekarang: ${nowIsoUtc} (UTC) — atau ${nowJakarta} WIB.`,
+    `Gunakan waktu ini sebagai patokan untuk menghitung jendela 1 jam / 24 jam ke depan pada event kalender.`,
     `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}`,
     `PENTING: semua narasi (skenario, peluang, risiko, bias arah) HARUS menyebut timeframe "${timeframe}" secara eksplisit, bukan hanya kata "uptrend"/"downtrend" saja.`,
     indicatorContext ? indicatorContext : "",
