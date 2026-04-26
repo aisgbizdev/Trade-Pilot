@@ -17,7 +17,7 @@ import {
   getGetMeQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, fromCanonicalSecurityQuestion } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 
 const passwordSchema = (mismatchMsg: string) =>
@@ -32,7 +32,7 @@ const passwordSchema = (mismatchMsg: string) =>
 type Step = "email" | "question" | "reset" | "done";
 
 export default function ForgotPasswordPage() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [question, setQuestion] = useState("");
@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
     try {
       const res = await getQuestion.mutateAsync({ data: { email: values.email } });
       setEmail(values.email);
-      setQuestion(res.securityQuestion);
+      setQuestion(fromCanonicalSecurityQuestion(res.securityQuestion, lang));
       setStep("question");
     } catch (err: unknown) {
       const apiErr = err as { data?: { error?: string } };

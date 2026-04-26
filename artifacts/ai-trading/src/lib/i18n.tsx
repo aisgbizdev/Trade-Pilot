@@ -45,3 +45,27 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 export function useTranslation() {
   return useContext(I18nContext);
 }
+
+const CANONICAL_SECURITY_QUESTIONS = id.profile.security_questions;
+
+export function getSecurityQuestionOptions(
+  lang: Language,
+): Array<{ value: string; label: string }> {
+  const labels = translations[lang].profile.security_questions;
+  return CANONICAL_SECURITY_QUESTIONS.map((value, idx) => ({
+    value,
+    label: labels[idx] ?? value,
+  }));
+}
+
+export function fromCanonicalSecurityQuestion(
+  canonical: string,
+  lang: Language,
+): string {
+  const idx = CANONICAL_SECURITY_QUESTIONS.indexOf(canonical);
+  const arr = translations[lang].profile.security_questions;
+  if (idx >= 0 && idx < arr.length) {
+    return arr[idx]!;
+  }
+  return canonical;
+}

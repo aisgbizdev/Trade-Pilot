@@ -16,7 +16,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useRegister, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 
 const schema = z.object({
@@ -31,7 +31,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function RegisterPage() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [, setLocation] = useLocation();
@@ -179,8 +179,8 @@ export default function RegisterPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {t.profile.security_questions.map((q) => (
-                          <SelectItem key={q} value={q}>{q}</SelectItem>
+                        {getSecurityQuestionOptions(lang).map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

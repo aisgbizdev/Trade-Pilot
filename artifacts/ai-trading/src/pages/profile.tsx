@@ -18,13 +18,13 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
@@ -329,8 +329,8 @@ export default function ProfilePage() {
                 data-testid="select-security-question"
               >
                 <option value="">{t.auth.security_question_placeholder}</option>
-                {t.profile.security_questions.map((q) => (
-                  <option key={q} value={q}>{q}</option>
+                {getSecurityQuestionOptions(lang).map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
               <div className="relative">
