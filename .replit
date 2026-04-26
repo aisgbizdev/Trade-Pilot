@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "api-server-test"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "ai-trading-test"
+
 [[workflows.workflow]]
 name = "api-server-test"
 author = "agent"
@@ -27,6 +31,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/api-server run test"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "ai-trading-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/ai-trading run test"
 
 [workflows.workflow.metadata]
 isValidation = true
