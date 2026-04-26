@@ -32,22 +32,18 @@ export function TradingViewMarketQuotes({
   symbols,
   height = 410,
   onLoadFailed,
-  loadTimeoutMs = 20000,
+  loadTimeoutMs = 6000,
 }: TradingViewMarketQuotesProps) {
   const { theme } = useTheme();
   const { lang } = useTranslation();
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const themeRef = useRef(theme);
-  const langRef = useRef(lang);
-  themeRef.current = theme;
-  langRef.current = lang;
 
   useEffect(() => {
     const hostEl = hostRef.current;
     if (!hostEl) return;
 
-    const colorTheme = resolveColorTheme(themeRef.current);
-    const widgetLang = langRef.current;
+    const colorTheme = resolveColorTheme(theme);
+    const widgetLang = lang;
 
     const config = {
       width: "100%",
@@ -165,12 +161,10 @@ export function TradingViewMarketQuotes({
       cleanup();
       hostEl.innerHTML = "";
     };
-    // Intentionally exclude theme/lang/onLoadFailed/symbols from deps:
-    // we capture initial values via refs and avoid re-running this effect
-    // on parent re-renders, which would otherwise wipe a partially-loaded
-    // widget and trigger spurious failures.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [height, loadTimeoutMs]);
+    // Re-injecting on theme/lang/symbols change is intentional so the widget
+    // reflects user toggles. The cleanup above clears the pending failTimeout,
+    // so a dep change mid-load cannot trigger a spurious fallback.
+  }, [height, loadTimeoutMs, onLoadFailed, theme, lang, symbols]);
 
   return (
     <div
