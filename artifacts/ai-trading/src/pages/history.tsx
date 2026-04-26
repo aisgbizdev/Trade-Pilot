@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
+import { MarketContextChip } from "@/components/market-context-summary";
 import { useListAnalyses, getListAnalysesQueryKey, type AnalysesList, type ListAnalysesMode } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
@@ -243,6 +244,16 @@ export default function HistoryPage() {
                           <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md font-medium", mc.color)}>
                             {mc.label}
                           </span>
+                        )}
+                        {/* At-a-glance lean derived from the indicator-tally
+                            snapshot taken at analysis time — same source as
+                            the Market Context Summary card on the detail page. */}
+                        {a.techBuyCount != null && a.techSellCount != null && (
+                          <MarketContextChip
+                            buy={a.techBuyCount}
+                            sell={a.techSellCount}
+                            neutral={a.techNeutralCount ?? 0}
+                          />
                         )}
                         <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                           <Clock className="w-2.5 h-2.5" />

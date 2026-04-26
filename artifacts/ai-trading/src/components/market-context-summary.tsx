@@ -1,4 +1,4 @@
-import { Compass } from "lucide-react";
+import { Compass, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
@@ -8,6 +8,53 @@ export function leanFromCounts(buy: number, sell: number): MarketContextLean {
   if (buy > sell * 1.5) return "bullish";
   if (sell > buy * 1.5) return "bearish";
   return "neutral";
+}
+
+/**
+ * Compact at-a-glance variant of the Market Context Summary intended for
+ * dense list rows (e.g. the History page). Shows just an icon + short label
+ * coloured by lean. Takes the same buy/sell/neutral snapshot persisted on
+ * each saved analysis so users can scan their history without opening each
+ * detail view.
+ */
+export function MarketContextChip({
+  buy,
+  sell,
+}: {
+  buy: number;
+  sell: number;
+  neutral?: number;
+}) {
+  const { t } = useTranslation();
+  const lean = leanFromCounts(buy, sell);
+
+  const label =
+    lean === "bullish" ? t.analyze.leaning_bullish :
+    lean === "bearish" ? t.analyze.leaning_bearish :
+    t.analyze.leaning_neutral;
+
+  const Icon =
+    lean === "bullish" ? TrendingUp :
+    lean === "bearish" ? TrendingDown :
+    Minus;
+
+  const styles =
+    lean === "bullish" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" :
+    lean === "bearish" ? "bg-red-500/15 text-red-600 dark:text-red-400" :
+    "bg-amber-500/15 text-amber-600 dark:text-amber-400";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md",
+        styles,
+      )}
+      data-testid={`chip-market-context-${lean}`}
+    >
+      <Icon className="w-2.5 h-2.5" />
+      {label}
+    </span>
+  );
 }
 
 export function MarketContextSummary({
