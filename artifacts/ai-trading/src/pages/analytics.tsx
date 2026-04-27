@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { BarChart3, Loader2, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -8,9 +9,12 @@ import { useLocation } from "wouter";
 import {
   useGetPersonalAnalytics,
   getGetPersonalAnalyticsQueryKey,
+  type GetPersonalAnalyticsParams,
   type PersonalAnalytics,
 } from "@workspace/api-client-react";
 import { useTranslation } from "@/lib/i18n";
+
+type AnalyticsRange = NonNullable<GetPersonalAnalyticsParams["range"]>;
 
 function AccuracyGauge({ value }: { value: number }) {
   const clamp = Math.max(0, Math.min(100, value));
@@ -49,9 +53,11 @@ function AccuracyGauge({ value }: { value: number }) {
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const { data, isLoading } = useGetPersonalAnalytics({
-    query: { queryKey: getGetPersonalAnalyticsQueryKey() },
-  });
+  const [range, setRange] = useState<AnalyticsRange>("weekly");
+  const { data, isLoading } = useGetPersonalAnalytics(
+    { range },
+    { query: { queryKey: getGetPersonalAnalyticsQueryKey({ range }) } },
+  );
 
   const analytics = data as PersonalAnalytics | undefined;
 
@@ -171,7 +177,42 @@ export default function AnalyticsPage() {
 
         {analytics.weeklyData?.length > 0 && (
           <Card className="p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-4">{t.analytics.weekly_chart}</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h3 className="text-sm font-semibold text-foreground">{t.analytics.weekly_chart}</h3>
+              <div
+                role="tablist"
+                aria-label={t.analytics.weekly_chart}
+                className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5"
+                data-testid="analytics-range-tabs"
+              >
+                {(["daily", "weekly", "monthly"] as const).map((key) => {
+                  const active = range === key;
+                  const label =
+                    key === "daily"
+                      ? t.analytics.range_daily
+                      : key === "weekly"
+                        ? t.analytics.range_weekly
+                        : t.analytics.range_monthly;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setRange(key)}
+                      data-testid={`analytics-range-${key}`}
+                      className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                        active
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={analytics.weeklyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <XAxis

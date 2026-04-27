@@ -42,6 +42,7 @@ import type {
   GetBroadcastsParams,
   GetNotificationsParams,
   GetOutboundClickStatsParams,
+  GetPersonalAnalyticsParams,
   HealthStatus,
   ListAnalysesParams,
   LoginBody,
@@ -1401,41 +1402,66 @@ export function useGetAnalysisQuota<
 /**
  * @summary Get personal analytics data
  */
-export const getGetPersonalAnalyticsUrl = () => {
-  return `/api/analyses/personal-analytics`;
+export const getGetPersonalAnalyticsUrl = (
+  params?: GetPersonalAnalyticsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analyses/personal-analytics?${stringifiedParams}`
+    : `/api/analyses/personal-analytics`;
 };
 
 export const getPersonalAnalytics = async (
+  params?: GetPersonalAnalyticsParams,
   options?: RequestInit,
 ): Promise<PersonalAnalytics> => {
-  return customFetch<PersonalAnalytics>(getGetPersonalAnalyticsUrl(), {
+  return customFetch<PersonalAnalytics>(getGetPersonalAnalyticsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetPersonalAnalyticsQueryKey = () => {
-  return [`/api/analyses/personal-analytics`] as const;
+export const getGetPersonalAnalyticsQueryKey = (
+  params?: GetPersonalAnalyticsParams,
+) => {
+  return [
+    `/api/analyses/personal-analytics`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getGetPersonalAnalyticsQueryOptions = <
   TData = Awaited<ReturnType<typeof getPersonalAnalytics>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getPersonalAnalytics>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetPersonalAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPersonalAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetPersonalAnalyticsQueryKey();
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPersonalAnalyticsQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getPersonalAnalytics>>
-  > = ({ signal }) => getPersonalAnalytics({ signal, ...requestOptions });
+  > = ({ signal }) =>
+    getPersonalAnalytics(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getPersonalAnalytics>>,
@@ -1456,15 +1482,18 @@ export type GetPersonalAnalyticsQueryError = ErrorType<ErrorResponse>;
 export function useGetPersonalAnalytics<
   TData = Awaited<ReturnType<typeof getPersonalAnalytics>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getPersonalAnalytics>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetPersonalAnalyticsQueryOptions(options);
+>(
+  params?: GetPersonalAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPersonalAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPersonalAnalyticsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

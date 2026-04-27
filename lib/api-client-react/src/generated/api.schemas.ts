@@ -747,6 +747,22 @@ export const ListAnalysesMode = {
   pro: "pro",
 } as const;
 
+export type GetPersonalAnalyticsParams = {
+  /**
+   * Time-bucket range for the chart series. `daily` returns the last 7 days, `weekly` the last 7 weeks, `monthly` the last 6 months.
+   */
+  range?: GetPersonalAnalyticsRange;
+};
+
+export type GetPersonalAnalyticsRange =
+  (typeof GetPersonalAnalyticsRange)[keyof typeof GetPersonalAnalyticsRange];
+
+export const GetPersonalAnalyticsRange = {
+  daily: "daily",
+  weekly: "weekly",
+  monthly: "monthly",
+} as const;
+
 export type GetNotificationsParams = {
   unreadOnly?: boolean;
 };

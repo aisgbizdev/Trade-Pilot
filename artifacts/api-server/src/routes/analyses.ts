@@ -190,18 +190,49 @@ router.get("/analyses/personal-analytics", requireAuth, async (req: AuthRequest,
   const accuracyRate =
     totalFeedback > 0 ? Math.round((correctCount / totalFeedback) * 100) : null;
 
+  const rangeRaw = typeof req.query["range"] === "string" ? req.query["range"] : "weekly";
+  const range: "daily" | "weekly" | "monthly" =
+    rangeRaw === "daily" || rangeRaw === "monthly" ? rangeRaw : "weekly";
+
   const weekly: { week: string; count: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const weekStart = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
-    const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-    const c = all.filter(
-      (a) =>
-        new Date(a.createdAt) >= weekStart && new Date(a.createdAt) < weekEnd
-    ).length;
-    weekly.push({
-      week: `${weekStart.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}`,
-      count: c,
-    });
+
+  if (range === "daily") {
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date(startOfToday.getTime() - i * 24 * 60 * 60 * 1000);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const c = all.filter(
+        (a) => new Date(a.createdAt) >= dayStart && new Date(a.createdAt) < dayEnd,
+      ).length;
+      weekly.push({
+        week: dayStart.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }),
+        count: c,
+      });
+    }
+  } else if (range === "monthly") {
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const c = all.filter(
+        (a) => new Date(a.createdAt) >= monthStart && new Date(a.createdAt) < monthEnd,
+      ).length;
+      weekly.push({
+        week: monthStart.toLocaleDateString("id-ID", { month: "short", year: "2-digit" }),
+        count: c,
+      });
+    }
+  } else {
+    for (let i = 6; i >= 0; i--) {
+      const weekStart = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+      const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+      const c = all.filter(
+        (a) => new Date(a.createdAt) >= weekStart && new Date(a.createdAt) < weekEnd,
+      ).length;
+      weekly.push({
+        week: weekStart.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }),
+        count: c,
+      });
+    }
   }
 
   res.json({

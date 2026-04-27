@@ -407,6 +407,17 @@ export const GetAnalysisQuotaResponse = zod.object({
 /**
  * @summary Get personal analytics data
  */
+export const getPersonalAnalyticsQueryRangeDefault = `weekly`;
+
+export const GetPersonalAnalyticsQueryParams = zod.object({
+  range: zod
+    .enum(["daily", "weekly", "monthly"])
+    .default(getPersonalAnalyticsQueryRangeDefault)
+    .describe(
+      "Time-bucket range for the chart series. `daily` returns the last 7 days, `weekly` the last 7 weeks, `monthly` the last 6 months.",
+    ),
+});
+
 export const GetPersonalAnalyticsResponse = zod.object({
   totalAllTime: zod.number(),
   totalThisMonth: zod.number(),

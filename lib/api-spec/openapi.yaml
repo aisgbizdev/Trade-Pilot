@@ -409,6 +409,14 @@ paths:
       operationId: getPersonalAnalytics
       tags: [analyses]
       summary: Get personal analytics data
+      parameters:
+        - name: range
+          in: query
+          description: Time-bucket range for the chart series. `daily` returns the last 7 days, `weekly` the last 7 weeks, `monthly` the last 6 months.
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+            default: weekly
       responses:
         "200":
           description: Personal analytics
