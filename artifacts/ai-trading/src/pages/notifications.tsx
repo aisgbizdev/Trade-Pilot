@@ -43,7 +43,7 @@ export default function NotificationsPage() {
   const { toast } = useToast();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-  const { state: pushState, subscribe, unsubscribe } = usePush();
+  const { state: pushState, subscribe, unsubscribe, errorMessage: pushErrorMessage } = usePush();
   const { data: pushPrefs } = useGetPushPrefs({
     query: { queryKey: getGetPushPrefsQueryKey(), staleTime: 60_000 },
   });
@@ -195,7 +195,17 @@ export default function NotificationsPage() {
                   <p className="text-xs text-muted-foreground">{t.notifications.push_unsupported}</p>
                 )}
                 {pushState === "error" && (
-                  <p className="text-xs text-destructive">{t.notifications.push_error}</p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-destructive">{t.notifications.push_error}</p>
+                    {pushErrorMessage && (
+                      <p
+                        className="text-[10px] text-destructive/70 break-words font-mono leading-snug"
+                        data-testid="text-push-error-detail"
+                      >
+                        {pushErrorMessage}
+                      </p>
+                    )}
+                  </div>
                 )}
                 {!isPushPending && !isPushDenied && !isPushUnavailable && pushState !== "error" && (
                   <Badge

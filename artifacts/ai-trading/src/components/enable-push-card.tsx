@@ -10,7 +10,7 @@ const DISMISS_KEY = "tp_enable_push_dismissed";
 
 export function EnablePushCard() {
   const { t } = useTranslation();
-  const { state, subscribe } = usePush();
+  const { state, subscribe, errorMessage } = usePush();
   const { standalone, isIos } = useStandalone();
   const { canInstall, prompt } = useInstallPrompt();
 
@@ -140,9 +140,17 @@ export function EnablePushCard() {
           )}
 
           {showError && (
-            <p className="mt-2 text-xs text-destructive" data-testid="text-enable-push-error">
-              {t.push.enable_error}
-            </p>
+            <div className="mt-2 space-y-1" data-testid="text-enable-push-error">
+              <p className="text-xs text-destructive">{t.push.enable_error}</p>
+              {errorMessage && (
+                <p
+                  className="text-[10px] text-destructive/70 break-words font-mono leading-snug"
+                  data-testid="text-enable-push-error-detail"
+                >
+                  {errorMessage}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>
