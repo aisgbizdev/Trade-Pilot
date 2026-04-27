@@ -414,6 +414,53 @@ describe("NotificationsPage: send-test push", () => {
 });
 
 describe("NotificationsPage: user actions", () => {
+  it("fires the destructive push_prefs_error toast when PATCH /api/push/prefs returns 500", async () => {
+    // Reply 500 to the PATCH so handlePrefToggle hits its catch branch.
+    // The GET handler is still served by `pushPrefsHandler` so the
+    // switches render with their initial state before the user toggles.
+    installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+      (url, init) => {
+        const method = (init?.method ?? "GET").toUpperCase();
+        if (method === "PATCH" && url.endsWith("/api/push/prefs")) {
+          return new Response(
+            JSON.stringify({ message: "boom" }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return null;
+      },
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    // Toggle the broadcast switch (false → true). Either switch would
+    // exercise the same handler; broadcast starts off so the click
+    // produces an unambiguous state-change attempt.
+    const broadcastSwitch = await screen.findByTestId("switch-pref-broadcast");
+    expect(broadcastSwitch.getAttribute("aria-checked")).toBe("false");
+
+    await act(async () => {
+      fireEvent.click(broadcastSwitch);
+    });
+
+    await waitFor(() => {
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: en.notifications.push_prefs_error,
+          variant: "destructive",
+        }),
+      );
+    });
+  });
+
   it("renders both push-pref switches reflecting the API payload", async () => {
     installFetchMock([
       notificationsHandler(NOTIFICATIONS_PAYLOAD),
