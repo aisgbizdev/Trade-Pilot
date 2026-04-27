@@ -1,19 +1,3 @@
-/**
- * Component test for the dashboard's "Enable notifications" card
- * (`src/components/enable-push-card.tsx`).
- *
- * The card is the only on-screen surface that asks a user to turn on
- * push, so it has strict UX contracts: never auto-prompt the OS
- * permission dialog, never re-pop after dismissal (sticky in
- * localStorage), hide entirely once the user is subscribed / has
- * blocked permission / is on an unsupported browser. On iOS Safari it
- * has to swap the "Enable" button for the Add-to-Home-Screen recipe
- * because push only works for installed PWAs there.
- *
- * The hooks `usePush`, `useStandalone`, and `useInstallPrompt` are
- * mocked at module-load via `vi.hoisted` shared state so each test
- * can flip a single field and assert the resulting render branch.
- */
 import {
   afterEach,
   beforeEach,
@@ -25,8 +9,6 @@ import {
 import { fireEvent, render, screen } from "@testing-library/react";
 import { LanguageProvider } from "@/lib/i18n";
 
-// Hoisted shared state so the `vi.mock` factories below can read /
-// write live values that each test mutates in `beforeEach`.
 const { state, subscribeMock, promptMock } = vi.hoisted(() => ({
   state: {
     push: "default" as
@@ -59,15 +41,9 @@ vi.mock("@/hooks/use-standalone", () => ({
 
 vi.mock("@/hooks/use-install-prompt", () => ({
   useInstallPrompt: () => ({ canInstall: state.canInstall, prompt: promptMock }),
-  // Provider is only used at the app root; tests render the card in
-  // isolation, so the no-op fallback in the real hook is fine. We
-  // still re-export it as a passthrough so any incidental import does
-  // not blow up.
   InstallPromptProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// IMPORTANT: import the component AFTER the mocks above so it picks
-// up the mocked hooks on its first module-load.
 import { EnablePushCard } from "../enable-push-card";
 
 const DISMISS_KEY = "tp_enable_push_dismissed";
@@ -81,9 +57,6 @@ function renderCard() {
 }
 
 beforeEach(() => {
-  // Reset to a "fresh, push-capable, signed-in user on a non-iOS
-  // browser, never prompted, never dismissed" baseline before every
-  // test.
   state.push = "default";
   state.standalone = false;
   state.isIos = false;
@@ -98,66 +71,60 @@ afterEach(() => {
 });
 
 describe("EnablePushCard: visibility lifecycle", () => {
-  it("renders the Enable button on a push-capable browser when the user is unsubscribed", () => {
+  it("renders Enable button on a push-capable browser when unsubscribed", () => {
     renderCard();
     expect(screen.getByTestId("card-enable-push")).toBeInTheDocument();
     expect(screen.getByTestId("button-enable-push")).toBeInTheDocument();
   });
 
-  it("hides itself entirely once the user is already subscribed", () => {
+  it("hides when already subscribed", () => {
     state.push = "subscribed";
     const { container } = renderCard();
     expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("card-enable-push")).not.toBeInTheDocument();
   });
 
-  it("hides itself when the OS-level permission has been denied (no point re-prompting)", () => {
+  it("hides when permission was denied", () => {
     state.push = "denied";
     const { container } = renderCard();
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("hides on browsers where push is genuinely unsupported AND the user is not on iOS", () => {
+  it("hides on unsupported browsers when not on iOS", () => {
     state.push = "unsupported";
     state.isIos = false;
     const { container } = renderCard();
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("respects a sticky dismissal stored in localStorage and does not re-render", () => {
+  it("respects sticky localStorage dismissal", () => {
     localStorage.setItem(DISMISS_KEY, "1");
     const { container } = renderCard();
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("clicking the dismiss button hides the card and persists the choice", () => {
+  it("clicking dismiss hides the card and persists the choice", () => {
     renderCard();
-    const dismiss = screen.getByTestId("button-dismiss-enable-push");
-    fireEvent.click(dismiss);
+    fireEvent.click(screen.getByTestId("button-dismiss-enable-push"));
     expect(screen.queryByTestId("card-enable-push")).not.toBeInTheDocument();
     expect(localStorage.getItem(DISMISS_KEY)).toBe("1");
   });
 });
 
 describe("EnablePushCard: never auto-prompts", () => {
-  it("never calls subscribe() on mount — only when the user explicitly taps Enable", () => {
+  it("does not call subscribe() on mount; only on explicit click", () => {
     renderCard();
-    // Critical contract: Chrome down-ranks sites that ask for the
-    // permission dialog without a user gesture. Mount must be silent.
     expect(subscribeMock).not.toHaveBeenCalled();
-
     fireEvent.click(screen.getByTestId("button-enable-push"));
     expect(subscribeMock).toHaveBeenCalledTimes(1);
   });
 
-  it("shows a loading state on the Enable button while the subscribe request is in flight", () => {
+  it("disables Enable button while the subscribe request is in flight", () => {
     state.push = "requesting";
     renderCard();
-    const btn = screen.getByTestId("button-enable-push");
-    expect(btn).toBeDisabled();
+    expect(screen.getByTestId("button-enable-push")).toBeDisabled();
   });
 
-  it("surfaces the error helper text when the subscribe attempt fails", () => {
+  it("surfaces error helper text when subscribe fails", () => {
     state.push = "error";
     renderCard();
     expect(screen.getByTestId("text-enable-push-error")).toBeInTheDocument();
@@ -165,22 +132,16 @@ describe("EnablePushCard: never auto-prompts", () => {
 });
 
 describe("EnablePushCard: iOS Add-to-Home-Screen recipe", () => {
-  it("on iOS Safari in a regular tab, swaps the Enable button for the Share→Add to Home Screen steps", () => {
+  it("on iOS in a regular tab, swaps Enable button for the install steps", () => {
     state.push = "unsupported";
     state.isIos = true;
     state.standalone = false;
     renderCard();
-    expect(screen.getByTestId("card-enable-push")).toBeInTheDocument();
     expect(screen.getByTestId("ios-install-steps")).toBeInTheDocument();
-    // The OS-prompt button must NOT render in this branch — tapping
-    // it on iOS Safari would silently fail.
     expect(screen.queryByTestId("button-enable-push")).not.toBeInTheDocument();
   });
 
-  it("hides the iOS recipe once the app is running standalone (already added to Home Screen)", () => {
-    // Standalone iOS but still unsupported / not yet subscribed: nothing
-    // useful to offer, so the card should disappear instead of telling
-    // the user to install something they already installed.
+  it("hides entirely when iOS app is already running standalone", () => {
     state.push = "unsupported";
     state.isIos = true;
     state.standalone = true;
@@ -190,20 +151,20 @@ describe("EnablePushCard: iOS Add-to-Home-Screen recipe", () => {
 });
 
 describe("EnablePushCard: install button (Chromium beforeinstallprompt)", () => {
-  it("only renders the Install button after `beforeinstallprompt` has been captured by the provider", () => {
+  it("hides the Install button when no deferred prompt is available", () => {
     state.canInstall = false;
     renderCard();
     expect(screen.queryByTestId("button-install-pwa")).not.toBeInTheDocument();
   });
 
-  it("renders the Install button when the install prompt is available and the app is not standalone", () => {
+  it("renders the Install button when canInstall && !standalone", () => {
     state.canInstall = true;
     state.standalone = false;
     renderCard();
     expect(screen.getByTestId("button-install-pwa")).toBeInTheDocument();
   });
 
-  it("calls the deferred install prompt only on explicit click", () => {
+  it("calls the deferred prompt only on explicit click", () => {
     state.canInstall = true;
     renderCard();
     expect(promptMock).not.toHaveBeenCalled();
@@ -211,7 +172,7 @@ describe("EnablePushCard: install button (Chromium beforeinstallprompt)", () => 
     expect(promptMock).toHaveBeenCalledTimes(1);
   });
 
-  it("hides the Install button once the app is already running standalone (already installed)", () => {
+  it("hides the Install button when the app is already standalone", () => {
     state.canInstall = true;
     state.standalone = true;
     renderCard();

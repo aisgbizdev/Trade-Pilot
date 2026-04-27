@@ -1,17 +1,3 @@
-/**
- * Tests for `POST /api/push/test` — the "send a sample push to my own
- * devices" endpoint that powers the test button on the Notifications
- * page. Covers the auth gate, the empty-subscriptions short-circuit,
- * the happy path with a stubbed dispatcher, and the per-user rate
- * limiter behaviour.
- *
- * `../../lib/webpush.sendPushToUser` is mocked so the test never
- * reaches the real FCM/APNs endpoints — and so the test does not
- * depend on the runtime VAPID configuration (the lib short-circuits
- * silently when the keys are unset, which is the default in the test
- * env). The route itself is unit-under-test: it counts subscriptions,
- * dispatches once per request, and surfaces the count to the client.
- */
 import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from "vitest";
 import request from "supertest";
 import { randomBytes } from "node:crypto";

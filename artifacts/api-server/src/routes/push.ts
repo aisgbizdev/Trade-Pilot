@@ -100,13 +100,8 @@ router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
   res.json(row);
 });
 
-// "Send a sample notification to my own phone" — used by the test button on
-// the Notifications page so users can confirm the OS pop-up actually fires
-// after they enable push. Auth-required + per-user rate-limited (see
-// `pushTestLimiter`). Counts the rows we *attempted* to dispatch to so the
-// UI can tell the user "0 devices subscribed" vs "we tried, nothing
-// arrived" — the latter usually means a system-level permission was
-// revoked outside the browser.
+// Send a sample notification to the caller's own subscribed devices.
+// Auth-required + per-user rate-limited via `pushTestLimiter`.
 router.post("/push/test", requireAuth, pushTestLimiter, async (req: AuthRequest, res) => {
   const userId = req.userId!;
   const [{ count }] = await db

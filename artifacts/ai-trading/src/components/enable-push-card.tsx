@@ -8,23 +8,6 @@ import { useInstallPrompt } from "@/hooks/use-install-prompt";
 
 const DISMISS_KEY = "tp_enable_push_dismissed";
 
-/**
- * Top-of-feed nudge that turns silent push subscribers into installed
- * PWA users with OS-level pop-ups. Renders only when the browser is
- * push-capable AND the user has not already subscribed AND has not
- * dismissed the card. Dismissal is sticky in localStorage — we never
- * pop this back up unattended once they have closed it.
- *
- * Critically, we never auto-call `Notification.requestPermission()` on
- * mount. Chrome flags sites that prompt without a user gesture as
- * spammy and quietly drops their permission UI for 30 days; the
- * permission dialog only fires when the user explicitly taps "Enable".
- *
- * On iOS Safari (push only works for installed PWAs) we surface the
- * "Share → Add to Home Screen" recipe instead. On Android Chrome we
- * also surface the standard `beforeinstallprompt` install button when
- * available.
- */
 export function EnablePushCard() {
   const { t } = useTranslation();
   const { state, subscribe } = usePush();
@@ -50,19 +33,11 @@ export function EnablePushCard() {
   };
 
   if (dismissed) return null;
-  // Already subscribed → user is done, no nudge needed.
-  if (state === "subscribed") return null;
-  // Browser blocked permission at the OS level. Re-prompting is useless
-  // and the Notifications page already explains how to re-enable in
-  // site settings, so stay out of the way.
-  if (state === "denied") return null;
+  if (state === "subscribed" || state === "denied") return null;
 
-  // iOS Safari in a regular tab: push only works after Add to Home
-  // Screen. Show the visual recipe instead of an "Enable" button that
-  // would just silently fail.
+  // iOS Safari in a regular tab: push only works after the user adds
+  // the app to the Home Screen, so swap the Enable button for the recipe.
   const isIosNeedsInstall = isIos && !standalone;
-  // Push genuinely unsupported (desktop Safari pre-16, etc.) AND not on
-  // iOS — nothing useful to offer.
   if (state === "unsupported" && !isIosNeedsInstall) return null;
 
   const installable = canInstall && !standalone;

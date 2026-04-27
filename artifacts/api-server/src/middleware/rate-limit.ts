@@ -104,12 +104,8 @@ export const forgotPasswordResetLimiter = buildLimiter({
     "Terlalu banyak percobaan reset password. Coba lagi dalam beberapa menit. / Too many password reset attempts. Try again in a few minutes.",
 });
 
-// Per-user limiter for the "send a sample push to my own devices" button on
-// the Notifications page. The endpoint exists purely so a user can verify
-// their phone actually pops up — anything more than a few per hour is either
-// a misbehaving client or someone trying to abuse the platform's web-push
-// quota. Keyed off the authenticated `req.userId`, so this middleware MUST
-// run AFTER `requireAuth`.
+// Per-user limiter for POST /api/push/test. Keyed off `req.userId`, so it
+// must be mounted after `requireAuth`.
 export const pushTestLimiter = buildLimiter({
   windowMs: 60 * 60 * 1000,
   max: 10,

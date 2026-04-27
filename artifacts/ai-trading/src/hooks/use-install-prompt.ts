@@ -9,27 +9,6 @@ import {
   type ReactNode,
 } from "react";
 
-/**
- * Shared `beforeinstallprompt` capture for Chromium-based browsers
- * (Android Chrome, desktop Chrome/Edge). The browser fires the event
- * exactly once when the PWA becomes installable; whoever captures it
- * gets to call `prompt()` later on a real user gesture.
- *
- * Because there is only one event per page-load, we capture it at the
- * app root (`InstallPromptProvider` mounted in `main.tsx` / `App.tsx`)
- * and share the deferred prompt via context so any screen — the
- * dashboard's enable-push card, the Notifications page, etc. — can
- * surface a single coherent "Install Trade Pilot" button without
- * racing each other for the same event.
- *
- * iOS Safari does NOT fire `beforeinstallprompt` — it has its own
- * "Share → Add to Home Screen" flow surfaced separately by
- * `useStandalone`.
- *
- * The install hint is auto-cleared once the user accepts the prompt
- * or the OS reports `appinstalled`, so every consuming UI hides
- * itself the moment install completes.
- */
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
@@ -47,8 +26,6 @@ export function InstallPromptProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
-      // Chromium expects us to call preventDefault() so it does not
-      // show the mini-infobar; we will surface our own button instead.
       e.preventDefault();
       setDeferred(e as BeforeInstallPromptEvent);
     };
@@ -80,10 +57,6 @@ export function InstallPromptProvider({ children }: { children: ReactNode }) {
 
 export function useInstallPrompt(): InstallPromptValue {
   const ctx = useContext(InstallPromptContext);
-  // Falling back to a no-op shape (instead of throwing) keeps tests
-  // and isolated component renders working even when the provider has
-  // not been mounted — the consuming UI simply hides its install
-  // button (`canInstall === false`).
   if (!ctx) {
     return { canInstall: false, prompt: async () => null };
   }
