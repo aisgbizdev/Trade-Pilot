@@ -11,10 +11,11 @@ import { LanguageProvider } from "@/lib/i18n";
 
 const { state, subscribeMock, promptMock } = vi.hoisted(() => ({
   state: {
-    push: "default" as
+    push: "unsubscribed" as
+      | "idle"
       | "unsupported"
       | "denied"
-      | "default"
+      | "unsubscribed"
       | "subscribed"
       | "requesting"
       | "error",
@@ -57,7 +58,7 @@ function renderCard() {
 }
 
 beforeEach(() => {
-  state.push = "default";
+  state.push = "unsubscribed";
   state.standalone = false;
   state.isIos = false;
   state.canInstall = false;

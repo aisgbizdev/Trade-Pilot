@@ -50,11 +50,6 @@ export default function NotificationsPage() {
   const updatePushPrefs = useUpdatePushPrefs();
   const sendPushTest = useSendPushTest();
   const [testSending, setTestSending] = useState(false);
-  // Surface a single coherent "Install Trade Pilot" CTA on this page
-  // whenever Chromium has fired `beforeinstallprompt` and the app is
-  // not already running standalone. The deferred event is captured at
-  // the app root by `InstallPromptProvider`, so the same prompt is
-  // shared with the dashboard's enable-push card.
   const { canInstall, prompt: triggerInstall } = useInstallPrompt();
   const { standalone } = useStandalone();
   const showInstallCta = canInstall && !standalone;

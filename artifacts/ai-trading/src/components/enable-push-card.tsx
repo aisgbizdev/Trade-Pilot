@@ -33,12 +33,20 @@ export function EnablePushCard() {
   };
 
   if (dismissed) return null;
-  if (state === "subscribed" || state === "denied") return null;
 
-  // iOS Safari in a regular tab: push only works after the user adds
-  // the app to the Home Screen, so swap the Enable button for the recipe.
+  // iOS Safari in a regular tab: push only works once the app is added
+  // to the Home Screen, so swap the Enable button for the recipe.
   const isIosNeedsInstall = isIos && !standalone;
-  if (state === "unsupported" && !isIosNeedsInstall) return null;
+
+  // Only render for unsubscribed-but-eligible states. Anything else
+  // (subscribed, denied, unsupported on non-iOS) is an explicit hide.
+  const eligible =
+    state === "idle" ||
+    state === "unsubscribed" ||
+    state === "requesting" ||
+    state === "error" ||
+    (state === "unsupported" && isIosNeedsInstall);
+  if (!eligible) return null;
 
   const installable = canInstall && !standalone;
   const requesting = state === "requesting";
