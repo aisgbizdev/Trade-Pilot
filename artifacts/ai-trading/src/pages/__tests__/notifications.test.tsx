@@ -43,7 +43,19 @@ vi.mock("@/hooks/use-push", () => ({
   }),
 }));
 
+// Capture `toast()` calls so the error-branch tests can assert the
+// exact title/variant the page tries to surface. The spy is created via
+// `vi.hoisted` so the mock factory below can reference it without
+// triggering the "no out-of-scope reference" rule.
+const { toastSpy } = vi.hoisted(() => ({ toastSpy: vi.fn() }));
+
+vi.mock("@/hooks/use-toast", () => ({
+  useToast: () => ({ toast: toastSpy, dismiss: vi.fn(), toasts: [] }),
+  toast: toastSpy,
+}));
+
 import NotificationsPage from "../notifications";
+import { en } from "@/locales/en";
 import {
   installFetchMock,
   jsonResponse,
@@ -117,6 +129,7 @@ function markReadHandler(): FetchHandler {
 beforeEach(() => {
   localStorage.clear();
   window.history.replaceState({}, "", "/notifications");
+  toastSpy.mockClear();
 });
 
 afterEach(() => {
@@ -241,6 +254,161 @@ describe("NotificationsPage: send-test push", () => {
         (c) => c.method === "POST" && c.url.endsWith("/api/push/test"),
       );
       expect(sent).toBeDefined();
+    });
+  });
+
+  it("shows the 'no devices subscribed' toast when /api/push/test returns 404", async () => {
+    installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+      (url, init) => {
+        const method = (init?.method ?? "GET").toUpperCase();
+        if (method === "POST" && url.endsWith("/api/push/test")) {
+          return new Response(
+            JSON.stringify({ message: "no subscribers" }),
+            { status: 404, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return null;
+      },
+    ]);
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    const btn = await screen.findByTestId("button-send-push-test");
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    await waitFor(() => {
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: en.notifications.test_push_no_devices,
+          variant: "destructive",
+        }),
+      );
+    });
+
+    // The generic-error copy must NOT have fired for the 404 branch —
+    // otherwise the wrong message would reach the user.
+    expect(toastSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: en.notifications.test_push_error,
+      }),
+    );
+  });
+
+  it("shows the generic error toast when /api/push/test returns 500", async () => {
+    installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+      (url, init) => {
+        const method = (init?.method ?? "GET").toUpperCase();
+        if (method === "POST" && url.endsWith("/api/push/test")) {
+          return new Response(
+            JSON.stringify({ message: "boom" }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return null;
+      },
+    ]);
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    const btn = await screen.findByTestId("button-send-push-test");
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    await waitFor(() => {
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: en.notifications.test_push_error,
+          variant: "destructive",
+        }),
+      );
+    });
+
+    // Sanity check: the 404-specific copy must not be used for the
+    // 500 branch.
+    expect(toastSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: en.notifications.test_push_no_devices,
+      }),
+    );
+  });
+
+  it("disables the button and swaps the label to the loading copy while the request is in flight", async () => {
+    let resolveTest: (() => void) | null = null;
+    const inFlight = new Promise<void>((resolve) => {
+      resolveTest = resolve;
+    });
+
+    installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+      async (url, init) => {
+        const method = (init?.method ?? "GET").toUpperCase();
+        if (method === "POST" && url.endsWith("/api/push/test")) {
+          await inFlight;
+          return jsonResponse({ delivered: 1 });
+        }
+        return null;
+      },
+    ]);
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    const btn = (await screen.findByTestId(
+      "button-send-push-test",
+    )) as HTMLButtonElement;
+
+    // Idle state: enabled and showing the default CTA copy.
+    expect(btn.disabled).toBe(false);
+    expect(btn.textContent).toContain(en.notifications.test_push_btn);
+
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    // While the POST is pending the button must flip to the loading
+    // label and be disabled so the user cannot double-fire the request.
+    await waitFor(() => {
+      expect(btn.disabled).toBe(true);
+      expect(btn.textContent).toContain(en.notifications.test_push_sending);
+    });
+
+    // Resolve the in-flight request and confirm the button returns to
+    // its idle, clickable state — proves the loading state was tied to
+    // the actual mutation lifecycle and not a stuck flag.
+    await act(async () => {
+      resolveTest?.();
+      // Yield so react-query can settle the mutation before assertions.
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(btn.disabled).toBe(false);
+      expect(btn.textContent).toContain(en.notifications.test_push_btn);
     });
   });
 });
