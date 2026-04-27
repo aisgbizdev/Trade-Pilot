@@ -350,6 +350,25 @@ export const en = {
     push_pref_broadcast_title: "Announcements & updates",
     push_pref_broadcast_desc: "Receive admin broadcasts and product updates.",
     push_prefs_error: "Could not save preferences. Please try again.",
+    test_push_btn: "Send a test notification",
+    test_push_sending: "Sending…",
+    test_push_success: "Test sent — check your phone for the pop-up.",
+    test_push_no_devices: "No subscribed device yet. Enable notifications first.",
+    test_push_error: "Could not send the test. Please try again.",
+  },
+  push: {
+    enable_card_title: "Get pop-up alerts on your phone",
+    enable_card_desc:
+      "Turn on notifications so you get a pop-up the moment a new analysis lands or an admin posts an update.",
+    enable_btn: "Enable notifications",
+    enable_btn_loading: "Asking permission…",
+    enable_error: "Could not enable. Please try again.",
+    install_btn: "Install Trade Pilot",
+    dismiss_aria: "Dismiss",
+    ios_install_title: "On iPhone, install the app first:",
+    ios_step_share: "Tap the Share button in Safari",
+    ios_step_add: "Choose \"Add to Home Screen\"",
+    ios_step_open: "Open Trade Pilot from your Home Screen, then enable notifications",
   },
   onboarding: {
     steps: [

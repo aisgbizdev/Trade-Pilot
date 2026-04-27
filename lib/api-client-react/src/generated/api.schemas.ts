@@ -44,6 +44,11 @@ export interface PushPrefs {
   pushBroadcast: boolean;
 }
 
+export interface PushTestResult {
+  /** Number of subscription endpoints the test push was dispatched to */
+  delivered: number;
+}
+
 export interface PushPrefsUpdate {
   pushExpiry?: boolean;
   pushBroadcast?: boolean;

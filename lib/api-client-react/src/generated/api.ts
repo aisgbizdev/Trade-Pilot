@@ -55,6 +55,7 @@ import type {
   PushPublicKey,
   PushSubscriptionBody,
   PushSubscriptionStatus,
+  PushTestResult,
   PushUnsubscribeBody,
   RecentInstruments,
   RegisterBody,
@@ -2393,6 +2394,92 @@ export const useUpdatePushPrefs = <
   TContext
 > => {
   return useMutation(getUpdatePushPrefsMutationOptions(options));
+};
+
+/**
+ * Lets a signed-in user verify their phone actually pops up an OS-level
+notification. Sends to every subscription endpoint registered for the
+caller. Per-user rate limited so a misbehaving client cannot spam
+their own devices.
+
+ * @summary Send a sample push notification to the calling user's subscribed devices
+ */
+export const getSendPushTestUrl = () => {
+  return `/api/push/test`;
+};
+
+export const sendPushTest = async (
+  options?: RequestInit,
+): Promise<PushTestResult> => {
+  return customFetch<PushTestResult>(getSendPushTestUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSendPushTestMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendPushTest>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendPushTest>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["sendPushTest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendPushTest>>,
+    void
+  > = () => {
+    return sendPushTest(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendPushTestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendPushTest>>
+>;
+
+export type SendPushTestMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Send a sample push notification to the calling user's subscribed devices
+ */
+export const useSendPushTest = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendPushTest>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendPushTest>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getSendPushTestMutationOptions(options));
 };
 
 /**

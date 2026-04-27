@@ -626,6 +626,22 @@ export const UpdatePushPrefsResponse = zod.object({
 });
 
 /**
+ * Lets a signed-in user verify their phone actually pops up an OS-level
+notification. Sends to every subscription endpoint registered for the
+caller. Per-user rate limited so a misbehaving client cannot spam
+their own devices.
+
+ * @summary Send a sample push notification to the calling user's subscribed devices
+ */
+export const SendPushTestResponse = zod.object({
+  delivered: zod
+    .number()
+    .describe(
+      "Number of subscription endpoints the test push was dispatched to",
+    ),
+});
+
+/**
  * @summary Get admin statistics
  */
 export const GetAdminStatsResponse = zod.object({

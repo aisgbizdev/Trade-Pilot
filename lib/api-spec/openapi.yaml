@@ -671,6 +671,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /push/test:
+    post:
+      operationId: sendPushTest
+      tags: [push]
+      summary: Send a sample push notification to the calling user's subscribed devices
+      description: |
+        Lets a signed-in user verify their phone actually pops up an OS-level
+        notification. Sends to every subscription endpoint registered for the
+        caller. Per-user rate limited so a misbehaving client cannot spam
+        their own devices.
+      responses:
+        "200":
+          description: Test push dispatched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushTestResult"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User has no push subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/stats:
     get:
       operationId: getAdminStats
@@ -1217,6 +1253,15 @@ components:
       required:
         - pushExpiry
         - pushBroadcast
+
+    PushTestResult:
+      type: object
+      properties:
+        delivered:
+          type: integer
+          description: Number of subscription endpoints the test push was dispatched to
+      required:
+        - delivered
 
     PushPrefsUpdate:
       type: object

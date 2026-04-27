@@ -16,6 +16,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+// Mock `usePush` at module-load (vi.mock is hoisted) so the page picks
+// up the mocked hook on its first import. The shared `pushHookState`
+// reference is created via `vi.hoisted` so the mock factory can read
+// it without violating the "no out-of-scope reference" rule. Tests
+// flip `pushHookState.current` to simulate different push states
+// (default: "unsupported", which matches the real behaviour in jsdom).
+const { pushHookState } = vi.hoisted(() => ({
+  pushHookState: {
+    current: "unsupported" as
+      | "unsupported"
+      | "denied"
+      | "default"
+      | "subscribed"
+      | "pending"
+      | "error",
+  },
+}));
+
+vi.mock("@/hooks/use-push", () => ({
+  usePush: () => ({
+    state: pushHookState.current,
+    subscription: null,
+    subscribe: vi.fn(async () => {}),
+    unsubscribe: vi.fn(async () => {}),
+  }),
+}));
+
 import NotificationsPage from "../notifications";
 import {
   installFetchMock,
@@ -167,6 +194,54 @@ describe("NotificationsPage: empty branch", () => {
     expect(
       screen.queryByTestId("button-mark-all-read"),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("NotificationsPage: send-test push", () => {
+  // The "Send a test notification" button is gated on the user actually
+  // having an active push subscription. Flip the hoisted hook state to
+  // "subscribed" for these tests so the button renders and we can drive
+  // the test-send mutation end-to-end.
+  beforeEach(() => {
+    pushHookState.current = "subscribed";
+  });
+
+  afterEach(() => {
+    pushHookState.current = "unsupported";
+  });
+
+  it("renders the send-test button when push is subscribed and POSTs /api/push/test on click", async () => {
+    const { calls } = installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+      (url, init) => {
+        const method = (init?.method ?? "GET").toUpperCase();
+        if (method === "POST" && url.endsWith("/api/push/test")) {
+          return jsonResponse({ delivered: 1 });
+        }
+        return null;
+      },
+    ]);
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    const btn = await screen.findByTestId("button-send-push-test");
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    await waitFor(() => {
+      const sent = calls.find(
+        (c) => c.method === "POST" && c.url.endsWith("/api/push/test"),
+      );
+      expect(sent).toBeDefined();
+    });
   });
 });
 

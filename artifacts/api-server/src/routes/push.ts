@@ -2,8 +2,10 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "../lib/db";
 import { pushSubscriptions, users } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { pushTestLimiter } from "../middleware/rate-limit";
+import { sendPushToUser } from "../lib/webpush";
 
 const router = Router();
 
@@ -96,6 +98,37 @@ router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
   res.json(row);
+});
+
+// "Send a sample notification to my own phone" — used by the test button on
+// the Notifications page so users can confirm the OS pop-up actually fires
+// after they enable push. Auth-required + per-user rate-limited (see
+// `pushTestLimiter`). Counts the rows we *attempted* to dispatch to so the
+// UI can tell the user "0 devices subscribed" vs "we tried, nothing
+// arrived" — the latter usually means a system-level permission was
+// revoked outside the browser.
+router.post("/push/test", requireAuth, pushTestLimiter, async (req: AuthRequest, res) => {
+  const userId = req.userId!;
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.userId, userId));
+
+  if (!count || count === 0) {
+    res.status(404).json({
+      error:
+        "Belum ada perangkat yang berlangganan notifikasi. / No subscribed devices yet.",
+    });
+    return;
+  }
+
+  await sendPushToUser(userId, {
+    title: "Trade Pilot",
+    body: "Notifikasi kamu sudah aktif. / Notifications are working.",
+    tag: "trade-pilot-test",
+  });
+
+  res.json({ delivered: count });
 });
 
 router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {

@@ -352,6 +352,25 @@ export const id: Translations = {
     push_pref_broadcast_title: "Pengumuman & update",
     push_pref_broadcast_desc: "Terima broadcast admin dan update produk.",
     push_prefs_error: "Gagal menyimpan preferensi. Coba lagi.",
+    test_push_btn: "Kirim notifikasi tes",
+    test_push_sending: "Mengirim…",
+    test_push_success: "Tes terkirim — cek HP kamu untuk pop-up notifikasi.",
+    test_push_no_devices: "Belum ada perangkat berlangganan. Aktifkan notifikasi dulu.",
+    test_push_error: "Gagal mengirim tes. Coba lagi.",
+  },
+  push: {
+    enable_card_title: "Dapatkan notifikasi pop-up di HP",
+    enable_card_desc:
+      "Aktifkan notifikasi supaya muncul pop-up begitu ada analisis baru atau pengumuman dari admin.",
+    enable_btn: "Aktifkan notifikasi",
+    enable_btn_loading: "Meminta izin…",
+    enable_error: "Gagal mengaktifkan. Coba lagi.",
+    install_btn: "Install Trade Pilot",
+    dismiss_aria: "Tutup",
+    ios_install_title: "Di iPhone, install dulu aplikasinya:",
+    ios_step_share: "Tap tombol Share di Safari",
+    ios_step_add: "Pilih \"Add to Home Screen\"",
+    ios_step_open: "Buka Trade Pilot dari Home Screen, lalu aktifkan notifikasi",
   },
   onboarding: {
     steps: [

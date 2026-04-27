@@ -7,6 +7,7 @@ import { OnboardingModal, isOnboardingDone } from "@/components/onboarding-modal
 import { NewsWidget } from "@/components/news-widget";
 import { CalendarWidget } from "@/components/calendar-widget";
 import { DashboardLivePrices } from "@/components/dashboard-live-prices";
+import { EnablePushCard } from "@/components/enable-push-card";
 import {
   useGetAnalysesSummary, getGetAnalysesSummaryQueryKey,
   useGetRecentInstruments, getGetRecentInstrumentsQueryKey,
@@ -113,6 +114,8 @@ export default function DashboardPage() {
       {user && !onboardingDone && <OnboardingModal open userId={user.id} />}
 
       <div className="px-4 py-5 space-y-5">
+
+        <EnablePushCard />
 
         {!liveBannerDismissed && (
           <div className="relative" data-testid="card-live-analisa">

@@ -1,4 +1,5 @@
-import { Bell, BellOff, BellRing, CheckCheck, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Bell, BellOff, BellRing, CheckCheck, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import {
   useGetPushPrefs,
   useUpdatePushPrefs,
   getGetPushPrefsQueryKey,
+  useSendPushTest,
   type NotificationsList,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -44,6 +46,25 @@ export default function NotificationsPage() {
     query: { queryKey: getGetPushPrefsQueryKey(), staleTime: 60_000 },
   });
   const updatePushPrefs = useUpdatePushPrefs();
+  const sendPushTest = useSendPushTest();
+  const [testSending, setTestSending] = useState(false);
+
+  const handleSendTest = async () => {
+    setTestSending(true);
+    try {
+      await sendPushTest.mutateAsync();
+      toast({ title: t.notifications.test_push_success });
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      const message =
+        status === 404
+          ? t.notifications.test_push_no_devices
+          : t.notifications.test_push_error;
+      toast({ title: message, variant: "destructive" });
+    } finally {
+      setTestSending(false);
+    }
+  };
 
   const handlePrefToggle = async (key: "pushExpiry" | "pushBroadcast", value: boolean) => {
     try {
@@ -187,6 +208,32 @@ export default function NotificationsPage() {
                   </Badge>
                 )}
               </div>
+
+              {isPushEnabled && (
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSendTest}
+                    disabled={testSending}
+                    className="gap-1.5 h-8"
+                    data-testid="button-send-push-test"
+                  >
+                    {testSending ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        {t.notifications.test_push_sending}
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        {t.notifications.test_push_btn}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </Card>
