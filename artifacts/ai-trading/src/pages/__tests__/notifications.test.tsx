@@ -255,6 +255,22 @@ describe("NotificationsPage: send-test push", () => {
       );
       expect(sent).toBeDefined();
     });
+
+    // Happy-path also surfaces the confirmation toast so the user knows
+    // the test was actually delivered. Must NOT use the destructive
+    // variant — that would falsely look like an error to the user.
+    await waitFor(() => {
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: en.notifications.test_push_success,
+        }),
+      );
+    });
+
+    const successCall = toastSpy.mock.calls.find(
+      ([arg]) => arg?.title === en.notifications.test_push_success,
+    );
+    expect(successCall?.[0]).not.toHaveProperty("variant", "destructive");
   });
 
   it("shows the 'no devices subscribed' toast when /api/push/test returns 404", async () => {
