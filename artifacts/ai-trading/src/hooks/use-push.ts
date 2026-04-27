@@ -81,7 +81,7 @@ export function usePush() {
       return;
     }
 
-    navigator.serviceWorker.ready
+    ensureServiceWorkerRegistration()
       .then((reg) => reg.pushManager.getSubscription())
       .then((sub) => {
         if (sub) {
@@ -91,7 +91,10 @@ export function usePush() {
           setState("unsubscribed");
         }
       })
-      .catch(() => setState("unsubscribed"));
+      .catch((err) => {
+        console.error("[push] initial subscription check failed", err);
+        setState("unsubscribed");
+      });
   }, []);
 
   const subscribe = useCallback(async () => {
