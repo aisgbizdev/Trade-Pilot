@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 
 type PushState = "idle" | "requesting" | "subscribed" | "unsubscribed" | "denied" | "unsupported" | "error";
 
+const SW_READY_TIMEOUT_MS = 15_000;
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -10,6 +12,28 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const view = new Uint8Array(buf);
   for (let i = 0; i < rawData.length; i++) view[i] = rawData.charCodeAt(i);
   return view;
+}
+
+async function ensureServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
+  const base = import.meta.env.BASE_URL || "/";
+  const existing = await navigator.serviceWorker.getRegistration();
+  if (!existing) {
+    try {
+      await navigator.serviceWorker.register(`${base}sw.js`, { scope: base });
+    } catch (err) {
+      console.error("[push] manual service worker registration failed", err);
+      throw err;
+    }
+  }
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Service worker did not become ready in time")),
+        SW_READY_TIMEOUT_MS,
+      ),
+    ),
+  ]);
 }
 
 async function getVapidPublicKey(): Promise<string> {
@@ -86,7 +110,7 @@ export function usePush() {
       }
 
       const publicKey = await getVapidPublicKey();
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await ensureServiceWorkerRegistration();
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
@@ -96,7 +120,8 @@ export function usePush() {
       await saveSubscription(json);
       setSubscription(sub);
       setState("subscribed");
-    } catch {
+    } catch (err) {
+      console.error("[push] subscribe failed", err);
       setState("error");
     }
   }, []);
