@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, BellOff, BellRing, CheckCheck, Loader2, Send } from "lucide-react";
+import { Bell, BellOff, BellRing, CheckCheck, Download, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { usePush } from "@/hooks/use-push";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
+import { useStandalone } from "@/hooks/use-standalone";
 
 const TYPE_STYLE: Record<string, string> = {
   info: "bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300",
@@ -48,6 +50,14 @@ export default function NotificationsPage() {
   const updatePushPrefs = useUpdatePushPrefs();
   const sendPushTest = useSendPushTest();
   const [testSending, setTestSending] = useState(false);
+  // Surface a single coherent "Install Trade Pilot" CTA on this page
+  // whenever Chromium has fired `beforeinstallprompt` and the app is
+  // not already running standalone. The deferred event is captured at
+  // the app root by `InstallPromptProvider`, so the same prompt is
+  // shared with the dashboard's enable-push card.
+  const { canInstall, prompt: triggerInstall } = useInstallPrompt();
+  const { standalone } = useStandalone();
+  const showInstallCta = canInstall && !standalone;
 
   const handleSendTest = async () => {
     setTestSending(true);
@@ -209,29 +219,46 @@ export default function NotificationsPage() {
                 )}
               </div>
 
-              {isPushEnabled && (
-                <div className="mt-3">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleSendTest}
-                    disabled={testSending}
-                    className="gap-1.5 h-8"
-                    data-testid="button-send-push-test"
-                  >
-                    {testSending ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        {t.notifications.test_push_sending}
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-3.5 h-3.5" />
-                        {t.notifications.test_push_btn}
-                      </>
-                    )}
-                  </Button>
+              {(isPushEnabled || showInstallCta) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {isPushEnabled && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSendTest}
+                      disabled={testSending}
+                      className="gap-1.5 h-8"
+                      data-testid="button-send-push-test"
+                    >
+                      {testSending ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          {t.notifications.test_push_sending}
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" />
+                          {t.notifications.test_push_btn}
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  {showInstallCta && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        void triggerInstall();
+                      }}
+                      className="gap-1.5 h-8"
+                      data-testid="button-install-app-notifications"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      {t.push.install_btn}
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
