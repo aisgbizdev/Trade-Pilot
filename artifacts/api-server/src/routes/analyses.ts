@@ -353,6 +353,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       techBuyCount: techCounts?.buy ?? null,
       techSellCount: techCounts?.sell ?? null,
       techNeutralCount: techCounts?.neutral ?? null,
+      tradePlan: aiResult.tradePlan ?? null,
       ...modeSpecificFields,
     };
   };

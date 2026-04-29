@@ -37,12 +37,16 @@ import {
 } from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
 import { MarketContextSummary } from "@/components/market-context-summary";
+import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
+import type { IndicatorTimeframe } from "@/hooks/use-technical-indicators";
 import {
   useGetAnalysis,
   getGetAnalysisQueryKey,
   useSubmitFeedback,
   type Analysis,
   type Feedback,
+  type TradePlan,
+  type TradeSide,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -295,6 +299,113 @@ function scenarioCText(bias: BiasKey, t: T): string {
   return t.analysis_detail.scenario_c_template_directional;
 }
 
+const INDICATOR_TIMEFRAMES = new Set<IndicatorTimeframe>(["1m", "5m", "15m", "1h", "4h", "1D", "1W"]);
+function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
+  return INDICATOR_TIMEFRAMES.has(tf as IndicatorTimeframe)
+    ? (tf as IndicatorTimeframe)
+    : null;
+}
+
+function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
+  const preferredLabel =
+    plan.preferredSide === "buy"
+      ? t.analysis_detail.trade_plan_preferred_buy
+      : plan.preferredSide === "sell"
+      ? t.analysis_detail.trade_plan_preferred_sell
+      : t.analysis_detail.trade_plan_preferred_wait;
+  const preferredColor =
+    plan.preferredSide === "buy"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/40"
+      : plan.preferredSide === "sell"
+      ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/40"
+      : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40";
+
+  const renderSide = (side: TradeSide, kind: "buy" | "sell") => {
+    const accent =
+      kind === "buy"
+        ? "border-l-emerald-500 dark:border-l-emerald-400"
+        : "border-l-red-500 dark:border-l-red-400";
+    const headerColor =
+      kind === "buy"
+        ? "text-emerald-700 dark:text-emerald-400"
+        : "text-red-700 dark:text-red-400";
+    const isPreferred =
+      (kind === "buy" && plan.preferredSide === "buy") ||
+      (kind === "sell" && plan.preferredSide === "sell");
+    const Icon = kind === "buy" ? TrendingUp : TrendingDown;
+    return (
+      <div
+        className={cn(
+          "border-l-4 rounded-md bg-muted/30 p-3 space-y-2",
+          accent,
+          isPreferred && "ring-1 ring-primary/40",
+        )}
+        data-testid={`trade-plan-${kind}`}
+      >
+        <div className="flex items-center gap-1.5">
+          <Icon className={cn("w-4 h-4", headerColor)} />
+          <h4 className={cn("text-sm font-bold", headerColor)}>
+            {kind === "buy" ? t.analysis_detail.trade_plan_side_buy : t.analysis_detail.trade_plan_side_sell}
+          </h4>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_entry}</dt>
+          <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-entry`}>{side.entryZone}</dd>
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_sl}</dt>
+          <dd className="font-semibold text-red-600 dark:text-red-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-sl`}>{side.stopLoss}</dd>
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_tp1}</dt>
+          <dd className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-tp1`}>{side.takeProfit1}</dd>
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_tp2}</dt>
+          <dd className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-tp2`}>{side.takeProfit2}</dd>
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_rr}</dt>
+          <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-rr`}>{side.riskRewardRatio}</dd>
+        </dl>
+        <div className="pt-1 border-t border-border/60">
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            <span className="font-semibold text-foreground/80">{t.analysis_detail.trade_plan_rationale}:</span>{" "}
+            {side.rationale}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="p-4 space-y-3" data-testid="card-trade-plan">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div className="flex-1 min-w-[180px]">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+            <Target className="w-4 h-4 text-primary" />
+            {t.analysis_detail.trade_plan_title}
+          </h3>
+          <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+            {t.analysis_detail.trade_plan_subtitle}
+          </p>
+        </div>
+        <span
+          className={cn(
+            "text-[10px] font-semibold px-2 py-1 rounded-full border whitespace-nowrap",
+            preferredColor,
+          )}
+          data-testid="trade-plan-preferred-side"
+        >
+          {preferredLabel}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {renderSide(plan.buy, "buy")}
+        {renderSide(plan.sell, "sell")}
+      </div>
+      <div className="flex gap-2 items-start bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md p-2.5">
+        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+        <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
+          {t.analysis_detail.trade_plan_disclaimer}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 function executionScenarioAText(bias: BiasKey, t: T): string {
   if (bias === "bullish" || bias === "bullish_strong") {
     return t.analysis_detail.execution_scenario_a_template_bullish;
@@ -443,6 +554,9 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         ? analysis.bullishScenario
         : analysis.bearishScenario);
 
+  const tradePlan = analysis.tradePlan ?? null;
+  const indicatorTimeframe = asIndicatorTimeframe(analysis.timeframe);
+
   return (
     <Layout>
       <div className="px-4 py-5 space-y-4">
@@ -571,6 +685,12 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           )}
         </Card>
 
+        {/* AI-suggested concrete trade plan with both buy and sell levels.
+            Anchored to the price at analysis time. Surfaces the structured
+            entry / SL / TP / R:R the model produced — keeps the rest of the
+            narrative consultative while giving the user actionable numbers. */}
+        {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
+
         {/* Market Context Summary — same card the user saw on the Analyze tab,
             rendered from the indicator-tally snapshot stored at analysis time. */}
         {analysis.techBuyCount != null &&
@@ -583,6 +703,28 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               mode={isBeginnerMode ? "beginner" : "pro"}
             />
           )}
+
+        {/* Live Technical Indicators panel — moved from the Analyze tab so
+            users get the full indicator picture in ONE place (the saved
+            analysis). Data is live (re-fetched from the upstream feed) so we
+            warn that it may differ from the snapshot the AI saw. */}
+        {indicatorTimeframe && (
+          <Card className="p-4 space-y-3" data-testid="card-indicators-section">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">
+                {t.analysis_detail.indicators_section_title}
+              </h3>
+              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                {t.analysis_detail.indicators_section_note}
+              </p>
+            </div>
+            <TechnicalIndicatorsPanel
+              instrument={analysis.instrument}
+              mode={isBeginnerMode ? "beginner" : "pro"}
+              timeframe={indicatorTimeframe}
+            />
+          </Card>
+        )}
 
         {analysis.userInputContext && (
           <Card className="p-4 space-y-2" data-testid="card-user-notes">

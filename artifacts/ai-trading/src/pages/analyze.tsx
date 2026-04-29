@@ -11,7 +11,6 @@ import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQuer
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
-import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
 import { useTranslation } from "@/lib/i18n";
 
 function formatPrice(price: number, instrument: string): string {
@@ -24,22 +23,6 @@ function formatPrice(price: number, instrument: string): string {
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
 const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"] as const;
-// Instruments wired up to the intraday OHLC source. The Technical Indicators
-// panel only renders for these on intraday timeframes; daily/weekly still
-// uses the broader upstream feed and works for additional symbols.
-// Must stay in sync with `YAHOO_SYMBOL_MAP` in
-// `artifacts/api-server/src/lib/historical.ts`.
-const INTRADAY_SUPPORTED_INSTRUMENTS = new Set([
-  "XAU/USD", "XAG/USD", "BRENT",
-  "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "USD/IDR",
-  "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY",
-]);
-type IndicatorTf = "1m" | "5m" | "15m" | "1h" | "4h" | "1D" | "1W";
-const INDICATOR_TIMEFRAMES = new Set<IndicatorTf>(["1m", "5m", "15m", "1h", "4h", "1D", "1W"]);
-function isIndicatorTf(tf: string): tf is IndicatorTf {
-  return INDICATOR_TIMEFRAMES.has(tf as IndicatorTf);
-}
-const INTRADAY_TIMEFRAMES = new Set<string>(["1m", "5m", "15m", "1h", "4h"]);
 
 function LivePriceChip({ instrument }: { instrument: string }) {
   const { t } = useTranslation();
@@ -276,28 +259,6 @@ export default function AnalyzePage() {
               ))}
             </div>
           </div>
-
-          {finalInstrument && isIndicatorTf(selectedTimeframe) && (
-            // Intraday OHLC is only mapped for our core 8 instruments. For
-            // everything else we still show the panel on 1D / 1W (which uses
-            // the broader upstream feed); on intraday timeframes we instead
-            // render a brief hint so the panel doesn't silently disappear.
-            !INTRADAY_TIMEFRAMES.has(selectedTimeframe) ||
-            INTRADAY_SUPPORTED_INSTRUMENTS.has(finalInstrument) ? (
-              <TechnicalIndicatorsPanel
-                instrument={finalInstrument}
-                mode={user?.selectedMode === "pro" ? "pro" : "beginner"}
-                timeframe={selectedTimeframe}
-              />
-            ) : (
-              <div
-                className="p-3 rounded-xl border border-dashed border-border bg-muted/40 text-[11px] text-muted-foreground leading-relaxed"
-                data-testid="text-intraday-indicators-unavailable"
-              >
-                {t.analyze.intraday_indicators_unavailable.replace("{tf}", selectedTimeframe)}
-              </div>
-            )
-          )}
 
           <div>
             <div className="flex items-center justify-between mb-2">
