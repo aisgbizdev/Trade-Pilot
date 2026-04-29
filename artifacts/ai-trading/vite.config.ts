@@ -59,6 +59,14 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         additionalManifestEntries: [{ url: `${basePath}offline.html`, revision: null }],
       },
+      // Enable the service worker in dev so push notifications and the
+      // install/enable flow can be tested from the Replit preview without
+      // running a production build.
+      devOptions: {
+        enabled: true,
+        type: "module",
+        navigateFallback: `${basePath}index.html`,
+      },
     }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined

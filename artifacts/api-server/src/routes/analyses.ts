@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { db } from "../lib/db";
-import { analyses, feedback, notifications, users } from "@workspace/db/schema";
+import { analyses, feedback, users } from "@workspace/db/schema";
 import { eq, and, desc, count, sql, gte, lte, ilike } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { generateAnalysis, getValidUntil, type BeginnerAIOutput, type ProAIOutput } from "../lib/openai";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
 import { getRelevantNews, formatNewsForPrompt } from "../lib/news";
 import { getRelevantCalendar, formatCalendarForPrompt } from "../lib/calendar";
-import { notificationsEmitter } from "../lib/notifications-emitter";
+import { createNotification, createNotificationsForUsers } from "../lib/create-notification";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -30,23 +30,11 @@ async function trackAiError(): Promise<void> {
     if (admins.length > 0) {
       const errorTitle = "Peringatan: Error AI Berulang";
       const errorMessage = `Lebih dari ${AI_ERROR_THRESHOLD} kegagalan analisis AI terjadi dalam 1 jam terakhir. Periksa koneksi dan konfigurasi AI.`;
-      await db.insert(notifications).values(
-        admins.map((a) => ({
-          userId: a.id,
-          title: errorTitle,
-          message: errorMessage,
-          type: "error" as const,
-        }))
+      await createNotificationsForUsers(
+        admins.map((a) => a.id),
+        { title: errorTitle, message: errorMessage, type: "error" },
+        { url: "/notifications", tag: "ai-error-alert" },
       );
-      const nowIso = new Date().toISOString();
-      for (const a of admins) {
-        notificationsEmitter.emitForUser(a.id, {
-          title: errorTitle,
-          message: errorMessage,
-          type: "error",
-          createdAt: nowIso,
-        });
-      }
     }
   }
 }
@@ -447,18 +435,16 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
   const completeTitle = "Analisis Selesai";
   const completeMessage = `Analisis ${instrument} (${timeframe}, ${typedMode === "beginner" ? "Pemula" : "Pro"}) telah selesai diproses.`;
-  await db.insert(notifications).values({
-    userId: req.userId!,
-    title: completeTitle,
-    message: completeMessage,
-    type: "info",
-  });
-  notificationsEmitter.emitForUser(req.userId!, {
-    title: completeTitle,
-    message: completeMessage,
-    type: "info",
-    createdAt: new Date().toISOString(),
-  });
+  await createNotification(
+    req.userId!,
+    { title: completeTitle, message: completeMessage, type: "info" },
+    {
+      title: "Analisis Selesai ✅",
+      body: `${instrument} (${timeframe}) — buka Trade Pilot untuk lihat hasilnya.`,
+      url: "/",
+      tag: `analysis-${analysis.id}`,
+    },
+  );
 
   res.status(201).json(analysis);
 });

@@ -8,6 +8,13 @@ import { NetworkFirst, CacheFirst } from "workbox-strategies";
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 cleanupOutdatedCaches();
+
+// In dev (`devOptions: enabled: true`), vite-plugin-pwa substitutes
+// `__WB_MANIFEST` with a stub (e.g. `[{ url: '/index.html' }]`) that does
+// not include `offline.html`. Calling `createHandlerBoundToURL` for a URL
+// that isn't in the precache throws and aborts the entire SW evaluation,
+// which would also kill the `push` handler we need for testing. Only wire
+// the offline navigation fallback in production builds.
 precacheAndRoute(self.__WB_MANIFEST);
 self.skipWaiting();
 clientsClaim();
@@ -23,12 +30,14 @@ registerRoute(
   new CacheFirst({ cacheName: "static-assets" })
 );
 
-const offlineHandler = createHandlerBoundToURL(import.meta.env.BASE_URL + "offline.html");
-registerRoute(
-  new NavigationRoute(offlineHandler, {
-    denylist: [/^\/api\//],
-  })
-);
+if (!import.meta.env.DEV) {
+  const offlineHandler = createHandlerBoundToURL(import.meta.env.BASE_URL + "offline.html");
+  registerRoute(
+    new NavigationRoute(offlineHandler, {
+      denylist: [/^\/api\//],
+    })
+  );
+}
 
 self.addEventListener("push", (event: PushEvent) => {
   if (!event.data) return;

@@ -1,9 +1,8 @@
 import { db } from "./db";
-import { users, analyses, feedback, notifications, pushSubscriptions } from "@workspace/db/schema";
+import { users, analyses, feedback, notifications } from "@workspace/db/schema";
 import { eq, and, count, sql, gte, lte, lt } from "drizzle-orm";
 import { logger } from "./logger";
-import { sendPushToUser } from "./webpush";
-import { notificationsEmitter } from "./notifications-emitter";
+import { createNotification, createNotificationsForUsers } from "./create-notification";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,20 +63,16 @@ async function sendFeedbackReminders(): Promise<void> {
 
       if (alreadyNotified) continue;
 
-      await db.insert(notifications).values({
+      await createNotification(
         userId,
-        title: "Bagaimana hasil analisamu?",
-        message:
-          "Sudah lebih dari 3 hari sejak analisis terakhirmu. Bagikan pengalamanmu — berhasil atau tidak — agar kamu bisa belajar lebih baik.",
-        type: "info",
-      });
-      notificationsEmitter.emitForUser(userId, {
-        title: "Bagaimana hasil analisamu?",
-        message:
-          "Sudah lebih dari 3 hari sejak analisis terakhirmu. Bagikan pengalamanmu — berhasil atau tidak — agar kamu bisa belajar lebih baik.",
-        type: "info",
-        createdAt: new Date().toISOString(),
-      });
+        {
+          title: "Bagaimana hasil analisamu?",
+          message:
+            "Sudah lebih dari 3 hari sejak analisis terakhirmu. Bagikan pengalamanmu — berhasil atau tidak — agar kamu bisa belajar lebih baik.",
+          type: "info",
+        },
+        { url: "/notifications", tag: `feedback-reminder-${userId}` },
+      );
 
       logger.info({ userId }, "Sent 3-day feedback reminder");
     }
@@ -113,24 +108,33 @@ async function sendDailySummary(): Promise<void> {
 
     if (admins.length === 0) return;
 
-    const summaryRows = admins.map((a) => ({
-      userId: a.id,
-      title: "Ringkasan Harian",
-      message:
-        a.role === "super_admin"
-          ? `Sistem hari ini: ${todayAnalyses.count} analisis, ${activeCount} pengguna aktif, ${totalUsers.count} total pengguna terdaftar.`
-          : `Hari ini: ${todayAnalyses.count} analisis baru, ${activeCount} pengguna aktif.`,
-      type: "info" as const,
-    }));
-    await db.insert(notifications).values(summaryRows);
-    const nowIso = new Date().toISOString();
-    for (const r of summaryRows) {
-      notificationsEmitter.emitForUser(r.userId, {
-        title: r.title,
-        message: r.message,
-        type: r.type,
-        createdAt: nowIso,
-      });
+    // Daily summary copy differs between super_admin (sees total users) and
+    // admin (sees only daily counts). Send each role group separately so the
+    // bulk insert + push payload share the same body within each group.
+    const superAdminIds = admins.filter((a) => a.role === "super_admin").map((a) => a.id);
+    const regularAdminIds = admins.filter((a) => a.role !== "super_admin").map((a) => a.id);
+
+    if (superAdminIds.length > 0) {
+      await createNotificationsForUsers(
+        superAdminIds,
+        {
+          title: "Ringkasan Harian",
+          message: `Sistem hari ini: ${todayAnalyses.count} analisis, ${activeCount} pengguna aktif, ${totalUsers.count} total pengguna terdaftar.`,
+          type: "info",
+        },
+        { url: "/notifications", tag: "daily-summary" },
+      );
+    }
+    if (regularAdminIds.length > 0) {
+      await createNotificationsForUsers(
+        regularAdminIds,
+        {
+          title: "Ringkasan Harian",
+          message: `Hari ini: ${todayAnalyses.count} analisis baru, ${activeCount} pengguna aktif.`,
+          type: "info",
+        },
+        { url: "/notifications", tag: "daily-summary" },
+      );
     }
 
     logger.info("Sent daily summary to admins and super-admins");
@@ -148,22 +152,15 @@ export async function notifyAdminsUserCreated(displayName: string): Promise<void
 
     if (admins.length === 0) return;
 
-    const rows = admins.map((a) => ({
-      userId: a.id,
-      title: "Pengguna Baru Terdaftar",
-      message: `Pengguna baru "${displayName}" telah mendaftar ke sistem.`,
-      type: "info" as const,
-    }));
-    await db.insert(notifications).values(rows);
-    const nowIso = new Date().toISOString();
-    for (const r of rows) {
-      notificationsEmitter.emitForUser(r.userId, {
-        title: r.title,
-        message: r.message,
-        type: r.type,
-        createdAt: nowIso,
-      });
-    }
+    await createNotificationsForUsers(
+      admins.map((a) => a.id),
+      {
+        title: "Pengguna Baru Terdaftar",
+        message: `Pengguna baru "${displayName}" telah mendaftar ke sistem.`,
+        type: "info",
+      },
+      { url: "/notifications", tag: "user-created" },
+    );
   } catch (err) {
     logger.error(err, "Error sending user-created notification");
   }
@@ -178,22 +175,15 @@ export async function notifySuperAdminsUserDeleted(displayName: string): Promise
 
     if (superAdmins.length === 0) return;
 
-    const rows = superAdmins.map((sa) => ({
-      userId: sa.id,
-      title: "Pengguna Dihapus",
-      message: `Pengguna "${displayName}" telah dihapus dari sistem.`,
-      type: "warning" as const,
-    }));
-    await db.insert(notifications).values(rows);
-    const nowIso = new Date().toISOString();
-    for (const r of rows) {
-      notificationsEmitter.emitForUser(r.userId, {
-        title: r.title,
-        message: r.message,
-        type: r.type,
-        createdAt: nowIso,
-      });
-    }
+    await createNotificationsForUsers(
+      superAdmins.map((sa) => sa.id),
+      {
+        title: "Pengguna Dihapus",
+        message: `Pengguna "${displayName}" telah dihapus dari sistem.`,
+        type: "warning",
+      },
+      { url: "/notifications", tag: "user-deleted" },
+    );
   } catch (err) {
     logger.error(err, "Error sending user-deleted notification");
   }
@@ -237,45 +227,34 @@ async function sendAnalysisExpiryAlerts(): Promise<void> {
 
       if (alreadyNotified) continue;
 
-      // Always insert the in-app notification so users see the alert in
-      // /notifications regardless of push subscription status.
       const expiryTitle = "Analisis Akan Berakhir";
       const expiryMessage = `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam. Segera ambil keputusan atau buat analisis baru. ${expiryMarker}`;
-      await db.insert(notifications).values({
-        userId: analysis.userId,
-        title: expiryTitle,
-        message: expiryMessage,
-        type: "warning",
-      });
-      notificationsEmitter.emitForUser(analysis.userId, {
-        title: expiryTitle,
-        message: expiryMessage,
-        type: "warning",
-        createdAt: new Date().toISOString(),
-      });
 
-      // Only send push if the user has an active subscription AND has not
-      // disabled expiry notifications in preferences.
-      const [hasSub] = await db
-        .select({ id: pushSubscriptions.id })
-        .from(pushSubscriptions)
-        .where(eq(pushSubscriptions.userId, analysis.userId))
-        .limit(1);
-
+      // Honor the per-user `pushExpiry` opt-out: in-app notification is
+      // always created (so the alert still surfaces in /notifications),
+      // but the OS-level pop-up is suppressed when the user has turned
+      // off expiry pushes. The push helper itself also no-ops when the
+      // user has no subscriptions, so we don't need a separate sub check.
       const [prefs] = await db
         .select({ pushExpiry: users.pushExpiry })
         .from(users)
         .where(eq(users.id, analysis.userId))
         .limit(1);
 
-      if (hasSub && prefs?.pushExpiry !== false) {
-        await sendPushToUser(analysis.userId, {
-          title: "Analisis Akan Berakhir ⚠️",
-          body: `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam.`,
-          url: "/",
-          tag: `expiry-${analysis.id}`,
-        });
-      }
+      const allowPush = prefs?.pushExpiry !== false;
+
+      await createNotification(
+        analysis.userId,
+        { title: expiryTitle, message: expiryMessage, type: "warning" },
+        allowPush
+          ? {
+              title: "Analisis Akan Berakhir ⚠️",
+              body: `Analisis ${analysis.instrument} kamu akan berakhir dalam kurang dari 2 jam.`,
+              url: "/",
+              tag: `expiry-${analysis.id}`,
+            }
+          : null,
+      );
 
       logger.info({ userId: analysis.userId, analysisId: analysis.id }, "Sent analysis expiry alert");
     }
@@ -330,18 +309,16 @@ async function sendRetentionWarnings(): Promise<void> {
       );
       const title = "Riwayat Analisis Akan Dihapus";
       const message = `Analisis ${a.instrument} kamu akan dihapus otomatis dalam ${daysLeft} hari karena sudah lebih dari ${ANALYSES_RETENTION_DAYS} hari. Simpan catatan jika perlu. ${retentionMarker}`;
-      await db.insert(notifications).values({
-        userId: a.userId,
-        title,
-        message,
-        type: "info",
-      });
-      notificationsEmitter.emitForUser(a.userId, {
-        title,
-        message,
-        type: "info",
-        createdAt: new Date().toISOString(),
-      });
+      await createNotification(
+        a.userId,
+        { title, message, type: "info" },
+        {
+          title: "Riwayat Analisis Akan Dihapus 🗑️",
+          body: `Analisis ${a.instrument} kamu akan dihapus dalam ${daysLeft} hari.`,
+          url: "/",
+          tag: `retention-${a.id}`,
+        },
+      );
     }
   } catch (err) {
     logger.error(err, "Error sending retention warnings");

@@ -10,7 +10,12 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       console.log("[pwa] service worker registered", { swUrl, scope: registration?.scope });
     },
     onRegisterError(error) {
-      console.error("[pwa] service worker registration failed", error);
+      const err = error as Error | { message?: string; name?: string } | null;
+      console.error(
+        "[pwa] service worker registration failed",
+        err?.message ?? String(err),
+        err,
+      );
     },
   });
 }

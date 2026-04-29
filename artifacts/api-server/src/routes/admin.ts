@@ -4,7 +4,6 @@ import { db } from "../lib/db";
 import {
   users,
   analyses,
-  notifications,
   userTags,
   broadcasts,
   feedback,
@@ -17,8 +16,7 @@ import {
   AuthRequest,
 } from "../middleware/auth";
 import { notifySuperAdminsUserDeleted, notifyAdminsUserCreated } from "../lib/jobs";
-import { sendPushToUsers } from "../lib/webpush";
-import { notificationsEmitter } from "../lib/notifications-emitter";
+import { createNotificationsForUsers } from "../lib/create-notification";
 
 type AudienceType = "all" | "role" | "tag";
 type Role = "user" | "admin" | "super_admin";
@@ -417,38 +415,25 @@ router.post("/admin/notifications", requireSuperAdmin, async (req: AuthRequest, 
     return;
   }
 
-  await db.insert(notifications).values(
-    targetUsers.map((u) => ({
-      userId: u.id,
+  // Honor per-user push preferences: in-app notification is inserted for
+  // every targeted user, but the OS-level push pop-up is suppressed for
+  // anyone who has opted out of broadcasts. Push errors are swallowed by
+  // the helper, so they can never break this response.
+  const pushSkipUserIds = targetUsers
+    .filter((u) => u.pushBroadcast === false)
+    .map((u) => u.id);
+
+  await createNotificationsForUsers(
+    targetUsers.map((u) => u.id),
+    {
+      title: trimmedTitle,
+      message: trimmedMessage,
+      type: type ?? "info",
       targetRole: resolvedType === "role" ? (resolvedValue as Role) : null,
-      title: trimmedTitle,
-      message: trimmedMessage,
-      type: type ?? "info",
-    })),
+    },
+    { url: "/notifications", tag: "broadcast" },
+    { pushSkipUserIds },
   );
-
-  const broadcastNowIso = new Date().toISOString();
-  for (const u of targetUsers) {
-    notificationsEmitter.emitForUser(u.id, {
-      title: trimmedTitle,
-      message: trimmedMessage,
-      type: type ?? "info",
-      createdAt: broadcastNowIso,
-    });
-  }
-
-  // Honor per-user push preferences: only push to users who haven't opted out
-  // of broadcasts. The in-app notification is still inserted for everyone.
-  const pushTargets = targetUsers.filter((u) => u.pushBroadcast !== false).map((u) => u.id);
-
-  sendPushToUsers(
-    pushTargets,
-    { title: trimmedTitle, body: trimmedMessage, url: "/notifications", tag: "broadcast" },
-  ).catch((err) => {
-    // Log but never let push delivery failures break the broadcast response.
-    // Errors here are operational (transient transport, bad endpoint), not auth.
-    console.warn("Broadcast push delivery failed", err);
-  });
 
   res.status(201).json({
     broadcastId: broadcastRow.id,
