@@ -34,7 +34,7 @@ export interface TechnicalIndicators {
   overallSummary: { buy: number; sell: number; neutral: number; signal: "Buy" | "Sell" | "Neutral" };
 }
 
-export type IndicatorTimeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1D" | "1W";
+export type IndicatorTimeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "4h" | "1D" | "1W";
 
 async function fetchIndicators(
   instrument: string,

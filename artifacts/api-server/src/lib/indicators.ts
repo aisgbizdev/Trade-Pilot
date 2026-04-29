@@ -222,7 +222,7 @@ const MA_PERIODS_DAILY = {
 
 // Timeframes treated as "intraday" for the MA-period selection. We accept the
 // raw string so this module doesn't need to depend on `historical.ts`.
-const INTRADAY_TF_KEYS = new Set(["1m", "5m", "15m", "1h", "4h"]);
+const INTRADAY_TF_KEYS = new Set(["1m", "5m", "15m", "30m", "1h", "4h"]);
 
 export function calculateIndicators(
   symbol: string,

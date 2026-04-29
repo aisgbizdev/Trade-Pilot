@@ -54,8 +54,8 @@ describe("calculateIndicators – timeframe-aware MA period selection", () => {
     }
   });
 
-  it("uses the shorter intraday ladder for 1m/5m/15m/1h/4h", () => {
-    for (const tf of ["1m", "5m", "15m", "1h", "4h"] as const) {
+  it("uses the shorter intraday ladder for 1m/5m/15m/30m/1h/4h", () => {
+    for (const tf of ["1m", "5m", "15m", "30m", "1h", "4h"] as const) {
       const result = calculateIndicators("EUR/USD", candles, tf);
       const smas = result.movingAverages
         .filter((m) => m.type === "SMA")

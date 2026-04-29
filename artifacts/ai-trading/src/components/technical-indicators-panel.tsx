@@ -5,9 +5,9 @@ import { useTranslation } from "@/lib/i18n";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import {
   MarketContextSummary,
-  leanFromCounts,
   type MarketContextLean,
 } from "./market-context-summary";
+import { SignalSpeedometer } from "./signal-speedometer";
 
 type RawSignal = "Buy" | "Sell" | "Neutral";
 
@@ -48,44 +48,21 @@ function SignalBadge({ signal, mode }: { signal: RawSignal; mode: "beginner" | "
   );
 }
 
-function SummaryGauge({ buy, sell, neutral, mode }: { buy: number; sell: number; neutral: number; mode: "beginner" | "pro" }) {
-  const { t } = useTranslation();
-  const total = buy + sell + neutral || 1;
-  const buyPct = (buy / total) * 100;
-  const sellPct = (sell / total) * 100;
-  const lean = leanFromCounts(buy, sell);
-  const headingLabel =
-    lean === "bullish" ? t.analyze.leaning_bullish :
-    lean === "bearish" ? t.analyze.leaning_bearish :
-    t.analyze.leaning_neutral;
-  const rawLabel =
-    lean === "bullish" ? t.analyze.signal_buy :
-    lean === "bearish" ? t.analyze.signal_sell :
-    t.analyze.signal_neutral;
-  const headingColor =
-    lean === "bullish" ? "text-emerald-500" :
-    lean === "bearish" ? "text-red-500" :
-    "text-amber-500";
-
-  return (
-    <div className="text-center">
-      <div className={cn("text-2xl font-extrabold mb-0.5", headingColor)}>{headingLabel}</div>
-      {mode === "pro" && (
-        <div className="text-[9px] text-muted-foreground uppercase tracking-wide mb-1">
-          ({rawLabel})
-        </div>
-      )}
-      <div className="h-2 rounded-full bg-muted overflow-hidden flex gap-0.5 mb-2">
-        <div className="bg-emerald-500 rounded-full transition-all" style={{ width: `${buyPct}%` }} />
-        <div className="bg-red-500 rounded-full transition-all" style={{ width: `${sellPct}%` }} />
-      </div>
-      <div className="flex justify-between text-[10px]">
-        <span className="text-emerald-500 font-semibold">{buy} {t.analyze.count_bullish}</span>
-        <span className="text-muted-foreground">{neutral} {t.analyze.leaning_neutral}</span>
-        <span className="text-red-500 font-semibold">{sell} {t.analyze.count_bearish}</span>
-      </div>
-    </div>
-  );
+/**
+ * Pro-mode raw signal label ("Buy"/"Sell"/"Neutral") shown as the
+ * parenthetical under the descriptive label in the Speedometer. Returns
+ * undefined for beginner mode so the speedometer hides the parenthetical.
+ */
+function rawSignalLabel(
+  buy: number,
+  sell: number,
+  mode: "beginner" | "pro",
+  t: ReturnType<typeof useTranslation>["t"],
+): string | undefined {
+  if (mode !== "pro") return undefined;
+  if (buy > sell * 1.5) return t.analyze.signal_buy;
+  if (sell > buy * 1.5) return t.analyze.signal_sell;
+  return t.analyze.signal_neutral;
 }
 
 export function TechnicalIndicatorsPanel({
@@ -183,15 +160,35 @@ export function TechnicalIndicatorsPanel({
 
       <div className="bg-card border border-border rounded-2xl p-4">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-3">{t.analyze.signal_summary}</p>
-        <SummaryGauge buy={ind.overallSummary.buy} sell={ind.overallSummary.sell} neutral={ind.overallSummary.neutral} mode={mode} />
+        <SignalSpeedometer
+          buy={ind.overallSummary.buy}
+          sell={ind.overallSummary.sell}
+          neutral={ind.overallSummary.neutral}
+          rawLabel={rawSignalLabel(ind.overallSummary.buy, ind.overallSummary.sell, mode, t)}
+          testId="speedometer-overall"
+        />
         <div className="grid grid-cols-2 gap-2 mt-3">
-          <div className="bg-muted/50 rounded-xl p-2 text-center">
+          <div className="bg-muted/50 rounded-xl p-2 flex flex-col items-center">
             <p className="text-[9px] text-muted-foreground mb-1">{t.analyze.oscillator_section}</p>
-            <SummaryGauge buy={ind.oscillatorSummary.buy} sell={ind.oscillatorSummary.sell} neutral={ind.oscillatorSummary.neutral} mode={mode} />
+            <SignalSpeedometer
+              buy={ind.oscillatorSummary.buy}
+              sell={ind.oscillatorSummary.sell}
+              neutral={ind.oscillatorSummary.neutral}
+              size="sm"
+              rawLabel={rawSignalLabel(ind.oscillatorSummary.buy, ind.oscillatorSummary.sell, mode, t)}
+              testId="speedometer-oscillator"
+            />
           </div>
-          <div className="bg-muted/50 rounded-xl p-2 text-center">
+          <div className="bg-muted/50 rounded-xl p-2 flex flex-col items-center">
             <p className="text-[9px] text-muted-foreground mb-1">{t.analyze.moving_avg_short}</p>
-            <SummaryGauge buy={ind.maSummary.buy} sell={ind.maSummary.sell} neutral={ind.maSummary.neutral} mode={mode} />
+            <SignalSpeedometer
+              buy={ind.maSummary.buy}
+              sell={ind.maSummary.sell}
+              neutral={ind.maSummary.neutral}
+              size="sm"
+              rawLabel={rawSignalLabel(ind.maSummary.buy, ind.maSummary.sell, mode, t)}
+              testId="speedometer-ma"
+            />
           </div>
         </div>
       </div>

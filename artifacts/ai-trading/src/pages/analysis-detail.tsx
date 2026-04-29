@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
 import { MarketContextSummary } from "@/components/market-context-summary";
+import { SignalSpeedometer } from "@/components/signal-speedometer";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
 import type { IndicatorTimeframe } from "@/hooks/use-technical-indicators";
 import {
@@ -117,12 +118,6 @@ function normalizeBias(raw: string | null | undefined): BiasKey | null {
   return valid.includes(raw as BiasKey) ? (raw as BiasKey) : null;
 }
 
-const BIAS_ORDER: BiasKey[] = ["bearish_strong", "bearish", "neutral", "bullish", "bullish_strong"];
-
-function biasIndex(bias: BiasKey): number {
-  return BIAS_ORDER.indexOf(bias);
-}
-
 function biasColor(bias: BiasKey): string {
   switch (bias) {
     case "bearish_strong":
@@ -138,18 +133,27 @@ function biasColor(bias: BiasKey): string {
   }
 }
 
-function biasFillColor(bias: BiasKey): string {
+/**
+ * Map a 5-step `BiasKey` into the same buy/sell/neutral triple shape used
+ * everywhere else by `<SignalSpeedometer>` so the bias gauge can share the
+ * exact same component (and angle math) as the technical-indicator gauges.
+ *
+ * Each preset lands the needle in the centre of its corresponding zone:
+ *   bearish_strong → -90° · bearish → -36° · neutral → 0°
+ *   bullish → +36° · bullish_strong → +90°
+ */
+function biasToCounts(bias: BiasKey): { buy: number; sell: number; neutral: number } {
   switch (bias) {
     case "bearish_strong":
-      return "bg-red-600";
+      return { buy: 0, sell: 4, neutral: 0 };
     case "bearish":
-      return "bg-red-400";
+      return { buy: 1, sell: 3, neutral: 1 };
     case "neutral":
-      return "bg-yellow-400";
+      return { buy: 1, sell: 1, neutral: 3 };
     case "bullish":
-      return "bg-green-400";
+      return { buy: 3, sell: 1, neutral: 1 };
     case "bullish_strong":
-      return "bg-green-600";
+      return { buy: 4, sell: 0, neutral: 0 };
   }
 }
 
@@ -196,9 +200,8 @@ function BiasIcon({ bias, className }: { bias: BiasKey; className?: string }) {
 
 function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string; timeframe: string }) {
   const { t } = useTranslation();
-  const idx = biasIndex(bias);
   const color = biasColor(bias);
-  const fill = biasFillColor(bias);
+  const counts = biasToCounts(bias);
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
@@ -223,17 +226,21 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
           </p>
         </div>
       </div>
-      <div className="flex gap-1" data-testid="bias-gauge">
-        {BIAS_ORDER.map((b, i) => (
-          <div
-            key={b}
-            className={cn(
-              "h-1.5 flex-1 rounded-full transition-opacity",
-              i === idx ? fill : "bg-muted"
-            )}
-          />
-        ))}
-      </div>
+      {/* Same speedometer the Technical Indicators panel uses, fed from the
+          synthetic counts for this bias preset so the needle lands in the
+          centre of the matching zone (bearish_strong → far left, etc.).
+          Header above already shows the descriptive label, so the gauge
+          itself hides its center label and counts. */}
+      <SignalSpeedometer
+        buy={counts.buy}
+        sell={counts.sell}
+        neutral={counts.neutral}
+        size="sm"
+        showCounts={false}
+        showCenterLabel={false}
+        testId="bias-gauge"
+        className="mx-auto"
+      />
       <div className="flex justify-between text-[10px] text-muted-foreground">
         <span>{t.analysis_detail.bias_bearish_strong}</span>
         <span>{t.analysis_detail.bias_neutral}</span>
@@ -299,7 +306,7 @@ function scenarioCText(bias: BiasKey, t: T): string {
   return t.analysis_detail.scenario_c_template_directional;
 }
 
-const INDICATOR_TIMEFRAMES = new Set<IndicatorTimeframe>(["1m", "5m", "15m", "1h", "4h", "1D", "1W"]);
+const INDICATOR_TIMEFRAMES = new Set<IndicatorTimeframe>(["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"]);
 function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
   return INDICATOR_TIMEFRAMES.has(tf as IndicatorTimeframe)
     ? (tf as IndicatorTimeframe)

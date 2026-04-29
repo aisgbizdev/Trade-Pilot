@@ -145,8 +145,8 @@ describe("AnalyzePage: happy-path render", () => {
         screen.queryByTestId("button-instrument-EUR/USD"),
       ).not.toBeInTheDocument();
 
-      // All seven timeframes appear.
-      for (const tf of ["1m", "5m", "15m", "1h", "4h", "1D", "1W"] as const) {
+      // All eight timeframes appear (1m, 5m, 15m, 30m, 1h, 4h, 1D, 1W).
+      for (const tf of ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const) {
         expect(screen.getByTestId(`button-timeframe-${tf}`)).toBeInTheDocument();
       }
 

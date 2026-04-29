@@ -54,11 +54,11 @@ const YAHOO_SYMBOL_MAP: Record<string, string> = {
   "DXY": "DX-Y.NYB",
 };
 
-export type IntradayTimeframe = "1m" | "5m" | "15m" | "1h" | "4h";
+export type IntradayTimeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "4h";
 export type DailyTimeframe = "1D" | "1W";
 export type IndicatorTimeframe = IntradayTimeframe | DailyTimeframe;
 
-export const INTRADAY_TIMEFRAMES: IntradayTimeframe[] = ["1m", "5m", "15m", "1h", "4h"];
+export const INTRADAY_TIMEFRAMES: IntradayTimeframe[] = ["1m", "5m", "15m", "30m", "1h", "4h"];
 export const SUPPORTED_INDICATOR_TIMEFRAMES: IndicatorTimeframe[] = [
   ...INTRADAY_TIMEFRAMES,
   "1D",
@@ -108,6 +108,7 @@ const INDICATORS_CACHE_TTL_MS: Record<IndicatorTimeframe, number> = {
   "1m": 30 * 1000,
   "5m": 60 * 1000,
   "15m": 3 * 60 * 1000,
+  "30m": 4 * 60 * 1000,
   "1h": 5 * 60 * 1000,
   "4h": 15 * 60 * 1000,
   "1D": 10 * 60 * 1000,
@@ -217,6 +218,7 @@ const YAHOO_INTRADAY_PARAMS: Record<IntradayTimeframe, { interval: string; range
   "1m": { interval: "1m", range: "7d" },     // ~10k candles (max Yahoo allows for 1m)
   "5m": { interval: "5m", range: "60d" },    // ~5k candles
   "15m": { interval: "15m", range: "60d" },  // ~1.7k candles
+  "30m": { interval: "30m", range: "60d" },  // ~880 candles — Yahoo supports 30m natively
   "1h": { interval: "60m", range: "730d" },  // ~3k candles
   // 4h is not a native Yahoo interval — we fetch 1h with a long range and
   // resample below to 4h buckets.
@@ -471,6 +473,8 @@ function timeframeLabels(tf: IndicatorTimeframe): { candleUnit: string; periodLa
       return { candleUnit: "candle 5 menit", periodLabel: "candle 5m" };
     case "15m":
       return { candleUnit: "candle 15 menit", periodLabel: "candle 15m" };
+    case "30m":
+      return { candleUnit: "candle 30 menit", periodLabel: "candle 30m" };
     case "1h":
       return { candleUnit: "candle 1 jam", periodLabel: "candle 1h" };
     case "4h":
