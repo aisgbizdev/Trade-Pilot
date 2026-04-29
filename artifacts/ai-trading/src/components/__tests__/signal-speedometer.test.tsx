@@ -139,6 +139,52 @@ describe("<SignalSpeedometer>", () => {
     expect(angle).toBe(90);
   });
 
+  it("locks the xs wrapper to a fixed width with shrink-0 so the half-circle cannot collapse to a flat line in a tight flex row", () => {
+    // Regression for the per-row mini gauges in the indicators panel:
+    // when a sibling label has `min-w-[2.75rem]` and the parent is a
+    // flex-row, a `w-full` wrapper without `shrink-0` gets squeezed to
+    // a sliver and the SVG arc renders almost flat. The xs preset must
+    // therefore always render at an explicit pixel width.
+    render(
+      <Wrapper>
+        <SignalSpeedometer
+          buy={2}
+          sell={1}
+          neutral={1}
+          size="xs"
+          showCounts={false}
+          showCenterLabel={false}
+          testId="gauge-xs"
+        />
+      </Wrapper>,
+    );
+
+    const root = screen.getByTestId("gauge-xs");
+    const cls = root.className;
+    expect(cls).toContain("w-14");
+    expect(cls).toContain("shrink-0");
+    expect(cls).not.toMatch(/(?:^|\s)w-full(?:\s|$)/);
+
+    // The inner SVG keeps its half-circle viewBox so the rendered arc
+    // matches the wrapper's 56:34 (~viewBox 100:60) aspect.
+    const svg = root.querySelector("svg");
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 100 60");
+  });
+
+  it("keeps `w-full` on sm/md presets so the larger summary gauges still stretch to fill their column", () => {
+    render(
+      <Wrapper>
+        <div>
+          <SignalSpeedometer buy={2} sell={1} neutral={1} size="sm" testId="gauge-sm" />
+          <SignalSpeedometer buy={2} sell={1} neutral={1} size="md" testId="gauge-md" />
+        </div>
+      </Wrapper>,
+    );
+
+    expect(screen.getByTestId("gauge-sm").className).toMatch(/(?:^|\s)w-full(?:\s|$)/);
+    expect(screen.getByTestId("gauge-md").className).toMatch(/(?:^|\s)w-full(?:\s|$)/);
+  });
+
   it("renders unique gradient ids when multiple speedometers share a page", () => {
     render(
       <Wrapper>

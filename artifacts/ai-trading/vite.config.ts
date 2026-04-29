@@ -56,8 +56,15 @@ export default defineConfig({
         ],
       },
       injectManifest: {
+        // `offline.html` is already picked up by the `*.html` glob below
+        // (with a revision hash). Re-adding it via `additionalManifestEntries`
+        // produced a second precache entry for the same URL but with
+        // `revision: null`, which trips workbox's "conflicting entries"
+        // guard in production and aborts the entire service-worker
+        // evaluation — so the install/notifications flow fails with
+        // "ServiceWorker script evaluation failed". Letting the glob
+        // be the single source of truth keeps one entry per URL.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        additionalManifestEntries: [{ url: `${basePath}offline.html`, revision: null }],
       },
       // Enable the service worker in dev so push notifications and the
       // install/enable flow can be tested from the Replit preview without

@@ -84,9 +84,16 @@ export function SignalSpeedometer({
   const angle = angleFromCounts(buy, sell, neutral);
   const needleEnd = polar(50, 50, 36, angle);
 
+  // The xs wrapper uses an explicit pixel width + `shrink-0` so the
+  // mini gauge keeps its 56×~34px footprint even when it lives inside
+  // a tight flex-row alongside a fixed-width label (see `SignalCell` in
+  // `technical-indicators-panel.tsx`). Without `shrink-0`, a sibling
+  // with `min-w-[2.75rem]` would steal space and the wrapper would
+  // collapse, making the half-circle look like a flat line.
   const sizing =
     size === "xs"
       ? {
+          wrapperW: "w-14 shrink-0",
           maxW: "max-w-[56px]",
           strokeWidth: 6,
           labelText: "text-[10px]",
@@ -95,6 +102,7 @@ export function SignalSpeedometer({
         }
       : size === "sm"
       ? {
+          wrapperW: "w-full",
           maxW: "max-w-[120px]",
           strokeWidth: 8,
           labelText: "text-xs",
@@ -102,6 +110,7 @@ export function SignalSpeedometer({
           labelMt: "mt-0.5",
         }
       : {
+          wrapperW: "w-full",
           maxW: "max-w-[180px]",
           strokeWidth: 10,
           labelText: "text-2xl",
@@ -111,7 +120,7 @@ export function SignalSpeedometer({
 
   return (
     <div
-      className={cn("flex flex-col items-center text-center w-full", className)}
+      className={cn("flex flex-col items-center text-center", sizing.wrapperW, className)}
       data-testid={testId ?? "signal-speedometer"}
       data-lean={lean}
     >
