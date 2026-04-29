@@ -1,8 +1,13 @@
 /// <reference lib="webworker" />
 
-import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching";
+import {
+  cleanupOutdatedCaches,
+  precacheAndRoute,
+  createHandlerBoundToURL,
+  matchPrecache,
+} from "workbox-precaching";
 import { clientsClaim } from "workbox-core";
-import { NavigationRoute, registerRoute } from "workbox-routing";
+import { NavigationRoute, registerRoute, setCatchHandler } from "workbox-routing";
 import { NetworkFirst, CacheFirst } from "workbox-strategies";
 
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
@@ -31,12 +36,35 @@ registerRoute(
 );
 
 if (!import.meta.env.DEV) {
-  const offlineHandler = createHandlerBoundToURL(import.meta.env.BASE_URL + "offline.html");
-  registerRoute(
-    new NavigationRoute(offlineHandler, {
-      denylist: [/^\/api\//],
-    })
+  // SPA navigation fallback: every in-app route renders from the
+  // precached `index.html` shell. The previous version of this file
+  // pointed `NavigationRoute` directly at `offline.html`, which made
+  // workbox serve the offline page from the precache for *every*
+  // client-side navigation (online or not), so the app appeared to be
+  // permanently offline once the SW activated.
+  const appShellHandler = createHandlerBoundToURL(
+    import.meta.env.BASE_URL + "index.html",
   );
+  registerRoute(
+    new NavigationRoute(appShellHandler, {
+      denylist: [/^\/api\//],
+    }),
+  );
+
+  // True offline fallback: only when the navigation handler (or any
+  // other route) actually throws — e.g. the network is unreachable and
+  // the precache lookup misses — fall back to the offline page so the
+  // user sees the "Try Again" screen instead of the browser's default
+  // dino. Non-document failures just return a network error.
+  setCatchHandler(async ({ request }) => {
+    if (request.mode === "navigate" || request.destination === "document") {
+      const offline = await matchPrecache(
+        import.meta.env.BASE_URL + "offline.html",
+      );
+      if (offline) return offline;
+    }
+    return Response.error();
+  });
 }
 
 self.addEventListener("push", (event: PushEvent) => {

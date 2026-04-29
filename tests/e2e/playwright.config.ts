@@ -22,6 +22,15 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // The production build registers a workbox Service Worker that
+    // intercepts navigations and `/api/*` fetches. Playwright's
+    // `page.route` does NOT intercept SW-mediated network calls by
+    // default, so a stubbed `GET /api/analyses/:id` would silently
+    // fall through to the real api-server (which returns 404 for the
+    // synthetic stub id). Blocking the SW for the test browser keeps
+    // route stubs authoritative without disabling the SW in the build
+    // itself. See: https://playwright.dev/docs/network#missing-network-events-and-service-workers
+    serviceWorkers: "block",
   },
   projects: [
     {
