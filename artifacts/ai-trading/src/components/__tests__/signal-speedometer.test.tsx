@@ -139,50 +139,97 @@ describe("<SignalSpeedometer>", () => {
     expect(angle).toBe(90);
   });
 
-  it("locks the xs wrapper to a fixed width with shrink-0 so the half-circle cannot collapse to a flat line in a tight flex row", () => {
-    // Regression for the per-row mini gauges in the indicators panel:
-    // when a sibling label has `min-w-[2.75rem]` and the parent is a
-    // flex-row, a `w-full` wrapper without `shrink-0` gets squeezed to
-    // a sliver and the SVG arc renders almost flat. The xs preset must
-    // therefore always render at an explicit pixel width.
+  it("xs preset uses a fixed, non-shrinkable wrapper so it can't collapse flat in tight flex-rows", () => {
+    // Reproduces the regression from Task #86: the per-row `SignalCell` on the
+    // Analyze indicators panel renders the gauge inside a flex-row with a
+    // sibling `min-w-[2.75rem]` label. If the gauge wrapper is allowed to
+    // flex-shrink, the SVG arc renders as an almost-flat sliver. Lock both
+    // the wrapper width and the SVG aspect-ratio.
     render(
       <Wrapper>
-        <SignalSpeedometer
-          buy={2}
-          sell={1}
-          neutral={1}
-          size="xs"
-          showCounts={false}
-          showCenterLabel={false}
-          testId="gauge-xs"
-        />
-      </Wrapper>,
-    );
-
-    const root = screen.getByTestId("gauge-xs");
-    const cls = root.className;
-    expect(cls).toContain("w-14");
-    expect(cls).toContain("shrink-0");
-    expect(cls).not.toMatch(/(?:^|\s)w-full(?:\s|$)/);
-
-    // The inner SVG keeps its half-circle viewBox so the rendered arc
-    // matches the wrapper's 56:34 (~viewBox 100:60) aspect.
-    const svg = root.querySelector("svg");
-    expect(svg?.getAttribute("viewBox")).toBe("0 0 100 60");
-  });
-
-  it("keeps `w-full` on sm/md presets so the larger summary gauges still stretch to fill their column", () => {
-    render(
-      <Wrapper>
-        <div>
-          <SignalSpeedometer buy={2} sell={1} neutral={1} size="sm" testId="gauge-sm" />
-          <SignalSpeedometer buy={2} sell={1} neutral={1} size="md" testId="gauge-md" />
+        <div style={{ display: "flex", alignItems: "center", gap: 6, width: 90 }}>
+          <SignalSpeedometer
+            buy={2}
+            sell={1}
+            neutral={0}
+            size="xs"
+            showCounts={false}
+            showCenterLabel={false}
+            testId="xs-cell-gauge"
+          />
+          <span style={{ minWidth: "2.75rem" }}>Buy</span>
         </div>
       </Wrapper>,
     );
 
-    expect(screen.getByTestId("gauge-sm").className).toMatch(/(?:^|\s)w-full(?:\s|$)/);
-    expect(screen.getByTestId("gauge-md").className).toMatch(/(?:^|\s)w-full(?:\s|$)/);
+    const root = screen.getByTestId("xs-cell-gauge");
+    // The wrapper is the sized container — it must be a fixed width and
+    // explicitly non-shrinkable so a sibling label can't squeeze it.
+    expect(root.className).toMatch(/\bshrink-0\b/);
+    expect(root.className).toMatch(/\bw-14\b/);
+    // The wrapper must NOT use plain `w-full` for the xs preset, otherwise it
+    // gets dragged down to a sliver inside a tight flex-row.
+    expect(root.className).not.toMatch(/\bw-full\b/);
+
+    const svg = root.querySelector("svg");
+    expect(svg).not.toBeNull();
+    // The half-circle viewBox aspect (100:60) must be preserved so the gauge
+    // never visually flattens — even when the rendered width changes.
+    const viewBox = svg?.getAttribute("viewBox") ?? "";
+    expect(viewBox).toBe("0 0 100 60");
+    // Compute the aspect implied by viewBox + preserveAspectRatio="meet" +
+    // h-auto. Anything below ~0.4 means the gauge would visually flatten,
+    // which is exactly the regression Task #86 fixes.
+    const [, , vbW, vbH] = viewBox.split(/\s+/).map(Number);
+    const aspect = vbH / vbW;
+    expect(aspect).toBeGreaterThan(0.4);
+    // `preserveAspectRatio` must keep the arc's aspect locked rather than
+    // letting it stretch flat.
+    const par = svg?.getAttribute("preserveAspectRatio");
+    expect(par === null || par === "" || /meet/.test(par)).toBe(true);
+    // Class must let height auto-scale with width, so the SVG can't be
+    // forced into a zero-height box by a parent that only sets width.
+    expect(svg?.getAttribute("class") ?? "").toMatch(/\bh-auto\b/);
+
+    // Sanity: the actual needle was rendered (i.e. drawing happened, not
+    // an empty SVG shell), so the gauge isn't silently empty either.
+    expect(root.querySelector("[data-testid='speedometer-needle']"))
+      .not.toBeNull();
+  });
+
+  it("sm and md presets keep `w-full` and the half-circle viewBox so the larger summary gauges still stretch to fill their column without flattening", () => {
+    render(
+      <Wrapper>
+        <div>
+          <SignalSpeedometer
+            buy={4}
+            sell={2}
+            neutral={1}
+            size="sm"
+            showCounts={false}
+            showCenterLabel={false}
+            testId="sm-summary-gauge"
+          />
+          <SignalSpeedometer
+            buy={4}
+            sell={2}
+            neutral={1}
+            size="md"
+            testId="md-overall-gauge"
+          />
+        </div>
+      </Wrapper>,
+    );
+
+    for (const id of ["sm-summary-gauge", "md-overall-gauge"]) {
+      const root = screen.getByTestId(id);
+      // sm/md must still expand with their column (w-full present, surrounded
+      // by other utility classes) so the larger gauges don't visually shrink.
+      expect(root.className).toMatch(/(?:^|\s)w-full(?:\s|$)/);
+      const svg = root.querySelector("svg");
+      expect(svg, `${id} should still render its SVG`).not.toBeNull();
+      expect(svg?.getAttribute("viewBox")).toBe("0 0 100 60");
+    }
   });
 
   it("renders unique gradient ids when multiple speedometers share a page", () => {

@@ -84,17 +84,19 @@ export function SignalSpeedometer({
   const angle = angleFromCounts(buy, sell, neutral);
   const needleEnd = polar(50, 50, 36, angle);
 
-  // The xs wrapper uses an explicit pixel width + `shrink-0` so the
-  // mini gauge keeps its 56×~34px footprint even when it lives inside
-  // a tight flex-row alongside a fixed-width label (see `SignalCell` in
-  // `technical-indicators-panel.tsx`). Without `shrink-0`, a sibling
-  // with `min-w-[2.75rem]` would steal space and the wrapper would
-  // collapse, making the half-circle look like a flat line.
+  // The wrapper width itself is sized per-preset (rather than `w-full` with a
+  // `max-w` only on the SVG). Critically the `xs` preset uses an explicit
+  // pixel width + `shrink-0` so the mini gauge keeps its 56×~34px footprint
+  // even when it lives inside a tight flex-row alongside a fixed-width label
+  // (see `SignalCell` in `technical-indicators-panel.tsx`). Without
+  // `shrink-0`, a sibling with `min-w-[2.75rem]` would steal space and the
+  // wrapper would collapse, making the half-circle render as an almost-flat
+  // sliver. `sm`/`md` inline their `max-w-` so the larger summary gauges
+  // still stretch to fill their column.
   const sizing =
     size === "xs"
       ? {
           wrapperW: "w-14 shrink-0",
-          maxW: "max-w-[56px]",
           strokeWidth: 6,
           labelText: "text-[10px]",
           countText: "text-[8px]",
@@ -102,16 +104,14 @@ export function SignalSpeedometer({
         }
       : size === "sm"
       ? {
-          wrapperW: "w-full",
-          maxW: "max-w-[120px]",
+          wrapperW: "w-full max-w-[120px]",
           strokeWidth: 8,
           labelText: "text-xs",
           countText: "text-[9px]",
           labelMt: "mt-0.5",
         }
       : {
-          wrapperW: "w-full",
-          maxW: "max-w-[180px]",
+          wrapperW: "w-full max-w-[180px]",
           strokeWidth: 10,
           labelText: "text-2xl",
           countText: "text-[10px]",
@@ -126,7 +126,8 @@ export function SignalSpeedometer({
     >
       <svg
         viewBox="0 0 100 60"
-        className={cn("block w-full", sizing.maxW)}
+        preserveAspectRatio="xMidYMid meet"
+        className="block w-full h-auto"
         role="img"
         aria-label={centerLabel}
       >
