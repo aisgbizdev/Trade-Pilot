@@ -348,8 +348,8 @@ export default function AnalyzePage() {
               placeholder={t.analyze.notes_placeholder}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className="resize-none"
+              rows={6}
+              className="resize-y text-sm leading-relaxed min-h-[140px]"
               data-testid="textarea-notes"
             />
             <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed">
