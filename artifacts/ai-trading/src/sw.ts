@@ -62,17 +62,32 @@ self.addEventListener("notificationclick", (event: NotificationEvent) => {
   event.notification.close();
   const notifUrl: string =
     (event.notification.data as { url?: string })?.url ?? import.meta.env.BASE_URL;
+  // Resolve the click destination against the SW scope so per-callsite
+  // `url: "/notifications"` opens at the right artifact base path
+  // (e.g. /artifacts/ai-trading/notifications).
+  const targetUrl = new URL(notifUrl, self.registration.scope).href;
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientList) => {
+      .then(async (clientList) => {
+        // Prefer an already-open app window: navigate it to the target URL
+        // and focus it, so retention warnings land on /notifications even
+        // when the user already has the dashboard open.
         for (const client of clientList) {
-          if ("focus" in client) {
-            void (client as WindowClient).focus();
+          const win = client as WindowClient;
+          if ("focus" in win) {
+            try {
+              if ("navigate" in win && win.url !== targetUrl) {
+                await win.navigate(targetUrl);
+              }
+            } catch {
+              // Cross-origin navigates throw; just focus the existing window.
+            }
+            await win.focus();
             return;
           }
         }
-        return self.clients.openWindow(notifUrl);
+        await self.clients.openWindow(targetUrl);
       })
   );
 });
