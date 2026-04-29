@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { BrandLogo } from "@/components/brand-logo";
+import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 
 const STORAGE_KEY = "tp_splash_shown_at";
 const REPEAT_AFTER_MS = 30 * 60 * 1000;
@@ -141,31 +142,33 @@ export function SplashScreen() {
           lineHeight: 1.5,
         }}
       >
-        <div>
-          {t.brand.sponsored_by}{" "}
-          <a
-            href="https://www.sg-berjangka.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="link-splash-sponsor"
-            onClick={() => trackOutbound("splash", "sg-berjangka")}
-            style={{
-              color: "#f5c518",
-              fontWeight: 700,
-              textDecoration: "none",
-              pointerEvents: "auto",
-            }}
-          >
-            SOLID PRIME
-          </a>
-        </div>
+        {SHOW_SPONSOR && (
+          <div>
+            {t.brand.sponsored_by}{" "}
+            <a
+              href="https://www.sg-berjangka.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-splash-sponsor"
+              onClick={() => trackOutbound("splash", "sg-berjangka")}
+              style={{
+                color: "#f5c518",
+                fontWeight: 700,
+                textDecoration: "none",
+                pointerEvents: "auto",
+              }}
+            >
+              SOLID PRIME
+            </a>
+          </div>
+        )}
         <div
           style={{
             fontSize: Math.max(dims.footer - 2, 9),
             opacity: 0.6,
             textTransform: "none",
             letterSpacing: "0.02em",
-            marginTop: 4,
+            marginTop: SHOW_SPONSOR ? 4 : 0,
           }}
         >
           {t.brand.news_data_via}

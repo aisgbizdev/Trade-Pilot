@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
+import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { LanguageToggle } from "./language-toggle";
 import { ContinuousTicker } from "./continuous-ticker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -246,19 +247,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {t.legal.terms_link}
             </Link>
           </div>
-          <p className="text-[10px] text-muted-foreground/70">
-            {t.brand.sponsored_by}{" "}
-            <a
-              href="https://www.sg-berjangka.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
-              data-testid="link-layout-footer-sponsor"
-              onClick={() => trackOutbound("layout-footer", "sg-berjangka")}
-            >
-              SOLID PRIME
-            </a>
-          </p>
+          {SHOW_SPONSOR && (
+            <p className="text-[10px] text-muted-foreground/70">
+              {t.brand.sponsored_by}{" "}
+              <a
+                href="https://www.sg-berjangka.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
+                data-testid="link-layout-footer-sponsor"
+                onClick={() => trackOutbound("layout-footer", "sg-berjangka")}
+              >
+                SOLID PRIME
+              </a>
+            </p>
+          )}
           <p className="text-[9px] text-muted-foreground/50">
             {t.brand.news_data_via}
           </p>

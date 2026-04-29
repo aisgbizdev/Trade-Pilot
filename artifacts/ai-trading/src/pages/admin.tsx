@@ -54,6 +54,7 @@ import { useLocation, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
+import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { useQueryClient } from "@tanstack/react-query";
 
 const MARKET_CONDITION_COLORS: Record<string, string> = {
@@ -711,7 +712,7 @@ function AdminContent() {
               </Card>
             )}
 
-            <SponsorClicksPanel />
+            {SHOW_SPONSOR && <SponsorClicksPanel />}
           </>
         )}
 

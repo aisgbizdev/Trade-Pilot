@@ -22,6 +22,7 @@ import { id as idLocale, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
+import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 
 function isValid(validUntil: string | Date) {
   return new Date(validUntil) > new Date();
@@ -117,7 +118,7 @@ export default function DashboardPage() {
 
         <EnablePushCard />
 
-        {!liveBannerDismissed && (
+        {SHOW_SPONSOR && !liveBannerDismissed && (
           <div className="relative" data-testid="card-live-analisa">
             <a
               href="https://www.tiktok.com/@solid.prime"

@@ -20,6 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
+import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -398,38 +399,40 @@ export default function ProfilePage() {
           </Card>
         )}
 
-        <Card
-          className="p-4 border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10"
-          data-testid="card-solid-prime-cta"
-        >
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t.brand.sponsored_by}
-            </span>
-            <span className="text-sm font-extrabold tracking-wide text-amber-500 dark:text-amber-300">
-              SOLID PRIME
-            </span>
-          </div>
-          <p className="text-[10px] text-muted-foreground/80 mb-2 leading-snug">
-            {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
-          </p>
-          <p className="text-xs text-foreground/85 leading-relaxed mb-3">
-            {t.brand.open_account_subtitle}
-          </p>
-          <Button asChild className="w-full btn-premium font-semibold">
-            <a
-              href="https://www.sg-berjangka.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-profile-open-solid-prime-account"
-              className="flex items-center justify-center gap-2"
-              onClick={() => trackOutbound("profile-cta", "sg-berjangka")}
-            >
-              {t.brand.open_account_cta}
-              <ArrowUpRight className="w-4 h-4" />
-            </a>
-          </Button>
-        </Card>
+        {SHOW_SPONSOR && (
+          <Card
+            className="p-4 border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10"
+            data-testid="card-solid-prime-cta"
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t.brand.sponsored_by}
+              </span>
+              <span className="text-sm font-extrabold tracking-wide text-amber-500 dark:text-amber-300">
+                SOLID PRIME
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground/80 mb-2 leading-snug">
+              {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
+            </p>
+            <p className="text-xs text-foreground/85 leading-relaxed mb-3">
+              {t.brand.open_account_subtitle}
+            </p>
+            <Button asChild className="w-full btn-premium font-semibold">
+              <a
+                href="https://www.sg-berjangka.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="link-profile-open-solid-prime-account"
+                className="flex items-center justify-center gap-2"
+                onClick={() => trackOutbound("profile-cta", "sg-berjangka")}
+              >
+                {t.brand.open_account_cta}
+                <ArrowUpRight className="w-4 h-4" />
+              </a>
+            </Button>
+          </Card>
+        )}
 
         <Button
           variant="destructive"

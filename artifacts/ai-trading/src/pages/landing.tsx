@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
+import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ContinuousTicker } from "@/components/continuous-ticker";
 
@@ -71,17 +72,19 @@ export default function LandingPage() {
                 <span className="gradient-text">Trade</span>
                 <span className="text-foreground"> Pilot</span>
               </span>
-              <a
-                href="https://www.sg-berjangka.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
-                data-testid="link-header-sponsor"
-                onClick={() => trackOutbound("landing-header", "sg-berjangka")}
-              >
-                <span className="text-[8px] text-muted-foreground/70 leading-none lowercase">{t.brand.sponsored_by}</span>
-                <span className="text-[9px] font-bold leading-none text-amber-400 tracking-wide">SOLID PRIME</span>
-              </a>
+              {SHOW_SPONSOR && (
+                <a
+                  href="https://www.sg-berjangka.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
+                  data-testid="link-header-sponsor"
+                  onClick={() => trackOutbound("landing-header", "sg-berjangka")}
+                >
+                  <span className="text-[8px] text-muted-foreground/70 leading-none lowercase">{t.brand.sponsored_by}</span>
+                  <span className="text-[9px] font-bold leading-none text-amber-400 tracking-wide">SOLID PRIME</span>
+                </a>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -321,36 +324,40 @@ export default function LandingPage() {
 
         {/* SOLID PRIME SPONSOR CTA — separates the AI tool (free) from
             the regulated broker product (real-money). Never bundled with
-            the "Try Trade Pilot" CTAs above so it's clear they're distinct. */}
-        <section className="px-4 pb-8" data-testid="section-solid-prime-cta">
-          <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t.brand.sponsored_by}
-              </span>
-              <span className="text-base font-extrabold tracking-wide text-amber-400">
-                SOLID PRIME
-              </span>
+            the "Try Trade Pilot" CTAs above so it's clear they're distinct.
+            Hidden via SHOW_SPONSOR until the legal sponsorship agreement
+            is finalized; intentionally kept in the codebase for fast revival. */}
+        {SHOW_SPONSOR && (
+          <section className="px-4 pb-8" data-testid="section-solid-prime-cta">
+            <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t.brand.sponsored_by}
+                </span>
+                <span className="text-base font-extrabold tracking-wide text-amber-400">
+                  SOLID PRIME
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground/80 mb-3 leading-snug">
+                {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
+              </p>
+              <p className="text-xs text-foreground/85 leading-relaxed mb-4">
+                {t.brand.open_account_subtitle}
+              </p>
+              <a
+                href="https://www.sg-berjangka.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="link-open-solid-prime-account"
+                className="w-full h-11 rounded-xl font-semibold btn-premium hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                onClick={() => trackOutbound("landing-cta", "sg-berjangka")}
+              >
+                {t.brand.open_account_cta}
+                <ArrowUpRight className="w-4 h-4" />
+              </a>
             </div>
-            <p className="text-[10px] text-muted-foreground/80 mb-3 leading-snug">
-              {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
-            </p>
-            <p className="text-xs text-foreground/85 leading-relaxed mb-4">
-              {t.brand.open_account_subtitle}
-            </p>
-            <a
-              href="https://www.sg-berjangka.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-open-solid-prime-account"
-              className="w-full h-11 rounded-xl font-semibold btn-premium hover:opacity-90 transition-all flex items-center justify-center gap-2"
-              onClick={() => trackOutbound("landing-cta", "sg-berjangka")}
-            >
-              {t.brand.open_account_cta}
-              <ArrowUpRight className="w-4 h-4" />
-            </a>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* BOTTOM CTA */}
         <section className="px-4 pb-8">
@@ -405,19 +412,21 @@ export default function LandingPage() {
             {t.legal.terms_link}
           </Link>
         </div>
-        <p className="text-[10px] text-muted-foreground/70">
-          {t.brand.sponsored_by}{" "}
-          <a
-            href="https://www.sg-berjangka.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
-            data-testid="link-landing-footer-sponsor"
-            onClick={() => trackOutbound("landing-footer", "sg-berjangka")}
-          >
-            SOLID PRIME
-          </a>
-        </p>
+        {SHOW_SPONSOR && (
+          <p className="text-[10px] text-muted-foreground/70">
+            {t.brand.sponsored_by}{" "}
+            <a
+              href="https://www.sg-berjangka.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
+              data-testid="link-landing-footer-sponsor"
+              onClick={() => trackOutbound("landing-footer", "sg-berjangka")}
+            >
+              SOLID PRIME
+            </a>
+          </p>
+        )}
         <p className="text-[9px] text-muted-foreground/50">
           {t.brand.news_data_via}
         </p>

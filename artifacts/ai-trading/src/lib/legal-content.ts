@@ -1,4 +1,5 @@
 import type { Language } from "@/lib/i18n";
+import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 
 export interface LegalSection {
   heading: string;
@@ -216,7 +217,11 @@ const TERMS_EN: LegalDocument = {
       heading: "6. Trading Risk Disclosure",
       paragraphs: [
         "Trading in financial markets carries substantial risk and may result in the loss of all or part of your capital. Past performance is not indicative of future results. You are solely responsible for your trading decisions and outcomes. We are not a broker, dealer, investment adviser, or fiduciary, and we do not execute trades on your behalf.",
-        'Sponsorship disclosure. Trade Pilot is co-branded with SOLID PRIME, a mini-account product of PT Solid Gold Berjangka, a futures broker regulated by BAPPEBTI and a member of JFX & ICH. SOLID PRIME may be presented as a sponsor or referenced in calls-to-action within the Service. The sponsorship does not influence the editorial independence of our analyses, indicators, or any AI-generated content, and it is not a recommendation to open an account or trade with that broker. Any account-opening, deposits, withdrawals, and trade execution are handled exclusively by PT Solid Gold Berjangka under its own terms and risk disclosures; Trade Pilot is not a party to that relationship.',
+        ...(SHOW_SPONSOR
+          ? [
+              'Sponsorship disclosure. Trade Pilot is co-branded with SOLID PRIME, a mini-account product of PT Solid Gold Berjangka, a futures broker regulated by BAPPEBTI and a member of JFX & ICH. SOLID PRIME may be presented as a sponsor or referenced in calls-to-action within the Service. The sponsorship does not influence the editorial independence of our analyses, indicators, or any AI-generated content, and it is not a recommendation to open an account or trade with that broker. Any account-opening, deposits, withdrawals, and trade execution are handled exclusively by PT Solid Gold Berjangka under its own terms and risk disclosures; Trade Pilot is not a party to that relationship.',
+            ]
+          : []),
       ],
     },
     {
@@ -330,7 +335,11 @@ const TERMS_ID: LegalDocument = {
       heading: "6. Pengungkapan Risiko Trading",
       paragraphs: [
         "Trading di pasar keuangan memiliki risiko yang besar dan dapat mengakibatkan hilangnya seluruh atau sebagian modal Anda. Kinerja masa lalu bukan indikator hasil di masa depan. Anda sepenuhnya bertanggung jawab atas keputusan dan hasil trading Anda. Kami bukan broker, dealer, penasihat investasi, atau fidusia, dan kami tidak melakukan eksekusi trading atas nama Anda.",
-        "Pengungkapan sponsorship. Trade Pilot tampil bersama (co-brand) dengan SOLID PRIME, yaitu produk mini akun dari PT Solid Gold Berjangka, pialang berjangka yang diawasi BAPPEBTI dan terdaftar sebagai anggota JFX & ICH. SOLID PRIME dapat ditampilkan sebagai sponsor atau dirujuk dalam ajakan bertindak (call-to-action) di dalam Layanan. Sponsorship ini tidak memengaruhi independensi editorial atas analisis, indikator, maupun konten yang dihasilkan AI, dan bukan merupakan rekomendasi untuk membuka akun atau bertransaksi melalui pialang tersebut. Pembukaan akun, setoran, penarikan, dan eksekusi transaksi sepenuhnya ditangani oleh PT Solid Gold Berjangka berdasarkan syarat dan pengungkapan risikonya sendiri; Trade Pilot bukan pihak dalam hubungan tersebut.",
+        ...(SHOW_SPONSOR
+          ? [
+              "Pengungkapan sponsorship. Trade Pilot tampil bersama (co-brand) dengan SOLID PRIME, yaitu produk mini akun dari PT Solid Gold Berjangka, pialang berjangka yang diawasi BAPPEBTI dan terdaftar sebagai anggota JFX & ICH. SOLID PRIME dapat ditampilkan sebagai sponsor atau dirujuk dalam ajakan bertindak (call-to-action) di dalam Layanan. Sponsorship ini tidak memengaruhi independensi editorial atas analisis, indikator, maupun konten yang dihasilkan AI, dan bukan merupakan rekomendasi untuk membuka akun atau bertransaksi melalui pialang tersebut. Pembukaan akun, setoran, penarikan, dan eksekusi transaksi sepenuhnya ditangani oleh PT Solid Gold Berjangka berdasarkan syarat dan pengungkapan risikonya sendiri; Trade Pilot bukan pihak dalam hubungan tersebut.",
+            ]
+          : []),
       ],
     },
     {
