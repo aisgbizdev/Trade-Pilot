@@ -315,7 +315,7 @@ async function sendRetentionWarnings(): Promise<void> {
         {
           title: "Riwayat Analisis Akan Dihapus 🗑️",
           body: `Analisis ${a.instrument} kamu akan dihapus dalam ${daysLeft} hari.`,
-          url: "/",
+          url: "/notifications",
           tag: `retention-${a.id}`,
         },
       );
