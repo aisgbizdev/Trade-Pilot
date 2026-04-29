@@ -226,11 +226,6 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
           </p>
         </div>
       </div>
-      {/* Same speedometer the Technical Indicators panel uses, fed from the
-          synthetic counts for this bias preset so the needle lands in the
-          centre of the matching zone (bearish_strong → far left, etc.).
-          Header above already shows the descriptive label, so the gauge
-          itself hides its center label and counts. */}
       <SignalSpeedometer
         buy={counts.buy}
         sell={counts.sell}

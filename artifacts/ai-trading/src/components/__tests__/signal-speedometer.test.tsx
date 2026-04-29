@@ -1,13 +1,3 @@
-/**
- * Component test for `<SignalSpeedometer>` — the half-circle gauge that
- * replaces the old horizontal "garis" bar in the Technical Indicators
- * panel and the 5-segment bar in the Analysis Detail bias card.
- *
- * Asserts the needle angle (read off the `data-angle` attribute set by
- * the SVG) lands in the correct zone for bullish, bearish, neutral, and
- * empty inputs, and that the optional counts row + center label can be
- * toggled off for the bias use-case.
- */
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -150,13 +140,6 @@ describe("<SignalSpeedometer>", () => {
   });
 
   it("renders unique gradient ids when multiple speedometers share a page", () => {
-    // Regression guard: the Technical Indicators panel renders three gauges
-    // (overall / oscillator / MA) and the Analysis Detail page adds a
-    // fourth (bias). If two SVGs reused the same `<linearGradient>` id the
-    // browser would resolve `url(#…)` to whichever element it found first
-    // and silently restyle the other gauges. The component derives its
-    // ids from React's `useId()` so each instance must end up with its
-    // own.
     render(
       <Wrapper>
         <div>

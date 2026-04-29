@@ -3,27 +3,22 @@ import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
-import {
-  MarketContextSummary,
-  type MarketContextLean,
-} from "./market-context-summary";
+import { MarketContextSummary } from "./market-context-summary";
 import { SignalSpeedometer } from "./signal-speedometer";
 
 type RawSignal = "Buy" | "Sell" | "Neutral";
 
-function leanFromSignal(signal: RawSignal): MarketContextLean {
-  if (signal === "Buy") return "bullish";
-  if (signal === "Sell") return "bearish";
-  return "neutral";
+/** Map a single Buy/Sell/Neutral signal into the speedometer's count tally. */
+function signalToCounts(signal: RawSignal): { buy: number; sell: number; neutral: number } {
+  if (signal === "Buy") return { buy: 1, sell: 0, neutral: 0 };
+  if (signal === "Sell") return { buy: 0, sell: 1, neutral: 0 };
+  return { buy: 0, sell: 0, neutral: 1 };
 }
 
-function SignalBadge({ signal, mode }: { signal: RawSignal; mode: "beginner" | "pro" }) {
+/** Per-row signal: a tiny gauge + (in pro mode) the raw Buy/Sell/Neutral label. */
+function SignalCell({ signal, mode, testId }: { signal: RawSignal; mode: "beginner" | "pro"; testId?: string }) {
   const { t } = useTranslation();
-  const lean = leanFromSignal(signal);
-  const descriptiveLabel =
-    lean === "bullish" ? t.analyze.leaning_bullish :
-    lean === "bearish" ? t.analyze.leaning_bearish :
-    t.analyze.leaning_neutral;
+  const counts = signalToCounts(signal);
   const rawLabel =
     signal === "Buy" ? t.analyze.signal_buy :
     signal === "Sell" ? t.analyze.signal_sell :
@@ -31,14 +26,15 @@ function SignalBadge({ signal, mode }: { signal: RawSignal; mode: "beginner" | "
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className={cn(
-        "text-[10px] font-bold px-1.5 py-0.5 rounded-md",
-        lean === "bullish" ? "bg-emerald-500/15 text-emerald-500" :
-        lean === "bearish" ? "bg-red-500/15 text-red-500" :
-        "bg-muted text-muted-foreground"
-      )}>
-        {descriptiveLabel}
-      </span>
+      <SignalSpeedometer
+        buy={counts.buy}
+        sell={counts.sell}
+        neutral={counts.neutral}
+        size="xs"
+        showCounts={false}
+        showCenterLabel={false}
+        testId={testId}
+      />
       {mode === "pro" && (
         <span className="text-[9px] text-muted-foreground uppercase tracking-wide tabular-nums">
           ({rawLabel})
@@ -205,7 +201,7 @@ export function TechnicalIndicatorsPanel({
             <span className="text-xs text-muted-foreground">{row.name}</span>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-foreground">{row.value}</span>
-              <SignalBadge signal={row.signal as RawSignal} mode={mode} />
+              <SignalCell signal={row.signal as RawSignal} mode={mode} />
             </div>
           </div>
         ))}
@@ -218,7 +214,7 @@ export function TechnicalIndicatorsPanel({
             <span className="text-xs text-muted-foreground">{ma.type} ({ma.period})</span>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-foreground">{Number(ma.value).toFixed(ma.value > 100 ? 2 : 4)}</span>
-              <SignalBadge signal={ma.signal} mode={mode} />
+              <SignalCell signal={ma.signal} mode={mode} />
             </div>
           </div>
         ))}
