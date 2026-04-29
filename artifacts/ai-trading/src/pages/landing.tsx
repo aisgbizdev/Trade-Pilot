@@ -53,7 +53,7 @@ export default function LandingPage() {
   const stats = [
     { value: "AI", label: t.landing.stats_model },
     { value: "10+", label: t.landing.stats_instruments },
-    { value: "7", label: t.landing.stats_timeframes },
+    { value: "8", label: t.landing.stats_timeframes },
     { value: "EN/ID", label: t.landing.stats_lang },
   ];
 
