@@ -1,13 +1,14 @@
 /**
  * Master toggle for SOLID PRIME / PT Solid Gold Berjangka sponsorship UI.
  *
- * The legal sponsorship agreement is not finalized yet, so all sponsor-
+ * The legal sponsorship agreement has been signed, so all sponsor-
  * branded surfaces (splash footer, landing CTA, dashboard live banner,
  * profile demo-account card, footer attribution, legal disclosure
- * paragraphs, etc.) are hidden.
+ * paragraphs, etc.) are visible.
  *
- * Flip this back to `true` once the legal paperwork is signed — the
- * UI itself is intentionally left in the codebase, just gated, so no
- * re-implementation is needed when sponsorship goes live.
+ * Set this back to `false` to hide every sponsor surface in one place
+ * if the agreement is ever paused or terminated — the UI is left in
+ * the codebase and gated on this flag, so no re-implementation is
+ * needed to toggle visibility.
  */
-export const SHOW_SPONSOR = false;
+export const SHOW_SPONSOR = true;
