@@ -36,8 +36,8 @@ function SignalCell({ signal, mode, testId }: { signal: RawSignal; mode: "beginn
         testId={testId}
       />
       {mode === "pro" && (
-        <span className="text-[9px] text-muted-foreground uppercase tracking-wide tabular-nums">
-          ({rawLabel})
+        <span className="text-[10px] font-medium leading-none text-muted-foreground/70 min-w-[2.75rem] text-left tabular-nums">
+          {rawLabel}
         </span>
       )}
     </div>
