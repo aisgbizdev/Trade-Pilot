@@ -85,6 +85,15 @@ function pageHandlers(opts: {
       }
       return null;
     },
+    // Calendar preview kicks in once an instrument is selected on the
+    // Analyze page. Default to an empty list so the component renders its
+    // empty-state without making network noise in tests.
+    (url) => {
+      if (url.includes("/api/calendar/relevant")) {
+        return jsonResponse({ status: "success", instrument: "", events: [] });
+      }
+      return null;
+    },
     (url, init) => {
       // POST /api/analyses (createAnalysis)
       const method = (init?.method ?? "GET").toUpperCase();

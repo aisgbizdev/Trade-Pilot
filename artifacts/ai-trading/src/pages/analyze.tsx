@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQuer
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
+import { useRelevantCalendar } from "@/hooks/use-relevant-calendar";
+import type { CalendarEvent } from "@/hooks/use-calendar";
 import { useTranslation } from "@/lib/i18n";
 
 function formatPrice(price: number, instrument: string): string {
@@ -23,6 +25,83 @@ function formatPrice(price: number, instrument: string): string {
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
 const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"] as const;
+
+const IMPACT_STYLES: Record<string, string> = {
+  "★★★": "text-red-500 bg-red-500/15",
+  "★★":  "text-amber-500 bg-amber-500/15",
+  "★":   "text-muted-foreground bg-muted",
+};
+
+const CURRENCY_FLAGS: Record<string, string> = {
+  USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵", AUD: "🇦🇺",
+  CAD: "🇨🇦", CHF: "🇨🇭", CNY: "🇨🇳", CHN: "🇨🇳", NZD: "🇳🇿",
+  IDR: "🇮🇩", HKD: "🇭🇰", GOLD: "🥇", OIL: "🛢️", OPEC: "🛢️",
+};
+
+function RelevantCalendarPreview({ instrument }: { instrument: string }) {
+  const { t, lang } = useTranslation();
+  const { data, isLoading, isError } = useRelevantCalendar(instrument);
+  const events = (data?.events ?? []).filter((e) => !e.actual).slice(0, 5);
+  const locale = lang === "id" ? "id-ID" : "en-US";
+
+  return (
+    <Card className="p-3 space-y-2 border-amber-500/30 bg-amber-500/[0.03]" data-testid="card-relevant-calendar">
+      <div className="flex items-center gap-1.5">
+        <CalendarClock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+        <h3 className="text-xs font-bold text-foreground">
+          {t.analyze.calendar_preview_title.replace("{instrument}", instrument)}
+        </h3>
+      </div>
+      {isLoading ? (
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground py-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>{t.widgets.loading_calendar}</span>
+        </div>
+      ) : isError ? (
+        <p className="text-[11px] text-muted-foreground py-1">{t.widgets.calendar_error}</p>
+      ) : events.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground py-1" data-testid="text-calendar-empty">
+          {t.analyze.calendar_preview_empty}
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {events.map((evt: CalendarEvent, i: number) => {
+            const dateLabel = new Date(evt.date + "T00:00:00").toLocaleDateString(locale, {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            });
+            const timeLabel = evt.time?.split(" ")[1] ?? "";
+            const impactStyle = IMPACT_STYLES[evt.impact] ?? "bg-muted text-muted-foreground";
+            return (
+              <li key={i} className="flex items-start gap-1.5 text-[11px] leading-snug" data-testid={`calendar-event-${i}`}>
+                <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded shrink-0 mt-0.5", impactStyle)}>
+                  {evt.impact}
+                </span>
+                <span className="text-sm leading-none mt-0.5" aria-hidden="true">
+                  {CURRENCY_FLAGS[evt.currency] ?? "🌐"}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="text-foreground font-medium">{evt.event}</span>
+                  {evt.forecast && (
+                    <span className="text-muted-foreground"> · {t.widgets.calendar_forecast}: <span className="text-foreground">{evt.forecast}</span></span>
+                  )}
+                </span>
+                <span className="text-[10px] text-muted-foreground font-mono shrink-0 mt-0.5 whitespace-nowrap">
+                  {dateLabel} {timeLabel}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="text-[10px] text-muted-foreground italic flex items-start gap-1 leading-relaxed pt-1 border-t border-border/40">
+        <span aria-hidden="true">ℹ</span>
+        {t.analyze.calendar_preview_note}
+      </p>
+    </Card>
+  );
+}
 
 function LivePriceChip({ instrument }: { instrument: string }) {
   const { t } = useTranslation();
@@ -260,10 +339,11 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">{t.analyze.notes_label}</h2>
             </div>
+            {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
             <Textarea
               placeholder={t.analyze.notes_placeholder}
               value={notes}
