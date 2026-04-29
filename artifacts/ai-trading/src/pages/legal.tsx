@@ -4,6 +4,7 @@ import { useTranslation } from "@/lib/i18n";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageToggle } from "@/components/language-toggle";
 import { getLegalDocument, type LegalKind } from "@/lib/legal-content";
+import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 
 interface LegalPageProps {
   kind: LegalKind;
@@ -109,18 +110,20 @@ export default function LegalPage({ kind }: LegalPageProps) {
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           {t.landing.footer}
         </p>
-        <p className="text-[10px] text-muted-foreground/70">
-          {t.landing.powered_by_prefix}{" "}
-          <a
-            href="https://newsmaker.id"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-            data-testid="link-footer-powered-by"
-          >
-            {t.landing.powered_by_brand}
-          </a>
-        </p>
+        {SHOW_NEWSMAKER && (
+          <p className="text-[10px] text-muted-foreground/70">
+            {t.landing.powered_by_prefix}{" "}
+            <a
+              href="https://newsmaker.id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+              data-testid="link-footer-powered-by"
+            >
+              {t.landing.powered_by_brand}
+            </a>
+          </p>
+        )}
       </footer>
     </div>
   );

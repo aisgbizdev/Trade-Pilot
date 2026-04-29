@@ -2,6 +2,7 @@ import { useNews } from "@/hooks/use-news";
 import { Loader2, Newspaper, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 
 // Category badge colors — kept inside the warm gold/amber family so news
 // tags don't compete visually with bullish/bearish signals on the page.
@@ -25,15 +26,17 @@ export function NewsWidget({ limit = 5 }: { limit?: number }) {
           <Newspaper className="w-3.5 h-3.5 text-amber-300" />
         </div>
         <h3 className="text-sm font-bold text-foreground">{t.widgets.news_title}</h3>
-        <a
-          href="https://newsmaker.id"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-auto text-[10px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
-          data-testid="link-news-source-newsmaker"
-        >
-          {t.widgets.source_newsmaker}
-        </a>
+        {SHOW_NEWSMAKER && (
+          <a
+            href="https://newsmaker.id"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto text-[10px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+            data-testid="link-news-source-newsmaker"
+          >
+            {t.widgets.source_newsmaker}
+          </a>
+        )}
       </div>
 
       {isLoading ? (

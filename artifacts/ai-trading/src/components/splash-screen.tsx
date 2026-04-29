@@ -3,6 +3,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { BrandLogo } from "@/components/brand-logo";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
+import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 
 const STORAGE_KEY = "tp_splash_shown_at";
 const REPEAT_AFTER_MS = 30 * 60 * 1000;
@@ -162,17 +163,19 @@ export function SplashScreen() {
             </a>
           </div>
         )}
-        <div
-          style={{
-            fontSize: Math.max(dims.footer - 2, 9),
-            opacity: 0.6,
-            textTransform: "none",
-            letterSpacing: "0.02em",
-            marginTop: SHOW_SPONSOR ? 4 : 0,
-          }}
-        >
-          {t.brand.news_data_via}
-        </div>
+        {SHOW_NEWSMAKER && (
+          <div
+            style={{
+              fontSize: Math.max(dims.footer - 2, 9),
+              opacity: 0.6,
+              textTransform: "none",
+              letterSpacing: "0.02em",
+              marginTop: SHOW_SPONSOR ? 4 : 0,
+            }}
+          >
+            {t.brand.news_data_via}
+          </div>
+        )}
       </div>
     </div>
   );

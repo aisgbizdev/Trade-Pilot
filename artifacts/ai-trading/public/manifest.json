@@ -1,7 +1,7 @@
 {
   "name": "Trade Pilot",
   "short_name": "TradePilot",
-  "description": "AI-powered trading decision support by Newsmaker.id",
+  "description": "AI-powered trading decision support",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b1220",

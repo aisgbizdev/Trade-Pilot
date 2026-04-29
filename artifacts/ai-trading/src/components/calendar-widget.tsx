@@ -3,6 +3,7 @@ import { Loader2, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useTranslation } from "@/lib/i18n";
+import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 
 const IMPACT_CONFIG: Record<string, { label: string; color: string }> = {
   "★★★": { label: "★★★", color: "text-red-500 bg-red-500/15" },
@@ -114,15 +115,17 @@ export function CalendarWidget({ filterCurrency, limit = 10 }: { filterCurrency?
           <Calendar className="w-3.5 h-3.5 text-amber-500" />
         </div>
         <h3 className="text-sm font-bold text-foreground">{t.widgets.calendar_title}</h3>
-        <a
-          href="https://newsmaker.id"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-auto text-[10px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
-          data-testid="link-calendar-source-newsmaker"
-        >
-          {t.widgets.source_newsmaker}
-        </a>
+        {SHOW_NEWSMAKER && (
+          <a
+            href="https://newsmaker.id"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto text-[10px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+            data-testid="link-calendar-source-newsmaker"
+          >
+            {t.widgets.source_newsmaker}
+          </a>
+        )}
       </div>
 
       {isLoading ? (

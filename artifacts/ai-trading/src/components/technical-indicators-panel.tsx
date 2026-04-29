@@ -2,6 +2,7 @@ import { useTechnicalIndicators, type IndicatorTimeframe } from "@/hooks/use-tec
 import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import {
   MarketContextSummary,
   leanFromCounts,
@@ -151,15 +152,17 @@ export function TechnicalIndicatorsPanel({
           <span className="text-[10px] text-muted-foreground">
             {dataLabel} · {ind.dataPoints} {t.analyze.candles}
           </span>
-          <a
-            href="https://newsmaker.id"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
-            data-testid="link-indicators-source-newsmaker"
-          >
-            {t.widgets.source_newsmaker}
-          </a>
+          {SHOW_NEWSMAKER && (
+            <a
+              href="https://newsmaker.id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+              data-testid="link-indicators-source-newsmaker"
+            >
+              {t.widgets.source_newsmaker}
+            </a>
+          )}
         </div>
       </div>
 

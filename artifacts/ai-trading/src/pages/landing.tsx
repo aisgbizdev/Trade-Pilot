@@ -18,6 +18,7 @@ import {
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
+import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ContinuousTicker } from "@/components/continuous-ticker";
 
@@ -427,9 +428,11 @@ export default function LandingPage() {
             </a>
           </p>
         )}
-        <p className="text-[9px] text-muted-foreground/50">
-          {t.brand.news_data_via}
-        </p>
+        {SHOW_NEWSMAKER && (
+          <p className="text-[9px] text-muted-foreground/50">
+            {t.brand.news_data_via}
+          </p>
+        )}
       </footer>
     </div>
   );

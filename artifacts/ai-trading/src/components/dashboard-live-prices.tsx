@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useLiveQuotes } from "@/hooks/use-live-quotes";
 import { useTranslation } from "@/lib/i18n";
+import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import {
   TradingViewMarketQuotes,
   type TradingViewSymbol,
@@ -47,7 +48,7 @@ function formatPrice(price: number, instrument: string): string {
   return price.toFixed(4);
 }
 
-function NewsmakerFallbackTicker() {
+function FallbackTicker() {
   const { t } = useTranslation();
   const { data, isLoading, isError, refetch, isFetching } = useLiveQuotes();
 
@@ -66,7 +67,9 @@ function NewsmakerFallbackTicker() {
           className="text-[10px] text-amber-600 dark:text-amber-400 font-medium"
           data-testid="fallback-source-label"
         >
-          {t.dashboard.live_price_fallback_label}
+          {SHOW_NEWSMAKER
+            ? t.dashboard.live_price_fallback_label
+            : t.dashboard.live_price_fallback_label_generic}
         </span>
         <div className="flex items-center gap-1.5">
           {data?.serverTime && (
@@ -257,7 +260,7 @@ export function DashboardLivePrices() {
       </div>
 
       {phase === "fallback" ? (
-        <NewsmakerFallbackTicker />
+        <FallbackTicker />
       ) : phase === "waiting-retry" ? (
         <div
           className="flex items-center justify-center rounded-xl border border-dashed border-border bg-card/40"

@@ -253,7 +253,7 @@ describe("DashboardLivePrices: TradingView blocked → retry → Newsmaker fallb
 
       expect(
         screen.getByTestId("fallback-source-label").textContent,
-      ).toMatch(/Newsmaker/i);
+      ).toMatch(/fallback|cadangan|backup|newsmaker/i);
 
       await waitFor(
         () => {
