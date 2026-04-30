@@ -35,10 +35,18 @@ PORT = "8080"
 # we don't run through pnpm to make startup faster in production
 args = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 
-# NOTE: do NOT hardcode PORT here — Cloud Run / Autoscale injects $PORT
-# at runtime and the app must bind to whatever it is given.
+# NOTE: PORT="8080" matches Cloud Run's default container port and acts
+# as the explicit signal the autoscale deployer uses to figure out which
+# of the workspace's [[ports]] entries should be exposed publicly. Cloud
+# Run still injects $PORT at runtime (also 8080 by default) and the
+# api-server reads process.env.PORT, so this stays in sync. Removing
+# this caused April 30 deploys to fail with "no run command provided"
+# and "multiple ports forwarded" because the deployer fell back to the
+# wrong artifact (mockup-sandbox, which owns externalPort=80 in the
+# auto-generated [[ports]] block but has no production service).
 [services.production.run.env]
 NODE_ENV = "production"
+PORT = "8080"
 
 [services.production.health.startup]
 path = "/api/healthz"
