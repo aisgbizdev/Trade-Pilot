@@ -290,6 +290,101 @@ describe("AnalysisDetailPage: fundamental context card", () => {
   });
 });
 
+describe("AnalysisDetailPage: refresh fundamentals", () => {
+  it("POSTs to /refresh-fundamentals and renders the drift banner with the missing citation when the server reports drift", async () => {
+    const refreshedAt = new Date(NOW - 60_000).toISOString();
+    let refreshCalls = 0;
+    const refreshHandler: FetchHandler = (url, init) => {
+      const method = (init?.method ?? "GET").toUpperCase();
+      if (method !== "POST") return null;
+      if (
+        !new RegExp(
+          `/api/analyses/${ANALYSIS_ID}/refresh-fundamentals$`,
+        ).test(url)
+      ) {
+        return null;
+      }
+      refreshCalls += 1;
+      return jsonResponse({
+        fundamentalContext: {
+          newsItems: [
+            {
+              id: "newsmaker-fresh",
+              title: "Brand new headline",
+              summary: "Just hit the wire.",
+              source: "Newsmaker.id",
+              url: "https://newsmaker.id/fresh",
+              publishedAt: refreshedAt,
+            },
+          ],
+          calendarEvents: [],
+        },
+        refreshedAt,
+        drift: {
+          totalCitations: 2,
+          missingCitations: [
+            { kind: "news", label: "Old headline the AI cited" },
+          ],
+        },
+      });
+    };
+
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: {
+            newsItems: [
+              {
+                id: "newsmaker-old",
+                title: "Old headline the AI cited",
+                summary: "Stale.",
+                source: "Newsmaker.id",
+                url: "https://newsmaker.id/old",
+                publishedAt: new Date(NOW - 6 * 3_600_000).toISOString(),
+              },
+            ],
+            calendarEvents: [],
+          },
+        },
+      }),
+      feedbackHandler(),
+      refreshHandler,
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    // Find and click the refresh button on the fundamental card.
+    const refreshBtn = await screen.findByTestId("button-refresh-fundamentals");
+    await act(async () => {
+      fireEvent.click(refreshBtn);
+    });
+
+    // The mutation should fire exactly once and the drift banner should
+    // surface the server-returned drift label so the user can see which
+    // cited item is no longer in the window.
+    await waitFor(() => {
+      expect(refreshCalls).toBe(1);
+    });
+    const banner = await screen.findByTestId("fundamental-refresh-banner");
+    expect(banner).toBeInTheDocument();
+    const driftText = banner.querySelector(
+      "[data-testid='fundamental-refresh-drift-text']",
+    );
+    expect(driftText?.textContent).toMatch(/1.*2/);
+    const items = banner.querySelectorAll(
+      "[data-testid='fundamental-refresh-drift-item']",
+    );
+    expect(items.length).toBe(1);
+    expect(items[0].textContent).toMatch(/Old headline the AI cited/);
+  });
+});
+
 describe("AnalysisDetailPage: user actions", () => {
   it("POSTs to /api/analyses/:id/feedback with feedbackType=useful when the user picks useful + submits", async () => {
     const { calls } = installFetchMock([

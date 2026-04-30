@@ -456,6 +456,45 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /analyses/{id}/refresh-fundamentals:
+    post:
+      operationId: refreshFundamentals
+      tags: [analyses]
+      summary: Re-fetch news + economic calendar for an existing analysis (no AI re-run)
+      description: >
+        Re-fetches the news headlines and economic-calendar events for the
+        analysis's instrument WITHOUT re-running the AI. Persists the fresh
+        snapshot on the analyses row (the audit "Fundamental Context" card
+        renders from this) and returns a drift report listing which of the
+        AI's original `fundamentalCitations` no longer match anything in the
+        fresh window. Lets the user sanity-check whether the saved AI thesis
+        still rests on a valid fundamental base.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Refreshed fundamental snapshot + drift report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshFundamentalsResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Analysis not found or not owned by this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /analyses/{id}/feedback:
     post:
       operationId: submitFeedback
@@ -1582,6 +1621,52 @@ components:
       required:
         - newsItems
         - calendarEvents
+
+    FundamentalDriftCitation:
+      type: object
+      description: "A single original AI citation that no longer matches anything in the freshly-fetched news/calendar window."
+      properties:
+        kind:
+          type: string
+          enum: [news, calendar]
+        label:
+          type: string
+      required:
+        - kind
+        - label
+
+    FundamentalDrift:
+      type: object
+      description: "Summary of how many of the AI's original fundamental citations are no longer present in the freshly-fetched window."
+      properties:
+        totalCitations:
+          type: integer
+          description: "Total citations the AI emitted at analysis time (newsTitles + calendarEvents)."
+        missingCitations:
+          type: array
+          description: "Original citations that no longer match any item in the fresh snapshot."
+          items:
+            $ref: "#/components/schemas/FundamentalDriftCitation"
+      required:
+        - totalCitations
+        - missingCitations
+
+    RefreshFundamentalsResponse:
+      type: object
+      description: "Response from POST /analyses/{id}/refresh-fundamentals — the freshly-fetched fundamental snapshot plus a drift report against the AI's original citations."
+      properties:
+        fundamentalContext:
+          $ref: "#/components/schemas/FundamentalContext"
+        refreshedAt:
+          type: string
+          format: date-time
+          description: "Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the 'updated N minutes ago' banner."
+        drift:
+          $ref: "#/components/schemas/FundamentalDrift"
+      required:
+        - fundamentalContext
+        - refreshedAt
+        - drift
 
     Analysis:
       type: object

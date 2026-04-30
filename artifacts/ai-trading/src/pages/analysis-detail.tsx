@@ -47,6 +47,7 @@ import {
   useGetAnalysis,
   getGetAnalysisQueryKey,
   useSubmitFeedback,
+  useRefreshFundamentals,
   type Analysis,
   type Feedback,
   type TradePlan,
@@ -54,6 +55,7 @@ import {
   type FundamentalContext,
   type FundamentalNewsItem,
   type FundamentalCalendarEvent,
+  type FundamentalDrift,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -417,28 +419,72 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
 // Auditable view of the fundamental snapshot the AI was given.
 // Captured server-side at analysis time so the user sees the same
 // inputs the model used. Empty arrays render the empty-state.
+//
+// Also hosts the "Refresh fundamentals" button + drift banner. Refresh
+// re-fetches news + calendar without re-running the AI; the drift banner
+// shows how many of the AI's original citations are no longer present in
+// the fresh window.
 function FundamentalContextCard({
   ctx,
   t,
   instrument,
   lang,
+  onRefresh,
+  isRefreshing,
+  refreshState,
 }: {
   ctx: FundamentalContext;
   t: T;
   instrument: string;
   lang: string;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+  refreshState: { refreshedAt: string; drift: FundamentalDrift } | null;
 }) {
   const news = (ctx.newsItems ?? []).slice(0, 3);
   const events = (ctx.calendarEvents ?? []).slice(0, 5);
+
+  const refreshButton = (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      className="h-7 px-2 text-xs"
+      onClick={onRefresh}
+      disabled={isRefreshing}
+      data-testid="button-refresh-fundamentals"
+    >
+      {isRefreshing ? (
+        <span className="flex items-center gap-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          {t.analysis_detail.fundamental_refresh_loading}
+        </span>
+      ) : (
+        <span className="flex items-center gap-1">
+          <RefreshCw className="w-3 h-3" />
+          {t.analysis_detail.fundamental_refresh_btn}
+        </span>
+      )}
+    </Button>
+  );
+
+  const driftBanner = refreshState ? (
+    <FundamentalDriftBanner state={refreshState} t={t} lang={lang} />
+  ) : null;
+
   if (news.length === 0 && events.length === 0) {
     return (
       <Card className="p-4 space-y-2" data-testid="card-fundamental-context">
-        <div className="flex items-center gap-2">
-          <Newspaper className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-bold text-foreground">
-            {t.analysis_detail.fundamental_context_title}
-          </h3>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Newspaper className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-sm font-bold text-foreground">
+              {t.analysis_detail.fundamental_context_title}
+            </h3>
+          </div>
+          {refreshButton}
         </div>
+        {driftBanner}
         <p className="text-xs text-muted-foreground leading-relaxed">
           {t.analysis_detail.fundamental_empty.replace("{instrument}", instrument)}
         </p>
@@ -448,16 +494,21 @@ function FundamentalContextCard({
   return (
     <Card className="p-4 space-y-4" data-testid="card-fundamental-context">
       <div>
-        <div className="flex items-center gap-2">
-          <Newspaper className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-bold text-foreground">
-            {t.analysis_detail.fundamental_context_title}
-          </h3>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Newspaper className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold text-foreground">
+              {t.analysis_detail.fundamental_context_title}
+            </h3>
+          </div>
+          {refreshButton}
         </div>
         <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
           {t.analysis_detail.fundamental_context_subtitle}
         </p>
       </div>
+
+      {driftBanner}
 
       {news.length > 0 && (
         <div className="space-y-2" data-testid="fundamental-news-list">
@@ -487,6 +538,95 @@ function FundamentalContextCard({
         </div>
       )}
     </Card>
+  );
+}
+
+// Inline banner that surfaces the result of the most recent refresh:
+// either "all original citations still in window" or "N of M cited
+// {kind} no longer in window". Driven entirely off the server-returned
+// drift report so the UI text is grounded in actual data.
+function FundamentalDriftBanner({
+  state,
+  t,
+  lang,
+}: {
+  state: { refreshedAt: string; drift: FundamentalDrift };
+  t: T;
+  lang: string;
+}) {
+  let when = "";
+  try {
+    const d = new Date(state.refreshedAt);
+    if (!Number.isNaN(d.getTime())) {
+      when = formatDistanceToNow(d, {
+        addSuffix: true,
+        locale: lang === "id" ? idLocale : undefined,
+      });
+    }
+  } catch {
+    when = "";
+  }
+  const total = state.drift.totalCitations;
+  const missing = state.drift.missingCitations;
+  // Nothing was cited originally — just confirm the refresh ran.
+  if (total === 0) {
+    return (
+      <div
+        className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+        role="status"
+        data-testid="fundamental-refresh-banner"
+      >
+        {t.analysis_detail.fundamental_refresh_updated.replace("{when}", when)}
+      </div>
+    );
+  }
+  if (missing.length === 0) {
+    return (
+      <div
+        className="rounded-md border border-green-300/60 bg-green-50 px-3 py-2 text-xs text-green-800 dark:border-green-800/50 dark:bg-green-950/40 dark:text-green-300"
+        role="status"
+        data-testid="fundamental-refresh-banner"
+      >
+        {t.analysis_detail.fundamental_refresh_no_drift
+          .replace("{when}", when)
+          .replace("{total}", String(total))}
+      </div>
+    );
+  }
+  // Pick a kind label that reflects what's actually missing — news only,
+  // calendar only, or mixed.
+  const kinds = new Set(missing.map((c) => c.kind));
+  const kindLabel =
+    kinds.size === 1
+      ? kinds.has("news")
+        ? t.analysis_detail.fundamental_refresh_kind_news
+        : t.analysis_detail.fundamental_refresh_kind_calendar
+      : t.analysis_detail.fundamental_refresh_kind_mixed;
+  return (
+    <div
+      className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-200"
+      role="status"
+      data-testid="fundamental-refresh-banner"
+    >
+      <div className="font-medium" data-testid="fundamental-refresh-drift-text">
+        {t.analysis_detail.fundamental_refresh_drift
+          .replace("{when}", when)
+          .replace("{missing}", String(missing.length))
+          .replace("{total}", String(total))
+          .replace("{kind}", kindLabel)}
+      </div>
+      <ul className="mt-1 list-disc pl-4 space-y-0.5">
+        {missing.slice(0, 5).map((c, i) => (
+          <li
+            key={`${c.kind}-${i}`}
+            className="leading-snug"
+            data-testid="fundamental-refresh-drift-item"
+          >
+            {c.label}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -638,6 +778,43 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const submitFeedback = useSubmitFeedback();
   const { refresh, isRefreshing: isRowRefreshing } = useRefreshAnalysis();
   const isRefreshing = isRowRefreshing(id);
+
+  // Local UI state for the "refresh fundamentals" mutation. The server
+  // persists the new snapshot on the analyses row, so we also invalidate
+  // the analysis query so the card data re-syncs from the source of
+  // truth — but the drift report is ephemeral and only lives in this
+  // banner state until the user navigates away.
+  const [fundamentalRefresh, setFundamentalRefresh] = useState<{
+    refreshedAt: string;
+    drift: FundamentalDrift;
+  } | null>(null);
+  const refreshFundamentalsMutation = useRefreshFundamentals({
+    mutation: {
+      onSuccess: (resp) => {
+        setFundamentalRefresh({
+          refreshedAt: resp.refreshedAt,
+          drift: resp.drift,
+        });
+        queryClient.invalidateQueries({ queryKey: getGetAnalysisQueryKey(id) });
+      },
+      onError: () => {
+        toast({
+          title: t.analysis_detail.fundamental_refresh_failed,
+          variant: "destructive",
+        });
+      },
+    },
+  });
+  const handleRefreshFundamentals = () => {
+    if (refreshFundamentalsMutation.isPending) return;
+    refreshFundamentalsMutation.mutate({ id });
+  };
+  // Drift banner is per-analysis — clear it when the user navigates to a
+  // different analysis ID so a stale banner from analysis #41 doesn't
+  // bleed into analysis #42.
+  useEffect(() => {
+    setFundamentalRefresh(null);
+  }, [id]);
 
   const [feedbackType, setFeedbackType] = useState<"useful" | "not_useful" | null>(null);
   const [outcome, setOutcome] = useState<"correct" | "wrong" | "unknown" | null>(null);
@@ -906,6 +1083,9 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             t={t}
             instrument={analysis.instrument}
             lang={lang}
+            onRefresh={handleRefreshFundamentals}
+            isRefreshing={refreshFundamentalsMutation.isPending}
+            refreshState={fundamentalRefresh}
           />
         )}
 

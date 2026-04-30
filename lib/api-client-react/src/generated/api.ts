@@ -59,6 +59,7 @@ import type {
   PushTestResult,
   PushUnsubscribeBody,
   RecentInstruments,
+  RefreshFundamentalsResponse,
   RegisterBody,
   ResetPasswordBody,
   ResetTokenResponse,
@@ -1588,6 +1589,95 @@ export function useGetAnalysis<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit "Fundamental Context" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base.
+
+ * @summary Re-fetch news + economic calendar for an existing analysis (no AI re-run)
+ */
+export const getRefreshFundamentalsUrl = (id: number) => {
+  return `/api/analyses/${id}/refresh-fundamentals`;
+};
+
+export const refreshFundamentals = async (
+  id: number,
+  options?: RequestInit,
+): Promise<RefreshFundamentalsResponse> => {
+  return customFetch<RefreshFundamentalsResponse>(
+    getRefreshFundamentalsUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getRefreshFundamentalsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof refreshFundamentals>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof refreshFundamentals>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["refreshFundamentals"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof refreshFundamentals>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return refreshFundamentals(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RefreshFundamentalsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof refreshFundamentals>>
+>;
+
+export type RefreshFundamentalsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Re-fetch news + economic calendar for an existing analysis (no AI re-run)
+ */
+export const useRefreshFundamentals = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof refreshFundamentals>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof refreshFundamentals>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getRefreshFundamentalsMutationOptions(options));
+};
 
 /**
  * @summary Submit feedback for analysis

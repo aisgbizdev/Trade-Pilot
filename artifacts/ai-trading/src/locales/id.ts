@@ -524,6 +524,17 @@ export const id: Translations = {
     fundamental_calendar_actual: "Aktual",
     fundamental_calendar_forecast: "Prakiraan",
     fundamental_calendar_previous: "Sebelumnya",
+    fundamental_refresh_btn: "Refresh fundamental",
+    fundamental_refresh_loading: "Memuat ulang…",
+    fundamental_refresh_failed: "Gagal me-refresh fundamental. Coba lagi sebentar.",
+    fundamental_refresh_updated: "Fundamental diperbarui {when}",
+    fundamental_refresh_drift:
+      "Fundamental diperbarui {when} — {missing} dari {total} {kind} yang dikutip AI sudah tidak ada di window.",
+    fundamental_refresh_no_drift:
+      "Fundamental diperbarui {when} — seluruh {total} kutipan asli AI masih ada di window.",
+    fundamental_refresh_kind_news: "berita",
+    fundamental_refresh_kind_calendar: "event",
+    fundamental_refresh_kind_mixed: "item",
   },
   admin: {
     title: "Panel Admin",

@@ -756,6 +756,95 @@ export const GetAnalysisResponse = zod.object({
 });
 
 /**
+ * Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit "Fundamental Context" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base.
+
+ * @summary Re-fetch news + economic calendar for an existing analysis (no AI re-run)
+ */
+export const RefreshFundamentalsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RefreshFundamentalsResponse = zod
+  .object({
+    fundamentalContext: zod
+      .object({
+        newsItems: zod.array(
+          zod
+            .object({
+              id: zod.string(),
+              title: zod.string(),
+              summary: zod.string(),
+              source: zod
+                .string()
+                .describe(
+                  "Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.",
+                ),
+              url: zod.string().nullable(),
+              publishedAt: zod.coerce.date(),
+            })
+            .describe(
+              "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
+            ),
+        ),
+        calendarEvents: zod.array(
+          zod
+            .object({
+              date: zod.string(),
+              time: zod.string().nullable(),
+              currency: zod.string(),
+              event: zod.string(),
+              impact: zod
+                .string()
+                .nullable()
+                .describe(
+                  "Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.",
+                ),
+              actual: zod.string().nullable(),
+              forecast: zod.string().nullable(),
+              previous: zod.string().nullable(),
+            })
+            .describe(
+              "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
+            ),
+        ),
+      })
+      .describe("Snapshot of fundamental inputs the AI saw at analysis time."),
+    refreshedAt: zod.coerce
+      .date()
+      .describe(
+        "Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the 'updated N minutes ago' banner.",
+      ),
+    drift: zod
+      .object({
+        totalCitations: zod
+          .number()
+          .describe(
+            "Total citations the AI emitted at analysis time (newsTitles + calendarEvents).",
+          ),
+        missingCitations: zod
+          .array(
+            zod
+              .object({
+                kind: zod.enum(["news", "calendar"]),
+                label: zod.string(),
+              })
+              .describe(
+                "A single original AI citation that no longer matches anything in the freshly-fetched news\/calendar window.",
+              ),
+          )
+          .describe(
+            "Original citations that no longer match any item in the fresh snapshot.",
+          ),
+      })
+      .describe(
+        "Summary of how many of the AI's original fundamental citations are no longer present in the freshly-fetched window.",
+      ),
+  })
+  .describe(
+    "Response from POST \/analyses\/{id}\/refresh-fundamentals — the freshly-fetched fundamental snapshot plus a drift report against the AI's original citations.",
+  );
+
+/**
  * @summary Submit feedback for analysis
  */
 export const SubmitFeedbackParams = zod.object({

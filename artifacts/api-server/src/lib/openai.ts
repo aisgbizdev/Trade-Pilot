@@ -296,7 +296,7 @@ function normalizeForCitationMatch(s: string): string {
 // match with a real item, OR shares ≥2 significant tokens (len ≥4)
 // with the same real item (lets the model abbreviate without us
 // flagging it as fabricated).
-function citationMatchesAny(citation: string, realItems: string[]): boolean {
+export function citationMatchesAny(citation: string, realItems: string[]): boolean {
   const normCit = normalizeForCitationMatch(citation);
   if (!normCit) return false;
   for (const real of realItems) {

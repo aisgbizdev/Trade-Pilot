@@ -247,6 +247,42 @@ export interface FundamentalContext {
   calendarEvents: FundamentalCalendarEvent[];
 }
 
+export type FundamentalDriftCitationKind =
+  (typeof FundamentalDriftCitationKind)[keyof typeof FundamentalDriftCitationKind];
+
+export const FundamentalDriftCitationKind = {
+  news: "news",
+  calendar: "calendar",
+} as const;
+
+/**
+ * A single original AI citation that no longer matches anything in the freshly-fetched news/calendar window.
+ */
+export interface FundamentalDriftCitation {
+  kind: FundamentalDriftCitationKind;
+  label: string;
+}
+
+/**
+ * Summary of how many of the AI's original fundamental citations are no longer present in the freshly-fetched window.
+ */
+export interface FundamentalDrift {
+  /** Total citations the AI emitted at analysis time (newsTitles + calendarEvents). */
+  totalCitations: number;
+  /** Original citations that no longer match any item in the fresh snapshot. */
+  missingCitations: FundamentalDriftCitation[];
+}
+
+/**
+ * Response from POST /analyses/{id}/refresh-fundamentals — the freshly-fetched fundamental snapshot plus a drift report against the AI's original citations.
+ */
+export interface RefreshFundamentalsResponse {
+  fundamentalContext: FundamentalContext;
+  /** Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the 'updated N minutes ago' banner. */
+  refreshedAt: string;
+  drift: FundamentalDrift;
+}
+
 export type AnalysisMode = (typeof AnalysisMode)[keyof typeof AnalysisMode];
 
 export const AnalysisMode = {

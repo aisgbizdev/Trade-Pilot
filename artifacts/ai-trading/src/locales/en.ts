@@ -520,6 +520,17 @@ export const en = {
     fundamental_calendar_actual: "Actual",
     fundamental_calendar_forecast: "Forecast",
     fundamental_calendar_previous: "Previous",
+    fundamental_refresh_btn: "Refresh fundamentals",
+    fundamental_refresh_loading: "Refreshing…",
+    fundamental_refresh_failed: "Could not refresh fundamentals. Please try again.",
+    fundamental_refresh_updated: "Fundamentals updated {when}",
+    fundamental_refresh_drift:
+      "Fundamentals updated {when} — {missing} of {total} cited {kind} no longer in window.",
+    fundamental_refresh_no_drift:
+      "Fundamentals updated {when} — all {total} original citations still in window.",
+    fundamental_refresh_kind_news: "headlines",
+    fundamental_refresh_kind_calendar: "events",
+    fundamental_refresh_kind_mixed: "items",
     indicators_section_title: "Live Technical Indicators",
     indicators_section_note: "Live data — may differ from the snapshot used at analysis time.",
   },

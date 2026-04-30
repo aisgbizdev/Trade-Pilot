@@ -6,6 +6,7 @@ import { requireAuth, AuthRequest } from "../middleware/auth";
 import {
   generateAnalysis,
   getValidUntil,
+  citationMatchesAny,
   type BeginnerAIOutput,
   type ProAIOutput,
   type FundamentalSnapshot,
@@ -564,6 +565,119 @@ router.get("/analyses/:id", requireAuth, async (req: AuthRequest, res) => {
 
   res.json({ ...analysis, feedback: fb ?? null });
 });
+
+// Re-fetch news + calendar for an existing analysis WITHOUT re-running the
+// AI. Returns the fresh snapshot plus a "drift" report: which of the
+// citations the AI originally relied on no longer match anything in the
+// fresh window. Lets the user sanity-check whether the saved AI thesis
+// still rests on a valid fundamental base. Persists the new snapshot on
+// the row so the audit view (Fundamental Context card) reflects it.
+router.post(
+  "/analyses/:id/refresh-fundamentals",
+  requireAuth,
+  async (req: AuthRequest, res) => {
+    const id = Number(req.params["id"]);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(404).json({ error: "Analisis tidak ditemukan" });
+      return;
+    }
+
+    const [analysis] = await db
+      .select()
+      .from(analyses)
+      .where(and(eq(analyses.id, id), eq(analyses.userId, req.userId!)))
+      .limit(1);
+
+    if (!analysis) {
+      res.status(404).json({ error: "Analisis tidak ditemukan" });
+      return;
+    }
+
+    // Pull the citations the AI emitted at analysis time. They live inside
+    // the rawAiOutput JSON blob (the same payload generateAnalysis returned).
+    // Defensively parse — older rows may lack the field, and a malformed blob
+    // must not crash the refresh route.
+    let originalCitations: { newsTitles: string[]; calendarEvents: string[] } = {
+      newsTitles: [],
+      calendarEvents: [],
+    };
+    try {
+      // rawAiOutput is nullable on the schema (legacy rows + future
+      // safety) — treat null as "no citations to drift against".
+      const rawText = analysis.rawAiOutput;
+      const raw = rawText ? (JSON.parse(rawText) as unknown) : null;
+      if (raw && typeof raw === "object" && "fundamentalCitations" in raw) {
+        const fc = (raw as { fundamentalCitations?: unknown }).fundamentalCitations;
+        if (fc && typeof fc === "object") {
+          const nt = (fc as { newsTitles?: unknown }).newsTitles;
+          const ce = (fc as { calendarEvents?: unknown }).calendarEvents;
+          originalCitations = {
+            newsTitles: Array.isArray(nt) ? nt.filter((x): x is string => typeof x === "string") : [],
+            calendarEvents: Array.isArray(ce) ? ce.filter((x): x is string => typeof x === "string") : [],
+          };
+        }
+      }
+    } catch {
+      // Leave originalCitations as empty — we'll just report zero drift.
+    }
+
+    // Re-fetch news + calendar — never throw on upstream failure (mirrors the
+    // create-analysis path). Either feed coming back empty is treated as
+    // "nothing relevant in the window", not as an error to the user.
+    let freshNews: NewsItem[] = [];
+    let freshCalendar: CalendarEvent[] = [];
+    await Promise.allSettled([
+      getRelevantNews(analysis.instrument).then((news) => {
+        freshNews = news;
+      }),
+      getRelevantCalendar(analysis.instrument).then((events) => {
+        freshCalendar = events;
+      }),
+    ]);
+
+    const freshSnapshot: FundamentalSnapshot = {
+      newsItems: freshNews,
+      calendarEvents: freshCalendar,
+    };
+
+    // Compute drift using the SAME matching logic that grounds the model's
+    // citations at generation time, so an item that would have been
+    // "grounded" originally is treated as still-grounded after refresh.
+    const realNews = freshSnapshot.newsItems.map((n) => n.title);
+    const realEvents = freshSnapshot.calendarEvents.map(
+      (e) => `${e.event} ${e.currency}`,
+    );
+    const missingCitations: { kind: "news" | "calendar"; label: string }[] = [];
+    for (const t of originalCitations.newsTitles) {
+      if (!citationMatchesAny(t, realNews)) {
+        missingCitations.push({ kind: "news", label: t });
+      }
+    }
+    for (const e of originalCitations.calendarEvents) {
+      if (!citationMatchesAny(e, realEvents)) {
+        missingCitations.push({ kind: "calendar", label: e });
+      }
+    }
+    const totalCitations =
+      originalCitations.newsTitles.length +
+      originalCitations.calendarEvents.length;
+
+    const refreshedAt = new Date();
+    await db
+      .update(analyses)
+      .set({ fundamentalContext: freshSnapshot })
+      .where(eq(analyses.id, id));
+
+    res.json({
+      fundamentalContext: freshSnapshot,
+      refreshedAt: refreshedAt.toISOString(),
+      drift: {
+        totalCitations,
+        missingCitations,
+      },
+    });
+  },
+);
 
 router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res) => {
   const analysisId = Number(req.params["id"]);
