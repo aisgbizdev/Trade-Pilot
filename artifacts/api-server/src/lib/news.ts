@@ -203,19 +203,14 @@ export async function getRelevantNews(
     kept = [...kept, ...macroFallback];
   }
 
-  // Last resort: most recent 3 items overall so the AI at least sees
-  // *some* market color rather than going to "no catalyst" silently.
-  if (kept.length === 0) {
-    const fallback = scored
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(b.item.publishedAt).getTime() -
-          new Date(a.item.publishedAt).getTime(),
-      )
-      .slice(0, 3);
-    kept = fallback;
-  }
+  // No "recent N overall" fallback: if neither the per-instrument
+  // keyword filter nor the macro pattern matches, the honest answer
+  // is "tidak ada katalis fundamental signifikan terdeteksi pada
+  // window ini" — and the prompt tells the model to say exactly that
+  // when the news block is empty. Pulling random recent headlines
+  // here would force the model to fabricate a fundamental angle
+  // around items that were never actually relevant, which is the
+  // generic-fundamental failure mode task #88 was built to eliminate.
 
   kept.sort(
     (a, b) =>

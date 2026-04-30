@@ -496,14 +496,23 @@ export async function generateAnalysis(
       snapshot,
     );
     if (retryCheck.ok) return retryParsed;
-    // Second failure — strip the bad citations rather than fail the
-    // whole analysis. The fundamental NARRATIVE may still be useful
-    // and we don't want to deny the user their analysis. We log so
-    // ops can see how often the model misbehaves here.
+    // Second failure on a snapshot that ACTUALLY HAS items is a hard
+    // gate: returning the analysis would let ungrounded fundamental
+    // prose through, which is exactly the failure mode task #88 was
+    // built to eliminate. Throw so the route surfaces a clean AI-
+    // error path (HTTP 502 / quota refunded) instead of pretending
+    // success.
+    //
+    // For the empty-snapshot branch (noSnapshot) the validator only
+    // fails when the model fabricated citations against a blank
+    // input — also a real failure worth surfacing rather than
+    // silently keeping the fabricated text.
     console.warn(
-      `[generateAnalysis] Citation grounding still failed after retry — stripping fundamentalCitations. Reason: ${retryCheck.reason}`,
+      `[generateAnalysis] Citation grounding still failed after retry — failing analysis. Reason: ${retryCheck.reason}`,
     );
-    return { ...retryParsed, fundamentalCitations: undefined };
+    throw new Error(
+      `AI fundamental grounding failed after retry: ${retryCheck.reason}`,
+    );
   }
 
   return parsed;

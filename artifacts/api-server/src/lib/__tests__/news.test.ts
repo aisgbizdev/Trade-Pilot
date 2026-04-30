@@ -136,6 +136,36 @@ describe("getRelevantNews — macro fallback", () => {
   });
 });
 
+describe("getRelevantNews — no irrelevant fallback", () => {
+  it("returns empty when no item matches the per-instrument keywords or the macro pattern (no 'recent 3 overall' fallback)", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse([
+        {
+          id: 9,
+          title: "Lokal: harga sayur naik di pasar tradisional",
+          summary: "Tidak ada hubungan dengan pasar finansial.",
+          url: "https://newsmaker.id/sayur",
+          date: "2026-04-30T07:00:00Z",
+        },
+        {
+          id: 10,
+          title: "Selebriti X dikabarkan menikah",
+          summary: "Berita gosip.",
+          url: "https://newsmaker.id/gosip",
+          date: "2026-04-30T06:00:00Z",
+        },
+      ]),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([]);
+
+    const items = await getRelevantNews("AUD/USD");
+    // Honest empty — the prompt will explicitly tell the model to say
+    // "no significant catalyst" instead of inventing one around random
+    // recent headlines.
+    expect(items.length).toBe(0);
+  });
+});
+
 describe("formatNewsForPrompt — sanitizer", () => {
   function makeItem(overrides: Partial<NewsItem> = {}): NewsItem {
     return {
