@@ -18,7 +18,7 @@ import {
 
 const TRADINGVIEW_SYMBOLS: TradingViewSymbol[] = [
   { name: "OANDA:XAUUSD", displayName: "XUL10" },
-  { name: "ACTIVTRADES:BRENTM2026", displayName: "BCO10_BBJ" },
+  { name: "BLACKBULL:BRENT", displayName: "BCO10_BBJ" },
   { name: "VANTAGE:HK50", displayName: "HKK50_BBJ" },
   { name: "SPREADEX:NIKKEI", displayName: "JPK50_BBJ" },
   { name: "OANDA:AUDUSD", displayName: "AU10F_BBJ" },
