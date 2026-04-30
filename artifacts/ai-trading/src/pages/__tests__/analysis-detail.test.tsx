@@ -160,6 +160,87 @@ describe("AnalysisDetailPage: not-found branch", () => {
   });
 });
 
+describe("AnalysisDetailPage: fundamental context card", () => {
+  it("renders the fundamental card with the headline + calendar event when fundamentalContext has items", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: {
+            newsItems: [
+              {
+                id: "newsmaker-1",
+                title: "Gold rallies as Fed signals pause",
+                summary: "Statement softer than expected.",
+                source: "Newsmaker.id",
+                url: "https://newsmaker.id/article-1",
+                publishedAt: new Date(NOW - 30 * 60_000).toISOString(),
+              },
+            ],
+            calendarEvents: [
+              {
+                date: "2026-04-30",
+                time: "12:00",
+                currency: "USD",
+                event: "FOMC rate decision",
+                impact: "★★★",
+                actual: "no change",
+                forecast: "no change",
+                previous: "no change",
+              },
+            ],
+          },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    const card = await screen.findByTestId("card-fundamental-context");
+    expect(card).toBeInTheDocument();
+    expect(card.textContent).toMatch(/Gold rallies as Fed signals pause/);
+    expect(card.textContent).toMatch(/FOMC rate decision/);
+  });
+
+  it("renders the empty-state message when fundamentalContext is present with empty arrays", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    // The card itself must render so the user knows fundamentals were
+    // checked but nothing surfaced — this is the explicit honesty the
+    // task requires (no silent omission of the section).
+    const card = await screen.findByTestId("card-fundamental-context");
+    expect(card).toBeInTheDocument();
+    // News + calendar list wrappers should NOT render in the empty state.
+    expect(
+      screen.queryByTestId("fundamental-news-list"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("fundamental-calendar-list"),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("AnalysisDetailPage: user actions", () => {
   it("POSTs to /api/analyses/:id/feedback with feedbackType=useful when the user picks useful + submits", async () => {
     const { calls } = installFetchMock([

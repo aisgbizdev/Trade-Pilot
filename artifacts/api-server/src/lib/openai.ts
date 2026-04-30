@@ -359,9 +359,25 @@ export function validateFundamentalCitations(
     return { ok: true };
   }
 
+  // Snapshot has real items in it — the model MUST cite at least one
+  // of them. Otherwise the fundamental narrative is ungrounded prose
+  // and the whole point of task #88 (fundamentals tied to real input)
+  // is defeated. Treat missing-citation-when-snapshot-non-empty as a
+  // grounding failure that triggers the same retry/override path as
+  // a fabricated citation.
+  const cited =
+    (citations?.newsTitles.length ?? 0) +
+    (citations?.calendarEvents.length ?? 0);
+  if (cited === 0) {
+    return {
+      ok: false,
+      reason:
+        "Model emitted no fundamentalCitations even though the input snapshot contains news and/or calendar items the model was supposed to ground its narrative in.",
+    };
+  }
   if (!citations) {
-    // Snapshot exists but model didn't emit citations — this happens
-    // for legacy responses; not a hard failure.
+    // Defensive — `cited === 0` already returned above. Treat as ok
+    // so we don't crash in the unreachable branch.
     return { ok: true };
   }
 

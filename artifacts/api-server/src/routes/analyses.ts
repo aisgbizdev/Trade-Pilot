@@ -317,12 +317,15 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
   // Snapshot persisted on the analysis row + handed to the model so
   // its `fundamentalCitations` can be validated against real items.
-  // Stays null when both upstream feeds returned empty (e.g. both
-  // down) so the UI knows to render the empty-state.
-  const fundamentalSnapshot: FundamentalSnapshot | null =
-    fetchedNews.length || fetchedCalendar.length
-      ? { newsItems: fetchedNews, calendarEvents: fetchedCalendar }
-      : null;
+  // Always persist as `{ newsItems: [], calendarEvents: [] }` (never
+  // null) when both upstream feeds returned empty, so the saved-
+  // analysis page can render the explicit empty-state ("tidak ada
+  // katalis fundamental signifikan...") instead of silently hiding
+  // the card and letting users assume fundamentals weren't checked.
+  const fundamentalSnapshot: FundamentalSnapshot = {
+    newsItems: fetchedNews,
+    calendarEvents: fetchedCalendar,
+  };
 
   const validUntil = getValidUntil(timeframe);
 

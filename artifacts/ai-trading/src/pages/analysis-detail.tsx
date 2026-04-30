@@ -897,19 +897,22 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           )}
         </Card>
 
+        {/* Fundamental context — the news headlines + economic-calendar
+            events the AI was given when this analysis was generated. Sits
+            directly under the bias gauge / primary-metrics card so the user
+            can audit the fundamentals the model leaned on BEFORE diving into
+            scenarios + trade plan. Always rendered when `fundamentalContext`
+            is present (even with empty arrays) so the empty-state message
+            is honest about whether fundamentals were checked. */}
+        {analysis.fundamentalContext && (
+          <FundamentalContextCard ctx={analysis.fundamentalContext} t={t} />
+        )}
+
         {/* AI-suggested concrete trade plan with both buy and sell levels.
             Anchored to the price at analysis time. Surfaces the structured
             entry / SL / TP / R:R the model produced — keeps the rest of the
             narrative consultative while giving the user actionable numbers. */}
         {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
-
-        {/* Fundamental context — the news headlines + economic-calendar
-            events the AI was given when this analysis was generated. Shown
-            so the user can audit the fundamentals the model leaned on
-            instead of treating the narrative as a black box. */}
-        {analysis.fundamentalContext && (
-          <FundamentalContextCard ctx={analysis.fundamentalContext} t={t} />
-        )}
 
         {/* Market Context Summary — same card the user saw on the Analyze tab,
             rendered from the indicator-tally snapshot stored at analysis time. */}
