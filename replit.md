@@ -91,7 +91,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 ## Production Routing
 
-In production only the api-server runs as a Cloud Run service; ai-trading is built ahead of time and its `dist/public` is served by api-server's SPA fallback in `src/app.ts`. Because of this, `api-server`'s `[[services]].paths` in `artifacts/api-server/.replit-artifact/artifact.toml` claims **both** `/api` and `/` — the workspace path-router needs a backend for the root URL or it returns a synthetic 500 (no pino request log appears). In dev, `previewPath` (`/api` for api-server, `/` for ai-trading) is the proxy's tiebreaker, so ai-trading's Vite dev server still owns root traffic and HMR keeps working.
+In production the workspace path-router has two backends: **api-server** runs as the Cloud Run autoscale service and serves `/api/*`, while **ai-trading** is built ahead of time and served as **static files** (`serve = "static"`, `publicDir = "dist/public"`) at `/`. Both artifacts have their own `[services.production]` block — without one for ai-trading, the path-router has no backend for the root URL and the deployer either fails ("no run command provided") or returns a synthetic 500 on `GET /`. The api-server's Express app no longer needs to host the SPA in production (the static service does), but the SPA fallback in `src/app.ts` is kept as a harmless safety net. In dev nothing changes: ai-trading's Vite dev server owns `/` and api-server's Express owns `/api`.
 
 ## Before You Publish
 

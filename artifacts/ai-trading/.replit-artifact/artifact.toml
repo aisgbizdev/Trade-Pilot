@@ -17,11 +17,24 @@ localPort = 20853
 [services.development]
 run = "pnpm --filter @workspace/ai-trading run dev"
 
-# NOTE: ai-trading has NO production service. In production the
-# ai-trading SPA is built by the api-server's production build step
-# and served by the api-server itself (Express static + SPA fallback)
-# so the whole app runs as a single Cloud Run service on one port.
-
 [services.env]
 PORT = "20853"
 BASE_PATH = "/"
+
+# Production: ai-trading is served as STATIC files by the workspace's
+# path-based router (no Cloud Run service needed). This gives the
+# router a real backend for "/" so root requests don't get a synthetic
+# 500. The api-server runs separately as the Cloud Run service for
+# /api. The build below produces dist/public which the static server
+# then serves at the path "/" claimed in [[services]].paths.
+[services.production]
+serve = "static"
+publicDir = "dist/public"
+
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/ai-trading", "run", "build"]
+
+[services.production.build.env]
+NODE_ENV = "production"
+BASE_PATH = "/"
+PORT = "20853"
