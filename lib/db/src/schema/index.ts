@@ -25,6 +25,36 @@ export type TradePlanShape = {
   sell: TradeSideShape;
 };
 
+// Snapshot of the news + economic-calendar items the AI saw at analysis
+// time so the saved-analysis page can render the same fundamental
+// context the user (and the model) had — without re-fetching live data
+// that may have moved on. Captured on the analyses row by the POST
+// /api/analyses handler in `routes/analyses.ts`.
+export type FundamentalNewsItemShape = {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  url: string | null;
+  publishedAt: string;
+};
+
+export type FundamentalCalendarEventShape = {
+  date: string;
+  time: string | null;
+  currency: string;
+  event: string;
+  impact: string | null;
+  actual: string | null;
+  forecast: string | null;
+  previous: string | null;
+};
+
+export type FundamentalContextShape = {
+  newsItems: FundamentalNewsItemShape[];
+  calendarEvents: FundamentalCalendarEventShape[];
+};
+
 export const roleEnum = pgEnum("role", ["user", "admin", "super_admin"]);
 export const modeEnum = pgEnum("mode", ["beginner", "pro"]);
 export const marketConditionEnum = pgEnum("market_condition", [
@@ -140,6 +170,13 @@ export const analyses = pgTable("analyses", {
   // without re-prompting the model. Nullable for legacy rows + cases where
   // no anchor price was available at analysis time.
   tradePlan: jsonb("trade_plan").$type<TradePlanShape>(),
+  // Snapshot of the news headlines + economic-calendar events the AI
+  // saw when generating this analysis (task #88). Lets the saved
+  // analysis page render the *same* fundamental context the model used,
+  // and gives us provenance to verify that fundamental commentary is
+  // grounded in real, citable sources rather than fabricated. Nullable
+  // for legacy rows + cases where both upstream feeds were down.
+  fundamentalContext: jsonb("fundamental_context").$type<FundamentalContextShape>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

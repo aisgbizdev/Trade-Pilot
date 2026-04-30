@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { z } from "zod";
+import type { CalendarEvent } from "./calendar";
+import type { NewsItem } from "./news";
 
 export const openai = new OpenAI({
   apiKey: process.env["OPENAI_API_KEY"],
@@ -42,6 +44,20 @@ const TradePlanSchema = z.object({
 
 export type TradePlan = z.infer<typeof TradePlanSchema>;
 
+/**
+ * The model is asked to record which news headlines and calendar
+ * events it actually leaned on so we can verify the fundamental
+ * commentary is grounded in the snapshot we sent (vs. fabricated).
+ * Optional because legacy responses + analyses with no fundamental
+ * data won't have one.
+ */
+const FundamentalCitationsSchema = z.object({
+  newsTitles: z.array(z.string()).default([]),
+  calendarEvents: z.array(z.string()).default([]),
+});
+
+export type FundamentalCitations = z.infer<typeof FundamentalCitationsSchema>;
+
 const BeginnerAIOutputSchema = z.object({
   marketCondition: MarketCondition,
   riskLevel: RiskLevel,
@@ -55,6 +71,7 @@ const BeginnerAIOutputSchema = z.object({
   whyReason: z.string().min(1),
   failureConditions: z.string().min(1),
   tradePlan: TradePlanSchema,
+  fundamentalCitations: FundamentalCitationsSchema.optional(),
 });
 
 const ProAIOutputSchema = z.object({
@@ -74,6 +91,7 @@ const ProAIOutputSchema = z.object({
   invalidationConditions: z.string().min(1),
   uncertaintyNotes: z.string().min(1),
   tradePlan: TradePlanSchema,
+  fundamentalCitations: FundamentalCitationsSchema.optional(),
 });
 
 export type BeginnerAIOutput = z.infer<typeof BeginnerAIOutputSchema>;
@@ -101,9 +119,15 @@ Aturan WAJIB untuk fundamental (kalender & berita):
 - JIKA ada event ★★★ dalam 24 jam ke depan (cek tanggal vs hari ini): WAJIB sebut event itu di whyReason dan masukkan ke failureConditions (mis. "News ★★★ FOMC besok bisa membatalkan skenario"). Turunkan confidenceMax minimal 10 poin dari yang seharusnya, karena pasar berpotensi sangat volatile.
 - JIKA ada event ★★ dalam 24 jam: sebut di whyReason sebagai sumber ketidakpastian, turunkan confidenceMax minimal 5 poin.
 - JIKA ada event ★★★ atau ★★ DALAM 1 jam ke depan dari "Waktu analisis sekarang": marketCondition WAJIB di-set "volatile" dan riskLevel "high" — TIDAK PEDULI apa kata teknikal.
-- Baca blok "BERITA TERKINI RELEVAN". Berita 1-2 hari terakhir = breaking news. JIKA ada berita yang materially mengubah arah fundamental (mis. perubahan kebijakan bank sentral, geopolitik, data ekonomi mengejutkan): WAJIB sebut judulnya di whyReason dan sesuaikan tradingBias + opportunity + risk dengan konteks itu.
-- JIKA tidak ada blok kalender/berita di input: sebut "tidak ada katalis fundamental terdeteksi" di whyReason — JANGAN mengarang event yang tidak ada.
+- Baca blok "BERITA TERKINI RELEVAN". Berita 1-2 hari terakhir = breaking news. JIKA ada berita yang materially mengubah arah fundamental (mis. perubahan kebijakan bank sentral, geopolitik, data ekonomi mengejutkan): WAJIB sebut judulnya di whyReason / opportunity / risk dan sesuaikan tradingBias dengan konteks itu. KAITKAN news dengan apa yang dilihat di teknikal — mis. "Teknikal momentum bullish 1D + berita Fed dovish memperkuat tesis cenderung naik."
+- JIKA tidak ada blok "KALENDER EKONOMI RELEVAN" / "BERITA TERKINI RELEVAN" sama sekali di input ATAU keduanya kosong: WAJIB tulis "Tidak ada katalis fundamental signifikan terdeteksi pada window ini" di whyReason dan KOSONGKAN fundamentalCitations.newsTitles dan fundamentalCitations.calendarEvents — JANGAN mengarang event/berita yang tidak ada.
 - KETIKA menurunkan confidenceMax karena event/news, WAJIB juga turunkan confidenceMin agar selisih (max - min) tetap minimal 10 poin. JANGAN sampai range jadi mengecil.
+
+Aturan WAJIB untuk fundamentalCitations (jejak provenance):
+- WAJIB isi field "fundamentalCitations" dengan judul berita + nama event yang BENAR-BENAR ada di blok BERITA / KALENDER di atas. Salin judul/nama persis seperti yang tertulis (boleh dipotong tetapi harus tetap dapat dikenali — mis. "FOMC Rate Decision" untuk event "FOMC Rate Decision" walau aslinya "★★★ USD — FOMC Rate Decision").
+- JIKA blok BERITA non-empty dan kamu menyebut beritanya di whyReason / opportunity / risk: judul yang kamu sebut HARUS muncul di fundamentalCitations.newsTitles.
+- JIKA blok KALENDER non-empty dan kamu menyebut event-nya: nama event HARUS muncul di fundamentalCitations.calendarEvents.
+- DILARANG mengarang judul berita atau nama event yang tidak muncul di blok input — output kamu akan divalidasi terhadap snapshot.
 
 Aturan WAJIB untuk tradePlan (saran level konkret):
 - WAJIB isi field "tradePlan" dengan harga konkret untuk SKENARIO BUY DAN SKENARIO SELL — keduanya, bahkan kalau bias hanya condong ke satu arah. User berhak tahu level kalau skenario sebaliknya yang terjadi.
@@ -126,8 +150,12 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "risk": "string (risiko utama: skenario merugikan dan ketidakpastian yang harus diwaspadai, 1-2 kalimat)",
   "mainScenario": "string (Skenario A — skenario utama yang paling mungkin, 2-3 kalimat. Bicara struktur/arah, bukan angka spesifik — angka ada di tradePlan)",
   "alternativeScenario": "string (Skenario B — skenario alternatif jika asumsi tidak terjadi, 1-2 kalimat)",
-  "whyReason": "string (alasan mengapa skenario ini mungkin terjadi DAN kenapa confidence tidak lebih tinggi, 2-3 kalimat)",
+  "whyReason": "string (alasan mengapa skenario ini mungkin terjadi DAN kenapa confidence tidak lebih tinggi, 2-3 kalimat. Sebutkan news/event spesifik kalau ada di input.)",
   "failureConditions": "string (minimum 2 kondisi konkret yang membatalkan analisis ini, dipisah '; ' — contoh: 'Harga break support 4650; Volume turun > 30%; News fundamental berubah')",
+  "fundamentalCitations": {
+    "newsTitles": ["string (judul berita yang dirujuk — harus persis seperti di blok BERITA TERKINI RELEVAN, atau [] kalau tidak ada blok / tidak menyebut)"],
+    "calendarEvents": ["string (nama event yang dirujuk — harus persis seperti di blok KALENDER EKONOMI RELEVAN, atau [] kalau tidak ada blok / tidak menyebut)"]
+  },
   "tradePlan": {
     "preferredSide": "buy" | "sell" | "wait",
     "buy": {
@@ -165,14 +193,21 @@ Aturan output:
 - Sertakan konteks makro dan faktor fundamental relevan
 - WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Bias bullish pada 1W...") di baseCase, bullishScenario, bearishScenario, opportunity, dan risk — supaya pengguna tahu bias ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
 
-Aturan WAJIB untuk fundamental (kalender & berita):
+Aturan WAJIB untuk fundamental (kalender & berita) — INI ADALAH ATURAN TERPENTING UNTUK MODE PRO:
 - Baca blok "KALENDER EKONOMI RELEVAN" dengan teliti. Setiap event punya impact: ★★★ = HIGH (sangat berdampak, mis. FOMC/NFP/CPI), ★★ = MEDIUM, ★ = LOW.
-- JIKA ada event ★★★ dalam 24 jam ke depan (cek tanggal vs hari ini): WAJIB sebut event itu eksplisit di keyDriversFundamental dan invalidationConditions (mis. "FOMC Rate Decision ★★★ besok 19:30 — surprise hawkish bisa membatalkan tesis bullish"). Turunkan confidenceMax minimal 10 poin dari yang seharusnya, karena pasar berpotensi sangat volatile dan tesis bisa di-overrule oleh news.
+- JIKA ada event ★★★ dalam 24 jam ke depan: WAJIB sebut event itu eksplisit di keyDriversFundamental dan invalidationConditions (mis. "FOMC Rate Decision ★★★ besok 19:30 — surprise hawkish bisa membatalkan tesis bullish"). Turunkan confidenceMax minimal 10 poin.
 - JIKA ada event ★★ dalam 24 jam: sebut di uncertaintyNotes sebagai sumber risiko event-driven, turunkan confidenceMax minimal 5 poin.
 - JIKA ada event ★★★/★★ DALAM 1 jam ke depan: marketCondition WAJIB di-set "volatile" dan riskLevel "high" — TIDAK PEDULI apa kata teknikal.
-- Baca blok "BERITA TERKINI RELEVAN". Berita 1-2 hari terakhir = breaking news. JIKA ada berita yang materially mengubah arah fundamental (mis. perubahan kebijakan bank sentral, geopolitik, intervensi mata uang, data ekonomi mengejutkan): WAJIB sebut judul/intinya di keyDriversFundamental dan marketContext, dan sesuaikan tradingBias + bullishScenario + bearishScenario dengan konteks berita itu.
-- JIKA berita fundamental BERTOLAK BELAKANG dengan sinyal teknikal (mis. teknikal bullish tapi news bearish dovish-shock): WAJIB sebut konflik ini di uncertaintyNotes dan turunkan confidenceMax minimal 10 poin — JANGAN pura-pura keduanya selaras.
-- JIKA tidak ada blok kalender/berita di input: sebut "tidak ada katalis fundamental terdeteksi pada window ini" di marketContext — JANGAN mengarang event yang tidak ada.
+- Baca blok "BERITA TERKINI RELEVAN". Berita 1-2 hari terakhir = breaking news. JIKA ada berita material (perubahan kebijakan bank sentral, geopolitik, intervensi mata uang, data ekonomi mengejutkan): WAJIB sebut judul/intinya di keyDriversFundamental dan marketContext, dan sesuaikan tradingBias + bullishScenario + bearishScenario dengan konteks berita itu.
+- JIKA berita fundamental BERTOLAK BELAKANG dengan sinyal teknikal: WAJIB sebut konflik ini di uncertaintyNotes dan turunkan confidenceMax minimal 10 poin.
+- keyDriversFundamental WAJIB MENGAITKAN sisi fundamental dengan sisi teknikal — BUKAN cuma daftar event/news terpisah. Contoh yang BENAR: "FOMC Rate Decision besok berisiko membalik momentum bullish 1D yang ditunjukkan MACD; pasar pricing-in cut 25bps, surprise hawkish akan menarik DXY naik dan menekan emas." Contoh yang SALAH: "Ada event FOMC. Ada berita inflasi turun." (terlalu generik, tidak terikat ke teknikal.)
+- JIKA tidak ada blok "KALENDER EKONOMI RELEVAN" / "BERITA TERKINI RELEVAN" sama sekali di input ATAU keduanya kosong: WAJIB tulis "Tidak ada katalis fundamental signifikan terdeteksi pada window ini — analisis murni teknikal." di keyDriversFundamental dan KOSONGKAN fundamentalCitations.newsTitles dan fundamentalCitations.calendarEvents — JANGAN mengarang event/berita yang tidak ada.
+
+Aturan WAJIB untuk fundamentalCitations (jejak provenance):
+- WAJIB isi field "fundamentalCitations" dengan judul berita + nama event yang BENAR-BENAR ada di blok BERITA / KALENDER di atas. Salin judul/nama persis seperti yang tertulis (boleh dipotong tetapi tetap dapat dikenali — mis. "FOMC Rate Decision" untuk event yang aslinya "★★★ USD — FOMC Rate Decision").
+- JIKA blok BERITA non-empty dan kamu menyebut beritanya di keyDriversFundamental / marketContext / uncertaintyNotes: judul yang kamu sebut HARUS muncul di fundamentalCitations.newsTitles.
+- JIKA blok KALENDER non-empty dan kamu menyebut event-nya: nama event HARUS muncul di fundamentalCitations.calendarEvents.
+- DILARANG mengarang judul berita / nama event yang tidak muncul di blok input — output kamu akan divalidasi terhadap snapshot dan akan ditolak jika ada citation fiktif.
 
 Aturan WAJIB untuk tradePlan (saran level konkret):
 - WAJIB isi field "tradePlan" dengan harga konkret untuk SKENARIO BUY DAN SKENARIO SELL — keduanya, terlepas dari arah bias. Trader pro butuh peta level dua sisi.
@@ -197,10 +232,14 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "bullishScenario": "string (Skenario alternatif bullish, 1-2 kalimat. Konseptual)",
   "bearishScenario": "string (Skenario alternatif bearish, 1-2 kalimat. Konseptual)",
   "keyDriversTechnical": "string (faktor teknikal utama yang mendukung tesis)",
-  "keyDriversFundamental": "string (faktor fundamental utama yang relevan)",
+  "keyDriversFundamental": "string (faktor fundamental utama yang relevan — KAITKAN dengan sisi teknikal, JANGAN cuma daftar event)",
   "marketContext": "string (konteks makro/kondisi pasar saat ini)",
   "invalidationConditions": "string (minimum 2 kondisi konkret yang membatalkan tesis, dipisah '; ' — contoh: 'Break support 4650 dengan close H1; Volume drop > 30%; FOMC surprise hawkish')",
   "uncertaintyNotes": "string (ketidakpastian utama dan KENAPA confidence tidak lebih tinggi, 1-2 kalimat)",
+  "fundamentalCitations": {
+    "newsTitles": ["string (judul berita yang dirujuk — persis seperti di blok BERITA, [] kalau tidak ada)"],
+    "calendarEvents": ["string (nama event yang dirujuk — persis seperti di blok KALENDER, [] kalau tidak ada)"]
+  },
   "tradePlan": {
     "preferredSide": "buy" | "sell" | "wait",
     "buy": {
@@ -242,33 +281,118 @@ function sanitizeNotes(notes: string): string {
   return notes;
 }
 
-export async function generateAnalysis(
-  instrument: string,
-  timeframe: string,
-  mode: "beginner" | "pro",
-  notes?: string,
-  indicatorContext?: string
-): Promise<AIOutput> {
-  const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
-  const now = new Date();
-  const nowIsoUtc = now.toISOString().replace(/\.\d{3}Z$/, "Z");
-  const nowJakarta = now.toLocaleString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    dateStyle: "full",
-    timeStyle: "short",
-  });
-  const userMessage = [
-    `Waktu analisis sekarang: ${nowIsoUtc} (UTC) — atau ${nowJakarta} WIB.`,
-    `Gunakan waktu ini sebagai patokan untuk menghitung jendela 1 jam / 24 jam ke depan pada event kalender.`,
-    `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}`,
-    `PENTING: semua narasi (skenario, peluang, risiko, bias arah) HARUS menyebut timeframe "${timeframe}" secara eksplisit, bukan hanya kata "uptrend"/"downtrend" saja.`,
-    indicatorContext ? indicatorContext : "",
-    cleanNotes ? `\nCatatan tambahan dari trader: ${cleanNotes}` : "",
-  ].filter(Boolean).join("\n");
+/**
+ * Snapshot of fundamentals shown to the model so we can verify the
+ * `fundamentalCitations` it emitted are real (substring-grounded in
+ * either a news headline or an event name we actually sent).
+ */
+export interface FundamentalSnapshot {
+  newsItems: NewsItem[];
+  calendarEvents: CalendarEvent[];
+}
 
-  const systemPrompt =
-    mode === "beginner" ? BEGINNER_SYSTEM_PROMPT : PRO_SYSTEM_PROMPT;
+function normalizeForCitationMatch(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
 
+/**
+ * A cited string counts as "grounded" if it shares a meaningful chunk
+ * of text with at least one real item:
+ *   - exact normalized substring match (fast path), OR
+ *   - ≥ 2 significant tokens (length ≥ 4) overlap with the same real
+ *     item.
+ *
+ * The 2-token rule lets the model abbreviate "★★★ USD — FOMC Rate
+ * Decision" to "FOMC Rate Decision" without us flagging it as
+ * fabricated, while still rejecting an unrelated invented headline
+ * that shares no substantive vocabulary with anything we sent.
+ */
+function citationMatchesAny(citation: string, realItems: string[]): boolean {
+  const normCit = normalizeForCitationMatch(citation);
+  if (!normCit) return false;
+  for (const real of realItems) {
+    const normReal = normalizeForCitationMatch(real);
+    if (!normReal) continue;
+    if (normReal.includes(normCit) || normCit.includes(normReal)) return true;
+  }
+  const citTokens = normCit.split(" ").filter((t) => t.length >= 4);
+  if (citTokens.length === 0) {
+    // Short citation (e.g. "CPI", "NFP", "FOMC"). Without enough
+    // tokens to do the overlap test, accept iff the entire normalized
+    // citation appears in some real item.
+    return realItems.some((r) =>
+      normalizeForCitationMatch(r).includes(normCit),
+    );
+  }
+  for (const real of realItems) {
+    const normReal = normalizeForCitationMatch(real);
+    const matches = citTokens.filter((t) => normReal.includes(t)).length;
+    if (matches >= Math.min(2, citTokens.length)) return true;
+  }
+  return false;
+}
+
+interface CitationValidation {
+  ok: boolean;
+  reason?: string;
+}
+
+export function validateFundamentalCitations(
+  citations: FundamentalCitations | undefined,
+  snapshot: FundamentalSnapshot | null,
+): CitationValidation {
+  const noSnapshot =
+    !snapshot ||
+    (snapshot.newsItems.length === 0 && snapshot.calendarEvents.length === 0);
+
+  if (noSnapshot) {
+    if (
+      citations &&
+      (citations.newsTitles.length > 0 || citations.calendarEvents.length > 0)
+    ) {
+      return {
+        ok: false,
+        reason:
+          "Model fabricated fundamental citations even though no news or calendar items were provided in the input.",
+      };
+    }
+    return { ok: true };
+  }
+
+  if (!citations) {
+    // Snapshot exists but model didn't emit citations — this happens
+    // for legacy responses; not a hard failure.
+    return { ok: true };
+  }
+
+  const realNews = snapshot.newsItems.map((n) => n.title);
+  const realEvents = snapshot.calendarEvents.map(
+    (e) => `${e.event} ${e.currency}`,
+  );
+
+  for (const t of citations.newsTitles) {
+    if (!citationMatchesAny(t, realNews)) {
+      return {
+        ok: false,
+        reason: `News citation "${t}" does not match any headline in the snapshot.`,
+      };
+    }
+  }
+  for (const e of citations.calendarEvents) {
+    if (!citationMatchesAny(e, realEvents)) {
+      return {
+        ok: false,
+        reason: `Calendar citation "${e}" does not match any event in the snapshot.`,
+      };
+    }
+  }
+  return { ok: true };
+}
+
+async function callOpenAI(
+  systemPrompt: string,
+  userMessage: string,
+): Promise<unknown> {
   const response = await openai.chat.completions.create({
     model: process.env["OPENAI_MODEL"] ?? "gpt-4o",
     messages: [
@@ -281,15 +405,90 @@ export async function generateAnalysis(
 
   const content = response.choices[0]?.message?.content;
   if (!content) throw new Error("No response from AI");
+  return JSON.parse(content);
+}
 
-  const raw: unknown = JSON.parse(content);
+export async function generateAnalysis(
+  instrument: string,
+  timeframe: string,
+  mode: "beginner" | "pro",
+  notes?: string,
+  indicatorContext?: string,
+  fundamentalSnapshot?: FundamentalSnapshot | null,
+): Promise<AIOutput> {
+  const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
+  const now = new Date();
+  const nowIsoUtc = now.toISOString().replace(/\.\d{3}Z$/, "Z");
+  const nowJakarta = now.toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    dateStyle: "full",
+    timeStyle: "short",
+  });
+  const baseUserMessage = [
+    `Waktu analisis sekarang: ${nowIsoUtc} (UTC) — atau ${nowJakarta} WIB.`,
+    `Gunakan waktu ini sebagai patokan untuk menghitung jendela 1 jam / 24 jam ke depan pada event kalender.`,
+    `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}`,
+    `PENTING: semua narasi (skenario, peluang, risiko, bias arah) HARUS menyebut timeframe "${timeframe}" secara eksplisit, bukan hanya kata "uptrend"/"downtrend" saja.`,
+    indicatorContext ? indicatorContext : "",
+    cleanNotes ? `\nCatatan tambahan dari trader: ${cleanNotes}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
+  const systemPrompt =
+    mode === "beginner" ? BEGINNER_SYSTEM_PROMPT : PRO_SYSTEM_PROMPT;
   const schema = mode === "beginner" ? BeginnerAIOutputSchema : ProAIOutputSchema;
-  const parsed = schema.safeParse(raw);
+  const snapshot = fundamentalSnapshot ?? null;
 
-  if (!parsed.success) {
-    throw new Error(`AI output validation failed: ${parsed.error.message}`);
+  const parseAttempt = (raw: unknown): AIOutput => {
+    const parsed = schema.safeParse(raw);
+    if (!parsed.success) {
+      throw new Error(`AI output validation failed: ${parsed.error.message}`);
+    }
+    return parsed.data;
+  };
+
+  // First attempt.
+  let raw: unknown = await callOpenAI(systemPrompt, baseUserMessage);
+  let parsed: AIOutput;
+  try {
+    parsed = parseAttempt(raw);
+  } catch (e) {
+    // Validation failed on first try — rerun with a corrective hint
+    // before giving up. Schema errors are usually missing or wrong
+    // type fields (e.g. confidenceMax dropped) and one nudged retry
+    // typically fixes them without paying for a third call.
+    const correction =
+      "\n\n[KOREKSI WAJIB] Output JSON sebelumnya gagal validasi. Pastikan SEMUA field wajib hadir dengan tipe & enum yang benar, dan kembalikan HANYA objek JSON tanpa markdown.";
+    raw = await callOpenAI(systemPrompt, baseUserMessage + correction);
+    parsed = parseAttempt(raw);
   }
 
-  return parsed.data;
+  // Citation grounding check. Done after schema validation so we know
+  // `fundamentalCitations` shape is sound.
+  const citationCheck = validateFundamentalCitations(
+    parsed.fundamentalCitations,
+    snapshot,
+  );
+
+  if (!citationCheck.ok) {
+    const correction = `\n\n[KOREKSI WAJIB — GROUNDING] ${citationCheck.reason} Output ulang analisis menggunakan HANYA judul berita / nama event yang BENAR-BENAR ada di blok BERITA TERKINI RELEVAN dan KALENDER EKONOMI RELEVAN di atas. Jika tidak ada item yang relevan, kosongkan fundamentalCitations.newsTitles / fundamentalCitations.calendarEvents dan tulis "Tidak ada katalis fundamental signifikan terdeteksi pada window ini" pada blok fundamental yang sesuai.`;
+    const retryRaw = await callOpenAI(systemPrompt, baseUserMessage + correction);
+    const retryParsed = parseAttempt(retryRaw);
+    const retryCheck = validateFundamentalCitations(
+      retryParsed.fundamentalCitations,
+      snapshot,
+    );
+    if (retryCheck.ok) return retryParsed;
+    // Second failure — strip the bad citations rather than fail the
+    // whole analysis. The fundamental NARRATIVE may still be useful
+    // and we don't want to deny the user their analysis. We log so
+    // ops can see how often the model misbehaves here.
+    console.warn(
+      `[generateAnalysis] Citation grounding still failed after retry — stripping fundamentalCitations. Reason: ${retryCheck.reason}`,
+    );
+    return { ...retryParsed, fundamentalCitations: undefined };
+  }
+
+  return parsed;
 }

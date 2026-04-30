@@ -3,10 +3,16 @@ import { db } from "../lib/db";
 import { analyses, feedback, users } from "@workspace/db/schema";
 import { eq, and, desc, count, sql, gte, lte, ilike } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
-import { generateAnalysis, getValidUntil, type BeginnerAIOutput, type ProAIOutput } from "../lib/openai";
+import {
+  generateAnalysis,
+  getValidUntil,
+  type BeginnerAIOutput,
+  type ProAIOutput,
+  type FundamentalSnapshot,
+} from "../lib/openai";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
-import { getRelevantNews, formatNewsForPrompt } from "../lib/news";
-import { getRelevantCalendar, formatCalendarForPrompt } from "../lib/calendar";
+import { getRelevantNews, formatNewsForPrompt, type NewsItem } from "../lib/news";
+import { getRelevantCalendar, formatCalendarForPrompt, type CalendarEvent } from "../lib/calendar";
 import { createNotification, createNotificationsForUsers } from "../lib/create-notification";
 
 let aiErrorCount = 0;
@@ -280,6 +286,12 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   // Summary card on the Analyze tab so the saved analysis page can render the
   // same card later. Stays null when indicators were unavailable.
   let techCounts: { buy: number; sell: number; neutral: number } | null = null;
+  // Captured from the news / calendar fetches below so we can both
+  // (a) hand them to generateAnalysis for citation grounding, and
+  // (b) persist them on the analyses row so the saved-analysis page
+  //     renders the SAME fundamental context the model was shown.
+  let fetchedNews: NewsItem[] = [];
+  let fetchedCalendar: CalendarEvent[] = [];
   await Promise.allSettled([
     indicatorTf
       ? getIndicators(instrument, indicatorTf).then((ind) => {
@@ -294,13 +306,23 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         })
       : Promise.resolve(),
     getRelevantNews(instrument).then((news) => {
+      fetchedNews = news;
       if (news.length) contextParts.push(formatNewsForPrompt(news, instrument));
     }),
     getRelevantCalendar(instrument).then((events) => {
+      fetchedCalendar = events;
       if (events.length) contextParts.push(formatCalendarForPrompt(events, instrument));
     }),
   ]);
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
+  // Snapshot persisted on the analysis row + handed to the model so
+  // its `fundamentalCitations` can be validated against real items.
+  // Stays null when both upstream feeds returned empty (e.g. both
+  // down) so the UI knows to render the empty-state.
+  const fundamentalSnapshot: FundamentalSnapshot | null =
+    fetchedNews.length || fetchedCalendar.length
+      ? { newsItems: fetchedNews, calendarEvents: fetchedCalendar }
+      : null;
 
   const validUntil = getValidUntil(timeframe);
 
@@ -342,6 +364,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       techSellCount: techCounts?.sell ?? null,
       techNeutralCount: techCounts?.neutral ?? null,
       tradePlan: aiResult.tradePlan ?? null,
+      fundamentalContext: fundamentalSnapshot,
       ...modeSpecificFields,
     };
   };
@@ -351,7 +374,14 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   if (isPrivilegedRole) {
     let aiResult: AIResult;
     try {
-      aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
+      aiResult = await generateAnalysis(
+        instrument,
+        timeframe,
+        typedMode,
+        userInputContext,
+        indicatorContext,
+        fundamentalSnapshot,
+      );
     } catch (aiErr) {
       void trackAiError();
       res.status(502).json({ error: "Layanan AI sedang tidak tersedia. Silakan coba lagi dalam beberapa saat." });
@@ -394,7 +424,14 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
       let aiResult: AIResult;
       try {
-        aiResult = await generateAnalysis(instrument, timeframe, typedMode, userInputContext, indicatorContext);
+        aiResult = await generateAnalysis(
+          instrument,
+          timeframe,
+          typedMode,
+          userInputContext,
+          indicatorContext,
+          fundamentalSnapshot,
+        );
       } catch (aiErr) {
         return { kind: "aiError" };
       }
