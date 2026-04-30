@@ -137,6 +137,31 @@ function buildStubAnalysis() {
         rationale: "Hanya jika struktur bullish 30m batal.",
       },
     },
+    fundamentalContext: {
+      newsItems: [
+        {
+          id: "yahoo-stub-1",
+          title: "Gold edges higher as dollar slips on Fed rate cut bets",
+          summary:
+            "Spot gold rose as the dollar weakened ahead of Friday's PCE inflation report.",
+          source: "Yahoo Finance",
+          url: "https://finance.yahoo.com/news/gold-stub",
+          publishedAt: new Date(now.getTime() - 60 * 60_000).toISOString(),
+        },
+      ],
+      calendarEvents: [
+        {
+          date: now.toISOString().slice(0, 10),
+          time: "19:30",
+          currency: "USD",
+          event: "FOMC Rate Decision",
+          impact: "★★★",
+          actual: null,
+          forecast: "5.25%",
+          previous: "5.50%",
+        },
+      ],
+    },
     createdAt: now.toISOString(),
     feedback: null,
   };
@@ -239,5 +264,16 @@ test.describe("Analyze flow — 30m timeframe (real Chromium)", () => {
     expect(createPayload).not.toBeNull();
     expect(createPayload!.timeframe).toBe("30m");
     expect(createPayload!.instrument).toBe("XAU/USD");
+
+    // Fundamental context card (task #88) renders the news + calendar
+    // snapshot the model saw at analysis time. Asserting the headline
+    // and the FOMC event proves the saved analysis page is wired to
+    // the persisted snapshot, not just the legacy AI narrative.
+    const fundamentalCard = page.getByTestId("card-fundamental-context");
+    await expect(fundamentalCard).toBeVisible();
+    await expect(fundamentalCard).toContainText(
+      "Gold edges higher as dollar slips on Fed rate cut bets",
+    );
+    await expect(fundamentalCard).toContainText("FOMC Rate Decision");
   });
 });

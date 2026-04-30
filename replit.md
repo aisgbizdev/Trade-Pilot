@@ -106,3 +106,23 @@ Auto-provided by the platform — do not set manually:
 Already covered by `[userenv.shared]` in `.replit` and carried into production automatically: `OPENAI_MODEL`, `VAPID_PUBLIC_KEY`, `VAPID_EMAIL`. No action needed for these.
 
 Optional tuning vars (defaults are fine for most cases): `ANALYSIS_QUOTA_PER_HOUR` (default 5), `ANALYSIS_QUOTA_PER_DAY` (default 20), `LOG_LEVEL` (default `info`).
+
+## Fundamental Pipeline (Task #88)
+
+Every `/api/analyses` POST now builds a **fundamental snapshot** that is fed to the AI *and* persisted on the row, so the AI's `keyDriversFundamental` is grounded in real, auditable inputs instead of generic templates.
+
+**Sources (server-side, parallel fetch):**
+- `lib/news.ts` merges **newsmaker.id** (HTML scrape, ID-language) + **Yahoo Finance per-symbol RSS** (`lib/news-yahoo.ts`, regex XML parse, no API key) — deduped by URL+normalized title. Filter relaxes to a `MACRO_FALLBACK_PATTERN` (FOMC/CPI/NFP/PCE/etc.) when no instrument-specific match exists, and always keeps ≥1 Yahoo headline as a baseline. Body trimmed to 600 chars in the prompt; source badge included.
+- `lib/calendar.ts` accepts `lookbackHours` (default **24h**) so freshly-released actuals (e.g. NFP from this morning) still appear, not just future events.
+
+**OpenAI (`lib/openai.ts`):**
+- `generateAnalysis(instrument, timeframe, mode, notes?, indicatorContext?, fundamentalSnapshot?)` — 6-arg signature.
+- Output schema gains optional `fundamentalCitations: { newsTitles[], calendarEvents[] }`.
+- `validateFundamentalCitations` enforces every cited title/event is a substring of the snapshot OR shares ≥2 token overlap; if validation fails, the call **retries once** with a corrective system message; if it still fails, the citation block is stripped (the analysis itself is kept).
+- Prompt rule: when the snapshot block is non-empty the model **must** quote ≥1 item by name into citations; when empty it must say "tidak ada katalis fundamental signifikan" and leave citations empty.
+
+**Persistence:** `analyses.fundamentalContext jsonb` (typed `FundamentalContextShape` in `lib/db/src/schema/index.ts`) stores `{ newsItems, calendarEvents }`. Exposed via `Analysis.fundamentalContext` in `lib/api-spec/openapi.yaml` and the regenerated client types.
+
+**UI (`analysis-detail.tsx`):** `FundamentalContextCard` renders below the trade plan when `fundamentalContext` is present — shows up to 3 news items (title + source + relative time + click-through) and up to 5 calendar rows (event + currency + impact + actual/forecast/previous), with an empty state. Locale keys live under `analysis_detail.fundamental_*` (EN + ID).
+
+**Tests:** `lib/__tests__/news.test.ts` (merge/dedupe + macro fallback), `lib/__tests__/calendar.test.ts` (lookback window), `lib/__tests__/openai.test.ts` (citation validation + retry-then-strip), `routes/__tests__/analyses-30m.test.ts` (asserts `fundamentalSnapshot` is the 6th arg + persisted on the response), `tests/e2e/tests/analyze-30m.spec.ts` (asserts `card-fundamental-context` renders the stub headline + FOMC event).

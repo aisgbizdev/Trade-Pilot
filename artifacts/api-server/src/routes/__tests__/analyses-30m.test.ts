@@ -73,7 +73,16 @@ vi.mock("../../lib/news", async () => {
   const actual = await vi.importActual<typeof import("../../lib/news")>("../../lib/news");
   return {
     ...actual,
-    getRelevantNews: vi.fn(async () => []),
+    getRelevantNews: vi.fn(async () => [
+      {
+        id: "yahoo-test-1",
+        title: "EUR rises on dovish ECB minutes",
+        summary: "Euro climbed against the dollar after minutes signaled a dovish tilt.",
+        source: "Yahoo Finance",
+        url: "https://finance.yahoo.com/news/eur-rises",
+        publishedAt: "2026-04-29T10:00:00.000Z",
+      },
+    ]),
   };
 });
 
@@ -81,7 +90,18 @@ vi.mock("../../lib/calendar", async () => {
   const actual = await vi.importActual<typeof import("../../lib/calendar")>("../../lib/calendar");
   return {
     ...actual,
-    getRelevantCalendar: vi.fn(async () => []),
+    getRelevantCalendar: vi.fn(async () => [
+      {
+        date: "2026-04-30",
+        time: "19:30",
+        currency: "USD",
+        event: "FOMC Rate Decision",
+        impact: "★★★",
+        actual: null,
+        forecast: "5.25%",
+        previous: "5.50%",
+      },
+    ]),
   };
 });
 
@@ -172,13 +192,42 @@ describe("POST /api/analyses with timeframe 30m", () => {
     });
 
     expect(getIndicators).toHaveBeenCalledWith(INSTRUMENT, "30m");
+    // Sixth arg is the fundamental snapshot passed for citation grounding —
+    // assert its shape rather than identity so future field tweaks don't
+    // turn this into a brittle test.
     expect(generateAnalysis).toHaveBeenCalledWith(
       INSTRUMENT,
       "30m",
       "beginner",
       undefined,
       expect.any(String),
+      expect.objectContaining({
+        newsItems: expect.arrayContaining([
+          expect.objectContaining({ source: "Yahoo Finance" }),
+        ]),
+        calendarEvents: expect.arrayContaining([
+          expect.objectContaining({ event: "FOMC Rate Decision" }),
+        ]),
+      }),
     );
+
+    // The persisted snapshot is also returned in the response so the
+    // saved-analysis page can render the same fundamental context the
+    // model saw, without re-fetching live data that may have moved on.
+    expect(res.body.fundamentalContext).toMatchObject({
+      newsItems: expect.arrayContaining([
+        expect.objectContaining({
+          title: "EUR rises on dovish ECB minutes",
+          source: "Yahoo Finance",
+        }),
+      ]),
+      calendarEvents: expect.arrayContaining([
+        expect.objectContaining({
+          event: "FOMC Rate Decision",
+          impact: "★★★",
+        }),
+      ]),
+    });
 
     const [stored] = await db
       .select()
@@ -186,5 +235,9 @@ describe("POST /api/analyses with timeframe 30m", () => {
       .where(eq(analyses.id, res.body.id));
     expect(stored).toBeDefined();
     expect(stored.timeframe).toBe("30m");
+    expect(stored.fundamentalContext).toMatchObject({
+      newsItems: expect.any(Array),
+      calendarEvents: expect.any(Array),
+    });
   });
 });

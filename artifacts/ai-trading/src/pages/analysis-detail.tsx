@@ -17,6 +17,9 @@ import {
   Target,
   AlertOctagon,
   HelpCircle,
+  Newspaper,
+  CalendarClock,
+  ExternalLink,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +51,9 @@ import {
   type Feedback,
   type TradePlan,
   type TradeSide,
+  type FundamentalContext,
+  type FundamentalNewsItem,
+  type FundamentalCalendarEvent,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -408,6 +414,210 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
   );
 }
 
+/**
+ * Auditable view of the fundamental snapshot the AI was given when
+ * this analysis was generated. The list of news headlines + economic
+ * calendar events is captured server-side at analysis time and stored
+ * on the row, so the user is looking at the SAME inputs the model
+ * leaned on — not whatever's live right now.
+ *
+ * Renders nothing visible if both lists are empty (caller should also
+ * gate, but we double-check here so a stray empty snapshot doesn't
+ * leave a confusing blank card).
+ */
+function FundamentalContextCard({
+  ctx,
+  t,
+}: {
+  ctx: FundamentalContext;
+  t: T;
+}) {
+  const news = (ctx.newsItems ?? []).slice(0, 3);
+  const events = (ctx.calendarEvents ?? []).slice(0, 5);
+  if (news.length === 0 && events.length === 0) {
+    return (
+      <Card className="p-4 space-y-2" data-testid="card-fundamental-context">
+        <div className="flex items-center gap-2">
+          <Newspaper className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-bold text-foreground">
+            {t.analysis_detail.fundamental_context_title}
+          </h3>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t.analysis_detail.fundamental_empty}
+        </p>
+      </Card>
+    );
+  }
+  return (
+    <Card className="p-4 space-y-4" data-testid="card-fundamental-context">
+      <div>
+        <div className="flex items-center gap-2">
+          <Newspaper className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-bold text-foreground">
+            {t.analysis_detail.fundamental_context_title}
+          </h3>
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+          {t.analysis_detail.fundamental_context_subtitle}
+        </p>
+      </div>
+
+      {news.length > 0 && (
+        <div className="space-y-2" data-testid="fundamental-news-list">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80 uppercase tracking-wide">
+            <Newspaper className="w-3.5 h-3.5" />
+            <span>{t.analysis_detail.fundamental_news_title}</span>
+          </div>
+          <ul className="space-y-2">
+            {news.map((n) => (
+              <FundamentalNewsRow key={n.id} item={n} t={t} />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {events.length > 0 && (
+        <div className="space-y-2" data-testid="fundamental-calendar-list">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80 uppercase tracking-wide">
+            <CalendarClock className="w-3.5 h-3.5" />
+            <span>{t.analysis_detail.fundamental_calendar_title}</span>
+          </div>
+          <ul className="space-y-2">
+            {events.map((e, i) => (
+              <FundamentalCalendarRow key={`${e.date}-${e.event}-${i}`} ev={e} t={t} />
+            ))}
+          </ul>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// Reject anything that isn't a vanilla http/https URL. The news feed is
+// upstream-controlled (newsmaker.id + Yahoo Finance), so a hostile or
+// glitched item could otherwise smuggle a `javascript:` / `data:` URL
+// straight into an anchor href and execute on click. Returning `null`
+// makes the row render the title as plain text instead.
+function safeHttpUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function FundamentalNewsRow({
+  item,
+  t,
+}: {
+  item: FundamentalNewsItem;
+  t: T;
+}) {
+  // Best-effort relative date — if the timestamp is unparseable we just
+  // skip the relative label rather than crashing the card render.
+  let relative = "";
+  try {
+    const d = new Date(item.publishedAt);
+    if (!Number.isNaN(d.getTime())) {
+      relative = formatDistanceToNow(d, { addSuffix: true, locale: idLocale });
+    }
+  } catch {
+    relative = "";
+  }
+  const safeUrl = safeHttpUrl(item.url);
+  const TitleEl = safeUrl ? (
+    <a
+      href={safeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sm font-medium text-foreground hover:text-primary inline-flex items-start gap-1 leading-snug"
+      data-testid="fundamental-news-link"
+    >
+      <span>{item.title}</span>
+      <ExternalLink className="w-3 h-3 mt-1 shrink-0 opacity-60" />
+    </a>
+  ) : (
+    <span className="text-sm font-medium text-foreground leading-snug">
+      {item.title}
+    </span>
+  );
+  return (
+    <li className="border-l-2 border-muted-foreground/20 pl-3 py-0.5">
+      {TitleEl}
+      <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+        <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px]">
+          {item.source}
+        </Badge>
+        {relative && <span>{relative}</span>}
+      </div>
+    </li>
+  );
+}
+
+function FundamentalCalendarRow({
+  ev,
+  t,
+}: {
+  ev: FundamentalCalendarEvent;
+  t: T;
+}) {
+  const impactColor = ev.impact === "★★★"
+    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+    : ev.impact === "★★"
+      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+      : "bg-muted text-muted-foreground";
+  return (
+    <li className="border-l-2 border-muted-foreground/20 pl-3 py-0.5 space-y-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-medium text-foreground leading-snug">
+          {ev.event}
+        </span>
+        <Badge variant="outline" className="px-1.5 py-0 h-4 text-[10px]">
+          {ev.currency}
+        </Badge>
+        {ev.impact && (
+          <span
+            className={cn(
+              "text-[10px] font-semibold px-1.5 py-0 rounded h-4 inline-flex items-center",
+              impactColor,
+            )}
+          >
+            {ev.impact}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+        <span>
+          {ev.date}
+          {ev.time ? ` · ${ev.time}` : ""}
+        </span>
+        {ev.actual != null && (
+          <span>
+            {t.analysis_detail.fundamental_calendar_actual}:{" "}
+            <span className="font-semibold text-foreground/80">{ev.actual}</span>
+          </span>
+        )}
+        {ev.forecast != null && (
+          <span>
+            {t.analysis_detail.fundamental_calendar_forecast}: {ev.forecast}
+          </span>
+        )}
+        {ev.previous != null && (
+          <span>
+            {t.analysis_detail.fundamental_calendar_previous}: {ev.previous}
+          </span>
+        )}
+      </div>
+    </li>
+  );
+}
+
 function executionScenarioAText(bias: BiasKey, t: T): string {
   if (bias === "bullish" || bias === "bullish_strong") {
     return t.analysis_detail.execution_scenario_a_template_bullish;
@@ -692,6 +902,14 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             entry / SL / TP / R:R the model produced — keeps the rest of the
             narrative consultative while giving the user actionable numbers. */}
         {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
+
+        {/* Fundamental context — the news headlines + economic-calendar
+            events the AI was given when this analysis was generated. Shown
+            so the user can audit the fundamentals the model leaned on
+            instead of treating the narrative as a black box. */}
+        {analysis.fundamentalContext && (
+          <FundamentalContextCard ctx={analysis.fundamentalContext} t={t} />
+        )}
 
         {/* Market Context Summary — same card the user saw on the Analyze tab,
             rendered from the indicator-tally snapshot stored at analysis time. */}
