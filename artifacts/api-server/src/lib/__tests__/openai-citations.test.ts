@@ -1,13 +1,5 @@
-/**
- * Unit tests for `validateFundamentalCitations` in `lib/openai.ts`.
- *
- * The validator is the gate that turns task #88 from "looks plausible"
- * into "actually grounded": when the input snapshot has real news /
- * calendar items, the model MUST cite at least one of them, and any
- * cited title MUST be present in the snapshot (substring or token
- * overlap). Without this gate the model can drift back to generic
- * fundamental prose that ignores the live feed.
- */
+// Tests for `validateFundamentalCitations` and the retry/throw path
+// in `generateAnalysis` (citation grounding).
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -69,7 +61,7 @@ describe("validateFundamentalCitations", () => {
       },
     );
     expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/no fundamentalCitations/i);
+    expect(r.reason).toMatch(/Missing fundamentalCitations/i);
   });
 
   it("REJECTS missing citations object when snapshot is non-empty", () => {
@@ -78,7 +70,7 @@ describe("validateFundamentalCitations", () => {
       calendarEvents: [],
     });
     expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/no fundamentalCitations/i);
+    expect(r.reason).toMatch(/Missing fundamentalCitations/i);
   });
 
   it("accepts a cited news title that substring-matches the snapshot", () => {

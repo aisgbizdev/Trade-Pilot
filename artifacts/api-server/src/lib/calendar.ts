@@ -1,18 +1,6 @@
-/**
- * Economic-calendar adapter.
- *
- * History:
- *   - v1 (task #82) only returned events with `date >= today`. That
- *     was correct for "what's coming", but it stripped out the events
- *     that already printed earlier today / yesterday — so the AI never
- *     saw the *actual* CPI or FOMC outcome and had no way to reason
- *     about its surprise factor.
- *
- *   - v2 (task #88) accepts a `lookbackHours` window so we can include
- *     the just-released figures with their `actual` numbers, and we
- *     return a typed shape that the route layer can persist on the
- *     analysis row alongside the news snapshot.
- */
+// Economic-calendar adapter. Accepts a `lookbackHours` window so we
+// include just-released figures with their `actual` numbers, and
+// returns a typed shape persisted on the analysis row.
 
 const CALENDAR_API =
   "https://endpoapi-production-3202.up.railway.app/api/calendar/this-week";

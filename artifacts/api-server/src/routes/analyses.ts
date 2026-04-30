@@ -315,13 +315,9 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     }),
   ]);
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
-  // Snapshot persisted on the analysis row + handed to the model so
-  // its `fundamentalCitations` can be validated against real items.
   // Always persist as `{ newsItems: [], calendarEvents: [] }` (never
-  // null) when both upstream feeds returned empty, so the saved-
-  // analysis page can render the explicit empty-state ("tidak ada
-  // katalis fundamental signifikan...") instead of silently hiding
-  // the card and letting users assume fundamentals weren't checked.
+  // null) so the saved-analysis page renders an honest empty-state
+  // when both feeds were empty, not a silently-hidden card.
   const fundamentalSnapshot: FundamentalSnapshot = {
     newsItems: fetchedNews,
     calendarEvents: fetchedCalendar,

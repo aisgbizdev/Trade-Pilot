@@ -1,30 +1,13 @@
-/**
- * Yahoo Finance per-symbol RSS adapter.
- *
- * Used as a SECOND fundamental-news source alongside the existing
- * Newsmaker.id feed (`news.ts`). Yahoo's RSS endpoints are public, do
- * not require an API key, and return symbol-scoped headlines, so each
- * item is already topically relevant for its instrument and we can give
- * it a baseline relevance score in the merger.
- *
- * The endpoint shape:
- *   https://feeds.finance.yahoo.com/rss/2.0/headline?s=<SYMBOL>
- *     &region=US&lang=en-US
- *
- * Yahoo silently returns an empty <channel> for unknown symbols rather
- * than a 4xx, so the caller treats "no items" as "no upstream data" and
- * keeps going — never as a hard error.
- */
+// Yahoo Finance per-symbol RSS adapter. Public, no API key. Used as a
+// second fundamental-news source alongside Newsmaker.id. Yahoo returns
+// empty <channel> for unknown symbols rather than 4xx, so the caller
+// treats no-items as no-upstream-data, never as a hard error.
 
 const YAHOO_RSS_BASE =
   "https://feeds.finance.yahoo.com/rss/2.0/headline";
 
-/**
- * Map our internal instrument codes onto the Yahoo Finance ticker each
- * one corresponds to. Yahoo uses `=F` for futures (gold, brent) and
- * `=X` for FX crosses. Anything not in this map falls back to a more
- * generic macro headline pull (see `getYahooFinanceMacroNews`).
- */
+// Yahoo uses `=F` for futures and `=X` for FX crosses. Unmapped
+// instruments fall back to `getYahooFinanceMacroNews`.
 const INSTRUMENT_TO_YAHOO_SYMBOL: Record<string, string> = {
   "XAU/USD": "GC=F",
   "BRENT": "BZ=F",

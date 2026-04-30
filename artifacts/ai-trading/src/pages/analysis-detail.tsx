@@ -414,17 +414,9 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
   );
 }
 
-/**
- * Auditable view of the fundamental snapshot the AI was given when
- * this analysis was generated. The list of news headlines + economic
- * calendar events is captured server-side at analysis time and stored
- * on the row, so the user is looking at the SAME inputs the model
- * leaned on — not whatever's live right now.
- *
- * Renders nothing visible if both lists are empty (caller should also
- * gate, but we double-check here so a stray empty snapshot doesn't
- * leave a confusing blank card).
- */
+// Auditable view of the fundamental snapshot the AI was given.
+// Captured server-side at analysis time so the user sees the same
+// inputs the model used. Empty arrays render the empty-state.
 function FundamentalContextCard({
   ctx,
   t,
@@ -906,13 +898,8 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           )}
         </Card>
 
-        {/* Fundamental context — the news headlines + economic-calendar
-            events the AI was given when this analysis was generated. Sits
-            directly under the bias gauge / primary-metrics card so the user
-            can audit the fundamentals the model leaned on BEFORE diving into
-            scenarios + trade plan. Always rendered when `fundamentalContext`
-            is present (even with empty arrays) so the empty-state message
-            is honest about whether fundamentals were checked. */}
+        {/* Fundamental context — news + calendar the AI was given,
+            shown directly under the bias gauge so users can audit it. */}
         {analysis.fundamentalContext && (
           <FundamentalContextCard
             ctx={analysis.fundamentalContext}

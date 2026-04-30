@@ -1,18 +1,5 @@
-/**
- * Unit tests for `lib/news.ts` — the multi-source aggregator that
- * feeds the AI fundamental block.
- *
- * Covers:
- *   - newsmaker.id + Yahoo merge with URL + title dedupe
- *   - the macro-fallback (FOMC / CPI / NFP / etc.) keeps the block
- *     non-empty when no instrument-specific match exists
- *   - the prompt sanitizer strips role markers, "ignore previous
- *     instructions", control characters, and our own `===` delimiter
- *
- * The newsmaker upstream is mocked via `globalThis.fetch`; the Yahoo
- * adapter is mocked at module level so we don't need to construct a
- * fake RSS payload.
- */
+// Tests for `lib/news.ts` — multi-source merge + dedupe, macro
+// fallback, and the prompt sanitizer.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../news-yahoo", () => ({

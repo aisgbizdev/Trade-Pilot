@@ -1,13 +1,5 @@
-/**
- * Unit tests for `lib/calendar.ts` — the economic-calendar adapter
- * that grounds the AI fundamental block.
- *
- * Covers:
- *   - `lookbackHours` honors datetime precision (not date-only) so a
- *     24-hour window is really 24 hours
- *   - the prompt sanitizer scrubs role markers / "ignore instructions"
- *     phrases / our own delimiter
- */
+// Tests for `lib/calendar.ts` — datetime-precision lookback window
+// and the prompt sanitizer.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {

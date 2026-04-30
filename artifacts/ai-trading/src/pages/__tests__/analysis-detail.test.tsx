@@ -1,18 +1,6 @@
-/**
- * Component test for the Analysis Detail view
- * (`src/pages/analysis-detail.tsx`).
- *
- * Covers the happy-path render of the instrument header, bias label,
- * confidence range, and risk level pulled from the analysis payload;
- * the not-found branch when the API responds with a 404 (which swaps
- * the body for the "back to history" CTA); and a user action that
- * picks the "useful" feedback button + submits the form, which fires
- * `POST /api/analyses/:id/feedback` with the chosen feedback type.
- *
- * The page mounts inside `<Layout>` so the layout-bell poll and the
- * SSE constructor must already be stubbed (the latter is handled in
- * `src/test/setup.ts`).
- */
+// Component tests for `src/pages/analysis-detail.tsx`. The page
+// mounts inside `<Layout>`, so the layout-bell poll and the SSE
+// constructor are stubbed in `src/test/setup.ts`.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 

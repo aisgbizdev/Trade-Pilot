@@ -281,11 +281,8 @@ function sanitizeNotes(notes: string): string {
   return notes;
 }
 
-/**
- * Snapshot of fundamentals shown to the model so we can verify the
- * `fundamentalCitations` it emitted are real (substring-grounded in
- * either a news headline or an event name we actually sent).
- */
+// Snapshot of fundamentals shown to the model; used to verify the
+// emitted `fundamentalCitations` are grounded in real items.
 export interface FundamentalSnapshot {
   newsItems: NewsItem[];
   calendarEvents: CalendarEvent[];
@@ -295,18 +292,10 @@ function normalizeForCitationMatch(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-/**
- * A cited string counts as "grounded" if it shares a meaningful chunk
- * of text with at least one real item:
- *   - exact normalized substring match (fast path), OR
- *   - ≥ 2 significant tokens (length ≥ 4) overlap with the same real
- *     item.
- *
- * The 2-token rule lets the model abbreviate "★★★ USD — FOMC Rate
- * Decision" to "FOMC Rate Decision" without us flagging it as
- * fabricated, while still rejecting an unrelated invented headline
- * that shares no substantive vocabulary with anything we sent.
- */
+// A citation is "grounded" if it has an exact normalized substring
+// match with a real item, OR shares ≥2 significant tokens (len ≥4)
+// with the same real item (lets the model abbreviate without us
+// flagging it as fabricated).
 function citationMatchesAny(citation: string, realItems: string[]): boolean {
   const normCit = normalizeForCitationMatch(citation);
   if (!normCit) return false;
@@ -317,9 +306,8 @@ function citationMatchesAny(citation: string, realItems: string[]): boolean {
   }
   const citTokens = normCit.split(" ").filter((t) => t.length >= 4);
   if (citTokens.length === 0) {
-    // Short citation (e.g. "CPI", "NFP", "FOMC"). Without enough
-    // tokens to do the overlap test, accept iff the entire normalized
-    // citation appears in some real item.
+    // Short citation (CPI / NFP / FOMC) — accept iff the whole
+    // normalized citation appears in some real item.
     return realItems.some((r) =>
       normalizeForCitationMatch(r).includes(normCit),
     );
@@ -359,12 +347,8 @@ export function validateFundamentalCitations(
     return { ok: true };
   }
 
-  // Snapshot has real items in it — the model MUST cite at least one
-  // of them. Otherwise the fundamental narrative is ungrounded prose
-  // and the whole point of task #88 (fundamentals tied to real input)
-  // is defeated. Treat missing-citation-when-snapshot-non-empty as a
-  // grounding failure that triggers the same retry/override path as
-  // a fabricated citation.
+  // Snapshot is non-empty — require at least one citation, otherwise
+  // the fundamental narrative is ungrounded.
   const cited =
     (citations?.newsTitles.length ?? 0) +
     (citations?.calendarEvents.length ?? 0);
@@ -372,14 +356,10 @@ export function validateFundamentalCitations(
     return {
       ok: false,
       reason:
-        "Model emitted no fundamentalCitations even though the input snapshot contains news and/or calendar items the model was supposed to ground its narrative in.",
+        "Missing fundamentalCitations against a non-empty snapshot.",
     };
   }
-  if (!citations) {
-    // Defensive — `cited === 0` already returned above. Treat as ok
-    // so we don't crash in the unreachable branch.
-    return { ok: true };
-  }
+  if (!citations) return { ok: true };
 
   const realNews = snapshot.newsItems.map((n) => n.title);
   const realEvents = snapshot.calendarEvents.map(
@@ -496,19 +476,11 @@ export async function generateAnalysis(
       snapshot,
     );
     if (retryCheck.ok) return retryParsed;
-    // Second failure on a snapshot that ACTUALLY HAS items is a hard
-    // gate: returning the analysis would let ungrounded fundamental
-    // prose through, which is exactly the failure mode task #88 was
-    // built to eliminate. Throw so the route surfaces a clean AI-
-    // error path (HTTP 502 / quota refunded) instead of pretending
-    // success.
-    //
-    // For the empty-snapshot branch (noSnapshot) the validator only
-    // fails when the model fabricated citations against a blank
-    // input — also a real failure worth surfacing rather than
-    // silently keeping the fabricated text.
+    // Hard fail after the corrective retry — the route turns this into
+    // an HTTP 502 / quota refund, which is preferable to returning
+    // ungrounded fundamental prose.
     console.warn(
-      `[generateAnalysis] Citation grounding still failed after retry — failing analysis. Reason: ${retryCheck.reason}`,
+      `[generateAnalysis] Citation grounding still failed after retry: ${retryCheck.reason}`,
     );
     throw new Error(
       `AI fundamental grounding failed after retry: ${retryCheck.reason}`,
