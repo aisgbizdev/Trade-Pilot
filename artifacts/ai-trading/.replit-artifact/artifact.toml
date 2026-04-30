@@ -25,11 +25,20 @@ BASE_PATH = "/"
 # path-based router (no Cloud Run service needed). This gives the
 # router a real backend for "/" so root requests don't get a synthetic
 # 500. The api-server runs separately as the Cloud Run service for
-# /api. The build below produces dist/public which the static server
-# then serves at the path "/" claimed in [[services]].paths.
+# /api. The build below produces artifacts/ai-trading/dist/public,
+# which the static server then serves at the path "/" claimed in
+# [[services]].paths.
+#
+# NOTE: publicDir is resolved from the REPO ROOT (not the artifact
+# directory), so it must include the full "artifacts/ai-trading/"
+# prefix. Confirmed by the April 30 deploy log:
+#   "static artifact publicDir does not exist, skipping
+#    error=stat /home/runner/workspace/dist/public:
+#    no such file or directory path=/ publicDir=dist/public"
+# i.e. "dist/public" was joined onto /home/runner/workspace.
 [services.production]
 serve = "static"
-publicDir = "dist/public"
+publicDir = "artifacts/ai-trading/dist/public"
 
 [services.production.build]
 args = ["pnpm", "--filter", "@workspace/ai-trading", "run", "build"]
