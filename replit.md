@@ -89,6 +89,10 @@ After codegen: fix `lib/api-zod/src/index.ts` to only export from `"./generated/
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
 
+## Production Routing
+
+In production only the api-server runs as a Cloud Run service; ai-trading is built ahead of time and its `dist/public` is served by api-server's SPA fallback in `src/app.ts`. Because of this, `api-server`'s `[[services]].paths` in `artifacts/api-server/.replit-artifact/artifact.toml` claims **both** `/api` and `/` — the workspace path-router needs a backend for the root URL or it returns a synthetic 500 (no pino request log appears). In dev, `previewPath` (`/api` for api-server, `/` for ai-trading) is the proxy's tiebreaker, so ai-trading's Vite dev server still owns root traffic and HMR keeps working.
+
 ## Before You Publish
 
 Production gets its own Postgres database (separate `DATABASE_URL` from dev). Two things must be in place before clicking Publish:

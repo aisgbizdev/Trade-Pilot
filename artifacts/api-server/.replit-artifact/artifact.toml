@@ -4,10 +4,21 @@ title = "API Server"
 version = "1.0.0"
 id = "3B4_FFSkEVBkAeYMFRJ2e"
 
+# In production the api-server is the ONLY running service — it serves
+# the API on /api/* via its Express router AND the ai-trading SPA on
+# every other path via the static-file fallback in src/app.ts. The
+# workspace's path-based proxy needs to know the api-server claims both
+# /api and / so it has a backend to route the root URL to. Without "/"
+# in this list, requests to https://<app>.replit.app/ get a synthetic
+# 500 from the proxy because no production service owns "/" (ai-trading
+# owns "/" but has no [services.production], so it can't serve prod).
+# In dev, the previewPath ("/api") is the proxy's primary tiebreaker,
+# so ai-trading's previewPath="/" still wins root traffic and dev HMR
+# keeps working through the ai-trading vite dev server.
 [[services]]
 localPort = 8080
 name = "API Server"
-paths = ["/api"]
+paths = ["/api", "/"]
 
 [services.development]
 run = "pnpm --filter @workspace/api-server run dev"
