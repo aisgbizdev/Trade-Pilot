@@ -55,6 +55,17 @@ export type FundamentalContextShape = {
   calendarEvents: FundamentalCalendarEventShape[];
 };
 
+// Provenance trail emitted by the AI: which news headlines + calendar
+// event names it actually leaned on while writing the narrative. Lets
+// the analysis-detail page inline-cite the matching cards next to
+// `whyReason` / `keyDriversFundamental` / `marketContext` (task #89).
+// Stored alongside `fundamentalContext` so the inline chips can match
+// against the same persisted snapshot the AI was given.
+export type FundamentalCitationsShape = {
+  newsTitles: string[];
+  calendarEvents: string[];
+};
+
 export const roleEnum = pgEnum("role", ["user", "admin", "super_admin"]);
 export const modeEnum = pgEnum("mode", ["beginner", "pro"]);
 export const marketConditionEnum = pgEnum("market_condition", [
@@ -177,6 +188,12 @@ export const analyses = pgTable("analyses", {
   // grounded in real, citable sources rather than fabricated. Nullable
   // for legacy rows + cases where both upstream feeds were down.
   fundamentalContext: jsonb("fundamental_context").$type<FundamentalContextShape>(),
+  // Which subset of `fundamentalContext` the AI actually cited in the
+  // narrative blocks (task #89). Stored as JSONB so the saved-analysis
+  // page can render inline source chips next to the AI's reasoning.
+  // Nullable for legacy rows + analyses where the AI didn't lean on
+  // any fundamental input.
+  fundamentalCitations: jsonb("fundamental_citations").$type<FundamentalCitationsShape>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

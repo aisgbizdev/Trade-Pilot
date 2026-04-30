@@ -283,6 +283,16 @@ export interface RefreshFundamentalsResponse {
   drift: FundamentalDrift;
 }
 
+/**
+ * Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).
+ */
+export interface FundamentalCitations {
+  /** News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems). */
+  newsTitles: string[];
+  /** Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents). */
+  calendarEvents: string[];
+}
+
 export type AnalysisMode = (typeof AnalysisMode)[keyof typeof AnalysisMode];
 
 export const AnalysisMode = {
@@ -355,6 +365,8 @@ export interface Analysis {
   tradePlan?: TradePlan | null;
   /** Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down. */
   fundamentalContext?: FundamentalContext | null;
+  /** Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason / keyDriversFundamental / marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input. */
+  fundamentalCitations?: FundamentalCitations | null;
   feedback?: Feedback | null;
   /** Number of "useful" feedback rows for this analysis. Only populated by admin endpoints. */
   usefulCount?: number;

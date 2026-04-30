@@ -333,6 +333,23 @@ export const ListAnalysesResponse = zod.object({
         .describe(
           "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
         ),
+      fundamentalCitations: zod
+        .object({
+          newsTitles: zod
+            .array(zod.string())
+            .describe(
+              "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
+            ),
+          calendarEvents: zod
+            .array(zod.string())
+            .describe(
+              "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
+            ),
+        })
+        .nullish()
+        .describe(
+          "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
+        ),
       feedback: zod
         .object({
           id: zod.number(),
@@ -500,6 +517,23 @@ export const GetAnalysesSummaryResponse = zod.object({
         .nullish()
         .describe(
           "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
+        ),
+      fundamentalCitations: zod
+        .object({
+          newsTitles: zod
+            .array(zod.string())
+            .describe(
+              "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
+            ),
+          calendarEvents: zod
+            .array(zod.string())
+            .describe(
+              "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
+            ),
+        })
+        .nullish()
+        .describe(
+          "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
         ),
       feedback: zod
         .object({
@@ -729,6 +763,23 @@ export const GetAnalysisResponse = zod.object({
     .nullish()
     .describe(
       "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
+    ),
+  fundamentalCitations: zod
+    .object({
+      newsTitles: zod
+        .array(zod.string())
+        .describe(
+          "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
+        ),
+      calendarEvents: zod
+        .array(zod.string())
+        .describe(
+          "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
+        ),
+    })
+    .nullish()
+    .describe(
+      "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
     ),
   feedback: zod
     .object({
@@ -1195,6 +1246,23 @@ export const GetAllAnalysesResponse = zod.object({
         .nullish()
         .describe(
           "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
+        ),
+      fundamentalCitations: zod
+        .object({
+          newsTitles: zod
+            .array(zod.string())
+            .describe(
+              "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
+            ),
+          calendarEvents: zod
+            .array(zod.string())
+            .describe(
+              "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
+            ),
+        })
+        .nullish()
+        .describe(
+          "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
         ),
       feedback: zod
         .object({

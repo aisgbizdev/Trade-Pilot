@@ -535,6 +535,7 @@ export const id: Translations = {
     fundamental_refresh_kind_news: "berita",
     fundamental_refresh_kind_calendar: "event",
     fundamental_refresh_kind_mixed: "item",
+    citations_label: "Sumber yang dirujuk:",
   },
   admin: {
     title: "Panel Admin",

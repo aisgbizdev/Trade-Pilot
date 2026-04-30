@@ -365,6 +365,13 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       techNeutralCount: techCounts?.neutral ?? null,
       tradePlan: aiResult.tradePlan ?? null,
       fundamentalContext: fundamentalSnapshot,
+      // Provenance trail emitted by the AI: which news titles + event
+      // names from `fundamentalSnapshot` it actually cited in the
+      // narrative. Drives the inline source chips on the saved-analysis
+      // page (task #89). Persist `null` when the AI didn't return one
+      // (legacy / no fundamental input cases) so the UI can fall back
+      // to rendering the narrative without chips.
+      fundamentalCitations: aiResult.fundamentalCitations ?? null,
       ...modeSpecificFields,
     };
   };

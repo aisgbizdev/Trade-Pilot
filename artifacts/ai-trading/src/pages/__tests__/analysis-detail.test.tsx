@@ -385,6 +385,250 @@ describe("AnalysisDetailPage: refresh fundamentals", () => {
   });
 });
 
+describe("AnalysisDetailPage: inline citation chips", () => {
+  it("renders an inline news chip + an inline calendar chip below the AI's whyReason for beginner mode, matched against fundamentalContext", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          whyReason:
+            "Trend bullish + Fed dovish memperkuat tesis cenderung naik.",
+          fundamentalContext: {
+            newsItems: [
+              {
+                id: "n-1",
+                title: "Gold rallies as Fed signals pause",
+                summary: "Statement softer than expected.",
+                source: "Newsmaker.id",
+                url: "https://newsmaker.id/article-1",
+                publishedAt: new Date(NOW - 30 * 60_000).toISOString(),
+              },
+            ],
+            calendarEvents: [
+              {
+                date: "2026-04-30",
+                time: "12:00",
+                currency: "USD",
+                event: "FOMC rate decision",
+                impact: "★★★",
+                actual: "no change",
+                forecast: "no change",
+                previous: "no change",
+              },
+            ],
+          },
+          fundamentalCitations: {
+            newsTitles: ["Gold rallies as Fed signals pause"],
+            // Mimic the AI emitting a star-prefixed event name — the chip
+            // matcher must normalize past the "★★★ USD —" decoration.
+            calendarEvents: ["★★★ USD — FOMC rate decision"],
+          },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    // The chips should land inside the confidence-reason block (which
+    // for beginner mode renders the whyReason text).
+    const reasonCard = await screen.findByTestId("card-confidence-reason");
+    const chipBlock = reasonCard.querySelector(
+      "[data-testid='citation-chips']",
+    );
+    expect(chipBlock).not.toBeNull();
+
+    const newsChip = chipBlock?.querySelector(
+      "[data-testid='citation-chip-news']",
+    );
+    expect(newsChip).not.toBeNull();
+    // News with a safe http(s) URL renders as an anchor that opens in
+    // a new tab — same safe-rel guarantees as the FundamentalContextCard.
+    expect(newsChip?.getAttribute("href")).toBe(
+      "https://newsmaker.id/article-1",
+    );
+    expect(newsChip?.getAttribute("target")).toBe("_blank");
+    expect(newsChip?.getAttribute("rel") ?? "").toMatch(/noopener/);
+
+    const eventChip = chipBlock?.querySelector(
+      "[data-testid='citation-chip-event']",
+    );
+    expect(eventChip).not.toBeNull();
+    expect(eventChip?.textContent).toMatch(/FOMC rate decision/);
+  });
+
+  it("uses the ORIGINAL calendar index (not the matched-list index) for the chip slug, so click-to-scroll lines up when only a subset is cited", async () => {
+    // Three events in the snapshot, AI cites only the THIRD one.
+    // The chip slug must end with `-2` (index in full list), not `-0`
+    // (index in matched list), or scrollToCitation finds nothing.
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: {
+            newsItems: [],
+            calendarEvents: [
+              {
+                date: "2026-04-30",
+                time: "08:00",
+                currency: "EUR",
+                event: "ECB press conference",
+                impact: "★★",
+                actual: null,
+                forecast: null,
+                previous: null,
+              },
+              {
+                date: "2026-04-30",
+                time: "10:00",
+                currency: "GBP",
+                event: "BoE bank rate",
+                impact: "★★",
+                actual: null,
+                forecast: null,
+                previous: null,
+              },
+              {
+                date: "2026-04-30",
+                time: "12:00",
+                currency: "USD",
+                event: "FOMC rate decision",
+                impact: "★★★",
+                actual: null,
+                forecast: null,
+                previous: null,
+              },
+            ],
+          },
+          fundamentalCitations: {
+            newsTitles: [],
+            calendarEvents: ["FOMC rate decision"],
+          },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    const chips = await screen.findByTestId("citation-chips");
+    const eventChip = chips.querySelector(
+      "[data-testid='citation-chip-event']",
+    ) as HTMLElement | null;
+    expect(eventChip).not.toBeNull();
+
+    // Build the slug the same way the component does, using the
+    // ORIGINAL index (2) for the third event in the snapshot.
+    const expectedSlug =
+      "cite-event-" +
+      "2026-04-30-fomc-rate-decision-2"
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80);
+
+    // The same slug must exist as an `id` somewhere in the calendar
+    // card (i.e. on the matching <li> row), proving the chip click
+    // would actually find a target.
+    const target = document.getElementById(expectedSlug);
+    expect(target).not.toBeNull();
+  });
+
+  it("drops AI-cited items that don't match any row in fundamentalContext (no dangling chips)", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: {
+            newsItems: [
+              {
+                id: "n-1",
+                title: "Gold rallies as Fed signals pause",
+                summary: "",
+                source: "Newsmaker.id",
+                url: null,
+                publishedAt: new Date(NOW - 30 * 60_000).toISOString(),
+              },
+            ],
+            calendarEvents: [],
+          },
+          fundamentalCitations: {
+            // Cited title is NOT in the snapshot — must be dropped.
+            newsTitles: ["Some hallucinated headline that doesn't exist"],
+            calendarEvents: [],
+          },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    // Wait for the page to mount, then assert no chips rendered.
+    await screen.findByTestId("text-instrument");
+    expect(
+      screen.queryByTestId("citation-chips"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders no chip block at all when fundamentalCitations is null (legacy rows)", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: {
+            newsItems: [
+              {
+                id: "n-1",
+                title: "Gold rallies as Fed signals pause",
+                summary: "",
+                source: "Newsmaker.id",
+                url: "https://newsmaker.id/article-1",
+                publishedAt: new Date(NOW - 30 * 60_000).toISOString(),
+              },
+            ],
+            calendarEvents: [],
+          },
+          fundamentalCitations: null,
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("text-instrument");
+    expect(
+      screen.queryByTestId("citation-chips"),
+    ).not.toBeInTheDocument();
+    // The FundamentalContextCard itself should still render (the
+    // snapshot is still there for the user to audit).
+    expect(
+      screen.getByTestId("card-fundamental-context"),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("AnalysisDetailPage: user actions", () => {
   it("POSTs to /api/analyses/:id/feedback with feedbackType=useful when the user picks useful + submits", async () => {
     const { calls } = installFetchMock([

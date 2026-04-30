@@ -53,6 +53,7 @@ import {
   type TradePlan,
   type TradeSide,
   type FundamentalContext,
+  type FundamentalCitations,
   type FundamentalNewsItem,
   type FundamentalCalendarEvent,
   type FundamentalDrift,
@@ -281,12 +282,212 @@ function ValidityBadge({ validUntil }: { validUntil: string }) {
   );
 }
 
-function Section({ title, content }: { title: string; content?: string | null }) {
+function Section({
+  title,
+  content,
+  citations,
+}: {
+  title: string;
+  content?: string | null;
+  citations?: React.ReactNode;
+}) {
   if (!content) return null;
   return (
     <div>
       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{title}</h3>
       <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{content}</p>
+      {citations}
+    </div>
+  );
+}
+
+// Stable, ASCII-safe slug for a string. Used to generate the DOM `id`
+// for a row inside the FundamentalContextCard so the inline citation
+// chips can scroll the matching row into view via #anchor on click.
+// Trim + lowercase + collapse non-alphanumerics so unicode (e.g. ★)
+// in a calendar event doesn't poison the id and break querySelector.
+function citationSlug(kind: "news" | "event", text: string): string {
+  const norm = text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return `cite-${kind}-${norm || "x"}`;
+}
+
+// Best-effort fuzzy match between an AI-emitted citation string and an
+// item in the persisted fundamental snapshot. The AI is told to copy
+// titles verbatim, but in practice it sometimes truncates or strips
+// punctuation/star prefixes (e.g. "★★★ USD — FOMC Rate Decision" →
+// "FOMC Rate Decision"), so we compare by normalized substring rather
+// than equality to keep chips matchable.
+function normalizeForMatch(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function findCitedNews(
+  title: string,
+  items: FundamentalNewsItem[],
+): FundamentalNewsItem | undefined {
+  const t = normalizeForMatch(title);
+  if (!t) return undefined;
+  return items.find((n) => {
+    const nt = normalizeForMatch(n.title);
+    return nt && (nt === t || nt.includes(t) || t.includes(nt));
+  });
+}
+
+// Returns the matched event AND its original index in the
+// `events` array, so the chip slug can be built from the SAME index
+// that FundamentalCalendarCard's row anchor uses. If we used the
+// matched-list index instead, citing a subset of events (e.g. only
+// the 2nd of 3) would generate a chip slug like `...-0` while the
+// row id is `...-1`, and the click-to-scroll would silently fail.
+function findCitedEvent(
+  name: string,
+  events: FundamentalCalendarEvent[],
+): { ev: FundamentalCalendarEvent; index: number } | undefined {
+  const t = normalizeForMatch(name);
+  if (!t) return undefined;
+  const idx = events.findIndex((e) => {
+    const en = normalizeForMatch(e.event);
+    return en && (en === t || en.includes(t) || t.includes(en));
+  });
+  if (idx === -1) return undefined;
+  return { ev: events[idx], index: idx };
+}
+
+// Scroll the FundamentalContextCard row matching the given `id` into
+// view + briefly highlight it. Falls back to a no-op when the target
+// isn't on the page (e.g. AI cited a row that didn't survive into the
+// persisted snapshot — rare but possible).
+function scrollToCitation(id: string): void {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  // Add a one-shot highlight ring so the eye lands on the row even if
+  // the card was already on screen and didn't need to scroll.
+  el.classList.add("ring-2", "ring-primary/60", "rounded-md");
+  window.setTimeout(() => {
+    el.classList.remove("ring-2", "ring-primary/60", "rounded-md");
+  }, 1500);
+}
+
+// Renders the inline source chips for ONE narrative block. Matches each
+// AI-cited title / event name against the persisted snapshot:
+//   • news with a safe http(s) URL → anchor that opens in a new tab
+//   • news without a URL → button that scrolls to the matching row
+//   • calendar event → button that scrolls to the matching row
+// AI-cited items that don't match any snapshot row are dropped (we'd
+// rather show nothing than dangle a useless chip).
+function CitationChips({
+  citations,
+  context,
+  t,
+}: {
+  citations: FundamentalCitations | null | undefined;
+  context: FundamentalContext | null | undefined;
+  t: T;
+}) {
+  if (!citations || !context) return null;
+  const newsItems = context.newsItems ?? [];
+  const events = context.calendarEvents ?? [];
+  const newsTitles = (citations.newsTitles ?? []).filter((s) => s && s.trim());
+  const calendarEvents = (citations.calendarEvents ?? []).filter((s) => s && s.trim());
+
+  const matchedNews = newsTitles
+    .map((title) => ({ title, item: findCitedNews(title, newsItems) }))
+    .filter((m): m is { title: string; item: FundamentalNewsItem } => !!m.item);
+  const matchedEvents = calendarEvents
+    .map((name) => {
+      const hit = findCitedEvent(name, events);
+      return hit ? { name, ev: hit.ev, index: hit.index } : null;
+    })
+    .filter(
+      (m): m is { name: string; ev: FundamentalCalendarEvent; index: number } =>
+        m !== null,
+    );
+
+  if (matchedNews.length === 0 && matchedEvents.length === 0) return null;
+
+  const eventImpactClass = (impact: string | null | undefined): string =>
+    impact === "★★★"
+      ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-700 dark:bg-red-900/30 dark:text-red-300"
+      : impact === "★★"
+        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+        : "border-border bg-muted/40 text-foreground hover:bg-muted";
+
+  return (
+    <div
+      className="mt-2 flex items-start gap-1.5 flex-wrap"
+      data-testid="citation-chips"
+    >
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mt-1 mr-0.5">
+        {t.analysis_detail.citations_label}
+      </span>
+      {matchedNews.map(({ item }) => {
+        const slug = citationSlug("news", item.title);
+        const safeUrl = safeHttpUrl(item.url);
+        const className =
+          "inline-flex items-center gap-1 max-w-[220px] truncate text-[11px] font-medium px-2 py-0.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors";
+        if (safeUrl) {
+          return (
+            <a
+              key={slug}
+              href={safeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={className}
+              data-testid="citation-chip-news"
+              title={item.title}
+            >
+              <Newspaper className="w-3 h-3 shrink-0" />
+              <span className="truncate">{item.title}</span>
+              <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-70" />
+            </a>
+          );
+        }
+        return (
+          <button
+            key={slug}
+            type="button"
+            onClick={() => scrollToCitation(slug)}
+            className={className}
+            data-testid="citation-chip-news"
+            title={item.title}
+          >
+            <Newspaper className="w-3 h-3 shrink-0" />
+            <span className="truncate">{item.title}</span>
+          </button>
+        );
+      })}
+      {matchedEvents.map(({ ev, index }) => {
+        // Use the ORIGINAL `events` index (not the matched-list index)
+        // so this slug matches the row id rendered by FundamentalCalendarRow.
+        const slug = citationSlug("event", `${ev.date}-${ev.event}-${index}`);
+        return (
+          <button
+            key={slug}
+            type="button"
+            onClick={() => scrollToCitation(slug)}
+            className={cn(
+              "inline-flex items-center gap-1 max-w-[220px] truncate text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors",
+              eventImpactClass(ev.impact),
+            )}
+            data-testid="citation-chip-event"
+            title={ev.event}
+          >
+            <CalendarClock className="w-3 h-3 shrink-0" />
+            <span className="truncate">{ev.event}</span>
+            {ev.impact && (
+              <span className="text-[9px] font-semibold ml-0.5 shrink-0">
+                {ev.impact}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -518,7 +719,13 @@ function FundamentalContextCard({
           </div>
           <ul className="space-y-2">
             {news.map((n) => (
-              <FundamentalNewsRow key={n.id} item={n} t={t} lang={lang} />
+              <FundamentalNewsRow
+                key={n.id}
+                item={n}
+                t={t}
+                lang={lang}
+                anchorId={citationSlug("news", n.title)}
+              />
             ))}
           </ul>
         </div>
@@ -532,7 +739,12 @@ function FundamentalContextCard({
           </div>
           <ul className="space-y-2">
             {events.map((e, i) => (
-              <FundamentalCalendarRow key={`${e.date}-${e.event}-${i}`} ev={e} t={t} />
+              <FundamentalCalendarRow
+                key={`${e.date}-${e.event}-${i}`}
+                ev={e}
+                t={t}
+                anchorId={citationSlug("event", `${e.date}-${e.event}-${i}`)}
+              />
             ))}
           </ul>
         </div>
@@ -652,10 +864,12 @@ function FundamentalNewsRow({
   item,
   t,
   lang,
+  anchorId,
 }: {
   item: FundamentalNewsItem;
   t: T;
   lang: string;
+  anchorId?: string;
 }) {
   // Best-effort relative date — if the timestamp is unparseable we just
   // skip the relative label rather than crashing the card render.
@@ -689,7 +903,10 @@ function FundamentalNewsRow({
     </span>
   );
   return (
-    <li className="border-l-2 border-muted-foreground/20 pl-3 py-0.5">
+    <li
+      id={anchorId}
+      className="border-l-2 border-muted-foreground/20 pl-3 py-0.5 transition-shadow"
+    >
       {TitleEl}
       <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
         <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px]">
@@ -704,9 +921,11 @@ function FundamentalNewsRow({
 function FundamentalCalendarRow({
   ev,
   t,
+  anchorId,
 }: {
   ev: FundamentalCalendarEvent;
   t: T;
+  anchorId?: string;
 }) {
   const impactColor = ev.impact === "★★★"
     ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -714,7 +933,10 @@ function FundamentalCalendarRow({
       ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
       : "bg-muted text-muted-foreground";
   return (
-    <li className="border-l-2 border-muted-foreground/20 pl-3 py-0.5 space-y-1">
+    <li
+      id={anchorId}
+      className="border-l-2 border-muted-foreground/20 pl-3 py-0.5 space-y-1 transition-shadow"
+    >
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm font-medium text-foreground leading-snug">
           {ev.event}
@@ -1040,6 +1262,19 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                   {t.analysis_detail.confidence_reason_label}
                 </p>
                 <p className="text-xs text-foreground leading-relaxed">{confidenceReason}</p>
+                {/* Beginner mode: `confidenceReason` IS the whyReason text,
+                    so this is exactly where the AI would mention the news /
+                    event it leaned on. Inline-cite the matching cards here
+                    (task #89) so the user can see "Fed dovish → bullish
+                    bias" with the actual headline rendered as a clickable
+                    chip right next to the sentence. */}
+                {isBeginnerMode && (
+                  <CitationChips
+                    citations={analysis.fundamentalCitations}
+                    context={analysis.fundamentalContext}
+                    t={t}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1242,8 +1477,32 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
           <Card className="p-4 space-y-4" data-testid="card-pro-details">
             <Section title={t.analysis_detail.pro_factor_technical} content={analysis.keyDriversTechnical} />
-            <Section title={t.analysis_detail.pro_factor_fundamental} content={analysis.keyDriversFundamental} />
-            <Section title={t.analysis_detail.pro_factor_market_context} content={analysis.marketContext} />
+            {/* Inline source chips next to the AI's fundamental + market-
+                context narrative (task #89) — duplicate the chip block
+                under both because the AI tends to reference fundamental
+                catalysts in either / both depending on the prompt. */}
+            <Section
+              title={t.analysis_detail.pro_factor_fundamental}
+              content={analysis.keyDriversFundamental}
+              citations={
+                <CitationChips
+                  citations={analysis.fundamentalCitations}
+                  context={analysis.fundamentalContext}
+                  t={t}
+                />
+              }
+            />
+            <Section
+              title={t.analysis_detail.pro_factor_market_context}
+              content={analysis.marketContext}
+              citations={
+                <CitationChips
+                  citations={analysis.fundamentalCitations}
+                  context={analysis.fundamentalContext}
+                  t={t}
+                />
+              }
+            />
           </Card>
         )}
 

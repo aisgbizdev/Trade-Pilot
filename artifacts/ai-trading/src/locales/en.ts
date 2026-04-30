@@ -531,6 +531,7 @@ export const en = {
     fundamental_refresh_kind_news: "headlines",
     fundamental_refresh_kind_calendar: "events",
     fundamental_refresh_kind_mixed: "items",
+    citations_label: "Sources cited:",
     indicators_section_title: "Live Technical Indicators",
     indicators_section_note: "Live data — may differ from the snapshot used at analysis time.",
   },
