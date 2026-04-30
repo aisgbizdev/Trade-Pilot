@@ -520,7 +520,7 @@ export const id: Translations = {
     fundamental_context_subtitle: "Berita & event ekonomi yang dilihat AI saat membuat analisis ini — supaya kamu bisa cek sumbernya, bukan cuma narasi AI.",
     fundamental_news_title: "Berita Terkini",
     fundamental_calendar_title: "Kalender Ekonomi",
-    fundamental_empty: "Tidak ada katalis fundamental signifikan terdeteksi pada window analisis ini.",
+    fundamental_empty: "Tidak ada katalis fundamental signifikan terdeteksi untuk {instrument} pada window analisis (berita 24 jam terakhir + kalender minggu ini). Anggap analisis ini murni teknikal.",
     fundamental_calendar_actual: "Aktual",
     fundamental_calendar_forecast: "Prakiraan",
     fundamental_calendar_previous: "Sebelumnya",

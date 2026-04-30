@@ -208,6 +208,67 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(card.textContent).toMatch(/FOMC rate decision/);
   });
 
+  it("caps news at 3 items and calendar at 5 items, and opens news links in a new tab with safe rel attrs", async () => {
+    // 5 news items + 7 calendar events — only 3 + 5 should render.
+    const newsItems = Array.from({ length: 5 }).map((_, i) => ({
+      id: `news-${i}`,
+      title: `Headline number ${i}`,
+      summary: `Summary ${i}`,
+      source: "Newsmaker.id",
+      url: `https://newsmaker.id/article-${i}`,
+      publishedAt: new Date(NOW - (i + 1) * 60_000).toISOString(),
+    }));
+    const events = Array.from({ length: 7 }).map((_, i) => ({
+      date: "2026-04-30",
+      time: `0${i}:00`,
+      currency: "USD",
+      event: `Event number ${i}`,
+      impact: "★★",
+      actual: null,
+      forecast: null,
+      previous: null,
+    }));
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: { newsItems, calendarEvents: events },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    const card = await screen.findByTestId("card-fundamental-context");
+    // News link rows are tagged `fundamental-news-link` (the anchor).
+    const links = card.querySelectorAll("[data-testid='fundamental-news-link']");
+    expect(links.length).toBe(3);
+    // Each link must open in a new tab with the noopener noreferrer
+    // protection — outbound feed links are upstream-controlled and we
+    // never want them tab-napping the user.
+    links.forEach((a) => {
+      expect(a.getAttribute("target")).toBe("_blank");
+      expect(a.getAttribute("rel") ?? "").toMatch(/noopener/);
+      expect(a.getAttribute("rel") ?? "").toMatch(/noreferrer/);
+    });
+
+    // Calendar list under the card should render exactly 5 of the 7
+    // events (top-N cap) — count the impact badges as a stand-in for
+    // a row marker that's stable across locales.
+    const calendarList = card.querySelector(
+      "[data-testid='fundamental-calendar-list']",
+    );
+    expect(calendarList).not.toBeNull();
+    const eventRows = calendarList?.querySelectorAll("li") ?? [];
+    expect(eventRows.length).toBe(5);
+  });
+
   it("renders the empty-state message when fundamentalContext is present with empty arrays", async () => {
     installFetchMock([
       getAnalysisHandler({

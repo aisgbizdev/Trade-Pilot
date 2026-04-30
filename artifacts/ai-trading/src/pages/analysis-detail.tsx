@@ -428,9 +428,13 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
 function FundamentalContextCard({
   ctx,
   t,
+  instrument,
+  lang,
 }: {
   ctx: FundamentalContext;
   t: T;
+  instrument: string;
+  lang: string;
 }) {
   const news = (ctx.newsItems ?? []).slice(0, 3);
   const events = (ctx.calendarEvents ?? []).slice(0, 5);
@@ -444,7 +448,7 @@ function FundamentalContextCard({
           </h3>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          {t.analysis_detail.fundamental_empty}
+          {t.analysis_detail.fundamental_empty.replace("{instrument}", instrument)}
         </p>
       </Card>
     );
@@ -471,7 +475,7 @@ function FundamentalContextCard({
           </div>
           <ul className="space-y-2">
             {news.map((n) => (
-              <FundamentalNewsRow key={n.id} item={n} t={t} />
+              <FundamentalNewsRow key={n.id} item={n} t={t} lang={lang} />
             ))}
           </ul>
         </div>
@@ -515,9 +519,11 @@ function safeHttpUrl(url: string | null | undefined): string | null {
 function FundamentalNewsRow({
   item,
   t,
+  lang,
 }: {
   item: FundamentalNewsItem;
   t: T;
+  lang: string;
 }) {
   // Best-effort relative date — if the timestamp is unparseable we just
   // skip the relative label rather than crashing the card render.
@@ -525,7 +531,10 @@ function FundamentalNewsRow({
   try {
     const d = new Date(item.publishedAt);
     if (!Number.isNaN(d.getTime())) {
-      relative = formatDistanceToNow(d, { addSuffix: true, locale: idLocale });
+      relative = formatDistanceToNow(d, {
+        addSuffix: true,
+        locale: lang === "id" ? idLocale : undefined,
+      });
     }
   } catch {
     relative = "";
@@ -905,7 +914,12 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             is present (even with empty arrays) so the empty-state message
             is honest about whether fundamentals were checked. */}
         {analysis.fundamentalContext && (
-          <FundamentalContextCard ctx={analysis.fundamentalContext} t={t} />
+          <FundamentalContextCard
+            ctx={analysis.fundamentalContext}
+            t={t}
+            instrument={analysis.instrument}
+            lang={lang}
+          />
         )}
 
         {/* AI-suggested concrete trade plan with both buy and sell levels.
