@@ -66,6 +66,7 @@ import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -842,23 +843,8 @@ function FundamentalDriftBanner({
   );
 }
 
-// Reject anything that isn't a vanilla http/https URL. The news feed is
-// upstream-controlled (newsmaker.id + Yahoo Finance), so a hostile or
-// glitched item could otherwise smuggle a `javascript:` / `data:` URL
-// straight into an anchor href and execute on click. Returning `null`
-// makes the row render the title as plain text instead.
-function safeHttpUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.toString();
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+// `safeHttpUrl` lives in `@/lib/safe-url` so we can unit-test it
+// directly without dragging the page component into a render.
 
 function FundamentalNewsRow({
   item,

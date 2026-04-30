@@ -133,12 +133,15 @@ export async function getAllCalendarThisWeek(): Promise<CalendarEvent[]> {
 /**
  * Strip prompt-injection vectors before splicing external feed text
  * into the AI context. The calendar feed is upstream-controlled, so we
- * match the same hardening news.ts uses on its sanitizer.
+ * match the same hardening news.ts uses on its sanitizer. Exported
+ * (with leading underscore) for direct unit testing.
  */
-function sanitizePromptText(input: string): string {
+export function _sanitizePromptText(input: string): string {
   if (!input) return input;
   return input
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    // Zero-width / invisible chars (see news.ts for rationale).
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
     .replace(
       /\b(ignore (the )?(previous|above|prior) (instructions?|messages?|prompts?)|disregard (the )?(previous|above) (instructions?|prompts?)|abaikan (instruksi|perintah) (sebelumnya|di atas))\b/gi,
       "[scrubbed]",
@@ -147,6 +150,8 @@ function sanitizePromptText(input: string): string {
     .replace(/^\s*===.*===\s*$/gm, "[scrubbed-delimiter]")
     .trim();
 }
+
+const sanitizePromptText = _sanitizePromptText;
 
 /**
  * Render the calendar block injected into the AI prompt. Same shape as

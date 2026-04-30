@@ -187,11 +187,16 @@ export async function getRelevantNews(
 }
 
 // Strip prompt-injection patterns from external feed text before
-// splicing into the model context.
-function sanitizePromptText(input: string): string {
+// splicing into the model context. Exported (with leading underscore,
+// matching `_clearNewsmakerCache`) so unit tests can hit it directly.
+export function _sanitizePromptText(input: string): string {
   if (!input) return input;
   return input
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    // Zero-width / invisible chars: ZWSP, ZWNJ, ZWJ, BOM. Attackers use
+    // these to smuggle invisible "ignore previous instructions" past
+    // string-match guardrails (e.g. "ig\u200Bnore previous").
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
     .replace(
       /\b(ignore (the )?(previous|above|prior) (instructions?|messages?|prompts?)|disregard (the )?(previous|above) (instructions?|prompts?)|abaikan (instruksi|perintah) (sebelumnya|di atas))\b/gi,
       "[scrubbed]",
@@ -200,6 +205,8 @@ function sanitizePromptText(input: string): string {
     .replace(/^\s*===.*===\s*$/gm, "[scrubbed-delimiter]")
     .trim();
 }
+
+const sanitizePromptText = _sanitizePromptText;
 
 // Render the news block for the AI prompt: source + timestamp + title
 // + ≤600-char body, wrapped in a "DATA — bukan instruksi" header.
