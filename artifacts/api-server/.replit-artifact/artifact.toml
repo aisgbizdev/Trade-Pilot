@@ -16,25 +16,28 @@ run = "pnpm --filter @workspace/api-server run dev"
 
 # Production build: push the current Drizzle schema to the production
 # database FIRST (using DATABASE_URL injected by the deployment runner),
-# then bundle the api-server with esbuild. Without the schema push the
-# production DB has no tables on first publish and every DB-backed
-# endpoint returns 500.
+# then build the ai-trading SPA, then bundle the api-server itself
+# (which serves the SPA in production so we run as a single Cloud Run
+# service on a single port).
 [services.production.build]
 args = [
   "sh",
   "-c",
-  "pnpm --filter @workspace/db run push-force && pnpm --filter @workspace/api-server run build",
+  "pnpm --filter @workspace/db run push-force && pnpm --filter @workspace/ai-trading run build && pnpm --filter @workspace/api-server run build",
 ]
 
 [services.production.build.env]
 NODE_ENV = "production"
+BASE_PATH = "/"
+PORT = "8080"
 
 [services.production.run]
 # we don't run through pnpm to make startup faster in production
 args = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 
+# NOTE: do NOT hardcode PORT here — Cloud Run / Autoscale injects $PORT
+# at runtime and the app must bind to whatever it is given.
 [services.production.run.env]
-PORT = "8080"
 NODE_ENV = "production"
 
 [services.production.health.startup]

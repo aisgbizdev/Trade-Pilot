@@ -17,14 +17,10 @@ localPort = 20853
 [services.development]
 run = "pnpm --filter @workspace/ai-trading run dev"
 
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/ai-trading", "run", "build" ]
-publicDir = "artifacts/ai-trading/dist/public"
-serve = "static"
-
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+# NOTE: ai-trading has NO production service. In production the
+# ai-trading SPA is built by the api-server's production build step
+# and served by the api-server itself (Express static + SPA fallback)
+# so the whole app runs as a single Cloud Run service on one port.
 
 [services.env]
 PORT = "20853"
