@@ -94,7 +94,7 @@ describe("ProfilePage: happy-path render", () => {
     expect(screen.getByTestId("button-edit-name")).toBeInTheDocument();
 
     // Both theme buttons render. The default storage key is "test-theme"
-    // and Wrapper sets defaultTheme="light", so the light button carries
+    // and Wrapper sets defaultTheme="dark", so the dark button carries
     // the active background classes.
     expect(screen.getByTestId("button-theme-light")).toBeInTheDocument();
     expect(screen.getByTestId("button-theme-dark")).toBeInTheDocument();

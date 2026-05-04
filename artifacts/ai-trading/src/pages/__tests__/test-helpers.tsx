@@ -151,7 +151,7 @@ export function makeWrapper() {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="light" storageKey="test-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="test-theme">
           <LanguageProvider>
             <AuthProvider>{children}</AuthProvider>
           </LanguageProvider>

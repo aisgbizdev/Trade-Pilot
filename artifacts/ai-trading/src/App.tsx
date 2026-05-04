@@ -139,7 +139,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="ai-trading-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="ai-trading-theme">
         <LanguageProvider>
           <TooltipProvider>
             <InstallPromptProvider>

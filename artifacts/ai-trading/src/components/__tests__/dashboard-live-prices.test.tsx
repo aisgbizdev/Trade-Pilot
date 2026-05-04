@@ -94,7 +94,7 @@ function makeWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="light" storageKey="test-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="test-theme">
           <LanguageProvider>{children}</LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>
@@ -316,7 +316,7 @@ describe("TradingViewMarketQuotes: theme + language toggles do not crash widget"
 
     render(
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="light" storageKey="harness-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="harness-theme">
           <LanguageProvider>
             <Harness />
           </LanguageProvider>
