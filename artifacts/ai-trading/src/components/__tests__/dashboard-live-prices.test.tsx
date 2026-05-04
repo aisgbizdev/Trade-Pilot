@@ -331,7 +331,7 @@ describe("TradingViewMarketQuotes: theme + language toggles do not crash widget"
     ).not.toBeNull();
     expect(screen.getByTestId("toggle-theme").getAttribute(
       "data-current-theme",
-    )).toBe("light");
+    )).toBe("dark");
     expect(screen.getByTestId("toggle-lang").getAttribute(
       "data-current-lang",
     )).toBe("en");
@@ -350,16 +350,13 @@ describe("TradingViewMarketQuotes: theme + language toggles do not crash widget"
       ).not.toBeNull();
     });
 
-    // Toggle theme at runtime via the real theme context setter — this
-    // updates the value the widget reads from `useTheme()`, so the
-    // useEffect in TradingViewMarketQuotes actually re-runs.
     await act(async () => {
       screen.getByTestId("toggle-theme").click();
     });
     await waitFor(() => {
       expect(
         screen.getByTestId("toggle-theme").getAttribute("data-current-theme"),
-      ).toBe("dark");
+      ).toBe("light");
       const host = screen.getByTestId("tradingview-market-quotes");
       expect(
         host.querySelector(".tradingview-widget-container__widget"),

@@ -32,7 +32,7 @@ Mobile-first PWA (React+Vite) for trading decision-support (NOT a signal generat
 **Features:**
 - Custom auth: register/login with httpOnly cookies, security questions, remember me (30d/24h), show/hide password
 - Two user modes: Pemula (Beginner) and Pro
-- Dark/light mode toggle in header (deep navy #0f172a / white dominant)
+- Dark/light mode toggle in header (useCallback-stabilized setTheme, useLayoutEffect for synchronous DOM class, inline script in index.html for FOUC prevention)
 - Dashboard with statistics cards
 - AI Analysis page: GPT-4o analysis, timeframe validity badges, animated loading messages
   - Per-user quota: max 5 analyses/hour and 20/day (configurable via `ANALYSIS_QUOTA_PER_HOUR` / `ANALYSIS_QUOTA_PER_DAY` env vars). Returns 429 with Indonesian message on overrun. Admins/super_admins bypass.
