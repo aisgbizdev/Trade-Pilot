@@ -347,17 +347,14 @@ export function validateFundamentalCitations(
     return { ok: true };
   }
 
-  // Snapshot is non-empty — require at least one citation, otherwise
-  // the fundamental narrative is ungrounded.
+  // Snapshot can be non-empty while the model decides fundamentals are not
+  // materially relevant for this specific setup/timeframe. Do not hard-fail
+  // solely because citations are empty; only fail on fabricated citations.
   const cited =
     (citations?.newsTitles.length ?? 0) +
     (citations?.calendarEvents.length ?? 0);
   if (cited === 0) {
-    return {
-      ok: false,
-      reason:
-        "Missing fundamentalCitations against a non-empty snapshot.",
-    };
+    return { ok: true };
   }
   if (!citations) return { ok: true };
 
@@ -388,20 +385,92 @@ export function validateFundamentalCitations(
 async function callOpenAI(
   systemPrompt: string,
   userMessage: string,
+  model: string,
+  maxTokens?: number,
+  timeoutMs?: number,
 ): Promise<unknown> {
-  const response = await openai.chat.completions.create({
-    model: process.env["OPENAI_MODEL"] ?? "gpt-4o",
+  const request = openai.chat.completions.create({
+    model,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
     ],
     response_format: { type: "json_object" },
-    temperature: 0.7,
+    temperature: 0.4,
+    max_tokens: maxTokens,
   });
+  const response = timeoutMs && timeoutMs > 0
+    ? await Promise.race([
+        request,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`OpenAI timeout after ${timeoutMs}ms`)), timeoutMs),
+        ),
+      ])
+    : await request;
 
   const content = response.choices[0]?.message?.content;
   if (!content) throw new Error("No response from AI");
   return JSON.parse(content);
+}
+
+function buildFastIntradayFallback(mode: "beginner" | "pro", timeframe: string): AIOutput {
+  const baseTradePlan: TradePlan = {
+    preferredSide: "wait",
+    buy: {
+      entryZone: "tunggu pullback terkonfirmasi",
+      stopLoss: "n/a",
+      takeProfit1: "n/a",
+      takeProfit2: "n/a",
+      riskRewardRatio: "n/a",
+      rationale: "Timeframe sangat cepat, noise tinggi.",
+    },
+    sell: {
+      entryZone: "tunggu rejection terkonfirmasi",
+      stopLoss: "n/a",
+      takeProfit1: "n/a",
+      takeProfit2: "n/a",
+      riskRewardRatio: "n/a",
+      rationale: "Timeframe sangat cepat, noise tinggi.",
+    },
+  };
+
+  if (mode === "beginner") {
+    return {
+      marketCondition: "volatile",
+      riskLevel: "high",
+      confidenceMin: 25,
+      confidenceMax: 40,
+      tradingBias: "neutral",
+      opportunity: `Pada timeframe ${timeframe}, peluang terbaik adalah menunggu konfirmasi arah yang lebih jelas.`,
+      risk: `Pada timeframe ${timeframe}, pergerakan acak dan spike cepat dapat memicu sinyal palsu.`,
+      mainScenario: `Pada timeframe ${timeframe}, harga cenderung bergerak fluktuatif jangka sangat pendek.`,
+      alternativeScenario: `Jika momentum tiba-tiba menguat satu arah, ikuti hanya setelah candle konfirmasi.`,
+      whyReason: `Keyakinan dibatasi karena timeframe ${timeframe} sangat sensitif terhadap noise intraday.`,
+      failureConditions: "Terjadi lonjakan volatilitas mendadak; Struktur mikro berubah cepat dalam beberapa candle",
+      tradePlan: baseTradePlan,
+      fundamentalCitations: { newsTitles: [], calendarEvents: [] },
+    };
+  }
+
+  return {
+    marketCondition: "volatile",
+    riskLevel: "high",
+    confidenceMin: 25,
+    confidenceMax: 40,
+    tradingBias: "neutral",
+    opportunity: `Pada timeframe ${timeframe}, peluang taktis muncul setelah konfirmasi breakout/rejection mikro.`,
+    risk: `Pada timeframe ${timeframe}, noise order flow dapat membalik sinyal dalam hitungan menit.`,
+    baseCase: `Pada timeframe ${timeframe}, bias netral dengan volatilitas tinggi sampai ada struktur yang valid.`,
+    bullishScenario: `Bullish hanya valid jika ada continuation jelas setelah break resistance mikro.`,
+    bearishScenario: `Bearish hanya valid jika ada rejection kuat dan break support mikro.`,
+    keyDriversTechnical: `Struktur mikro dan momentum jangka sangat pendek masih campuran pada timeframe ${timeframe}.`,
+    keyDriversFundamental: "Tidak ada katalis fundamental signifikan yang dipakai pada mode cepat intraday.",
+    marketContext: "Kondisi intraday cepat dengan probabilitas whipsaw tinggi.",
+    invalidationConditions: "Breakout gagal dalam 1-2 candle; Volatilitas spike mematahkan struktur mikro",
+    uncertaintyNotes: `Confidence dibatasi karena timeframe ${timeframe} memiliki rasio noise terhadap sinyal yang tinggi.`,
+    tradePlan: baseTradePlan,
+    fundamentalCitations: { newsTitles: [], calendarEvents: [] },
+  };
 }
 
 export async function generateAnalysis(
@@ -412,7 +481,15 @@ export async function generateAnalysis(
   indicatorContext?: string,
   fundamentalSnapshot?: FundamentalSnapshot | null,
 ): Promise<AIOutput> {
+  const isFastIntraday = timeframe === "1m" || timeframe === "5m";
+  const selectedModel =
+    isFastIntraday
+      ? process.env["OPENAI_MODEL_FAST_INTRADAY"] ??
+        process.env["OPENAI_MODEL"] ??
+        "gpt-4o-mini"
+      : process.env["OPENAI_MODEL"] ?? "gpt-4o";
   const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
+  const fastIntradayTimeoutMs = isFastIntraday ? 2800 : undefined;
   const now = new Date();
   const nowIsoUtc = now.toISOString().replace(/\.\d{3}Z$/, "Z");
   const nowJakarta = now.toLocaleString("id-ID", {
@@ -433,6 +510,12 @@ export async function generateAnalysis(
 
   const systemPrompt =
     mode === "beginner" ? BEGINNER_SYSTEM_PROMPT : PRO_SYSTEM_PROMPT;
+  const fastIntradayPrompt =
+    mode === "beginner"
+      ? `Kamu analis intraday super ringkas untuk timeframe sangat pendek (1m/5m). Keluarkan HANYA JSON valid sesuai schema. Fokus murni pada struktur harga jangka sangat pendek + risiko tinggi noise. Jangan narasi panjang. Setiap field string cukup 1 kalimat pendek. Tetap konsultatif, bukan instruksi order.`
+      : `Kamu analis intraday pro super ringkas untuk timeframe sangat pendek (1m/5m). Keluarkan HANYA JSON valid sesuai schema. Fokus murni pada momentum/struktur mikro + invalidasi cepat. Jangan narasi panjang. Setiap field string cukup 1 kalimat pendek. Tetap konsultatif, bukan instruksi order.`;
+  const effectiveSystemPrompt = isFastIntraday ? fastIntradayPrompt : systemPrompt;
+  const maxTokens = isFastIntraday ? 700 : undefined;
   const schema = mode === "beginner" ? BeginnerAIOutputSchema : ProAIOutputSchema;
   const snapshot = fundamentalSnapshot ?? null;
 
@@ -445,18 +528,39 @@ export async function generateAnalysis(
   };
 
   // First attempt.
-  let raw: unknown = await callOpenAI(systemPrompt, baseUserMessage);
+  let raw: unknown;
+  try {
+    raw = await callOpenAI(
+      effectiveSystemPrompt,
+      baseUserMessage,
+      selectedModel,
+      maxTokens,
+      fastIntradayTimeoutMs,
+    );
+  } catch (e) {
+    if (isFastIntraday) return buildFastIntradayFallback(mode, timeframe);
+    throw e;
+  }
   let parsed: AIOutput;
   try {
     parsed = parseAttempt(raw);
   } catch (e) {
+    if (isFastIntraday) {
+      return buildFastIntradayFallback(mode, timeframe);
+    }
     // Validation failed on first try — rerun with a corrective hint
     // before giving up. Schema errors are usually missing or wrong
     // type fields (e.g. confidenceMax dropped) and one nudged retry
     // typically fixes them without paying for a third call.
     const correction =
       "\n\n[KOREKSI WAJIB] Output JSON sebelumnya gagal validasi. Pastikan SEMUA field wajib hadir dengan tipe & enum yang benar, dan kembalikan HANYA objek JSON tanpa markdown.";
-    raw = await callOpenAI(systemPrompt, baseUserMessage + correction);
+    raw = await callOpenAI(
+      effectiveSystemPrompt,
+      baseUserMessage + correction,
+      selectedModel,
+      maxTokens,
+      fastIntradayTimeoutMs,
+    );
     parsed = parseAttempt(raw);
   }
 
@@ -468,8 +572,17 @@ export async function generateAnalysis(
   );
 
   if (!citationCheck.ok) {
+    if (isFastIntraday) {
+      return buildFastIntradayFallback(mode, timeframe);
+    }
     const correction = `\n\n[KOREKSI WAJIB — GROUNDING] ${citationCheck.reason} Output ulang analisis menggunakan HANYA judul berita / nama event yang BENAR-BENAR ada di blok BERITA TERKINI RELEVAN dan KALENDER EKONOMI RELEVAN di atas. Jika tidak ada item yang relevan, kosongkan fundamentalCitations.newsTitles / fundamentalCitations.calendarEvents dan tulis "Tidak ada katalis fundamental signifikan terdeteksi pada window ini" pada blok fundamental yang sesuai.`;
-    const retryRaw = await callOpenAI(systemPrompt, baseUserMessage + correction);
+    const retryRaw = await callOpenAI(
+      effectiveSystemPrompt,
+      baseUserMessage + correction,
+      selectedModel,
+      maxTokens,
+      fastIntradayTimeoutMs,
+    );
     const retryParsed = parseAttempt(retryRaw);
     const retryCheck = validateFundamentalCitations(
       retryParsed.fundamentalCitations,

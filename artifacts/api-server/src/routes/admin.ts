@@ -17,6 +17,7 @@ import {
 } from "../middleware/auth";
 import { notifySuperAdminsUserDeleted, notifyAdminsUserCreated } from "../lib/jobs";
 import { createNotificationsForUsers } from "../lib/create-notification";
+import { getAnalysisQuotaConfig, setAnalysisQuotaConfig } from "./analyses";
 
 type AudienceType = "all" | "role" | "tag";
 type Role = "user" | "admin" | "super_admin";
@@ -28,6 +29,32 @@ type Role = "user" | "admin" | "super_admin";
 const SUPER_ADMIN_GUARD_LOCK = 0x5a5ad317;
 
 const router = Router();
+
+router.get("/superadmin/quota-settings", requireSuperAdmin, async (_req: AuthRequest, res) => {
+  const cfg = getAnalysisQuotaConfig();
+  res.json({
+    analysisQuotaPerHour: cfg.perHour,
+    analysisQuotaPerDay: cfg.perDay,
+  });
+});
+
+router.patch("/superadmin/quota-settings", requireSuperAdmin, async (req: AuthRequest, res) => {
+  const perHourRaw = Number(req.body?.analysisQuotaPerHour);
+  const perDayRaw = Number(req.body?.analysisQuotaPerDay);
+  const perHour = Number.isFinite(perHourRaw) && perHourRaw > 0 ? Math.floor(perHourRaw) : NaN;
+  const perDay = Number.isFinite(perDayRaw) && perDayRaw > 0 ? Math.floor(perDayRaw) : NaN;
+  if (!Number.isFinite(perHour) || !Number.isFinite(perDay)) {
+    res.status(400).json({ error: "Quota per jam/hari harus angka > 0" });
+    return;
+  }
+  setAnalysisQuotaConfig(perHour, perDay);
+  const cfg = getAnalysisQuotaConfig();
+  res.json({
+    message: "Quota berhasil diupdate",
+    analysisQuotaPerHour: cfg.perHour,
+    analysisQuotaPerDay: cfg.perDay,
+  });
+});
 
 router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
   const now = new Date();

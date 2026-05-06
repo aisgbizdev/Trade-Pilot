@@ -248,9 +248,18 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-const ANALYSIS_QUOTA_PER_HOUR = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_HOUR"], 5);
-const ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_DAY"], 20);
+let ANALYSIS_QUOTA_PER_HOUR = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_HOUR"], 5);
+let ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_DAY"], 20);
 const ANALYSIS_LOCK_NAMESPACE = 4242;
+
+export function getAnalysisQuotaConfig(): { perHour: number; perDay: number } {
+  return { perHour: ANALYSIS_QUOTA_PER_HOUR, perDay: ANALYSIS_QUOTA_PER_DAY };
+}
+
+export function setAnalysisQuotaConfig(perHour: number, perDay: number): void {
+  ANALYSIS_QUOTA_PER_HOUR = parsePositiveInt(String(perHour), ANALYSIS_QUOTA_PER_HOUR);
+  ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(String(perDay), ANALYSIS_QUOTA_PER_DAY);
+}
 
 type AIResult = Awaited<ReturnType<typeof generateAnalysis>>;
 type AnalysisRow = typeof analyses.$inferSelect;
@@ -277,6 +286,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const userId = req.userId!;
   const typedMode = mode as "beginner" | "pro";
   const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
+  const isFastIntraday = timeframe === "1m" || timeframe === "5m";
 
   // External context fetches are pure HTTP — do them outside any transaction.
   // Indicators only support daily/weekly today; skip them for intraday timeframes
@@ -306,14 +316,18 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           }
         })
       : Promise.resolve(),
-    getRelevantNews(instrument).then((news) => {
-      fetchedNews = news;
-      if (news.length) contextParts.push(formatNewsForPrompt(news, instrument));
-    }),
-    getRelevantCalendar(instrument).then((events) => {
-      fetchedCalendar = events;
-      if (events.length) contextParts.push(formatCalendarForPrompt(events, instrument));
-    }),
+    isFastIntraday
+      ? Promise.resolve()
+      : getRelevantNews(instrument).then((news) => {
+          fetchedNews = news;
+          if (news.length) contextParts.push(formatNewsForPrompt(news, instrument));
+        }),
+    isFastIntraday
+      ? Promise.resolve()
+      : getRelevantCalendar(instrument).then((events) => {
+          fetchedCalendar = events;
+          if (events.length) contextParts.push(formatCalendarForPrompt(events, instrument));
+        }),
   ]);
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
   // Always persist as `{ newsItems: [], calendarEvents: [] }` (never

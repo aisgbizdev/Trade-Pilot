@@ -134,6 +134,11 @@ export default function AnalyzePage() {
   const { data: quota } = useGetAnalysisQuota({
     query: { queryKey: getGetAnalysisQuotaQueryKey(), staleTime: 30_000 },
   });
+  const hourlyQuota = quota?.hourly;
+  const dailyQuota = quota?.daily;
+  const canShowQuotaChip = Boolean(
+    quota && !quota.unlimited && hourlyQuota && dailyQuota,
+  );
 
   const [activeTab, setActiveTab] = useState<"futures" | "forex">("futures");
   const [selectedInstrument, setSelectedInstrument] = useState("");
@@ -224,20 +229,20 @@ export default function AnalyzePage() {
               {t.analyze.mode_label}: {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
             </p>
           </div>
-          {quota && !quota.unlimited && (
+          {canShowQuotaChip && hourlyQuota && dailyQuota && (
             <span
               className={cn(
                 "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
-                quota.hourly.remaining === 0 || quota.daily.remaining === 0
+                hourlyQuota.remaining === 0 || dailyQuota.remaining === 0
                   ? "bg-destructive/10 border-destructive/40 text-destructive"
-                  : quota.hourly.remaining <= 1 || quota.daily.remaining <= 3
+                  : hourlyQuota.remaining <= 1 || dailyQuota.remaining <= 3
                   ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
                   : "bg-primary/10 border-primary/30 text-primary",
               )}
               data-testid="chip-quota"
-              title={`${t.analyze.quota_hour}: ${quota.hourly.remaining}/${quota.hourly.limit} • ${t.analyze.quota_day}: ${quota.daily.remaining}/${quota.daily.limit}`}
+              title={`${t.analyze.quota_hour}: ${hourlyQuota.remaining}/${hourlyQuota.limit} • ${t.analyze.quota_day}: ${dailyQuota.remaining}/${dailyQuota.limit}`}
             >
-              {quota.hourly.remaining}/{quota.hourly.limit} {t.analyze.quota_hour_short} · {quota.daily.remaining}/{quota.daily.limit} {t.analyze.quota_day_short}
+              {hourlyQuota.remaining}/{hourlyQuota.limit} {t.analyze.quota_hour_short} · {dailyQuota.remaining}/{dailyQuota.limit} {t.analyze.quota_day_short}
             </span>
           )}
         </div>

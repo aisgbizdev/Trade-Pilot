@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Loader2,
   ChevronLeft,
@@ -606,6 +606,101 @@ function BroadcastHistoryPanel() {
   );
 }
 
+function QuotaSettingsPanel() {
+  const { toast } = useToast();
+  const [hourly, setHourly] = useState<string>("");
+  const [daily, setDaily] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/superadmin/quota-settings", { credentials: "include" });
+        if (!r.ok) throw new Error("failed");
+        const data = (await r.json()) as { analysisQuotaPerHour: number; analysisQuotaPerDay: number };
+        if (!mounted) return;
+        setHourly(String(data.analysisQuotaPerHour));
+        setDaily(String(data.analysisQuotaPerDay));
+      } catch {
+        if (mounted) toast({ title: "Gagal memuat quota settings", variant: "destructive" });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [toast]);
+
+  const save = async () => {
+    const perHour = Number(hourly);
+    const perDay = Number(daily);
+    if (!Number.isFinite(perHour) || perHour <= 0 || !Number.isFinite(perDay) || perDay <= 0) {
+      toast({ title: "Quota harus angka > 0", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const r = await fetch("/api/superadmin/quota-settings", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          analysisQuotaPerHour: Math.floor(perHour),
+          analysisQuotaPerDay: Math.floor(perDay),
+        }),
+      });
+      const data = (await r.json()) as { error?: string; analysisQuotaPerHour?: number; analysisQuotaPerDay?: number };
+      if (!r.ok) throw new Error(data.error ?? "update failed");
+      setHourly(String(data.analysisQuotaPerHour ?? Math.floor(perHour)));
+      setDaily(String(data.analysisQuotaPerDay ?? Math.floor(perDay)));
+      toast({ title: "Quota berhasil diupdate" });
+    } catch (e) {
+      toast({ title: (e as Error).message || "Gagal update quota", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="p-4 space-y-3" data-testid="card-quota-settings">
+      <h3 className="text-sm font-semibold text-foreground">Analysis Quota Settings</h3>
+      {loading ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" /> Loading...
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="number"
+              min={1}
+              value={hourly}
+              onChange={(e) => setHourly(e.target.value)}
+              placeholder="Per hour"
+              data-testid="input-quota-hour"
+            />
+            <Input
+              type="number"
+              min={1}
+              value={daily}
+              onChange={(e) => setDaily(e.target.value)}
+              placeholder="Per day"
+              data-testid="input-quota-day"
+            />
+          </div>
+          <Button onClick={save} disabled={saving} data-testid="button-save-quota">
+            {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            Save Quota
+          </Button>
+        </>
+      )}
+    </Card>
+  );
+}
+
 function AdminContent() {
   const [, setLocation] = useLocation();
   const { t, lang } = useTranslation();
@@ -734,6 +829,8 @@ function AdminContent() {
         <BroadcastComposer />
 
         <BroadcastHistoryPanel />
+
+        <QuotaSettingsPanel />
 
         <div>
           <h2 className="text-sm font-semibold text-foreground mb-3">{t.admin.all_analyses}</h2>

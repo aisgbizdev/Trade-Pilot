@@ -1,0 +1,9 @@
+
+> @workspace/api-server@0.0.0 build C:\laragon\www\Trade-Pilot\artifacts\api-server
+> node ./build.mjs
+
+[17:15:03.512] [32mINFO[39m (38716): [36mWeb Push (VAPID) configured successfully[39m
+[17:15:03.708] [32mINFO[39m (38716): [36mServer listening[39m
+    [35mport[39m: 5000
+[17:15:03.708] [32mINFO[39m (38716): [36mBackground notification jobs started[39m
+    [35mretentionDays[39m: 90
