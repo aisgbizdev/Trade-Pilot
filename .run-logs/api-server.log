@@ -7,3 +7,13 @@
     [35mport[39m: 5000
 [17:15:03.708] [32mINFO[39m (38716): [36mBackground notification jobs started[39m
     [35mretentionDays[39m: 90
+[17:15:13.966] [32mINFO[39m (38716): [36mSent daily summary to admins and super-admins[39m
+[17:15:18.792] [32mINFO[39m (38716): [36mSent analysis expiry alert[39m
+    [35muserId[39m: 35
+    [35manalysisId[39m: 77
+[17:15:18.842] [32mINFO[39m (38716): [36mSent analysis expiry alert[39m
+    [35muserId[39m: 35
+    [35manalysisId[39m: 96
+[17:15:18.894] [32mINFO[39m (38716): [36mSent analysis expiry alert[39m
+    [35muserId[39m: 35
+    [35manalysisId[39m: 99
