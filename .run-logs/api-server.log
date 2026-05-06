@@ -2,18 +2,18 @@
 > @workspace/api-server@0.0.0 build C:\laragon\www\Trade-Pilot\artifacts\api-server
 > node ./build.mjs
 
-[17:15:03.512] [32mINFO[39m (38716): [36mWeb Push (VAPID) configured successfully[39m
-[17:15:03.708] [32mINFO[39m (38716): [36mServer listening[39m
+[17:32:54.039] [32mINFO[39m (15688): [36mWeb Push (VAPID) configured successfully[39m
+[17:32:54.236] [32mINFO[39m (15688): [36mServer listening[39m
     [35mport[39m: 5000
-[17:15:03.708] [32mINFO[39m (38716): [36mBackground notification jobs started[39m
+[17:32:54.236] [32mINFO[39m (15688): [36mBackground notification jobs started[39m
     [35mretentionDays[39m: 90
-[17:15:13.966] [32mINFO[39m (38716): [36mSent daily summary to admins and super-admins[39m
-[17:15:18.792] [32mINFO[39m (38716): [36mSent analysis expiry alert[39m
-    [35muserId[39m: 35
-    [35manalysisId[39m: 77
-[17:15:18.842] [32mINFO[39m (38716): [36mSent analysis expiry alert[39m
-    [35muserId[39m: 35
-    [35manalysisId[39m: 96
-[17:15:18.894] [32mINFO[39m (38716): [36mSent analysis expiry alert[39m
-    [35muserId[39m: 35
-    [35manalysisId[39m: 99
+[17:32:55.299] [32mINFO[39m (15688): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/notifications"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 229

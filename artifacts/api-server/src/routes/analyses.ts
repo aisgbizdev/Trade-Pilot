@@ -99,7 +99,10 @@ router.get("/analyses/recent-instruments", requireAuth, async (req: AuthRequest,
 });
 
 router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
-  const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
+  const isPrivilegedRole =
+    req.userRole === "user" ||
+    req.userRole === "admin" ||
+    req.userRole === "super_admin";
   if (isPrivilegedRole) {
     res.json({
       unlimited: true,
@@ -285,7 +288,10 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
   const userId = req.userId!;
   const typedMode = mode as "beginner" | "pro";
-  const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
+  const isPrivilegedRole =
+    req.userRole === "user" ||
+    req.userRole === "admin" ||
+    req.userRole === "super_admin";
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
 
   // External context fetches are pure HTTP — do them outside any transaction.
