@@ -12,3 +12,9 @@ id = "hV8G6zgBcKoRjxHsc6dGi"
 uri = "file://docs/USER_MANUAL.md"
 type = "text"
 title = "Buku Panduan Pengguna (User Manual)"
+
+[[outputs]]
+id = "bsH36Le25mIr-11hLJOK6"
+uri = "file://attached_assets/trade-pilot-logo.svg"
+type = "image"
+title = "Trade Pilot Logo (SVG)"
