@@ -18,3 +18,9 @@ id = "bsH36Le25mIr-11hLJOK6"
 uri = "file://attached_assets/trade-pilot-logo.svg"
 type = "image"
 title = "Trade Pilot Logo (SVG)"
+
+[[outputs]]
+id = "dM69YQwwbGyTjHZuozet6"
+uri = "file://attached_assets/trade-pilot-logo.png"
+type = "image"
+title = "Trade Pilot Logo (PNG 1024x1024)"
