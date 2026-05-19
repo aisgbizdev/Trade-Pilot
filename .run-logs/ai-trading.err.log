@@ -244,3 +244,12 @@ Error: read ECONNRESET
 [2m17.15.01[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications/stream[39m
 Error: read ECONNRESET
     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m17.32.51[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications/stream[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m17.32.51[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications/stream[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m17.47.39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications/stream[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
