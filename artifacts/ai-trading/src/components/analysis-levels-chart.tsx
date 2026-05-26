@@ -34,7 +34,10 @@ interface AnalysisLevelsChartProps {
 // content is present.
 function parsePriceLevel(raw: string | null | undefined): number | null {
   if (!raw) return null;
-  const matches = raw.match(/-?\d+(?:[.,]\d+)?/g);
+  // Prices are always positive; intentionally NOT matching a leading `-`
+  // so that zone strings like "2350-2356" parse as [2350, 2356] instead
+  // of [2350, -2356] (which would yield a midpoint of -3).
+  const matches = raw.match(/\d+(?:[.,]\d+)?/g);
   if (!matches || matches.length === 0) return null;
   const nums = matches
     .map((m) => Number(m.replace(/,/g, ".")))
