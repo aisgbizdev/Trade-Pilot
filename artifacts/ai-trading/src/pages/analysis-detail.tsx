@@ -1305,6 +1305,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           instrument={analysis.instrument}
           timeframe={analysis.timeframe}
           tradePlan={tradePlan}
+          analysisCreatedAt={analysis.createdAt}
         />
 
         {/* Fundamental context — news + calendar the AI was given,

@@ -22,6 +22,9 @@ interface AnalysisChartSectionProps {
   instrument: string;
   timeframe: string;
   tradePlan?: TradePlan | null;
+  // Wall-clock time the analysis was generated. Passed down so the
+  // levels chart can mark "AI saw up to here" on the time axis.
+  analysisCreatedAt?: string | Date | null;
 }
 
 // Timeframes the backend `/historical/candles` endpoint supports. Keep in
@@ -36,6 +39,7 @@ export function AnalysisChartSection({
   instrument,
   timeframe,
   tradePlan = null,
+  analysisCreatedAt = null,
 }: AnalysisChartSectionProps) {
   const { t } = useTranslation();
   const [overviewFailed, setOverviewFailed] = useState<string | null>(null);
@@ -105,6 +109,7 @@ export function AnalysisChartSection({
             instrument={instrument}
             timeframe={timeframe}
             tradePlan={tradePlan}
+            analysisCreatedAt={analysisCreatedAt}
             height="100%"
             onLoadFailed={handleLevelsInlineFail}
           />
@@ -147,6 +152,7 @@ export function AnalysisChartSection({
                   instrument={instrument}
                   timeframe={timeframe}
                   tradePlan={tradePlan}
+                  analysisCreatedAt={analysisCreatedAt}
                   height="100%"
                   onLoadFailed={handleLevelsModalFail}
                 />

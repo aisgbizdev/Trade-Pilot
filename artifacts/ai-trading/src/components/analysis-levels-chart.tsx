@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -24,6 +24,10 @@ interface AnalysisLevelsChartProps {
   instrument: string;
   timeframe: string;
   tradePlan: TradePlan | null;
+  // Wall-clock time the AI ran this analysis. Used to draw the
+  // "AI saw up to here" vertical marker and to mute bars that
+  // printed AFTER the call (i.e. bars the AI never saw).
+  analysisCreatedAt?: string | Date | null;
   height?: number | string;
   onLoadFailed?: (reason: string) => void;
 }
@@ -119,14 +123,39 @@ function toCssSize(value: number | string): string {
   return value || "100%";
 }
 
-function dedupeByTime(candles: Candle[]): CandlestickData<UTCTimestamp>[] {
+function buildCandleData(
+  candles: Candle[],
+  cutoffSec: number | null,
+  isDark: boolean,
+): CandlestickData<UTCTimestamp>[] {
   // lightweight-charts requires strictly increasing, unique timestamps.
   // Backend candles are already sorted, but two intraday bars occasionally
   // share a second (rounding); keep the last one in that case.
+  //
+  // Bars whose timestamp is AFTER the analysis cutoff are recolored to a
+  // muted/translucent palette — these are bars the AI never saw, so
+  // de-emphasizing them keeps the user from mistaking "TP already hit on
+  // this later bar" for "the AI's call was wrong from the start".
+  const mutedUp   = isDark ? "rgba(16,185,129,0.32)" : "rgba(16,185,129,0.42)";
+  const mutedDown = isDark ? "rgba(239,68,68,0.32)"  : "rgba(239,68,68,0.42)";
   const map = new Map<number, CandlestickData<UTCTimestamp>>();
   for (const c of candles) {
-    const t = Math.floor(new Date(c.date).getTime() / 1000) as UTCTimestamp;
-    map.set(t, { time: t, open: c.open, high: c.high, low: c.low, close: c.close });
+    const t = Math.floor(new Date(c.date).getTime() / 1000);
+    const item: CandlestickData<UTCTimestamp> = {
+      time: t as UTCTimestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+    };
+    if (cutoffSec != null && t > cutoffSec) {
+      const isUp = c.close >= c.open;
+      const col = isUp ? mutedUp : mutedDown;
+      item.color = col;
+      item.borderColor = col;
+      item.wickColor = col;
+    }
+    map.set(t, item);
   }
   return [...map.entries()]
     .sort((a, b) => a[0] - b[0])
@@ -137,6 +166,7 @@ export function AnalysisLevelsChart({
   instrument,
   timeframe,
   tradePlan,
+  analysisCreatedAt = null,
   height = 280,
   onLoadFailed,
 }: AnalysisLevelsChartProps) {
@@ -148,6 +178,14 @@ export function AnalysisLevelsChart({
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [candles, setCandles] = useState<Candle[] | null>(null);
+  const [markerX, setMarkerX] = useState<number | null>(null);
+
+  const cutoffSec = useMemo<number | null>(() => {
+    if (!analysisCreatedAt) return null;
+    const ms = new Date(analysisCreatedAt).getTime();
+    if (!Number.isFinite(ms)) return null;
+    return Math.floor(ms / 1000);
+  }, [analysisCreatedAt]);
 
   // Fetch candles when instrument / timeframe changes.
   useEffect(() => {
@@ -186,7 +224,7 @@ export function AnalysisLevelsChart({
     };
   }, [instrument, timeframe, onLoadFailed]);
 
-  // Build/refresh chart when candles or theme change.
+  // Build/refresh chart when candles, theme, or cutoff change.
   useEffect(() => {
     const host = hostRef.current;
     if (!host || state !== "ready" || !candles) return;
@@ -225,7 +263,7 @@ export function AnalysisLevelsChart({
       wickDownColor: "#ef4444",
     });
     seriesRef.current = series;
-    series.setData(dedupeByTime(candles));
+    series.setData(buildCandleData(candles, cutoffSec, isDark));
     chart.timeScale().fitContent();
 
     return () => {
@@ -234,7 +272,7 @@ export function AnalysisLevelsChart({
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, [candles, state, theme]);
+  }, [candles, state, theme, cutoffSec]);
 
   // Draw / refresh price lines for the trade plan whenever plan changes.
   useEffect(() => {
@@ -268,6 +306,35 @@ export function AnalysisLevelsChart({
     }
   }, [tradePlan, candles, state]);
 
+  // Track the x-coordinate of the analysis-created cutoff so we can draw a
+  // vertical marker line + badge as an HTML overlay. lightweight-charts has
+  // no native vertical-line primitive, so we project the timestamp into pane
+  // pixels via timeToCoordinate and re-run on every pan/zoom/resize.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || state !== "ready" || cutoffSec == null) {
+      setMarkerX(null);
+      return;
+    }
+    const timeScale = chart.timeScale();
+    const recompute = () => {
+      const x = timeScale.timeToCoordinate(cutoffSec as UTCTimestamp);
+      setMarkerX(typeof x === "number" && Number.isFinite(x) ? x : null);
+    };
+    recompute();
+    timeScale.subscribeVisibleTimeRangeChange(recompute);
+    timeScale.subscribeVisibleLogicalRangeChange(recompute);
+    const ro = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(recompute)
+      : null;
+    if (ro && hostRef.current) ro.observe(hostRef.current);
+    return () => {
+      timeScale.unsubscribeVisibleTimeRangeChange(recompute);
+      timeScale.unsubscribeVisibleLogicalRangeChange(recompute);
+      ro?.disconnect();
+    };
+  }, [cutoffSec, state, candles, theme]);
+
   return (
     <div
       className="relative w-full"
@@ -276,12 +343,35 @@ export function AnalysisLevelsChart({
       data-state={state}
       data-instrument={instrument}
       data-timeframe={timeframe}
+      data-analysis-cutoff={cutoffSec ?? ""}
     >
       <div
         ref={hostRef}
         className="absolute inset-0"
         style={{ visibility: state === "ready" ? "visible" : "hidden" }}
       />
+      {state === "ready" && markerX != null && (
+        <>
+          {/* Vertical dashed marker line. Leaves room at the bottom for
+              the time axis (~22px) so it doesn't bleed into the labels. */}
+          <div
+            className="pointer-events-none absolute top-0 border-l border-dashed border-foreground/50"
+            style={{ left: `${markerX}px`, bottom: 22 }}
+            data-testid="analysis-cutoff-marker"
+          />
+          {/* "AI saw up to here" badge — small chip anchored just left of
+              the line so it visually labels the historical (left) side. */}
+          <div
+            className="pointer-events-none absolute top-1 -translate-x-full pr-1"
+            style={{ left: `${markerX}px` }}
+            data-testid="analysis-cutoff-badge"
+          >
+            <span className="inline-block rounded bg-foreground/80 text-background text-[10px] leading-none px-1.5 py-1 whitespace-nowrap">
+              AI saw up to here
+            </span>
+          </div>
+        </>
+      )}
       {state === "loading" && (
         <div
           className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground"
