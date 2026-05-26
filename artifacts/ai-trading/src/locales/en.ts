@@ -534,6 +534,9 @@ export const en = {
     citations_label: "Sources cited:",
     indicators_section_title: "Live Technical Indicators",
     indicators_section_note: "Live data — may differ from the snapshot used at analysis time.",
+    chart_section_title: "Price Chart",
+    chart_open_full: "Open full chart",
+    chart_unavailable: "Chart unavailable. Your browser or network may be blocking TradingView. You can still review the analysis below.",
   },
   admin: {
     title: "Admin Panel",

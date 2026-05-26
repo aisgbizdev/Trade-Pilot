@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
 import { MarketContextSummary } from "@/components/market-context-summary";
+import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { SignalSpeedometer } from "@/components/signal-speedometer";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
 import type { IndicatorTimeframe } from "@/hooks/use-technical-indicators";
@@ -1295,6 +1296,15 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             </Button>
           )}
         </Card>
+
+        {/* TradingView chart — visual confirmation of the AI's read
+            against the live tape. Symbol Overview is the default; the
+            "Open full chart" button opens a full-screen Advanced Chart
+            modal for power users. */}
+        <AnalysisChartSection
+          instrument={analysis.instrument}
+          timeframe={analysis.timeframe}
+        />
 
         {/* Fundamental context — news + calendar the AI was given,
             shown directly under the bias gauge so users can audit it. */}
