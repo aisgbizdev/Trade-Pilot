@@ -103,6 +103,20 @@ export const audienceTypeEnum = pgEnum("audience_type", [
   "tag",
 ]);
 
+// Which AI-generated level a price_alerts row is watching. `entry` is the
+// AI's preferred entry zone, `sl` the stop-loss, `tp1` / `tp2` the two
+// take-profits. One analysis can arm up to 4 levels per side, but in v1
+// we only arm levels for the AI's `preferredSide` (buy or sell), so each
+// active analysis has at most 4 rows.
+export const alertLevelEnum = pgEnum("alert_level", ["entry", "sl", "tp1", "tp2"]);
+// Direction the price needs to cross to fire the alert. Computed at arm
+// time from the spot price vs. the level: if spot is above the level,
+// we fire `below` (price needs to fall to touch); if spot is below, we
+// fire `above`. Stored explicitly so the watcher doesn't have to
+// re-derive it (and stays correct even if our derivation logic changes
+// later).
+export const alertDirectionEnum = pgEnum("alert_direction", ["above", "below"]);
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -284,6 +298,55 @@ export const outboundClicks = pgTable("outbound_clicks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// One row per AI-generated level (entry / SL / TP1 / TP2) the user has
+// opted in to be pinged about. The background watcher in `price-alerts.ts`
+// polls live prices, fires a Web Push the first time `levelPrice` is
+// crossed in `triggerDirection`, and stamps `triggeredAt`. Once a row's
+// `validUntil` passes or any SL/TP on the same analysis fires, the
+// remaining rows for that analysis are `cancelledAt`'d so the user
+// doesn't keep getting alerts on a trade that already resolved.
+export const priceAlerts = pgTable(
+  "price_alerts",
+  {
+    id: serial("id").primaryKey(),
+    analysisId: integer("analysis_id")
+      .notNull()
+      .references(() => analyses.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    instrument: text("instrument").notNull(),
+    // Trade side this level belongs to ("buy" or "sell"). Stored as text
+    // rather than a new enum because the existing TradePlanShape side
+    // values are already a free-form union — keeping them aligned.
+    side: text("side").notNull(),
+    level: alertLevelEnum("level").notNull(),
+    // The actual price the watcher compares against. Stored as text to
+    // preserve the AI's exact precision (e.g. "1.08573") without falling
+    // into numeric/float rounding — parsed back to a Number in the
+    // watcher.
+    levelPrice: text("level_price").notNull(),
+    triggerDirection: alertDirectionEnum("trigger_direction").notNull(),
+    validUntil: timestamp("valid_until").notNull(),
+    triggeredAt: timestamp("triggered_at"),
+    // Price the watcher saw when it decided the level had been crossed.
+    // Logged for debugging "why did this fire?" support questions.
+    triggeredPrice: text("triggered_price"),
+    cancelledAt: timestamp("cancelled_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    // The watcher tick scans by `(triggeredAt IS NULL, cancelledAt IS NULL,
+    // validUntil > now)` grouped by instrument — this composite index keeps
+    // that scan cheap as the table grows.
+    activeByInstrument: uniqueIndex("price_alerts_unique_per_analysis_level").on(
+      t.analysisId,
+      t.level,
+      t.side,
+    ),
+  }),
+);
+
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").references(() => users.id, {
@@ -310,3 +373,5 @@ export type Broadcast = typeof broadcasts.$inferSelect;
 export type NewBroadcast = typeof broadcasts.$inferInsert;
 export type OutboundClick = typeof outboundClicks.$inferSelect;
 export type NewOutboundClick = typeof outboundClicks.$inferInsert;
+export type PriceAlert = typeof priceAlerts.$inferSelect;
+export type NewPriceAlert = typeof priceAlerts.$inferInsert;

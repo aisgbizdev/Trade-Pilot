@@ -4,6 +4,7 @@ import { eq, and, count, sql, gte, lte, lt } from "drizzle-orm";
 import { logger } from "./logger";
 import { createNotification, createNotificationsForUsers } from "./create-notification";
 import { resolvePendingOutcomes } from "./outcomes";
+import { checkPriceAlerts } from "./price-alerts";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -414,6 +415,11 @@ export function startBackgroundJobs(): void {
   const outcomeResolverInterval = 5 * 60 * 1000;
   schedule(resolvePendingOutcomes, outcomeResolverInterval, 30000);
   schedule(deleteOldAnalyses, retentionInterval, 25000);
+  // Live-price watcher for task #110: pings users when price crosses
+  // any AI-armed entry/SL/TP level. Runs every 30s (matches the
+  // upstream feed's 15s cache TTL closely enough without hammering it).
+  const priceAlertInterval = 30 * 1000;
+  schedule(checkPriceAlerts, priceAlertInterval, 12000);
 
   logger.info({ retentionDays: ANALYSES_RETENTION_DAYS }, "Background notification jobs started");
 }

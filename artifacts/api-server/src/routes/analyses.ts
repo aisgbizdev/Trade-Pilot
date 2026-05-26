@@ -15,6 +15,13 @@ import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe
 import { getRelevantNews, formatNewsForPrompt, type NewsItem } from "../lib/news";
 import { getRelevantCalendar, formatCalendarForPrompt, type CalendarEvent } from "../lib/calendar";
 import { createNotification, createNotificationsForUsers } from "../lib/create-notification";
+import { logger } from "../lib/logger";
+import {
+  armAlertsForAnalysis,
+  cancelAlertsForAnalysis,
+  getAlertStatusForAnalysis,
+  userHasPushSubscription,
+} from "../lib/price-alerts";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -565,6 +572,20 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     },
   );
 
+  // Auto-arm price alerts for the AI's trade plan when the user already
+  // has push enabled — they shouldn't need a second tap to opt in for
+  // a feature that's clearly useful and that they've already accepted
+  // the OS-level prompt for. Best-effort: failures are logged inside
+  // armAlertsForAnalysis and never block the analysis response.
+  try {
+    const hasPush = await userHasPushSubscription(req.userId!);
+    if (hasPush) {
+      await armAlertsForAnalysis(analysis.id);
+    }
+  } catch (err) {
+    logger.warn({ err, analysisId: analysis.id }, "Auto-arm price alerts failed");
+  }
+
   res.status(201).json(analysis);
 });
 
@@ -760,6 +781,79 @@ router.post(
     });
   },
 );
+
+// Price-alerts routes for task #110. The detail page's "Notify me when
+// price hits these levels" toggle drives POST (arm) / DELETE (cancel).
+// GET returns the current armed/triggered state so the detail page can
+// render the "Alerts: ON · N levels armed" indicator.
+router.get("/analyses/:id/alerts", requireAuth, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+  const [own] = await db
+    .select({ id: analyses.id })
+    .from(analyses)
+    .where(and(eq(analyses.id, id), eq(analyses.userId, req.userId!)))
+    .limit(1);
+  if (!own) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+  const status = await getAlertStatusForAnalysis(id);
+  res.json(status);
+});
+
+router.post("/analyses/:id/alerts", requireAuth, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+  const [own] = await db
+    .select({ id: analyses.id })
+    .from(analyses)
+    .where(and(eq(analyses.id, id), eq(analyses.userId, req.userId!)))
+    .limit(1);
+  if (!own) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+  const armed = await armAlertsForAnalysis(id);
+  if (armed === 0) {
+    // Most common cause: instrument isn't covered by the live-quotes
+    // upstream (e.g. NIKKEI variants we don't map). Surface a 422 so
+    // the UI can toast a real reason rather than silently flipping
+    // the toggle back off.
+    res.status(422).json({
+      error: "Tidak bisa menyalakan alert: instrumen ini belum didukung oleh data harga live, atau analisis tidak memiliki trade plan.",
+    });
+    return;
+  }
+  const status = await getAlertStatusForAnalysis(id);
+  res.status(201).json(status);
+});
+
+router.delete("/analyses/:id/alerts", requireAuth, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+  const [own] = await db
+    .select({ id: analyses.id })
+    .from(analyses)
+    .where(and(eq(analyses.id, id), eq(analyses.userId, req.userId!)))
+    .limit(1);
+  if (!own) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+  await cancelAlertsForAnalysis(id);
+  const status = await getAlertStatusForAnalysis(id);
+  res.json(status);
+});
 
 router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res) => {
   const analysisId = Number(req.params["id"]);

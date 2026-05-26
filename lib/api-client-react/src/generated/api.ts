@@ -20,6 +20,7 @@ import type {
   AddUserTagBody,
   AdminFeedbackList,
   AdminStats,
+  AlertStatus,
   AnalysesList,
   AnalysesSummary,
   Analysis,
@@ -1759,6 +1760,265 @@ export const useRefreshFundamentals = <
   TContext
 > => {
   return useMutation(getRefreshFundamentalsMutationOptions(options));
+};
+
+/**
+ * Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the "Alerts: ON · N levels armed" indicator on the analysis-detail page.
+
+ * @summary Get price-alert status for an analysis
+ */
+export const getGetAnalysisAlertsUrl = (id: number) => {
+  return `/api/analyses/${id}/alerts`;
+};
+
+export const getAnalysisAlerts = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AlertStatus> => {
+  return customFetch<AlertStatus>(getGetAnalysisAlertsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAnalysisAlertsQueryKey = (id: number) => {
+  return [`/api/analyses/${id}/alerts`] as const;
+};
+
+export const getGetAnalysisAlertsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalysisAlerts>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAnalysisAlerts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAnalysisAlertsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAnalysisAlerts>>
+  > = ({ signal }) => getAnalysisAlerts(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisAlerts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAnalysisAlertsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalysisAlerts>>
+>;
+export type GetAnalysisAlertsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get price-alert status for an analysis
+ */
+
+export function useGetAnalysisAlerts<
+  TData = Awaited<ReturnType<typeof getAnalysisAlerts>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAnalysisAlerts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAnalysisAlertsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Arms one push alert per AI level on the preferred trade side. The background watcher polls live prices every ~30s and fires the first time each level is touched, deep-linking back to this analysis.
+
+ * @summary Arm price alerts for an analysis
+ */
+export const getArmAnalysisAlertsUrl = (id: number) => {
+  return `/api/analyses/${id}/alerts`;
+};
+
+export const armAnalysisAlerts = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AlertStatus> => {
+  return customFetch<AlertStatus>(getArmAnalysisAlertsUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getArmAnalysisAlertsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof armAnalysisAlerts>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof armAnalysisAlerts>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["armAnalysisAlerts"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof armAnalysisAlerts>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return armAnalysisAlerts(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArmAnalysisAlertsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof armAnalysisAlerts>>
+>;
+
+export type ArmAnalysisAlertsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Arm price alerts for an analysis
+ */
+export const useArmAnalysisAlerts = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof armAnalysisAlerts>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof armAnalysisAlerts>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getArmAnalysisAlertsMutationOptions(options));
+};
+
+/**
+ * @summary Cancel any un-fired price alerts for an analysis
+ */
+export const getCancelAnalysisAlertsUrl = (id: number) => {
+  return `/api/analyses/${id}/alerts`;
+};
+
+export const cancelAnalysisAlerts = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AlertStatus> => {
+  return customFetch<AlertStatus>(getCancelAnalysisAlertsUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getCancelAnalysisAlertsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelAnalysisAlerts>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelAnalysisAlerts>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["cancelAnalysisAlerts"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelAnalysisAlerts>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return cancelAnalysisAlerts(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelAnalysisAlertsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelAnalysisAlerts>>
+>;
+
+export type CancelAnalysisAlertsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Cancel any un-fired price alerts for an analysis
+ */
+export const useCancelAnalysisAlerts = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelAnalysisAlerts>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelAnalysisAlerts>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getCancelAnalysisAlertsMutationOptions(options));
 };
 
 /**

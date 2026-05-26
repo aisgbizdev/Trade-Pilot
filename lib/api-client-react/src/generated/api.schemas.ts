@@ -548,6 +548,58 @@ export interface FeedbackList {
   limit: number;
 }
 
+export type AlertLevelRowLevel =
+  (typeof AlertLevelRowLevel)[keyof typeof AlertLevelRowLevel];
+
+export const AlertLevelRowLevel = {
+  entry: "entry",
+  sl: "sl",
+  tp1: "tp1",
+  tp2: "tp2",
+} as const;
+
+export type AlertLevelRowSide =
+  (typeof AlertLevelRowSide)[keyof typeof AlertLevelRowSide];
+
+export const AlertLevelRowSide = {
+  buy: "buy",
+  sell: "sell",
+} as const;
+
+/**
+ * Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.
+
+ */
+export type AlertLevelRowDirection =
+  (typeof AlertLevelRowDirection)[keyof typeof AlertLevelRowDirection];
+
+export const AlertLevelRowDirection = {
+  above: "above",
+  below: "below",
+} as const;
+
+export interface AlertLevelRow {
+  level: AlertLevelRowLevel;
+  side: AlertLevelRowSide;
+  /** AI-generated level price, stored verbatim for precision. */
+  price: string;
+  /** Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.
+   */
+  direction: AlertLevelRowDirection;
+  triggeredAt: string | null;
+  /** Live price the watcher saw when it fired the alert. */
+  triggeredPrice: string | null;
+  cancelledAt: string | null;
+}
+
+export interface AlertStatus {
+  /** Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists. */
+  enabled: boolean;
+  /** Number of currently armed levels (un-triggered, un-cancelled, in-validity). */
+  armedCount: number;
+  levels: AlertLevelRow[];
+}
+
 export type FeedbackBodyFeedbackType =
   (typeof FeedbackBodyFeedbackType)[keyof typeof FeedbackBodyFeedbackType];
 

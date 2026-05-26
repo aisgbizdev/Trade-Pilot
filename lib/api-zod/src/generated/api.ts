@@ -997,6 +997,97 @@ export const RefreshFundamentalsResponse = zod
   );
 
 /**
+ * Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the "Alerts: ON · N levels armed" indicator on the analysis-detail page.
+
+ * @summary Get price-alert status for an analysis
+ */
+export const GetAnalysisAlertsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetAnalysisAlertsResponse = zod.object({
+  enabled: zod
+    .boolean()
+    .describe(
+      "Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.",
+    ),
+  armedCount: zod
+    .number()
+    .describe(
+      "Number of currently armed levels (un-triggered, un-cancelled, in-validity).",
+    ),
+  levels: zod.array(
+    zod.object({
+      level: zod.enum(["entry", "sl", "tp1", "tp2"]),
+      side: zod.enum(["buy", "sell"]),
+      price: zod
+        .string()
+        .describe("AI-generated level price, stored verbatim for precision."),
+      direction: zod
+        .enum(["above", "below"])
+        .describe(
+          "Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.\n",
+        ),
+      triggeredAt: zod.coerce.date().nullable(),
+      triggeredPrice: zod
+        .string()
+        .nullable()
+        .describe("Live price the watcher saw when it fired the alert."),
+      cancelledAt: zod.coerce.date().nullable(),
+    }),
+  ),
+});
+
+/**
+ * Arms one push alert per AI level on the preferred trade side. The background watcher polls live prices every ~30s and fires the first time each level is touched, deep-linking back to this analysis.
+
+ * @summary Arm price alerts for an analysis
+ */
+export const ArmAnalysisAlertsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Cancel any un-fired price alerts for an analysis
+ */
+export const CancelAnalysisAlertsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CancelAnalysisAlertsResponse = zod.object({
+  enabled: zod
+    .boolean()
+    .describe(
+      "Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.",
+    ),
+  armedCount: zod
+    .number()
+    .describe(
+      "Number of currently armed levels (un-triggered, un-cancelled, in-validity).",
+    ),
+  levels: zod.array(
+    zod.object({
+      level: zod.enum(["entry", "sl", "tp1", "tp2"]),
+      side: zod.enum(["buy", "sell"]),
+      price: zod
+        .string()
+        .describe("AI-generated level price, stored verbatim for precision."),
+      direction: zod
+        .enum(["above", "below"])
+        .describe(
+          "Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.\n",
+        ),
+      triggeredAt: zod.coerce.date().nullable(),
+      triggeredPrice: zod
+        .string()
+        .nullable()
+        .describe("Live price the watcher saw when it fired the alert."),
+      cancelledAt: zod.coerce.date().nullable(),
+    }),
+  ),
+});
+
+/**
  * @summary Submit feedback for analysis
  */
 export const SubmitFeedbackParams = zod.object({

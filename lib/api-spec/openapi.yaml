@@ -519,6 +519,109 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /analyses/{id}/alerts:
+    get:
+      operationId: getAnalysisAlerts
+      tags: [analyses]
+      summary: Get price-alert status for an analysis
+      description: >
+        Returns whether push alerts are armed on this analysis's AI-generated
+        entry / SL / TP levels, and the per-level fire history. Drives the
+        "Alerts: ON · N levels armed" indicator on the analysis-detail page.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Alert status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertStatus"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Analysis not found or not owned by this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: armAnalysisAlerts
+      tags: [analyses]
+      summary: Arm price alerts for an analysis
+      description: >
+        Arms one push alert per AI level on the preferred trade side. The
+        background watcher polls live prices every ~30s and fires the first
+        time each level is touched, deep-linking back to this analysis.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Alerts armed; returns the fresh status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertStatus"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Analysis not found or not owned by this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Could not arm (instrument not on live feed, no trade plan, etc)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: cancelAnalysisAlerts
+      tags: [analyses]
+      summary: Cancel any un-fired price alerts for an analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Alerts cancelled; returns the fresh status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertStatus"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Analysis not found or not owned by this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /analyses/{id}/feedback:
     post:
       operationId: submitFeedback
@@ -2129,6 +2232,64 @@ components:
         - total
         - page
         - limit
+
+    AlertLevelRow:
+      type: object
+      properties:
+        level:
+          type: string
+          enum: [entry, sl, tp1, tp2]
+        side:
+          type: string
+          enum: [buy, sell]
+        price:
+          type: string
+          description: AI-generated level price, stored verbatim for precision.
+        direction:
+          type: string
+          enum: [above, below]
+          description: >
+            Which way price must move from the spot at arm time to fire the
+            alert. `above` = fire when live ≥ price; `below` = fire when
+            live ≤ price.
+        triggeredAt:
+          type: string
+          format: date-time
+          nullable: true
+        triggeredPrice:
+          type: string
+          nullable: true
+          description: Live price the watcher saw when it fired the alert.
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - level
+        - side
+        - price
+        - direction
+        - triggeredAt
+        - triggeredPrice
+        - cancelledAt
+
+    AlertStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.
+        armedCount:
+          type: integer
+          description: Number of currently armed levels (un-triggered, un-cancelled, in-validity).
+        levels:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlertLevelRow"
+      required:
+        - enabled
+        - armedCount
+        - levels
 
     FeedbackBody:
       type: object
