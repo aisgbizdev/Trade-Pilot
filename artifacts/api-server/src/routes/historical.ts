@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  getCandles,
   getIndicators,
   isSupportedIndicatorTimeframe,
   SUPPORTED_INDICATOR_TIMEFRAMES,
@@ -36,6 +37,43 @@ router.get("/historical/indicators", async (req, res) => {
       `private, max-age=${indicatorsCacheTtlSeconds(tfRaw)}`,
     );
     return res.json({ status: "success", timeframe: tfRaw, indicators });
+  } catch (err: any) {
+    return res.status(502).json({ error: "Gagal mengambil data historis", detail: err.message });
+  }
+});
+
+// Raw OHLC candles for chart overlays. Mirrors the same instrument /
+// timeframe whitelist as /historical/indicators so the chart panel always
+// has matching data — but returns the bars themselves instead of derived
+// indicator values.
+router.get("/historical/candles", async (req, res) => {
+  const { instrument, timeframe } = req.query;
+  if (!instrument || typeof instrument !== "string") {
+    return res.status(400).json({ error: "Parameter instrument wajib diisi" });
+  }
+
+  const tfRaw = (typeof timeframe === "string" && timeframe.length > 0) ? timeframe : "1D";
+  if (!isSupportedIndicatorTimeframe(tfRaw)) {
+    return res.status(400).json({
+      error: `Timeframe "${tfRaw}" belum didukung. Hanya tersedia: ${SUPPORTED_INDICATOR_TIMEFRAMES.join(", ")}.`,
+      supportedTimeframes: SUPPORTED_INDICATOR_TIMEFRAMES,
+    });
+  }
+
+  try {
+    const candles = await getCandles(instrument, tfRaw);
+    if (!candles) {
+      return res.status(404).json({ error: "Data historis tidak tersedia untuk instrumen ini" });
+    }
+    // Cap response size — even the deepest timeframe only needs the last
+    // ~300 bars for a chart preview. Avoids shipping 10k bars over the wire
+    // when the user only sees the last screenful anyway.
+    const trimmed = candles.length > 300 ? candles.slice(-300) : candles;
+    res.setHeader(
+      "Cache-Control",
+      `private, max-age=${indicatorsCacheTtlSeconds(tfRaw)}`,
+    );
+    return res.json({ status: "success", timeframe: tfRaw, candles: trimmed });
   } catch (err: any) {
     return res.status(502).json({ error: "Gagal mengambil data historis", detail: err.message });
   }

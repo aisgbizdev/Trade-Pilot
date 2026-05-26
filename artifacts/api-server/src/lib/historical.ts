@@ -464,6 +464,21 @@ export async function getIndicators(
   return indicators;
 }
 
+// Public candle fetcher used by the /historical/candles endpoint (chart
+// overlay). Returns raw OHLC bars suitable for client-side rendering;
+// indicator math intentionally lives in `getIndicators`. Returns null when
+// the instrument has no upstream coverage for the requested timeframe.
+export async function getCandles(
+  instrument: string,
+  timeframe: IndicatorTimeframe,
+): Promise<Candle[] | null> {
+  if (isIntradayTimeframe(timeframe)) {
+    return getIntradayCandles(instrument, timeframe);
+  }
+  const result = await getDailyCandles(instrument, timeframe);
+  return result ? result.candles : null;
+}
+
 // Human-readable Indonesian unit/period labels for prompt + UI alignment.
 function timeframeLabels(tf: IndicatorTimeframe): { candleUnit: string; periodLabel: string } {
   switch (tf) {
