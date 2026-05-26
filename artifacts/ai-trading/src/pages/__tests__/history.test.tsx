@@ -2,10 +2,11 @@
  * Component test for the History list (`src/pages/history.tsx`).
  *
  * Covers happy-path rendering of the analyses list (with valid/expired
- * badges and the per-row refresh button only on expired entries), the
- * empty state with both "no data ever" and "no data after a filter"
- * branches, the loading spinner, and the filters panel toggle which
- * causes the list query to refetch with new query params.
+ * badges and the one-tap Re-analyze button on every row regardless of
+ * validity — task #108), the empty state with both "no data ever" and
+ * "no data after a filter" branches, the loading spinner, and the
+ * filters panel toggle which causes the list query to refetch with new
+ * query params.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -75,7 +76,7 @@ afterEach(() => {
 });
 
 describe("HistoryPage: happy-path render", () => {
-  it("renders one card per analysis with valid/expired badges and the refresh button only on expired rows", async () => {
+  it("renders one card per analysis with valid/expired badges and a Re-analyze button on every row", async () => {
     installFetchMock([
       listHandler({ analyses: SAMPLE_ANALYSES, total: SAMPLE_ANALYSES.length }),
     ]);
@@ -98,11 +99,9 @@ describe("HistoryPage: happy-path render", () => {
     expect(valid.textContent).toMatch(/1h/);
     expect(expired.textContent).toMatch(/EUR\/USD/);
 
-    // Per-row refresh only renders for the expired row.
-    expect(screen.getByTestId("button-refresh-row-102")).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("button-refresh-row-101"),
-    ).not.toBeInTheDocument();
+    // One-tap Re-analyze is available on every row, valid or expired.
+    expect(screen.getByTestId("button-reanalyze-row-101")).toBeInTheDocument();
+    expect(screen.getByTestId("button-reanalyze-row-102")).toBeInTheDocument();
 
     // Pagination controls render once data is in. With total=2 and
     // limit=20 there is no next page and we are on the first page.

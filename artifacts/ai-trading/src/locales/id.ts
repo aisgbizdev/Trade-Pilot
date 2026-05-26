@@ -279,6 +279,8 @@ export const id: Translations = {
     expired: "Kadaluarsa",
     prev: "Sebelumnya",
     next: "Selanjutnya",
+    analyze_again: "Analisa Ulang",
+    analyzing_again: "Menganalisis…",
   },
   analytics: {
     title: "Statistik Saya",

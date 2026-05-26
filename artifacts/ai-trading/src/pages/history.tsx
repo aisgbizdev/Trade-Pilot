@@ -271,36 +271,44 @@ export default function HistoryPage() {
                       >
                         {valid ? t.history.valid : t.history.expired}
                       </Badge>
-                      {!valid && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (refreshing) return;
-                            refresh({
-                              id: a.id,
-                              instrument: a.instrument,
-                              timeframe: a.timeframe,
-                              mode: a.mode,
-                            });
-                          }}
-                          disabled={refreshing}
-                          aria-label={t.analysis_detail.refresh_btn}
-                          title={t.analysis_detail.refresh_btn}
-                          data-testid={`button-refresh-row-${a.id}`}
-                          className={cn(
-                            "p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors",
-                            refreshing && "opacity-60 cursor-not-allowed"
-                          )}
-                        >
-                          {refreshing ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      )}
+                      {/* One-tap re-analyze: kicks off a new analysis with
+                          the same instrument/timeframe/mode without sending
+                          users back through the Analyze flow. Quota errors
+                          fall through to the hook's toast. */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (refreshing) return;
+                          refresh({
+                            id: a.id,
+                            instrument: a.instrument,
+                            timeframe: a.timeframe,
+                            mode: a.mode,
+                          });
+                        }}
+                        disabled={refreshing}
+                        aria-label={t.history.analyze_again}
+                        title={t.history.analyze_again}
+                        data-testid={`button-reanalyze-row-${a.id}`}
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-colors",
+                          refreshing && "opacity-60 cursor-not-allowed"
+                        )}
+                      >
+                        {refreshing ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>{t.history.analyzing_again}</span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-3 h-3" />
+                            <span>{t.history.analyze_again}</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </Card>

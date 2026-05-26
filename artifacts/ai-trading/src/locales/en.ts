@@ -277,6 +277,8 @@ export const en = {
     expired: "Expired",
     prev: "Previous",
     next: "Next",
+    analyze_again: "Re-analyze",
+    analyzing_again: "Analyzing…",
   },
   analytics: {
     title: "My Statistics",
