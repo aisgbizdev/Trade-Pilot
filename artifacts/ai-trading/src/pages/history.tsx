@@ -111,6 +111,27 @@ function buildSearch(filters: FilterState, page: number): string {
 
 const MAX_PRESET_NAME_LEN = 40;
 
+// Pull the server-supplied error string out of a thrown `ApiError`
+// (`custom-fetch.ts`), which exposes the parsed JSON body on `.data`.
+// Earlier code was reading the axios-style `err.response.data.error`
+// path which never matched — so e.g. the 409 cap message
+// ("Maksimal 20 preset per pengguna") was always swallowed and the UI
+// fell back to a generic copy. Falls back to the passed default copy
+// when the error shape isn't recognisable.
+function extractApiError(err: unknown, fallback: string): string {
+  const e = err as
+    | { data?: { error?: unknown } | unknown; response?: { data?: { error?: unknown } } }
+    | undefined;
+  const direct =
+    e && typeof e === "object" && e.data && typeof e.data === "object"
+      ? (e.data as { error?: unknown }).error
+      : undefined;
+  if (typeof direct === "string" && direct.trim()) return direct;
+  const nested = e?.response?.data?.error;
+  if (typeof nested === "string" && nested.trim()) return nested;
+  return fallback;
+}
+
 // Compare two FilterStates so we can highlight the chip whose saved
 // filters match what's currently in the URL. Arrays are compared as
 // sets — order on disk shouldn't matter for "are these the same filter
@@ -239,12 +260,7 @@ export default function HistoryPage() {
       { data: { name, filters } },
       {
         onError: (err: unknown) => {
-          const e = err as { response?: { data?: { error?: string } } };
-          window.alert(
-            e?.response?.data?.error ??
-              t.history.preset_save_failed ??
-              "Could not save preset",
-          );
+          window.alert(extractApiError(err, t.history.preset_save_failed ?? "Could not save preset"));
         },
       },
     );
@@ -266,12 +282,7 @@ export default function HistoryPage() {
       { id: preset.id, data: { name } },
       {
         onError: (err: unknown) => {
-          const e = err as { response?: { data?: { error?: string } } };
-          window.alert(
-            e?.response?.data?.error ??
-              t.history.preset_save_failed ??
-              "Could not rename preset",
-          );
+          window.alert(extractApiError(err, t.history.preset_save_failed ?? "Could not rename preset"));
         },
       },
     );

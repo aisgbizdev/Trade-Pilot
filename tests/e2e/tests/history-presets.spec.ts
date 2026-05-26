@@ -108,10 +108,15 @@ test.describe("History saved-filter presets (real Chromium + real DB)", () => {
     await page.getByTestId("button-save-preset").click();
     await savePrompt; // window.prompt fired and was accepted
 
-    // The new chip must show up with the typed name.
-    const savedChip = page.locator('[data-testid^="preset-"]', {
-      hasText: "XAU 1h scalp",
-    });
+    // The new chip wrapper must show up with the typed name. The wrapper
+    // testid is `preset-<numericId>`; sibling buttons are
+    // `preset-apply-…` / `preset-rename-…` / `preset-delete-…`, so a
+    // `^="preset-"` prefix selector matches all of them and trips
+    // strict-mode. Use `getByTestId(/^preset-\d+$/)` to hit only the
+    // wrapper.
+    const savedChip = page
+      .getByTestId(/^preset-\d+$/)
+      .filter({ hasText: "XAU 1h scalp" });
     await expect(savedChip).toBeVisible({ timeout: 5_000 });
 
     // --- 2. APPLY ----------------------------------------------------
@@ -137,14 +142,9 @@ test.describe("History saved-filter presets (real Chromium + real DB)", () => {
     await expect(page.getByTestId("chip-tf-1h")).toBeVisible();
 
     // --- 3. RENAME ---------------------------------------------------
-    // Resolve the preset row's id from its testid so we can target the
-    // pencil/trash buttons directly (their ids include the row id).
-    const presetTestId = await page
-      .locator('[data-testid^="preset-"][data-testid*="-"]')
-      .filter({ hasText: "XAU 1h scalp" })
-      .first()
-      .getAttribute("data-testid");
-    // Strip the `preset-` prefix to recover the numeric id.
+    // Resolve the preset row's numeric id from the wrapper testid so we
+    // can target the pencil/trash buttons (their ids include the id).
+    const presetTestId = await savedChip.first().getAttribute("data-testid");
     const presetId = presetTestId?.replace(/^preset-/, "");
     expect(presetId).toMatch(/^\d+$/);
 
@@ -153,10 +153,10 @@ test.describe("History saved-filter presets (real Chromium + real DB)", () => {
     await renamePrompt;
 
     await expect(
-      page.locator('[data-testid^="preset-"]', { hasText: "XAU 1h v2" }),
+      page.getByTestId(/^preset-\d+$/).filter({ hasText: "XAU 1h v2" }),
     ).toBeVisible({ timeout: 5_000 });
     await expect(
-      page.locator('[data-testid^="preset-"]', { hasText: "XAU 1h scalp" }),
+      page.getByTestId(/^preset-\d+$/).filter({ hasText: "XAU 1h scalp" }),
     ).toHaveCount(0);
 
     // --- 4. DELETE ---------------------------------------------------
@@ -165,7 +165,7 @@ test.describe("History saved-filter presets (real Chromium + real DB)", () => {
     await deleteConfirm;
 
     await expect(
-      page.locator('[data-testid^="preset-"]', { hasText: "XAU 1h v2" }),
+      page.getByTestId(/^preset-\d+$/).filter({ hasText: "XAU 1h v2" }),
     ).toHaveCount(0);
   });
 
@@ -201,19 +201,41 @@ test.describe("History saved-filter presets (real Chromium + real DB)", () => {
     await expect(page.getByTestId("active-filters-row")).toBeVisible();
 
     // The 21st save should be rejected by the server (409) and the UI
-    // must surface that via window.alert — not swallow it silently and
-    // not crash the React tree.
-    const namePrompt = awaitNextDialog(page, "accept", "Over the cap");
-    const alertSeen = awaitNextDialog(page, "accept");
+    // must surface that via window.alert.
+    //
+    // Two dialogs fire here in sequence: a `prompt` (for the preset
+    // name) and then — after the mutation's async onError runs — an
+    // `alert` carrying the server message. Registering two `page.once`
+    // listeners up-front races them on the first dialog; registering
+    // the alert listener AFTER awaiting the prompt loses the alert
+    // when the onError chain fires faster than the test catches up.
+    // A single long-lived `page.on` keyed on `dialog.type()` handles
+    // both reliably.
+    const seenAlerts: string[] = [];
+    const alertSeen = new Promise<string>((resolve) => {
+      page.on("dialog", async (dialog) => {
+        const msg = dialog.message();
+        if (dialog.type() === "prompt") {
+          await dialog.accept("Over the cap");
+        } else {
+          // alert (or confirm) — onError surfaces server copy here.
+          seenAlerts.push(msg);
+          await dialog.accept();
+          resolve(msg);
+        }
+      });
+    });
+
     await page.getByTestId("button-save-preset").click();
-    await namePrompt;
     const alertMsg = await alertSeen;
 
-    expect(alertMsg.toLowerCase()).toContain("20");
+    // Backend error mentions the cap ("20"); UI surfaces it verbatim
+    // via the ApiError.data.error path now read in history.tsx.
+    expect(alertMsg).toContain("20");
 
     // No new chip should have been added.
     await expect(
-      page.locator('[data-testid^="preset-"]', { hasText: "Over the cap" }),
+      page.getByTestId(/^preset-\d+$/).filter({ hasText: "Over the cap" }),
     ).toHaveCount(0);
   });
 });
