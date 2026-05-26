@@ -7,6 +7,7 @@ import { OnboardingModal, isOnboardingDone } from "@/components/onboarding-modal
 import { NewsWidget } from "@/components/news-widget";
 import { CalendarWidget } from "@/components/calendar-widget";
 import { DashboardLivePrices } from "@/components/dashboard-live-prices";
+import { WatchlistSection } from "@/components/watchlist-section";
 import { EnablePushCard } from "@/components/enable-push-card";
 import {
   useGetAnalysesSummary, getGetAnalysesSummaryQueryKey,
@@ -324,6 +325,8 @@ export default function DashboardPage() {
             </span>
           </div>
         )}
+
+        <WatchlistSection />
 
         <DashboardLivePrices />
 

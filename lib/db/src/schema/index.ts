@@ -455,6 +455,29 @@ export type FilterPresetShape = {
   q: string;
 };
 
+// Per-user instrument watchlist (task #109). One row per starred
+// instrument; uniqueness is enforced at the DB level so a double-tap
+// on the star button can't create duplicates. Read by the "My
+// Watchlist" dashboard section, which joins each row to live quotes
+// + the user's most recent analysis for that instrument.
+export const watchlistItems = pgTable(
+  "watchlist_items",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    instrument: text("instrument").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    userInstrumentUnique: uniqueIndex("watchlist_items_user_instrument_unique").on(
+      t.userId,
+      t.instrument,
+    ),
+  }),
+);
+
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").references(() => users.id, {

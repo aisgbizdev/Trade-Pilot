@@ -24,6 +24,8 @@ tags:
     description: Lightweight client telemetry events
   - name: filter-presets
     description: Saved history-page filter combinations
+  - name: watchlist
+    description: Per-user instrument watchlist
 paths:
   /healthz:
     get:
@@ -258,6 +260,79 @@ paths:
       responses:
         "200":
           description: Security question updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /watchlist:
+    get:
+      operationId: getWatchlist
+      tags: [watchlist]
+      summary: Get the current user's instrument watchlist
+      responses:
+        "200":
+          description: Watchlist items with most-recent-analysis pointers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Watchlist"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: addWatchlistItem
+      tags: [watchlist]
+      summary: Star an instrument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddWatchlistBody"
+      responses:
+        "201":
+          description: Item added (or already present — idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchlistItem"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /watchlist/{instrument}:
+    delete:
+      operationId: removeWatchlistItem
+      tags: [watchlist]
+      summary: Unstar an instrument
+      parameters:
+        - name: instrument
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Item removed (idempotent — returns 200 even if not present)
           content:
             application/json:
               schema:
@@ -3182,3 +3257,43 @@ components:
           enum: [user, admin, super_admin]
       required:
         - role
+
+    WatchlistItem:
+      type: object
+      properties:
+        instrument:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+        mostRecentAnalysisId:
+          type: integer
+          nullable: true
+          description: ID of the user's most recent analysis for this instrument, or null if none exists.
+        mostRecentAnalysisAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Created-at of the most recent analysis for this instrument, or null if none exists.
+      required:
+        - instrument
+        - addedAt
+
+    Watchlist:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WatchlistItem"
+      required:
+        - items
+
+    AddWatchlistBody:
+      type: object
+      properties:
+        instrument:
+          type: string
+          minLength: 1
+      required:
+        - instrument

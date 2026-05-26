@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
 import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
+import { WatchlistStar } from "@/components/watchlist-star";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
@@ -309,19 +310,29 @@ export default function AnalyzePage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {(activeTab === "futures" ? FUTURES_INSTRUMENTS : FOREX_INSTRUMENTS).map((inst) => (
-                <button
+                <div
                   key={inst}
-                  onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
-                  data-testid={`button-instrument-${inst}`}
                   className={cn(
-                    "py-2.5 text-sm font-medium rounded-lg border transition-all",
+                    "flex items-center gap-1 pr-1 rounded-lg border transition-all",
                     selectedInstrument === inst && !customInstrument
-                      ? "bg-primary/10 border-primary text-primary"
-                      : "bg-background border-border text-foreground hover:border-primary/50"
+                      ? "bg-primary/10 border-primary"
+                      : "bg-background border-border hover:border-primary/50"
                   )}
                 >
-                  {inst}
-                </button>
+                  <button
+                    onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
+                    data-testid={`button-instrument-${inst}`}
+                    className={cn(
+                      "flex-1 py-2.5 text-sm font-medium text-left pl-3",
+                      selectedInstrument === inst && !customInstrument
+                        ? "text-primary"
+                        : "text-foreground"
+                    )}
+                  >
+                    {inst}
+                  </button>
+                  <WatchlistStar instrument={inst} size="sm" />
+                </div>
               ))}
             </div>
             <div className="mt-3">

@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useLiveQuotes } from "@/hooks/use-live-quotes";
 import { useTranslation } from "@/lib/i18n";
+import { WatchlistStar } from "@/components/watchlist-star";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import {
   TradingViewMarketQuotes,
@@ -136,27 +137,30 @@ function FallbackTicker() {
                           : "",
                     )}
                   />
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-1.5 gap-1">
                     <span className="text-[11px] font-bold text-foreground tracking-tight">
                       {q.instrument}
                     </span>
-                    <div
-                      className={cn(
-                        "w-6 h-6 rounded-lg flex items-center justify-center",
-                        isFlat
-                          ? "bg-muted"
-                          : isUp
-                            ? "bg-emerald-500/15"
-                            : "bg-red-500/15",
-                      )}
-                    >
-                      {isFlat ? (
-                        <Minus className="w-3 h-3 text-muted-foreground" />
-                      ) : isUp ? (
-                        <TrendingUp className="w-3 h-3 text-emerald-500" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3 text-red-500" />
-                      )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <div
+                        className={cn(
+                          "w-6 h-6 rounded-lg flex items-center justify-center",
+                          isFlat
+                            ? "bg-muted"
+                            : isUp
+                              ? "bg-emerald-500/15"
+                              : "bg-red-500/15",
+                        )}
+                      >
+                        {isFlat ? (
+                          <Minus className="w-3 h-3 text-muted-foreground" />
+                        ) : isUp ? (
+                          <TrendingUp className="w-3 h-3 text-emerald-500" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 text-red-500" />
+                        )}
+                      </div>
+                      <WatchlistStar instrument={q.instrument} size="sm" />
                     </div>
                   </div>
                   <div className="text-[15px] font-bold text-foreground tabular-nums leading-none mb-1">

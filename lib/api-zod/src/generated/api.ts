@@ -173,6 +173,49 @@ export const ChangeSecurityQuestionResponse = zod.object({
 });
 
 /**
+ * @summary Get the current user's instrument watchlist
+ */
+export const GetWatchlistResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      instrument: zod.string(),
+      addedAt: zod.coerce.date(),
+      mostRecentAnalysisId: zod
+        .number()
+        .nullish()
+        .describe(
+          "ID of the user's most recent analysis for this instrument, or null if none exists.",
+        ),
+      mostRecentAnalysisAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "Created-at of the most recent analysis for this instrument, or null if none exists.",
+        ),
+    }),
+  ),
+});
+
+/**
+ * @summary Star an instrument
+ */
+
+export const AddWatchlistItemBody = zod.object({
+  instrument: zod.string().min(1),
+});
+
+/**
+ * @summary Unstar an instrument
+ */
+export const RemoveWatchlistItemParams = zod.object({
+  instrument: zod.coerce.string(),
+});
+
+export const RemoveWatchlistItemResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Create new analysis (triggers AI)
  */
 export const CreateAnalysisBody = zod.object({

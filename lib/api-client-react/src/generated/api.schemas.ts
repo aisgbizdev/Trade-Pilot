@@ -1053,6 +1053,24 @@ export interface UpdateUserRoleBody {
   role: UpdateUserRoleBodyRole;
 }
 
+export interface WatchlistItem {
+  instrument: string;
+  addedAt: string;
+  /** ID of the user's most recent analysis for this instrument, or null if none exists. */
+  mostRecentAnalysisId?: number | null;
+  /** Created-at of the most recent analysis for this instrument, or null if none exists. */
+  mostRecentAnalysisAt?: string | null;
+}
+
+export interface Watchlist {
+  items: WatchlistItem[];
+}
+
+export interface AddWatchlistBody {
+  /** @minLength 1 */
+  instrument: string;
+}
+
 export type ListAnalysesParams = {
   mode?: ListAnalysesMode;
   instrument?: string;
