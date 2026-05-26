@@ -235,7 +235,13 @@ test.describe("Analyze flow — 30m timeframe (real Chromium)", () => {
 
     await page.getByTestId("button-submit-analysis").click();
 
-    // The Analyze page navigates to `/analyses/:id` once the POST resolves.
+    // Task #102: the Analyze page now keeps the user on /analyze and
+    // shows the trade-plan chart inline. The user then opts into the
+    // full detail view via the "View full analysis" CTA.
+    const viewFull = page.getByTestId("button-view-full-analysis");
+    await expect(viewFull).toBeVisible({ timeout: 30_000 });
+    await viewFull.click();
+
     await page.waitForURL(new RegExp(`/analyses/${STUB_ANALYSIS_ID}$`), {
       timeout: 30_000,
     });

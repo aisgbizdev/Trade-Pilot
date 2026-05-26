@@ -102,7 +102,19 @@ function pageHandlers(opts: {
         if (status >= 400) {
           return jsonResponse({ error: "boom" }, status);
         }
-        return jsonResponse(opts.createResult ?? { id: 42 });
+        // Real API returns the full Analysis row. The Analyze page now
+        // renders an inline trade-plan chart against the response, so the
+        // mock has to include at least the fields the chart section reads
+        // (instrument/timeframe/createdAt). tradePlan stays null — that's
+        // valid and exercises the no-overlay fallback path.
+        const baseRow = {
+          id: 42,
+          instrument: "XAU/USD",
+          timeframe: "1h",
+          createdAt: new Date().toISOString(),
+          tradePlan: null,
+        };
+        return jsonResponse({ ...baseRow, ...(opts.createResult ?? {}) });
       }
       return null;
     },
