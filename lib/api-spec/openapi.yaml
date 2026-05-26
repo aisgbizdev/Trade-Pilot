@@ -339,6 +339,12 @@ paths:
           schema:
             type: integer
             default: 20
+        - name: q
+          in: query
+          description: Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).
+          schema:
+            type: string
+            maxLength: 100
         - name: from
           in: query
           description: Filter analyses created on or after this date (ISO 8601)

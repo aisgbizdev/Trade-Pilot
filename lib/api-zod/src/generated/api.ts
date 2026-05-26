@@ -187,6 +187,7 @@ export const CreateAnalysisBody = zod.object({
  */
 export const listAnalysesQueryPageDefault = 1;
 export const listAnalysesQueryLimitDefault = 20;
+export const listAnalysesQueryQMax = 100;
 
 export const ListAnalysesQueryParams = zod.object({
   mode: zod.enum(["beginner", "pro"]).optional(),
@@ -203,6 +204,13 @@ export const ListAnalysesQueryParams = zod.object({
     .describe("Multi-select timeframe filter (repeatable)."),
   page: zod.coerce.number().default(listAnalysesQueryPageDefault),
   limit: zod.coerce.number().default(listAnalysesQueryLimitDefault),
+  q: zod.coerce
+    .string()
+    .max(listAnalysesQueryQMax)
+    .optional()
+    .describe(
+      "Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).",
+    ),
   from: zod
     .date()
     .optional()

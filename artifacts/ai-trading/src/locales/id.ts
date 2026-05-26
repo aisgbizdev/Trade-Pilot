@@ -281,6 +281,8 @@ export const id: Translations = {
     mode_chip_prefix: "Mode",
     no_results_with_filters_title: "Tidak ada yang cocok dengan filter ini",
     no_results_with_filters_subtitle: "Coba hapus salah satu filter atau hapus semua untuk melihat lebih banyak analisis.",
+    search: "Cari",
+    search_placeholder: "Cari catatan, instrumen, analisis AI…",
     valid: "Berlaku",
     expired: "Kadaluarsa",
     prev: "Sebelumnya",

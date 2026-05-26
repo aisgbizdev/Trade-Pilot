@@ -279,6 +279,8 @@ export const en = {
     mode_chip_prefix: "Mode",
     no_results_with_filters_title: "No matches for these filters",
     no_results_with_filters_subtitle: "Try removing a filter or clearing all to see more analyses.",
+    search: "Search",
+    search_placeholder: "Search notes, instrument, AI reasoning…",
     valid: "Valid",
     expired: "Expired",
     prev: "Previous",

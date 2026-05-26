@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../lib/db";
 import { analyses, feedback, users } from "@workspace/db/schema";
-import { eq, and, desc, count, sql, gte, lte, ilike, inArray } from "drizzle-orm";
+import { eq, and, or, desc, count, sql, gte, lte, ilike, inArray } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import {
   generateAnalysis,
@@ -627,6 +627,21 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const filterInstruments = toArray(req.query["instruments"]);
   const filterTimeframes = toArray(req.query["timeframes"]);
 
+  // Free-text search. Runs a parameterised ILIKE across the columns the
+  // user is likely to recall by — the instrument label, their own
+  // private note, the user-supplied prompt context, and the AI's short
+  // opportunity/risk headline + the longer narrative blocks (so a
+  // search for e.g. "FOMC" or "breakout retest" finds analyses where
+  // those words appear anywhere in the body). The raw value is escaped
+  // for LIKE wildcards so a user typing "50%" doesn't accidentally
+  // match everything; length-capped to keep the query payload bounded.
+  const MAX_SEARCH_LEN = 100;
+  const rawSearch = typeof req.query["q"] === "string" ? req.query["q"] : "";
+  const trimmedSearch = rawSearch.trim().slice(0, MAX_SEARCH_LEN);
+  const searchPattern = trimmedSearch
+    ? `%${trimmedSearch.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")}%`
+    : null;
+
   const conditions = [eq(analyses.userId, req.userId!)];
   if (filterMode === "beginner" || filterMode === "pro") {
     conditions.push(eq(analyses.mode, filterMode));
@@ -648,6 +663,23 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
     const toDate = new Date(filterTo);
     toDate.setHours(23, 59, 59, 999);
     conditions.push(lte(analyses.createdAt, toDate));
+  }
+  if (searchPattern) {
+    const orClauses = or(
+      ilike(analyses.instrument, searchPattern),
+      ilike(analyses.userNote, searchPattern),
+      ilike(analyses.userInputContext, searchPattern),
+      ilike(analyses.opportunity, searchPattern),
+      ilike(analyses.risk, searchPattern),
+      ilike(analyses.whyReason, searchPattern),
+      ilike(analyses.mainScenario, searchPattern),
+      ilike(analyses.alternativeScenario, searchPattern),
+      ilike(analyses.baseCase, searchPattern),
+      ilike(analyses.bullishScenario, searchPattern),
+      ilike(analyses.bearishScenario, searchPattern),
+      ilike(analyses.marketContext, searchPattern),
+    );
+    if (orClauses) conditions.push(orClauses);
   }
 
   const whereClause = and(...conditions);

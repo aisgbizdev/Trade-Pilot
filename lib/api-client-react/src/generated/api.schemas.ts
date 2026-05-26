@@ -1017,6 +1017,11 @@ export type ListAnalysesParams = {
   page?: number;
   limit?: number;
   /**
+   * Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).
+   * @maxLength 100
+   */
+  q?: string;
+  /**
    * Filter analyses created on or after this date (ISO 8601)
    */
   from?: string;

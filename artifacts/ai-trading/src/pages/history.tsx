@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw, StickyNote } from "lucide-react";
+import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw, StickyNote, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ type FilterState = {
   timeframes: string[];
   from: string;
   to: string;
+  q: string;
 };
 
 const EMPTY_FILTERS: FilterState = {
@@ -41,7 +42,10 @@ const EMPTY_FILTERS: FilterState = {
   timeframes: [],
   from: "",
   to: "",
+  q: "",
 };
+
+const MAX_SEARCH_LEN = 100;
 
 // Normalise a list of URL-derived values: trim, drop empties, dedupe,
 // and (optionally) whitelist against a known set. This mirrors the
@@ -75,6 +79,7 @@ function parseFiltersFromSearch(search: string): { filters: FilterState; page: n
       timeframes: normalizeList(sp.getAll("timeframes"), ALL_TIMEFRAMES_SET),
       from: sp.get("from") ?? "",
       to: sp.get("to") ?? "",
+      q: (sp.get("q") ?? "").slice(0, MAX_SEARCH_LEN),
     },
   };
 }
@@ -86,6 +91,7 @@ function buildSearch(filters: FilterState, page: number): string {
   for (const tf of filters.timeframes) sp.append("timeframes", tf);
   if (filters.from) sp.set("from", filters.from);
   if (filters.to) sp.set("to", filters.to);
+  if (filters.q) sp.set("q", filters.q);
   if (page > 1) sp.set("page", String(page));
   const s = sp.toString();
   return s ? `?${s}` : "";
@@ -120,7 +126,39 @@ export default function HistoryPage() {
     filters.instruments.length > 0 ||
     filters.timeframes.length > 0 ||
     filters.from !== "" ||
-    filters.to !== "";
+    filters.to !== "" ||
+    filters.q !== "";
+
+  // Debounce the search input: while the user is still typing, the URL
+  // (and thus the request) is unchanged. The committed value flows into
+  // `filters.q` via the parent URL once typing pauses.
+  //
+  // Race fix: the debounced fire reads `filters` through a ref so that
+  // if the user toggles a non-search filter inside the debounce window
+  // (e.g. picks an instrument), the deferred URL write merges into the
+  // LATEST filters instead of clobbering them with a stale snapshot.
+  const [searchDraft, setSearchDraft] = useState(filters.q);
+  const latestFiltersRef = useRef(filters);
+  latestFiltersRef.current = filters;
+  useEffect(() => {
+    // Keep the input in sync if the URL changes externally (back/forward,
+    // chip removal). Only overwrite when they actually differ to avoid
+    // clobbering the user's in-flight typing.
+    setSearchDraft((prev) => (prev === filters.q ? prev : filters.q));
+  }, [filters.q]);
+  useEffect(() => {
+    // Normalise client-side the same way the backend does (trim + cap)
+    // so the active-filter chip can never display a value the server
+    // wouldn't honour.
+    const normalised = searchDraft.trim().slice(0, MAX_SEARCH_LEN);
+    if (normalised === filters.q) return;
+    const handle = window.setTimeout(() => {
+      const live = latestFiltersRef.current;
+      apply({ ...live, q: normalised }, 1);
+    }, 300);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchDraft, filters.q]);
 
   const params = {
     page,
@@ -130,6 +168,7 @@ export default function HistoryPage() {
     ...(filters.timeframes.length > 0 ? { timeframes: filters.timeframes } : {}),
     ...(filters.from ? { from: filters.from } : {}),
     ...(filters.to ? { to: filters.to } : {}),
+    ...(filters.q ? { q: filters.q } : {}),
   };
 
   const { data, isLoading } = useListAnalyses(
@@ -217,6 +256,13 @@ export default function HistoryPage() {
       remove: () => updateFilters({ ...filters, to: "" }),
     });
   }
+  if (filters.q) {
+    activeChips.push({
+      key: "q",
+      label: `${t.history.search ?? "Search"}: "${filters.q}"`,
+      remove: () => updateFilters({ ...filters, q: "" }),
+    });
+  }
 
   const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
     trending_up: { label: t.dashboard.trending_up, color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -251,6 +297,31 @@ export default function HistoryPage() {
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
               )}
             </button>
+          </div>
+
+          <div className="mt-3 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="search"
+              inputMode="search"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value.slice(0, MAX_SEARCH_LEN))}
+              maxLength={MAX_SEARCH_LEN}
+              placeholder={t.history.search_placeholder ?? "Search notes, instrument, AI reasoning…"}
+              data-testid="input-history-search"
+              className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            {searchDraft && (
+              <button
+                type="button"
+                onClick={() => setSearchDraft("")}
+                aria-label={t.common.clear_filters ?? "Clear"}
+                data-testid="button-clear-search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted text-muted-foreground"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
 
           {activeChips.length > 0 && (
