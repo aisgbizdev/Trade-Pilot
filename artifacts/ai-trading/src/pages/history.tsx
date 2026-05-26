@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useMemo, useState } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw, StickyNote } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,28 +19,117 @@ const ALL_INSTRUMENTS = [
   "AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR",
 ];
 
+const ALL_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"];
+
+const ALL_INSTRUMENTS_SET = new Set(ALL_INSTRUMENTS);
+const ALL_TIMEFRAMES_SET = new Set(ALL_TIMEFRAMES);
+
+// Filter state lives in the URL so the view is shareable / bookmarkable.
+// We round-trip through URLSearchParams: arrays are repeated keys (?instruments=A&instruments=B)
+// to match the backend's repeatable query-param contract.
+type FilterState = {
+  mode: ListAnalysesMode | "";
+  instruments: string[];
+  timeframes: string[];
+  from: string;
+  to: string;
+};
+
+const EMPTY_FILTERS: FilterState = {
+  mode: "",
+  instruments: [],
+  timeframes: [],
+  from: "",
+  to: "",
+};
+
+// Normalise a list of URL-derived values: trim, drop empties, dedupe,
+// and (optionally) whitelist against a known set. This mirrors the
+// backend's dedupe/cap behaviour so a crafted URL can't create duplicate
+// chips, duplicate React keys, or filters the UI can't render/remove.
+function normalizeList(raw: string[], allow?: Set<string>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of raw) {
+    const t = (v ?? "").trim();
+    if (!t || seen.has(t)) continue;
+    if (allow && !allow.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
+function parseFiltersFromSearch(search: string): { filters: FilterState; page: number } {
+  const sp = new URLSearchParams(search);
+  const modeRaw = sp.get("mode");
+  const mode: ListAnalysesMode | "" =
+    modeRaw === "beginner" || modeRaw === "pro" ? modeRaw : "";
+  const pageRaw = Number(sp.get("page") ?? 1);
+  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
+  return {
+    page,
+    filters: {
+      mode,
+      instruments: normalizeList(sp.getAll("instruments"), ALL_INSTRUMENTS_SET),
+      timeframes: normalizeList(sp.getAll("timeframes"), ALL_TIMEFRAMES_SET),
+      from: sp.get("from") ?? "",
+      to: sp.get("to") ?? "",
+    },
+  };
+}
+
+function buildSearch(filters: FilterState, page: number): string {
+  const sp = new URLSearchParams();
+  if (filters.mode) sp.set("mode", filters.mode);
+  for (const i of filters.instruments) sp.append("instruments", i);
+  for (const tf of filters.timeframes) sp.append("timeframes", tf);
+  if (filters.from) sp.set("from", filters.from);
+  if (filters.to) sp.set("to", filters.to);
+  if (page > 1) sp.set("page", String(page));
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
 export default function HistoryPage() {
   const { t, lang } = useTranslation();
   const dateLocale = lang === "id" ? idLocale : enUS;
-  const [page, setPage] = useState(1);
+  const search = useSearch();
+  const [, setLocation] = useLocation();
   const limit = 20;
   const { refresh, isRefreshing } = useRefreshAnalysis();
-
-  const [filterMode, setFilterMode] = useState<ListAnalysesMode | "">("");
-  const [filterInstrument, setFilterInstrument] = useState("");
-  const [filterFrom, setFilterFrom] = useState("");
-  const [filterTo, setFilterTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  const hasActiveFilters = filterMode !== "" || filterInstrument !== "" || filterFrom !== "" || filterTo !== "";
+  // Single source of truth: the URL. Filters and page are derived from
+  // it on every render, and every UI change calls `apply()` which routes
+  // through wouter's `setLocation` (replace=true). This avoids the
+  // two-way useEffect race where a URL-driven update could be clobbered
+  // by a stale state-driven write-back during back/forward navigation.
+  const { filters, page } = useMemo(
+    () => parseFiltersFromSearch(search),
+    [search],
+  );
+
+  const apply = (nextFilters: FilterState, nextPage: number) => {
+    const qs = buildSearch(nextFilters, nextPage);
+    setLocation(`/history${qs}`, { replace: true });
+  };
+
+  const hasActiveFilters =
+    filters.mode !== "" ||
+    filters.instruments.length > 0 ||
+    filters.timeframes.length > 0 ||
+    filters.from !== "" ||
+    filters.to !== "";
 
   const params = {
     page,
     limit,
-    ...(filterMode ? { mode: filterMode } : {}),
-    ...(filterInstrument ? { instrument: filterInstrument } : {}),
-    ...(filterFrom ? { from: filterFrom } : {}),
-    ...(filterTo ? { to: filterTo } : {}),
+    ...(filters.mode ? { mode: filters.mode } : {}),
+    ...(filters.instruments.length > 0 ? { instruments: filters.instruments } : {}),
+    ...(filters.timeframes.length > 0 ? { timeframes: filters.timeframes } : {}),
+    ...(filters.from ? { from: filters.from } : {}),
+    ...(filters.to ? { to: filters.to } : {}),
   };
 
   const { data, isLoading } = useListAnalyses(
@@ -53,13 +142,81 @@ export default function HistoryPage() {
   const total = listData?.total ?? 0;
   const hasMore = page * limit < total;
 
-  const handleClearFilters = () => {
-    setFilterMode("");
-    setFilterInstrument("");
-    setFilterFrom("");
-    setFilterTo("");
-    setPage(1);
+  const updateFilters = (next: FilterState) => {
+    apply(next, 1);
   };
+
+  const toggleInstrument = (inst: string) => {
+    const exists = filters.instruments.includes(inst);
+    updateFilters({
+      ...filters,
+      instruments: exists
+        ? filters.instruments.filter((i) => i !== inst)
+        : [...filters.instruments, inst],
+    });
+  };
+
+  const toggleTimeframe = (tf: string) => {
+    const exists = filters.timeframes.includes(tf);
+    updateFilters({
+      ...filters,
+      timeframes: exists
+        ? filters.timeframes.filter((t) => t !== tf)
+        : [...filters.timeframes, tf],
+    });
+  };
+
+  const handleClearFilters = () => {
+    apply(EMPTY_FILTERS, 1);
+  };
+
+  // Build the active-filter chip list — one chip per concrete filter value
+  // so the user can tap × on a single instrument without nuking the rest.
+  type Chip = { key: string; label: string; remove: () => void };
+  const activeChips: Chip[] = [];
+  if (filters.mode) {
+    activeChips.push({
+      key: `mode-${filters.mode}`,
+      label: `${t.history.mode_chip_prefix ?? "Mode"}: ${filters.mode === "beginner" ? t.common.beginner : t.common.pro}`,
+      remove: () => updateFilters({ ...filters, mode: "" }),
+    });
+  }
+  for (const inst of filters.instruments) {
+    activeChips.push({
+      key: `inst-${inst}`,
+      label: inst,
+      remove: () =>
+        updateFilters({
+          ...filters,
+          instruments: filters.instruments.filter((i) => i !== inst),
+        }),
+    });
+  }
+  for (const tf of filters.timeframes) {
+    activeChips.push({
+      key: `tf-${tf}`,
+      label: tf,
+      remove: () =>
+        updateFilters({
+          ...filters,
+          timeframes: filters.timeframes.filter((t) => t !== tf),
+        }),
+    });
+  }
+  if (filters.from) {
+    activeChips.push({
+      key: "from",
+      label: `${t.history.from_date ?? "From"}: ${filters.from}`,
+      remove: () => updateFilters({ ...filters, from: "" }),
+    });
+  }
+  if (filters.to) {
+    activeChips.push({
+      key: "to",
+      label: `${t.history.to_date ?? "To"}: ${filters.to}`,
+      remove: () => updateFilters({ ...filters, to: "" }),
+    });
+  }
 
   const MARKET_CONDITION_LABELS: Record<string, { label: string; color: string }> = {
     trending_up: { label: t.dashboard.trending_up, color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -96,6 +253,35 @@ export default function HistoryPage() {
             </button>
           </div>
 
+          {activeChips.length > 0 && (
+            <div
+              className="mt-2 flex flex-wrap gap-1.5 items-center"
+              data-testid="active-filters-row"
+            >
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mr-1">
+                {t.history.active_filters ?? "Active filters"}
+              </span>
+              {activeChips.map((chip) => (
+                <button
+                  key={chip.key}
+                  onClick={chip.remove}
+                  data-testid={`chip-${chip.key}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <span>{chip.label}</span>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              ))}
+              <button
+                onClick={handleClearFilters}
+                data-testid="button-clear-filters-chips"
+                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+              >
+                {t.history.clear_all ?? "Clear all"}
+              </button>
+            </div>
+          )}
+
           {showFilters && (
             <div className="mt-3 p-3 rounded-xl border border-border bg-muted/30 space-y-3" data-testid="filter-panel">
               <div>
@@ -104,11 +290,11 @@ export default function HistoryPage() {
                   {(["", "beginner", "pro"] as const).map((m) => (
                     <button
                       key={m}
-                      onClick={() => { setFilterMode(m as ListAnalysesMode | ""); setPage(1); }}
+                      onClick={() => updateFilters({ ...filters, mode: m as ListAnalysesMode | "" })}
                       data-testid={`filter-mode-${m || "all"}`}
                       className={cn(
                         "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all",
-                        filterMode === m
+                        filters.mode === m
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-background border-border text-muted-foreground hover:border-primary/50"
                       )}
@@ -121,33 +307,51 @@ export default function HistoryPage() {
               <div>
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{t.analyze.select_instrument}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => { setFilterInstrument(""); setPage(1); }}
-                    data-testid="filter-instrument-all"
-                    className={cn(
-                      "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all",
-                      filterInstrument === ""
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background border-border text-muted-foreground hover:border-primary/50"
-                    )}
-                  >
-                    {t.common.all ?? "All"}
-                  </button>
-                  {ALL_INSTRUMENTS.map((inst) => (
-                    <button
-                      key={inst}
-                      onClick={() => { setFilterInstrument(inst); setPage(1); }}
-                      data-testid={`filter-instrument-${inst}`}
-                      className={cn(
-                        "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all",
-                        filterInstrument === inst
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border text-muted-foreground hover:border-primary/50"
-                      )}
-                    >
-                      {inst}
-                    </button>
-                  ))}
+                  {ALL_INSTRUMENTS.map((inst) => {
+                    const active = filters.instruments.includes(inst);
+                    return (
+                      <button
+                        key={inst}
+                        onClick={() => toggleInstrument(inst)}
+                        data-testid={`filter-instrument-${inst}`}
+                        aria-pressed={active}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                        )}
+                      >
+                        {inst}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                  {t.history.timeframe ?? "Timeframe"}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {ALL_TIMEFRAMES.map((tf) => {
+                    const active = filters.timeframes.includes(tf);
+                    return (
+                      <button
+                        key={tf}
+                        onClick={() => toggleTimeframe(tf)}
+                        data-testid={`filter-timeframe-${tf}`}
+                        aria-pressed={active}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                        )}
+                      >
+                        {tf}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
@@ -161,8 +365,8 @@ export default function HistoryPage() {
                     </label>
                     <input
                       type="date"
-                      value={filterFrom}
-                      onChange={(e) => { setFilterFrom(e.target.value); setPage(1); }}
+                      value={filters.from}
+                      onChange={(e) => updateFilters({ ...filters, from: e.target.value })}
                       data-testid="filter-date-from"
                       className="w-full px-2 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground"
                     />
@@ -173,8 +377,8 @@ export default function HistoryPage() {
                     </label>
                     <input
                       type="date"
-                      value={filterTo}
-                      onChange={(e) => { setFilterTo(e.target.value); setPage(1); }}
+                      value={filters.to}
+                      onChange={(e) => updateFilters({ ...filters, to: e.target.value })}
                       data-testid="filter-date-to"
                       className="w-full px-2 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground"
                     />
@@ -201,10 +405,18 @@ export default function HistoryPage() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : analyses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="history-empty-state">
             <TrendingUp className="w-12 h-12 text-muted-foreground opacity-40 mb-3" />
-            <p className="text-sm font-medium text-foreground">{t.history.no_analyses_title}</p>
-            <p className="text-xs text-muted-foreground mt-1">{t.history.no_analyses_subtitle}</p>
+            <p className="text-sm font-medium text-foreground">
+              {hasActiveFilters
+                ? (t.history.no_results_with_filters_title ?? "No matches for these filters")
+                : t.history.no_analyses_title}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+              {hasActiveFilters
+                ? (t.history.no_results_with_filters_subtitle ?? "Try removing a filter or clearing all to see more analyses.")
+                : t.history.no_analyses_subtitle}
+            </p>
             {hasActiveFilters ? (
               <Button variant="outline" size="sm" className="mt-4" onClick={handleClearFilters} data-testid="button-clear-filters-empty">
                 {t.common.clear_filters ?? "Clear filters"}
@@ -246,9 +458,6 @@ export default function HistoryPage() {
                             {mc.label}
                           </span>
                         )}
-                        {/* At-a-glance lean derived from the indicator-tally
-                            snapshot taken at analysis time — same source as
-                            the Market Context Summary card on the detail page. */}
                         {a.techBuyCount != null && a.techSellCount != null && (
                           <MarketContextChip
                             buy={a.techBuyCount}
@@ -262,13 +471,7 @@ export default function HistoryPage() {
                       </div>
                     </Link>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {/* Resolution badge — what actually happened to the AI's
-                          plan once the resolver scored it against real OHLC. */}
                       <OutcomeBadge status={(a as { outcomeStatus?: OutcomeStatus | null }).outcomeStatus} />
-                      {/* Note indicator — shown when the user has written
-                          a private journal entry for this analysis. Pure
-                          visual cue; the note itself only opens from the
-                          detail page. */}
                       {(a as { hasNote?: boolean }).hasNote && (
                         <span
                           aria-label={t.history.has_note}
@@ -285,10 +488,6 @@ export default function HistoryPage() {
                       >
                         {valid ? t.history.valid : t.history.expired}
                       </Badge>
-                      {/* One-tap re-analyze: kicks off a new analysis with
-                          the same instrument/timeframe/mode without sending
-                          users back through the Analyze flow. Quota errors
-                          fall through to the hook's toast. */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -335,7 +534,7 @@ export default function HistoryPage() {
                 size="sm"
                 className="flex-1"
                 disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
+                onClick={() => apply(filters, Math.max(1, page - 1))}
                 data-testid="button-prev-page"
               >
                 {t.history.prev}
@@ -345,7 +544,7 @@ export default function HistoryPage() {
                 size="sm"
                 className="flex-1"
                 disabled={!hasMore}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => apply(filters, page + 1)}
                 data-testid="button-next-page"
               >
                 {t.history.next}

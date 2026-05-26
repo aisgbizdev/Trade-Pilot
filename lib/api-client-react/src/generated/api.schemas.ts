@@ -1006,6 +1006,14 @@ export interface UpdateUserRoleBody {
 export type ListAnalysesParams = {
   mode?: ListAnalysesMode;
   instrument?: string;
+  /**
+   * Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.
+   */
+  instruments?: string[];
+  /**
+   * Multi-select timeframe filter (repeatable).
+   */
+  timeframes?: string[];
   page?: number;
   limit?: number;
   /**

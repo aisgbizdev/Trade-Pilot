@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../lib/db";
 import { analyses, feedback, users } from "@workspace/db/schema";
-import { eq, and, desc, count, sql, gte, lte, ilike } from "drizzle-orm";
+import { eq, and, desc, count, sql, gte, lte, ilike, inArray } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import {
   generateAnalysis,
@@ -605,12 +605,41 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const filterFrom = req.query["from"] as string | undefined;
   const filterTo = req.query["to"] as string | undefined;
 
+  // Multi-select filters. Express normalises `?instruments=A&instruments=B`
+  // into a string[], but a single occurrence stays a string — coerce both
+  // into a deduped, trimmed, non-empty array and cap at MAX_MULTI_FILTER
+  // so a malicious caller cannot DOS the query with a huge IN list.
+  const MAX_MULTI_FILTER = 50;
+  const toArray = (v: unknown): string[] => {
+    const raw = Array.isArray(v) ? v : v != null ? [v] : [];
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const item of raw) {
+      if (typeof item !== "string") continue;
+      const trimmed = item.trim();
+      if (!trimmed || seen.has(trimmed)) continue;
+      seen.add(trimmed);
+      out.push(trimmed);
+      if (out.length >= MAX_MULTI_FILTER) break;
+    }
+    return out;
+  };
+  const filterInstruments = toArray(req.query["instruments"]);
+  const filterTimeframes = toArray(req.query["timeframes"]);
+
   const conditions = [eq(analyses.userId, req.userId!)];
   if (filterMode === "beginner" || filterMode === "pro") {
     conditions.push(eq(analyses.mode, filterMode));
   }
-  if (filterInstrument) {
+  // Multi-select instruments wins over the legacy single `instrument`
+  // param; the UI sends one or the other, never both.
+  if (filterInstruments.length > 0) {
+    conditions.push(inArray(analyses.instrument, filterInstruments));
+  } else if (filterInstrument) {
     conditions.push(ilike(analyses.instrument, `%${filterInstrument}%`));
+  }
+  if (filterTimeframes.length > 0) {
+    conditions.push(inArray(analyses.timeframe, filterTimeframes));
   }
   if (filterFrom) {
     conditions.push(gte(analyses.createdAt, new Date(filterFrom)));

@@ -191,6 +191,16 @@ export const listAnalysesQueryLimitDefault = 20;
 export const ListAnalysesQueryParams = zod.object({
   mode: zod.enum(["beginner", "pro"]).optional(),
   instrument: zod.coerce.string().optional(),
+  instruments: zod
+    .array(zod.coerce.string())
+    .optional()
+    .describe(
+      "Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.",
+    ),
+  timeframes: zod
+    .array(zod.coerce.string())
+    .optional()
+    .describe("Multi-select timeframe filter (repeatable)."),
   page: zod.coerce.number().default(listAnalysesQueryPageDefault),
   limit: zod.coerce.number().default(listAnalysesQueryLimitDefault),
   from: zod

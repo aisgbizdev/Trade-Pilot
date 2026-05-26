@@ -311,6 +311,24 @@ paths:
           in: query
           schema:
             type: string
+        - name: instruments
+          in: query
+          description: Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: timeframes
+          in: query
+          description: Multi-select timeframe filter (repeatable).
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
         - name: page
           in: query
           schema:
