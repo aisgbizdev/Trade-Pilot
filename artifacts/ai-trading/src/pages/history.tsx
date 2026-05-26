@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw } from "lucide-react";
+import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw, StickyNote } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -265,6 +265,20 @@ export default function HistoryPage() {
                       {/* Resolution badge — what actually happened to the AI's
                           plan once the resolver scored it against real OHLC. */}
                       <OutcomeBadge status={(a as { outcomeStatus?: OutcomeStatus | null }).outcomeStatus} />
+                      {/* Note indicator — shown when the user has written
+                          a private journal entry for this analysis. Pure
+                          visual cue; the note itself only opens from the
+                          detail page. */}
+                      {(a as { hasNote?: boolean }).hasNote && (
+                        <span
+                          aria-label={t.history.has_note}
+                          title={t.history.has_note}
+                          data-testid={`icon-has-note-${a.id}`}
+                          className="inline-flex items-center text-primary"
+                        >
+                          <StickyNote className="w-3.5 h-3.5" />
+                        </span>
+                      )}
                       <Badge
                         variant={valid ? "default" : "secondary"}
                         className="text-[10px] px-1.5 py-0"

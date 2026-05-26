@@ -636,8 +636,16 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
     .from(analyses)
     .where(whereClause);
 
+  // Project `hasNote` (computed, not the note body itself) so the history
+  // page can render the "journaled" icon without paying for the full note
+  // text on every row. The body lives only on the detail-page GET.
+  const projected = rows.map(({ userNote, ...rest }) => ({
+    ...rest,
+    hasNote: !!(userNote && userNote.trim().length > 0),
+  }));
+
   res.json({
-    analyses: rows,
+    analyses: projected,
     total: Number(total.count),
     page,
     limit,
@@ -667,6 +675,56 @@ router.get("/analyses/:id", requireAuth, async (req: AuthRequest, res) => {
     .limit(1);
 
   res.json({ ...analysis, feedback: fb ?? null });
+});
+
+// Per-analysis private trading journal note (task #111). Keyed by the
+// owning user — ownership is enforced by `analyses.userId`, so there is
+// no separate join table. Body is plain text only and is NEVER fed into
+// the AI prompt. A blank string clears the note (sets the column back to
+// NULL) so the history "has note" indicator can hide the icon.
+const MAX_USER_NOTE_LEN = 5000;
+router.put("/analyses/:id/note", requireAuth, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+
+  const rawNote = (req.body as { note?: unknown } | undefined)?.note;
+  if (typeof rawNote !== "string") {
+    res.status(400).json({ error: "Catatan tidak valid" });
+    return;
+  }
+  if (rawNote.length > MAX_USER_NOTE_LEN) {
+    res.status(400).json({
+      error: `Catatan terlalu panjang (maks ${MAX_USER_NOTE_LEN} karakter)`,
+    });
+    return;
+  }
+
+  const trimmed = rawNote.trim();
+  // Persist the trimmed value (not the raw) so leading/trailing
+  // whitespace never lands in the DB; blank/whitespace-only collapses
+  // to NULL so `hasNote` accurately reflects "user actually wrote
+  // something."
+  const noteForDb: string | null = trimmed.length === 0 ? null : trimmed;
+  const updatedAt = new Date();
+
+  const result = await db
+    .update(analyses)
+    .set({ userNote: noteForDb, userNoteUpdatedAt: noteForDb ? updatedAt : null })
+    .where(and(eq(analyses.id, id), eq(analyses.userId, req.userId!)))
+    .returning({ id: analyses.id });
+
+  if (result.length === 0) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+
+  res.json({
+    note: noteForDb,
+    updatedAt: noteForDb ? updatedAt.toISOString() : null,
+  });
 });
 
 // Re-fetch news + calendar for an existing analysis WITHOUT re-running the

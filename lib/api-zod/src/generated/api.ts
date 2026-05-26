@@ -375,6 +375,24 @@ export const ListAnalysesResponse = zod.object({
         .describe(
           "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
         ),
+      userNote: zod
+        .string()
+        .nullish()
+        .describe(
+          "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
+        ),
+      userNoteUpdatedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "When `userNote` was last saved server-side. Null when no note has been written.",
+        ),
+      hasNote: zod
+        .boolean()
+        .optional()
+        .describe(
+          "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
+        ),
       feedback: zod
         .object({
           id: zod.number(),
@@ -584,6 +602,24 @@ export const GetAnalysesSummaryResponse = zod.object({
         .nullish()
         .describe(
           "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
+        ),
+      userNote: zod
+        .string()
+        .nullish()
+        .describe(
+          "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
+        ),
+      userNoteUpdatedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "When `userNote` was last saved server-side. Null when no note has been written.",
+        ),
+      hasNote: zod
+        .boolean()
+        .optional()
+        .describe(
+          "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
         ),
       feedback: zod
         .object({
@@ -882,6 +918,24 @@ export const GetAnalysisResponse = zod.object({
     .describe(
       "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
     ),
+  userNote: zod
+    .string()
+    .nullish()
+    .describe(
+      "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
+    ),
+  userNoteUpdatedAt: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "When `userNote` was last saved server-side. Null when no note has been written.",
+    ),
+  hasNote: zod
+    .boolean()
+    .optional()
+    .describe(
+      "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
+    ),
   feedback: zod
     .object({
       id: zod.number(),
@@ -906,6 +960,32 @@ export const GetAnalysisResponse = zod.object({
     ),
   createdAt: zod.coerce.date(),
 });
+
+/**
+ * Persists a plain-text journal note scoped to this analysis and the authenticated user. Sending an empty / whitespace-only string clears the note. The note is never included in any AI prompt — it is purely a private user field for the trading-journal UI on the detail page.
+
+ * @summary Save the user's private trading-journal note for an analysis
+ */
+export const SetAnalysisNoteParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SetAnalysisNoteBody = zod.object({
+  note: zod
+    .string()
+    .describe(
+      "Plain-text note (max 5000 chars). Empty\/whitespace string clears the note.",
+    ),
+});
+
+export const SetAnalysisNoteResponse = zod
+  .object({
+    note: zod.string().nullable(),
+    updatedAt: zod.coerce.date().nullable(),
+  })
+  .describe(
+    "Response shape for PUT \/analyses\/{id}\/note — the persisted note body (null when cleared) and the server-stamped updatedAt.",
+  );
 
 /**
  * Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit "Fundamental Context" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base.
@@ -1480,6 +1560,24 @@ export const GetAllAnalysesResponse = zod.object({
         .nullish()
         .describe(
           "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
+        ),
+      userNote: zod
+        .string()
+        .nullish()
+        .describe(
+          "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
+        ),
+      userNoteUpdatedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "When `userNote` was last saved server-side. Null when no note has been written.",
+        ),
+      hasNote: zod
+        .boolean()
+        .optional()
+        .describe(
+          "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
         ),
       feedback: zod
         .object({

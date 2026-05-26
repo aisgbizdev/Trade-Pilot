@@ -229,6 +229,14 @@ export const analyses = pgTable("analyses", {
   outcomeStatus: analysisOutcomeEnum("outcome_status").notNull().default("pending"),
   outcomeResolvedAt: timestamp("outcome_resolved_at"),
   outcomeCheckedAt: timestamp("outcome_checked_at"),
+  // Private per-analysis trading journal note written by the owning user
+  // (task #111). Plain text only — never fed into the AI prompt and never
+  // exposed across users (ownership is already enforced by analyses.userId).
+  // `userNoteUpdatedAt` is stamped server-side on every PUT so the
+  // detail-page "Saved · {time}" indicator reflects the actual persisted
+  // write, not the client clock.
+  userNote: text("user_note"),
+  userNoteUpdatedAt: timestamp("user_note_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

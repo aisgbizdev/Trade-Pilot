@@ -24,6 +24,7 @@ import type {
   AnalysesList,
   AnalysesSummary,
   Analysis,
+  AnalysisNoteResponse,
   AnalysisOutcomesSummary,
   AnalysisQuota,
   AuthResponse,
@@ -67,6 +68,7 @@ import type {
   ResetTokenResponse,
   ResetUserPasswordBody,
   SecurityQuestionResponse,
+  SetAnalysisNoteBody,
   TagsList,
   UpdateProfileBody,
   UpdateUserRoleBody,
@@ -1672,6 +1674,95 @@ export function useGetAnalysis<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Persists a plain-text journal note scoped to this analysis and the authenticated user. Sending an empty / whitespace-only string clears the note. The note is never included in any AI prompt — it is purely a private user field for the trading-journal UI on the detail page.
+
+ * @summary Save the user's private trading-journal note for an analysis
+ */
+export const getSetAnalysisNoteUrl = (id: number) => {
+  return `/api/analyses/${id}/note`;
+};
+
+export const setAnalysisNote = async (
+  id: number,
+  setAnalysisNoteBody: SetAnalysisNoteBody,
+  options?: RequestInit,
+): Promise<AnalysisNoteResponse> => {
+  return customFetch<AnalysisNoteResponse>(getSetAnalysisNoteUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(setAnalysisNoteBody),
+  });
+};
+
+export const getSetAnalysisNoteMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setAnalysisNote>>,
+    TError,
+    { id: number; data: BodyType<SetAnalysisNoteBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setAnalysisNote>>,
+  TError,
+  { id: number; data: BodyType<SetAnalysisNoteBody> },
+  TContext
+> => {
+  const mutationKey = ["setAnalysisNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setAnalysisNote>>,
+    { id: number; data: BodyType<SetAnalysisNoteBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setAnalysisNote(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetAnalysisNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setAnalysisNote>>
+>;
+export type SetAnalysisNoteMutationBody = BodyType<SetAnalysisNoteBody>;
+export type SetAnalysisNoteMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Save the user's private trading-journal note for an analysis
+ */
+export const useSetAnalysisNote = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setAnalysisNote>>,
+    TError,
+    { id: number; data: BodyType<SetAnalysisNoteBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setAnalysisNote>>,
+  TError,
+  { id: number; data: BodyType<SetAnalysisNoteBody> },
+  TContext
+> => {
+  return useMutation(getSetAnalysisNoteMutationOptions(options));
+};
 
 /**
  * Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit "Fundamental Context" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base.

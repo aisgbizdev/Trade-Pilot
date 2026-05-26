@@ -480,6 +480,59 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /analyses/{id}/note:
+    put:
+      operationId: setAnalysisNote
+      tags: [analyses]
+      summary: Save the user's private trading-journal note for an analysis
+      description: >
+        Persists a plain-text journal note scoped to this analysis and the
+        authenticated user. Sending an empty / whitespace-only string clears
+        the note. The note is never included in any AI prompt — it is purely
+        a private user field for the trading-journal UI on the detail page.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+                  description: "Plain-text note (max 5000 chars). Empty/whitespace string clears the note."
+              required: [note]
+      responses:
+        "200":
+          description: Note saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisNoteResponse"
+        "400":
+          description: Invalid note (wrong type or exceeds max length)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Analysis not found or not owned by this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /analyses/{id}/refresh-fundamentals:
     post:
       operationId: refreshFundamentals
@@ -1929,6 +1982,18 @@ components:
           format: date-time
           nullable: true
           description: "When the background resolver last looked at this row. Null until the first resolver pass touches it."
+        userNote:
+          type: string
+          nullable: true
+          description: "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt."
+        userNoteUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: "When `userNote` was last saved server-side. Null when no note has been written."
+        hasNote:
+          type: boolean
+          description: "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body."
         feedback:
           $ref: "#/components/schemas/Feedback"
           nullable: true
@@ -1949,6 +2014,21 @@ components:
         - mode
         - validUntil
         - createdAt
+
+    AnalysisNoteResponse:
+      type: object
+      description: "Response shape for PUT /analyses/{id}/note — the persisted note body (null when cleared) and the server-stamped updatedAt."
+      properties:
+        note:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - note
+        - updatedAt
 
     AnalysesList:
       type: object

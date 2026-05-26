@@ -55,6 +55,7 @@ import {
   useCancelAnalysisAlerts,
   getGetAnalysisAlertsQueryKey,
   useGetPushSubscriptionStatus,
+  useSetAnalysisNote,
   type Analysis,
   type Feedback,
   type TradePlan,
@@ -625,6 +626,230 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
           {t.analysis_detail.trade_plan_disclaimer}
         </p>
       </div>
+    </Card>
+  );
+}
+
+// Per-analysis private trading-journal note (task #111). Plain text only,
+// scoped to (user × analysis). Autosaves on a debounce (~800ms after the
+// user stops typing) AND on blur, with an explicit Save button as a
+// belt-and-braces escape hatch. The card is collapsible because most rows
+// won't have a note — keeps the detail page from getting noisier.
+//
+// The note body is NOT included in the AI prompt anywhere: the server
+// only ever reads `userNote` for the GET/PUT endpoints, never to build
+// generation context.
+const NOTES_MAX_LEN = 5000;
+const NOTES_AUTOSAVE_DELAY_MS = 800;
+
+type NoteSaveState = "idle" | "dirty" | "saving" | "saved" | "error";
+
+function AnalysisNotesCard({
+  analysisId,
+  initialNote,
+  initialUpdatedAt,
+  t,
+  lang,
+}: {
+  analysisId: number;
+  initialNote: string | null;
+  initialUpdatedAt: string | null;
+  t: T;
+  lang: string;
+}) {
+  // Track the LAST value we successfully persisted so the debounce
+  // doesn't keep PUTing the same string and so we can hide the "Saved"
+  // chip the moment the user re-edits.
+  const [text, setText] = useState(initialNote ?? "");
+  const [savedText, setSavedText] = useState(initialNote ?? "");
+  const [savedAt, setSavedAt] = useState<string | null>(initialUpdatedAt);
+  const [state, setState] = useState<NoteSaveState>("idle");
+  // Open by default if the note already has content so users land on
+  // their previous journal entry without an extra click.
+  const [open, setOpen] = useState<boolean>(!!(initialNote && initialNote.trim().length > 0));
+  const setNoteMutation = useSetAnalysisNote();
+  const { toast } = useToast();
+  const dateLocale = lang === "id" ? idLocale : undefined;
+
+  const tooLong = text.length > NOTES_MAX_LEN;
+
+  // Race-safety: keep a monotonic request id and the value currently
+  // in-flight. The debounce + blur + manual-save paths can all fire
+  // overlapping PUTs; without ordering an older slower response would
+  // clobber a newer one and leave the UI showing "saved" against stale
+  // text. We bump `latestReqId` for every save, store it on the request,
+  // and ignore success/error callbacks that don't match the latest id.
+  // We also short-circuit when an identical value is already in flight.
+  const latestReqIdRef = useRef(0);
+  const inFlightValueRef = useRef<string | null>(null);
+
+  const saveNow = (value: string) => {
+    if (value === savedText) return;
+    if (value.length > NOTES_MAX_LEN) return;
+    if (inFlightValueRef.current === value) return;
+    latestReqIdRef.current += 1;
+    const reqId = latestReqIdRef.current;
+    inFlightValueRef.current = value;
+    setState("saving");
+    setNoteMutation.mutate(
+      { id: analysisId, data: { note: value } },
+      {
+        onSuccess: (res) => {
+          if (reqId !== latestReqIdRef.current) return;
+          inFlightValueRef.current = null;
+          setSavedText(value);
+          setSavedAt(res.updatedAt);
+          setState("saved");
+        },
+        onError: () => {
+          if (reqId !== latestReqIdRef.current) return;
+          inFlightValueRef.current = null;
+          setState("error");
+          toast({ title: t.analysis_detail.notes_save_error, variant: "destructive" });
+        },
+      },
+    );
+  };
+
+  // Debounced autosave: re-arm a timer whenever `text` changes; the
+  // timer triggers a PUT once the user pauses typing. Tear it down on
+  // unmount so we don't fire after navigation.
+  useEffect(() => {
+    if (text === savedText) {
+      // Reset to "idle" once the field matches what's on the server so
+      // the "Saved" chip doesn't linger forever after a save.
+      if (state === "dirty") setState("saved");
+      return;
+    }
+    if (text.length > NOTES_MAX_LEN) {
+      setState("dirty");
+      return;
+    }
+    setState("dirty");
+    const t = window.setTimeout(() => {
+      saveNow(text);
+    }, NOTES_AUTOSAVE_DELAY_MS);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, savedText]);
+
+  const handleSaveClick = () => {
+    if (tooLong) return;
+    saveNow(text);
+  };
+
+  const isDirty = text !== savedText;
+  const isEmpty = !savedText && !text;
+
+  return (
+    <Card className="overflow-hidden" data-testid="card-user-journal-note">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger
+          className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left"
+          data-testid="button-toggle-notes"
+          aria-label={open ? t.analysis_detail.notes_close : t.analysis_detail.notes_open}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {open ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            )}
+            <StickyNote className="w-4 h-4 text-primary shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                {t.analysis_detail.notes_title}
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-snug truncate">
+                {isEmpty
+                  ? t.analysis_detail.notes_empty_collapsed
+                  : t.analysis_detail.notes_subtitle}
+              </p>
+            </div>
+          </div>
+          {!isEmpty && !open && (
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0 ml-2"
+              data-testid="badge-has-note"
+            >
+              •
+            </span>
+          )}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-4 pt-0 space-y-2 border-t border-border">
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onBlur={() => {
+                if (isDirty && !tooLong) saveNow(text);
+              }}
+              placeholder={t.analysis_detail.notes_placeholder}
+              rows={5}
+              maxLength={NOTES_MAX_LEN + 200}
+              className="resize-y text-sm mt-3"
+              data-testid="textarea-user-journal-note"
+            />
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 text-[11px] min-h-[1.25rem]">
+                {tooLong ? (
+                  <span className="text-red-600 dark:text-red-400 font-medium" data-testid="notes-too-long">
+                    {t.analysis_detail.notes_too_long.replace("{max}", String(NOTES_MAX_LEN))}
+                  </span>
+                ) : state === "saving" ? (
+                  <span className="text-muted-foreground flex items-center gap-1" data-testid="notes-status-saving">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    {t.analysis_detail.notes_saving}
+                  </span>
+                ) : state === "saved" && !isDirty ? (
+                  <span className="text-emerald-600 dark:text-emerald-400" data-testid="notes-status-saved">
+                    {savedAt
+                      ? t.analysis_detail.notes_saved_at.replace(
+                          "{when}",
+                          formatDistanceToNow(new Date(savedAt), {
+                            addSuffix: true,
+                            locale: dateLocale,
+                          }),
+                        )
+                      : t.analysis_detail.notes_saved}
+                  </span>
+                ) : isDirty ? (
+                  <span className="text-muted-foreground" data-testid="notes-status-dirty">
+                    {text.length} / {NOTES_MAX_LEN}
+                  </span>
+                ) : savedAt ? (
+                  <span className="text-muted-foreground" data-testid="notes-status-saved-at">
+                    {t.analysis_detail.notes_saved_at.replace(
+                      "{when}",
+                      formatDistanceToNow(new Date(savedAt), {
+                        addSuffix: true,
+                        locale: dateLocale,
+                      }),
+                    )}
+                  </span>
+                ) : null}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleSaveClick}
+                disabled={!isDirty || tooLong || state === "saving"}
+                data-testid="button-save-notes"
+              >
+                {state === "saving" ? (
+                  <span className="flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    {t.analysis_detail.notes_saving}
+                  </span>
+                ) : (
+                  t.analysis_detail.notes_save
+                )}
+              </Button>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
@@ -1516,6 +1741,21 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         {tradePlan && (
           <AnalysisAlertsCard analysisId={analysis.id} t={t} />
         )}
+
+        {/* Private trading-journal note for this analysis (task #111).
+            Rendered for every saved analysis — having a journal entry
+            next to the AI's read is one of the most consistently-
+            recommended habits for serious traders. Never shown to other
+            users; never fed into the AI prompt. */}
+        <AnalysisNotesCard
+          analysisId={analysis.id}
+          initialNote={(analysis as { userNote?: string | null }).userNote ?? null}
+          initialUpdatedAt={
+            (analysis as { userNoteUpdatedAt?: string | null }).userNoteUpdatedAt ?? null
+          }
+          t={t}
+          lang={lang}
+        />
 
         {/* Market Context Summary — same card the user saw on the Analyze tab,
             rendered from the indicator-tally snapshot stored at analysis time. */}

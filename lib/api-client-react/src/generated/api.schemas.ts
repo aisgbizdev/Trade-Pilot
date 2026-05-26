@@ -388,12 +388,26 @@ export interface Analysis {
   outcomeResolvedAt?: string | null;
   /** When the background resolver last looked at this row. Null until the first resolver pass touches it. */
   outcomeCheckedAt?: string | null;
+  /** Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt. */
+  userNote?: string | null;
+  /** When `userNote` was last saved server-side. Null when no note has been written. */
+  userNoteUpdatedAt?: string | null;
+  /** True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body. */
+  hasNote?: boolean;
   feedback?: Feedback | null;
   /** Number of "useful" feedback rows for this analysis. Only populated by admin endpoints. */
   usefulCount?: number;
   /** Number of "not_useful" feedback rows for this analysis. Only populated by admin endpoints. */
   notUsefulCount?: number;
   createdAt: string;
+}
+
+/**
+ * Response shape for PUT /analyses/{id}/note — the persisted note body (null when cleared) and the server-stamped updatedAt.
+ */
+export interface AnalysisNoteResponse {
+  note: string | null;
+  updatedAt: string | null;
 }
 
 export interface AnalysesList {
@@ -974,6 +988,11 @@ export const GetPersonalAnalyticsRange = {
   weekly: "weekly",
   monthly: "monthly",
 } as const;
+
+export type SetAnalysisNoteBody = {
+  /** Plain-text note (max 5000 chars). Empty/whitespace string clears the note. */
+  note: string;
+};
 
 export type GetNotificationsParams = {
   unreadOnly?: boolean;
