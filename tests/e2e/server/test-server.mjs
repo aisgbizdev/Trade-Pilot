@@ -11,8 +11,10 @@
 // session cookies usable from Playwright without cross-origin gymnastics.
 
 import { spawn } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import express from "express";
 
@@ -78,12 +80,36 @@ function waitForHealthz(port, timeoutMs) {
   });
 }
 
-function startApiServer() {
+async function waitForBuildArtifact(p, timeoutMs = 15_000) {
+  // The `build-deps` script runs `pnpm --filter @workspace/api-server run build`
+  // immediately before playwright launches the webServer. In edge cases
+  // (pnpm filter / fs sync race, or a concurrent dev workflow that's
+  // also rebuilding into the same `dist`) the entry path can be briefly
+  // missing or zero-byte at the moment we spawn the child, surfacing as
+  // MODULE_NOT_FOUND with no useful context. Poll for the file before
+  // spawning so we either start cleanly or fail with an obvious message.
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      if (existsSync(p) && statSync(p).size > 0) return;
+    } catch {
+      // ignore transient stat errors during a rename / rewrite
+    }
+    await sleep(100);
+  }
+  throw new Error(
+    `[e2e] api-server build artifact never appeared at ${p} within ${timeoutMs}ms — did the upstream build step fail?`,
+  );
+}
+
+async function startApiServer() {
   if (!process.env.DATABASE_URL) {
     console.warn(
       "[e2e] DATABASE_URL not set — api-server will fail to authenticate. The test harness still starts, but tests requiring auth will fail.",
     );
   }
+
+  await waitForBuildArtifact(API_SERVER_ENTRY);
 
   const child = spawn(
     process.execPath,
@@ -113,7 +139,7 @@ function startApiServer() {
 }
 
 let shuttingDown = false;
-const apiChild = startApiServer();
+const apiChild = await startApiServer();
 
 function shutdown(reason) {
   if (shuttingDown) return;

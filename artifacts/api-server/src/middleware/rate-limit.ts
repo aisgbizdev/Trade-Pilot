@@ -25,9 +25,22 @@ function emailKeyPart(req: Request): string {
   return typeof v === "string" ? v.toLowerCase() : "";
 }
 
+// Rate limiters are a production safety net (DoS, credential stuffing,
+// sign-up flooding). In local dev and the e2e harness they only get in
+// the way — the e2e suite registers many users from a single IP in a
+// short window and would otherwise hit `registerLimiter` and fail with
+// 429 "Terlalu banyak pendaftaran". Bypass when NODE_ENV is explicitly
+// "development" (set by the e2e test-server). The unit-test suite runs
+// with NODE_ENV=test (vitest default) and continues to exercise the
+// real limiter so the 429 / Retry-After contract stays covered.
+function rateLimitDisabled(): boolean {
+  return process.env["NODE_ENV"] === "development";
+}
+
 function buildLimiter(opts: RateLimitOptions) {
   const store = new Map<string, Bucket>();
   const middleware = (req: Request, res: Response, next: NextFunction) => {
+    if (rateLimitDisabled()) return next();
     const key = opts.keyFn(req);
     const now = Date.now();
     const bucket = store.get(key);
