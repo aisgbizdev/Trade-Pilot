@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
 import { MarketContextChip } from "@/components/market-context-summary";
+import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { useListAnalyses, getListAnalysesQueryKey, type AnalysesList, type ListAnalysesMode } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
@@ -261,6 +262,9 @@ export default function HistoryPage() {
                       </div>
                     </Link>
                     <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Resolution badge — what actually happened to the AI's
+                          plan once the resolver scored it against real OHLC. */}
+                      <OutcomeBadge status={(a as { outcomeStatus?: OutcomeStatus | null }).outcomeStatus} />
                       <Badge
                         variant={valid ? "default" : "secondary"}
                         className="text-[10px] px-1.5 py-0"

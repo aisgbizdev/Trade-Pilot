@@ -70,6 +70,61 @@ router.get("/analyses/summary", requireAuth, async (req: AuthRequest, res) => {
   });
 });
 
+router.get("/analyses/outcomes-summary", requireAuth, async (req: AuthRequest, res) => {
+  // Roll-up of the background outcome resolver over the last 30 days.
+  // Drives the "AI accuracy" card on the dashboard so the user can see
+  // how often the AI's plans actually reached TP vs got stopped out.
+  // We deliberately count `invalidated` separately (unparseable / broken
+  // plans) so an unreliable-input row doesn't pollute the accuracy %.
+  const RANGE_DAYS = 30;
+  const since = new Date(Date.now() - RANGE_DAYS * 24 * 60 * 60 * 1000);
+  const [row] = await db
+    .select({
+      total: count(analyses.id),
+      pending: sql<number>`sum(case when ${analyses.outcomeStatus} = 'pending' then 1 else 0 end)`,
+      tp1: sql<number>`sum(case when ${analyses.outcomeStatus} = 'tp1_hit' then 1 else 0 end)`,
+      tp2: sql<number>`sum(case when ${analyses.outcomeStatus} = 'tp2_hit' then 1 else 0 end)`,
+      sl: sql<number>`sum(case when ${analyses.outcomeStatus} = 'sl_hit' then 1 else 0 end)`,
+      expired: sql<number>`sum(case when ${analyses.outcomeStatus} = 'expired' then 1 else 0 end)`,
+      invalidated: sql<number>`sum(case when ${analyses.outcomeStatus} = 'invalidated' then 1 else 0 end)`,
+    })
+    .from(analyses)
+    .where(
+      and(
+        eq(analyses.userId, req.userId!),
+        gte(analyses.createdAt, since),
+      ),
+    );
+
+  const total = Number(row?.total ?? 0);
+  const pending = Number(row?.pending ?? 0);
+  const tp1 = Number(row?.tp1 ?? 0);
+  const tp2 = Number(row?.tp2 ?? 0);
+  const sl = Number(row?.sl ?? 0);
+  const expired = Number(row?.expired ?? 0);
+  const invalidated = Number(row?.invalidated ?? 0);
+  // Accuracy denominator: only resolved + scorable rows. Excludes pending
+  // (not yet known) and invalidated (plan was unparseable, AI's fault but
+  // not a directional miss).
+  const scored = tp1 + tp2 + sl + expired;
+  const tpHitRate = scored > 0 ? (tp1 + tp2) / scored : null;
+  const slHitRate = scored > 0 ? sl / scored : null;
+
+  res.json({
+    rangeDays: RANGE_DAYS,
+    total,
+    pending,
+    tp1Hit: tp1,
+    tp2Hit: tp2,
+    slHit: sl,
+    expired,
+    invalidated,
+    scored,
+    tpHitRate,
+    slHitRate,
+  });
+});
+
 router.get("/analyses/recent-instruments", requireAuth, async (req: AuthRequest, res) => {
   const rows = await db
     .selectDistinct({

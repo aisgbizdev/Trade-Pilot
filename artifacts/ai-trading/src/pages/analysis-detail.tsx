@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
 import { MarketContextSummary } from "@/components/market-context-summary";
+import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { SignalSpeedometer } from "@/components/signal-speedometer";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
@@ -1181,8 +1182,15 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <ValidityBadge validUntil={analysis.validUntil} />
+              {/* After-the-fact outcome of the AI's trade plan: TP1/TP2 hit,
+                  SL hit, expired, or invalidated. Populated by the background
+                  resolver — `pending` until the first resolver pass. */}
+              <OutcomeBadge
+                status={(analysis as Analysis & { outcomeStatus?: OutcomeStatus | null }).outcomeStatus}
+                size="md"
+              />
             </div>
           </div>
         </div>

@@ -300,6 +300,21 @@ export const AnalysisMode = {
   pro: "pro",
 } as const;
 
+/**
+ * After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.
+ */
+export type AnalysisOutcomeStatus =
+  (typeof AnalysisOutcomeStatus)[keyof typeof AnalysisOutcomeStatus];
+
+export const AnalysisOutcomeStatus = {
+  pending: "pending",
+  tp1_hit: "tp1_hit",
+  tp2_hit: "tp2_hit",
+  sl_hit: "sl_hit",
+  expired: "expired",
+  invalidated: "invalidated",
+} as const;
+
 export type FeedbackFeedbackType =
   (typeof FeedbackFeedbackType)[keyof typeof FeedbackFeedbackType];
 
@@ -367,6 +382,12 @@ export interface Analysis {
   fundamentalContext?: FundamentalContext | null;
   /** Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason / keyDriversFundamental / marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input. */
   fundamentalCitations?: FundamentalCitations | null;
+  /** After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent. */
+  outcomeStatus?: AnalysisOutcomeStatus;
+  /** Timestamp the trigger (SL/TP1/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`. */
+  outcomeResolvedAt?: string | null;
+  /** When the background resolver last looked at this row. Null until the first resolver pass touches it. */
+  outcomeCheckedAt?: string | null;
   feedback?: Feedback | null;
   /** Number of "useful" feedback rows for this analysis. Only populated by admin endpoints. */
   usefulCount?: number;
@@ -418,6 +439,26 @@ export interface AnalysesSummary {
   avgConfidenceMin?: number | null;
   avgConfidenceMax?: number | null;
   recentAnalyses: Analysis[];
+}
+
+/**
+ * Outcome roll-up powering the dashboard's AI accuracy card. Counts every analysis created in the last `rangeDays` days; `scored` is the resolved + non-invalidated subset that the hit-rate percentages are computed against.
+ */
+export interface AnalysisOutcomesSummary {
+  rangeDays: number;
+  total: number;
+  pending: number;
+  tp1Hit: number;
+  tp2Hit: number;
+  slHit: number;
+  expired: number;
+  invalidated: number;
+  /** Denominator used for tpHitRate / slHitRate. Equals tp1Hit + tp2Hit + slHit + expired (excludes pending and invalidated). */
+  scored: number;
+  /** (tp1Hit + tp2Hit) / scored. Null when scored == 0. */
+  tpHitRate?: number | null;
+  /** slHit / scored. Null when scored == 0. */
+  slHitRate?: number | null;
 }
 
 export type RecentInstrumentsInstrumentsItem = {

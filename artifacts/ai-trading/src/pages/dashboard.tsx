@@ -10,12 +10,15 @@ import { DashboardLivePrices } from "@/components/dashboard-live-prices";
 import { EnablePushCard } from "@/components/enable-push-card";
 import {
   useGetAnalysesSummary, getGetAnalysesSummaryQueryKey,
+  useGetAnalysisOutcomesSummary, getGetAnalysisOutcomesSummaryQueryKey,
   useGetRecentInstruments, getGetRecentInstrumentsQueryKey,
   useListAnalyses, getListAnalysesQueryKey,
   useUpdateProfile, getGetMeQueryKey,
   type AnalysesSummary, type AnalysesList, type RecentInstruments,
+  type AnalysisOutcomesSummary,
   type User, type UserSelectedMode,
 } from "@workspace/api-client-react";
+import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
@@ -67,6 +70,13 @@ export default function DashboardPage() {
   const { data: recentInstruments } = useGetRecentInstruments({
     query: { queryKey: getGetRecentInstrumentsQueryKey() },
   });
+
+  // Outcome roll-up powers the AI accuracy card. Returns nulls for the
+  // hit-rate fields when `scored == 0`, which we render as a zero-state.
+  const { data: outcomesSummary } = useGetAnalysisOutcomesSummary({
+    query: { queryKey: getGetAnalysisOutcomesSummaryQueryKey() },
+  });
+  const outcomesData = outcomesSummary as AnalysisOutcomesSummary | undefined;
 
   const { data: listData, isLoading: listLoading } = useListAnalyses(
     { page: 1, limit: 5 },
@@ -223,6 +233,89 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+        {outcomesData && outcomesData.total > 0 && (
+          <div
+            className="bg-card border border-border rounded-2xl p-4 space-y-3"
+            data-testid="card-outcomes-summary"
+          >
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                {t.outcomes.summary_title.replace("{days}", String(outcomesData.rangeDays))}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {t.outcomes.summary_subtitle}
+              </p>
+            </div>
+            {outcomesData.scored > 0 ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-emerald-500/10 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-emerald-700/80 dark:text-emerald-300/80">
+                      {t.outcomes.summary_tp_rate}
+                    </p>
+                    <p
+                      className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400"
+                      data-testid="stat-tp-hit-rate"
+                    >
+                      {Math.round((outcomesData.tpHitRate ?? 0) * 100)}%
+                    </p>
+                    <p className="text-[10px] text-emerald-700/70 dark:text-emerald-300/70 mt-0.5">
+                      {outcomesData.tp1Hit + outcomesData.tp2Hit} / {outcomesData.scored}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-red-500/10 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-red-700/80 dark:text-red-300/80">
+                      {t.outcomes.summary_sl_rate}
+                    </p>
+                    <p
+                      className="text-lg font-extrabold text-red-600 dark:text-red-400"
+                      data-testid="stat-sl-hit-rate"
+                    >
+                      {Math.round((outcomesData.slHitRate ?? 0) * 100)}%
+                    </p>
+                    <p className="text-[10px] text-red-700/70 dark:text-red-300/70 mt-0.5">
+                      {outcomesData.slHit} / {outcomesData.scored}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>
+                    {t.outcomes.summary_resolved
+                      .replace("{scored}", String(outcomesData.scored))
+                      .replace("{total}", String(outcomesData.total))}
+                  </span>
+                  {outcomesData.pending > 0 && (
+                    <span>
+                      {t.outcomes.summary_pending.replace("{n}", String(outcomesData.pending))}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {(["tp2_hit", "tp1_hit", "sl_hit", "expired", "invalidated", "pending"] as const).map((s) => {
+                    const counts: Record<OutcomeStatus, number> = {
+                      tp1_hit: outcomesData.tp1Hit,
+                      tp2_hit: outcomesData.tp2Hit,
+                      sl_hit: outcomesData.slHit,
+                      expired: outcomesData.expired,
+                      invalidated: outcomesData.invalidated,
+                      pending: outcomesData.pending,
+                    };
+                    const n = counts[s];
+                    if (n === 0) return null;
+                    return (
+                      <span key={s} className="inline-flex items-center gap-1">
+                        <OutcomeBadge status={s} />
+                        <span className="text-[10px] text-muted-foreground">{n}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t.outcomes.summary_no_data}</p>
+            )}
+          </div>
+        )}
         {summaryData?.avgConfidenceMin != null && summaryData.avgConfidenceMax != null && (
           <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center justify-between" data-testid="stat-avg-confidence">
             <span className="text-xs text-muted-foreground">{t.dashboard.avg_confidence ?? "Avg. Confidence"}</span>

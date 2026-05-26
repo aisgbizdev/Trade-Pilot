@@ -23,6 +23,7 @@ import type {
   AnalysesList,
   AnalysesSummary,
   Analysis,
+  AnalysisOutcomesSummary,
   AnalysisQuota,
   AuthResponse,
   BroadcastNotificationBody,
@@ -1242,6 +1243,87 @@ export function useGetAnalysesSummary<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetAnalysesSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Aggregates the after-the-fact outcomes the background resolver has written to each analysis (TP1/TP2 hit, SL hit, expired, invalidated, or still pending) for the current user over the past 30 days. Drives the "AI accuracy" card on the dashboard.
+
+ * @summary AI trade-plan outcome roll-up over the last 30 days
+ */
+export const getGetAnalysisOutcomesSummaryUrl = () => {
+  return `/api/analyses/outcomes-summary`;
+};
+
+export const getAnalysisOutcomesSummary = async (
+  options?: RequestInit,
+): Promise<AnalysisOutcomesSummary> => {
+  return customFetch<AnalysisOutcomesSummary>(
+    getGetAnalysisOutcomesSummaryUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAnalysisOutcomesSummaryQueryKey = () => {
+  return [`/api/analyses/outcomes-summary`] as const;
+};
+
+export const getGetAnalysisOutcomesSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalysisOutcomesSummary>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisOutcomesSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAnalysisOutcomesSummaryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAnalysisOutcomesSummary>>
+  > = ({ signal }) => getAnalysisOutcomesSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisOutcomesSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAnalysisOutcomesSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalysisOutcomesSummary>>
+>;
+export type GetAnalysisOutcomesSummaryQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary AI trade-plan outcome roll-up over the last 30 days
+ */
+
+export function useGetAnalysisOutcomesSummary<
+  TData = Awaited<ReturnType<typeof getAnalysisOutcomesSummary>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisOutcomesSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAnalysisOutcomesSummaryQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -3,6 +3,7 @@ import { users, analyses, feedback, notifications } from "@workspace/db/schema";
 import { eq, and, count, sql, gte, lte, lt } from "drizzle-orm";
 import { logger } from "./logger";
 import { createNotification, createNotificationsForUsers } from "./create-notification";
+import { resolvePendingOutcomes } from "./outcomes";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -407,6 +408,11 @@ export function startBackgroundJobs(): void {
   schedule(sendDailySummary, dailyInterval, 10000);
   schedule(sendAnalysisExpiryAlerts, expiryCheckInterval, 15000);
   schedule(sendRetentionWarnings, retentionInterval, 20000);
+  // Walk pending trade plans and check whether SL/TP1/TP2 actually
+  // printed inside the analysis's validity window. Runs every 5 min;
+  // first tick is delayed 30s so the server is fully warm.
+  const outcomeResolverInterval = 5 * 60 * 1000;
+  schedule(resolvePendingOutcomes, outcomeResolverInterval, 30000);
   schedule(deleteOldAnalyses, retentionInterval, 25000);
 
   logger.info({ retentionDays: ANALYSES_RETENTION_DAYS }, "Background notification jobs started");

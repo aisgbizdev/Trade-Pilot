@@ -350,6 +350,31 @@ export const ListAnalysesResponse = zod.object({
         .describe(
           "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
         ),
+      outcomeStatus: zod
+        .enum([
+          "pending",
+          "tp1_hit",
+          "tp2_hit",
+          "sl_hit",
+          "expired",
+          "invalidated",
+        ])
+        .optional()
+        .describe(
+          "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
+        ),
+      outcomeResolvedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
+        ),
+      outcomeCheckedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
+        ),
       feedback: zod
         .object({
           id: zod.number(),
@@ -535,6 +560,31 @@ export const GetAnalysesSummaryResponse = zod.object({
         .describe(
           "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
         ),
+      outcomeStatus: zod
+        .enum([
+          "pending",
+          "tp1_hit",
+          "tp2_hit",
+          "sl_hit",
+          "expired",
+          "invalidated",
+        ])
+        .optional()
+        .describe(
+          "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
+        ),
+      outcomeResolvedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
+        ),
+      outcomeCheckedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
+        ),
       feedback: zod
         .object({
           id: zod.number(),
@@ -561,6 +611,39 @@ export const GetAnalysesSummaryResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * Aggregates the after-the-fact outcomes the background resolver has written to each analysis (TP1/TP2 hit, SL hit, expired, invalidated, or still pending) for the current user over the past 30 days. Drives the "AI accuracy" card on the dashboard.
+
+ * @summary AI trade-plan outcome roll-up over the last 30 days
+ */
+export const GetAnalysisOutcomesSummaryResponse = zod
+  .object({
+    rangeDays: zod.number(),
+    total: zod.number(),
+    pending: zod.number(),
+    tp1Hit: zod.number(),
+    tp2Hit: zod.number(),
+    slHit: zod.number(),
+    expired: zod.number(),
+    invalidated: zod.number(),
+    scored: zod
+      .number()
+      .describe(
+        "Denominator used for tpHitRate \/ slHitRate. Equals tp1Hit + tp2Hit + slHit + expired (excludes pending and invalidated).",
+      ),
+    tpHitRate: zod
+      .number()
+      .nullish()
+      .describe("(tp1Hit + tp2Hit) \/ scored. Null when scored == 0."),
+    slHitRate: zod
+      .number()
+      .nullish()
+      .describe("slHit \/ scored. Null when scored == 0."),
+  })
+  .describe(
+    "Outcome roll-up powering the dashboard's AI accuracy card. Counts every analysis created in the last `rangeDays` days; `scored` is the resolved + non-invalidated subset that the hit-rate percentages are computed against.",
+  );
 
 /**
  * @summary Get 3 most recently analyzed instruments
@@ -780,6 +863,24 @@ export const GetAnalysisResponse = zod.object({
     .nullish()
     .describe(
       "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
+    ),
+  outcomeStatus: zod
+    .enum(["pending", "tp1_hit", "tp2_hit", "sl_hit", "expired", "invalidated"])
+    .optional()
+    .describe(
+      "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
+    ),
+  outcomeResolvedAt: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
+    ),
+  outcomeCheckedAt: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
     ),
   feedback: zod
     .object({
@@ -1263,6 +1364,31 @@ export const GetAllAnalysesResponse = zod.object({
         .nullish()
         .describe(
           "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
+        ),
+      outcomeStatus: zod
+        .enum([
+          "pending",
+          "tp1_hit",
+          "tp2_hit",
+          "sl_hit",
+          "expired",
+          "invalidated",
+        ])
+        .optional()
+        .describe(
+          "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
+        ),
+      outcomeResolvedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
+        ),
+      outcomeCheckedAt: zod.coerce
+        .date()
+        .nullish()
+        .describe(
+          "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
         ),
       feedback: zod
         .object({

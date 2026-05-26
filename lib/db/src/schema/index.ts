@@ -80,6 +80,18 @@ export const feedbackTypeEnum = pgEnum("feedback_type", [
   "not_useful",
 ]);
 export const outcomeEnum = pgEnum("outcome", ["correct", "wrong", "unknown"]);
+// Outcome of the AI's trade plan after the fact — did price actually touch
+// TP1 / TP2 / SL within the analysis's validity window? Populated by the
+// background resolver in `lib/outcomes.ts`, separate from the user-driven
+// `outcomeEnum` above (which lives on the feedback table).
+export const analysisOutcomeEnum = pgEnum("analysis_outcome", [
+  "pending",
+  "tp1_hit",
+  "tp2_hit",
+  "sl_hit",
+  "expired",
+  "invalidated",
+]);
 export const notificationTypeEnum = pgEnum("notification_type", [
   "info",
   "warning",
@@ -194,6 +206,15 @@ export const analyses = pgTable("analyses", {
   // Nullable for legacy rows + analyses where the AI didn't lean on
   // any fundamental input.
   fundamentalCitations: jsonb("fundamental_citations").$type<FundamentalCitationsShape>(),
+  // After-the-fact resolution of the AI's trade plan: did price actually
+  // touch TP1 / TP2 / SL inside the validity window, or did the window
+  // expire first? Populated by the background resolver in `lib/outcomes.ts`.
+  // `outcomeStatus` defaults to 'pending' for new rows; `outcomeResolvedAt`
+  // is the bar timestamp the trigger was hit on (or validUntil for
+  // 'expired'); `outcomeCheckedAt` records when the resolver last looked.
+  outcomeStatus: analysisOutcomeEnum("outcome_status").notNull().default("pending"),
+  outcomeResolvedAt: timestamp("outcome_resolved_at"),
+  outcomeCheckedAt: timestamp("outcome_checked_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
