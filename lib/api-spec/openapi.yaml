@@ -22,6 +22,8 @@ tags:
     description: Super admin operations
   - name: events
     description: Lightweight client telemetry events
+  - name: filter-presets
+    description: Saved history-page filter combinations
 paths:
   /healthz:
     get:
@@ -1070,6 +1072,110 @@ paths:
       responses:
         "204":
           description: Recorded (or silently dropped)
+
+  /filter-presets:
+    get:
+      operationId: listFilterPresets
+      tags: [filter-presets]
+      summary: List the signed-in user's saved filter presets
+      responses:
+        "200":
+          description: List of presets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FilterPresetList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createFilterPreset
+      tags: [filter-presets]
+      summary: Save the current filter combination as a named preset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFilterPresetBody"
+      responses:
+        "201":
+          description: Preset created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FilterPreset"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Name already used or per-user cap reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /filter-presets/{id}:
+    patch:
+      operationId: renameFilterPreset
+      tags: [filter-presets]
+      summary: Rename an existing preset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameFilterPresetBody"
+      responses:
+        "200":
+          description: Renamed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FilterPreset"
+        "404":
+          description: Preset not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Name already used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteFilterPreset
+      tags: [filter-presets]
+      summary: Delete a preset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Preset not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /admin/analyses:
     get:
@@ -2234,6 +2340,90 @@ components:
         - total
         - page
         - limit
+
+    FilterPresetFilters:
+      type: object
+      description: Mirrors the URL-derived filter state used by the history page.
+      properties:
+        mode:
+          type: string
+          enum: ["", beginner, pro]
+        instruments:
+          type: array
+          items:
+            type: string
+        timeframes:
+          type: array
+          items:
+            type: string
+        from:
+          type: string
+        to:
+          type: string
+        q:
+          type: string
+      required:
+        - mode
+        - instruments
+        - timeframes
+        - from
+        - to
+        - q
+
+    FilterPreset:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        filters:
+          $ref: "#/components/schemas/FilterPresetFilters"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - filters
+        - createdAt
+        - updatedAt
+
+    FilterPresetList:
+      type: object
+      properties:
+        presets:
+          type: array
+          items:
+            $ref: "#/components/schemas/FilterPreset"
+      required:
+        - presets
+
+    CreateFilterPresetBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        filters:
+          $ref: "#/components/schemas/FilterPresetFilters"
+      required:
+        - name
+        - filters
+
+    RenameFilterPresetBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+      required:
+        - name
 
     CreateAnalysisBody:
       type: object

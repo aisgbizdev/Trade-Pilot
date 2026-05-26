@@ -470,6 +470,56 @@ export interface AnalysesList {
   limit: number;
 }
 
+export type FilterPresetFiltersMode =
+  (typeof FilterPresetFiltersMode)[keyof typeof FilterPresetFiltersMode];
+
+export const FilterPresetFiltersMode = {
+  "": "",
+  beginner: "beginner",
+  pro: "pro",
+} as const;
+
+/**
+ * Mirrors the URL-derived filter state used by the history page.
+ */
+export interface FilterPresetFilters {
+  mode: FilterPresetFiltersMode;
+  instruments: string[];
+  timeframes: string[];
+  from: string;
+  to: string;
+  q: string;
+}
+
+export interface FilterPreset {
+  id: number;
+  name: string;
+  filters: FilterPresetFilters;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FilterPresetList {
+  presets: FilterPreset[];
+}
+
+export interface CreateFilterPresetBody {
+  /**
+   * @minLength 1
+   * @maxLength 40
+   */
+  name: string;
+  filters: FilterPresetFilters;
+}
+
+export interface RenameFilterPresetBody {
+  /**
+   * @minLength 1
+   * @maxLength 40
+   */
+  name: string;
+}
+
 export type CreateAnalysisBodyTimeframe =
   (typeof CreateAnalysisBodyTimeframe)[keyof typeof CreateAnalysisBodyTimeframe];
 

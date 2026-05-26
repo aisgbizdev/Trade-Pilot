@@ -418,6 +418,43 @@ export const dailyDigests = pgTable(
   }),
 );
 
+// Saved history-page filter combinations a user can recall with one tap
+// (task #129). `filters` mirrors the URL-derived FilterState the history
+// page already uses (mode + instruments[] + timeframes[] + from/to + q),
+// stored as JSONB so adding a new filter key later doesn't need a
+// migration. The (userId, name) unique constraint enforces "no two
+// presets with the same name for one user" at the DB level, so a
+// concurrent double-create can't slip through the validate-then-insert
+// race in the route handler.
+export const filterPresets = pgTable(
+  "filter_presets",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    filters: jsonb("filters").notNull().$type<FilterPresetShape>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    perUserNameUnique: uniqueIndex("filter_presets_user_name_unique").on(
+      t.userId,
+      t.name,
+    ),
+  }),
+);
+
+export type FilterPresetShape = {
+  mode: "beginner" | "pro" | "";
+  instruments: string[];
+  timeframes: string[];
+  from: string;
+  to: string;
+  q: string;
+};
+
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").references(() => users.id, {
@@ -448,3 +485,5 @@ export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type NewPriceAlert = typeof priceAlerts.$inferInsert;
 export type DailyDigest = typeof dailyDigests.$inferSelect;
 export type NewDailyDigest = typeof dailyDigests.$inferInsert;
+export type FilterPreset = typeof filterPresets.$inferSelect;
+export type NewFilterPreset = typeof filterPresets.$inferInsert;

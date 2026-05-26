@@ -1,13 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw, StickyNote, Search } from "lucide-react";
+import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw, StickyNote, Search, Bookmark, Pencil, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
 import { MarketContextChip } from "@/components/market-context-summary";
 import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
-import { useListAnalyses, getListAnalysesQueryKey, type AnalysesList, type ListAnalysesMode } from "@workspace/api-client-react";
+import {
+  useListAnalyses,
+  getListAnalysesQueryKey,
+  useListFilterPresets,
+  useCreateFilterPreset,
+  useRenameFilterPreset,
+  useDeleteFilterPreset,
+  getListFilterPresetsQueryKey,
+  type AnalysesList,
+  type ListAnalysesMode,
+  type FilterPreset,
+} from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -97,6 +109,43 @@ function buildSearch(filters: FilterState, page: number): string {
   return s ? `?${s}` : "";
 }
 
+const MAX_PRESET_NAME_LEN = 40;
+
+// Compare two FilterStates so we can highlight the chip whose saved
+// filters match what's currently in the URL. Arrays are compared as
+// sets — order on disk shouldn't matter for "are these the same filter
+// combo?".
+function filtersEqual(a: FilterState, b: FilterState): boolean {
+  if (a.mode !== b.mode) return false;
+  if (a.from !== b.from || a.to !== b.to || a.q !== b.q) return false;
+  if (a.instruments.length !== b.instruments.length) return false;
+  if (a.timeframes.length !== b.timeframes.length) return false;
+  const aI = new Set(a.instruments);
+  for (const v of b.instruments) if (!aI.has(v)) return false;
+  const aT = new Set(a.timeframes);
+  for (const v of b.timeframes) if (!aT.has(v)) return false;
+  return true;
+}
+
+// Coerce a preset's stored filters back into a UI FilterState, in case
+// an older preset row is missing newer keys (e.g. saved before `q`
+// existed). Mirrors EMPTY_FILTERS for the defaults.
+function normalisePresetFilters(raw: FilterPreset["filters"]): FilterState {
+  const mode = raw?.mode === "beginner" || raw?.mode === "pro" ? raw.mode : "";
+  return {
+    mode: mode as ListAnalysesMode | "",
+    instruments: Array.isArray(raw?.instruments)
+      ? normalizeList(raw.instruments, ALL_INSTRUMENTS_SET)
+      : [],
+    timeframes: Array.isArray(raw?.timeframes)
+      ? normalizeList(raw.timeframes, ALL_TIMEFRAMES_SET)
+      : [],
+    from: typeof raw?.from === "string" ? raw.from : "",
+    to: typeof raw?.to === "string" ? raw.to : "",
+    q: typeof raw?.q === "string" ? raw.q.slice(0, MAX_SEARCH_LEN) : "",
+  };
+}
+
 export default function HistoryPage() {
   const { t, lang } = useTranslation();
   const dateLocale = lang === "id" ? idLocale : enUS;
@@ -105,6 +154,7 @@ export default function HistoryPage() {
   const limit = 20;
   const { refresh, isRefreshing } = useRefreshAnalysis();
   const [showFilters, setShowFilters] = useState(false);
+  const queryClient = useQueryClient();
 
   // Single source of truth: the URL. Filters and page are derived from
   // it on every render, and every UI change calls `apply()` which routes
@@ -159,6 +209,82 @@ export default function HistoryPage() {
     return () => window.clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchDraft, filters.q]);
+
+  // Saved filter presets (task #129). The list is per-user, returned in
+  // creation order. Mutations invalidate the same query key so the chip
+  // row stays in sync without manual cache surgery.
+  const presetsQueryKey = getListFilterPresetsQueryKey();
+  const { data: presetsData } = useListFilterPresets({
+    query: { queryKey: presetsQueryKey },
+  });
+  const presets = presetsData?.presets ?? [];
+  const invalidatePresets = () =>
+    queryClient.invalidateQueries({ queryKey: presetsQueryKey });
+  const createPreset = useCreateFilterPreset({
+    mutation: { onSuccess: invalidatePresets },
+  });
+  const renamePreset = useRenameFilterPreset({
+    mutation: { onSuccess: invalidatePresets },
+  });
+  const deletePreset = useDeleteFilterPreset({
+    mutation: { onSuccess: invalidatePresets },
+  });
+
+  const handleSavePreset = () => {
+    if (!hasActiveFilters) return;
+    const raw = window.prompt(t.history.preset_prompt_save ?? "Name this preset");
+    const name = (raw ?? "").trim().slice(0, MAX_PRESET_NAME_LEN);
+    if (!name) return;
+    createPreset.mutate(
+      { data: { name, filters } },
+      {
+        onError: (err: unknown) => {
+          const e = err as { response?: { data?: { error?: string } } };
+          window.alert(
+            e?.response?.data?.error ??
+              t.history.preset_save_failed ??
+              "Could not save preset",
+          );
+        },
+      },
+    );
+  };
+
+  const handleApplyPreset = (preset: FilterPreset) => {
+    apply(normalisePresetFilters(preset.filters), 1);
+  };
+
+  const handleRenamePreset = (preset: FilterPreset) => {
+    const raw = window.prompt(
+      t.history.preset_prompt_rename ?? "Rename preset",
+      preset.name,
+    );
+    if (raw == null) return;
+    const name = raw.trim().slice(0, MAX_PRESET_NAME_LEN);
+    if (!name || name === preset.name) return;
+    renamePreset.mutate(
+      { id: preset.id, data: { name } },
+      {
+        onError: (err: unknown) => {
+          const e = err as { response?: { data?: { error?: string } } };
+          window.alert(
+            e?.response?.data?.error ??
+              t.history.preset_save_failed ??
+              "Could not rename preset",
+          );
+        },
+      },
+    );
+  };
+
+  const handleDeletePreset = (preset: FilterPreset) => {
+    const confirmMsg = (t.history.preset_confirm_delete ?? "Delete preset \"{name}\"?").replace(
+      "{name}",
+      preset.name,
+    );
+    if (!window.confirm(confirmMsg)) return;
+    deletePreset.mutate({ id: preset.id });
+  };
 
   const params = {
     page,
@@ -323,6 +449,83 @@ export default function HistoryPage() {
               </button>
             )}
           </div>
+
+          {(presets.length > 0 || hasActiveFilters) && (
+            <div
+              className="mt-2 flex flex-wrap gap-1.5 items-center"
+              data-testid="preset-row"
+            >
+              <Bookmark className="w-3 h-3 text-muted-foreground" />
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mr-1">
+                {t.history.presets ?? "Presets"}
+              </span>
+              {presets.map((preset) => {
+                const active = filtersEqual(filters, normalisePresetFilters(preset.filters));
+                return (
+                  <div
+                    key={preset.id}
+                    className={cn(
+                      "inline-flex items-center rounded-full text-[11px] font-medium transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground hover:bg-muted/80",
+                    )}
+                    data-testid={`preset-${preset.id}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset(preset)}
+                      data-testid={`preset-apply-${preset.id}`}
+                      className="pl-2.5 pr-1 py-0.5"
+                      title={preset.name}
+                    >
+                      {preset.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRenamePreset(preset)}
+                      data-testid={`preset-rename-${preset.id}`}
+                      aria-label={t.history.preset_rename ?? "Rename preset"}
+                      className={cn(
+                        "p-1 rounded-full transition-colors",
+                        active
+                          ? "hover:bg-primary-foreground/20"
+                          : "hover:bg-foreground/10 text-muted-foreground",
+                      )}
+                    >
+                      <Pencil className="w-2.5 h-2.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePreset(preset)}
+                      data-testid={`preset-delete-${preset.id}`}
+                      aria-label={t.history.preset_delete ?? "Delete preset"}
+                      className={cn(
+                        "p-1 pr-2 rounded-full transition-colors",
+                        active
+                          ? "hover:bg-primary-foreground/20"
+                          : "hover:bg-foreground/10 text-muted-foreground",
+                      )}
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleSavePreset}
+                  disabled={createPreset.isPending}
+                  data-testid="button-save-preset"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full border border-dashed border-primary/50 text-primary hover:bg-primary/10 transition-colors disabled:opacity-60"
+                >
+                  <Bookmark className="w-2.5 h-2.5" />
+                  {t.history.save_preset ?? "Save preset"}
+                </button>
+              )}
+            </div>
+          )}
 
           {activeChips.length > 0 && (
             <div

@@ -1458,6 +1458,88 @@ export const RecordOutboundClickBody = zod.object({
 });
 
 /**
+ * @summary List the signed-in user's saved filter presets
+ */
+export const ListFilterPresetsResponse = zod.object({
+  presets: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      filters: zod
+        .object({
+          mode: zod.enum(["", "beginner", "pro"]),
+          instruments: zod.array(zod.string()),
+          timeframes: zod.array(zod.string()),
+          from: zod.string(),
+          to: zod.string(),
+          q: zod.string(),
+        })
+        .describe(
+          "Mirrors the URL-derived filter state used by the history page.",
+        ),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Save the current filter combination as a named preset
+ */
+export const createFilterPresetBodyNameMax = 40;
+
+export const CreateFilterPresetBody = zod.object({
+  name: zod.string().min(1).max(createFilterPresetBodyNameMax),
+  filters: zod
+    .object({
+      mode: zod.enum(["", "beginner", "pro"]),
+      instruments: zod.array(zod.string()),
+      timeframes: zod.array(zod.string()),
+      from: zod.string(),
+      to: zod.string(),
+      q: zod.string(),
+    })
+    .describe("Mirrors the URL-derived filter state used by the history page."),
+});
+
+/**
+ * @summary Rename an existing preset
+ */
+export const RenameFilterPresetParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const renameFilterPresetBodyNameMax = 40;
+
+export const RenameFilterPresetBody = zod.object({
+  name: zod.string().min(1).max(renameFilterPresetBodyNameMax),
+});
+
+export const RenameFilterPresetResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  filters: zod
+    .object({
+      mode: zod.enum(["", "beginner", "pro"]),
+      instruments: zod.array(zod.string()),
+      timeframes: zod.array(zod.string()),
+      from: zod.string(),
+      to: zod.string(),
+      q: zod.string(),
+    })
+    .describe("Mirrors the URL-derived filter state used by the history page."),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a preset
+ */
+export const DeleteFilterPresetParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary Get all analyses (admin only)
  */
 export const getAllAnalysesQueryPageDefault = 1;

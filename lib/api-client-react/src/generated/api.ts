@@ -34,6 +34,7 @@ import type {
   ChangePasswordBody,
   ChangeSecurityQuestionBody,
   CreateAnalysisBody,
+  CreateFilterPresetBody,
   CreateUserBody,
   DailySummaryResponse,
   DailySummarySettings,
@@ -41,6 +42,8 @@ import type {
   ErrorResponse,
   Feedback,
   FeedbackBody,
+  FilterPreset,
+  FilterPresetList,
   ForgotPasswordQuestionBody,
   GetAdminFeedbackParams,
   GetAllAnalysesParams,
@@ -67,6 +70,7 @@ import type {
   RecentInstruments,
   RefreshFundamentalsResponse,
   RegisterBody,
+  RenameFilterPresetBody,
   ResetPasswordBody,
   ResetTokenResponse,
   ResetUserPasswordBody,
@@ -3475,6 +3479,338 @@ export const useRecordOutboundClick = <
   TContext
 > => {
   return useMutation(getRecordOutboundClickMutationOptions(options));
+};
+
+/**
+ * @summary List the signed-in user's saved filter presets
+ */
+export const getListFilterPresetsUrl = () => {
+  return `/api/filter-presets`;
+};
+
+export const listFilterPresets = async (
+  options?: RequestInit,
+): Promise<FilterPresetList> => {
+  return customFetch<FilterPresetList>(getListFilterPresetsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFilterPresetsQueryKey = () => {
+  return [`/api/filter-presets`] as const;
+};
+
+export const getListFilterPresetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFilterPresets>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFilterPresets>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFilterPresetsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listFilterPresets>>
+  > = ({ signal }) => listFilterPresets({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFilterPresets>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFilterPresetsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFilterPresets>>
+>;
+export type ListFilterPresetsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List the signed-in user's saved filter presets
+ */
+
+export function useListFilterPresets<
+  TData = Awaited<ReturnType<typeof listFilterPresets>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFilterPresets>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFilterPresetsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Save the current filter combination as a named preset
+ */
+export const getCreateFilterPresetUrl = () => {
+  return `/api/filter-presets`;
+};
+
+export const createFilterPreset = async (
+  createFilterPresetBody: CreateFilterPresetBody,
+  options?: RequestInit,
+): Promise<FilterPreset> => {
+  return customFetch<FilterPreset>(getCreateFilterPresetUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createFilterPresetBody),
+  });
+};
+
+export const getCreateFilterPresetMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFilterPreset>>,
+    TError,
+    { data: BodyType<CreateFilterPresetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createFilterPreset>>,
+  TError,
+  { data: BodyType<CreateFilterPresetBody> },
+  TContext
+> => {
+  const mutationKey = ["createFilterPreset"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createFilterPreset>>,
+    { data: BodyType<CreateFilterPresetBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createFilterPreset(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateFilterPresetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createFilterPreset>>
+>;
+export type CreateFilterPresetMutationBody = BodyType<CreateFilterPresetBody>;
+export type CreateFilterPresetMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Save the current filter combination as a named preset
+ */
+export const useCreateFilterPreset = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFilterPreset>>,
+    TError,
+    { data: BodyType<CreateFilterPresetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createFilterPreset>>,
+  TError,
+  { data: BodyType<CreateFilterPresetBody> },
+  TContext
+> => {
+  return useMutation(getCreateFilterPresetMutationOptions(options));
+};
+
+/**
+ * @summary Rename an existing preset
+ */
+export const getRenameFilterPresetUrl = (id: number) => {
+  return `/api/filter-presets/${id}`;
+};
+
+export const renameFilterPreset = async (
+  id: number,
+  renameFilterPresetBody: RenameFilterPresetBody,
+  options?: RequestInit,
+): Promise<FilterPreset> => {
+  return customFetch<FilterPreset>(getRenameFilterPresetUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(renameFilterPresetBody),
+  });
+};
+
+export const getRenameFilterPresetMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renameFilterPreset>>,
+    TError,
+    { id: number; data: BodyType<RenameFilterPresetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof renameFilterPreset>>,
+  TError,
+  { id: number; data: BodyType<RenameFilterPresetBody> },
+  TContext
+> => {
+  const mutationKey = ["renameFilterPreset"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof renameFilterPreset>>,
+    { id: number; data: BodyType<RenameFilterPresetBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return renameFilterPreset(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RenameFilterPresetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof renameFilterPreset>>
+>;
+export type RenameFilterPresetMutationBody = BodyType<RenameFilterPresetBody>;
+export type RenameFilterPresetMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Rename an existing preset
+ */
+export const useRenameFilterPreset = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renameFilterPreset>>,
+    TError,
+    { id: number; data: BodyType<RenameFilterPresetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof renameFilterPreset>>,
+  TError,
+  { id: number; data: BodyType<RenameFilterPresetBody> },
+  TContext
+> => {
+  return useMutation(getRenameFilterPresetMutationOptions(options));
+};
+
+/**
+ * @summary Delete a preset
+ */
+export const getDeleteFilterPresetUrl = (id: number) => {
+  return `/api/filter-presets/${id}`;
+};
+
+export const deleteFilterPreset = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteFilterPresetUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteFilterPresetMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteFilterPreset>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteFilterPreset>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteFilterPreset"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteFilterPreset>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteFilterPreset(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteFilterPresetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteFilterPreset>>
+>;
+
+export type DeleteFilterPresetMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a preset
+ */
+export const useDeleteFilterPreset = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteFilterPreset>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteFilterPreset>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteFilterPresetMutationOptions(options));
 };
 
 /**
