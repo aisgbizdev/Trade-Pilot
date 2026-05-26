@@ -35,6 +35,9 @@ import type {
   ChangeSecurityQuestionBody,
   CreateAnalysisBody,
   CreateUserBody,
+  DailySummaryResponse,
+  DailySummarySettings,
+  DailySummarySettingsUpdate,
   ErrorResponse,
   Feedback,
   FeedbackBody,
@@ -2786,6 +2789,168 @@ export function useGetPushSubscriptionStatus<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get current user's daily summary settings + today's digest
+ */
+export const getGetDailySummaryUrl = () => {
+  return `/api/me/daily-summary`;
+};
+
+export const getDailySummary = async (
+  options?: RequestInit,
+): Promise<DailySummaryResponse> => {
+  return customFetch<DailySummaryResponse>(getGetDailySummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDailySummaryQueryKey = () => {
+  return [`/api/me/daily-summary`] as const;
+};
+
+export const getGetDailySummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDailySummary>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDailySummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDailySummaryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDailySummary>>> = ({
+    signal,
+  }) => getDailySummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDailySummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDailySummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDailySummary>>
+>;
+export type GetDailySummaryQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get current user's daily summary settings + today's digest
+ */
+
+export function useGetDailySummary<
+  TData = Awaited<ReturnType<typeof getDailySummary>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDailySummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDailySummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update daily summary settings (enabled, time, timezone)
+ */
+export const getUpdateDailySummarySettingsUrl = () => {
+  return `/api/me/daily-summary`;
+};
+
+export const updateDailySummarySettings = async (
+  dailySummarySettingsUpdate: DailySummarySettingsUpdate,
+  options?: RequestInit,
+): Promise<DailySummarySettings> => {
+  return customFetch<DailySummarySettings>(getUpdateDailySummarySettingsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(dailySummarySettingsUpdate),
+  });
+};
+
+export const getUpdateDailySummarySettingsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDailySummarySettings>>,
+    TError,
+    { data: BodyType<DailySummarySettingsUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDailySummarySettings>>,
+  TError,
+  { data: BodyType<DailySummarySettingsUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updateDailySummarySettings"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDailySummarySettings>>,
+    { data: BodyType<DailySummarySettingsUpdate> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateDailySummarySettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDailySummarySettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDailySummarySettings>>
+>;
+export type UpdateDailySummarySettingsMutationBody =
+  BodyType<DailySummarySettingsUpdate>;
+export type UpdateDailySummarySettingsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update daily summary settings (enabled, time, timezone)
+ */
+export const useUpdateDailySummarySettings = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDailySummarySettings>>,
+    TError,
+    { data: BodyType<DailySummarySettingsUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateDailySummarySettings>>,
+  TError,
+  { data: BodyType<DailySummarySettingsUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdateDailySummarySettingsMutationOptions(options));
+};
 
 /**
  * @summary Get current user's push notification preferences

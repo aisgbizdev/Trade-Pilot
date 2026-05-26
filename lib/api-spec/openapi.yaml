@@ -850,6 +850,54 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /me/daily-summary:
+    get:
+      operationId: getDailySummary
+      tags: [daily-summary]
+      summary: Get current user's daily summary settings + today's digest
+      responses:
+        "200":
+          description: Settings + today's digest (if any)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailySummaryResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateDailySummarySettings
+      tags: [daily-summary]
+      summary: Update daily summary settings (enabled, time, timezone)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DailySummarySettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailySummarySettings"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /push/prefs:
     get:
       operationId: getPushPrefs
@@ -1477,9 +1525,12 @@ components:
           type: boolean
         pushBroadcast:
           type: boolean
+        pushDailySummary:
+          type: boolean
       required:
         - pushExpiry
         - pushBroadcast
+        - pushDailySummary
 
     PushTestResult:
       type: object
@@ -1497,6 +1548,117 @@ components:
           type: boolean
         pushBroadcast:
           type: boolean
+        pushDailySummary:
+          type: boolean
+
+    DailySummarySettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        time:
+          type: string
+          description: HH:MM 24h local time the digest should fire
+          example: "07:00"
+        timezone:
+          type: string
+          description: IANA timezone the time is interpreted in
+          example: Asia/Jakarta
+        pushDailySummary:
+          type: boolean
+        lastSentDate:
+          type: string
+          nullable: true
+          description: YYYY-MM-DD in user's TZ; null if never sent
+      required:
+        - enabled
+        - time
+        - timezone
+        - pushDailySummary
+
+    DailySummarySettingsUpdate:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        time:
+          type: string
+        timezone:
+          type: string
+
+    DailySummaryAnalysis:
+      type: object
+      properties:
+        id:
+          type: integer
+        instrument:
+          type: string
+        timeframe:
+          type: string
+        tradingBias:
+          type: string
+          nullable: true
+        confidenceMin:
+          type: integer
+          nullable: true
+        confidenceMax:
+          type: integer
+          nullable: true
+        preferredSide:
+          type: string
+          nullable: true
+        mainScenario:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - instrument
+        - timeframe
+        - createdAt
+
+    DailySummaryToday:
+      type: object
+      properties:
+        digestDate:
+          type: string
+        kind:
+          type: string
+          enum: [full, quota_only]
+        instruments:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        analyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailySummaryAnalysis"
+      required:
+        - digestDate
+        - kind
+        - instruments
+        - summary
+        - createdAt
+        - analyses
+
+    DailySummaryResponse:
+      type: object
+      properties:
+        settings:
+          $ref: "#/components/schemas/DailySummarySettings"
+        today:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/DailySummaryToday"
+      required:
+        - settings
 
     User:
       type: object

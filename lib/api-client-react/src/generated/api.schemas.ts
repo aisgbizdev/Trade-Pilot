@@ -42,6 +42,7 @@ export interface PushSubscriptionStatus {
 export interface PushPrefs {
   pushExpiry: boolean;
   pushBroadcast: boolean;
+  pushDailySummary: boolean;
 }
 
 export interface PushTestResult {
@@ -52,6 +53,58 @@ export interface PushTestResult {
 export interface PushPrefsUpdate {
   pushExpiry?: boolean;
   pushBroadcast?: boolean;
+  pushDailySummary?: boolean;
+}
+
+export interface DailySummarySettings {
+  enabled: boolean;
+  /** HH:MM 24h local time the digest should fire */
+  time: string;
+  /** IANA timezone the time is interpreted in */
+  timezone: string;
+  pushDailySummary: boolean;
+  /** YYYY-MM-DD in user's TZ; null if never sent */
+  lastSentDate?: string | null;
+}
+
+export interface DailySummarySettingsUpdate {
+  enabled?: boolean;
+  time?: string;
+  timezone?: string;
+}
+
+export interface DailySummaryAnalysis {
+  id: number;
+  instrument: string;
+  timeframe: string;
+  tradingBias?: string | null;
+  confidenceMin?: number | null;
+  confidenceMax?: number | null;
+  preferredSide?: string | null;
+  mainScenario?: string | null;
+  createdAt: string;
+}
+
+export type DailySummaryTodayKind =
+  (typeof DailySummaryTodayKind)[keyof typeof DailySummaryTodayKind];
+
+export const DailySummaryTodayKind = {
+  full: "full",
+  quota_only: "quota_only",
+} as const;
+
+export interface DailySummaryToday {
+  digestDate: string;
+  kind: DailySummaryTodayKind;
+  instruments: string[];
+  summary: string;
+  createdAt: string;
+  analyses: DailySummaryAnalysis[];
+}
+
+export interface DailySummaryResponse {
+  settings: DailySummarySettings;
+  today?: DailySummaryToday | null;
 }
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];

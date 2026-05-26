@@ -1,9 +1,12 @@
-import { useState } from "react";
-import { Bell, BellOff, BellRing, CheckCheck, Download, Loader2, Send } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, BellOff, BellRing, CheckCheck, Download, Loader2, Send, Sunrise } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Layout } from "@/components/layout";
 import {
   useGetNotifications,
@@ -14,6 +17,9 @@ import {
   useUpdatePushPrefs,
   getGetPushPrefsQueryKey,
   useSendPushTest,
+  useGetDailySummary,
+  useUpdateDailySummarySettings,
+  getGetDailySummaryQueryKey,
   type NotificationsList,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -71,12 +77,44 @@ export default function NotificationsPage() {
     }
   };
 
-  const handlePrefToggle = async (key: "pushExpiry" | "pushBroadcast", value: boolean) => {
+  const handlePrefToggle = async (
+    key: "pushExpiry" | "pushBroadcast" | "pushDailySummary",
+    value: boolean,
+  ) => {
     try {
       await updatePushPrefs.mutateAsync({ data: { [key]: value } });
       queryClient.invalidateQueries({ queryKey: getGetPushPrefsQueryKey() });
     } catch {
       toast({ title: t.notifications.push_prefs_error, variant: "destructive" });
+    }
+  };
+
+  // Daily summary settings — toggle + time + timezone. Kept local while
+  // the user is editing to avoid stomping their typing on each refetch;
+  // synced back from the server response on save / first load.
+  const { data: dailySummary } = useGetDailySummary({
+    query: { queryKey: getGetDailySummaryQueryKey(), staleTime: 60_000 },
+  });
+  const updateDailySummary = useUpdateDailySummarySettings();
+  const [dsTime, setDsTime] = useState("07:00");
+  const [dsTimezone, setDsTimezone] = useState("Asia/Jakarta");
+  useEffect(() => {
+    if (dailySummary?.settings) {
+      setDsTime(dailySummary.settings.time);
+      setDsTimezone(dailySummary.settings.timezone);
+    }
+  }, [dailySummary?.settings]);
+
+  const persistDailySummary = async (patch: {
+    enabled?: boolean;
+    time?: string;
+    timezone?: string;
+  }) => {
+    try {
+      await updateDailySummary.mutateAsync({ data: patch });
+      queryClient.invalidateQueries({ queryKey: getGetDailySummaryQueryKey() });
+    } catch {
+      toast({ title: t.daily_summary.save_error, variant: "destructive" });
     }
   };
 
@@ -313,6 +351,107 @@ export default function NotificationsPage() {
                   data-testid="switch-pref-broadcast"
                 />
               </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.daily_summary.push_alert_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.daily_summary.push_alert_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushDailySummary}
+                  onCheckedChange={(v) => handlePrefToggle("pushDailySummary", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-daily-summary"
+                />
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {dailySummary && (
+          <Card className="p-4 mb-5">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-primary/10 mt-0.5">
+                <Sunrise className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    {t.daily_summary.section_title}
+                  </p>
+                  <Switch
+                    checked={dailySummary.settings.enabled}
+                    onCheckedChange={(v) => persistDailySummary({ enabled: v })}
+                    disabled={updateDailySummary.isPending}
+                    data-testid="switch-daily-summary-enabled"
+                    aria-label={t.daily_summary.enable_label}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  {t.daily_summary.section_desc}
+                </p>
+              </div>
+            </div>
+            {dailySummary.settings.enabled && (
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <div>
+                  <Label htmlFor="ds-time" className="text-xs text-muted-foreground">
+                    {t.daily_summary.time_label}
+                  </Label>
+                  <Input
+                    id="ds-time"
+                    type="time"
+                    value={dsTime}
+                    onChange={(e) => setDsTime(e.target.value)}
+                    onBlur={() => {
+                      if (dsTime && dsTime !== dailySummary.settings.time) {
+                        void persistDailySummary({ time: dsTime });
+                      }
+                    }}
+                    disabled={updateDailySummary.isPending}
+                    className="mt-1 h-9 text-sm"
+                    data-testid="input-daily-summary-time"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ds-tz" className="text-xs text-muted-foreground">
+                    {t.daily_summary.timezone_label}
+                  </Label>
+                  <Input
+                    id="ds-tz"
+                    type="text"
+                    value={dsTimezone}
+                    onChange={(e) => setDsTimezone(e.target.value)}
+                    onBlur={() => {
+                      if (dsTimezone && dsTimezone !== dailySummary.settings.timezone) {
+                        void persistDailySummary({ timezone: dsTimezone });
+                      }
+                    }}
+                    disabled={updateDailySummary.isPending}
+                    className="mt-1 h-9 text-sm font-mono"
+                    placeholder="Asia/Jakarta"
+                    data-testid="input-daily-summary-timezone"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="text-[10px] text-muted-foreground">
+                {dailySummary.settings.lastSentDate
+                  ? `${t.daily_summary.last_sent}: ${dailySummary.settings.lastSentDate}`
+                  : t.daily_summary.no_digest_yet}
+              </p>
+              <Link href="/daily-summary">
+                <a
+                  className="text-xs text-primary hover:underline"
+                  data-testid="link-open-daily-summary"
+                >
+                  {t.daily_summary.page_title} →
+                </a>
+              </Link>
             </div>
           </Card>
         )}

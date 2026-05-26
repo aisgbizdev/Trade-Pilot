@@ -19,6 +19,7 @@ import HistoryPage from "@/pages/history";
 import AnalyticsPage from "@/pages/analytics";
 import ProfilePage from "@/pages/profile";
 import NotificationsPage from "@/pages/notifications";
+import DailySummaryPage from "@/pages/daily-summary";
 import AdminPage from "@/pages/admin";
 import AdminUsersPage from "@/pages/admin-users";
 import AdminFeedbackPage from "@/pages/admin-feedback";
@@ -113,6 +114,11 @@ function Router() {
         <Route path="/notifications">
           <ProtectedRoute>
             <NotificationsPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/daily-summary">
+          <ProtectedRoute>
+            <DailySummaryPage />
           </ProtectedRoute>
         </Route>
         <Route path="/admin">

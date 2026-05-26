@@ -1262,11 +1262,70 @@ export const GetPushSubscriptionStatusResponse = zod.object({
 });
 
 /**
+ * @summary Get current user's daily summary settings + today's digest
+ */
+export const GetDailySummaryResponse = zod.object({
+  settings: zod.object({
+    enabled: zod.boolean(),
+    time: zod.string().describe("HH:MM 24h local time the digest should fire"),
+    timezone: zod.string().describe("IANA timezone the time is interpreted in"),
+    pushDailySummary: zod.boolean(),
+    lastSentDate: zod
+      .string()
+      .nullish()
+      .describe("YYYY-MM-DD in user's TZ; null if never sent"),
+  }),
+  today: zod
+    .object({
+      digestDate: zod.string(),
+      kind: zod.enum(["full", "quota_only"]),
+      instruments: zod.array(zod.string()),
+      summary: zod.string(),
+      createdAt: zod.coerce.date(),
+      analyses: zod.array(
+        zod.object({
+          id: zod.number(),
+          instrument: zod.string(),
+          timeframe: zod.string(),
+          tradingBias: zod.string().nullish(),
+          confidenceMin: zod.number().nullish(),
+          confidenceMax: zod.number().nullish(),
+          preferredSide: zod.string().nullish(),
+          mainScenario: zod.string().nullish(),
+          createdAt: zod.coerce.date(),
+        }),
+      ),
+    })
+    .nullish(),
+});
+
+/**
+ * @summary Update daily summary settings (enabled, time, timezone)
+ */
+export const UpdateDailySummarySettingsBody = zod.object({
+  enabled: zod.boolean().optional(),
+  time: zod.string().optional(),
+  timezone: zod.string().optional(),
+});
+
+export const UpdateDailySummarySettingsResponse = zod.object({
+  enabled: zod.boolean(),
+  time: zod.string().describe("HH:MM 24h local time the digest should fire"),
+  timezone: zod.string().describe("IANA timezone the time is interpreted in"),
+  pushDailySummary: zod.boolean(),
+  lastSentDate: zod
+    .string()
+    .nullish()
+    .describe("YYYY-MM-DD in user's TZ; null if never sent"),
+});
+
+/**
  * @summary Get current user's push notification preferences
  */
 export const GetPushPrefsResponse = zod.object({
   pushExpiry: zod.boolean(),
   pushBroadcast: zod.boolean(),
+  pushDailySummary: zod.boolean(),
 });
 
 /**
@@ -1275,11 +1334,13 @@ export const GetPushPrefsResponse = zod.object({
 export const UpdatePushPrefsBody = zod.object({
   pushExpiry: zod.boolean().optional(),
   pushBroadcast: zod.boolean().optional(),
+  pushDailySummary: zod.boolean().optional(),
 });
 
 export const UpdatePushPrefsResponse = zod.object({
   pushExpiry: zod.boolean(),
   pushBroadcast: zod.boolean(),
+  pushDailySummary: zod.boolean(),
 });
 
 /**

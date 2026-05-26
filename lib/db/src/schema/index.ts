@@ -132,6 +132,26 @@ export const users = pgTable("users", {
   securityAnswerHash: text("security_answer_hash").notNull(),
   pushExpiry: boolean("push_expiry").notNull().default(true),
   pushBroadcast: boolean("push_broadcast").notNull().default(true),
+  // Daily-summary push (task #113). Three columns control delivery:
+  //  - `pushDailySummary`: alert-type opt-in, sits next to pushExpiry /
+  //    pushBroadcast on the notifications page. When false, the
+  //    scheduled push is suppressed (in-app notification still lands).
+  //  - `dailySummaryEnabled`: master on/off for the daily-summary
+  //    feature itself (separate from the alert-type switch so users
+  //    can disable the digest entirely without touching push prefs).
+  //  - `dailySummaryTime`: HH:MM in 24h local-time the digest should
+  //    fire at (defaults to 07:00).
+  //  - `dailySummaryTimezone`: IANA timezone the time is interpreted in
+  //    (defaults to Asia/Jakarta — the project's primary user base).
+  //  - `dailySummaryLastSentDate`: YYYY-MM-DD in the user's local
+  //    timezone the last digest was sent on. Guards once-per-day
+  //    idempotency even if the scheduler ticks multiple times after the
+  //    user's scheduled time.
+  pushDailySummary: boolean("push_daily_summary").notNull().default(true),
+  dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(false),
+  dailySummaryTime: text("daily_summary_time").notNull().default("07:00"),
+  dailySummaryTimezone: text("daily_summary_timezone").notNull().default("Asia/Jakarta"),
+  dailySummaryLastSentDate: text("daily_summary_last_sent_date"),
   // Persistent brute-force protection for /auth/forgot-password/verify.
   // The IP+email rate limiter is in-memory (resets on restart) and
   // bypassable via IP rotation; these columns layer a per-account
@@ -355,6 +375,49 @@ export const priceAlerts = pgTable(
   }),
 );
 
+// One row per (user, calendar-day-in-user-TZ) once the morning digest
+// has been generated and pushed (task #113). Persisted so:
+//  1. The scheduler can idempotently skip users whose digest already
+//     ran today even if the worker restarts mid-day.
+//  2. The `/daily-summary` landing page can render the exact set of
+//     analyses the push referenced (looked up by `analysisIds`) instead
+//     of re-querying "latest" which would drift if newer analyses landed
+//     after the digest fired.
+// `kind` distinguishes a `full` digest (newly-generated or recently-
+// reused analyses) from a `quota_only` digest sent when the user's
+// hourly/daily AI quota was already exhausted (we still send something
+// useful — the user's most recent existing analyses for the picked
+// instruments).
+export const dailyDigests = pgTable(
+  "daily_digests",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // YYYY-MM-DD in the user's chosen IANA timezone — NOT a UTC date.
+    // Stored as text so timezone arithmetic stays in JS and we don't
+    // need to coerce a `date` column through pg's session timezone.
+    digestDate: text("digest_date").notNull(),
+    kind: text("kind").notNull(), // 'full' | 'quota_only'
+    // The 3 instruments the digest covered, in display order.
+    instruments: jsonb("instruments").notNull().$type<string[]>(),
+    // FK-less list of analyses.id rows surfaced by this digest. We don't
+    // model a separate join table because the order matters (it's the
+    // same order as `instruments`) and the count is bounded at 3.
+    analysisIds: jsonb("analysis_ids").notNull().$type<number[]>(),
+    // Plain-text body sent in the push notification, persisted so the
+    // landing page can echo it back ("you were told: X") for context.
+    summary: text("summary").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    // One digest per user per local day — the scheduler relies on this
+    // unique constraint as a hard backstop against duplicate pushes.
+    perUserPerDay: uniqueIndex("daily_digests_user_day_unique").on(t.userId, t.digestDate),
+  }),
+);
+
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").references(() => users.id, {
@@ -383,3 +446,5 @@ export type OutboundClick = typeof outboundClicks.$inferSelect;
 export type NewOutboundClick = typeof outboundClicks.$inferInsert;
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type NewPriceAlert = typeof priceAlerts.$inferInsert;
+export type DailyDigest = typeof dailyDigests.$inferSelect;
+export type NewDailyDigest = typeof dailyDigests.$inferInsert;

@@ -10,6 +10,7 @@ import newsRouter from "./news";
 import calendarRouter from "./calendar";
 import pushRouter from "./push";
 import eventsRouter from "./events";
+import dailySummaryRouter from "./daily-summary";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(newsRouter);
 router.use(calendarRouter);
 router.use(pushRouter);
 router.use(eventsRouter);
+router.use(dailySummaryRouter);
 
 export default router;

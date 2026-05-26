@@ -81,6 +81,7 @@ router.get("/push/subscription-status", requireAuth, async (req: AuthRequest, re
 const prefsSchema = z.object({
   pushExpiry: z.boolean().optional(),
   pushBroadcast: z.boolean().optional(),
+  pushDailySummary: z.boolean().optional(),
 });
 
 router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
@@ -88,6 +89,7 @@ router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
     .select({
       pushExpiry: users.pushExpiry,
       pushBroadcast: users.pushBroadcast,
+      pushDailySummary: users.pushDailySummary,
     })
     .from(users)
     .where(eq(users.id, req.userId!))
@@ -135,6 +137,8 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
   const updates: Record<string, boolean> = {};
   if (typeof parsed.data.pushExpiry === "boolean") updates["pushExpiry"] = parsed.data.pushExpiry;
   if (typeof parsed.data.pushBroadcast === "boolean") updates["pushBroadcast"] = parsed.data.pushBroadcast;
+  if (typeof parsed.data.pushDailySummary === "boolean")
+    updates["pushDailySummary"] = parsed.data.pushDailySummary;
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: "Tidak ada perubahan" });
     return;
@@ -146,6 +150,7 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
     .returning({
       pushExpiry: users.pushExpiry,
       pushBroadcast: users.pushBroadcast,
+      pushDailySummary: users.pushDailySummary,
     });
   res.json(updated);
 });

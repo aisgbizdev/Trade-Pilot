@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { createNotification, createNotificationsForUsers } from "./create-notification";
 import { resolvePendingOutcomes } from "./outcomes";
 import { checkPriceAlerts } from "./price-alerts";
+import { dispatchDailySummaries } from "./daily-summary";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -420,6 +421,12 @@ export function startBackgroundJobs(): void {
   // upstream feed's 15s cache TTL closely enough without hammering it).
   const priceAlertInterval = 30 * 1000;
   schedule(checkPriceAlerts, priceAlertInterval, 12000);
+  // Per-user morning digest (task #113). 60s tick so we can fire within
+  // a minute of the user's chosen local time. Idempotency is enforced
+  // inside dispatchDailySummaries via the per-user-per-day unique index
+  // on daily_digests plus the lastSentDate guard.
+  const dailySummaryInterval = 60 * 1000;
+  schedule(dispatchDailySummaries, dailySummaryInterval, 18000);
 
   logger.info({ retentionDays: ANALYSES_RETENTION_DAYS }, "Background notification jobs started");
 }
