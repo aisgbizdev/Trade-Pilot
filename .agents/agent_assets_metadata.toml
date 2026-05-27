@@ -24,3 +24,15 @@ id = "dM69YQwwbGyTjHZuozet6"
 uri = "file://attached_assets/trade-pilot-logo.png"
 type = "image"
 title = "Trade Pilot Logo (PNG 1024x1024)"
+
+[[outputs]]
+id = "b3-efavLT5_KgX9yS4lQ3"
+uri = "file://artifacts/ai-trading/public/icon-512.png"
+type = "image"
+title = "New PWA icon (512×512)"
+
+[[outputs]]
+id = "3IADm6wwMONdFG79V9a5j"
+uri = "file://artifacts/ai-trading/public/apple-touch-icon-180.png"
+type = "image"
+title = "New iOS home-screen icon (180×180)"
