@@ -9,6 +9,8 @@ import { users, notifications } from "@workspace/db/schema";
 import { and, asc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { logger } from "./logger";
 
+type UserRow = typeof users.$inferSelect;
+
 // Maps notification.category → the users column to flip when the user
 // has clearly stopped reading them. Keep this list in lockstep with
 // the categories used in dispatchers (price-anomaly, signal-flip,
@@ -66,70 +68,87 @@ export async function runAutoDisengage(now: Date = new Date()): Promise<RunStats
       )
       .orderBy(asc(notifications.userId), asc(notifications.category), asc(notifications.createdAt));
 
-    // Group: (userId, category) → ordered list of {readAt}
-    const grouped = new Map<string, { userId: number; category: string; reads: (Date | null)[] }>();
+    // Group: (userId, category) → ordered list of {createdAt, readAt}
+    const grouped = new Map<
+      string,
+      { userId: number; category: string; reads: { createdAt: Date; readAt: Date | null }[] }
+    >();
     for (const r of rows) {
       if (r.userId == null || r.category == null) continue;
       if (!CATEGORY_TO_TOGGLE[r.category]) continue;
       const key = `${r.userId}:${r.category}`;
       const slot = grouped.get(key) ?? { userId: r.userId, category: r.category, reads: [] };
-      slot.reads.push(r.readAt ?? null);
+      slot.reads.push({ createdAt: r.createdAt, readAt: r.readAt ?? null });
       grouped.set(key, slot);
     }
     stats.scanned = grouped.size;
 
     // Cache user rows we've already loaded to avoid N+1 selects.
-    const userCache = new Map<number, { disengageStreaks: Record<string, number> }>();
+    const userCache = new Map<number, UserRow>();
     for (const slot of grouped.values()) {
-      // Count the trailing streak of unread items: walk from newest to
-      // oldest and stop at the first read. Limits to the categories
-      // we know how to pause.
-      let streak = 0;
-      for (let i = slot.reads.length - 1; i >= 0; i -= 1) {
-        if (slot.reads[i] == null) streak += 1;
-        else break;
-      }
-
-      let cached = userCache.get(slot.userId);
-      if (!cached) {
+      let user = userCache.get(slot.userId);
+      if (!user) {
         const [row] = await db
-          .select({ disengageStreaks: users.disengageStreaks })
+          .select()
           .from(users)
           .where(eq(users.id, slot.userId))
           .limit(1);
         if (!row) continue;
-        cached = { disengageStreaks: row.disengageStreaks ?? {} };
-        userCache.set(slot.userId, cached);
+        user = row;
+        userCache.set(slot.userId, user);
       }
 
-      const prev = cached.disengageStreaks[slot.category] ?? 0;
+      // Steady-state guard: if the user's toggle for this category is
+      // already off (we paused it on a previous tick, or the user
+      // opted out manually), there's nothing to do — and crucially,
+      // we must NOT re-stamp the banner. Old unread notifications
+      // would otherwise produce streak>=3 forever in the 30d lookback.
+      if (!isCategoryEnabled(user, slot.category)) {
+        continue;
+      }
+
+      // Only count notifications newer than the per-category
+      // checkpoint. The checkpoint is set when (a) we previously
+      // paused this category, or (b) the user re-opted in via PATCH
+      // /push/prefs (handled in routes/push.ts). Without it, the same
+      // 30d-window history would keep re-triggering.
+      const checkpoints = (user.disengageCheckpoints ?? {}) as Record<string, string>;
+      const checkpoint = checkpoints[slot.category]
+        ? new Date(checkpoints[slot.category])
+        : null;
+
+      // Count the trailing streak of unread items: walk from newest to
+      // oldest and stop at the first read OR at a notification at/
+      // before the checkpoint.
+      let streak = 0;
+      for (let i = slot.reads.length - 1; i >= 0; i -= 1) {
+        const r = slot.reads[i];
+        if (checkpoint && r.createdAt <= checkpoint) break;
+        if (r.readAt == null) streak += 1;
+        else break;
+      }
+
+      const currentStreaks = (user.disengageStreaks ?? {}) as Record<string, number>;
+      const prev = currentStreaks[slot.category] ?? 0;
       if (streak === prev && streak < STREAK_THRESHOLD) {
         // Nothing changed for this category and we're not at the
         // threshold — skip the write to keep tick cost flat.
         continue;
       }
-      cached.disengageStreaks[slot.category] = streak;
 
       if (streak >= STREAK_THRESHOLD) {
-        // Persist a streak reset to 0 in the *same* write that flips
-        // the toggle off. Without this, the historical unread rows
-        // still produce streak>=3 on the next hourly tick, re-flipping
-        // the toggle and re-stamping `disengageNoticeCategory` — which
-        // would defeat the "show banner once after dismissal" guarantee.
-        // Also: only re-stamp the banner category if it's currently
-        // null (i.e. nothing to dismiss). If the user already has a
-        // pending banner, don't overwrite it.
-        cached.disengageStreaks[slot.category] = 0;
-        const [existing] = await db
-          .select({ disengageNoticeCategory: users.disengageNoticeCategory })
-          .from(users)
-          .where(eq(users.id, slot.userId))
-          .limit(1);
+        // Stamp a checkpoint at `now` so the next tick's lookback
+        // ignores everything we just counted, AND reset the streak.
+        // Only set the banner category if none is currently pending
+        // (the user hasn't dismissed it yet).
+        const nextStreaks = { ...currentStreaks, [slot.category]: 0 };
+        const nextCheckpoints = { ...checkpoints, [slot.category]: now.toISOString() };
         const updates: Record<string, unknown> = {
-          disengageStreaks: { ...cached.disengageStreaks },
+          disengageStreaks: nextStreaks,
+          disengageCheckpoints: nextCheckpoints,
           updatedAt: new Date(),
         };
-        if (!existing?.disengageNoticeCategory) {
+        if (!user.disengageNoticeCategory) {
           updates["disengageNoticeCategory"] = slot.category;
         }
         // Flip the right opt-out. `market_open` opts out by clearing
@@ -141,12 +160,17 @@ export async function runAutoDisengage(now: Date = new Date()): Promise<RunStats
           if (col) updates[col as string] = false;
         }
         await db.update(users).set(updates).where(eq(users.id, slot.userId));
+        // Mirror the write into our cache so subsequent slots for the
+        // same user see the updated state.
+        Object.assign(user, updates);
         stats.paused += 1;
       } else {
+        const nextStreaks = { ...currentStreaks, [slot.category]: streak };
         await db
           .update(users)
-          .set({ disengageStreaks: cached.disengageStreaks, updatedAt: new Date() })
+          .set({ disengageStreaks: nextStreaks, updatedAt: new Date() })
           .where(eq(users.id, slot.userId));
+        user.disengageStreaks = nextStreaks;
         stats.streakUpdates += 1;
       }
     }
@@ -183,6 +207,16 @@ export async function resetDisengageStreak(userId: number, category: string): Pr
   } catch (err) {
     logger.warn({ err, userId, category }, "resetDisengageStreak failed");
   }
+}
+
+/** True if the user currently has the toggle for `category` enabled. */
+function isCategoryEnabled(user: UserRow, category: string): boolean {
+  if (category === "market_open") {
+    return Array.isArray(user.marketOpenSessions) && user.marketOpenSessions.length > 0;
+  }
+  const col = CATEGORY_TO_TOGGLE[category];
+  if (!col) return false;
+  return user[col] === true;
 }
 
 // Suppress unused-import warning for `sql` (kept for future extensions).

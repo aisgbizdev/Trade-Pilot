@@ -166,6 +166,39 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
   if (typeof d.pushPriceAnomaly === "boolean") updates["pushPriceAnomaly"] = d.pushPriceAnomaly;
   if (typeof d.pushWeeklyRecap === "boolean") updates["pushWeeklyRecap"] = d.pushWeeklyRecap;
   if (typeof d.pushSignalFlip === "boolean") updates["pushSignalFlip"] = d.pushSignalFlip;
+  // Track categories the user just re-enabled so we can checkpoint
+  // them — this prevents the auto-disengage worker from re-counting
+  // any stale unread notifications that pre-date the re-opt-in.
+  const reEnabled: string[] = [];
+  // Load current state once so we can detect off→on transitions.
+  const [current] = await db
+    .select({
+      pushMarketNews: users.pushMarketNews,
+      pushCalendarEvents: users.pushCalendarEvents,
+      pushPriceAnomaly: users.pushPriceAnomaly,
+      pushWeeklyRecap: users.pushWeeklyRecap,
+      pushSignalFlip: users.pushSignalFlip,
+      pushDormancyNudge: users.pushDormancyNudge,
+      marketOpenSessions: users.marketOpenSessions,
+      disengageCheckpoints: users.disengageCheckpoints,
+      disengageStreaks: users.disengageStreaks,
+    })
+    .from(users)
+    .where(eq(users.id, req.userId!))
+    .limit(1);
+  if (!current) {
+    res.status(404).json({ error: "User tidak ditemukan" });
+    return;
+  }
+  const trackReEnable = (cat: string, prev: boolean, next: boolean | undefined) => {
+    if (next === true && prev === false) reEnabled.push(cat);
+  };
+  trackReEnable("market_news", current.pushMarketNews, updates["pushMarketNews"] as boolean | undefined);
+  trackReEnable("calendar_event", current.pushCalendarEvents, updates["pushCalendarEvents"] as boolean | undefined);
+  trackReEnable("price_anomaly", current.pushPriceAnomaly, updates["pushPriceAnomaly"] as boolean | undefined);
+  trackReEnable("weekly_recap", current.pushWeeklyRecap, updates["pushWeeklyRecap"] as boolean | undefined);
+  trackReEnable("signal_flip", current.pushSignalFlip, updates["pushSignalFlip"] as boolean | undefined);
+
   if (Array.isArray(d.marketOpenSessions)) {
     // Deduplicate while preserving order so the UI's checkbox order is stable.
     const seen = new Set<string>();
@@ -175,15 +208,30 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
       return true;
     });
     updates["marketOpenSessions"] = cleaned;
+    const prevOn = Array.isArray(current.marketOpenSessions) && current.marketOpenSessions.length > 0;
+    if (cleaned.length > 0 && !prevOn) reEnabled.push("market_open");
   }
   if (typeof d.pushDormancyNudge === "boolean") {
     updates["pushDormancyNudge"] = d.pushDormancyNudge;
     // Re-opting in resets the auto-pause streak so the user gets the
     // full 3-strike budget again.
     if (d.pushDormancyNudge) updates["dormancyNudgeStreak"] = 0;
+    trackReEnable("dormancy_nudge", current.pushDormancyNudge, d.pushDormancyNudge);
   }
   if (typeof d.pushOnboarding === "boolean") updates["pushOnboarding"] = d.pushOnboarding;
   if (d.dismissDisengageNotice === true) updates["disengageNoticeCategory"] = null;
+
+  if (reEnabled.length > 0) {
+    const nowIso = new Date().toISOString();
+    const nextCheckpoints = { ...((current.disengageCheckpoints ?? {}) as Record<string, string>) };
+    const nextStreaks = { ...((current.disengageStreaks ?? {}) as Record<string, number>) };
+    for (const cat of reEnabled) {
+      nextCheckpoints[cat] = nowIso;
+      nextStreaks[cat] = 0;
+    }
+    updates["disengageCheckpoints"] = nextCheckpoints;
+    updates["disengageStreaks"] = nextStreaks;
+  }
 
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: "Tidak ada perubahan" });

@@ -76,6 +76,27 @@ async function hasRecentAnalysis(userId: number, since: Date): Promise<boolean> 
 }
 
 /**
+ * Compute a real micro-stat to mix into the nudge body. Today it's
+ * "X hari sejak analisa terakhir" (X days since last analysis) — the
+ * most relevant nudge for a dormant user. Returns null when we have
+ * nothing concrete to say (brand-new user with zero analyses ever).
+ */
+export async function computeDormancyMicroStat(
+  userId: number,
+  now: Date = new Date(),
+): Promise<string | null> {
+  const [row] = await db
+    .select({ createdAt: analyses.createdAt })
+    .from(analyses)
+    .where(eq(analyses.userId, userId))
+    .orderBy(desc(analyses.createdAt))
+    .limit(1);
+  if (!row) return null;
+  const days = Math.max(1, Math.floor((now.getTime() - row.createdAt.getTime()) / (24 * 60 * 60 * 1000)));
+  return `${days} hari sejak analisa terakhirmu`;
+}
+
+/**
  * Once-daily tick at 10:00 user-local. Per-user steps:
  *  1. Bail if opt-out.
  *  2. Bail if local hour ≠ 10 (jobs ticks every minute or so).
@@ -149,7 +170,8 @@ export async function dispatchDormancyNudge(
         continue;
       }
 
-      const { title, body } = buildDormancyMessage();
+      const microStat = await computeDormancyMicroStat(user.id, now);
+      const { title, body } = buildDormancyMessage(microStat);
       const created = await createNotification(
         user.id,
         { title, message: body, type: "info", category: CATEGORY, dedupeKey },

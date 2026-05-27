@@ -13,7 +13,7 @@ vi.mock("../../lib/webpush", () => ({
 import { sendPushToUser } from "../../lib/webpush";
 import app from "../../app";
 import { db } from "../../lib/db";
-import { users, sessions, pushSubscriptions } from "@workspace/db/schema";
+import { users, sessions, pushSubscriptions, notifications } from "@workspace/db/schema";
 import { pushTestLimiter } from "../../middleware/rate-limit";
 
 const sendPushToUserMock = sendPushToUser as unknown as ReturnType<typeof vi.fn>;
@@ -80,6 +80,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (seededUserIds.length > 0) {
+    await db.delete(notifications).where(inArray(notifications.userId, seededUserIds));
     await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.userId, seededUserIds));
     await db.delete(sessions).where(inArray(sessions.userId, seededUserIds));
     await db.delete(users).where(inArray(users.id, seededUserIds));
@@ -198,5 +199,88 @@ describe("POST /push/test rate limit", () => {
     // Bob in the same window must still be allowed.
     const bobOk = await request(app).post("/api/push/test").set(...authHeader(bob));
     expect(bobOk.status).toBe(200);
+  });
+});
+
+describe("PATCH /push/prefs — disengage checkpoint on off→on re-enable", () => {
+  it("writes a fresh checkpoint + zeroes streak for every re-enabled category, including market_open []→['tokyo']", async () => {
+    const u = await createUser();
+    // Seed the user with every disengage-managed toggle OFF and stale
+    // checkpoints/streaks from a prior auto-pause cycle.
+    const stale = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    await db
+      .update(users)
+      .set({
+        pushMarketNews: false,
+        pushCalendarEvents: false,
+        pushPriceAnomaly: false,
+        pushWeeklyRecap: false,
+        pushSignalFlip: false,
+        pushDormancyNudge: false,
+        marketOpenSessions: [],
+        disengageCheckpoints: {
+          market_news: stale,
+          calendar_event: stale,
+          price_anomaly: stale,
+          weekly_recap: stale,
+          signal_flip: stale,
+          dormancy_nudge: stale,
+          market_open: stale,
+        },
+        disengageStreaks: {
+          market_news: 3,
+          calendar_event: 3,
+          price_anomaly: 3,
+          weekly_recap: 3,
+          signal_flip: 3,
+          dormancy_nudge: 3,
+          market_open: 3,
+        },
+      })
+      .where(eq(users.id, u.id));
+
+    const before = Date.now();
+    const res = await request(app)
+      .patch("/api/push/prefs")
+      .set(...authHeader(u))
+      .send({
+        pushMarketNews: true,
+        pushCalendarEvents: true,
+        pushPriceAnomaly: true,
+        pushWeeklyRecap: true,
+        pushSignalFlip: true,
+        pushDormancyNudge: true,
+        marketOpenSessions: ["tokyo"],
+      });
+    expect(res.status).toBe(200);
+
+    const [row] = await db
+      .select({
+        disengageCheckpoints: users.disengageCheckpoints,
+        disengageStreaks: users.disengageStreaks,
+        marketOpenSessions: users.marketOpenSessions,
+      })
+      .from(users)
+      .where(eq(users.id, u.id))
+      .limit(1);
+
+    const cats = [
+      "market_news",
+      "calendar_event",
+      "price_anomaly",
+      "weekly_recap",
+      "signal_flip",
+      "dormancy_nudge",
+      "market_open",
+    ] as const;
+    const cps = row.disengageCheckpoints as Record<string, string>;
+    const streaks = row.disengageStreaks as Record<string, number>;
+    for (const cat of cats) {
+      // Checkpoint must be freshly stamped (post `before`, not the 30-day-old stale).
+      expect(new Date(cps[cat]).getTime()).toBeGreaterThanOrEqual(before);
+      // Streak must be reset to zero so the 3-strike budget starts fresh.
+      expect(streaks[cat]).toBe(0);
+    }
+    expect(row.marketOpenSessions).toEqual(["tokyo"]);
   });
 });

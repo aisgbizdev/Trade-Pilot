@@ -193,6 +193,13 @@ export const users = pgTable("users", {
   onboardingNudgeSentAt: timestamp("onboarding_nudge_sent_at"),
   disengageStreaks: jsonb("disengage_streaks").$type<Record<string, number>>().notNull().default({}),
   disengageNoticeCategory: text("disengage_notice_category"),
+  // Per-category ISO timestamp: when set, the auto-disengage worker
+  // ignores notifications older than this for that category. Stamped
+  // (a) when the worker hits the pause threshold, and (b) when the
+  // user re-opts into a category whose toggle was previously auto-
+  // flipped off. Without it, historical unread rows in the 30-day
+  // lookback would re-trigger pause/banner on every tick.
+  disengageCheckpoints: jsonb("disengage_checkpoints").$type<Record<string, string>>().notNull().default({}),
   dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(false),
   dailySummaryTime: text("daily_summary_time").notNull().default("07:00"),
   dailySummaryTimezone: text("daily_summary_timezone").notNull().default("Asia/Jakarta"),
