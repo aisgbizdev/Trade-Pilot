@@ -18,15 +18,15 @@ import {
 } from "@/components/tradingview-market-quotes";
 
 const TRADINGVIEW_SYMBOLS: TradingViewSymbol[] = [
-  { name: "OANDA:XAUUSD", displayName: "XUL10" },
-  { name: "BLACKBULL:BRENT", displayName: "BCO10_BBJ" },
-  { name: "VANTAGE:HK50", displayName: "HKK50_BBJ" },
-  { name: "SPREADEX:NIKKEI", displayName: "JPK50_BBJ" },
-  { name: "OANDA:AUDUSD", displayName: "AU10F_BBJ" },
-  { name: "OANDA:EURUSD", displayName: "EU10F_BBJ" },
-  { name: "OANDA:GBPUSD", displayName: "GU10F_BBJ" },
-  { name: "OANDA:USDCHF", displayName: "UC10F_BBJ" },
-  { name: "OANDA:USDJPY", displayName: "UJ10F_BBJ" },
+  { name: "OANDA:XAUUSD", displayName: "Gold" },
+  { name: "BLACKBULL:BRENT", displayName: "Brent" },
+  { name: "VANTAGE:HK50", displayName: "Hang Seng" },
+  { name: "SPREADEX:NIKKEI", displayName: "Nikkei" },
+  { name: "OANDA:AUDUSD", displayName: "Aussie" },
+  { name: "OANDA:EURUSD", displayName: "Euro" },
+  { name: "OANDA:GBPUSD", displayName: "Pound" },
+  { name: "OANDA:USDCHF", displayName: "Swissy" },
+  { name: "OANDA:USDJPY", displayName: "Yen" },
 ];
 
 const FALLBACK_INSTRUMENTS = [
@@ -194,7 +194,7 @@ function FallbackTicker() {
 
 const RETRY_DELAY_MS = 2000;
 const MAX_ATTEMPTS = 2;
-const WIDGET_HEIGHT = 410;
+const WIDGET_HEIGHT = 340;
 
 type LoadPhase = "loading" | "waiting-retry" | "fallback";
 
