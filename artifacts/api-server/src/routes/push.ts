@@ -84,6 +84,9 @@ const prefsSchema = z.object({
   pushDailySummary: z.boolean().optional(),
   pushMarketNews: z.boolean().optional(),
   pushCalendarEvents: z.boolean().optional(),
+  pushPriceAnomaly: z.boolean().optional(),
+  pushWeeklyRecap: z.boolean().optional(),
+  pushSignalFlip: z.boolean().optional(),
 });
 
 router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
@@ -94,6 +97,9 @@ router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
       pushDailySummary: users.pushDailySummary,
       pushMarketNews: users.pushMarketNews,
       pushCalendarEvents: users.pushCalendarEvents,
+      pushPriceAnomaly: users.pushPriceAnomaly,
+      pushWeeklyRecap: users.pushWeeklyRecap,
+      pushSignalFlip: users.pushSignalFlip,
     })
     .from(users)
     .where(eq(users.id, req.userId!))
@@ -147,6 +153,12 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
     updates["pushMarketNews"] = parsed.data.pushMarketNews;
   if (typeof parsed.data.pushCalendarEvents === "boolean")
     updates["pushCalendarEvents"] = parsed.data.pushCalendarEvents;
+  if (typeof parsed.data.pushPriceAnomaly === "boolean")
+    updates["pushPriceAnomaly"] = parsed.data.pushPriceAnomaly;
+  if (typeof parsed.data.pushWeeklyRecap === "boolean")
+    updates["pushWeeklyRecap"] = parsed.data.pushWeeklyRecap;
+  if (typeof parsed.data.pushSignalFlip === "boolean")
+    updates["pushSignalFlip"] = parsed.data.pushSignalFlip;
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: "Tidak ada perubahan" });
     return;
@@ -161,6 +173,9 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
       pushDailySummary: users.pushDailySummary,
       pushMarketNews: users.pushMarketNews,
       pushCalendarEvents: users.pushCalendarEvents,
+      pushPriceAnomaly: users.pushPriceAnomaly,
+      pushWeeklyRecap: users.pushWeeklyRecap,
+      pushSignalFlip: users.pushSignalFlip,
     });
   res.json(updated);
 });

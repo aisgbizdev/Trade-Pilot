@@ -155,6 +155,12 @@ export const users = pgTable("users", {
   // existing accounts without forcing a re-onboarding step.
   pushMarketNews: boolean("push_market_news").notNull().default(true),
   pushCalendarEvents: boolean("push_calendar_events").notNull().default(true),
+  // Tier 2 push categories (task #141). Same opt-out pattern as the
+  // Tier 1 toggles above — false suppresses OS push only, the in-app
+  // notification row still surfaces in /notifications.
+  pushPriceAnomaly: boolean("push_price_anomaly").notNull().default(true),
+  pushWeeklyRecap: boolean("push_weekly_recap").notNull().default(true),
+  pushSignalFlip: boolean("push_signal_flip").notNull().default(true),
   dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(false),
   dailySummaryTime: text("daily_summary_time").notNull().default("07:00"),
   dailySummaryTimezone: text("daily_summary_timezone").notNull().default("Asia/Jakarta"),

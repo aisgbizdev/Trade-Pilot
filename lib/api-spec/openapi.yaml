@@ -1736,12 +1736,21 @@ components:
           type: boolean
         pushCalendarEvents:
           type: boolean
+        pushPriceAnomaly:
+          type: boolean
+        pushWeeklyRecap:
+          type: boolean
+        pushSignalFlip:
+          type: boolean
       required:
         - pushExpiry
         - pushBroadcast
         - pushDailySummary
         - pushMarketNews
         - pushCalendarEvents
+        - pushPriceAnomaly
+        - pushWeeklyRecap
+        - pushSignalFlip
 
     PushTestResult:
       type: object
@@ -1764,6 +1773,12 @@ components:
         pushMarketNews:
           type: boolean
         pushCalendarEvents:
+          type: boolean
+        pushPriceAnomaly:
+          type: boolean
+        pushWeeklyRecap:
+          type: boolean
+        pushSignalFlip:
           type: boolean
 
     DailySummarySettings:

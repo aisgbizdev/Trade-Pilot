@@ -45,6 +45,9 @@ export interface PushPrefs {
   pushDailySummary: boolean;
   pushMarketNews: boolean;
   pushCalendarEvents: boolean;
+  pushPriceAnomaly: boolean;
+  pushWeeklyRecap: boolean;
+  pushSignalFlip: boolean;
 }
 
 export interface PushTestResult {
@@ -58,6 +61,9 @@ export interface PushPrefsUpdate {
   pushDailySummary?: boolean;
   pushMarketNews?: boolean;
   pushCalendarEvents?: boolean;
+  pushPriceAnomaly?: boolean;
+  pushWeeklyRecap?: boolean;
+  pushSignalFlip?: boolean;
 }
 
 export interface DailySummarySettings {

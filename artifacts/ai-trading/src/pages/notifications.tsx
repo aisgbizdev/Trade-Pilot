@@ -83,7 +83,10 @@ export default function NotificationsPage() {
       | "pushBroadcast"
       | "pushDailySummary"
       | "pushMarketNews"
-      | "pushCalendarEvents",
+      | "pushCalendarEvents"
+      | "pushPriceAnomaly"
+      | "pushWeeklyRecap"
+      | "pushSignalFlip",
     value: boolean,
   ) => {
     try {
@@ -402,6 +405,54 @@ export default function NotificationsPage() {
                   onCheckedChange={(v) => handlePrefToggle("pushCalendarEvents", v)}
                   disabled={updatePushPrefs.isPending}
                   data-testid="switch-pref-calendar"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_price_anomaly_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_price_anomaly_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushPriceAnomaly}
+                  onCheckedChange={(v) => handlePrefToggle("pushPriceAnomaly", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-price-anomaly"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_weekly_recap_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_weekly_recap_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushWeeklyRecap}
+                  onCheckedChange={(v) => handlePrefToggle("pushWeeklyRecap", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-weekly-recap"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_signal_flip_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_signal_flip_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushSignalFlip}
+                  onCheckedChange={(v) => handlePrefToggle("pushSignalFlip", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-signal-flip"
                 />
               </div>
             </div>

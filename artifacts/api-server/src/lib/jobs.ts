@@ -10,6 +10,8 @@ import {
   dispatchWatchlistNewsAlerts,
   dispatchCalendarReminders,
 } from "./watchlist-alerts";
+import { detectPriceAnomalies } from "./price-anomaly";
+import { dispatchWeeklyRecap } from "./weekly-recap";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -450,6 +452,31 @@ export function startBackgroundJobs(): void {
     },
     watchlistAlertInterval,
     28000,
+  );
+
+  // Tier 2 push (task #141).
+  // Price-anomaly detection: same 5-min cadence as Tier 1 watchlist
+  // dispatchers — the in-memory price snapshot ring needs steady
+  // ticks to compute 5m/30m deltas.
+  const priceAnomalyInterval = 5 * 60 * 1000;
+  schedule(
+    async () => {
+      await detectPriceAnomalies();
+    },
+    priceAnomalyInterval,
+    35000,
+  );
+  // Weekly recap: 60s tick so the Sunday-19:00 user-local window is
+  // hit reliably regardless of which minute of that hour the scheduler
+  // wakes. The per-week dedupe key inside dispatchWeeklyRecap is the
+  // hard backstop against duplicate sends.
+  const weeklyRecapInterval = 60 * 1000;
+  schedule(
+    async () => {
+      await dispatchWeeklyRecap();
+    },
+    weeklyRecapInterval,
+    42000,
   );
 
   logger.info({ retentionDays: ANALYSES_RETENTION_DAYS }, "Background notification jobs started");

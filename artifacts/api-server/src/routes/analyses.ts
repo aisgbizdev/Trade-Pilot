@@ -22,6 +22,7 @@ import {
   getAlertStatusForAnalysis,
   userHasPushSubscription,
 } from "../lib/price-alerts";
+import { maybeDispatchSignalFlip } from "../lib/signal-flip";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -585,6 +586,21 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   } catch (err) {
     logger.warn({ err, analysisId: analysis.id }, "Auto-arm price alerts failed");
   }
+
+  // Tier 2 push (task #141 C). Compare this new analysis with the
+  // user's previous same-(instrument,timeframe) call inside the last
+  // 7 days; fire a push when the AI's recommended side flipped
+  // meaningfully (BUY↔SELL or to/from WAIT with confidence Δ > 20).
+  // Fire-and-forget — never blocks the analyses response.
+  void maybeDispatchSignalFlip({
+    userId: req.userId!,
+    newAnalysisId: analysis.id,
+    instrument: analysis.instrument,
+    timeframe: analysis.timeframe,
+    tradePlan: analysis.tradePlan,
+    confidenceMin: analysis.confidenceMin,
+    confidenceMax: analysis.confidenceMax,
+  });
 
   res.status(201).json(analysis);
 });
