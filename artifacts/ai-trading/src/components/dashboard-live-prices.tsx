@@ -194,7 +194,7 @@ function FallbackTicker() {
 
 const RETRY_DELAY_MS = 2000;
 const MAX_ATTEMPTS = 2;
-const WIDGET_HEIGHT = 340;
+const WIDGET_HEIGHT = 290;
 
 type LoadPhase = "loading" | "waiting-retry" | "fallback";
 
