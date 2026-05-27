@@ -4,6 +4,7 @@ import { notifications } from "@workspace/db/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { notificationsEmitter } from "../lib/notifications-emitter";
+import { resetDisengageStreak } from "../lib/auto-disengage";
 
 const router = Router();
 
@@ -66,6 +67,14 @@ router.patch("/notifications/:id/read", requireAuth, async (req: AuthRequest, re
   if (!updated) {
     res.status(404).json({ error: "Notifikasi tidak ditemukan" });
     return;
+  }
+
+  // Tier 3 (task #142 E): reset the per-category disengage streak so
+  // a user who actually starts engaging again won't get auto-paused
+  // on the next worker tick. Fire-and-forget — the response shouldn't
+  // wait on this housekeeping update.
+  if (updated.category) {
+    void resetDisengageStreak(req.userId!, updated.category);
   }
 
   res.json({ message: "Notifikasi ditandai telah dibaca" });

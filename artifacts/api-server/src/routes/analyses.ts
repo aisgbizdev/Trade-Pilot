@@ -23,6 +23,7 @@ import {
   userHasPushSubscription,
 } from "../lib/price-alerts";
 import { maybeDispatchSignalFlip } from "../lib/signal-flip";
+import { resetDormancyStreak } from "../lib/dormancy";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -601,6 +602,11 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     confidenceMin: analysis.confidenceMin,
     confidenceMax: analysis.confidenceMax,
   });
+
+  // Tier 3 push (task #142 B). User created a new analysis → they
+  // came back, so clear the dormancy-nudge backoff counter so the
+  // next idle streak starts fresh from zero.
+  void resetDormancyStreak(req.userId!);
 
   res.status(201).json(analysis);
 });

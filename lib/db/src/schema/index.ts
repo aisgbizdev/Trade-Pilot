@@ -161,6 +161,38 @@ export const users = pgTable("users", {
   pushPriceAnomaly: boolean("push_price_anomaly").notNull().default(true),
   pushWeeklyRecap: boolean("push_weekly_recap").notNull().default(true),
   pushSignalFlip: boolean("push_signal_flip").notNull().default(true),
+  // Tier 3 push (task #142) — habit & retention nudges. Conservative
+  // defaults: dormancy nudge is opt-in (false), onboarding is opt-out
+  // (true) and only ever fires once per user.
+  //  - `marketOpenSessions`: which FX sessions the user wants a 5-min
+  //    pre-open ping for. Empty array = feature off. Stored as jsonb
+  //    string array (project convention — see dailyDigests.instruments)
+  //    rather than pg text[] so adding session names later is migration-
+  //    free.
+  //  - `pushDormancyNudge`: opt-in for the "we miss you" weekly nudge.
+  //    `dormancyNudgeStreak` is a backoff counter — incremented every
+  //    time we send a nudge without the user coming back, reset on any
+  //    new analysis. After 3 unanswered nudges the dispatcher auto-
+  //    pauses the toggle (set to false) so we stop spamming dead users.
+  //    `dormancyLastNudgeAt` is the timestamp of the last nudge — used
+  //    to enforce the ≥7d cap.
+  //  - `pushOnboarding`: opt-out flag for the 24h-after-signup empty-
+  //    watchlist nudge. `onboardingNudgeSentAt` is the one-shot marker
+  //    (non-null = already sent, never send again).
+  //  - `disengageStreaks` / `disengageNoticeCategory`: shared
+  //    auto-disengage engine state. The worker counts consecutive
+  //    unread-after-48h notifications per category; after 3 it flips
+  //    the matching opt-out boolean to false and stamps the category
+  //    name in `disengageNoticeCategory` so the UI can render a
+  //    one-time banner explaining what happened.
+  marketOpenSessions: jsonb("market_open_sessions").$type<string[]>().notNull().default([]),
+  pushDormancyNudge: boolean("push_dormancy_nudge").notNull().default(false),
+  pushOnboarding: boolean("push_onboarding").notNull().default(true),
+  dormancyNudgeStreak: integer("dormancy_nudge_streak").notNull().default(0),
+  dormancyLastNudgeAt: timestamp("dormancy_last_nudge_at"),
+  onboardingNudgeSentAt: timestamp("onboarding_nudge_sent_at"),
+  disengageStreaks: jsonb("disengage_streaks").$type<Record<string, number>>().notNull().default({}),
+  disengageNoticeCategory: text("disengage_notice_category"),
   dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(false),
   dailySummaryTime: text("daily_summary_time").notNull().default("07:00"),
   dailySummaryTimezone: text("daily_summary_timezone").notNull().default("Asia/Jakarta"),

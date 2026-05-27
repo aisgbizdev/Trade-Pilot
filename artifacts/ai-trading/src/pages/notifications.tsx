@@ -86,11 +86,41 @@ export default function NotificationsPage() {
       | "pushCalendarEvents"
       | "pushPriceAnomaly"
       | "pushWeeklyRecap"
-      | "pushSignalFlip",
+      | "pushSignalFlip"
+      | "pushDormancyNudge"
+      | "pushOnboarding",
     value: boolean,
   ) => {
     try {
       await updatePushPrefs.mutateAsync({ data: { [key]: value } });
+      queryClient.invalidateQueries({ queryKey: getGetPushPrefsQueryKey() });
+    } catch {
+      toast({ title: t.notifications.push_prefs_error, variant: "destructive" });
+    }
+  };
+
+  // Tier 3 (task #142 A): market-session reminders. The pref is an
+  // array of opted-in sessions — toggling a checkbox sends the new
+  // membership list, not a boolean.
+  const handleSessionToggle = async (
+    session: "tokyo" | "london" | "newyork",
+    checked: boolean,
+  ) => {
+    const current = pushPrefs?.marketOpenSessions ?? [];
+    const next = checked
+      ? Array.from(new Set([...current, session]))
+      : current.filter((s) => s !== session);
+    try {
+      await updatePushPrefs.mutateAsync({ data: { marketOpenSessions: next } });
+      queryClient.invalidateQueries({ queryKey: getGetPushPrefsQueryKey() });
+    } catch {
+      toast({ title: t.notifications.push_prefs_error, variant: "destructive" });
+    }
+  };
+
+  const handleDismissDisengageBanner = async () => {
+    try {
+      await updatePushPrefs.mutateAsync({ data: { dismissDisengageNotice: true } });
       queryClient.invalidateQueries({ queryKey: getGetPushPrefsQueryKey() });
     } catch {
       toast({ title: t.notifications.push_prefs_error, variant: "destructive" });
@@ -453,6 +483,113 @@ export default function NotificationsPage() {
                   onCheckedChange={(v) => handlePrefToggle("pushSignalFlip", v)}
                   disabled={updatePushPrefs.isPending}
                   data-testid="switch-pref-signal-flip"
+                />
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {pushPrefs?.disengageNoticeCategory && (
+          <Card
+            className="p-4 mb-5 border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/20"
+            data-testid="card-disengage-banner"
+          >
+            <p className="text-sm font-semibold text-foreground">
+              {t.notifications.push_disengage_banner_title}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              {t.notifications.push_disengage_banner_body}
+            </p>
+            <div className="mt-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDismissDisengageBanner}
+                disabled={updatePushPrefs.isPending}
+                data-testid="button-dismiss-disengage-banner"
+              >
+                {t.notifications.push_disengage_banner_dismiss}
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {pushPrefs && (
+          <Card className="p-4 mb-5">
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-foreground">
+                {t.notifications.push_session_section_title}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                {t.notifications.push_session_section_desc}
+              </p>
+            </div>
+            <div className="space-y-3">
+              {(["tokyo", "london", "newyork"] as const).map((session) => {
+                const label =
+                  session === "tokyo"
+                    ? t.notifications.push_session_tokyo
+                    : session === "london"
+                      ? t.notifications.push_session_london
+                      : t.notifications.push_session_newyork;
+                const checked = (pushPrefs.marketOpenSessions ?? []).includes(session);
+                return (
+                  <div key={session} className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-foreground">{label}</p>
+                    <Switch
+                      checked={checked}
+                      onCheckedChange={(v) => handleSessionToggle(session, v)}
+                      disabled={updatePushPrefs.isPending}
+                      data-testid={`switch-session-${session}`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
+        {pushPrefs && (
+          <Card className="p-4 mb-5">
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-foreground">
+                {t.notifications.push_engage_section_title}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                {t.notifications.push_engage_section_desc}
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_dormancy_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_dormancy_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushDormancyNudge}
+                  onCheckedChange={(v) => handlePrefToggle("pushDormancyNudge", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-dormancy"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_onboarding_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_onboarding_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushOnboarding}
+                  onCheckedChange={(v) => handlePrefToggle("pushOnboarding", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-onboarding"
                 />
               </div>
             </div>

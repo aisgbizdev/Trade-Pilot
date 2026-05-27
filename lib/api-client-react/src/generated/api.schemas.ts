@@ -39,6 +39,15 @@ export interface PushSubscriptionStatus {
   subscribed: boolean;
 }
 
+export type PushPrefsMarketOpenSessionsItem =
+  (typeof PushPrefsMarketOpenSessionsItem)[keyof typeof PushPrefsMarketOpenSessionsItem];
+
+export const PushPrefsMarketOpenSessionsItem = {
+  tokyo: "tokyo",
+  london: "london",
+  newyork: "newyork",
+} as const;
+
 export interface PushPrefs {
   pushExpiry: boolean;
   pushBroadcast: boolean;
@@ -48,12 +57,29 @@ export interface PushPrefs {
   pushPriceAnomaly: boolean;
   pushWeeklyRecap: boolean;
   pushSignalFlip: boolean;
+  /** FX sessions the user wants a 5-min pre-open ping for. Empty = off. */
+  marketOpenSessions: PushPrefsMarketOpenSessionsItem[];
+  /** Opt-in toggle for the weekly "we miss you" nudge after 7+ days idle. */
+  pushDormancyNudge: boolean;
+  /** One-shot 24h-after-signup empty-watchlist nudge. */
+  pushOnboarding: boolean;
+  /** When non-null, the UI should render a one-time banner explaining auto-pause. */
+  disengageNoticeCategory?: string | null;
 }
 
 export interface PushTestResult {
   /** Number of subscription endpoints the test push was dispatched to */
   delivered: number;
 }
+
+export type PushPrefsUpdateMarketOpenSessionsItem =
+  (typeof PushPrefsUpdateMarketOpenSessionsItem)[keyof typeof PushPrefsUpdateMarketOpenSessionsItem];
+
+export const PushPrefsUpdateMarketOpenSessionsItem = {
+  tokyo: "tokyo",
+  london: "london",
+  newyork: "newyork",
+} as const;
 
 export interface PushPrefsUpdate {
   pushExpiry?: boolean;
@@ -64,6 +90,11 @@ export interface PushPrefsUpdate {
   pushPriceAnomaly?: boolean;
   pushWeeklyRecap?: boolean;
   pushSignalFlip?: boolean;
+  marketOpenSessions?: PushPrefsUpdateMarketOpenSessionsItem[];
+  pushDormancyNudge?: boolean;
+  pushOnboarding?: boolean;
+  /** Pass true to clear the one-time auto-pause banner. */
+  dismissDisengageNotice?: boolean;
 }
 
 export interface DailySummarySettings {

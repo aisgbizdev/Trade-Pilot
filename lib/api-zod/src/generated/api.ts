@@ -1392,6 +1392,25 @@ export const GetPushPrefsResponse = zod.object({
   pushPriceAnomaly: zod.boolean(),
   pushWeeklyRecap: zod.boolean(),
   pushSignalFlip: zod.boolean(),
+  marketOpenSessions: zod
+    .array(zod.enum(["tokyo", "london", "newyork"]))
+    .describe(
+      "FX sessions the user wants a 5-min pre-open ping for. Empty = off.",
+    ),
+  pushDormancyNudge: zod
+    .boolean()
+    .describe(
+      'Opt-in toggle for the weekly \"we miss you\" nudge after 7+ days idle.',
+    ),
+  pushOnboarding: zod
+    .boolean()
+    .describe("One-shot 24h-after-signup empty-watchlist nudge."),
+  disengageNoticeCategory: zod
+    .string()
+    .nullish()
+    .describe(
+      "When non-null, the UI should render a one-time banner explaining auto-pause.",
+    ),
 });
 
 /**
@@ -1406,6 +1425,15 @@ export const UpdatePushPrefsBody = zod.object({
   pushPriceAnomaly: zod.boolean().optional(),
   pushWeeklyRecap: zod.boolean().optional(),
   pushSignalFlip: zod.boolean().optional(),
+  marketOpenSessions: zod
+    .array(zod.enum(["tokyo", "london", "newyork"]))
+    .optional(),
+  pushDormancyNudge: zod.boolean().optional(),
+  pushOnboarding: zod.boolean().optional(),
+  dismissDisengageNotice: zod
+    .boolean()
+    .optional()
+    .describe("Pass true to clear the one-time auto-pause banner."),
 });
 
 export const UpdatePushPrefsResponse = zod.object({
@@ -1417,6 +1445,25 @@ export const UpdatePushPrefsResponse = zod.object({
   pushPriceAnomaly: zod.boolean(),
   pushWeeklyRecap: zod.boolean(),
   pushSignalFlip: zod.boolean(),
+  marketOpenSessions: zod
+    .array(zod.enum(["tokyo", "london", "newyork"]))
+    .describe(
+      "FX sessions the user wants a 5-min pre-open ping for. Empty = off.",
+    ),
+  pushDormancyNudge: zod
+    .boolean()
+    .describe(
+      'Opt-in toggle for the weekly \"we miss you\" nudge after 7+ days idle.',
+    ),
+  pushOnboarding: zod
+    .boolean()
+    .describe("One-shot 24h-after-signup empty-watchlist nudge."),
+  disengageNoticeCategory: zod
+    .string()
+    .nullish()
+    .describe(
+      "When non-null, the UI should render a one-time banner explaining auto-pause.",
+    ),
 });
 
 /**

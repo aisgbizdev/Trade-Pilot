@@ -12,6 +12,10 @@ import {
 } from "./watchlist-alerts";
 import { detectPriceAnomalies } from "./price-anomaly";
 import { dispatchWeeklyRecap } from "./weekly-recap";
+import { dispatchMarketOpenReminders } from "./market-open";
+import { dispatchDormancyNudge } from "./dormancy";
+import { dispatchOnboardingNudges } from "./onboarding-nudge";
+import { runAutoDisengage } from "./auto-disengage";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -477,6 +481,49 @@ export function startBackgroundJobs(): void {
     },
     weeklyRecapInterval,
     42000,
+  );
+
+  // Tier 3 push (task #142).
+  // Market-open reminder: 5-min tick aligns with the 5-min pre-open
+  // lead window the dispatcher checks for.
+  const marketOpenInterval = 5 * 60 * 1000;
+  schedule(
+    async () => {
+      await dispatchMarketOpenReminders();
+    },
+    marketOpenInterval,
+    48000,
+  );
+  // Dormancy nudge: 60s tick so we reliably catch the user's local
+  // 10:00 hour. The per-user 7d cap inside the dispatcher is the
+  // real backstop against duplicate sends.
+  const dormancyInterval = 60 * 1000;
+  schedule(
+    async () => {
+      await dispatchDormancyNudge();
+    },
+    dormancyInterval,
+    52000,
+  );
+  // Onboarding nudge: hourly is enough — the trigger is "24h after
+  // signup" so we don't need sub-hour precision.
+  const onboardingInterval = 60 * 60 * 1000;
+  schedule(
+    async () => {
+      await dispatchOnboardingNudges();
+    },
+    onboardingInterval,
+    56000,
+  );
+  // Auto-disengage: hourly. Walks the trailing 30d of notifications
+  // and pauses categories the user has clearly stopped reading.
+  const autoDisengageInterval = 60 * 60 * 1000;
+  schedule(
+    async () => {
+      await runAutoDisengage();
+    },
+    autoDisengageInterval,
+    60000,
   );
 
   logger.info({ retentionDays: ANALYSES_RETENTION_DAYS }, "Background notification jobs started");

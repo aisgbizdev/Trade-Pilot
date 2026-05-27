@@ -1742,6 +1742,22 @@ components:
           type: boolean
         pushSignalFlip:
           type: boolean
+        marketOpenSessions:
+          type: array
+          items:
+            type: string
+            enum: [tokyo, london, newyork]
+          description: FX sessions the user wants a 5-min pre-open ping for. Empty = off.
+        pushDormancyNudge:
+          type: boolean
+          description: Opt-in toggle for the weekly "we miss you" nudge after 7+ days idle.
+        pushOnboarding:
+          type: boolean
+          description: One-shot 24h-after-signup empty-watchlist nudge.
+        disengageNoticeCategory:
+          type: string
+          nullable: true
+          description: When non-null, the UI should render a one-time banner explaining auto-pause.
       required:
         - pushExpiry
         - pushBroadcast
@@ -1751,6 +1767,9 @@ components:
         - pushPriceAnomaly
         - pushWeeklyRecap
         - pushSignalFlip
+        - marketOpenSessions
+        - pushDormancyNudge
+        - pushOnboarding
 
     PushTestResult:
       type: object
@@ -1780,6 +1799,18 @@ components:
           type: boolean
         pushSignalFlip:
           type: boolean
+        marketOpenSessions:
+          type: array
+          items:
+            type: string
+            enum: [tokyo, london, newyork]
+        pushDormancyNudge:
+          type: boolean
+        pushOnboarding:
+          type: boolean
+        dismissDisengageNotice:
+          type: boolean
+          description: Pass true to clear the one-time auto-pause banner.
 
     DailySummarySettings:
       type: object
