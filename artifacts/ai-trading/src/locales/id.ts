@@ -185,6 +185,7 @@ export const id: Translations = {
     title: "Analisis Baru",
     mode_label: "Mode",
     select_instrument: "Pilih Instrumen",
+    favorites_section_title: "Favorit",
     or_type: "Atau ketik instrumen lain...",
     select_timeframe: "Pilih Timeframe",
     notes_label: "Insight & Catatan Kamu (opsional)",

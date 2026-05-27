@@ -24,7 +24,7 @@ router.get("/watchlist", requireAuth, async (req: AuthRequest, res) => {
     })
     .from(watchlistItems)
     .where(eq(watchlistItems.userId, userId))
-    .orderBy(watchlistItems.instrument);
+    .orderBy(watchlistItems.createdAt);
 
   if (items.length === 0) {
     res.json({ items: [] });

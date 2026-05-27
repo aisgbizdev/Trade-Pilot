@@ -183,6 +183,7 @@ export const en = {
     title: "New Analysis",
     mode_label: "Mode",
     select_instrument: "Select Instrument",
+    favorites_section_title: "Favorites",
     or_type: "Or type another instrument...",
     select_timeframe: "Select Timeframe",
     notes_label: "Your Insights & Notes (optional)",

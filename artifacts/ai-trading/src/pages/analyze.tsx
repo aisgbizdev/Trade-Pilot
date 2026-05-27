@@ -11,7 +11,9 @@ import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQuer
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { TradingViewMiniChart, type MiniChartDateRange } from "@/components/tradingview-mini-chart";
 import { instrumentToTradingViewSymbol } from "@/lib/tradingview-symbols";
-import { WatchlistStar } from "@/components/watchlist-star";
+import { WatchlistStar, useWatchlist } from "@/components/watchlist-star";
+import type { Watchlist } from "@workspace/api-client-react";
+import { Star } from "lucide-react";
 import { MarketSessionsBadge } from "@/components/market-sessions-badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -105,6 +107,58 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
         {t.analyze.calendar_preview_note}
       </p>
     </Card>
+  );
+}
+
+function FavoritesSection({
+  selectedInstrument,
+  hasCustom,
+  onSelect,
+}: {
+  selectedInstrument: string;
+  hasCustom: boolean;
+  onSelect: (instrument: string) => void;
+}) {
+  const { t } = useTranslation();
+  const { data } = useWatchlist();
+  const items = (data as Watchlist | undefined)?.items ?? [];
+  if (items.length === 0) return null;
+  return (
+    <div className="mb-3" data-testid="favorites-section">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" aria-hidden="true" />
+        <h3 className="text-xs font-semibold text-foreground">
+          {t.analyze.favorites_section_title}
+        </h3>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {items.map((fav) => (
+          <div
+            key={fav.instrument}
+            className={cn(
+              "flex items-center gap-1 pr-1 rounded-lg border transition-all",
+              selectedInstrument === fav.instrument && !hasCustom
+                ? "bg-primary/10 border-primary"
+                : "bg-background border-border hover:border-primary/50",
+            )}
+          >
+            <button
+              onClick={() => onSelect(fav.instrument)}
+              data-testid={`button-favorite-${fav.instrument}`}
+              className={cn(
+                "flex-1 py-2.5 text-sm font-medium text-left pl-3",
+                selectedInstrument === fav.instrument && !hasCustom
+                  ? "text-primary"
+                  : "text-foreground",
+              )}
+            >
+              {fav.instrument}
+            </button>
+            <WatchlistStar instrument={fav.instrument} size="sm" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -299,6 +353,11 @@ export default function AnalyzePage() {
 
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
+            <FavoritesSection
+              selectedInstrument={selectedInstrument}
+              hasCustom={Boolean(customInstrument)}
+              onSelect={(inst) => { setSelectedInstrument(inst); setCustomInstrument(""); }}
+            />
             <div className="flex gap-2 mb-3">
               {(["futures", "forex"] as const).map((tab) => (
                 <button
