@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, ChevronDown, ChevronUp, Newspaper } from "lucide-react";
+import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, ChevronDown, ChevronUp, Newspaper, AlertTriangle } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SetAlertModal } from "@/components/set-alert-modal";
@@ -110,6 +110,91 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
         {t.analyze.calendar_preview_note}
       </p>
     </Card>
+  );
+}
+
+// Pre-trade warning: surface a prominent inline callout when a ★★★ macro
+// release for the selected instrument's currencies is within the next
+// `PRE_TRADE_WARN_WINDOW_MIN` minutes. Mirrors the same "★★★ only" filter
+// the embedded TradingView calendar uses (importanceFilter="1"), so users
+// don't see the chip for low-tier events.
+const PRE_TRADE_WARN_WINDOW_MIN = 30;
+const PRE_TRADE_TICK_MS = 30_000;
+
+function parseEventTs(date: string, time: string | null | undefined): number | null {
+  // Match the server-side parsing in lib/calendar.ts: interpret
+  // `YYYY-MM-DDTHH:MM:00` without a TZ offset, which both sides treat as
+  // local wall-clock. Users in the Indonesian feed's region see the same
+  // minute count the server uses to gate event freshness.
+  if (!date) return null;
+  const t = time && time.length >= 4 ? time : "00:00";
+  const ts = Date.parse(`${date}T${t}:00`);
+  return Number.isFinite(ts) ? ts : null;
+}
+
+function PreTradeWarning({ instrument }: { instrument: string }) {
+  const { t } = useTranslation();
+  // Ask for a wider window than the default preview cap so an unusually
+  // packed week (multiple ★★★ events for the same currency on FOMC /
+  // NFP days) can't silently truncate the imminent event off the list.
+  const { data } = useRelevantCalendar(instrument, { maxItems: 20 });
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), PRE_TRADE_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  const events = data?.events ?? [];
+  // Pick the soonest unreleased ★★★ event whose start is within the
+  // warning window. Sort by absolute time so an event 5 min away wins
+  // over one 25 min away even if the upstream order is impact-sorted.
+  let soonest: { event: CalendarEvent; minutes: number } | null = null;
+  for (const evt of events) {
+    if (evt.actual) continue;
+    if (evt.impact !== "★★★") continue;
+    const ts = parseEventTs(evt.date, evt.time);
+    if (ts === null) continue;
+    const diffMin = (ts - now) / 60_000;
+    if (diffMin <= 0 || diffMin > PRE_TRADE_WARN_WINDOW_MIN) continue;
+    if (!soonest || diffMin < soonest.minutes) {
+      soonest = { event: evt, minutes: diffMin };
+    }
+  }
+
+  if (!soonest) return null;
+
+  const flag = CURRENCY_FLAGS[soonest.event.currency] ?? "🌐";
+  const eventLabel = `${flag} ${soonest.event.event}`;
+  const minutes = Math.floor(soonest.minutes);
+  const message =
+    minutes < 1
+      ? t.analyze.pre_trade_warning_any_moment.replace("{event}", eventLabel)
+      : t.analyze.pre_trade_warning_in_minutes
+          .replace("{event}", eventLabel)
+          .replace("{minutes}", String(minutes));
+
+  return (
+    <div
+      role="alert"
+      data-testid="pre-trade-warning"
+      data-event-currency={soonest.event.currency}
+      data-event-minutes={minutes}
+      className="rounded-lg border border-amber-500/60 bg-amber-500/10 dark:bg-amber-500/[0.08] p-3 flex items-start gap-2"
+    >
+      <AlertTriangle
+        className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+        aria-hidden="true"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-bold text-amber-700 dark:text-amber-300 leading-tight">
+          ⚠ {t.analyze.pre_trade_warning_title}
+        </p>
+        <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-snug mt-0.5">
+          {message}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -594,6 +679,8 @@ export default function AnalyzePage() {
               </div>
             </Card>
           )}
+
+          {finalInstrument && <PreTradeWarning instrument={finalInstrument} />}
 
           <Button
             className="w-full h-12 text-base"

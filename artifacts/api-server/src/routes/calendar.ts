@@ -14,12 +14,17 @@ router.get("/calendar/relevant", async (req, res) => {
   if (!instrument) {
     return res.status(400).json({ error: "instrument query param required" });
   }
+  // Optional `maxItems` so consumers that need full coverage (e.g. the
+  // pre-trade warning that must not silently drop a ★★★ event when the
+  // week is unusually packed) can ask for a wider window. Clamped so a
+  // crafted client can't ask the upstream feed for unbounded slices.
+  const rawMax = typeof req.query.maxItems === "string" ? parseInt(req.query.maxItems, 10) : NaN;
+  const maxItems = Number.isFinite(rawMax) ? Math.min(Math.max(rawMax, 1), 50) : undefined;
   try {
-    // Use the SAME cap the analyses pipeline uses (default 6 in
-    // getRelevantCalendar). This guarantees the user-visible list is a
-    // subset of what the AI actually saw — no events appear in the UI
-    // that the model never considered.
-    const events = await getRelevantCalendar(instrument);
+    // Default cap stays in lockstep with what the analyses pipeline
+    // sees (6) so the AI and the relevant-calendar preview agree on
+    // which events count. The warning consumer passes a larger cap.
+    const events = await getRelevantCalendar(instrument, maxItems !== undefined ? { maxItems } : undefined);
     const mapped = events.map((e: any) => ({
       time: e.time,
       currency: e.currency,

@@ -199,3 +199,30 @@ describe("_sanitizePromptText — direct rules (calendar)", () => {
     expect(out).not.toContain("=== INSTRUCTIONS ===");
   });
 });
+
+describe("getRelevantCalendar — same-impact same-day datetime tie-break", () => {
+  // Regression guard for the pre-trade-warning path (task #154): when
+  // multiple ★★★ events land on the same day, the imminent one (lower
+  // wall-clock time) must sort first regardless of upstream feed order.
+  // Without datetime-precision tie-break, a small maxItems cap can
+  // truncate the soonest event off the list.
+  it("orders same-day ★★★ events by time, earliest first", async () => {
+    const NOW = new Date("2026-05-01T08:00:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+
+    globalThis.fetch = vi.fn(async () =>
+      calendarResponse([
+        // Intentionally listed late-first to defeat any stable-sort
+        // fallback to feed order.
+        { date: "2026-05-01", time: "2026-05-01 20:00", currency: "USD", event: "FOMC", impact: "★★★" },
+        { date: "2026-05-01", time: "2026-05-01 12:30", currency: "USD", event: "CPI",  impact: "★★★" },
+        { date: "2026-05-01", time: "2026-05-01 08:30", currency: "USD", event: "NFP",  impact: "★★★" },
+      ]),
+    ) as unknown as typeof fetch;
+
+    const events = await getRelevantCalendar("EUR/USD");
+    const order = events.map((e: CalendarEvent) => e.event);
+    expect(order.slice(0, 3)).toEqual(["NFP", "CPI", "FOMC"]);
+  });
+});

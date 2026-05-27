@@ -121,7 +121,13 @@ export async function getRelevantCalendar(
       (a, b) =>
         (IMPACT_RANK[b.impact ?? ""] ?? 0) -
           (IMPACT_RANK[a.impact ?? ""] ?? 0) ||
-        a.date.localeCompare(b.date),
+        // Tie-break by full datetime, not just date, so that within the
+        // same impact tier the earlier wall-clock event wins. Without
+        // this, two same-day ★★★ events come back in upstream-feed order
+        // and the warning path can truncate the imminent one first.
+        `${a.date}T${a.time ?? "00:00"}`.localeCompare(
+          `${b.date}T${b.time ?? "00:00"}`,
+        ),
     )
     .slice(0, maxItems);
 }
