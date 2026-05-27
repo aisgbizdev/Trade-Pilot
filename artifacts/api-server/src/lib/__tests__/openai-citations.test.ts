@@ -25,6 +25,7 @@ function calEvent(event: string, currency = "USD"): CalendarEvent {
   return {
     date: "2026-04-30",
     time: "12:00",
+    epochMs: Date.UTC(2026, 3, 30, 12, 0, 0, 0),
     currency,
     event,
     impact: "★★★",

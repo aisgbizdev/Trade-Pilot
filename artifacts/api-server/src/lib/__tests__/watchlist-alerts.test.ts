@@ -19,9 +19,18 @@ function makeNews(over: Partial<NewsItem> = {}): NewsItem {
 }
 
 function makeEvent(over: Partial<CalendarEvent> = {}): CalendarEvent {
+  const date = over.date ?? "2026-05-27";
+  const time = "time" in over ? over.time : "20:00";
+  const [y, mon, d] = date.split("-").map(Number);
+  const [h, min] = (time ?? "00:00").split(":").map(Number);
+  const epochMs =
+    "epochMs" in over
+      ? over.epochMs ?? null
+      : Date.UTC(y!, mon! - 1, d!, h!, min!, 0, 0);
   return {
-    date: "2026-05-27",
-    time: "20:00",
+    date,
+    time: time ?? null,
+    epochMs,
     currency: "USD",
     event: "FOMC Meeting Minutes",
     impact: "★★★",

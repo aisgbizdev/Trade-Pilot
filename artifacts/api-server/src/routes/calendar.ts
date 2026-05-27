@@ -34,6 +34,10 @@ router.get("/calendar/relevant", async (req, res) => {
       forecast: e.forecast,
       actual: e.actual,
       date: e.date,
+      // Absolute UTC instant computed server-side so any client TZ
+      // gets the same "time until release" answer without re-parsing
+      // the wall-clock string.
+      epochMs: e.epochMs ?? null,
       whyTraderCare: e.details?.whyTraderCare ?? "",
     }));
     return res.json({ status: "success", instrument, events: mapped });

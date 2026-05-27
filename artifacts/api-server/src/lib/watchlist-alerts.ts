@@ -100,8 +100,11 @@ export function calendarReminderTimestamp(
 ): number | null {
   if (event.impact !== "★★★") return null;
   if (!event.date || !event.time) return null;
-  const ts = Date.parse(`${event.date}T${event.time}:00`);
-  if (!Number.isFinite(ts)) return null;
+  // Use the absolute UTC instant the normalizer attached so this
+  // matches the pre-trade-warning chip on the Analyze page and is
+  // independent of `process.env.TZ`.
+  const ts = event.epochMs;
+  if (ts === null || !Number.isFinite(ts)) return null;
   const diff = ts - now.getTime();
   // 25–35-minute window. Tight enough that we don't fire repeatedly
   // for the same event across multiple ticks, wide enough that a 5-min

@@ -121,14 +121,32 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
 const PRE_TRADE_WARN_WINDOW_MIN = 30;
 const PRE_TRADE_TICK_MS = 30_000;
 
-function parseEventTs(date: string, time: string | null | undefined): number | null {
-  // Match the server-side parsing in lib/calendar.ts: interpret
-  // `YYYY-MM-DDTHH:MM:00` without a TZ offset, which both sides treat as
-  // local wall-clock. Users in the Indonesian feed's region see the same
-  // minute count the server uses to gate event freshness.
-  if (!date) return null;
-  const t = time && time.length >= 4 ? time : "00:00";
-  const ts = Date.parse(`${date}T${t}:00`);
+function eventEpoch(evt: CalendarEvent): number | null {
+  // Prefer the absolute UTC instant the server computed (see
+  // lib/calendar.ts → `eventEpochMs`). Falling back to a UTC-anchored
+  // parse of `date` + `time` keeps the warning working if an older
+  // payload without `epochMs` is still in the React Query cache, and
+  // keeps the "minutes until release" identical for users in any time
+  // zone — the previous naive `Date.parse(...)` relied on the browser's
+  // local TZ and silently drifted for non-WIB clients.
+  if (typeof evt.epochMs === "number" && Number.isFinite(evt.epochMs)) {
+    return evt.epochMs;
+  }
+  if (!evt.date) return null;
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(evt.date);
+  if (!dateMatch) return null;
+  const y = Number(dateMatch[1]);
+  const mon = Number(dateMatch[2]);
+  const d = Number(dateMatch[3]);
+  let h = 0;
+  let min = 0;
+  if (evt.time) {
+    const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(evt.time);
+    if (!timeMatch) return null;
+    h = Number(timeMatch[1]);
+    min = Number(timeMatch[2]);
+  }
+  const ts = Date.UTC(y, mon - 1, d, h, min, 0, 0);
   return Number.isFinite(ts) ? ts : null;
 }
 
@@ -153,7 +171,7 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
   for (const evt of events) {
     if (evt.actual) continue;
     if (evt.impact !== "★★★") continue;
-    const ts = parseEventTs(evt.date, evt.time);
+    const ts = eventEpoch(evt);
     if (ts === null) continue;
     const diffMin = (ts - now) / 60_000;
     if (diffMin <= 0 || diffMin > PRE_TRADE_WARN_WINDOW_MIN) continue;

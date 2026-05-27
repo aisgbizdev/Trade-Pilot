@@ -75,18 +75,22 @@ function Wrapper({ children }: { children: ReactNode }) {
   return <LanguageProvider>{children}</LanguageProvider>;
 }
 
-// Build a date/time string aligned with how the calendar feed encodes
-// events (server local wall clock, no TZ offset). Using offset relative
-// to `now` keeps the assertions stable regardless of which TZ the test
-// runner happens to live in.
+// Build an event keyed on an absolute Unix epoch (`epochMs`) so the
+// warning logic reads its "time until release" without re-parsing the
+// `date`/`time` strings. This means the assertions hold identically
+// regardless of which TZ the test runner — or, more importantly, the
+// end user's browser — happens to live in.
 function offsetEvent(offsetMs: number, overrides: Record<string, unknown> = {}) {
-  const target = new Date(Date.now() + offsetMs);
+  const epochMs = Date.now() + offsetMs;
+  const target = new Date(epochMs);
   const pad = (n: number) => String(n).padStart(2, "0");
-  const date = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}`;
-  const time = `${pad(target.getHours())}:${pad(target.getMinutes())}`;
+  // UTC formatting matches the server-side normalizer's TZ assumption.
+  const date = `${target.getUTCFullYear()}-${pad(target.getUTCMonth() + 1)}-${pad(target.getUTCDate())}`;
+  const time = `${pad(target.getUTCHours())}:${pad(target.getUTCMinutes())}`;
   return {
     date,
     time,
+    epochMs,
     currency: "USD",
     impact: "★★★",
     event: "Non-Farm Payrolls",
@@ -266,6 +270,51 @@ describe("PreTradeWarning on Analyze page", () => {
     expect(warning.textContent).toContain("Rilis berdampak tinggi");
     expect(warning.textContent).toContain("menit");
     localStorage.removeItem("app_lang");
+  });
+
+  it("reads the absolute epochMs so the warning is identical across user time zones", () => {
+    // Pin "now" to a fixed UTC instant so the assertion does not drift
+    // with the runner's clock. The event sits exactly 10 minutes ahead
+    // in absolute time, regardless of what wall-clock TZ a user is in.
+    vi.useFakeTimers();
+    const fixedNow = Date.UTC(2026, 4, 27, 12, 0, 0, 0);
+    vi.setSystemTime(fixedNow);
+    const eventEpoch = fixedNow + 10 * 60_000;
+
+    // Build the event with date/time strings that look like Tokyo
+    // (UTC+9) wall-clock — what a JST-based feed renderer might emit.
+    // The warning must IGNORE those strings and read `epochMs`, so the
+    // displayed "10 min" holds whether the user is in JST, WIB, or NY.
+    const tokyoWall = new Date(eventEpoch + 9 * 60 * 60_000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const misleadingEvent = {
+      date: `${tokyoWall.getUTCFullYear()}-${pad(tokyoWall.getUTCMonth() + 1)}-${pad(tokyoWall.getUTCDate())}`,
+      time: `${pad(tokyoWall.getUTCHours())}:${pad(tokyoWall.getUTCMinutes())}`,
+      epochMs: eventEpoch,
+      currency: "USD",
+      impact: "★★★",
+      event: "CPI",
+      actual: "",
+      forecast: "",
+      previous: "",
+      whyTraderCare: "",
+    };
+    mockRelevantCalendar.mockReturnValue({
+      data: { events: [misleadingEvent] },
+      isLoading: false,
+      isError: false,
+    });
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+    const warning = screen.getByTestId("pre-trade-warning");
+    expect(warning).toBeTruthy();
+    // 10 min before the event, the warning should report "10" minutes
+    // — proving the absolute epoch was used and the wall-clock strings
+    // (which would say ~9h away if parsed as local) were ignored.
+    expect(warning.getAttribute("data-event-minutes")).toBe("10");
   });
 
   it("auto-clears once the event time has passed (tick advances)", () => {

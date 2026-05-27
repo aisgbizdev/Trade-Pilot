@@ -9,6 +9,12 @@ export interface CalendarEvent {
   forecast: string;
   actual: string;
   date: string;
+  // Absolute UTC instant from the server (Unix epoch ms). Lets clients
+  // in any time zone compute "time until release" without re-parsing
+  // the wall-clock `date` + `time` strings. Null when the feed omitted
+  // a time or the date was malformed. Optional in the type so older
+  // cached payloads (server <Task #159) still deserialize.
+  epochMs?: number | null;
   whyTraderCare: string;
 }
 

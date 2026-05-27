@@ -74,6 +74,35 @@ describe("getRelevantCalendar — lookbackHours datetime precision", () => {
     expect(events.some((e) => e.event === "Old CPI release")).toBe(false);
   });
 
+  it("normalizes event time as absolute UTC epochMs (deterministic regardless of process TZ)", async () => {
+    // The normalized event should carry an absolute Unix instant
+    // pegged to UTC, NOT a value that drifts with `process.env.TZ`.
+    // We assert exact equality with `Date.UTC(...)` so a regression
+    // back to `Date.parse("YYYY-MM-DDTHH:MM:00")` (which silently uses
+    // the host's local TZ) would fail this test on any non-UTC runner
+    // and on a UTC runner alike.
+    const NOW = new Date("2026-04-30T12:00:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+
+    globalThis.fetch = vi.fn(async () =>
+      calendarResponse([
+        {
+          date: "2026-04-30",
+          time: "2026-04-30 14:30",
+          currency: "USD",
+          event: "Powell testimony",
+          impact: "★★★",
+        },
+      ]),
+    ) as unknown as typeof fetch;
+
+    const events = await getRelevantCalendar("DXY");
+    const powell = events.find((e) => e.event === "Powell testimony");
+    expect(powell).toBeDefined();
+    expect(powell!.epochMs).toBe(Date.UTC(2026, 3, 30, 14, 30, 0, 0));
+  });
+
   it("includes an event that printed 18 hours ago when lookbackHours=24", async () => {
     const NOW = new Date("2026-04-30T12:00:00Z");
     vi.useFakeTimers();
@@ -102,6 +131,7 @@ describe("formatCalendarForPrompt — sanitizer", () => {
     return {
       date: "2026-04-30",
       time: "12:00",
+      epochMs: Date.UTC(2026, 3, 30, 12, 0, 0, 0),
       currency: "USD",
       event: "CPI",
       impact: "★★★",

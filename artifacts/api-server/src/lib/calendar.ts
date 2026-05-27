@@ -38,8 +38,13 @@ interface CalendarRaw {
 }
 
 export interface CalendarEvent {
-  date: string;          // YYYY-MM-DD
-  time: string | null;   // best-effort HH:MM (local feed) or null
+  date: string;          // YYYY-MM-DD (release date as published by feed)
+  time: string | null;   // best-effort HH:MM in the feed's published TZ (treated as UTC) or null
+  // Absolute event start as a Unix epoch in ms. Lets clients in any
+  // time zone compute "time until release" without re-parsing the
+  // wall-clock string. `null` when the feed only supplied a date (no
+  // time). See `normalize` for the TZ assumption.
+  epochMs: number | null;
   currency: string;
   event: string;
   impact: string | null; // "★", "★★", "★★★" or null
@@ -57,13 +62,49 @@ async function fetchCalendar(): Promise<CalendarRaw[]> {
   return cache.data;
 }
 
+/**
+ * TZ assumption: the upstream feed publishes `date` + `time` as a
+ * timestamp we treat as UTC. The previous implementation parsed via
+ * naive `Date.parse("YYYY-MM-DDTHH:MM:00")`, which silently used the
+ * server's local TZ — fine on Replit (UTC) but a latent bug anywhere
+ * else. We anchor on UTC explicitly here so the resulting `epochMs` is
+ * deterministic regardless of `process.env.TZ`, and every downstream
+ * consumer (server lookback filter, watchlist reminder window,
+ * pre-trade-warning chip on the Analyze page) reads from the same
+ * absolute reference. If the upstream feed ever switches to a fixed
+ * non-UTC TZ (e.g. WIB / America/New_York), add a `tz` field to
+ * `CalendarRaw` and shift here — DO NOT push that work onto each
+ * consumer.
+ */
+function eventEpochMs(date: string, time: string | null): number | null {
+  if (!date) return null;
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!dateMatch) return null;
+  const [, yStr, monStr, dStr] = dateMatch;
+  const y = Number(yStr);
+  const mon = Number(monStr);
+  const d = Number(dStr);
+  let h = 0;
+  let min = 0;
+  if (time) {
+    const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(time);
+    if (!timeMatch) return null;
+    h = Number(timeMatch[1]);
+    min = Number(timeMatch[2]);
+  }
+  const ts = Date.UTC(y, mon - 1, d, h, min, 0, 0);
+  return Number.isFinite(ts) ? ts : null;
+}
+
 function normalize(raw: CalendarRaw): CalendarEvent {
   // Upstream `time` is shaped like "2026-04-29 19:30" — pull just the
   // wall-clock half so the UI doesn't show a duplicated date.
   const time = raw.time ? raw.time.split(" ")[1] ?? null : null;
+  const normalizedTime = time && time.length > 0 ? time : null;
   return {
     date: raw.date,
-    time: time && time.length > 0 ? time : null,
+    time: normalizedTime,
+    epochMs: eventEpochMs(raw.date, normalizedTime),
     currency: raw.currency,
     event: raw.event,
     impact: raw.impact && raw.impact.length > 0 ? raw.impact : null,
@@ -97,37 +138,30 @@ export async function getRelevantCalendar(
   const cutoffMs = Date.now() - lookbackHours * 60 * 60 * 1000;
 
   return all
+    .map(normalize)
     .filter((e) => {
       if (!currencies.includes(e.currency)) return false;
       // Prefer datetime precision so a 24h lookback is really 24h, not
-      // anywhere from 24h to ~48h depending on the wall clock. The feed
-      // emits time strings like "2026-04-29 19:30" (server local). Fall
-      // back to a date-only conservative comparison when time is absent.
-      const wallTime = e.time ?? "";
-      const datePart = e.date;
-      const timePart =
-        wallTime && wallTime.includes(" ")
-          ? wallTime.split(" ")[1] ?? "00:00"
-          : wallTime || "00:00";
-      const ts = Date.parse(`${datePart}T${timePart}:00`);
-      if (Number.isFinite(ts)) {
-        return ts >= cutoffMs;
+      // anywhere from 24h to ~48h depending on the wall clock. The
+      // normalized event carries an absolute `epochMs` computed in UTC;
+      // when the feed omitted the time we fall back to a date-only
+      // conservative comparison.
+      if (e.epochMs !== null) {
+        return e.epochMs >= cutoffMs;
       }
       const cutoffDate = new Date(cutoffMs).toISOString().split("T")[0]!;
       return e.date >= cutoffDate;
     })
-    .map(normalize)
     .sort(
       (a, b) =>
         (IMPACT_RANK[b.impact ?? ""] ?? 0) -
           (IMPACT_RANK[a.impact ?? ""] ?? 0) ||
-        // Tie-break by full datetime, not just date, so that within the
-        // same impact tier the earlier wall-clock event wins. Without
-        // this, two same-day ★★★ events come back in upstream-feed order
-        // and the warning path can truncate the imminent one first.
-        `${a.date}T${a.time ?? "00:00"}`.localeCompare(
-          `${b.date}T${b.time ?? "00:00"}`,
-        ),
+        // Tie-break by absolute time so that within the same impact
+        // tier the earlier wall-clock event wins. Without this, two
+        // same-day ★★★ events come back in upstream-feed order and the
+        // warning path can truncate the imminent one first.
+        (a.epochMs ?? Number.POSITIVE_INFINITY) -
+          (b.epochMs ?? Number.POSITIVE_INFINITY),
     )
     .slice(0, maxItems);
 }
