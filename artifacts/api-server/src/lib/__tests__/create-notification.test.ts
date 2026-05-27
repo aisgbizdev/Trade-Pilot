@@ -145,7 +145,7 @@ describe("createNotification", () => {
         { title: "Push Gagal", message: "Tetap insert in-app" },
         { url: "/" },
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(true);
 
     // The in-app row was still inserted even though push threw.
     const rows = await db

@@ -78,7 +78,12 @@ export default function NotificationsPage() {
   };
 
   const handlePrefToggle = async (
-    key: "pushExpiry" | "pushBroadcast" | "pushDailySummary",
+    key:
+      | "pushExpiry"
+      | "pushBroadcast"
+      | "pushDailySummary"
+      | "pushMarketNews"
+      | "pushCalendarEvents",
     value: boolean,
   ) => {
     try {
@@ -365,6 +370,38 @@ export default function NotificationsPage() {
                   onCheckedChange={(v) => handlePrefToggle("pushDailySummary", v)}
                   disabled={updatePushPrefs.isPending}
                   data-testid="switch-pref-daily-summary"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_market_news_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_market_news_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushMarketNews}
+                  onCheckedChange={(v) => handlePrefToggle("pushMarketNews", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-market-news"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_calendar_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_calendar_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.pushCalendarEvents}
+                  onCheckedChange={(v) => handlePrefToggle("pushCalendarEvents", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-calendar"
                 />
               </div>
             </div>

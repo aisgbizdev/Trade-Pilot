@@ -1387,6 +1387,8 @@ export const GetPushPrefsResponse = zod.object({
   pushExpiry: zod.boolean(),
   pushBroadcast: zod.boolean(),
   pushDailySummary: zod.boolean(),
+  pushMarketNews: zod.boolean(),
+  pushCalendarEvents: zod.boolean(),
 });
 
 /**
@@ -1396,12 +1398,16 @@ export const UpdatePushPrefsBody = zod.object({
   pushExpiry: zod.boolean().optional(),
   pushBroadcast: zod.boolean().optional(),
   pushDailySummary: zod.boolean().optional(),
+  pushMarketNews: zod.boolean().optional(),
+  pushCalendarEvents: zod.boolean().optional(),
 });
 
 export const UpdatePushPrefsResponse = zod.object({
   pushExpiry: zod.boolean(),
   pushBroadcast: zod.boolean(),
   pushDailySummary: zod.boolean(),
+  pushMarketNews: zod.boolean(),
+  pushCalendarEvents: zod.boolean(),
 });
 
 /**

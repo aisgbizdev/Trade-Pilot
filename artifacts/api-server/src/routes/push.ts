@@ -82,6 +82,8 @@ const prefsSchema = z.object({
   pushExpiry: z.boolean().optional(),
   pushBroadcast: z.boolean().optional(),
   pushDailySummary: z.boolean().optional(),
+  pushMarketNews: z.boolean().optional(),
+  pushCalendarEvents: z.boolean().optional(),
 });
 
 router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
@@ -90,6 +92,8 @@ router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
       pushExpiry: users.pushExpiry,
       pushBroadcast: users.pushBroadcast,
       pushDailySummary: users.pushDailySummary,
+      pushMarketNews: users.pushMarketNews,
+      pushCalendarEvents: users.pushCalendarEvents,
     })
     .from(users)
     .where(eq(users.id, req.userId!))
@@ -139,6 +143,10 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
   if (typeof parsed.data.pushBroadcast === "boolean") updates["pushBroadcast"] = parsed.data.pushBroadcast;
   if (typeof parsed.data.pushDailySummary === "boolean")
     updates["pushDailySummary"] = parsed.data.pushDailySummary;
+  if (typeof parsed.data.pushMarketNews === "boolean")
+    updates["pushMarketNews"] = parsed.data.pushMarketNews;
+  if (typeof parsed.data.pushCalendarEvents === "boolean")
+    updates["pushCalendarEvents"] = parsed.data.pushCalendarEvents;
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: "Tidak ada perubahan" });
     return;
@@ -151,6 +159,8 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
       pushExpiry: users.pushExpiry,
       pushBroadcast: users.pushBroadcast,
       pushDailySummary: users.pushDailySummary,
+      pushMarketNews: users.pushMarketNews,
+      pushCalendarEvents: users.pushCalendarEvents,
     });
   res.json(updated);
 });

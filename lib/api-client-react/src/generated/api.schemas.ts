@@ -43,6 +43,8 @@ export interface PushPrefs {
   pushExpiry: boolean;
   pushBroadcast: boolean;
   pushDailySummary: boolean;
+  pushMarketNews: boolean;
+  pushCalendarEvents: boolean;
 }
 
 export interface PushTestResult {
@@ -54,6 +56,8 @@ export interface PushPrefsUpdate {
   pushExpiry?: boolean;
   pushBroadcast?: boolean;
   pushDailySummary?: boolean;
+  pushMarketNews?: boolean;
+  pushCalendarEvents?: boolean;
 }
 
 export interface DailySummarySettings {

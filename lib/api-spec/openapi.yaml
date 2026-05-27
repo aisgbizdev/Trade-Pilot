@@ -1732,10 +1732,16 @@ components:
           type: boolean
         pushDailySummary:
           type: boolean
+        pushMarketNews:
+          type: boolean
+        pushCalendarEvents:
+          type: boolean
       required:
         - pushExpiry
         - pushBroadcast
         - pushDailySummary
+        - pushMarketNews
+        - pushCalendarEvents
 
     PushTestResult:
       type: object
@@ -1754,6 +1760,10 @@ components:
         pushBroadcast:
           type: boolean
         pushDailySummary:
+          type: boolean
+        pushMarketNews:
+          type: boolean
+        pushCalendarEvents:
           type: boolean
 
     DailySummarySettings:

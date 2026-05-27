@@ -13,6 +13,21 @@ export interface NotificationContent {
   type?: NotificationType;
   /** Broadcast tag for the in-app notification row (admin broadcasts only). */
   targetRole?: Role | null;
+  /**
+   * Category slug recognised by `lib/notification-guards.ts`
+   * (e.g. "market_news", "calendar_event"). Persisted to
+   * `notifications.category` so the per-category frequency cap can
+   * count rows without depending on title/message string-matching.
+   */
+  category?: string | null;
+  /**
+   * Optional cross-run dedupe key. When set, a UNIQUE constraint on
+   * `notifications.dedupe_key` ensures the same key can only ever
+   * insert one row — so repeated job ticks for the same news item or
+   * calendar event collapse into a single delivery. When the insert
+   * conflicts, the call resolves without sending push.
+   */
+  dedupeKey?: string | null;
 }
 
 /**
@@ -50,16 +65,38 @@ export async function createNotification(
   userId: number,
   content: NotificationContent,
   push?: PushSpec | null,
-): Promise<void> {
+): Promise<boolean> {
   const type = content.type ?? "info";
 
-  await db.insert(notifications).values({
-    userId,
-    title: content.title,
-    message: content.message,
-    type,
-    ...(content.targetRole !== undefined ? { targetRole: content.targetRole } : {}),
-  });
+  // When a dedupeKey is provided, rely on the UNIQUE index to collapse
+  // races between concurrent ticks: if a row with this key already
+  // exists, `returning` comes back empty and we skip the SSE + push so
+  // the user only ever sees one delivery for the same event.
+  if (content.dedupeKey) {
+    const inserted = await db
+      .insert(notifications)
+      .values({
+        userId,
+        title: content.title,
+        message: content.message,
+        type,
+        ...(content.targetRole !== undefined ? { targetRole: content.targetRole } : {}),
+        ...(content.category !== undefined ? { category: content.category } : {}),
+        dedupeKey: content.dedupeKey,
+      })
+      .onConflictDoNothing({ target: notifications.dedupeKey })
+      .returning({ id: notifications.id });
+    if (inserted.length === 0) return false;
+  } else {
+    await db.insert(notifications).values({
+      userId,
+      title: content.title,
+      message: content.message,
+      type,
+      ...(content.targetRole !== undefined ? { targetRole: content.targetRole } : {}),
+      ...(content.category !== undefined ? { category: content.category } : {}),
+    });
+  }
 
   notificationsEmitter.emitForUser(userId, {
     title: content.title,
@@ -78,6 +115,7 @@ export async function createNotification(
       logger.warn({ err, userId }, "Background push delivery failed");
     });
   }
+  return true;
 }
 
 /**

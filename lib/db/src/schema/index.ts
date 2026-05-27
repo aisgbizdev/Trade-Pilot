@@ -148,6 +148,13 @@ export const users = pgTable("users", {
   //    idempotency even if the scheduler ticks multiple times after the
   //    user's scheduled time.
   pushDailySummary: boolean("push_daily_summary").notNull().default(true),
+  // Tier 1 push categories (task #140). Same opt-out pattern as the
+  // older `pushExpiry` / `pushBroadcast` toggles — when false the
+  // OS-level push is suppressed but the in-app notification still
+  // surfaces in /notifications. Defaults true so the feature is on for
+  // existing accounts without forcing a re-onboarding step.
+  pushMarketNews: boolean("push_market_news").notNull().default(true),
+  pushCalendarEvents: boolean("push_calendar_events").notNull().default(true),
   dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(false),
   dailySummaryTime: text("daily_summary_time").notNull().default("07:00"),
   dailySummaryTimezone: text("daily_summary_timezone").notNull().default("Asia/Jakarta"),
@@ -274,16 +281,34 @@ export const feedback = pgTable("feedback", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const notifications = pgTable("notifications", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-  targetRole: roleEnum("target_role"),
-  title: text("title").notNull(),
-  message: text("message").notNull(),
-  type: notificationTypeEnum("type").notNull().default("info"),
-  readAt: timestamp("read_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    targetRole: roleEnum("target_role"),
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    type: notificationTypeEnum("type").notNull().default("info"),
+    readAt: timestamp("read_at"),
+    // Category tag used by the anti-annoyance engine in
+    // `lib/notification-guards.ts` (task #140) to count per-category
+    // sends inside a rolling window without depending on title/message
+    // string-matching. Existing jobs can leave it null — the guards
+    // only care about rows that opt into a category.
+    category: text("category"),
+    // Cross-run dedupe key (task #140). When set, the dispatcher
+    // checks for an existing row with the same key before inserting,
+    // so a 5-minute job tick can never deliver the same news/calendar
+    // event twice to the same user. Postgres unique constraints allow
+    // multiple NULLs, so legacy rows without a key coexist fine.
+    dedupeKey: text("dedupe_key"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    dedupeKeyUnique: uniqueIndex("notifications_dedupe_key_unique").on(t.dedupeKey),
+  }),
+);
 
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: serial("id").primaryKey(),

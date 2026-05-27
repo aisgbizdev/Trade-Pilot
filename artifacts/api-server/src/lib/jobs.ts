@@ -6,6 +6,10 @@ import { createNotification, createNotificationsForUsers } from "./create-notifi
 import { resolvePendingOutcomes } from "./outcomes";
 import { checkPriceAlerts } from "./price-alerts";
 import { dispatchDailySummaries } from "./daily-summary";
+import {
+  dispatchWatchlistNewsAlerts,
+  dispatchCalendarReminders,
+} from "./watchlist-alerts";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -427,6 +431,26 @@ export function startBackgroundJobs(): void {
   // on daily_digests plus the lastSentDate guard.
   const dailySummaryInterval = 60 * 1000;
   schedule(dispatchDailySummaries, dailySummaryInterval, 18000);
+  // Tier 1 push notifications (task #140). Both dispatchers run on
+  // a 5-min cadence — frequent enough to catch a 30-min-out calendar
+  // event reliably, sparse enough not to hammer upstream feeds. Each
+  // tick goes through the shared anti-annoyance guards (quiet hours,
+  // frequency caps, dedupe) inside the dispatcher itself.
+  const watchlistAlertInterval = 5 * 60 * 1000;
+  schedule(
+    async () => {
+      await dispatchWatchlistNewsAlerts();
+    },
+    watchlistAlertInterval,
+    22000,
+  );
+  schedule(
+    async () => {
+      await dispatchCalendarReminders();
+    },
+    watchlistAlertInterval,
+    28000,
+  );
 
   logger.info({ retentionDays: ANALYSES_RETENTION_DAYS }, "Background notification jobs started");
 }
