@@ -31,18 +31,14 @@ export const en = {
     register: "Sign Up",
     tagline_part1: "See the Market Clearly.",
     tagline_part2: "Decide with Confidence.",
-    subtitle_full: "AI-powered analysis that helps you understand the market — not just follow it.",
+    subtitle_full: "Stop guessing. Start understanding the market with AI.",
+    always_free_note: "Always free. No paid tier.",
     cta_start: "Start Your First Analysis — Free",
     cta_login: "Already have an account? Sign In",
-    section_features_tag: "Platform Capabilities",
-    section_features_title: "More Than Just",
-    section_features_highlight: "Signals & Indicators",
     cta_bottom_title: "Try Now —",
     cta_bottom_highlight: "Free",
-    cta_bottom_subtitle: "Register in 30 seconds. First analysis available immediately.",
-    no_credit_card: "No credit card",
-    secure_data: "Secure data",
-    cta_signup: "Register Now",
+    cta_bottom_subtitle: "30 seconds to sign up. Your first analysis is instant.",
+    cta_signup: "Sign Up Free",
     footer: "Trade Pilot is a decision-support tool, not financial advice or a trading service.",
     powered_by_prefix: "Powered by",
     powered_by_brand: "newsmaker.id",
@@ -50,48 +46,10 @@ export const en = {
     stats_instruments: "Instruments",
     stats_timeframes: "Timeframes",
     stats_lang: "Bilingual",
-    features: [
-      {
-        title: "Powered by Generative AI",
-        description: "Deep insight from the latest large language models — designed to clarify the market, not hype it.",
-      },
-      {
-        title: "Beginner & Pro Mode",
-        description: "Beginner Mode keeps the output concise and guided. Pro Mode adds full technical and fundamental depth.",
-      },
-      {
-        title: "Validity per Timeframe",
-        description: "1m analysis valid for 15 minutes. 1D valid for 36 hours. Always know when analysis is still relevant.",
-      },
-      {
-        title: "No Signals. Just Clear Market Insight.",
-        description: "We don't sell signals. We help you read the market and decide for yourself — confidently.",
-      },
-    ],
-    what_you_get_tag: "What's Inside Every Analysis",
-    what_you_get_title: "What You Actually Get",
-    what_you_get_subtitle: "Every analysis breaks the market down into clear, structured layers — so you understand before you decide.",
-    what_you_get_items: [
-      {
-        title: "Market Condition",
-        description: "Trend, range, or volatile — explained in plain language so you know the terrain.",
-      },
-      {
-        title: "Directional Bias",
-        description: "Bullish, bearish, or wait. A clear leaning — never a BUY/SELL command.",
-      },
-      {
-        title: "Risk vs Opportunity",
-        description: "See the upside and the downside side-by-side before you act.",
-      },
-      {
-        title: "Scenario Breakdown",
-        description: "Main scenario, alternative scenario, and a wait/no-trade option.",
-      },
-      {
-        title: "Invalidation Logic",
-        description: "Know exactly when your idea is wrong — listed at the top of every analysis.",
-      },
+    value_props: [
+      "Market insight, not blind signals",
+      "First analysis in under 30 seconds",
+      "Know exactly when you're wrong",
     ],
   },
   auth: {

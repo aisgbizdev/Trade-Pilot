@@ -1,18 +1,11 @@
 import { Link } from "wouter";
 import { BrandLogo } from "@/components/brand-logo";
 import {
-  BarChart3,
-  Clock,
   ChevronRight,
   Brain,
-  Lock,
   Shield,
-  LineChart,
-  Compass,
-  Scale,
-  GitBranch,
-  AlertTriangle,
-  Sparkles,
+  Zap,
+  Target,
   ArrowUpRight,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -22,29 +15,10 @@ import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ContinuousTicker } from "@/components/continuous-ticker";
 
-const FEATURE_ICON_MAP = [Brain, BarChart3, Clock, Sparkles];
-
-// Feature accent palette: gold/amber family for brand-aligned cards.
-// The third entry intentionally keeps emerald (signal/safe), and the
-// fourth keeps amber+orange for warm variation — matches the brand.
-const FEATURE_STYLES = [
-  { color: "from-amber-400/20 to-yellow-500/20", iconColor: "text-amber-300", glow: "group-hover:shadow-[0_0_20px_rgba(245,197,24,0.35)]" },
-  { color: "from-yellow-400/20 to-amber-500/20", iconColor: "text-yellow-300", glow: "group-hover:shadow-[0_0_20px_rgba(255,210,74,0.35)]" },
-  { color: "from-emerald-500/20 to-teal-500/20", iconColor: "text-emerald-400", glow: "group-hover:shadow-[0_0_20px_rgba(52,211,153,0.3)]" },
-  { color: "from-amber-500/20 to-orange-500/20", iconColor: "text-amber-400", glow: "group-hover:shadow-[0_0_20px_rgba(251,191,36,0.3)]" },
-];
-
-const WHAT_YOU_GET_ICONS = [LineChart, Compass, Scale, GitBranch, AlertTriangle];
-
-// "What you get" tiles — gold/amber variations except where a semantic
-// color carries meaning (emerald = bullish, rose = risk).
-const WHAT_YOU_GET_STYLES = [
-  { color: "from-amber-400/15 to-yellow-500/15", iconColor: "text-amber-300" },
-  { color: "from-yellow-400/15 to-amber-500/15", iconColor: "text-yellow-300" },
-  { color: "from-emerald-500/15 to-amber-500/15", iconColor: "text-emerald-400" },
-  { color: "from-amber-500/15 to-orange-500/15", iconColor: "text-amber-400" },
-  { color: "from-rose-500/15 to-orange-500/15", iconColor: "text-rose-400" },
-];
+// One icon per value-prop, in display order. Hard-coded here so locale
+// files stay pure strings and translators don't have to deal with icon
+// identifiers. Keep the array length in sync with `landing.value_props`.
+const VALUE_PROP_ICONS = [Brain, Zap, Target];
 
 export default function LandingPage() {
   const { t } = useTranslation();
@@ -122,11 +96,11 @@ export default function LandingPage() {
               <span className="text-white">{t.landing.tagline_part2}</span>
             </h1>
 
-            <p className="text-sm text-slate-200 leading-relaxed mb-8 max-w-xs mx-auto" data-testid="text-hero-subtitle">
+            <p className="text-sm text-slate-200 leading-relaxed mb-7 max-w-xs mx-auto" data-testid="text-hero-subtitle">
               {t.landing.subtitle_full}
             </p>
 
-            <div className="flex flex-col gap-3 mb-10">
+            <div className="flex flex-col gap-3 mb-3">
               <Link href="/register" className="block">
                 <button
                   className="w-full h-12 rounded-xl font-semibold btn-premium flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
@@ -145,6 +119,16 @@ export default function LandingPage() {
                 </button>
               </Link>
             </div>
+
+            {/* Subtle, confident reassurance line — replaces the old loud
+                "no credit card" chip. Trade Pilot is genuinely free with
+                no paid tier, so the copy says exactly that, quietly. */}
+            <p
+              className="text-[11px] text-amber-100/70 mb-8"
+              data-testid="text-always-free-note"
+            >
+              {t.landing.always_free_note}
+            </p>
 
             <div className="grid grid-cols-4 gap-3">
               {stats.map(({ value, label }) => (
@@ -165,73 +149,32 @@ export default function LandingPage() {
           aria-hidden="true"
         />
 
-        {/* WHAT YOU ACTUALLY GET */}
-        <section className="px-4 pt-2 pb-10" data-testid="section-what-you-get">
-          <div className="text-center mb-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">
-              {t.landing.what_you_get_tag}
-            </p>
-            <h2 className="text-xl font-bold text-foreground">{t.landing.what_you_get_title}</h2>
-            <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-xs mx-auto">
-              {t.landing.what_you_get_subtitle}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-            {t.landing.what_you_get_items.map((item, idx) => {
-              const Icon = WHAT_YOU_GET_ICONS[idx] ?? Sparkles;
-              const style = WHAT_YOU_GET_STYLES[idx] ?? WHAT_YOU_GET_STYLES[0];
+        {/* VALUE PROPS — one tight strip of 3 one-liners. No paragraphs,
+            no card descriptions. Detail belongs inside the app, not on
+            the front door. */}
+        <section
+          className="px-4 pt-2 pb-10"
+          data-testid="section-value-props"
+        >
+          <ul className="space-y-2.5">
+            {t.landing.value_props.map((text, idx) => {
+              const Icon = VALUE_PROP_ICONS[idx] ?? Brain;
               return (
-                <div
+                <li
                   key={idx}
-                  className="flex gap-3.5 p-4 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all"
-                  data-testid={`card-what-you-get-${idx}`}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card"
+                  data-testid={`item-value-prop-${idx}`}
                 >
-                  <div
-                    className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.color} flex items-center justify-center shrink-0 border border-white/10`}
-                  >
-                    <Icon className={`w-5 h-5 ${style.iconColor}`} />
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400/15 to-yellow-500/15 border border-amber-400/20 flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-amber-400" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-foreground mb-1">{item.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-                  </div>
-                </div>
+                  <span className="text-sm font-medium text-foreground leading-snug">
+                    {text}
+                  </span>
+                </li>
               );
             })}
-          </div>
-        </section>
-
-        {/* FEATURE CARDS */}
-        <section className="px-4 py-8">
-          <div className="text-center mb-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">{t.landing.section_features_tag}</p>
-            <h2 className="text-xl font-bold text-foreground">
-              {t.landing.section_features_title}{" "}
-              <span className="gradient-text">{t.landing.section_features_highlight}</span>
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {t.landing.features.map((feature, idx) => {
-              const Icon = FEATURE_ICON_MAP[idx] ?? Brain;
-              const style = FEATURE_STYLES[idx] ?? FEATURE_STYLES[0];
-              return (
-                <div
-                  key={idx}
-                  className={`group flex gap-3.5 p-4 rounded-2xl border border-border bg-card hover:border-primary/30 transition-all duration-300 ${style.glow}`}
-                  data-testid={`card-feature-${idx}`}
-                >
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.color} flex items-center justify-center shrink-0 border border-white/10`}>
-                    <Icon className={`w-5 h-5 ${style.iconColor}`} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground mb-1">{feature.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          </ul>
         </section>
 
         {/* SOLID PRIME SPONSOR CTA — separates the AI tool (free) from
@@ -288,15 +231,22 @@ export default function LandingPage() {
                 <p className="text-xs text-slate-200 leading-relaxed mb-5">
                   {t.landing.cta_bottom_subtitle}
                 </p>
-                <div className="flex items-center justify-center gap-4 mb-5 text-xs text-slate-200">
-                  <span className="flex items-center gap-1"><Lock className="w-3 h-3 text-emerald-400" /> {t.landing.no_credit_card}</span>
-                  <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-amber-300" /> {t.landing.secure_data}</span>
-                </div>
                 <Link href="/register">
                   <button className="w-full h-11 rounded-xl font-semibold btn-premium hover:opacity-90 transition-all" data-testid="button-signup-bottom">
                     {t.landing.cta_signup}
                   </button>
                 </Link>
+                {/* Single low-key reassurance line — same understated tone
+                    as the hero microcopy. Replaces the old two-chip row
+                    (no-credit-card + secure-data) which felt like a
+                    discount banner. */}
+                <p
+                  className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-amber-100/70"
+                  data-testid="text-bottom-always-free-note"
+                >
+                  <Shield className="w-3 h-3 text-amber-300/80" />
+                  {t.landing.always_free_note}
+                </p>
               </div>
             </div>
           </div>

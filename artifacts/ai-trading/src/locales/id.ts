@@ -33,18 +33,14 @@ export const id: Translations = {
     register: "Daftar",
     tagline_part1: "Lihat Pasar Lebih Jernih.",
     tagline_part2: "Putuskan Lebih Yakin.",
-    subtitle_full: "Analisis bertenaga AI yang membantu kamu MEMAHAMI pasar — bukan sekadar mengikutinya.",
+    subtitle_full: "Berhenti menebak. Mulai memahami pasar dengan AI.",
+    always_free_note: "Selalu gratis. Tanpa tier berbayar.",
     cta_start: "Mulai Analisis Pertamamu — Gratis",
     cta_login: "Sudah punya akun? Masuk",
-    section_features_tag: "Kemampuan Platform",
-    section_features_title: "Lebih dari Sekadar",
-    section_features_highlight: "Sinyal & Indikator",
     cta_bottom_title: "Coba Sekarang —",
     cta_bottom_highlight: "Gratis",
-    cta_bottom_subtitle: "Daftar dalam 30 detik. Analisis pertama langsung tersedia.",
-    no_credit_card: "Tanpa kartu kredit",
-    secure_data: "Data aman",
-    cta_signup: "Daftar Sekarang",
+    cta_bottom_subtitle: "Daftar 30 detik. Analisis pertamamu langsung jalan.",
+    cta_signup: "Daftar Gratis",
     footer: "Trade Pilot adalah alat pendukung keputusan, bukan saran keuangan atau layanan trading.",
     powered_by_prefix: "Didukung oleh",
     powered_by_brand: "newsmaker.id",
@@ -52,48 +48,10 @@ export const id: Translations = {
     stats_instruments: "Instrumen",
     stats_timeframes: "Timeframe",
     stats_lang: "Dwibahasa",
-    features: [
-      {
-        title: "Didukung AI Generatif",
-        description: "Insight mendalam dari large language model terbaru — dirancang untuk memperjelas pasar, bukan menghebohkannya.",
-      },
-      {
-        title: "Mode Pemula & Pro",
-        description: "Mode Pemula menjaga output ringkas dan terbimbing. Mode Pro menambah kedalaman teknikal dan fundamental penuh.",
-      },
-      {
-        title: "Validitas per Timeframe",
-        description: "Analisis 1m berlaku 15 menit. 1D berlaku 36 jam. Selalu tahu kapan analisis masih relevan.",
-      },
-      {
-        title: "Bukan Sinyal. Hanya Insight Pasar yang Jelas.",
-        description: "Kami tidak jual sinyal. Kami bantu kamu MEMBACA pasar dan memutuskan sendiri — dengan yakin.",
-      },
-    ],
-    what_you_get_tag: "Isi Setiap Analisis",
-    what_you_get_title: "Apa yang Sebenarnya Kamu Dapat",
-    what_you_get_subtitle: "Setiap analisis memecah pasar menjadi lapisan yang jelas dan terstruktur — supaya kamu paham sebelum memutuskan.",
-    what_you_get_items: [
-      {
-        title: "Kondisi Pasar",
-        description: "Tren, range, atau volatil — dijelaskan dalam bahasa sederhana supaya kamu kenal medannya.",
-      },
-      {
-        title: "Bias Arah",
-        description: "Bullish, bearish, atau tunggu. Kecenderungan yang jelas — bukan perintah BUY/SELL.",
-      },
-      {
-        title: "Risiko vs Peluang",
-        description: "Lihat upside dan downside berdampingan sebelum mengambil tindakan.",
-      },
-      {
-        title: "Breakdown Skenario",
-        description: "Skenario utama, skenario alternatif, dan opsi tunggu / tanpa posisi.",
-      },
-      {
-        title: "Logika Pembatal",
-        description: "Tahu persis kapan ide kamu salah — daftar kondisinya ada di paling atas tiap analisis.",
-      },
+    value_props: [
+      "Insight pasar, bukan sinyal buta",
+      "Analisis pertama di bawah 30 detik",
+      "Tahu persis kapan kamu salah",
     ],
   },
   auth: {
