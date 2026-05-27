@@ -12,6 +12,7 @@ import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { TradingViewMiniChart, type MiniChartDateRange } from "@/components/tradingview-mini-chart";
 import { instrumentToTradingViewSymbol } from "@/lib/tradingview-symbols";
 import { WatchlistStar } from "@/components/watchlist-star";
+import { MarketSessionsBadge } from "@/components/market-sessions-badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
@@ -265,6 +266,10 @@ export default function AnalyzePage() {
               {hourlyQuota.remaining}/{hourlyQuota.limit} {t.analyze.quota_hour_short} · {dailyQuota.remaining}/{dailyQuota.limit} {t.analyze.quota_day_short}
             </span>
           )}
+        </div>
+
+        <div className="mb-4 flex justify-start">
+          <MarketSessionsBadge />
         </div>
 
         <div className="space-y-5">
