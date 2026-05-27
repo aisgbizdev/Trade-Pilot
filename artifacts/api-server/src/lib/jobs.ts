@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { createNotification, createNotificationsForUsers } from "./create-notification";
 import { resolvePendingOutcomes } from "./outcomes";
 import { checkPriceAlerts } from "./price-alerts";
+import { checkUserPriceAlerts } from "./user-price-alerts";
 import { dispatchDailySummaries } from "./daily-summary";
 import {
   dispatchWatchlistNewsAlerts,
@@ -431,6 +432,11 @@ export function startBackgroundJobs(): void {
   // upstream feed's 15s cache TTL closely enough without hammering it).
   const priceAlertInterval = 30 * 1000;
   schedule(checkPriceAlerts, priceAlertInterval, 12000);
+  // User-defined price alerts (task #148). Same 30s cadence as the
+  // analysis-bound watcher above — both share the 15s live-prices cache
+  // so the extra tick is cheap. Two-tick crossing detection inside the
+  // checker prevents false-fires on the very first poll after creation.
+  schedule(checkUserPriceAlerts, priceAlertInterval, 14000);
   // Per-user morning digest (task #113). 60s tick so we can fire within
   // a minute of the user's chosen local time. Idempotency is enforced
   // inside dispatchDailySummaries via the per-user-per-day unique index

@@ -1112,6 +1112,71 @@ export interface AddWatchlistBody {
   instrument: string;
 }
 
+export type UserPriceAlertTriggerDirection =
+  (typeof UserPriceAlertTriggerDirection)[keyof typeof UserPriceAlertTriggerDirection];
+
+export const UserPriceAlertTriggerDirection = {
+  above: "above",
+  below: "below",
+} as const;
+
+export type UserPriceAlertStatus =
+  (typeof UserPriceAlertStatus)[keyof typeof UserPriceAlertStatus];
+
+export const UserPriceAlertStatus = {
+  active: "active",
+  triggered: "triggered",
+  cancelled: "cancelled",
+} as const;
+
+export interface UserPriceAlert {
+  id: number;
+  instrument: string;
+  /** Target price as a string, preserving the precision the user typed. */
+  targetPrice: string;
+  triggerDirection: UserPriceAlertTriggerDirection;
+  note?: string | null;
+  status: UserPriceAlertStatus;
+  triggeredAt?: string | null;
+  triggeredPrice?: string | null;
+  createdAt: string;
+}
+
+export interface UserPriceAlertList {
+  alerts: UserPriceAlert[];
+}
+
+export type CreateUserPriceAlertBodyTriggerDirection =
+  (typeof CreateUserPriceAlertBodyTriggerDirection)[keyof typeof CreateUserPriceAlertBodyTriggerDirection];
+
+export const CreateUserPriceAlertBodyTriggerDirection = {
+  above: "above",
+  below: "below",
+} as const;
+
+/**
+ * UI language at create time; controls push notification language.
+ */
+export type CreateUserPriceAlertBodyLang =
+  (typeof CreateUserPriceAlertBodyLang)[keyof typeof CreateUserPriceAlertBodyLang];
+
+export const CreateUserPriceAlertBodyLang = {
+  en: "en",
+  id: "id",
+} as const;
+
+export interface CreateUserPriceAlertBody {
+  /** @minLength 1 */
+  instrument: string;
+  /** Target price. Must be a positive finite number. */
+  targetPrice: number;
+  triggerDirection: CreateUserPriceAlertBodyTriggerDirection;
+  /** @maxLength 200 */
+  note?: string | null;
+  /** UI language at create time; controls push notification language. */
+  lang?: CreateUserPriceAlertBodyLang;
+}
+
 export type ListAnalysesParams = {
   mode?: ListAnalysesMode;
   instrument?: string;

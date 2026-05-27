@@ -13,6 +13,7 @@ import pushRouter from "./push";
 import eventsRouter from "./events";
 import dailySummaryRouter from "./daily-summary";
 import watchlistRouter from "./watchlist";
+import userPriceAlertsRouter from "./user-price-alerts";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(pushRouter);
 router.use(eventsRouter);
 router.use(dailySummaryRouter);
 router.use(watchlistRouter);
+router.use(userPriceAlertsRouter);
 
 export default router;

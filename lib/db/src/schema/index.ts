@@ -548,6 +548,51 @@ export const watchlistItems = pgTable(
   }),
 );
 
+// User-defined standalone price alerts (task #148). Unlike `priceAlerts`
+// above (which is tied to AI-generated entry/SL/TP levels on a specific
+// analysis), each row here represents a manual "ping me when EUR/USD
+// crosses 1.0900 from below" request the user typed in themselves. The
+// background checker in `user-price-alerts.ts` compares the live tick
+// against `targetPrice` and `lastSeenPrice` — only fires on an actual
+// *crossing* between the two ticks, so an alert created with the price
+// already above its `above`-target does NOT fire on the very next poll.
+// One-shot: once fired (or deleted) the row's `status` flips and it is
+// excluded from the watcher loop forever.
+export const userAlertStatusEnum = pgEnum("user_alert_status", [
+  "active",
+  "triggered",
+  "cancelled",
+]);
+
+export const userPriceAlerts = pgTable("user_price_alerts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  instrument: text("instrument").notNull(),
+  // Stored as text to preserve the exact precision the user typed (e.g.
+  // "1.08573") without falling into numeric/float rounding — parsed back
+  // to a Number in the watcher.
+  targetPrice: text("target_price").notNull(),
+  triggerDirection: alertDirectionEnum("trigger_direction").notNull(),
+  // Optional one-line user note ("EUR/USD breakout above 1.09").
+  note: text("note"),
+  // UI language at create time ("en" / "id") — used by the push
+  // dispatcher so the OS notification is rendered in the language the
+  // user was using when they set the alert. Defaults "en" for safety.
+  lang: text("lang").notNull().default("en"),
+  status: userAlertStatusEnum("status").notNull().default("active"),
+  // Spot price last seen by the checker (or at create time). The
+  // watcher only fires when the previous tick was on the *wrong* side
+  // of the target and the current tick is on the right side — this is
+  // the anti-false-fire guard that keeps "above 1.09" from triggering
+  // immediately for a user who set it while EUR/USD was already at 1.10.
+  lastSeenPrice: text("last_seen_price"),
+  triggeredAt: timestamp("triggered_at"),
+  triggeredPrice: text("triggered_price"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").references(() => users.id, {
@@ -580,3 +625,5 @@ export type DailyDigest = typeof dailyDigests.$inferSelect;
 export type NewDailyDigest = typeof dailyDigests.$inferInsert;
 export type FilterPreset = typeof filterPresets.$inferSelect;
 export type NewFilterPreset = typeof filterPresets.$inferInsert;
+export type UserPriceAlert = typeof userPriceAlerts.$inferSelect;
+export type NewUserPriceAlert = typeof userPriceAlerts.$inferInsert;

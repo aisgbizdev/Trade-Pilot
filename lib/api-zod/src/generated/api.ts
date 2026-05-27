@@ -216,6 +216,61 @@ export const RemoveWatchlistItemResponse = zod.object({
 });
 
 /**
+ * @summary List the current user's price alerts (active + recently triggered)
+ */
+export const ListUserPriceAlertsResponse = zod.object({
+  alerts: zod.array(
+    zod.object({
+      id: zod.number(),
+      instrument: zod.string(),
+      targetPrice: zod
+        .string()
+        .describe(
+          "Target price as a string, preserving the precision the user typed.",
+        ),
+      triggerDirection: zod.enum(["above", "below"]),
+      note: zod.string().nullish(),
+      status: zod.enum(["active", "triggered", "cancelled"]),
+      triggeredAt: zod.coerce.date().nullish(),
+      triggeredPrice: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Create a new price alert for an instrument
+ */
+
+export const createUserPriceAlertBodyNoteMax = 200;
+
+export const CreateUserPriceAlertBody = zod.object({
+  instrument: zod.string().min(1),
+  targetPrice: zod
+    .number()
+    .describe("Target price. Must be a positive finite number."),
+  triggerDirection: zod.enum(["above", "below"]),
+  note: zod.string().max(createUserPriceAlertBodyNoteMax).nullish(),
+  lang: zod
+    .enum(["en", "id"])
+    .optional()
+    .describe(
+      "UI language at create time; controls push notification language.",
+    ),
+});
+
+/**
+ * @summary Delete one of the user's price alerts
+ */
+export const DeleteUserPriceAlertParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteUserPriceAlertResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Create new analysis (triggers AI)
  */
 export const CreateAnalysisBody = zod.object({

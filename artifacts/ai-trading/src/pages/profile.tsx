@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -368,6 +368,19 @@ export default function ProfilePage() {
               </Button>
             </div>
           )}
+        </Card>
+
+        <Card className="p-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => setLocation("/my-alerts")}
+            data-testid="button-go-my-alerts"
+          >
+            <Bell className="w-4 h-4 mr-2" />
+            {t.alerts.page_title}
+          </Button>
         </Card>
 
         {(user?.role === "admin" || user?.role === "super_admin") && (

@@ -26,6 +26,8 @@ tags:
     description: Saved history-page filter combinations
   - name: watchlist
     description: Per-user instrument watchlist
+  - name: user-price-alerts
+    description: User-defined standalone price alerts (task #148)
 paths:
   /healthz:
     get:
@@ -339,6 +341,85 @@ paths:
                 $ref: "#/components/schemas/MessageResponse"
         "401":
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /user-price-alerts:
+    get:
+      operationId: listUserPriceAlerts
+      tags: [user-price-alerts]
+      summary: List the current user's price alerts (active + recently triggered)
+      responses:
+        "200":
+          description: User's price alerts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPriceAlertList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createUserPriceAlert
+      tags: [user-price-alerts]
+      summary: Create a new price alert for an instrument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserPriceAlertBody"
+      responses:
+        "201":
+          description: Alert created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPriceAlert"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /user-price-alerts/{id}:
+    delete:
+      operationId: deleteUserPriceAlert
+      tags: [user-price-alerts]
+      summary: Delete one of the user's price alerts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Alert deleted (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Alert not found or not owned by the caller
           content:
             application/json:
               schema:
@@ -3353,3 +3434,75 @@ components:
           minLength: 1
       required:
         - instrument
+
+    UserPriceAlert:
+      type: object
+      properties:
+        id:
+          type: integer
+        instrument:
+          type: string
+        targetPrice:
+          type: string
+          description: Target price as a string, preserving the precision the user typed.
+        triggerDirection:
+          type: string
+          enum: [above, below]
+        note:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, triggered, cancelled]
+        triggeredAt:
+          type: string
+          format: date-time
+          nullable: true
+        triggeredPrice:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - instrument
+        - targetPrice
+        - triggerDirection
+        - status
+        - createdAt
+
+    UserPriceAlertList:
+      type: object
+      properties:
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserPriceAlert"
+      required:
+        - alerts
+
+    CreateUserPriceAlertBody:
+      type: object
+      properties:
+        instrument:
+          type: string
+          minLength: 1
+        targetPrice:
+          type: number
+          description: Target price. Must be a positive finite number.
+        triggerDirection:
+          type: string
+          enum: [above, below]
+        note:
+          type: string
+          nullable: true
+          maxLength: 200
+        lang:
+          type: string
+          enum: [en, id]
+          description: UI language at create time; controls push notification language.
+      required:
+        - instrument
+        - targetPrice
+        - triggerDirection

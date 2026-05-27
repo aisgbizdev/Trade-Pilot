@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock } from "lucide-react";
+import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell } from "lucide-react";
+import { SetAlertModal } from "@/components/set-alert-modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -241,6 +242,7 @@ export default function AnalyzePage() {
 
   const finalInstrument = customInstrument.trim() || selectedInstrument;
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
 
   const handleSubmit = async () => {
     if (!finalInstrument) {
@@ -467,6 +469,19 @@ export default function AnalyzePage() {
                 <span className="text-muted-foreground">{t.analyze.current_price}:</span>
                 <LivePriceChip instrument={finalInstrument} />
               </div>
+              <div className="mt-2 flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAlertModalOpen(true)}
+                  data-testid="button-set-alert"
+                  className="text-xs gap-1.5"
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                  {t.analyze.set_alert_btn}
+                </Button>
+              </div>
               <div className="mt-3 space-y-2" data-testid="mini-chart-section">
                 <TradingViewMiniChart
                   symbol={instrumentToTradingViewSymbol(finalInstrument)}
@@ -586,6 +601,11 @@ export default function AnalyzePage() {
           </p>
         </div>
       </div>
+      <SetAlertModal
+        open={alertModalOpen}
+        onOpenChange={setAlertModalOpen}
+        instrument={finalInstrument}
+      />
     </Layout>
   );
 }
