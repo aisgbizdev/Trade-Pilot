@@ -9,6 +9,8 @@ import { useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
 import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
+import { TradingViewMiniChart, type MiniChartDateRange } from "@/components/tradingview-mini-chart";
+import { instrumentToTradingViewSymbol } from "@/lib/tradingview-symbols";
 import { WatchlistStar } from "@/components/watchlist-star";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -183,6 +185,7 @@ export default function AnalyzePage() {
   const recentInstruments = (recentData as RecentInstruments | undefined)?.instruments?.slice(0, 3) ?? [];
 
   const finalInstrument = customInstrument.trim() || selectedInstrument;
+  const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
 
   const handleSubmit = async () => {
     if (!finalInstrument) {
@@ -400,7 +403,46 @@ export default function AnalyzePage() {
                 <span className="text-muted-foreground">{t.analyze.current_price}:</span>
                 <LivePriceChip instrument={finalInstrument} />
               </div>
-              <div className="flex items-center justify-between text-sm mt-1">
+              <div className="mt-3 space-y-2" data-testid="mini-chart-section">
+                <TradingViewMiniChart
+                  symbol={instrumentToTradingViewSymbol(finalInstrument)}
+                  dateRange={miniChartRange}
+                  height={180}
+                />
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    {t.widgets.mini_chart_range_title}
+                  </h3>
+                  <div className="flex gap-1" role="group" aria-label={t.widgets.mini_chart_range_title}>
+                    {(["1D", "1W", "1M", "3M", "1Y"] as const).map((r) => {
+                      const labelKey = `mini_chart_range_${r.toLowerCase()}` as
+                        | "mini_chart_range_1d"
+                        | "mini_chart_range_1w"
+                        | "mini_chart_range_1m"
+                        | "mini_chart_range_3m"
+                        | "mini_chart_range_1y";
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setMiniChartRange(r)}
+                          data-testid={`button-mini-chart-range-${r}`}
+                          aria-pressed={miniChartRange === r}
+                          className={cn(
+                            "px-2.5 py-1 text-[11px] font-medium rounded-md border transition-all",
+                            miniChartRange === r
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:border-primary/50",
+                          )}
+                        >
+                          {t.widgets[labelKey]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm mt-3">
                 <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
                 <span className="font-semibold text-foreground">{selectedTimeframe}</span>
               </div>

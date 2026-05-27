@@ -475,6 +475,13 @@ export const id: Translations = {
     show_less: "Tampilkan lebih sedikit",
     more_events: "event lainnya",
     source_newsmaker: "Sumber: Newsmaker.id",
+    mini_chart_range_title: "Rentang grafik",
+    mini_chart_offline: "Grafik langsung tidak tersedia saat offline. Hubungkan kembali untuk melihat harga bergerak.",
+    mini_chart_range_1d: "1 Hari",
+    mini_chart_range_1w: "1 Mgg",
+    mini_chart_range_1m: "1 Bln",
+    mini_chart_range_3m: "3 Bln",
+    mini_chart_range_1y: "1 Thn",
   },
   analysis_detail: {
     loading: "Memuat analisis...",

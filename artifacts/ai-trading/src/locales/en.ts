@@ -473,6 +473,13 @@ export const en = {
     show_less: "Show less",
     more_events: "more events",
     source_newsmaker: "Source: Newsmaker.id",
+    mini_chart_range_title: "Chart range",
+    mini_chart_offline: "Live chart unavailable while offline. Reconnect to see the moving price.",
+    mini_chart_range_1d: "1D",
+    mini_chart_range_1w: "1W",
+    mini_chart_range_1m: "1M",
+    mini_chart_range_3m: "3M",
+    mini_chart_range_1y: "1Y",
   },
   analysis_detail: {
     loading: "Loading analysis...",
