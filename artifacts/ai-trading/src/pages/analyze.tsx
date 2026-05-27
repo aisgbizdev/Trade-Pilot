@@ -13,7 +13,7 @@ import { Layout } from "@/components/layout";
 import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { TradingViewMiniChart, type MiniChartDateRange } from "@/components/tradingview-mini-chart";
-import { instrumentToTradingViewSymbol } from "@/lib/tradingview-symbols";
+import { instrumentToTradingViewSymbol, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
 import { WatchlistStar, useWatchlist } from "@/components/watchlist-star";
 import type { Watchlist } from "@workspace/api-client-react";
 import { Star } from "lucide-react";
@@ -199,9 +199,38 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
 }
 
 const ECON_CAL_STORAGE_KEY = "analyze.economicCalendar.open";
+const ECON_CAL_CURRENCIES_KEY_BASE = "analyze.economicCalendar.currencies";
+
+function readStoredCurrencies(storageKey: string): string[] | null {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (raw == null) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((c): c is string => typeof c === "string");
+  } catch {
+    return null;
+  }
+}
 
 function EconomicCalendarSection() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { data: watchlistData } = useWatchlist();
+  const watchlistItems = (watchlistData as Watchlist | undefined)?.items ?? [];
+
+  const availableCurrencies = (() => {
+    const seen = new Set<string>(["USD"]);
+    for (const item of watchlistItems) {
+      for (const c of instrumentToCurrencies(item.instrument)) {
+        seen.add(c);
+      }
+    }
+    return Array.from(seen);
+  })();
+
+  const storageKey = `${ECON_CAL_CURRENCIES_KEY_BASE}.${user?.id ?? "anon"}`;
+
   const [open, setOpen] = useState<boolean>(() => {
     try {
       const stored = sessionStorage.getItem(ECON_CAL_STORAGE_KEY);
@@ -211,11 +240,42 @@ function EconomicCalendarSection() {
     return false;
   });
 
+  const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>(
+    () => readStoredCurrencies(storageKey) ?? [],
+  );
+
+  useEffect(() => {
+    const stored = readStoredCurrencies(storageKey);
+    setSelectedCurrencies(stored ?? []);
+  }, [storageKey]);
+
   useEffect(() => {
     try {
       sessionStorage.setItem(ECON_CAL_STORAGE_KEY, String(open));
     } catch {}
   }, [open]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(selectedCurrencies));
+    } catch {}
+  }, [storageKey, selectedCurrencies]);
+
+  const toggleCurrency = (currency: string) => {
+    setSelectedCurrencies((prev) =>
+      prev.includes(currency)
+        ? prev.filter((c) => c !== currency)
+        : [...prev, currency],
+    );
+  };
+
+  const clearCurrencies = () => setSelectedCurrencies([]);
+
+  const effectiveCurrencies = selectedCurrencies.filter((c) =>
+    availableCurrencies.includes(c),
+  );
+  const countryFilter = currenciesToCountryFilter(effectiveCurrencies);
+  const allActive = effectiveCurrencies.length === 0;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -249,7 +309,65 @@ function EconomicCalendarSection() {
             <p className="text-[10px] text-muted-foreground leading-snug">
               {t.analyze.economic_calendar_section_hint}
             </p>
-            <TradingViewEconomicCalendar height={420} importanceFilter="1" />
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              role="group"
+              aria-label={t.analyze.economic_calendar_currency_filter_label}
+              data-testid="economic-calendar-currency-chips"
+            >
+              <button
+                type="button"
+                onClick={clearCurrencies}
+                aria-pressed={allActive}
+                data-testid="chip-economic-calendar-currency-all"
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors",
+                  allActive
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 text-muted-foreground border-border hover:bg-muted",
+                )}
+              >
+                {t.analyze.economic_calendar_currency_filter_all}
+              </button>
+              {availableCurrencies.map((currency) => {
+                const active = effectiveCurrencies.includes(currency);
+                const flag = CURRENCY_FLAGS[currency] ?? "";
+                return (
+                  <button
+                    key={currency}
+                    type="button"
+                    onClick={() => toggleCurrency(currency)}
+                    aria-pressed={active}
+                    data-testid={`chip-economic-calendar-currency-${currency}`}
+                    className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/40 text-foreground border-border hover:bg-muted",
+                    )}
+                  >
+                    {flag ? <span className="mr-1" aria-hidden="true">{flag}</span> : null}
+                    {currency}
+                  </button>
+                );
+              })}
+            </div>
+            <p
+              className="text-[10px] text-muted-foreground"
+              data-testid="economic-calendar-currency-status"
+            >
+              {allActive
+                ? t.analyze.economic_calendar_currency_filter_all_active
+                : t.analyze.economic_calendar_currency_filter_active.replace(
+                    "{currencies}",
+                    effectiveCurrencies.join(", "),
+                  )}
+            </p>
+            <TradingViewEconomicCalendar
+              height={420}
+              importanceFilter="1"
+              countryFilter={countryFilter}
+            />
           </div>
         </CollapsibleContent>
       </Card>

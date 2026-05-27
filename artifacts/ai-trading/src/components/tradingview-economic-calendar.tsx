@@ -7,6 +7,7 @@ interface TradingViewEconomicCalendarProps {
   height?: number;
   importanceFilter?: "-1" | "0" | "1";
   loadTimeoutMs?: number;
+  countryFilter?: string;
 }
 
 const SCRIPT_SRC =
@@ -51,6 +52,7 @@ export function TradingViewEconomicCalendar({
   height = 400,
   importanceFilter = "1",
   loadTimeoutMs = 8000,
+  countryFilter,
 }: TradingViewEconomicCalendarProps) {
   const { theme } = useTheme();
   const deferredTheme = useDeferredValue(theme);
@@ -72,7 +74,7 @@ export function TradingViewEconomicCalendar({
     const colorTheme = resolveColorTheme(deferredTheme);
     const widgetLocale = lang === "id" ? "id" : "en";
 
-    const config = {
+    const config: Record<string, unknown> = {
       colorTheme,
       isTransparent: true,
       locale: widgetLocale,
@@ -80,6 +82,9 @@ export function TradingViewEconomicCalendar({
       height,
       importanceFilter,
     };
+    if (countryFilter && countryFilter.length > 0) {
+      config["countryFilter"] = countryFilter;
+    }
 
     hostEl.innerHTML = "";
     hostEl.dataset["loadState"] = "pending";
@@ -177,6 +182,7 @@ export function TradingViewEconomicCalendar({
   }, [
     height,
     importanceFilter,
+    countryFilter,
     effectiveLoadTimeoutMs,
     deferredTheme,
     lang,
@@ -231,6 +237,7 @@ export function TradingViewEconomicCalendar({
         style={{ width: "100%" }}
         data-testid="tradingview-economic-calendar"
         data-importance={importanceFilter}
+        data-country-filter={countryFilter ?? ""}
         data-load-state={loadState}
       />
     </div>

@@ -64,3 +64,51 @@ export function timeframeToTradingViewInterval(
 ): TradingViewInterval {
   return TIMEFRAME_TO_INTERVAL[timeframe] ?? "60";
 }
+
+const INSTRUMENT_TO_CURRENCIES: Record<string, string[]> = {
+  "XAU/USD": ["USD"],
+  "XAG/USD": ["USD"],
+  BRENT: [],
+  HSI: ["HKD"],
+  NIKKEI: ["JPY"],
+  DJIA: ["USD"],
+  NASDAQ: ["USD"],
+  DXY: ["USD"],
+  "BTC/USD": ["USD"],
+  "ETH/USD": ["USD"],
+};
+
+export function instrumentToCurrencies(instrument: string): string[] {
+  const key = instrument.toUpperCase().trim();
+  if (key in INSTRUMENT_TO_CURRENCIES) return INSTRUMENT_TO_CURRENCIES[key]!;
+  const parts = key.split("/").map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 2 && /^[A-Z]{3}$/.test(parts[0]!) && /^[A-Z]{3}$/.test(parts[1]!)) {
+    return parts as string[];
+  }
+  return [];
+}
+
+const CURRENCY_TO_COUNTRY: Record<string, string> = {
+  USD: "us",
+  EUR: "eu",
+  GBP: "gb",
+  JPY: "jp",
+  CHF: "ch",
+  AUD: "au",
+  CAD: "ca",
+  NZD: "nz",
+  IDR: "id",
+  HKD: "hk",
+  CNY: "cn",
+};
+
+export function currenciesToCountryFilter(currencies: string[]): string {
+  const seen = new Set<string>();
+  for (const c of currencies) {
+    const code = CURRENCY_TO_COUNTRY[c.toUpperCase()];
+    if (code) seen.add(code);
+  }
+  return Array.from(seen).join(",");
+}
+
+export const SUPPORTED_CALENDAR_CURRENCIES = Object.keys(CURRENCY_TO_COUNTRY);
