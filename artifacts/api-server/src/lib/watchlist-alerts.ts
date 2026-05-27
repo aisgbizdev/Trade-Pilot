@@ -341,7 +341,7 @@ export async function dispatchCalendarReminders(
 
         const forecastBit = event.forecast ? ` — prakiraan: ${event.forecast}` : "";
         const body = `${event.event} (${event.currency}) rilis ~30 menit lagi${forecastBit}.`;
-        await createNotification(
+        const created = await createNotification(
           user.id,
           {
             title: `⏰ ${event.event}`,
@@ -357,7 +357,8 @@ export async function dispatchCalendarReminders(
             tag: `calendar-${event.currency}-${event.event}`,
           },
         );
-        stats.sent += 1;
+        if (created) stats.sent += 1;
+        else stats.suppressedDedupe += 1;
       }
     }
 
