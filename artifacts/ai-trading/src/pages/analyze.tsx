@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell } from "lucide-react";
+import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, ChevronDown, ChevronUp, Newspaper } from "lucide-react";
+import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SetAlertModal } from "@/components/set-alert-modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -108,6 +110,65 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
         {t.analyze.calendar_preview_note}
       </p>
     </Card>
+  );
+}
+
+const ECON_CAL_STORAGE_KEY = "analyze.economicCalendar.open";
+
+function EconomicCalendarSection() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState<boolean>(() => {
+    try {
+      const stored = sessionStorage.getItem(ECON_CAL_STORAGE_KEY);
+      if (stored === "true") return true;
+      if (stored === "false") return false;
+    } catch {}
+    return false;
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(ECON_CAL_STORAGE_KEY, String(open));
+    } catch {}
+  }, [open]);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card className="p-3 space-y-2" data-testid="card-economic-calendar">
+        <CollapsibleTrigger
+          className="w-full flex items-center justify-between gap-2 text-left"
+          data-testid="button-toggle-economic-calendar"
+          aria-label={open ? t.analyze.economic_calendar_collapse : t.analyze.economic_calendar_expand}
+        >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Newspaper className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-foreground truncate">
+                {t.analyze.economic_calendar_section_title}
+              </h3>
+              {!open && (
+                <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                  {t.analyze.economic_calendar_section_hint}
+                </p>
+              )}
+            </div>
+          </div>
+          {open ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
+          )}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+          <div className="pt-1 space-y-2">
+            <p className="text-[10px] text-muted-foreground leading-snug">
+              {t.analyze.economic_calendar_section_hint}
+            </p>
+            <TradingViewEconomicCalendar height={420} importanceFilter="1" />
+          </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
 
@@ -589,6 +650,8 @@ export default function AnalyzePage() {
               </div>
             </div>
           )}
+
+          <EconomicCalendarSection />
 
           <p className="text-xs text-muted-foreground text-center leading-relaxed">
             {t.analyze.disclaimer}
