@@ -86,6 +86,12 @@ export function AntiPatternGuardrails({
   // per re-render.
   const loggedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
+    const activeKeys = new Set(visible.map((s) => `${signalKey(s)}|${instrument}`));
+    // Prune entries for signals that are no longer visible so that if the
+    // same (kind,instrument) reappears later in the session we log it again.
+    for (const k of loggedRef.current) {
+      if (!activeKeys.has(k)) loggedRef.current.delete(k);
+    }
     for (const s of visible) {
       const k = `${signalKey(s)}|${instrument}`;
       if (loggedRef.current.has(k)) continue;
