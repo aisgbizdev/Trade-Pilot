@@ -18,6 +18,14 @@ const INSTRUMENT_CURRENCIES: Record<string, string[]> = {
   "AUD/USD": ["AUD", "USD"],
   "USD/CHF": ["CHF", "USD"],
   "HSI": ["CHN", "HKD"],
+  // Crypto: Fed policy / CPI / risk-on macro still drive BTC & altcoin
+  // moves more than any coin-specific calendar item, so USD is the
+  // pragmatic default for surfacing relevant macro events.
+  "BTC/USD": ["USD"],
+  "ETH/USD": ["USD"],
+  "SOL/USD": ["USD"],
+  "BNB/USD": ["USD"],
+  "XRP/USD": ["USD"],
 };
 
 const IMPACT_RANK: Record<string, number> = {

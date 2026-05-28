@@ -1,4 +1,5 @@
 import { calculateIndicators, type TechnicalIndicators, type Candle } from "./indicators.js";
+import { isCryptoInstrument, yahooCryptoSymbolFor } from "./crypto-instruments.js";
 
 const HISTORICAL_API = "https://endpoapi-production-3202.up.railway.app/api/historical";
 // Yahoo Finance's chart endpoint. Public, unauthenticated, widely used as a
@@ -350,7 +351,10 @@ async function getIntradayCandles(
   instrument: string,
   timeframe: IntradayTimeframe,
 ): Promise<Candle[] | null> {
-  const yahooSymbol = YAHOO_SYMBOL_MAP[instrument];
+  // Crypto: Yahoo carries BTC-USD / ETH-USD / etc. on the same chart
+  // endpoint we already use for forex futures, so we just resolve the
+  // symbol differently and reuse the rest of the pipeline.
+  const yahooSymbol = yahooCryptoSymbolFor(instrument) ?? YAHOO_SYMBOL_MAP[instrument];
   if (!yahooSymbol) return null;
 
   const params = YAHOO_INTRADAY_PARAMS[timeframe];
@@ -361,10 +365,43 @@ async function getIntradayCandles(
   return timeframe === "4h" ? resampleHourlyToFourHour(raw) : raw;
 }
 
+// Crypto daily/weekly via Yahoo. The upstream daily feed used for forex
+// & commodities doesn't carry crypto, so we go direct to Yahoo's 1d
+// interval and (for 1W) resample with the same Mon–Sun bucketing rule
+// used everywhere else. Range of 2y comfortably exceeds the 200-period
+// SMA on daily, and ~5y for weekly.
+const YAHOO_DAILY_PARAMS: Record<DailyTimeframe, { interval: string; range: string }> = {
+  "1D": { interval: "1d", range: "2y" },
+  "1W": { interval: "1d", range: "5y" },
+};
+
+async function getCryptoDailyCandles(
+  instrument: string,
+  timeframe: DailyTimeframe,
+): Promise<Candle[] | null> {
+  const yahooSymbol = yahooCryptoSymbolFor(instrument);
+  if (!yahooSymbol) return null;
+  const params = YAHOO_DAILY_PARAMS[timeframe];
+  const raw = await fetchYahooCandles(yahooSymbol, params.interval, params.range);
+  if (raw.length === 0) return [];
+  return timeframe === "1W" ? resampleDailyToWeekly(raw) : raw;
+}
+
 async function getDailyCandles(
   instrument: string,
   timeframe: DailyTimeframe,
 ): Promise<{ candles: Candle[]; sourceFetchedAt: number } | null> {
+  // Crypto goes straight to Yahoo (the forex/commodity daily feed
+  // doesn't carry it). Each call is its own snapshot, so we synth a
+  // `sourceFetchedAt` from the current clock — the cache TTL still
+  // bounds staleness, we just lose the cross-instrument pinning we get
+  // from the shared daily blob (acceptable, crypto trades 24/7 anyway).
+  if (isCryptoInstrument(instrument)) {
+    const cryptoCandles = await getCryptoDailyCandles(instrument, timeframe);
+    if (!cryptoCandles) return null;
+    return { candles: cryptoCandles, sourceFetchedAt: Date.now() };
+  }
+
   const apiSymbol = SYMBOL_MAP[instrument];
   if (!apiSymbol) return null;
 

@@ -228,6 +228,7 @@ export const en = {
     indicators_error: "Technical data not available for this instrument",
     tab_futures: "Futures",
     tab_forex: "Forex",
+    tab_crypto: "Crypto",
     oscillator_section: "Oscillator",
     moving_averages_section: "Moving Averages",
     moving_avg_short: "Moving Avg",
@@ -509,6 +510,7 @@ export const en = {
     sessions_no_session: "No active session",
     sessions_local_time_note: "Times shown in your local time zone.",
     sessions_weekend_note: "FX market is closed on weekends. Reopens with Sydney on Sunday 22:00 UTC.",
+    sessions_crypto_24_7: "Crypto · 24/7",
   },
   analysis_detail: {
     loading: "Loading analysis...",

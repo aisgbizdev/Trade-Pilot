@@ -28,6 +28,9 @@ const INSTRUMENT_TO_TV_SYMBOL: Record<string, string> = {
   "USD/IDR": "FX_IDC:USDIDR",
   "BTC/USD": "BINANCE:BTCUSDT",
   "ETH/USD": "BINANCE:ETHUSDT",
+  "SOL/USD": "BINANCE:SOLUSDT",
+  "BNB/USD": "BINANCE:BNBUSDT",
+  "XRP/USD": "BINANCE:XRPUSDT",
 };
 
 export function instrumentToTradingViewSymbol(instrument: string): string {
@@ -76,7 +79,27 @@ const INSTRUMENT_TO_CURRENCIES: Record<string, string[]> = {
   DXY: ["USD"],
   "BTC/USD": ["USD"],
   "ETH/USD": ["USD"],
+  "SOL/USD": ["USD"],
+  "BNB/USD": ["USD"],
+  "XRP/USD": ["USD"],
 };
+
+// Crypto instruments — mirror of the server-side list. Kept here so the
+// analyze picker, market-sessions badge, and any other client UI can
+// branch on asset class without importing from the server.
+export const CRYPTO_INSTRUMENTS = [
+  "BTC/USD",
+  "ETH/USD",
+  "SOL/USD",
+  "BNB/USD",
+  "XRP/USD",
+] as const;
+
+const CRYPTO_SET = new Set<string>(CRYPTO_INSTRUMENTS);
+
+export function isCryptoInstrument(instrument: string): boolean {
+  return CRYPTO_SET.has(instrument.toUpperCase().trim());
+}
 
 export function instrumentToCurrencies(instrument: string): string[] {
   const key = instrument.toUpperCase().trim();

@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import type { CalendarEvent } from "./calendar";
 import type { NewsItem } from "./news";
+import { isCryptoInstrument } from "./crypto-instruments";
 
 export const openai = new OpenAI({
   apiKey: process.env["OPENAI_API_KEY"],
@@ -497,11 +498,23 @@ export async function generateAnalysis(
     dateStyle: "full",
     timeStyle: "short",
   });
+  const isCrypto = isCryptoInstrument(instrument);
+  const cryptoContext = isCrypto
+    ? [
+        `\nKONTEKS ASET — CRYPTO SPOT:`,
+        `- ${instrument} adalah pasangan crypto-spot yang diperdagangkan 24/7 tanpa sesi London/Tokyo/New York. Jangan menyebut "buka sesi" atau "tutup sesi" gaya forex.`,
+        `- Volatilitas intraday cenderung jauh lebih tinggi dari forex/komoditas; ATR & spike candle wajar lebih lebar. Sesuaikan ekspektasi SL/TP secara proporsional pada timeframe ${timeframe}.`,
+        `- Driver utama: sentimen risk-on/risk-off global, ekspektasi suku bunga The Fed, BTC dominance (untuk altcoin), funding rate perp & berita regulasi (SEC/ETF/exchange). Sebut bila relevan; jangan dipaksakan.`,
+        `- Likuiditas tertipis pada akhir pekan (Sabtu–Minggu UTC); breakout di window ini lebih rawan whipsaw — wajar untuk men-down-tone confidence di kondisi tersebut.`,
+      ].join("\n")
+    : "";
+
   const baseUserMessage = [
     `Waktu analisis sekarang: ${nowIsoUtc} (UTC) — atau ${nowJakarta} WIB.`,
     `Gunakan waktu ini sebagai patokan untuk menghitung jendela 1 jam / 24 jam ke depan pada event kalender.`,
     `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}`,
     `PENTING: semua narasi (skenario, peluang, risiko, bias arah) HARUS menyebut timeframe "${timeframe}" secara eksplisit, bukan hanya kata "uptrend"/"downtrend" saja.`,
+    cryptoContext,
     indicatorContext ? indicatorContext : "",
     cleanNotes ? `\nCatatan tambahan dari trader: ${cleanNotes}` : "",
   ]

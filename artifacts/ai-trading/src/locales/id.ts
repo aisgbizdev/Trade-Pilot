@@ -230,6 +230,7 @@ export const id: Translations = {
     indicators_error: "Data teknikal tidak tersedia untuk instrumen ini",
     tab_futures: "Futures",
     tab_forex: "Forex",
+    tab_crypto: "Crypto",
     oscillator_section: "Oscillator",
     moving_averages_section: "Moving Averages",
     moving_avg_short: "Moving Avg",
@@ -511,6 +512,7 @@ export const id: Translations = {
     sessions_no_session: "Tidak ada sesi aktif",
     sessions_local_time_note: "Waktu ditampilkan dalam zona waktu lokal kamu.",
     sessions_weekend_note: "Pasar FX tutup di akhir pekan. Dibuka kembali bersama Sydney Minggu 22:00 UTC.",
+    sessions_crypto_24_7: "Crypto · 24/7",
   },
   analysis_detail: {
     loading: "Memuat analisis...",

@@ -1,9 +1,21 @@
 import { logger } from "./logger";
+import {
+  BINANCE_SYMBOL_MAP,
+  CRYPTO_INSTRUMENTS,
+  type CryptoInstrument,
+} from "./crypto-instruments";
 
 // Shared upstream live-quotes feed. The HTTP route at `/quotes/live` and
 // the price-alerts watcher both call into here so they share the same
 // 15s in-memory cache (one upstream fetch serves the entire process).
 const LIVE_QUOTES_URL = "https://endpoapi-production-3202.up.railway.app/api/live-quotes";
+
+// Binance public ticker for spot crypto. Unauthenticated, free, very
+// reliable. We merge its output into the forex/commodity payload so the
+// rest of the app (alerts watcher, dashboard ticker, analyze chip) gets
+// crypto with zero downstream changes.
+const BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/24hr";
+const BINANCE_TIMEOUT_MS = 4_000;
 
 // Maps the upstream's opaque symbol codes onto the same instrument names
 // the rest of the app uses (the values stored on `analyses.instrument`).
@@ -48,8 +60,79 @@ const CACHE_TTL_MS = 15_000;
 let cache: { data: LiveQuotesPayload; fetchedAt: number } | null = null;
 let inFlight: Promise<LiveQuotesPayload> | null = null;
 
+interface BinanceTicker {
+  symbol: string;
+  lastPrice: string;
+  priceChangePercent: string;
+  highPrice: string;
+  lowPrice: string;
+  openPrice: string;
+  bidPrice?: string;
+  askPrice?: string;
+}
+
+/**
+ * Fetch Binance 24h tickers for our supported crypto symbols and shape
+ * them into the same `LiveQuote` schema we use for forex/commodities.
+ * Returns `[]` (not throws) on any error so a Binance outage can't
+ * blank out the forex feed for everyone — the dashboard / alerts
+ * watcher just sees the crypto rows missing for one cycle.
+ */
+export async function fetchBinanceCryptoQuotes(): Promise<LiveQuote[]> {
+  const reverseMap = new Map<string, CryptoInstrument>();
+  for (const inst of CRYPTO_INSTRUMENTS) {
+    reverseMap.set(BINANCE_SYMBOL_MAP[inst], inst);
+  }
+  const symbols = JSON.stringify(Array.from(reverseMap.keys()));
+  const url = `${BINANCE_TICKER_URL}?symbols=${encodeURIComponent(symbols)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), BINANCE_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`Binance ticker HTTP ${res.status}`);
+    }
+    const arr = (await res.json()) as BinanceTicker[];
+    const out: LiveQuote[] = [];
+    for (const t of arr) {
+      const instrument = reverseMap.get(t.symbol);
+      if (!instrument) continue;
+      const pct = Number(t.priceChangePercent);
+      const isNeg = pct < 0;
+      const sign = isNeg ? "" : "+";
+      out.push({
+        instrument,
+        symbol: t.symbol,
+        price: Number(t.lastPrice),
+        buy: t.bidPrice ? Number(t.bidPrice) : Number(t.lastPrice),
+        sell: t.askPrice ? Number(t.askPrice) : Number(t.lastPrice),
+        spread:
+          t.bidPrice && t.askPrice
+            ? Number((Number(t.askPrice) - Number(t.bidPrice)).toFixed(8))
+            : 0,
+        high: Number(t.highPrice),
+        low: Number(t.lowPrice),
+        open: Number(t.openPrice),
+        changePercent: `${sign}${pct.toFixed(2)}%`,
+        direction: isNeg ? "down" : "up",
+      });
+    }
+    return out;
+  } catch (err) {
+    logger.warn({ err: String(err) }, "Binance crypto fetch failed");
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchLive(): Promise<LiveQuotesPayload> {
-  const response = await fetch(LIVE_QUOTES_URL);
+  // Fetch forex/commodity (required) and crypto (best-effort) in
+  // parallel so an extra HTTP round-trip doesn't add latency.
+  const [response, cryptoQuotes] = await Promise.all([
+    fetch(LIVE_QUOTES_URL),
+    fetchBinanceCryptoQuotes(),
+  ]);
   if (!response.ok) throw new Error(`Upstream live-quotes error: ${response.status}`);
   const raw = (await response.json()) as { data?: unknown[]; updatedAt?: string; serverTime?: string };
   const mapped: LiveQuote[] = (raw.data ?? []).map((item) => {
@@ -78,7 +161,7 @@ async function fetchLive(): Promise<LiveQuotesPayload> {
     status: "success",
     updatedAt: raw.updatedAt,
     serverTime: raw.serverTime,
-    data: mapped,
+    data: [...mapped, ...cryptoQuotes],
   };
 }
 

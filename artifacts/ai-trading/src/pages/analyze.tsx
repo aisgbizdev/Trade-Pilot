@@ -37,6 +37,18 @@ function formatPrice(price: number, instrument: string): string {
 
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
+const CRYPTO_INSTRUMENTS_PICKER = ["BTC/USD", "ETH/USD", "SOL/USD", "BNB/USD", "XRP/USD"];
+
+function instrumentsForTab(tab: "futures" | "forex" | "crypto"): string[] {
+  switch (tab) {
+    case "futures":
+      return FUTURES_INSTRUMENTS;
+    case "forex":
+      return FOREX_INSTRUMENTS;
+    case "crypto":
+      return CRYPTO_INSTRUMENTS_PICKER;
+  }
+}
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
 
 const IMPACT_STYLES: Record<string, string> = {
@@ -576,7 +588,7 @@ export default function AnalyzePage() {
     quota && !quota.unlimited && hourlyQuota && dailyQuota,
   );
 
-  const [activeTab, setActiveTab] = useState<"futures" | "forex">("futures");
+  const [activeTab, setActiveTab] = useState<"futures" | "forex" | "crypto">("futures");
   const [selectedInstrument, setSelectedInstrument] = useState("");
   const [customInstrument, setCustomInstrument] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1D");
@@ -702,7 +714,7 @@ export default function AnalyzePage() {
         </div>
 
         <div className="mb-4 flex justify-start">
-          <MarketSessionsBadge />
+          <MarketSessionsBadge instrument={finalInstrument || undefined} />
         </div>
 
         <div className="space-y-5">
@@ -738,7 +750,7 @@ export default function AnalyzePage() {
               onSelect={(inst) => { setSelectedInstrument(inst); setCustomInstrument(""); }}
             />
             <div className="flex gap-2 mb-3">
-              {(["futures", "forex"] as const).map((tab) => (
+              {(["futures", "forex", "crypto"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -750,12 +762,16 @@ export default function AnalyzePage() {
                       : "bg-background text-muted-foreground border-border"
                   )}
                 >
-                  {tab === "futures" ? t.analyze.tab_futures : t.analyze.tab_forex}
+                  {tab === "futures"
+                    ? t.analyze.tab_futures
+                    : tab === "forex"
+                      ? t.analyze.tab_forex
+                      : t.analyze.tab_crypto}
                 </button>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {(activeTab === "futures" ? FUTURES_INSTRUMENTS : FOREX_INSTRUMENTS).map((inst) => (
+              {instrumentsForTab(activeTab).map((inst) => (
                 <div
                   key={inst}
                   className={cn(

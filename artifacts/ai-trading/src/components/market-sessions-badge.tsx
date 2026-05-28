@@ -9,6 +9,7 @@ import {
   formatLocalTime,
   getMarketStatus,
 } from "@/lib/market-sessions";
+import { isCryptoInstrument } from "@/lib/tradingview-symbols";
 
 const DOT_COLOR: Record<SessionName, string> = {
   sydney: "bg-cyan-500",
@@ -30,12 +31,41 @@ export interface MarketSessionsBadgeProps {
   className?: string;
   /** Override "now" — for tests/snapshots. */
   now?: Date;
+  /**
+   * Optional instrument context. When the instrument is a crypto pair
+   * (BTC/USD, ETH/USD, …) we swap the FX-session pill for a "24/7" pill
+   * — sessions are meaningless for spot crypto and showing London/NY
+   * timers there has historically confused users.
+   */
+  instrument?: string;
 }
 
-export function MarketSessionsBadge({ className, now: nowProp }: MarketSessionsBadgeProps) {
+export function MarketSessionsBadge({ className, now: nowProp, instrument }: MarketSessionsBadgeProps) {
   const { t, lang } = useTranslation();
   const tickedNow = useNow();
   const now = nowProp ?? tickedNow;
+
+  // Crypto short-circuit — render a simple always-open pill instead of
+  // the FX session machinery. No popover; the label says it all.
+  if (instrument && isCryptoInstrument(instrument)) {
+    return (
+      <span
+        data-testid="market-sessions-badge"
+        data-asset-class="crypto"
+        className={cn(
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-medium",
+          "bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300",
+          className,
+        )}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+        <span className="font-semibold whitespace-nowrap">
+          {t.widgets.sessions_crypto_24_7}
+        </span>
+      </span>
+    );
+  }
+
   const status = getMarketStatus(now);
   const locale = lang === "id" ? "id-ID" : "en-US";
 
