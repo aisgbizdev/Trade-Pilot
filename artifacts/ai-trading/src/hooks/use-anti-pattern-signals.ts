@@ -11,6 +11,7 @@ export type GuardrailKind =
   | "revenge"
   | "overtrading"
   | "high_risk_window"
+  | "unusual_hour"
   | "cooling_off";
 
 export interface RevengeSignal {
@@ -25,6 +26,14 @@ export interface OvertradingSignal {
   scope: "hour" | "day";
   count: number;
   limit: number;
+  personalized: boolean;
+}
+
+export interface UnusualHourSignal {
+  kind: "unusual_hour";
+  hourUtc: number;
+  pastFrequencyPct: number;
+  sampleSize: number;
 }
 
 export interface HighRiskSignal {
@@ -50,6 +59,7 @@ export type GuardrailSignal =
   | RevengeSignal
   | OvertradingSignal
   | HighRiskSignal
+  | UnusualHourSignal
   | CoolingOffSignal;
 
 export interface GuardrailPrefs {

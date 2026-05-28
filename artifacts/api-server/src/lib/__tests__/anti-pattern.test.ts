@@ -123,7 +123,103 @@ describe("detectGuardrailSignals", () => {
       expect(ot.scope).toBe("hour");
       expect(ot.count).toBe(5);
       expect(ot.limit).toBe(5);
+      expect(ot.personalized).toBe(false);
     }
+  });
+
+  it("personalises overtrading caps once the user has ≥30 historical analyses", async () => {
+    mockCalendar.mockResolvedValue([]);
+    const id = await createUser();
+    const now = Date.now();
+    // 60 historical analyses across 10 active hours (6 per hour avg)
+    // — personalised hourly cap = max(5, ceil(6*2)) = 12, well above
+    // the default 5.
+    const history = Array.from({ length: 60 }, (_, i) => ({
+      userId: id,
+      instrument: "EUR/USD",
+      timeframe: "1h" as const,
+      mode: "beginner" as const,
+      validUntil: new Date(now + 60 * 60_000),
+      marketCondition: "ranging" as const,
+      riskLevel: "low" as const,
+      confidenceMin: 50,
+      confidenceMax: 70,
+      // Bucket 6 analyses into each of 10 distinct past hours (all
+      // ≥1 day old so they don't count toward the hourly/daily window).
+      createdAt: new Date(now - (24 + Math.floor(i / 6)) * 60 * 60_000),
+    }));
+    await db.insert(analyses).values(history);
+    // Now run 6 analyses in the last hour. Under defaults this fires
+    // (6 ≥ 5); with personalised caps it should *not* fire.
+    const recent = Array.from({ length: 6 }, (_, i) => ({
+      ...history[0],
+      createdAt: new Date(now - (i + 1) * 5 * 60_000),
+    }));
+    await db.insert(analyses).values(recent);
+    const result = await detectGuardrailSignals(id, "EUR/USD", { now });
+    const ot = result!.signals.find((s) => s.kind === "overtrading");
+    if (ot && ot.kind === "overtrading") {
+      expect(ot.personalized).toBe(true);
+      expect(ot.limit).toBeGreaterThan(5);
+    }
+  });
+
+  it("fires unusual_hour when current UTC hour is rarely used and history is sufficient", async () => {
+    mockCalendar.mockResolvedValue([]);
+    const id = await createUser();
+    // Pick a "now" we control and an unused hour. Seed 40 analyses all
+    // at a different hour-of-day so the current hour has 0 frequency.
+    const now = new Date("2026-06-01T03:00:00Z").getTime();
+    const rows = Array.from({ length: 30 }, (_, i) => ({
+      userId: id,
+      instrument: "EUR/USD",
+      timeframe: "1h" as const,
+      mode: "beginner" as const,
+      validUntil: new Date(now + 60 * 60_000),
+      marketCondition: "ranging" as const,
+      riskLevel: "low" as const,
+      confidenceMin: 50,
+      confidenceMax: 70,
+      // 30 seeds all at 14:00 UTC, one per day inside the 30-day
+      // lookback (which starts at 03:00 UTC on May 2). Oldest seed
+      // is May 2 14:00 — still inside the window. Current hour
+      // (03 UTC) has zero frequency.
+      createdAt: new Date(
+        new Date("2026-05-31T14:00:00Z").getTime() - i * 24 * 60 * 60_000,
+      ),
+    }));
+    await db.insert(analyses).values(rows);
+    const result = await detectGuardrailSignals(id, "EUR/USD", { now });
+    const uh = result!.signals.find((s) => s.kind === "unusual_hour");
+    expect(uh).toBeTruthy();
+    if (uh && uh.kind === "unusual_hour") {
+      expect(uh.hourUtc).toBe(3);
+      expect(uh.sampleSize).toBeGreaterThanOrEqual(30);
+    }
+  });
+
+  it("does not fire unusual_hour for low-history users", async () => {
+    mockCalendar.mockResolvedValue([]);
+    const id = await createUser();
+    const now = Date.now();
+    // Only 5 historical analyses — below the 30-row floor.
+    const rows = Array.from({ length: 5 }, (_, i) => ({
+      userId: id,
+      instrument: "EUR/USD",
+      timeframe: "1h" as const,
+      mode: "beginner" as const,
+      validUntil: new Date(now + 60 * 60_000),
+      marketCondition: "ranging" as const,
+      riskLevel: "low" as const,
+      confidenceMin: 50,
+      confidenceMax: 70,
+      createdAt: new Date(now - i * 24 * 60 * 60_000),
+    }));
+    await db.insert(analyses).values(rows);
+    const result = await detectGuardrailSignals(id, "EUR/USD", { now });
+    expect(
+      result!.signals.find((s) => s.kind === "unusual_hour"),
+    ).toBeUndefined();
   });
 
   it("fires cooling-off when last loss ≥1% is within the 30-min window — and only when opt-in", async () => {

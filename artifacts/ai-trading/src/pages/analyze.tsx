@@ -29,6 +29,8 @@ import { MentalChecklist } from "@/components/mental-checklist";
 import { LocalSentimentWidget } from "@/components/local-sentiment-widget";
 import { useMentalChecklistPref } from "@/hooks/use-mental-checklist";
 import { AntiPatternGuardrails } from "@/components/anti-pattern-guardrails";
+import { CoolingOffBreathingDialog } from "@/components/cooling-off-breathing-dialog";
+import { useAntiPatternSignals } from "@/hooks/use-anti-pattern-signals";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -640,17 +642,16 @@ export default function AnalyzePage() {
   // component can fire `proceeded: true` telemetry — supports the
   // Mirror digest "you ignored N revenge warnings this week" metric.
   const guardrailProceedRef = useRef<(() => void) | null>(null);
+  const [coolingOffActive, setCoolingOffActive] = useState(false);
+  const [breathingOpen, setBreathingOpen] = useState(false);
+  // The guardrails query also feeds the breathing dialog with the
+  // exact loss % the cooling-off countdown was triggered by, so the
+  // confirmation copy is concrete instead of generic.
+  const { data: guardrailData } = useAntiPatternSignals(finalInstrument);
+  const coolingOffLoss =
+    guardrailData?.signals.find((s) => s.kind === "cooling_off")?.lossPnlPercent ?? null;
 
-  const handleSubmit = async () => {
-    if (!finalInstrument) {
-      toast({ title: t.analyze.error_no_instrument, description: t.analyze.error_no_instrument_desc, variant: "destructive" });
-      return;
-    }
-    if (!selectedTimeframe) {
-      toast({ title: t.analyze.error_no_timeframe, description: t.analyze.error_no_timeframe_desc, variant: "destructive" });
-      return;
-    }
-
+  const runAnalysis = async () => {
     guardrailProceedRef.current?.();
     setIsLoading(true);
     try {
@@ -685,6 +686,27 @@ export default function AnalyzePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async () => {
+    if (!finalInstrument) {
+      toast({ title: t.analyze.error_no_instrument, description: t.analyze.error_no_instrument_desc, variant: "destructive" });
+      return;
+    }
+    if (!selectedTimeframe) {
+      toast({ title: t.analyze.error_no_timeframe, description: t.analyze.error_no_timeframe_desc, variant: "destructive" });
+      return;
+    }
+    // Cooling-off interception: an active countdown routes the submit
+    // through the breathing-exercise dialog. The dialog's explicit
+    // "Continue anyway" tap is the only way to actually run the
+    // analysis — keeping the guardrail soft (bypassable) but
+    // friction-laden, per task #163.
+    if (coolingOffActive) {
+      setBreathingOpen(true);
+      return;
+    }
+    await runAnalysis();
   };
 
   return (
@@ -944,8 +966,19 @@ export default function AnalyzePage() {
             <AntiPatternGuardrails
               instrument={finalInstrument}
               proceedHandleRef={guardrailProceedRef}
+              onCoolingOffChange={setCoolingOffActive}
             />
           )}
+          <CoolingOffBreathingDialog
+            open={breathingOpen}
+            onClose={() => setBreathingOpen(false)}
+            onContinueAnyway={() => {
+              setBreathingOpen(false);
+              void runAnalysis();
+            }}
+            lossPnlPercent={coolingOffLoss}
+          />
+
 
           {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist />}
 

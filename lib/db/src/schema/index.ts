@@ -707,6 +707,7 @@ export const guardrailKindEnum = pgEnum("guardrail_kind", [
   "revenge",
   "overtrading",
   "high_risk_window",
+  "unusual_hour",
   "cooling_off",
 ]);
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, ShieldAlert, Clock3, Repeat } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Clock3, Repeat, MoonStar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import {
@@ -23,6 +23,7 @@ const ICONS: Record<GuardrailKind, typeof AlertTriangle> = {
   revenge: Repeat,
   overtrading: ShieldAlert,
   high_risk_window: AlertTriangle,
+  unusual_hour: MoonStar,
   cooling_off: Clock3,
 };
 
@@ -44,11 +45,18 @@ interface AntiPatternGuardrailsProps {
    * `proceeded: true` events for whatever was on screen at click time.
    */
   proceedHandleRef?: { current: (() => void) | null };
+  /**
+   * Notifies the parent whether cooling-off is currently active so it
+   * can route the submit through the breathing-exercise confirmation
+   * dialog instead of analysing immediately.
+   */
+  onCoolingOffChange?: (active: boolean) => void;
 }
 
 export function AntiPatternGuardrails({
   instrument,
   proceedHandleRef,
+  onCoolingOffChange,
 }: AntiPatternGuardrailsProps) {
   const { t, lang } = useTranslation();
   const { data } = useAntiPatternSignals(instrument);
@@ -68,6 +76,10 @@ export function AntiPatternGuardrails({
   const visible = signals.filter((s) =>
     s.kind === "cooling_off" ? s.untilEpochMs > now : true,
   );
+  const coolingOffActive = visible.some((s) => s.kind === "cooling_off");
+  useEffect(() => {
+    onCoolingOffChange?.(coolingOffActive);
+  }, [coolingOffActive, onCoolingOffChange]);
 
   // Track which (kind+instrument) pairs we've already logged so the
   // telemetry endpoint sees one row per appearance per session, not one
@@ -89,7 +101,9 @@ export function AntiPatternGuardrails({
               ? { event: s.event.name, minutesUntil: s.minutesUntil }
               : s.kind === "revenge"
                 ? { minutesSinceLoss: s.minutesSinceLoss }
-                : { minutesRemaining: s.minutesRemaining },
+                : s.kind === "unusual_hour"
+                  ? { hourUtc: s.hourUtc, sampleSize: s.sampleSize }
+                  : { minutesRemaining: s.minutesRemaining },
       });
     }
     // We intentionally key the effect on visible.length + the joined
@@ -149,6 +163,11 @@ export function AntiPatternGuardrails({
             body = format(t.analyze.guardrail_high_risk_body, {
               event: s.event.name,
               minutes: s.minutesUntil,
+            });
+          } else if (s.kind === "unusual_hour") {
+            body = format(t.analyze.guardrail_unusual_hour_body, {
+              hour: s.hourUtc,
+              freq: s.pastFrequencyPct,
             });
           } else {
             // cooling_off — recompute remaining minutes against `now`

@@ -12,10 +12,11 @@ import { getRelevantCalendar, type CalendarEvent } from "./calendar";
 //     blocks an action; the analyse endpoint is untouched. The UI is
 //     responsible for surfacing the warning and letting the user click
 //     "Analyse anyway".
-//   * Thresholds are constants (not configurable) so the behaviour is
-//     predictable and we can A/B them later if needed. The single
-//     user-configurable knob is the per-category opt-out, lifted from
-//     the existing push-prefs columns.
+//   * Defaults vs personalised — overtrading limits and the
+//     "unusual hour" baseline both have hard defaults for new users
+//     and graduate to personalised values once the user has enough
+//     history. `personalized: true` on the signal lets the UI tell the
+//     user "based on your own data".
 //   * Cooling-off is opt-in. When the user opts in we read their most
 //     recent journal entry; if it was a loss above the threshold within
 //     the cool-off window we report `coolingOff.active = true` and let
@@ -23,16 +24,22 @@ import { getRelevantCalendar, type CalendarEvent } from "./calendar";
 //     timestamp — the source of truth is the journal row itself.
 
 const REVENGE_WINDOW_MIN = 5;
-const OVERTRADING_PER_HOUR = 5;
-const OVERTRADING_PER_DAY = 10;
+const OVERTRADING_DEFAULT_PER_HOUR = 5;
+const OVERTRADING_DEFAULT_PER_DAY = 10;
+const OVERTRADING_HISTORY_DAYS = 30;
+const OVERTRADING_HISTORY_MIN = 30; // need ≥30 past analyses to personalise
 const HIGH_RISK_EVENT_MIN = 30;
 const COOLING_OFF_WINDOW_MIN = 30;
 const COOLING_OFF_DEFAULT_LOSS_PCT = 1;
+const UNUSUAL_HOUR_LOOKBACK_DAYS = 30;
+const UNUSUAL_HOUR_HISTORY_MIN = 30;
+const UNUSUAL_HOUR_FREQ_THRESHOLD = 0.03; // <3% of the user's past hours
 
 export type GuardrailKind =
   | "revenge"
   | "overtrading"
   | "high_risk_window"
+  | "unusual_hour"
   | "cooling_off";
 
 export interface RevengeSignal {
@@ -47,6 +54,8 @@ export interface OvertradingSignal {
   scope: "hour" | "day";
   count: number;
   limit: number;
+  /** True once the user has enough history for a personalised cap. */
+  personalized: boolean;
 }
 
 export interface HighRiskSignal {
@@ -58,6 +67,13 @@ export interface HighRiskSignal {
     epochMs: number;
   };
   minutesUntil: number;
+}
+
+export interface UnusualHourSignal {
+  kind: "unusual_hour";
+  hourUtc: number;
+  pastFrequencyPct: number;
+  sampleSize: number;
 }
 
 export interface CoolingOffSignal {
@@ -72,6 +88,7 @@ export type GuardrailSignal =
   | RevengeSignal
   | OvertradingSignal
   | HighRiskSignal
+  | UnusualHourSignal
   | CoolingOffSignal;
 
 export interface GuardrailPrefs {
@@ -143,12 +160,64 @@ async function detectRevenge(
   };
 }
 
+interface PersonalCaps {
+  perHour: number;
+  perDay: number;
+  personalized: boolean;
+}
+
+/**
+ * Personalise overtrading thresholds from the user's own last 30 days.
+ * Rule: cap = max(default, ceil(avg-active-bucket × 2)). For low-history
+ * users we keep the default. This gives habitual high-frequency users a
+ * higher tolerance instead of nagging them every session, while still
+ * flagging when *they* spike well above *their own* baseline.
+ */
+async function computeOvertradingCaps(
+  userId: number,
+  now: number,
+): Promise<PersonalCaps> {
+  const since = new Date(now - OVERTRADING_HISTORY_DAYS * 24 * 60 * 60_000);
+  const rows = await db
+    .select({ createdAt: analyses.createdAt })
+    .from(analyses)
+    .where(and(eq(analyses.userId, userId), gte(analyses.createdAt, since)));
+  if (rows.length < OVERTRADING_HISTORY_MIN) {
+    return {
+      perHour: OVERTRADING_DEFAULT_PER_HOUR,
+      perDay: OVERTRADING_DEFAULT_PER_DAY,
+      personalized: false,
+    };
+  }
+  const hourBuckets = new Map<string, number>();
+  const dayBuckets = new Map<string, number>();
+  for (const r of rows) {
+    const ms = r.createdAt.getTime();
+    const dayKey = String(Math.floor(ms / (24 * 60 * 60_000)));
+    const hourKey = String(Math.floor(ms / (60 * 60_000)));
+    dayBuckets.set(dayKey, (dayBuckets.get(dayKey) ?? 0) + 1);
+    hourBuckets.set(hourKey, (hourBuckets.get(hourKey) ?? 0) + 1);
+  }
+  const avgPerActiveHour =
+    [...hourBuckets.values()].reduce((a, b) => a + b, 0) /
+    Math.max(1, hourBuckets.size);
+  const avgPerActiveDay =
+    [...dayBuckets.values()].reduce((a, b) => a + b, 0) /
+    Math.max(1, dayBuckets.size);
+  return {
+    perHour: Math.max(OVERTRADING_DEFAULT_PER_HOUR, Math.ceil(avgPerActiveHour * 2)),
+    perDay: Math.max(OVERTRADING_DEFAULT_PER_DAY, Math.ceil(avgPerActiveDay * 1.5)),
+    personalized: true,
+  };
+}
+
 async function detectOvertrading(
   userId: number,
   now: number,
 ): Promise<OvertradingSignal | null> {
   // Count *analyses* (not journal entries) so the signal fires for
   // habitual chart-reload users even if they don't always log a trade.
+  const caps = await computeOvertradingCaps(userId, now);
   const hourAgo = new Date(now - 60 * 60_000);
   const dayAgo = new Date(now - 24 * 60 * 60_000);
   const [row] = await db
@@ -160,20 +229,22 @@ async function detectOvertrading(
     .where(and(eq(analyses.userId, userId), gte(analyses.createdAt, dayAgo)));
   const hourlyCount = Number(row?.hourly ?? 0);
   const dailyCount = Number(row?.daily ?? 0);
-  if (hourlyCount >= OVERTRADING_PER_HOUR) {
+  if (hourlyCount >= caps.perHour) {
     return {
       kind: "overtrading",
       scope: "hour",
       count: hourlyCount,
-      limit: OVERTRADING_PER_HOUR,
+      limit: caps.perHour,
+      personalized: caps.personalized,
     };
   }
-  if (dailyCount >= OVERTRADING_PER_DAY) {
+  if (dailyCount >= caps.perDay) {
     return {
       kind: "overtrading",
       scope: "day",
       count: dailyCount,
-      limit: OVERTRADING_PER_DAY,
+      limit: caps.perDay,
+      personalized: caps.personalized,
     };
   }
   return null;
@@ -218,6 +289,37 @@ async function detectHighRiskWindow(
       epochMs: first.epochMs,
     },
     minutesUntil: Math.max(0, Math.floor((first.epochMs - now) / 60_000)),
+  };
+}
+
+/**
+ * Fires when the user is analysing at a UTC hour they almost never
+ * touch — proxy for "far outside their usual trading hours". Only runs
+ * once the user has ≥30 historical analyses; new users get nothing
+ * here. Gated behind the same `highRisk` pref as the event detector
+ * since both answer the same user intent ("warn me about risky
+ * windows").
+ */
+async function detectUnusualHour(
+  userId: number,
+  now: number,
+): Promise<UnusualHourSignal | null> {
+  const since = new Date(now - UNUSUAL_HOUR_LOOKBACK_DAYS * 24 * 60 * 60_000);
+  const rows = await db
+    .select({ createdAt: analyses.createdAt })
+    .from(analyses)
+    .where(and(eq(analyses.userId, userId), gte(analyses.createdAt, since)));
+  if (rows.length < UNUSUAL_HOUR_HISTORY_MIN) return null;
+  const counts = new Array<number>(24).fill(0);
+  for (const r of rows) counts[r.createdAt.getUTCHours()]++;
+  const currentHour = new Date(now).getUTCHours();
+  const freq = counts[currentHour] / rows.length;
+  if (freq >= UNUSUAL_HOUR_FREQ_THRESHOLD) return null;
+  return {
+    kind: "unusual_hour",
+    hourUtc: currentHour,
+    pastFrequencyPct: Math.round(freq * 1000) / 10, // one decimal
+    sampleSize: rows.length,
   };
 }
 
@@ -272,15 +374,18 @@ export async function detectGuardrailSignals(
   // *do* still surface cooling-off telemetry through the existing
   // analyse flow even when the toggle is off; the toggle just controls
   // whether the countdown is shown here.
-  const [revenge, overtrading, highRisk, coolingOff] = await Promise.all([
-    prefs.revenge ? detectRevenge(userId, instrument, now) : Promise.resolve(null),
-    prefs.overtrading ? detectOvertrading(userId, now) : Promise.resolve(null),
-    prefs.highRisk ? detectHighRiskWindow(instrument, now) : Promise.resolve(null),
-    prefs.coolingOff ? detectCoolingOff(userId, now) : Promise.resolve(null),
-  ]);
+  const [revenge, overtrading, highRisk, unusualHour, coolingOff] =
+    await Promise.all([
+      prefs.revenge ? detectRevenge(userId, instrument, now) : Promise.resolve(null),
+      prefs.overtrading ? detectOvertrading(userId, now) : Promise.resolve(null),
+      prefs.highRisk ? detectHighRiskWindow(instrument, now) : Promise.resolve(null),
+      prefs.highRisk ? detectUnusualHour(userId, now) : Promise.resolve(null),
+      prefs.coolingOff ? detectCoolingOff(userId, now) : Promise.resolve(null),
+    ]);
   if (revenge) signals.push(revenge);
   if (overtrading) signals.push(overtrading);
   if (highRisk) signals.push(highRisk);
+  if (unusualHour) signals.push(unusualHour);
   if (coolingOff) signals.push(coolingOff);
 
   return { signals, prefs };
@@ -290,5 +395,6 @@ export const GUARDRAIL_KINDS: readonly GuardrailKind[] = [
   "revenge",
   "overtrading",
   "high_risk_window",
+  "unusual_hour",
   "cooling_off",
 ] as const;

@@ -1,2 +1,2 @@
-- [Sentiment privacy gating](sentiment-privacy-gating.md) — gated aggregates must suppress raw cohort counts too, not just the percentages, or attackers can probe for membership inference on thin instruments.
-- [Orval query options need queryKey](orval-query-key.md) — when passing a `query: {...}` options object to a generated orval hook, you must also pass `queryKey` (use the generated `get*QueryKey(params)` helper) or typecheck fails.
+- [Postgres enum migration with Drizzle](pg-enum-add-value.md) — adding a value to a pgEnum needs an out-of-band `ALTER TYPE ... ADD VALUE`; drizzle-kit push won't do it idempotently and tsc compares against the live schema's d.ts.
+- [Time-windowed seed tests](time-windowed-seed-tests.md) — when a detector filters by `createdAt >= now - Ndays`, seed-by-`i*24h` going back N days drops the oldest row past the boundary; align the seed-hour or shorten the spacing.
