@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
 import { en } from "@/locales/en";
 import { id } from "@/locales/id";
 import type { Translations } from "@/locales/en";
+import { updateProfile } from "@workspace/api-client-react";
 
 export type Language = "en" | "id";
 
@@ -28,11 +29,23 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return "en";
   });
 
+  const syncing = useRef(false);
   const setLang = (l: Language) => {
     setLangState(l);
     try {
       localStorage.setItem("app_lang", l);
     } catch {}
+    // Best-effort sync to the server so background dispatchers
+    // (weekly trader-mirror report, etc.) localise pushes correctly.
+    // Anonymous visitors will get a 401 — silently swallowed.
+    if (!syncing.current) {
+      syncing.current = true;
+      updateProfile({ lang: l })
+        .catch(() => {})
+        .finally(() => {
+          syncing.current = false;
+        });
+    }
   };
 
   return (

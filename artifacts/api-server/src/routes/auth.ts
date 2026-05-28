@@ -255,6 +255,11 @@ const profileUpdateSchema = z
     onboardingCompleted: z
       .boolean({ invalid_type_error: "onboardingCompleted harus boolean" })
       .optional(),
+    lang: z
+      .enum(["en", "id"], {
+        errorMap: () => ({ message: "Bahasa harus 'en' atau 'id'" }),
+      })
+      .optional(),
   })
   .strict();
 
@@ -265,7 +270,7 @@ router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
     res.status(400).json({ error: first?.message ?? "Data profil tidak valid" });
     return;
   }
-  const { displayName, selectedMode, themePreference, onboardingCompleted } =
+  const { displayName, selectedMode, themePreference, onboardingCompleted, lang } =
     parsed.data;
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
@@ -273,6 +278,7 @@ router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
   if (selectedMode !== undefined) updateData["selectedMode"] = selectedMode;
   if (themePreference !== undefined) updateData["themePreference"] = themePreference;
   if (onboardingCompleted !== undefined) updateData["onboardingCompleted"] = onboardingCompleted;
+  if (lang !== undefined) updateData["lang"] = lang;
 
   const [updated] = await db
     .update(users)

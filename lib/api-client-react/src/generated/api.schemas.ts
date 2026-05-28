@@ -268,11 +268,24 @@ export const UpdateProfileBodyThemePreference = {
   dark: "dark",
 } as const;
 
+/**
+ * UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language.
+ */
+export type UpdateProfileBodyLang =
+  (typeof UpdateProfileBodyLang)[keyof typeof UpdateProfileBodyLang];
+
+export const UpdateProfileBodyLang = {
+  en: "en",
+  id: "id",
+} as const;
+
 export interface UpdateProfileBody {
   displayName?: string;
   selectedMode?: UpdateProfileBodySelectedMode;
   themePreference?: UpdateProfileBodyThemePreference;
   onboardingCompleted?: boolean;
+  /** UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language. */
+  lang?: UpdateProfileBodyLang;
 }
 
 export interface ChangePasswordBody {
@@ -1352,6 +1365,67 @@ export interface JournalStats {
   worstInstrument?: JournalGroupStat | null;
   bestSession?: JournalGroupStat | null;
   worstSession?: JournalGroupStat | null;
+}
+
+/**
+ * Aggregate stats for one bucket inside a trader-mirror category (session, instrument, time-of-day, etc.).
+ */
+export interface MirrorGroupStat {
+  key: string;
+  total: number;
+  wins: number;
+  winRate: number;
+  avgPnlPercent: number | null;
+}
+
+export type MirrorGatedInsightReason =
+  | (typeof MirrorGatedInsightReason)[keyof typeof MirrorGatedInsightReason]
+  | null;
+
+export const MirrorGatedInsightReason = {
+  need_more_data: "need_more_data",
+} as const;
+
+export type MirrorGatedInsightData = { [key: string]: unknown } | null;
+
+/**
+ * Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.
+ */
+export interface MirrorGatedInsight {
+  gated: boolean;
+  reason?: MirrorGatedInsightReason;
+  need?: number | null;
+  have?: number | null;
+  data?: MirrorGatedInsightData;
+}
+
+/**
+ * Personal trader-mirror insights bundle (task #162). Every category respects a minimum-sample guardrail.
+ */
+export interface TraderMirrorInsights {
+  windowDays: number | null;
+  totalResolved: number;
+  overallGated: boolean;
+  sessions: MirrorGatedInsight;
+  instruments: MirrorGatedInsight;
+  timing: MirrorGatedInsight;
+  postLoss: MirrorGatedInsight;
+  exitDiscipline: MirrorGatedInsight;
+}
+
+/**
+ * Short bilingual one-liner pulled from the insights bundle. Used for both the dashboard hero strip and the weekly trader-report push. `id` is the stable highlight key; `en` and `idText` are the English and Indonesian copy.
+ */
+export interface TraderMirrorHighlight {
+  id: string;
+  en: string;
+  idText: string;
+}
+
+export interface TraderMirrorResponse {
+  insights: TraderMirrorInsights;
+  highlights: TraderMirrorHighlight[];
+  timezone: string;
 }
 
 /**

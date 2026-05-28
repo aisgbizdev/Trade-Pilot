@@ -131,6 +131,12 @@ export const UpdateProfileBody = zod.object({
   selectedMode: zod.enum(["beginner", "pro"]).optional(),
   themePreference: zod.enum(["light", "dark"]).optional(),
   onboardingCompleted: zod.boolean().optional(),
+  lang: zod
+    .enum(["en", "id"])
+    .optional()
+    .describe(
+      "UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language.",
+    ),
 });
 
 export const UpdateProfileResponse = zod.object({
@@ -547,6 +553,88 @@ export const DeleteJournalEntryParams = zod.object({
 
 export const DeleteJournalEntryResponse = zod.object({
   message: zod.string(),
+});
+
+/**
+ * @summary Behavioural insights about the caller as a trader (task
+ */
+export const GetTraderMirrorInsightsResponse = zod.object({
+  insights: zod
+    .object({
+      windowDays: zod.number().nullable(),
+      totalResolved: zod.number(),
+      overallGated: zod.boolean(),
+      sessions: zod
+        .object({
+          gated: zod.boolean(),
+          reason: zod.enum(["need_more_data"]).nullish(),
+          need: zod.number().nullish(),
+          have: zod.number().nullish(),
+          data: zod.record(zod.string(), zod.unknown()).nullish(),
+        })
+        .describe(
+          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
+        ),
+      instruments: zod
+        .object({
+          gated: zod.boolean(),
+          reason: zod.enum(["need_more_data"]).nullish(),
+          need: zod.number().nullish(),
+          have: zod.number().nullish(),
+          data: zod.record(zod.string(), zod.unknown()).nullish(),
+        })
+        .describe(
+          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
+        ),
+      timing: zod
+        .object({
+          gated: zod.boolean(),
+          reason: zod.enum(["need_more_data"]).nullish(),
+          need: zod.number().nullish(),
+          have: zod.number().nullish(),
+          data: zod.record(zod.string(), zod.unknown()).nullish(),
+        })
+        .describe(
+          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
+        ),
+      postLoss: zod
+        .object({
+          gated: zod.boolean(),
+          reason: zod.enum(["need_more_data"]).nullish(),
+          need: zod.number().nullish(),
+          have: zod.number().nullish(),
+          data: zod.record(zod.string(), zod.unknown()).nullish(),
+        })
+        .describe(
+          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
+        ),
+      exitDiscipline: zod
+        .object({
+          gated: zod.boolean(),
+          reason: zod.enum(["need_more_data"]).nullish(),
+          need: zod.number().nullish(),
+          have: zod.number().nullish(),
+          data: zod.record(zod.string(), zod.unknown()).nullish(),
+        })
+        .describe(
+          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
+        ),
+    })
+    .describe(
+      "Personal trader-mirror insights bundle (task #162). Every category respects a minimum-sample guardrail.",
+    ),
+  highlights: zod.array(
+    zod
+      .object({
+        id: zod.string(),
+        en: zod.string(),
+        idText: zod.string(),
+      })
+      .describe(
+        "Short bilingual one-liner pulled from the insights bundle. Used for both the dashboard hero strip and the weekly trader-report push. `id` is the stable highlight key; `en` and `idText` are the English and Indonesian copy.",
+      ),
+  ),
+  timezone: zod.string(),
 });
 
 /**

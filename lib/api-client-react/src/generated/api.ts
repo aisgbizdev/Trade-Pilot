@@ -87,6 +87,7 @@ import type {
   SecurityQuestionResponse,
   SetAnalysisNoteBody,
   TagsList,
+  TraderMirrorResponse,
   UpdateJournalEntryBody,
   UpdateProfileBody,
   UpdateUserRoleBody,
@@ -2059,6 +2060,82 @@ export const useDeleteJournalEntry = <
 > => {
   return useMutation(getDeleteJournalEntryMutationOptions(options));
 };
+
+/**
+ * @summary Behavioural insights about the caller as a trader (task
+ */
+export const getGetTraderMirrorInsightsUrl = () => {
+  return `/api/mirror/insights`;
+};
+
+export const getTraderMirrorInsights = async (
+  options?: RequestInit,
+): Promise<TraderMirrorResponse> => {
+  return customFetch<TraderMirrorResponse>(getGetTraderMirrorInsightsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTraderMirrorInsightsQueryKey = () => {
+  return [`/api/mirror/insights`] as const;
+};
+
+export const getGetTraderMirrorInsightsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTraderMirrorInsights>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTraderMirrorInsights>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTraderMirrorInsightsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTraderMirrorInsights>>
+  > = ({ signal }) => getTraderMirrorInsights({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTraderMirrorInsights>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTraderMirrorInsightsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTraderMirrorInsights>>
+>;
+export type GetTraderMirrorInsightsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Behavioural insights about the caller as a trader (task
+ */
+
+export function useGetTraderMirrorInsights<
+  TData = Awaited<ReturnType<typeof getTraderMirrorInsights>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTraderMirrorInsights>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTraderMirrorInsightsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Create new analysis (triggers AI)

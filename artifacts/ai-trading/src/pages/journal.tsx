@@ -177,17 +177,26 @@ export default function JournalPage() {
               </p>
             </div>
           </div>
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
-            }}
-            data-testid="button-add-journal-entry"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            {t.journal.add_entry}
-          </Button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Link
+              href="/mirror"
+              className="text-[12px] font-medium text-primary px-2 py-1.5 rounded-md hover:bg-primary/10 transition-colors"
+              data-testid="link-journal-to-mirror"
+            >
+              {t.mirror.nav_label}
+            </Link>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+              data-testid="button-add-journal-entry"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              {t.journal.add_entry}
+            </Button>
+          </div>
         </div>
 
         {/* Stats summary */}

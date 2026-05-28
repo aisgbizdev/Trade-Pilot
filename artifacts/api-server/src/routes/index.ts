@@ -15,6 +15,7 @@ import dailySummaryRouter from "./daily-summary";
 import watchlistRouter from "./watchlist";
 import userPriceAlertsRouter from "./user-price-alerts";
 import tradeJournalRouter from "./trade-journal";
+import traderMirrorRouter from "./trader-mirror";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(dailySummaryRouter);
 router.use(watchlistRouter);
 router.use(userPriceAlertsRouter);
 router.use(tradeJournalRouter);
+router.use(traderMirrorRouter);
 
 export default router;

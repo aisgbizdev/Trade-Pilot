@@ -13,6 +13,7 @@ import {
 } from "./watchlist-alerts";
 import { detectPriceAnomalies } from "./price-anomaly";
 import { dispatchWeeklyRecap } from "./weekly-recap";
+import { dispatchTraderMirrorReport } from "./trader-mirror-weekly";
 import { dispatchMarketOpenReminders } from "./market-open";
 import { dispatchDormancyNudge } from "./dormancy";
 import { dispatchOnboardingNudges } from "./onboarding-nudge";
@@ -487,6 +488,17 @@ export function startBackgroundJobs(): void {
     },
     weeklyRecapInterval,
     42000,
+  );
+  // Personal Trader Mirror weekly report (task #162). Fires Sunday
+  // 20:00 user-local — one hour after dispatchWeeklyRecap above so the
+  // two pushes don't land back-to-back. 60s tick + per-week dedupe key
+  // keep delivery at exactly one per ISO week per user.
+  schedule(
+    async () => {
+      await dispatchTraderMirrorReport();
+    },
+    weeklyRecapInterval,
+    48000,
   );
 
   // Tier 3 push (task #142).

@@ -161,6 +161,12 @@ export const users = pgTable("users", {
   pushPriceAnomaly: boolean("push_price_anomaly").notNull().default(true),
   pushWeeklyRecap: boolean("push_weekly_recap").notNull().default(true),
   pushSignalFlip: boolean("push_signal_flip").notNull().default(true),
+  // UI language preference ("en" / "id") — synced from the client
+  // i18n provider so background dispatchers (e.g. weekly trader-mirror
+  // report, task #162) can render OS push + in-app notification copy
+  // in the user's chosen language without depending on per-request
+  // headers. Defaults "en" for safety.
+  lang: text("lang").notNull().default("en"),
   // Tier 3 push (task #142) — habit & retention nudges. Conservative
   // defaults: dormancy nudge is opt-in (false), onboarding is opt-out
   // (true) and only ever fires once per user.

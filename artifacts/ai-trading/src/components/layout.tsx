@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, BookOpen } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, BookOpen, Sparkles } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
@@ -25,7 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 
-const MAIN_NAV_PATHS = ["/dashboard", "/analyze", "/journal", "/history", "/analytics", "/profile"];
+const MAIN_NAV_PATHS = ["/dashboard", "/analyze", "/journal", "/mirror", "/history", "/analytics", "/profile"];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -82,6 +82,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/dashboard", icon: LayoutDashboard, label: t.nav.dashboard },
     { href: "/analyze", icon: TrendingUp, label: t.nav.analyze },
     { href: "/journal", icon: BookOpen, label: t.journal.nav_label },
+    { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label },
     { href: "/history", icon: Clock, label: t.nav.history },
     { href: "/analytics", icon: BarChart3, label: t.nav.analytics },
     { href: "/profile", icon: User, label: t.nav.profile },

@@ -30,6 +30,8 @@ tags:
     description: User-defined standalone price alerts (task #148)
   - name: trade-journal
     description: Manual post-trade journal entries (task #161)
+  - name: trader-mirror
+    description: Personal trader mirror — behavioural insights (task #162)
 paths:
   /healthz:
     get:
@@ -642,6 +644,25 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Entry not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mirror/insights:
+    get:
+      operationId: getTraderMirrorInsights
+      tags: [trader-mirror]
+      summary: Behavioural insights about the caller as a trader (task #162)
+      responses:
+        "200":
+          description: Trader mirror insights + bilingual highlights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TraderMirrorResponse"
+        "401":
+          description: Not authenticated
           content:
             application/json:
               schema:
@@ -2406,6 +2427,10 @@ components:
           enum: [light, dark]
         onboardingCompleted:
           type: boolean
+        lang:
+          type: string
+          enum: [en, id]
+          description: "UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language."
 
     ChangePasswordBody:
       type: object
@@ -3996,6 +4021,101 @@ components:
           nullable: true
       required:
         - totals
+
+    MirrorGroupStat:
+      type: object
+      description: "Aggregate stats for one bucket inside a trader-mirror category (session, instrument, time-of-day, etc.)."
+      properties:
+        key:
+          type: string
+        total:
+          type: integer
+        wins:
+          type: integer
+        winRate:
+          type: number
+        avgPnlPercent:
+          type: number
+          nullable: true
+      required: [key, total, wins, winRate, avgPnlPercent]
+
+    MirrorGatedInsight:
+      type: object
+      description: "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder."
+      properties:
+        gated:
+          type: boolean
+        reason:
+          type: string
+          enum: [need_more_data]
+          nullable: true
+        need:
+          type: integer
+          nullable: true
+        have:
+          type: integer
+          nullable: true
+        data:
+          type: object
+          nullable: true
+          additionalProperties: true
+      required: [gated]
+
+    TraderMirrorInsights:
+      type: object
+      description: "Personal trader-mirror insights bundle (task #162). Every category respects a minimum-sample guardrail."
+      properties:
+        windowDays:
+          type: integer
+          nullable: true
+        totalResolved:
+          type: integer
+        overallGated:
+          type: boolean
+        sessions:
+          $ref: "#/components/schemas/MirrorGatedInsight"
+        instruments:
+          $ref: "#/components/schemas/MirrorGatedInsight"
+        timing:
+          $ref: "#/components/schemas/MirrorGatedInsight"
+        postLoss:
+          $ref: "#/components/schemas/MirrorGatedInsight"
+        exitDiscipline:
+          $ref: "#/components/schemas/MirrorGatedInsight"
+      required:
+        - windowDays
+        - totalResolved
+        - overallGated
+        - sessions
+        - instruments
+        - timing
+        - postLoss
+        - exitDiscipline
+
+    TraderMirrorHighlight:
+      type: object
+      description: "Short bilingual one-liner pulled from the insights bundle. Used for both the dashboard hero strip and the weekly trader-report push. `id` is the stable highlight key; `en` and `idText` are the English and Indonesian copy."
+      properties:
+        id:
+          type: string
+        en:
+          type: string
+        idText:
+          type: string
+      required: [id, en, idText]
+
+    TraderMirrorResponse:
+      type: object
+      properties:
+        insights:
+          $ref: "#/components/schemas/TraderMirrorInsights"
+        highlights:
+          type: array
+          items:
+            $ref: "#/components/schemas/TraderMirrorHighlight"
+        timezone:
+          type: string
+      required: [insights, highlights, timezone]
 
     JournalSentiment:
       type: object
