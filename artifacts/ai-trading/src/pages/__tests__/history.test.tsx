@@ -104,12 +104,36 @@ describe("HistoryPage: happy-path render", () => {
     expect(screen.getByTestId("button-reanalyze-row-102")).toBeInTheDocument();
 
     // Pagination controls render once data is in. With total=2 and
-    // limit=20 there is no next page and we are on the first page.
+    // limit=5 there is no next page and we are on the first page.
     expect(
       (screen.getByTestId("button-prev-page") as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
       (screen.getByTestId("button-next-page") as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+});
+
+describe("HistoryPage: pagination size", () => {
+  it("enables the next-page button when total exceeds the 5-per-page size", async () => {
+    // total=6 with limit=5 → second page exists → next is enabled.
+    installFetchMock([
+      listHandler({ analyses: SAMPLE_ANALYSES, total: 6 }),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <HistoryPage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("card-analysis-101");
+    expect(
+      (screen.getByTestId("button-next-page") as HTMLButtonElement).disabled,
+    ).toBe(false);
+    expect(
+      (screen.getByTestId("button-prev-page") as HTMLButtonElement).disabled,
     ).toBe(true);
   });
 });

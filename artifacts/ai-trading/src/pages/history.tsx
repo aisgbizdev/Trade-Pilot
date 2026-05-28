@@ -172,7 +172,7 @@ export default function HistoryPage() {
   const dateLocale = lang === "id" ? idLocale : enUS;
   const search = useSearch();
   const [, setLocation] = useLocation();
-  const limit = 20;
+  const limit = 5;
   const { refresh, isRefreshing } = useRefreshAnalysis();
   const [showFilters, setShowFilters] = useState(false);
   const queryClient = useQueryClient();
