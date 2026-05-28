@@ -200,6 +200,18 @@ export const users = pgTable("users", {
   // flipped off. Without it, historical unread rows in the 30-day
   // lookback would re-trigger pause/banner on every tick.
   disengageCheckpoints: jsonb("disengage_checkpoints").$type<Record<string, string>>().notNull().default({}),
+  // Anti-pattern guardrails (task #163). Soft warnings shown above the
+  // analyse button when the user is about to revenge-trade, overtrade,
+  // or open a position right before a known high-risk window. Each
+  // category has an individual opt-out so a power user can silence the
+  // overtrading nag while keeping the imminent-event reminder. Default
+  // ON for the three signals (low-noise + protective), OFF for the
+  // cooling-off mode (it imposes a 30-min countdown that some users
+  // will find too restrictive, so we wait for explicit opt-in).
+  guardrailRevenge: boolean("guardrail_revenge").notNull().default(true),
+  guardrailOvertrading: boolean("guardrail_overtrading").notNull().default(true),
+  guardrailHighRisk: boolean("guardrail_high_risk").notNull().default(true),
+  coolingOffEnabled: boolean("cooling_off_enabled").notNull().default(false),
   dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(false),
   dailySummaryTime: text("daily_summary_time").notNull().default("07:00"),
   dailySummaryTimezone: text("daily_summary_timezone").notNull().default("Asia/Jakarta"),
@@ -684,3 +696,31 @@ export type UserPriceAlert = typeof userPriceAlerts.$inferSelect;
 export type NewUserPriceAlert = typeof userPriceAlerts.$inferInsert;
 export type TradeJournalEntry = typeof tradeJournal.$inferSelect;
 export type NewTradeJournalEntry = typeof tradeJournal.$inferInsert;
+
+// Anti-pattern guardrail telemetry (task #163). One row each time a
+// soft warning is shown to the user. `proceeded` flips to true if the
+// user pressed "Analyse anyway" after seeing the warning; null/false
+// means the warning was shown and either dismissed or the page
+// unmounted before they clicked through. Feeds the Mirror digest
+// (task #162) and the personal-analytics page.
+export const guardrailKindEnum = pgEnum("guardrail_kind", [
+  "revenge",
+  "overtrading",
+  "high_risk_window",
+  "cooling_off",
+]);
+
+export const guardrailEvents = pgTable("guardrail_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  kind: guardrailKindEnum("kind").notNull(),
+  instrument: text("instrument"),
+  firedAt: timestamp("fired_at").notNull().defaultNow(),
+  proceeded: boolean("proceeded").notNull().default(false),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+});
+
+export type GuardrailEvent = typeof guardrailEvents.$inferSelect;
+export type NewGuardrailEvent = typeof guardrailEvents.$inferInsert;

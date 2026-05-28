@@ -88,7 +88,11 @@ export default function NotificationsPage() {
       | "pushWeeklyRecap"
       | "pushSignalFlip"
       | "pushDormancyNudge"
-      | "pushOnboarding",
+      | "pushOnboarding"
+      | "guardrailRevenge"
+      | "guardrailOvertrading"
+      | "guardrailHighRisk"
+      | "coolingOffEnabled",
     value: boolean,
   ) => {
     try {
@@ -483,6 +487,85 @@ export default function NotificationsPage() {
                   onCheckedChange={(v) => handlePrefToggle("pushSignalFlip", v)}
                   disabled={updatePushPrefs.isPending}
                   data-testid="switch-pref-signal-flip"
+                />
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {pushPrefs && (
+          <Card className="p-4 mb-5" data-testid="card-guardrail-prefs">
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-foreground">
+                {t.notifications.guardrail_section_title}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                {t.notifications.guardrail_section_desc}
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.guardrail_revenge_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.guardrail_revenge_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.guardrailRevenge}
+                  onCheckedChange={(v) => handlePrefToggle("guardrailRevenge", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-guardrail-revenge"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.guardrail_overtrading_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.guardrail_overtrading_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.guardrailOvertrading}
+                  onCheckedChange={(v) => handlePrefToggle("guardrailOvertrading", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-guardrail-overtrading"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.guardrail_high_risk_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.guardrail_high_risk_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.guardrailHighRisk}
+                  onCheckedChange={(v) => handlePrefToggle("guardrailHighRisk", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-guardrail-high-risk"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.cooling_off_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.cooling_off_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.coolingOffEnabled}
+                  onCheckedChange={(v) => handlePrefToggle("coolingOffEnabled", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-cooling-off"
                 />
               </div>
             </div>

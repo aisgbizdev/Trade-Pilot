@@ -93,6 +93,13 @@ const prefsSchema = z.object({
   pushDormancyNudge: z.boolean().optional(),
   pushOnboarding: z.boolean().optional(),
   dismissDisengageNotice: z.boolean().optional(),
+  // Anti-pattern guardrail opt-outs (task #163). Co-located on the
+  // push-prefs endpoint because the settings UI groups them under the
+  // same "what we surface to you" notifications panel.
+  guardrailRevenge: z.boolean().optional(),
+  guardrailOvertrading: z.boolean().optional(),
+  guardrailHighRisk: z.boolean().optional(),
+  coolingOffEnabled: z.boolean().optional(),
 });
 
 const PREF_SELECT = {
@@ -108,6 +115,10 @@ const PREF_SELECT = {
   pushDormancyNudge: users.pushDormancyNudge,
   pushOnboarding: users.pushOnboarding,
   disengageNoticeCategory: users.disengageNoticeCategory,
+  guardrailRevenge: users.guardrailRevenge,
+  guardrailOvertrading: users.guardrailOvertrading,
+  guardrailHighRisk: users.guardrailHighRisk,
+  coolingOffEnabled: users.coolingOffEnabled,
 } as const;
 
 router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
@@ -220,6 +231,10 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
   }
   if (typeof d.pushOnboarding === "boolean") updates["pushOnboarding"] = d.pushOnboarding;
   if (d.dismissDisengageNotice === true) updates["disengageNoticeCategory"] = null;
+  if (typeof d.guardrailRevenge === "boolean") updates["guardrailRevenge"] = d.guardrailRevenge;
+  if (typeof d.guardrailOvertrading === "boolean") updates["guardrailOvertrading"] = d.guardrailOvertrading;
+  if (typeof d.guardrailHighRisk === "boolean") updates["guardrailHighRisk"] = d.guardrailHighRisk;
+  if (typeof d.coolingOffEnabled === "boolean") updates["coolingOffEnabled"] = d.coolingOffEnabled;
 
   if (reEnabled.length > 0) {
     const nowIso = new Date().toISOString();

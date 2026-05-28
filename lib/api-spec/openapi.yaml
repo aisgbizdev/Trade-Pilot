@@ -2061,6 +2061,18 @@ components:
           type: string
           nullable: true
           description: When non-null, the UI should render a one-time banner explaining auto-pause.
+        guardrailRevenge:
+          type: boolean
+          description: Show soft warning when a loss on this instrument fired within the revenge window.
+        guardrailOvertrading:
+          type: boolean
+          description: Show soft warning when the user crosses the per-hour or per-day analysis count.
+        guardrailHighRisk:
+          type: boolean
+          description: Show soft warning when a high-impact event for the instrument prints within 30 min.
+        coolingOffEnabled:
+          type: boolean
+          description: Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.
       required:
         - pushExpiry
         - pushBroadcast
@@ -2073,6 +2085,10 @@ components:
         - marketOpenSessions
         - pushDormancyNudge
         - pushOnboarding
+        - guardrailRevenge
+        - guardrailOvertrading
+        - guardrailHighRisk
+        - coolingOffEnabled
 
     PushTestResult:
       type: object
@@ -2114,6 +2130,14 @@ components:
         dismissDisengageNotice:
           type: boolean
           description: Pass true to clear the one-time auto-pause banner.
+        guardrailRevenge:
+          type: boolean
+        guardrailOvertrading:
+          type: boolean
+        guardrailHighRisk:
+          type: boolean
+        coolingOffEnabled:
+          type: boolean
 
     DailySummarySettings:
       type: object

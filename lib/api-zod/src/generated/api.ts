@@ -1745,6 +1745,26 @@ export const GetPushPrefsResponse = zod.object({
     .describe(
       "When non-null, the UI should render a one-time banner explaining auto-pause.",
     ),
+  guardrailRevenge: zod
+    .boolean()
+    .describe(
+      "Show soft warning when a loss on this instrument fired within the revenge window.",
+    ),
+  guardrailOvertrading: zod
+    .boolean()
+    .describe(
+      "Show soft warning when the user crosses the per-hour or per-day analysis count.",
+    ),
+  guardrailHighRisk: zod
+    .boolean()
+    .describe(
+      "Show soft warning when a high-impact event for the instrument prints within 30 min.",
+    ),
+  coolingOffEnabled: zod
+    .boolean()
+    .describe(
+      "Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.",
+    ),
 });
 
 /**
@@ -1768,6 +1788,10 @@ export const UpdatePushPrefsBody = zod.object({
     .boolean()
     .optional()
     .describe("Pass true to clear the one-time auto-pause banner."),
+  guardrailRevenge: zod.boolean().optional(),
+  guardrailOvertrading: zod.boolean().optional(),
+  guardrailHighRisk: zod.boolean().optional(),
+  coolingOffEnabled: zod.boolean().optional(),
 });
 
 export const UpdatePushPrefsResponse = zod.object({
@@ -1797,6 +1821,26 @@ export const UpdatePushPrefsResponse = zod.object({
     .nullish()
     .describe(
       "When non-null, the UI should render a one-time banner explaining auto-pause.",
+    ),
+  guardrailRevenge: zod
+    .boolean()
+    .describe(
+      "Show soft warning when a loss on this instrument fired within the revenge window.",
+    ),
+  guardrailOvertrading: zod
+    .boolean()
+    .describe(
+      "Show soft warning when the user crosses the per-hour or per-day analysis count.",
+    ),
+  guardrailHighRisk: zod
+    .boolean()
+    .describe(
+      "Show soft warning when a high-impact event for the instrument prints within 30 min.",
+    ),
+  coolingOffEnabled: zod
+    .boolean()
+    .describe(
+      "Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.",
     ),
 });
 

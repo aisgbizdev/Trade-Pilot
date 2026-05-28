@@ -14,6 +14,11 @@ vi.mock("@/components/tradingview-economic-calendar", () => ({
   ),
 }));
 
+vi.mock("@/hooks/use-anti-pattern-signals", () => ({
+  useAntiPatternSignals: () => ({ data: { signals: [], prefs: {} } }),
+  useLogGuardrailEvent: () => ({ mutate: vi.fn() }),
+}));
+
 import AnalyzePage from "../../pages/analyze";
 
 vi.mock("@/components/layout", () => ({

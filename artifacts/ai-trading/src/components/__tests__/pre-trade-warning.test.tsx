@@ -41,6 +41,11 @@ vi.mock("@/hooks/use-live-quotes", () => ({
   useQuoteByInstrument: () => ({ quote: null, isLoading: false }),
 }));
 
+vi.mock("@/hooks/use-anti-pattern-signals", () => ({
+  useAntiPatternSignals: () => ({ data: { signals: [], prefs: {} } }),
+  useLogGuardrailEvent: () => ({ mutate: vi.fn() }),
+}));
+
 const mockRelevantCalendar = vi.fn();
 vi.mock("@/hooks/use-relevant-calendar", () => ({
   useRelevantCalendar: (

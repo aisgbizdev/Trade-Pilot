@@ -65,6 +65,14 @@ export interface PushPrefs {
   pushOnboarding: boolean;
   /** When non-null, the UI should render a one-time banner explaining auto-pause. */
   disengageNoticeCategory?: string | null;
+  /** Show soft warning when a loss on this instrument fired within the revenge window. */
+  guardrailRevenge: boolean;
+  /** Show soft warning when the user crosses the per-hour or per-day analysis count. */
+  guardrailOvertrading: boolean;
+  /** Show soft warning when a high-impact event for the instrument prints within 30 min. */
+  guardrailHighRisk: boolean;
+  /** Opt-in 30-minute countdown after a significant loss before showing the analyse button warning. */
+  coolingOffEnabled: boolean;
 }
 
 export interface PushTestResult {
@@ -95,6 +103,10 @@ export interface PushPrefsUpdate {
   pushOnboarding?: boolean;
   /** Pass true to clear the one-time auto-pause banner. */
   dismissDisengageNotice?: boolean;
+  guardrailRevenge?: boolean;
+  guardrailOvertrading?: boolean;
+  guardrailHighRisk?: boolean;
+  coolingOffEnabled?: boolean;
 }
 
 export interface DailySummarySettings {

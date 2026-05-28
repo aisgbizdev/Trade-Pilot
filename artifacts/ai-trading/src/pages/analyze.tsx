@@ -28,6 +28,7 @@ import { explainerFor } from "@/lib/event-explainers";
 import { MentalChecklist } from "@/components/mental-checklist";
 import { LocalSentimentWidget } from "@/components/local-sentiment-widget";
 import { useMentalChecklistPref } from "@/hooks/use-mental-checklist";
+import { AntiPatternGuardrails } from "@/components/anti-pattern-guardrails";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -634,6 +635,12 @@ export default function AnalyzePage() {
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
   const [alertModalOpen, setAlertModalOpen] = useState(false);
 
+  // Imperative handle exposed by AntiPatternGuardrails. When the user
+  // clicks Analyse despite any active warnings we call it so the
+  // component can fire `proceeded: true` telemetry — supports the
+  // Mirror digest "you ignored N revenge warnings this week" metric.
+  const guardrailProceedRef = useRef<(() => void) | null>(null);
+
   const handleSubmit = async () => {
     if (!finalInstrument) {
       toast({ title: t.analyze.error_no_instrument, description: t.analyze.error_no_instrument_desc, variant: "destructive" });
@@ -644,6 +651,7 @@ export default function AnalyzePage() {
       return;
     }
 
+    guardrailProceedRef.current?.();
     setIsLoading(true);
     try {
       const created = await createAnalysis.mutateAsync({
@@ -931,6 +939,13 @@ export default function AnalyzePage() {
           {finalInstrument && <LocalSentimentWidget instrument={finalInstrument} />}
 
           {finalInstrument && <PreTradeWarning instrument={finalInstrument} />}
+
+          {finalInstrument && (
+            <AntiPatternGuardrails
+              instrument={finalInstrument}
+              proceedHandleRef={guardrailProceedRef}
+            />
+          )}
 
           {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist />}
 

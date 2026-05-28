@@ -24,6 +24,9 @@ import {
 } from "../lib/price-alerts";
 import { maybeDispatchSignalFlip } from "../lib/signal-flip";
 import { resetDormancyStreak } from "../lib/dormancy";
+import { detectGuardrailSignals, GUARDRAIL_KINDS, type GuardrailKind } from "../lib/anti-pattern";
+import { guardrailEvents } from "@workspace/db/schema";
+import { z } from "zod";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -160,6 +163,50 @@ router.get("/analyses/recent-instruments", requireAuth, async (req: AuthRequest,
       mode: r.mode,
     })),
   });
+});
+
+// Anti-pattern guardrails (task #163). Read endpoint returns the
+// active soft warnings for the requested instrument so the analyse
+// page can render an inline card. Telemetry endpoint logs (kind,
+// proceeded) so the Mirror digest and analytics can show how often
+// each warning is shown / overridden. Both routes deliberately stay
+// non-blocking — the analyse POST is untouched.
+router.get("/analyses/guardrails", requireAuth, async (req: AuthRequest, res) => {
+  const instrument = String(req.query["instrument"] ?? "").trim();
+  if (!instrument) {
+    res.status(400).json({ error: "instrument is required" });
+    return;
+  }
+  const result = await detectGuardrailSignals(req.userId!, instrument);
+  if (!result) {
+    res.status(404).json({ error: "User tidak ditemukan" });
+    return;
+  }
+  res.json(result);
+});
+
+const guardrailTelemetrySchema = z.object({
+  kind: z.enum(GUARDRAIL_KINDS as readonly [GuardrailKind, ...GuardrailKind[]]),
+  instrument: z.string().trim().max(32).optional(),
+  proceeded: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+router.post("/analyses/guardrails/telemetry", requireAuth, async (req: AuthRequest, res) => {
+  const parsed = guardrailTelemetrySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Telemetri tidak valid" });
+    return;
+  }
+  const { kind, instrument, proceeded, metadata } = parsed.data;
+  await db.insert(guardrailEvents).values({
+    userId: req.userId!,
+    kind,
+    instrument: instrument ?? null,
+    proceeded: proceeded === true,
+    metadata: metadata ?? {},
+  });
+  res.status(201).json({ ok: true });
 });
 
 router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
