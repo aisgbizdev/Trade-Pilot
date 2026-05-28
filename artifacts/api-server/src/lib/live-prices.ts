@@ -29,9 +29,47 @@ const SYMBOL_MAP: Record<string, string> = {
   UI10F_BBJ: "USD/IDR",
   DX10F_BBJ: "DXY",
   AU10F_BBJ: "AUD/USD",
-  HKK50_BBJ: "HK50",
+  // Upstream feeds Hang Seng under the "HK50" alias, but the rest of the
+  // app (history filters, journal, analyses, news, calendar) uses the
+  // canonical "HSI". Map onto HSI here and emit a duplicate HK50 row in
+  // `fetchLive` for the few legacy call sites that still reference HK50.
+  HKK50_BBJ: "HSI",
   JPK50_BBJ: "NIKKEI",
 };
+
+// Instruments the app supports in the dashboard / analyze flow that
+// intentionally have NO live spot mapping in the upstream feed. They're
+// futures-only (Yahoo Finance gives us intraday OHLC via CME/COMEX/ICE
+// contracts) so `getLivePriceFor` returns null for them and
+// `anchorCandlesToLivePrice` no-ops — the displayed price stays on the
+// Yahoo futures last-close, which is the most accurate number we have.
+// Kept here as explicit documentation so the live-feed coverage test
+// can distinguish "missing by design" from "missing by accident".
+export const LIVE_PRICE_FUTURES_ONLY: ReadonlySet<string> = new Set([
+  "XAG/USD", // COMEX silver futures only
+  "DJIA",    // CME E-mini Dow futures only
+  "NASDAQ",  // CME E-mini Nasdaq 100 futures only
+  "USD/CHF", // No upstream spot feed; Yahoo CHF=X covers intraday
+]);
+
+// Canonical instrument list the dashboard/analyze/history surface
+// supports. Kept in lockstep with the `ALL_INSTRUMENTS` arrays in
+// `artifacts/ai-trading/src/pages/{history,journal}.tsx` and the
+// `KNOWN_INSTRUMENTS` set in `routes/user-price-alerts.ts`. Used by
+// the live-feed coverage test to assert every supported instrument
+// either has a SYMBOL_MAP entry (forex/commodity), a Binance crypto
+// mapping, or is documented in LIVE_PRICE_FUTURES_ONLY.
+export const SUPPORTED_INSTRUMENTS: readonly string[] = [
+  "XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY",
+  "AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR",
+  ...CRYPTO_INSTRUMENTS,
+];
+
+// Instruments resolvable from the forex/commodity upstream live-quotes
+// feed. Derived from SYMBOL_MAP so the two can't drift.
+export const LIVE_FEED_SPOT_INSTRUMENTS: ReadonlySet<string> = new Set(
+  Object.values(SYMBOL_MAP),
+);
 
 export interface LiveQuote {
   instrument: string;
@@ -189,11 +227,19 @@ async function fetchLive(): Promise<LiveQuotesPayload> {
       updatedAt: it["serverDateTime"] as string | undefined,
     };
   });
+  // Emit a duplicate "HK50" row mirroring the HSI quote so legacy call
+  // sites that still reference the upstream alias keep working without
+  // a second upstream lookup. The canonical row is HSI (see SYMBOL_MAP).
+  const aliasRows: LiveQuote[] = [];
+  const hsiRow = mapped.find((q) => q.instrument === "HSI");
+  if (hsiRow) {
+    aliasRows.push({ ...hsiRow, instrument: "HK50" });
+  }
   return {
     status: "success",
     updatedAt: raw.updatedAt,
     serverTime: raw.serverTime,
-    data: [...mapped, ...cryptoQuotes],
+    data: [...mapped, ...aliasRows, ...cryptoQuotes],
   };
 }
 
