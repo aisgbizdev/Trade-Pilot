@@ -4,6 +4,7 @@ import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, C
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
+import { avatarSrc } from "@/lib/avatar";
 import {
   useGetNotifications,
   getGetNotificationsQueryKey,
@@ -89,6 +90,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const profileActive = location === "/profile" || location.startsWith("/profile/");
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "";
+  const profileAvatar = avatarSrc(user?.avatarUrl);
 
   const handleMarkAllRead = () => {
     markAll.mutate(undefined, {
@@ -155,13 +157,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
               data-testid="link-header-profile"
               aria-label={t.nav.profile}
               className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-full text-[12px] font-semibold transition-colors",
+                "flex items-center justify-center w-8 h-8 rounded-full text-[12px] font-semibold transition-colors overflow-hidden",
                 profileActive
                   ? "bg-primary/15 text-primary ring-2 ring-primary/40"
                   : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground"
               )}
             >
-              {profileInitial ? (
+              {profileAvatar ? (
+                <img
+                  src={profileAvatar}
+                  alt={user?.displayName ?? ""}
+                  className="w-full h-full object-cover"
+                />
+              ) : profileInitial ? (
                 <span>{profileInitial}</span>
               ) : (
                 <User className="w-4 h-4" />

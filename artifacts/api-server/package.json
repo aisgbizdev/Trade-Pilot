@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.19.0",
     "@types/pg": "^8.18.0",
     "@types/web-push": "^3.6.4",
     "@workspace/api-zod": "workspace:*",
@@ -22,6 +23,7 @@
     "crypto": "^1.0.1",
     "drizzle-orm": "catalog:",
     "express": "^5",
+    "google-auth-library": "^10.6.2",
     "openai": "^6.34.0",
     "pg": "^8.20.0",
     "pino": "^9",

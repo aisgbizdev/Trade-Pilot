@@ -122,6 +122,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   displayName: text("display_name").notNull(),
+  avatarUrl: text("avatar_url"),
   role: roleEnum("role").notNull().default("user"),
   selectedMode: modeEnum("selected_mode").notNull().default("beginner"),
   themePreference: text("theme_preference").notNull().default("light"),

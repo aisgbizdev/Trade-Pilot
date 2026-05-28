@@ -52,6 +52,12 @@ export const LoginResponse = zod.object({
     id: zod.number(),
     email: zod.string(),
     displayName: zod.string(),
+    avatarUrl: zod
+      .string()
+      .nullish()
+      .describe(
+        "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
+      ),
     role: zod.enum(["user", "admin", "super_admin"]),
     selectedMode: zod.enum(["beginner", "pro"]),
     themePreference: zod.enum(["light", "dark"]),
@@ -76,6 +82,12 @@ export const GetMeResponse = zod.object({
   id: zod.number(),
   email: zod.string(),
   displayName: zod.string(),
+  avatarUrl: zod
+    .string()
+    .nullish()
+    .describe(
+      "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
+    ),
   role: zod.enum(["user", "admin", "super_admin"]),
   selectedMode: zod.enum(["beginner", "pro"]),
   themePreference: zod.enum(["light", "dark"]),
@@ -124,8 +136,42 @@ export const ResetPasswordResponse = zod.object({
 });
 
 /**
+ * Returns a presigned GCS URL for direct upload. The client sends JSON
+metadata here, then uploads the file directly to the returned URL.
+
+ * @summary Request a presigned URL for file upload
+ */
+
+export const RequestUploadUrlBody = zod.object({
+  name: zod.string().min(1),
+  size: zod.number().min(1),
+  contentType: zod.string().min(1),
+});
+
+export const RequestUploadUrlResponse = zod.object({
+  uploadURL: zod.string().url(),
+  objectPath: zod.string(),
+  metadata: zod
+    .object({
+      name: zod.string().min(1),
+      size: zod.number().min(1),
+      contentType: zod.string().min(1),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const GetStorageObjectParams = zod.object({
+  objectPath: zod.coerce.string(),
+});
+
+/**
  * @summary Update user profile
  */
+export const updateProfileBodyAvatarUrlMax = 500;
+
 export const UpdateProfileBody = zod.object({
   displayName: zod.string().optional(),
   selectedMode: zod.enum(["beginner", "pro"]).optional(),
@@ -137,12 +183,25 @@ export const UpdateProfileBody = zod.object({
     .describe(
       "UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language.",
     ),
+  avatarUrl: zod
+    .string()
+    .max(updateProfileBodyAvatarUrlMax)
+    .nullish()
+    .describe(
+      "Object-storage path returned by the storage upload flow. Pass `null` to remove the current avatar.",
+    ),
 });
 
 export const UpdateProfileResponse = zod.object({
   id: zod.number(),
   email: zod.string(),
   displayName: zod.string(),
+  avatarUrl: zod
+    .string()
+    .nullish()
+    .describe(
+      "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
+    ),
   role: zod.enum(["user", "admin", "super_admin"]),
   selectedMode: zod.enum(["beginner", "pro"]),
   themePreference: zod.enum(["light", "dark"]),
@@ -2796,6 +2855,12 @@ export const UpdateUserRoleResponse = zod.object({
   id: zod.number(),
   email: zod.string(),
   displayName: zod.string(),
+  avatarUrl: zod
+    .string()
+    .nullish()
+    .describe(
+      "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
+    ),
   role: zod.enum(["user", "admin", "super_admin"]),
   selectedMode: zod.enum(["beginner", "pro"]),
   themePreference: zod.enum(["light", "dark"]),

@@ -138,6 +138,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
       selectedMode: user.selectedMode,
       themePreference: user.themePreference,
       onboardingCompleted: user.onboardingCompleted,
+      avatarUrl: user.avatarUrl,
     },
   });
 });
@@ -199,6 +200,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
       selectedMode: user.selectedMode,
       themePreference: user.themePreference,
       onboardingCompleted: user.onboardingCompleted,
+      avatarUrl: user.avatarUrl,
     },
   });
 });
@@ -232,6 +234,7 @@ router.get("/auth/me", requireAuth, async (req: AuthRequest, res) => {
     selectedMode: user.selectedMode,
     themePreference: user.themePreference,
     onboardingCompleted: user.onboardingCompleted,
+    avatarUrl: user.avatarUrl,
   });
 });
 
@@ -260,6 +263,19 @@ const profileUpdateSchema = z
         errorMap: () => ({ message: "Bahasa harus 'en' atau 'id'" }),
       })
       .optional(),
+    // Only accept canonical object paths issued by our upload flow
+    // (`/objects/uploads/<uuid>`) or `null` to clear. Without this whitelist,
+    // a caller could point `avatarUrl` at any object key — including someone
+    // else's upload or an attacker-uploaded HTML payload from a different
+    // prefix — and have the app render it as their profile photo.
+    avatarUrl: z
+      .string({ invalid_type_error: "Avatar tidak valid" })
+      .regex(
+        /^\/objects\/uploads\/[A-Za-z0-9_-]{8,64}$/,
+        "URL avatar tidak valid"
+      )
+      .nullable()
+      .optional(),
   })
   .strict();
 
@@ -270,7 +286,7 @@ router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
     res.status(400).json({ error: first?.message ?? "Data profil tidak valid" });
     return;
   }
-  const { displayName, selectedMode, themePreference, onboardingCompleted, lang } =
+  const { displayName, selectedMode, themePreference, onboardingCompleted, lang, avatarUrl } =
     parsed.data;
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
@@ -279,6 +295,7 @@ router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
   if (themePreference !== undefined) updateData["themePreference"] = themePreference;
   if (onboardingCompleted !== undefined) updateData["onboardingCompleted"] = onboardingCompleted;
   if (lang !== undefined) updateData["lang"] = lang;
+  if (avatarUrl !== undefined) updateData["avatarUrl"] = avatarUrl;
 
   const [updated] = await db
     .update(users)
@@ -294,6 +311,7 @@ router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
     selectedMode: updated.selectedMode,
     themePreference: updated.themePreference,
     onboardingCompleted: updated.onboardingCompleted,
+    avatarUrl: updated.avatarUrl,
   });
 });
 

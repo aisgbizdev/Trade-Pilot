@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, BookOpen, Brain } from "lucide-react";
+import { useRef, useState } from "react";
+import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, BookOpen, Brain, Trash2 } from "lucide-react";
+import { avatarSrc, uploadAvatar, validateAvatarFile } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -41,6 +42,50 @@ export default function ProfilePage() {
 
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.displayName ?? "");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarUrl = avatarSrc(user?.avatarUrl);
+
+  const handlePickAvatar = () => fileInputRef.current?.click();
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const err = validateAvatarFile(file);
+    if (err === "too_large") {
+      toast({ title: t.profile.avatar_too_large, variant: "destructive" });
+      return;
+    }
+    if (err === "invalid_type") {
+      toast({ title: t.profile.avatar_invalid_type, variant: "destructive" });
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      const objectPath = await uploadAvatar(file);
+      await updateProfile.mutateAsync({ data: { avatarUrl: objectPath } });
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      toast({ title: t.profile.avatar_updated });
+    } catch {
+      toast({ title: t.profile.avatar_failed, variant: "destructive" });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!user?.avatarUrl) return;
+    setAvatarUploading(true);
+    try {
+      await updateProfile.mutateAsync({ data: { avatarUrl: null } });
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+    } catch {
+      toast({ title: t.profile.avatar_failed, variant: "destructive" });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [showSecuritySection, setShowSecuritySection] = useState(false);
 
@@ -131,8 +176,44 @@ export default function ProfilePage() {
 
         <Card className="p-4">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
-              {user?.displayName?.charAt(0)?.toUpperCase()}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={handlePickAvatar}
+                disabled={avatarUploading}
+                data-testid="button-avatar-upload"
+                aria-label={t.profile.avatar_change}
+                className="relative w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-2xl overflow-hidden ring-2 ring-border/60 hover:ring-primary/60 transition-all disabled:opacity-60"
+              >
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={user?.displayName ?? ""}
+                    className="w-full h-full object-cover"
+                    data-testid="img-avatar"
+                  />
+                ) : (
+                  <span>{user?.displayName?.charAt(0)?.toUpperCase()}</span>
+                )}
+                {avatarUploading ? (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-white" />
+                  </div>
+                ) : (
+                  <div className="absolute bottom-0 right-0 bg-background border border-border/60 rounded-full p-1 shadow-md">
+                    <Camera className="w-3 h-3 text-foreground" />
+                  </div>
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                capture="user"
+                onChange={handleAvatarChange}
+                className="hidden"
+                data-testid="input-avatar-file"
+              />
             </div>
             <div className="flex-1">
               {editingName ? (
@@ -173,7 +254,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="secondary" className="text-xs">
               {user?.role === "super_admin"
                 ? t.profile.role_super_admin
@@ -184,6 +265,18 @@ export default function ProfilePage() {
             <Badge variant="outline" className="text-xs">
               {user?.selectedMode === "beginner" ? `${t.profile.mode_label}: ${t.common.beginner}` : `${t.profile.mode_label}: ${t.common.pro}`}
             </Badge>
+            {user?.avatarUrl && (
+              <button
+                type="button"
+                onClick={handleRemoveAvatar}
+                disabled={avatarUploading}
+                data-testid="button-avatar-remove"
+                className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors disabled:opacity-60"
+              >
+                <Trash2 className="w-3 h-3" />
+                {t.profile.avatar_remove}
+              </button>
+            )}
           </div>
         </Card>
 

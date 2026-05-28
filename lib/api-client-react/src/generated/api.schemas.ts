@@ -188,6 +188,8 @@ export interface User {
   id: number;
   email: string;
   displayName: string;
+  /** Object-storage path (e.g. `/objects/uploads/uuid`) for the user's profile photo. Null if not set. */
+  avatarUrl?: string | null;
   role: UserRole;
   selectedMode: UserSelectedMode;
   themePreference: UserThemePreference;
@@ -286,6 +288,26 @@ export interface UpdateProfileBody {
   onboardingCompleted?: boolean;
   /** UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language. */
   lang?: UpdateProfileBodyLang;
+  /**
+   * Object-storage path returned by the storage upload flow. Pass `null` to remove the current avatar.
+   * @maxLength 500
+   */
+  avatarUrl?: string | null;
+}
+
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: UploadUrlRequest;
 }
 
 export interface ChangePasswordBody {
