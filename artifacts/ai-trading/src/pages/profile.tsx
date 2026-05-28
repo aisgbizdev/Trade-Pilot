@@ -386,6 +386,26 @@ export default function ProfilePage() {
           </Button>
         </Card>
 
+        <Card className="p-4">
+          <button
+            type="button"
+            className="w-full flex items-center gap-3 text-left p-2 -mx-2 rounded-lg hover:bg-muted/60 transition-colors"
+            onClick={() => setLocation("/notifications#settings")}
+            data-testid="button-go-notification-settings"
+          >
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">{t.profile_extra.notifications_link_title}</p>
+              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                {t.profile_extra.notifications_link_subtitle}
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </button>
+        </Card>
+
         <Card className="p-4 space-y-3">
           <h3 className="text-sm font-semibold text-foreground">{t.profile_extra.learning_section_title}</h3>
           <button

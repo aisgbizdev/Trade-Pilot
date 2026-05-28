@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff, BellRing, CheckCheck, Download, Loader2, Send, Sunrise } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -200,6 +200,40 @@ export default function NotificationsPage() {
   const isPushUnavailable = pushState === "unsupported";
   const isPushDenied = pushState === "denied";
 
+  // Re-render on any in-app navigation (wouter pushState) so we can
+  // re-read window.location.hash; also listen for back/forward and
+  // explicit hash changes from outside wouter.
+  const [location] = useLocation();
+  const [hashTick, setHashTick] = useState(0);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const bump = () => setHashTick((n) => n + 1);
+    window.addEventListener("hashchange", bump);
+    window.addEventListener("popstate", bump);
+    return () => {
+      window.removeEventListener("hashchange", bump);
+      window.removeEventListener("popstate", bump);
+    };
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#settings") return;
+    let scrolled = false;
+    const tryScroll = () => {
+      if (scrolled) return true;
+      const el = document.getElementById("notification-settings");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        scrolled = true;
+        return true;
+      }
+      return false;
+    };
+    if (tryScroll()) return;
+    const timer = window.setTimeout(tryScroll, 150);
+    return () => window.clearTimeout(timer);
+  }, [location, hashTick, pushPrefs]);
+
   return (
     <Layout>
       <div className="px-4 py-5">
@@ -227,7 +261,7 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        <Card className="p-4 mb-5">
+        <Card className="p-4 mb-5" id="notification-settings" data-testid="card-notification-settings">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-primary/10 mt-0.5">
               {isPushEnabled ? (

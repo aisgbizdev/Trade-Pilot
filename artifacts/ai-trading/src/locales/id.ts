@@ -567,6 +567,7 @@ export const id: Translations = {
     push_disengage_banner_dismiss: "Oke",
     push_prefs_error: "Gagal menyimpan preferensi. Coba lagi.",
     test_push_btn: "Kirim notifikasi tes",
+    settings_shortcut_label: "Pengaturan notifikasi",
     test_push_sending: "Mengirim…",
     test_push_success: "Tes terkirim — cek HP kamu untuk pop-up notifikasi.",
     test_push_no_devices: "Belum ada perangkat berlangganan. Aktifkan notifikasi dulu.",
@@ -1040,6 +1041,8 @@ export const id: Translations = {
     preferences_section_title: "Preferensi",
     mental_checklist_toggle_title: "Tampilkan cek mental pra-trade",
     mental_checklist_toggle_subtitle: "Tambah self-check 4 item di halaman Analisis sebelum kamu submit analisis baru.",
+    notifications_link_title: "Pengaturan Notifikasi",
+    notifications_link_subtitle: "Push, jenis alert, sesi pasar, ringkasan harian, guardrail.",
   },
   legal: {
     privacy_link: "Kebijakan Privasi",

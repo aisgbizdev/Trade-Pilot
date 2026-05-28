@@ -565,6 +565,7 @@ export const en = {
     push_disengage_banner_dismiss: "Got it",
     push_prefs_error: "Could not save preferences. Please try again.",
     test_push_btn: "Send a test notification",
+    settings_shortcut_label: "Notification settings",
     test_push_sending: "Sending…",
     test_push_success: "Test sent — check your phone for the pop-up.",
     test_push_no_devices: "No subscribed device yet. Enable notifications first.",
@@ -1038,6 +1039,8 @@ export const en = {
     preferences_section_title: "Preferences",
     mental_checklist_toggle_title: "Show pre-trade mental check",
     mental_checklist_toggle_subtitle: "Adds a 4-item self-check on the Analyze page before you submit a new analysis.",
+    notifications_link_title: "Notification Settings",
+    notifications_link_subtitle: "Push, alert types, market sessions, daily summary, guardrails.",
   },
   legal: {
     privacy_link: "Privacy Policy",

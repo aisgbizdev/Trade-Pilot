@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, BookOpen, Sparkles } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, BookOpen, Sparkles, Settings } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
@@ -195,19 +195,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <p className="text-[11px] text-muted-foreground">{unreadCount} belum dibaca</p>
                     )}
                   </div>
-                  {unreadCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs gap-1 text-primary hover:text-primary/80"
-                      onClick={handleMarkAllRead}
-                      data-testid="button-mark-all-read"
-                      disabled={markAll.isPending}
-                    >
-                      <CheckCheck className="w-3.5 h-3.5" />
-                      Tandai semua
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1 text-primary hover:text-primary/80"
+                        onClick={handleMarkAllRead}
+                        data-testid="button-mark-all-read"
+                        disabled={markAll.isPending}
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        Tandai semua
+                      </Button>
+                    )}
+                    <Link href="/notifications#settings" onClick={() => setBellOpen(false)}>
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        data-testid="button-notification-settings-shortcut"
+                        aria-label={t.notifications.settings_shortcut_label}
+                        title={t.notifications.settings_shortcut_label}
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                      </button>
+                    </Link>
+                  </div>
                 </div>
 
                 {notifications.length === 0 ? (
