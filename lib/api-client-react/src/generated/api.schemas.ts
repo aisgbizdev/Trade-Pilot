@@ -1517,6 +1517,10 @@ export interface PerformanceSummary {
   byInstrument: PerformanceSegment;
   bySession: PerformanceSegment;
   byCondition: PerformanceSegment;
+  /** Deterministic regime classification derived from the stored indicator tally (trending / ranging / choppy). Replaces ADX where raw OHLC isn't kept per analysis. */
+  byVolatility: PerformanceSegment;
+  /** news_week vs quiet_week, derived from whether the AI's fundamental snapshot included any high-impact calendar event at analysis time. */
+  byNewsActivity: PerformanceSegment;
 }
 
 /**

@@ -4265,6 +4265,12 @@ components:
           $ref: "#/components/schemas/PerformanceSegment"
         byCondition:
           $ref: "#/components/schemas/PerformanceSegment"
+        byVolatility:
+          $ref: "#/components/schemas/PerformanceSegment"
+          description: "Deterministic regime classification derived from the stored indicator tally (trending / ranging / choppy). Replaces ADX where raw OHLC isn't kept per analysis."
+        byNewsActivity:
+          $ref: "#/components/schemas/PerformanceSegment"
+          description: "news_week vs quiet_week, derived from whether the AI's fundamental snapshot included any high-impact calendar event at analysis time."
       required:
         - windowDays
         - generatedAt
@@ -4275,6 +4281,8 @@ components:
         - byInstrument
         - bySession
         - byCondition
+        - byVolatility
+        - byNewsActivity
 
     PerformanceMinSamples:
       type: object

@@ -699,6 +699,56 @@ export const GetPerformanceSummaryResponse = zod
       .describe(
         "A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.",
       ),
+    byVolatility: zod
+      .object({
+        gated: zod.boolean(),
+        need: zod.number(),
+        have: zod.number(),
+        buckets: zod.array(
+          zod
+            .object({
+              key: zod.string(),
+              triggered: zod.number(),
+              wins: zod.number(),
+              losses: zod.number(),
+              expired: zod.number(),
+              total: zod.number(),
+              winRate: zod.number().nullable(),
+              hitRate: zod.number().nullable(),
+            })
+            .describe(
+              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
+            ),
+        ),
+      })
+      .describe(
+        "Deterministic regime classification derived from the stored indicator tally (trending \/ ranging \/ choppy). Replaces ADX where raw OHLC isn't kept per analysis.",
+      ),
+    byNewsActivity: zod
+      .object({
+        gated: zod.boolean(),
+        need: zod.number(),
+        have: zod.number(),
+        buckets: zod.array(
+          zod
+            .object({
+              key: zod.string(),
+              triggered: zod.number(),
+              wins: zod.number(),
+              losses: zod.number(),
+              expired: zod.number(),
+              total: zod.number(),
+              winRate: zod.number().nullable(),
+              hitRate: zod.number().nullable(),
+            })
+            .describe(
+              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
+            ),
+        ),
+      })
+      .describe(
+        "news_week vs quiet_week, derived from whether the AI's fundamental snapshot included any high-impact calendar event at analysis time.",
+      ),
   })
   .describe(
     "Public AI transparency snapshot for the rolling `windowDays` window (task #164).",

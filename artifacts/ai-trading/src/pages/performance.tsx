@@ -123,20 +123,30 @@ function Banner({
   );
 }
 
-function bucketLabel(segKind: "instrument" | "session" | "condition", key: string, t: ReturnType<typeof useTranslation>["t"]): string {
+type SegKind = "instrument" | "session" | "condition" | "volatility" | "news";
+
+function bucketLabel(segKind: SegKind, key: string, t: ReturnType<typeof useTranslation>["t"]): string {
+  const tp = t.performance;
   if (segKind === "session") {
-    const tp = t.performance;
     if (key === "asia") return tp.session_asia;
     if (key === "london") return tp.session_london;
     if (key === "newyork") return tp.session_newyork;
     return tp.session_off;
   }
   if (segKind === "condition") {
-    const tp = t.performance;
     if (key === "trending_up") return tp.condition_trending_up;
     if (key === "trending_down") return tp.condition_trending_down;
     if (key === "ranging") return tp.condition_ranging;
     return tp.condition_volatile;
+  }
+  if (segKind === "volatility") {
+    if (key === "trending") return tp.volatility_trending;
+    if (key === "ranging") return tp.volatility_ranging;
+    return tp.volatility_choppy;
+  }
+  if (segKind === "news") {
+    if (key === "news_week") return tp.news_news_week;
+    return tp.news_quiet_week;
   }
   return key;
 }
@@ -148,7 +158,7 @@ function SegmentCard({
   seg,
   t,
 }: {
-  kind: "instrument" | "session" | "condition";
+  kind: SegKind;
   icon: React.ReactNode;
   title: string;
   seg: PerformanceSegment;
@@ -356,6 +366,20 @@ export default function PerformancePage() {
               icon={<Calendar className="w-4 h-4 text-primary" />}
               title={tp.seg_condition_title}
               seg={summary.byCondition}
+              t={t}
+            />
+            <SegmentCard
+              kind="volatility"
+              icon={<Activity className="w-4 h-4 text-primary" />}
+              title={tp.seg_volatility_title}
+              seg={summary.byVolatility}
+              t={t}
+            />
+            <SegmentCard
+              kind="news"
+              icon={<AlertTriangle className="w-4 h-4 text-primary" />}
+              title={tp.seg_news_title}
+              seg={summary.byNewsActivity}
               t={t}
             />
           </>

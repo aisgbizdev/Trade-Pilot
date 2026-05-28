@@ -5,7 +5,13 @@ import { inArray } from "drizzle-orm";
 
 import { db } from "../db";
 import { users, analyses } from "@workspace/db/schema";
-import { computePerformanceSummary, MIN_SAMPLE } from "../performance";
+import {
+  computePerformanceSummary,
+  MIN_SAMPLE,
+  classifyVolatilityRegime,
+  classifyNewsActivity,
+} from "../performance";
+import type { FundamentalContextShape } from "@workspace/db/schema";
 
 const RUN_ID = randomBytes(4).toString("hex");
 const seededUserIds: number[] = [];
@@ -38,6 +44,10 @@ async function seedAnalysis(opts: {
   hoursAgo: number;
   /** UTC hour at which the analysis was created (drives session bucket). */
   createdAtUtcHour?: number;
+  techBuyCount?: number | null;
+  techSellCount?: number | null;
+  techNeutralCount?: number | null;
+  fundamentalContext?: FundamentalContextShape | null;
   now: Date;
 }) {
   const createdAt = new Date(opts.now.getTime() - opts.hoursAgo * 60 * 60 * 1000);
@@ -58,6 +68,10 @@ async function seedAnalysis(opts: {
     outcomeResolvedAt:
       opts.outcome === "pending" ? null : new Date(createdAt.getTime() + 30 * 60 * 1000),
     createdAt,
+    techBuyCount: opts.techBuyCount ?? null,
+    techSellCount: opts.techSellCount ?? null,
+    techNeutralCount: opts.techNeutralCount ?? null,
+    fundamentalContext: opts.fundamentalContext ?? null,
   });
 }
 
@@ -212,5 +226,50 @@ describe("computePerformanceSummary", () => {
     // Recent is much worse than baseline.
     expect(summary.banner.delta!).toBeLessThanOrEqual(-0.15);
     expect(summary.banner.severity).toBe("warn");
+  });
+});
+
+describe("classifyVolatilityRegime", () => {
+  it("returns trending when one side dominates >=2x with >=3 votes", () => {
+    expect(classifyVolatilityRegime(6, 2, 2)).toBe("trending");
+    expect(classifyVolatilityRegime(3, 1, 1)).toBe("trending");
+  });
+  it("returns ranging when sides are close and neutrals dominate", () => {
+    expect(classifyVolatilityRegime(2, 2, 5)).toBe("ranging");
+    expect(classifyVolatilityRegime(3, 2, 4)).toBe("ranging");
+  });
+  it("returns choppy for everything else with a meaningful tally", () => {
+    expect(classifyVolatilityRegime(2, 2, 1)).toBe("choppy");
+  });
+  it("returns unclassified when tally is missing or too small", () => {
+    expect(classifyVolatilityRegime(null, 1, 1)).toBe("unclassified");
+    expect(classifyVolatilityRegime(1, 1, 0)).toBe("unclassified");
+  });
+});
+
+describe("classifyNewsActivity", () => {
+  it("returns unknown when no snapshot was captured", () => {
+    expect(classifyNewsActivity(null)).toBe("unknown");
+  });
+  it("returns quiet_week when snapshot has no calendar events", () => {
+    expect(classifyNewsActivity({ newsItems: [], calendarEvents: [] })).toBe("quiet_week");
+  });
+  it("returns news_week when any event has high impact (case-insensitive)", () => {
+    const ctx: FundamentalContextShape = {
+      newsItems: [],
+      calendarEvents: [
+        { date: "2026-05-15", time: null, currency: "USD", event: "CPI", impact: "HIGH", actual: null, forecast: null, previous: null },
+      ],
+    };
+    expect(classifyNewsActivity(ctx)).toBe("news_week");
+  });
+  it("returns quiet_week when calendar has only low/medium impact events", () => {
+    const ctx: FundamentalContextShape = {
+      newsItems: [],
+      calendarEvents: [
+        { date: "2026-05-15", time: null, currency: "USD", event: "Speech", impact: "medium", actual: null, forecast: null, previous: null },
+      ],
+    };
+    expect(classifyNewsActivity(ctx)).toBe("quiet_week");
   });
 });
