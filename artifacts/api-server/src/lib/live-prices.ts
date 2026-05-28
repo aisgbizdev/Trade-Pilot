@@ -78,6 +78,38 @@ interface BinanceTicker {
  * blank out the forex feed for everyone — the dashboard / alerts
  * watcher just sees the crypto rows missing for one cycle.
  */
+// Throttle state for the Binance failure log. The fetch runs every ~15s,
+// so without this we spam the log with the same message 240×/hour. We
+// emit once on first failure (or whenever the failure *changes*) and
+// then re-emit at most every 10 minutes while the outage persists.
+const BINANCE_WARN_THROTTLE_MS = 10 * 60 * 1000;
+let lastBinanceWarnAt = 0;
+let lastBinanceWarnKey = "";
+
+function logBinanceFailure(err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  // HTTP 451 from Binance = "Unavailable For Legal Reasons", i.e. the
+  // request region (Replit infra here) is geo-blocked. That's not a
+  // transient outage — it's permanent for this environment — so we
+  // log it as info with a clearer hint instead of WARN-spam.
+  const isGeoBlocked = message.includes("HTTP 451");
+  const key = isGeoBlocked ? "geo-blocked" : message;
+  const now = Date.now();
+  if (key === lastBinanceWarnKey && now - lastBinanceWarnAt < BINANCE_WARN_THROTTLE_MS) {
+    return;
+  }
+  lastBinanceWarnKey = key;
+  lastBinanceWarnAt = now;
+  if (isGeoBlocked) {
+    logger.info(
+      { err: message },
+      "Binance crypto feed unavailable from this region (HTTP 451) — skipping crypto quotes",
+    );
+  } else {
+    logger.warn({ err: message }, "Binance crypto fetch failed");
+  }
+}
+
 export async function fetchBinanceCryptoQuotes(): Promise<LiveQuote[]> {
   const reverseMap = new Map<string, CryptoInstrument>();
   for (const inst of CRYPTO_INSTRUMENTS) {
@@ -119,7 +151,7 @@ export async function fetchBinanceCryptoQuotes(): Promise<LiveQuote[]> {
     }
     return out;
   } catch (err) {
-    logger.warn({ err: String(err) }, "Binance crypto fetch failed");
+    logBinanceFailure(err);
     return [];
   } finally {
     clearTimeout(timer);
