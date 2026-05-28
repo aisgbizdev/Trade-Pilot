@@ -28,6 +28,8 @@ tags:
     description: Per-user instrument watchlist
   - name: user-price-alerts
     description: User-defined standalone price alerts (task #148)
+  - name: trade-journal
+    description: Manual post-trade journal entries (task #161)
 paths:
   /healthz:
     get:
@@ -420,6 +422,195 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Alert not found or not owned by the caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /journal:
+    get:
+      operationId: listJournalEntries
+      tags: [trade-journal]
+      summary: List the current user's trade journal entries with optional filters
+      parameters:
+        - in: query
+          name: instrument
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: outcome
+          required: false
+          schema:
+            type: string
+            enum: [win, loss, breakeven, open, skipped]
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        "200":
+          description: List of journal entries (most recent `tradedAt` first)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntryList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createJournalEntry
+      tags: [trade-journal]
+      summary: Log a new manual trade-journal entry (optionally linked to an analysis)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJournalEntryBody"
+      responses:
+        "201":
+          description: Journal entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Linked analysis not found or not owned by caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /journal/stats:
+    get:
+      operationId: getJournalStats
+      tags: [trade-journal]
+      summary: Summary stats for the user's trade journal (win rate, avg P/L, best/worst)
+      parameters:
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Journal summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalStats"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /journal/{id}:
+    patch:
+      operationId: updateJournalEntry
+      tags: [trade-journal]
+      summary: Update an existing journal entry (e.g. close out an open trade)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJournalEntryBody"
+      responses:
+        "200":
+          description: Updated entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Entry not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteJournalEntry
+      tags: [trade-journal]
+      summary: Delete a journal entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Entry deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Entry not found
           content:
             application/json:
               schema:
@@ -3506,3 +3697,247 @@ components:
         - instrument
         - targetPrice
         - triggerDirection
+
+    JournalEntry:
+      type: object
+      description: "A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed."
+      properties:
+        id:
+          type: integer
+        analysisId:
+          type: integer
+          nullable: true
+          description: "Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted."
+        instrument:
+          type: string
+        side:
+          type: string
+          enum: [buy, sell]
+        entryPrice:
+          type: string
+          nullable: true
+        exitPrice:
+          type: string
+          nullable: true
+        quantity:
+          type: string
+          nullable: true
+        pnlAmount:
+          type: string
+          nullable: true
+          description: "Auto-computed from (exit - entry) * direction * quantity unless the user overrode it."
+        pnlPercent:
+          type: string
+          nullable: true
+          description: "Auto-computed from (exit - entry) / entry * 100 (signed by side) unless the user overrode it."
+        outcome:
+          type: string
+          enum: [win, loss, breakeven, open, skipped]
+        mood:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        tradedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - instrument
+        - side
+        - outcome
+        - tradedAt
+        - createdAt
+        - updatedAt
+
+    JournalEntryList:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/JournalEntry"
+      required:
+        - entries
+
+    CreateJournalEntryBody:
+      type: object
+      properties:
+        analysisId:
+          type: integer
+          nullable: true
+        instrument:
+          type: string
+          minLength: 1
+          maxLength: 64
+        side:
+          type: string
+          enum: [buy, sell]
+        entryPrice:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        exitPrice:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        quantity:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        pnlAmount:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        pnlPercent:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        outcome:
+          type: string
+          enum: [win, loss, breakeven, open, skipped]
+        mood:
+          type: string
+          nullable: true
+          maxLength: 40
+        note:
+          type: string
+          nullable: true
+          maxLength: 2000
+        tradedAt:
+          type: string
+          format: date-time
+      required:
+        - instrument
+        - side
+
+    UpdateJournalEntryBody:
+      type: object
+      description: "Partial update — every field is optional. Recomputes pnlAmount/pnlPercent/outcome from entry+exit+side when the user didn't pass an explicit override."
+      properties:
+        analysisId:
+          type: integer
+          nullable: true
+        instrument:
+          type: string
+          minLength: 1
+          maxLength: 64
+        side:
+          type: string
+          enum: [buy, sell]
+        entryPrice:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        exitPrice:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        quantity:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        pnlAmount:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        pnlPercent:
+          oneOf:
+            - type: string
+            - type: number
+          nullable: true
+        outcome:
+          type: string
+          enum: [win, loss, breakeven, open, skipped]
+        mood:
+          type: string
+          nullable: true
+          maxLength: 40
+        note:
+          type: string
+          nullable: true
+          maxLength: 2000
+        tradedAt:
+          type: string
+          format: date-time
+
+    JournalGroupStat:
+      type: object
+      description: "Aggregate stats for one instrument or session bucket (best/worst rankings)."
+      properties:
+        key:
+          type: string
+        winRate:
+          type: number
+        total:
+          type: integer
+        avgPnlPercent:
+          type: number
+          nullable: true
+      required:
+        - key
+        - winRate
+        - total
+
+    JournalStats:
+      type: object
+      description: "Summary stats for the user's trade journal, computed over the optional from/to date range."
+      properties:
+        totals:
+          type: object
+          properties:
+            entries:
+              type: integer
+            wins:
+              type: integer
+            losses:
+              type: integer
+            breakevens:
+              type: integer
+            open:
+              type: integer
+            skipped:
+              type: integer
+            resolved:
+              type: integer
+          required: [entries, wins, losses, breakevens, open, skipped, resolved]
+        winRate:
+          type: number
+          nullable: true
+          description: "wins / (wins + losses); null when no resolved trades."
+        avgPnlPercent:
+          type: number
+          nullable: true
+        avgPnlAmount:
+          type: number
+          nullable: true
+        bestInstrument:
+          $ref: "#/components/schemas/JournalGroupStat"
+          nullable: true
+        worstInstrument:
+          $ref: "#/components/schemas/JournalGroupStat"
+          nullable: true
+        bestSession:
+          $ref: "#/components/schemas/JournalGroupStat"
+          nullable: true
+        worstSession:
+          $ref: "#/components/schemas/JournalGroupStat"
+          nullable: true
+      required:
+        - totals

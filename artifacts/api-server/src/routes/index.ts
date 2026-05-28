@@ -14,6 +14,7 @@ import eventsRouter from "./events";
 import dailySummaryRouter from "./daily-summary";
 import watchlistRouter from "./watchlist";
 import userPriceAlertsRouter from "./user-price-alerts";
+import tradeJournalRouter from "./trade-journal";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(eventsRouter);
 router.use(dailySummaryRouter);
 router.use(watchlistRouter);
 router.use(userPriceAlertsRouter);
+router.use(tradeJournalRouter);
 
 export default router;

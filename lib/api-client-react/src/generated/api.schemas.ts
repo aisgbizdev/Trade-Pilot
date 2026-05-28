@@ -1177,6 +1177,199 @@ export interface CreateUserPriceAlertBody {
   lang?: CreateUserPriceAlertBodyLang;
 }
 
+export type JournalEntrySide =
+  (typeof JournalEntrySide)[keyof typeof JournalEntrySide];
+
+export const JournalEntrySide = {
+  buy: "buy",
+  sell: "sell",
+} as const;
+
+export type JournalEntryOutcome =
+  (typeof JournalEntryOutcome)[keyof typeof JournalEntryOutcome];
+
+export const JournalEntryOutcome = {
+  win: "win",
+  loss: "loss",
+  breakeven: "breakeven",
+  open: "open",
+  skipped: "skipped",
+} as const;
+
+/**
+ * A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.
+ */
+export interface JournalEntry {
+  id: number;
+  /** Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted. */
+  analysisId?: number | null;
+  instrument: string;
+  side: JournalEntrySide;
+  entryPrice?: string | null;
+  exitPrice?: string | null;
+  quantity?: string | null;
+  /** Auto-computed from (exit - entry) * direction * quantity unless the user overrode it. */
+  pnlAmount?: string | null;
+  /** Auto-computed from (exit - entry) / entry * 100 (signed by side) unless the user overrode it. */
+  pnlPercent?: string | null;
+  outcome: JournalEntryOutcome;
+  mood?: string | null;
+  note?: string | null;
+  tradedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JournalEntryList {
+  entries: JournalEntry[];
+}
+
+export type CreateJournalEntryBodySide =
+  (typeof CreateJournalEntryBodySide)[keyof typeof CreateJournalEntryBodySide];
+
+export const CreateJournalEntryBodySide = {
+  buy: "buy",
+  sell: "sell",
+} as const;
+
+export type CreateJournalEntryBodyOutcome =
+  (typeof CreateJournalEntryBodyOutcome)[keyof typeof CreateJournalEntryBodyOutcome];
+
+export const CreateJournalEntryBodyOutcome = {
+  win: "win",
+  loss: "loss",
+  breakeven: "breakeven",
+  open: "open",
+  skipped: "skipped",
+} as const;
+
+export interface CreateJournalEntryBody {
+  analysisId?: number | null;
+  /**
+   * @minLength 1
+   * @maxLength 64
+   */
+  instrument: string;
+  side: CreateJournalEntryBodySide;
+  entryPrice?: string | number | null;
+  exitPrice?: string | number | null;
+  quantity?: string | number | null;
+  pnlAmount?: string | number | null;
+  pnlPercent?: string | number | null;
+  outcome?: CreateJournalEntryBodyOutcome;
+  /** @maxLength 40 */
+  mood?: string | null;
+  /** @maxLength 2000 */
+  note?: string | null;
+  tradedAt?: string;
+}
+
+export type UpdateJournalEntryBodySide =
+  (typeof UpdateJournalEntryBodySide)[keyof typeof UpdateJournalEntryBodySide];
+
+export const UpdateJournalEntryBodySide = {
+  buy: "buy",
+  sell: "sell",
+} as const;
+
+export type UpdateJournalEntryBodyOutcome =
+  (typeof UpdateJournalEntryBodyOutcome)[keyof typeof UpdateJournalEntryBodyOutcome];
+
+export const UpdateJournalEntryBodyOutcome = {
+  win: "win",
+  loss: "loss",
+  breakeven: "breakeven",
+  open: "open",
+  skipped: "skipped",
+} as const;
+
+/**
+ * Partial update — every field is optional. Recomputes pnlAmount/pnlPercent/outcome from entry+exit+side when the user didn't pass an explicit override.
+ */
+export interface UpdateJournalEntryBody {
+  analysisId?: number | null;
+  /**
+   * @minLength 1
+   * @maxLength 64
+   */
+  instrument?: string;
+  side?: UpdateJournalEntryBodySide;
+  entryPrice?: string | number | null;
+  exitPrice?: string | number | null;
+  quantity?: string | number | null;
+  pnlAmount?: string | number | null;
+  pnlPercent?: string | number | null;
+  outcome?: UpdateJournalEntryBodyOutcome;
+  /** @maxLength 40 */
+  mood?: string | null;
+  /** @maxLength 2000 */
+  note?: string | null;
+  tradedAt?: string;
+}
+
+/**
+ * Aggregate stats for one instrument or session bucket (best/worst rankings).
+ */
+export interface JournalGroupStat {
+  key: string;
+  winRate: number;
+  total: number;
+  avgPnlPercent?: number | null;
+}
+
+export type JournalStatsTotals = {
+  entries: number;
+  wins: number;
+  losses: number;
+  breakevens: number;
+  open: number;
+  skipped: number;
+  resolved: number;
+};
+
+/**
+ * Summary stats for the user's trade journal, computed over the optional from/to date range.
+ */
+export interface JournalStats {
+  totals: JournalStatsTotals;
+  /** wins / (wins + losses); null when no resolved trades. */
+  winRate?: number | null;
+  avgPnlPercent?: number | null;
+  avgPnlAmount?: number | null;
+  bestInstrument?: JournalGroupStat | null;
+  worstInstrument?: JournalGroupStat | null;
+  bestSession?: JournalGroupStat | null;
+  worstSession?: JournalGroupStat | null;
+}
+
+export type ListJournalEntriesParams = {
+  instrument?: string;
+  outcome?: ListJournalEntriesOutcome;
+  from?: string;
+  to?: string;
+  /**
+   * @minimum 1
+   * @maximum 500
+   */
+  limit?: number;
+};
+
+export type ListJournalEntriesOutcome =
+  (typeof ListJournalEntriesOutcome)[keyof typeof ListJournalEntriesOutcome];
+
+export const ListJournalEntriesOutcome = {
+  win: "win",
+  loss: "loss",
+  breakeven: "breakeven",
+  open: "open",
+  skipped: "skipped",
+} as const;
+
+export type GetJournalStatsParams = {
+  from?: string;
+  to?: string;
+};
+
 export type ListAnalysesParams = {
   mode?: ListAnalysesMode;
   instrument?: string;

@@ -130,6 +130,35 @@ export const pushTestLimiter = buildLimiter({
     "Terlalu banyak tes notifikasi. Coba lagi sebentar lagi. / Too many test notifications. Try again in a bit.",
 });
 
+// Per-user limiter for the manual trade-journal endpoints (task #161).
+// Write path is gated tighter than read because journal entries land
+// directly in the user's permanent record — accidental double-submit
+// from a phone tap-storm shouldn't create dozens of duplicate rows.
+export const journalWriteLimiter = buildLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyFn: (req) => {
+    const id = (req as Request & { userId?: number }).userId;
+    return typeof id === "number" ? `user-${id}` : clientIp(req);
+  },
+  message:
+    "Terlalu banyak update jurnal. Coba lagi sebentar lagi. / Too many journal updates. Try again in a moment.",
+});
+
+// Looser limiter for journal list + stats reads — the journal page
+// re-queries on filter changes and we don't want to throttle normal
+// browsing, only outright scraping.
+export const journalReadLimiter = buildLimiter({
+  windowMs: 60 * 1000,
+  max: 120,
+  keyFn: (req) => {
+    const id = (req as Request & { userId?: number }).userId;
+    return typeof id === "number" ? `user-${id}` : clientIp(req);
+  },
+  message:
+    "Terlalu banyak permintaan jurnal. Coba lagi sebentar lagi. / Too many journal requests. Try again in a moment.",
+});
+
 setInterval(() => {
   const now = Date.now();
   for (const limiter of [
@@ -139,6 +168,8 @@ setInterval(() => {
     registerLimiter,
     forgotPasswordResetLimiter,
     pushTestLimiter,
+    journalWriteLimiter,
+    journalReadLimiter,
   ]) {
     for (const [k, b] of limiter.store) {
       if (b.resetAt <= now) limiter.store.delete(k);

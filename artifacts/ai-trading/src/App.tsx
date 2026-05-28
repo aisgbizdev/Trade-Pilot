@@ -26,6 +26,7 @@ import AdminUsersPage from "@/pages/admin-users";
 import AdminFeedbackPage from "@/pages/admin-feedback";
 import LegalPage from "@/pages/legal";
 import MindsetPage from "@/pages/mindset";
+import JournalPage from "@/pages/journal";
 import { SplashScreen } from "@/components/splash-screen";
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
@@ -131,6 +132,11 @@ function Router() {
         <Route path="/mindset">
           <ProtectedRoute>
             <MindsetPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/journal">
+          <ProtectedRoute>
+            <JournalPage />
           </ProtectedRoute>
         </Route>
         <Route path="/admin">

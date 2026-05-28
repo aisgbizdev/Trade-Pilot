@@ -39,6 +39,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
+import { LogTradeDialog } from "@/components/log-trade-dialog";
+import { BookOpen } from "lucide-react";
 import { MarketContextSummary } from "@/components/market-context-summary";
 import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
@@ -627,6 +629,59 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
         </p>
       </div>
     </Card>
+  );
+}
+
+// Compact "Log this trade" CTA card (task #161). Opens the LogTradeDialog
+// pre-filled with the analysis's instrument + AI-preferred side so the
+// common case ("I took the recommended trade") is one tap + outcome.
+function LogTradeButton({
+  analysisId,
+  instrument,
+  preferredSide,
+  t,
+}: {
+  analysisId: number;
+  instrument: string;
+  preferredSide: string | null;
+  t: T;
+}) {
+  const [open, setOpen] = useState(false);
+  const side: "buy" | "sell" | undefined =
+    preferredSide === "buy" || preferredSide === "sell"
+      ? preferredSide
+      : undefined;
+  return (
+    <>
+      <Card className="p-3 flex items-center justify-between gap-3" data-testid="card-log-trade">
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="w-4 h-4 text-primary shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              {t.journal.log_trade_from_analysis}
+            </p>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              {t.journal.subtitle}
+            </p>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setOpen(true)}
+          data-testid="button-log-trade"
+        >
+          {t.journal.log_trade}
+        </Button>
+      </Card>
+      <LogTradeDialog
+        open={open}
+        onOpenChange={setOpen}
+        analysisId={analysisId}
+        defaultInstrument={instrument}
+        defaultSide={side}
+      />
+    </>
   );
 }
 
@@ -1741,6 +1796,19 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         {tradePlan && (
           <AnalysisAlertsCard analysisId={analysis.id} t={t} />
         )}
+
+        {/* "Log this trade" — task #161 manual post-trade journal entry
+            scoped to this analysis. Opens a modal pre-filled with the
+            instrument + AI-preferred side; persists to `trade_journal`
+            keyed on this `analysisId`. Rendered above the private note
+            card so the journal CTA is the first journaling action the
+            user sees on the page. */}
+        <LogTradeButton
+          analysisId={analysis.id}
+          instrument={analysis.instrument}
+          preferredSide={tradePlan?.preferredSide ?? null}
+          t={t}
+        />
 
         {/* Private trading-journal note for this analysis (task #111).
             Rendered for every saved analysis — having a journal entry

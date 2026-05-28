@@ -271,6 +271,248 @@ export const DeleteUserPriceAlertResponse = zod.object({
 });
 
 /**
+ * @summary List the current user's trade journal entries with optional filters
+ */
+export const listJournalEntriesQueryLimitMax = 500;
+
+export const ListJournalEntriesQueryParams = zod.object({
+  instrument: zod.coerce.string().optional(),
+  outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]).optional(),
+  from: zod.date().optional(),
+  to: zod.date().optional(),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listJournalEntriesQueryLimitMax)
+    .optional(),
+});
+
+export const ListJournalEntriesResponse = zod.object({
+  entries: zod.array(
+    zod
+      .object({
+        id: zod.number(),
+        analysisId: zod
+          .number()
+          .nullish()
+          .describe(
+            "Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.",
+          ),
+        instrument: zod.string(),
+        side: zod.enum(["buy", "sell"]),
+        entryPrice: zod.string().nullish(),
+        exitPrice: zod.string().nullish(),
+        quantity: zod.string().nullish(),
+        pnlAmount: zod
+          .string()
+          .nullish()
+          .describe(
+            "Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.",
+          ),
+        pnlPercent: zod
+          .string()
+          .nullish()
+          .describe(
+            "Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.",
+          ),
+        outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]),
+        mood: zod.string().nullish(),
+        note: zod.string().nullish(),
+        tradedAt: zod.coerce.date(),
+        createdAt: zod.coerce.date(),
+        updatedAt: zod.coerce.date(),
+      })
+      .describe(
+        "A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.",
+      ),
+  ),
+});
+
+/**
+ * @summary Log a new manual trade-journal entry (optionally linked to an analysis)
+ */
+export const createJournalEntryBodyInstrumentMax = 64;
+
+export const createJournalEntryBodyMoodMax = 40;
+
+export const createJournalEntryBodyNoteMax = 2000;
+
+export const CreateJournalEntryBody = zod.object({
+  analysisId: zod.number().nullish(),
+  instrument: zod.string().min(1).max(createJournalEntryBodyInstrumentMax),
+  side: zod.enum(["buy", "sell"]),
+  entryPrice: zod.union([zod.string(), zod.number()]).nullish(),
+  exitPrice: zod.union([zod.string(), zod.number()]).nullish(),
+  quantity: zod.union([zod.string(), zod.number()]).nullish(),
+  pnlAmount: zod.union([zod.string(), zod.number()]).nullish(),
+  pnlPercent: zod.union([zod.string(), zod.number()]).nullish(),
+  outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]).optional(),
+  mood: zod.string().max(createJournalEntryBodyMoodMax).nullish(),
+  note: zod.string().max(createJournalEntryBodyNoteMax).nullish(),
+  tradedAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Summary stats for the user's trade journal (win rate, avg P/L, best/worst)
+ */
+export const GetJournalStatsQueryParams = zod.object({
+  from: zod.date().optional(),
+  to: zod.date().optional(),
+});
+
+export const GetJournalStatsResponse = zod
+  .object({
+    totals: zod.object({
+      entries: zod.number(),
+      wins: zod.number(),
+      losses: zod.number(),
+      breakevens: zod.number(),
+      open: zod.number(),
+      skipped: zod.number(),
+      resolved: zod.number(),
+    }),
+    winRate: zod
+      .number()
+      .nullish()
+      .describe("wins \/ (wins + losses); null when no resolved trades."),
+    avgPnlPercent: zod.number().nullish(),
+    avgPnlAmount: zod.number().nullish(),
+    bestInstrument: zod
+      .object({
+        key: zod.string(),
+        winRate: zod.number(),
+        total: zod.number(),
+        avgPnlPercent: zod.number().nullish(),
+      })
+      .nullish()
+      .describe(
+        "Aggregate stats for one instrument or session bucket (best\/worst rankings).",
+      ),
+    worstInstrument: zod
+      .object({
+        key: zod.string(),
+        winRate: zod.number(),
+        total: zod.number(),
+        avgPnlPercent: zod.number().nullish(),
+      })
+      .nullish()
+      .describe(
+        "Aggregate stats for one instrument or session bucket (best\/worst rankings).",
+      ),
+    bestSession: zod
+      .object({
+        key: zod.string(),
+        winRate: zod.number(),
+        total: zod.number(),
+        avgPnlPercent: zod.number().nullish(),
+      })
+      .nullish()
+      .describe(
+        "Aggregate stats for one instrument or session bucket (best\/worst rankings).",
+      ),
+    worstSession: zod
+      .object({
+        key: zod.string(),
+        winRate: zod.number(),
+        total: zod.number(),
+        avgPnlPercent: zod.number().nullish(),
+      })
+      .nullish()
+      .describe(
+        "Aggregate stats for one instrument or session bucket (best\/worst rankings).",
+      ),
+  })
+  .describe(
+    "Summary stats for the user's trade journal, computed over the optional from\/to date range.",
+  );
+
+/**
+ * @summary Update an existing journal entry (e.g. close out an open trade)
+ */
+export const UpdateJournalEntryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const updateJournalEntryBodyInstrumentMax = 64;
+
+export const updateJournalEntryBodyMoodMax = 40;
+
+export const updateJournalEntryBodyNoteMax = 2000;
+
+export const UpdateJournalEntryBody = zod
+  .object({
+    analysisId: zod.number().nullish(),
+    instrument: zod
+      .string()
+      .min(1)
+      .max(updateJournalEntryBodyInstrumentMax)
+      .optional(),
+    side: zod.enum(["buy", "sell"]).optional(),
+    entryPrice: zod.union([zod.string(), zod.number()]).nullish(),
+    exitPrice: zod.union([zod.string(), zod.number()]).nullish(),
+    quantity: zod.union([zod.string(), zod.number()]).nullish(),
+    pnlAmount: zod.union([zod.string(), zod.number()]).nullish(),
+    pnlPercent: zod.union([zod.string(), zod.number()]).nullish(),
+    outcome: zod
+      .enum(["win", "loss", "breakeven", "open", "skipped"])
+      .optional(),
+    mood: zod.string().max(updateJournalEntryBodyMoodMax).nullish(),
+    note: zod.string().max(updateJournalEntryBodyNoteMax).nullish(),
+    tradedAt: zod.coerce.date().optional(),
+  })
+  .describe(
+    "Partial update — every field is optional. Recomputes pnlAmount\/pnlPercent\/outcome from entry+exit+side when the user didn't pass an explicit override.",
+  );
+
+export const UpdateJournalEntryResponse = zod
+  .object({
+    id: zod.number(),
+    analysisId: zod
+      .number()
+      .nullish()
+      .describe(
+        "Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.",
+      ),
+    instrument: zod.string(),
+    side: zod.enum(["buy", "sell"]),
+    entryPrice: zod.string().nullish(),
+    exitPrice: zod.string().nullish(),
+    quantity: zod.string().nullish(),
+    pnlAmount: zod
+      .string()
+      .nullish()
+      .describe(
+        "Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.",
+      ),
+    pnlPercent: zod
+      .string()
+      .nullish()
+      .describe(
+        "Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.",
+      ),
+    outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]),
+    mood: zod.string().nullish(),
+    note: zod.string().nullish(),
+    tradedAt: zod.coerce.date(),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  })
+  .describe(
+    "A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.",
+  );
+
+/**
+ * @summary Delete a journal entry
+ */
+export const DeleteJournalEntryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteJournalEntryResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Create new analysis (triggers AI)
  */
 export const CreateAnalysisBody = zod.object({

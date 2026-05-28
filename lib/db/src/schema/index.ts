@@ -593,6 +593,61 @@ export const userPriceAlerts = pgTable("user_price_alerts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Manual post-trade journal entries (task #161). Each row is a user-
+// reported log of an actual trade they took (or chose to pass on),
+// optionally linked back to the AI analysis that informed it. Keys on
+// `userId` + nullable `analysisId` (one analysis can spawn multiple
+// journal entries, e.g. a partial scale-out). Prices/PnL are stored as
+// text to preserve the exact precision the user typed (mirrors the
+// `user_price_alerts.target_price` convention). The note body is
+// private and never fed into any AI prompt.
+export const tradeSideEnum = pgEnum("trade_side", ["buy", "sell"]);
+export const tradeOutcomeEnum = pgEnum("trade_outcome", [
+  "win",
+  "loss",
+  "breakeven",
+  "open",
+  "skipped",
+]);
+
+export const tradeJournal = pgTable("trade_journal", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Nullable: users can journal a trade with no AI analysis behind it
+  // ("walked into something on the chart"). When the source analysis
+  // is later deleted we keep the row but null the FK — the trade still
+  // happened.
+  analysisId: integer("analysis_id").references(() => analyses.id, {
+    onDelete: "set null",
+  }),
+  instrument: text("instrument").notNull(),
+  side: tradeSideEnum("side").notNull(),
+  // Numeric strings — kept verbatim (no float rounding). Entry is
+  // required when `tookTrade` is true; exit/pnl are populated once the
+  // trade is closed. For `tookTrade=false` (skipped) the user logs only
+  // an outcome of "skipped" + reason in the note.
+  entryPrice: text("entry_price"),
+  exitPrice: text("exit_price"),
+  quantity: text("quantity"),
+  pnlAmount: text("pnl_amount"),
+  pnlPercent: text("pnl_percent"),
+  outcome: tradeOutcomeEnum("outcome").notNull().default("open"),
+  // Free-form mood tag (e.g. "confident", "fomo", "revenge"). Loose
+  // string so the UI can present a recommended chip set without locking
+  // the schema. Capped server-side.
+  mood: text("mood"),
+  note: text("note"),
+  // When the trade was opened (user-provided; defaults to createdAt on
+  // insert). Used by the session-tag derivation in the stats endpoint
+  // so "best session" reflects when the user *traded*, not when they
+  // happened to log it later in the evening.
+  tradedAt: timestamp("traded_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").references(() => users.id, {
@@ -627,3 +682,5 @@ export type FilterPreset = typeof filterPresets.$inferSelect;
 export type NewFilterPreset = typeof filterPresets.$inferInsert;
 export type UserPriceAlert = typeof userPriceAlerts.$inferSelect;
 export type NewUserPriceAlert = typeof userPriceAlerts.$inferInsert;
+export type TradeJournalEntry = typeof tradeJournal.$inferSelect;
+export type NewTradeJournalEntry = typeof tradeJournal.$inferInsert;
