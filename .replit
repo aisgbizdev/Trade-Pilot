@@ -112,6 +112,14 @@ externalPort = 4200
 localPort = 20853
 externalPort = 3000
 
+[[ports]]
+localPort = 29911
+externalPort = 5000
+
+[[ports]]
+localPort = 29912
+externalPort = 5173
+
 [userenv]
 
 [userenv.shared]
