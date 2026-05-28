@@ -80,10 +80,17 @@ async function fetchNewsmaker(): Promise<NewsmakerRaw[]> {
   return data;
 }
 
+// Sentinel for missing / unparseable upstream dates. Anything older than
+// the recency window is dropped by `getRelevantNews`, so flagging
+// undated items with the epoch ensures they cannot masquerade as fresh
+// — much safer than coercing missing dates to `now`, which would let an
+// undated item bypass the 7-day cutoff entirely.
+const UNDATED_SENTINEL = new Date(0).toISOString();
+
 function toIsoDate(input: string | undefined): string {
-  if (!input) return new Date().toISOString();
+  if (!input) return UNDATED_SENTINEL;
   const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return new Date().toISOString();
+  if (Number.isNaN(d.getTime())) return UNDATED_SENTINEL;
   return d.toISOString();
 }
 
@@ -123,6 +130,19 @@ interface ScoredItem {
 function scoreItem(item: NewsItem, keywords: string[]): number {
   const text = `${item.title} ${item.summary}`.toLowerCase();
   return keywords.reduce((s, kw) => s + (text.includes(kw) ? 1 : 0), 0);
+}
+
+// Recency policy for "Recent News". Without these bounds, an older
+// headline that happens to be keyword-dense (e.g. mentions emas + dolar
+// + inflasi + fed) outranks a fresh headline with a terse title and
+// the UI ends up showing 2-week-old news as "recent". The window is
+// generous on purpose so that quiet news days still surface something.
+const NEWS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const NEWS_FRESH_TIER_MS = 3 * 24 * 60 * 60 * 1000;
+
+function publishedAtMs(item: NewsItem): number {
+  const t = new Date(item.publishedAt).getTime();
+  return Number.isFinite(t) ? t : 0;
 }
 
 // Fetch + merge + dedupe + rank up to `maxItems` items for the
@@ -192,15 +212,31 @@ export async function getRelevantNews(
     kept = [...kept, ...macroFallback];
   }
 
-  // No "recent N overall" fallback — empty is the honest answer when
-  // nothing matches keywords OR the macro pattern.
+  // Hard recency cutoff. Anything older than NEWS_MAX_AGE_MS is dropped
+  // outright — better to return [] (UI shows an honest empty state) than
+  // to surface 2-week-old headlines as if they were current. Items with
+  // an unparseable / missing date get publishedAtMs=0 and are filtered
+  // out by the same rule, which is the safe default.
+  const now = Date.now();
+  kept = kept.filter((s) => now - publishedAtMs(s.item) <= NEWS_MAX_AGE_MS);
 
-  kept.sort(
-    (a, b) =>
-      b.score - a.score ||
-      new Date(b.item.publishedAt).getTime() -
-        new Date(a.item.publishedAt).getTime(),
-  );
+  // Two-tier ranking: items ≤ NEWS_FRESH_TIER_MS old form the "fresh"
+  // tier and are always ranked above the older tier, regardless of
+  // keyword density. Within the fresh tier we sort by recency (newest
+  // first) so the freshest market-moving headline always wins. The
+  // older tier still uses score-then-recency, so that on a quiet news
+  // day we surface the most relevant of the slightly-older items
+  // instead of an arbitrary one. Without this two-tier rule, a
+  // keyword-dense 10-day-old headline outranks a terse fresh one.
+  kept.sort((a, b) => {
+    const at = publishedAtMs(a.item);
+    const bt = publishedAtMs(b.item);
+    const aTier = now - at <= NEWS_FRESH_TIER_MS ? 0 : 1;
+    const bTier = now - bt <= NEWS_FRESH_TIER_MS ? 0 : 1;
+    if (aTier !== bTier) return aTier - bTier;
+    if (aTier === 0) return bt - at; // fresh tier: pure recency
+    return b.score - a.score || bt - at; // older tier: score, then recency
+  });
 
   return kept.slice(0, maxItems).map((s) => s.item);
 }

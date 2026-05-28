@@ -131,10 +131,16 @@ export interface YahooNewsItem {
   publishedAt: string; // ISO 8601, best-effort
 }
 
+// Sentinel for missing / unparseable upstream dates. Mirrors the same
+// approach in `news.ts`: tagging undated items as the epoch lets the
+// 7-day recency filter drop them automatically, instead of letting an
+// undated item slip through by being coerced to `now`.
+const UNDATED_SENTINEL = new Date(0).toISOString();
+
 function toIsoDate(input: string): string {
-  if (!input) return new Date().toISOString();
+  if (!input) return UNDATED_SENTINEL;
   const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return new Date().toISOString();
+  if (Number.isNaN(d.getTime())) return UNDATED_SENTINEL;
   return d.toISOString();
 }
 

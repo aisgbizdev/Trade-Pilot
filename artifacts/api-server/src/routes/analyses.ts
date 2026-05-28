@@ -12,8 +12,19 @@ import {
   type FundamentalSnapshot,
 } from "../lib/openai";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
-import { getRelevantNews, formatNewsForPrompt, type NewsItem } from "../lib/news";
-import { getRelevantCalendar, formatCalendarForPrompt, type CalendarEvent } from "../lib/calendar";
+import {
+  getRelevantNews,
+  formatNewsForPrompt,
+  type NewsItem,
+  _clearNewsmakerCache,
+} from "../lib/news";
+import { _clearYahooCache } from "../lib/news-yahoo";
+import {
+  getRelevantCalendar,
+  formatCalendarForPrompt,
+  type CalendarEvent,
+  _clearCalendarCache,
+} from "../lib/calendar";
 import { createNotification, createNotificationsForUsers } from "../lib/create-notification";
 import { logger } from "../lib/logger";
 import {
@@ -911,6 +922,16 @@ router.post(
     } catch {
       // Leave originalCitations as empty — we'll just report zero drift.
     }
+
+    // The aggregator caches upstream feeds for 10–30 min. On an explicit
+    // "Refresh fundamentals" the user expects an actual re-fetch, not a
+    // re-run against the same cached snapshot — so bust the upstream
+    // caches before refetching. Cache busts are global (per-process),
+    // which is fine: the next caller that wants news/calendar will just
+    // refill from upstream.
+    _clearNewsmakerCache();
+    _clearYahooCache();
+    _clearCalendarCache();
 
     // Re-fetch news + calendar — never throw on upstream failure (mirrors the
     // create-analysis path). Either feed coming back empty is treated as

@@ -1,5 +1,6 @@
 import { calculateIndicators, type TechnicalIndicators, type Candle } from "./indicators.js";
 import { isCryptoInstrument, yahooCryptoSymbolFor } from "./crypto-instruments.js";
+import { getLivePriceFor } from "./live-prices.js";
 
 const HISTORICAL_API = "https://endpoapi-production-3202.up.railway.app/api/historical";
 // Yahoo Finance's chart endpoint. Public, unauthenticated, widely used as a
@@ -422,6 +423,56 @@ async function getDailyCandles(
   return { candles, sourceFetchedAt };
 }
 
+// Anchor the OHLC series to the same live spot/feed price the dashboard
+// ticker shows so the "Price" displayed in Technical Indicators (and the
+// number fed to the AI prompt + Suggested Levels) matches what the user
+// sees everywhere else. Background: indicators are computed from Yahoo
+// Finance OHLC, which for XAU/USD is GC=F (gold futures), but the live
+// ticker uses XUL10 (spot). Spot vs futures carries a basis spread that
+// can be 20+ points on gold — large enough that the analysis price
+// looks visibly wrong next to the ticker.
+//
+// We shift every candle by a single offset (live_price − last_close).
+// Because indicators only depend on relative price movement (MAs,
+// signals, % changes), applying the same constant shift to every bar
+// leaves all signals and changes IDENTICAL — only the displayed price
+// levels (`lastClose`, MA values, Bollinger bands) re-anchor onto the
+// live feed. If the offset looks pathological (> 5% of last close)
+// we skip — almost certainly a bad live-feed value, and keeping the
+// raw Yahoo prices is the safer fallback.
+async function anchorCandlesToLivePrice(
+  instrument: string,
+  candles: Candle[],
+): Promise<Candle[]> {
+  if (candles.length === 0) return candles;
+  const lastClose = candles[candles.length - 1].close;
+  if (!Number.isFinite(lastClose) || lastClose <= 0) return candles;
+  let livePrice: number | null = null;
+  try {
+    livePrice = await getLivePriceFor(instrument);
+  } catch {
+    return candles;
+  }
+  if (livePrice === null || !Number.isFinite(livePrice) || livePrice <= 0) {
+    return candles;
+  }
+  const offset = livePrice - lastClose;
+  // Tiny offsets aren't worth the alloc — same instrument feed (e.g.
+  // EUR/USD spot vs Yahoo's EURUSD=X spot) typically lines up to within
+  // a fraction of a pip.
+  if (Math.abs(offset) < 1e-6) return candles;
+  // Sanity: a >5% shift means one of the two feeds is broken; trust
+  // Yahoo and skip the anchor so we don't surface nonsense prices.
+  if (Math.abs(offset) / lastClose > 0.05) return candles;
+  return candles.map((c) => ({
+    date: c.date,
+    open: c.open + offset,
+    high: c.high + offset,
+    low: c.low + offset,
+    close: c.close + offset,
+  }));
+}
+
 // If the upstream is unavailable but we still have a "recent enough" cached
 // indicator entry, return it instead of surfacing null. Recent enough = within
 // STALE_FALLBACK_MULTIPLIER × the timeframe's normal TTL.
@@ -463,7 +514,8 @@ export async function getIndicators(
       // Empty result is treated like a soft failure — same fallback policy.
       return staleFallback(cached, timeframe);
     }
-    const indicators = calculateIndicators(instrument, candles, timeframe);
+    const anchored = await anchorCandlesToLivePrice(instrument, candles);
+    const indicators = calculateIndicators(instrument, anchored, timeframe);
     indicatorsCache.set(cacheKey, { indicators, computedAt: Date.now() });
     return indicators;
   }
@@ -492,7 +544,8 @@ export async function getIndicators(
   }
 
   if (!candles.length) return staleFallback(cached, timeframe);
-  const indicators = calculateIndicators(instrument, candles, timeframe);
+  const anchored = await anchorCandlesToLivePrice(instrument, candles);
+  const indicators = calculateIndicators(instrument, anchored, timeframe);
   indicatorsCache.set(cacheKey, {
     indicators,
     computedAt: Date.now(),
@@ -509,11 +562,19 @@ export async function getCandles(
   instrument: string,
   timeframe: IndicatorTimeframe,
 ): Promise<Candle[] | null> {
+  let candles: Candle[] | null;
   if (isIntradayTimeframe(timeframe)) {
-    return getIntradayCandles(instrument, timeframe);
+    candles = await getIntradayCandles(instrument, timeframe);
+  } else {
+    const result = await getDailyCandles(instrument, timeframe);
+    candles = result ? result.candles : null;
   }
-  const result = await getDailyCandles(instrument, timeframe);
-  return result ? result.candles : null;
+  if (!candles || candles.length === 0) return candles;
+  // Apply the same live-price anchoring that `getIndicators` uses, so the
+  // chart overlay and the AI-generated trade levels live in the same price
+  // space. Without this, gold candles render at futures (GC=F) prices
+  // while the suggested levels sit at spot (XUL10), visibly mis-aligned.
+  return anchorCandlesToLivePrice(instrument, candles);
 }
 
 // Human-readable Indonesian unit/period labels for prompt + UI alignment.

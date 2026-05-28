@@ -44,6 +44,12 @@ afterEach(() => {
 });
 
 describe("getRelevantNews — merge + dedupe", () => {
+  // Use a date inside the 7-day recency window so the dedupe assertions
+  // actually run against retained items. Re-evaluated per call so the
+  // window stays valid even if the suite is run across midnight.
+  const recentISO = (hoursAgo = 2) =>
+    new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+
   it("dedupes the same headline syndicated to both sources by normalized title", async () => {
     const sharedTitle = "Gold rallies as Fed signals pause";
     globalThis.fetch = vi.fn(async () =>
@@ -53,7 +59,7 @@ describe("getRelevantNews — merge + dedupe", () => {
           title: sharedTitle,
           summary: "Newsmaker copy",
           url: "https://newsmaker.id/a",
-          date: "2026-04-30T10:00:00Z",
+          date: recentISO(3),
         },
       ]),
     ) as unknown as typeof fetch;
@@ -63,7 +69,7 @@ describe("getRelevantNews — merge + dedupe", () => {
         title: "  GOLD rallies, as fed SIGNALS pause! ",
         summary: "Yahoo copy",
         url: "https://finance.yahoo.com/x",
-        publishedAt: "2026-04-30T11:00:00Z",
+        publishedAt: recentISO(2),
       },
     ]);
 
@@ -82,13 +88,13 @@ describe("getRelevantNews — merge + dedupe", () => {
         title: "Brent crude rises on OPEC cut",
         summary: "first",
         url: sharedUrl,
-        publishedAt: "2026-04-30T09:00:00Z",
+        publishedAt: recentISO(4),
       },
       {
         title: "Brent crude rises after OPEC cut",
         summary: "second",
         url: sharedUrl,
-        publishedAt: "2026-04-30T10:00:00Z",
+        publishedAt: recentISO(3),
       },
     ]);
     const items = await getRelevantNews("BRENT");
@@ -106,14 +112,14 @@ describe("getRelevantNews — macro fallback", () => {
           title: "FOMC keeps rates unchanged, signals patience",
           summary: "Statement language softened.",
           url: "https://newsmaker.id/fomc",
-          date: "2026-04-30T08:00:00Z",
+          date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
         },
         {
           id: 8,
           title: "Lokal: harga sayur di pasar tradisional naik",
           summary: "Berita tidak relevan.",
           url: "https://newsmaker.id/sayur",
-          date: "2026-04-30T07:00:00Z",
+          date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
         },
       ]),
     ) as unknown as typeof fetch;
@@ -151,6 +157,77 @@ describe("getRelevantNews — no irrelevant fallback", () => {
     // "no significant catalyst" instead of inventing one around random
     // recent headlines.
     expect(items.length).toBe(0);
+  });
+});
+
+describe("getRelevantNews — recency ranking", () => {
+  function iso(daysAgo: number): string {
+    return new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  it("drops items older than the 7d recency cutoff even when keyword-dense", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse([
+        {
+          id: 1,
+          title: "Gold rallies as Fed signals pause, dollar weakens",
+          summary: "emas, dolar, fed, inflasi, suku bunga",
+          url: "https://newsmaker.id/old",
+          date: iso(20),
+        },
+      ]),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([]);
+    const items = await getRelevantNews("XAU/USD");
+    expect(items.length).toBe(0);
+  });
+
+  it("drops items with missing or unparseable upstream dates (no 'undated treated as now')", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse([
+        {
+          id: 1,
+          title: "Gold rallies as Fed signals pause",
+          summary: "emas dolar fed",
+          url: "https://newsmaker.id/undated",
+          // No `date` field — adapter must NOT coerce this to `now`.
+        },
+        {
+          id: 2,
+          title: "Gold ticks higher on dollar slide",
+          summary: "emas dolar",
+          url: "https://newsmaker.id/bad-date",
+          date: "not-a-real-date",
+        },
+      ]),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([]);
+    const items = await getRelevantNews("XAU/USD");
+    expect(items.length).toBe(0);
+  });
+
+  it("ranks a fresh terse headline above an older keyword-dense one", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse([
+        {
+          id: 1,
+          title: "Old: Gold extends rally as Fed dovish, dollar slides, inflation cools",
+          summary: "emas dolar fed inflasi suku bunga FOMC",
+          url: "https://newsmaker.id/old",
+          date: iso(5),
+        },
+        {
+          id: 2,
+          title: "Fresh: Gold ticks up",
+          summary: "",
+          url: "https://newsmaker.id/fresh",
+          date: iso(1),
+        },
+      ]),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([]);
+    const items = await getRelevantNews("XAU/USD");
+    expect(items[0].url).toBe("https://newsmaker.id/fresh");
   });
 });
 
