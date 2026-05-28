@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
+import { explainerFor } from "@/lib/event-explainers";
 
 const IMPACT_CONFIG: Record<string, { label: string; color: string }> = {
   "★★★": { label: "★★★", color: "text-red-500 bg-red-500/15" },
@@ -17,11 +18,19 @@ const CURRENCY_FLAGS: Record<string, string> = {
   IDR: "🇮🇩", HKD: "🇭🇰",
 };
 
+let calendarRowSeq = 0;
+
 function EventRow({ event }: { event: CalendarEvent }) {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const [panelId] = useState(() => `cal-row-explainer-${++calendarRowSeq}`);
   const impact = IMPACT_CONFIG[event.impact] ?? { label: "—", color: "bg-muted text-muted-foreground" };
   const hasResult = !!event.actual;
+  // Local dictionary lookup so events that come back with an empty
+  // `whyTraderCare` from upstream still get the expandable explainer.
+  const dict = explainerFor(event.event, lang);
+  const upstream = event.whyTraderCare?.trim() ?? "";
+  const hasExplainer = !!dict || !!upstream;
   const actualBetter = event.actual && event.forecast
     ? parseFloat(event.actual) > parseFloat(event.forecast)
     : null;
@@ -29,8 +38,12 @@ function EventRow({ event }: { event: CalendarEvent }) {
   return (
     <div className="border-b border-border/50 last:border-0">
       <button
-        onClick={() => event.whyTraderCare && setExpanded((v) => !v)}
-        className="w-full text-left py-2.5 px-0"
+        type="button"
+        onClick={() => hasExplainer && setExpanded((v) => !v)}
+        className="w-full text-left py-2.5 px-0 disabled:cursor-default"
+        disabled={!hasExplainer}
+        aria-expanded={hasExplainer ? expanded : undefined}
+        aria-controls={hasExplainer ? panelId : undefined}
       >
         <div className="flex items-start gap-2">
           <span className="text-sm mt-0.5">{CURRENCY_FLAGS[event.currency] ?? "🌐"}</span>
@@ -67,17 +80,24 @@ function EventRow({ event }: { event: CalendarEvent }) {
           </div>
           <div className="text-right shrink-0">
             <div className="text-[10px] text-muted-foreground font-mono">{event.time?.split(" ")[1] ?? ""}</div>
-            {event.whyTraderCare && (
+            {hasExplainer && (
               expanded ? <ChevronUp className="w-3 h-3 text-muted-foreground mt-1" /> : <ChevronDown className="w-3 h-3 text-muted-foreground mt-1" />
             )}
           </div>
         </div>
       </button>
-      {expanded && event.whyTraderCare && (
-        <div className="pb-2.5 px-0">
-          <p className="text-[11px] text-muted-foreground leading-relaxed bg-muted/50 rounded-lg p-2">
-            {event.whyTraderCare}
-          </p>
+      {expanded && hasExplainer && (
+        <div id={panelId} className="pb-2.5 px-0">
+          {dict ? (
+            <div className="text-[11px] leading-relaxed bg-muted/50 rounded-lg p-2 space-y-1">
+              <p className="font-semibold text-foreground">{dict.headline}</p>
+              <p className="text-muted-foreground">{dict.what}</p>
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground leading-relaxed bg-muted/50 rounded-lg p-2">
+              {upstream}
+            </p>
+          )}
         </div>
       )}
     </div>

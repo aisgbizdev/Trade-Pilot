@@ -25,6 +25,7 @@ import AdminPage from "@/pages/admin";
 import AdminUsersPage from "@/pages/admin-users";
 import AdminFeedbackPage from "@/pages/admin-feedback";
 import LegalPage from "@/pages/legal";
+import MindsetPage from "@/pages/mindset";
 import { SplashScreen } from "@/components/splash-screen";
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
@@ -125,6 +126,11 @@ function Router() {
         <Route path="/my-alerts">
           <ProtectedRoute>
             <MyAlertsPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/mindset">
+          <ProtectedRoute>
+            <MindsetPage />
           </ProtectedRoute>
         </Route>
         <Route path="/admin">

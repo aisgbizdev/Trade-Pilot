@@ -24,6 +24,9 @@ import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
 import { useRelevantCalendar } from "@/hooks/use-relevant-calendar";
 import type { CalendarEvent } from "@/hooks/use-calendar";
 import { useTranslation } from "@/lib/i18n";
+import { explainerFor } from "@/lib/event-explainers";
+import { MentalChecklist } from "@/components/mental-checklist";
+import { useMentalChecklistPref } from "@/hooks/use-mental-checklist";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -47,6 +50,53 @@ const CURRENCY_FLAGS: Record<string, string> = {
   CAD: "🇨🇦", CHF: "🇨🇭", CNY: "🇨🇳", CHN: "🇨🇳", NZD: "🇳🇿",
   IDR: "🇮🇩", HKD: "🇭🇰", GOLD: "🥇", OIL: "🛢️", OPEC: "🛢️",
 };
+
+let calendarExplainerSeq = 0;
+
+function CalendarEventExplainer({ event }: { event: CalendarEvent }) {
+  const { t, lang } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [panelId] = useState(() => `cal-explainer-${++calendarExplainerSeq}`);
+  // Prefer the upstream-provided text when present; otherwise look up
+  // the local dictionary. If neither yields anything, render nothing.
+  const dict = explainerFor(event.event, lang);
+  const upstream = event.whyTraderCare?.trim();
+  if (!dict && !upstream) return null;
+  return (
+    <div className="mt-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-[10px] font-medium text-primary hover:underline"
+        data-testid="button-event-explainer-toggle"
+        aria-expanded={open}
+        aria-controls={panelId}
+      >
+        {open ? t.analyze.pre_trade_warning_explainer_hide : t.analyze.calendar_event_explainer_btn}
+      </button>
+      {open && (
+        <div id={panelId} className="mt-1 rounded-lg bg-muted/60 p-2 space-y-1.5 text-[11px] leading-snug">
+          {dict ? (
+            <>
+              <p className="font-semibold text-foreground">{dict.headline}</p>
+              <p className="text-foreground/90">{dict.what}</p>
+              <p className="text-foreground/85">
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">↑ {t.analyze.explainer_if_higher_label}: </span>
+                {dict.if_higher}
+              </p>
+              <p className="text-foreground/85">
+                <span className="font-medium text-red-500 dark:text-red-400">↓ {t.analyze.explainer_if_lower_label}: </span>
+                {dict.if_lower}
+              </p>
+            </>
+          ) : (
+            <p className="text-foreground/85">{upstream}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function RelevantCalendarPreview({ instrument }: { instrument: string }) {
   const { t, lang } = useTranslation();
@@ -96,6 +146,7 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
                   {evt.forecast && (
                     <span className="text-muted-foreground"> · {t.widgets.calendar_forecast}: <span className="text-foreground">{evt.forecast}</span></span>
                   )}
+                  <CalendarEventExplainer event={evt} />
                 </span>
                 <span className="text-[10px] text-muted-foreground font-mono shrink-0 mt-0.5 whitespace-nowrap">
                   {dateLabel} {timeLabel}
@@ -151,7 +202,9 @@ function eventEpoch(evt: CalendarEvent): number | null {
 }
 
 function PreTradeWarning({ instrument }: { instrument: string }) {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const [explainerOpen, setExplainerOpen] = useState(false);
+  const explainerPanelId = "pre-trade-warning-explainer-panel";
   // Ask for a wider window than the default preview cap so an unusually
   // packed week (multiple ★★★ events for the same currency on FOMC /
   // NFP days) can't silently truncate the imminent event off the list.
@@ -211,6 +264,47 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
         <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-snug mt-0.5">
           {message}
         </p>
+        {(() => {
+          const dict = explainerFor(soonest.event.event, lang);
+          const upstream = soonest.event.whyTraderCare?.trim();
+          if (!dict && !upstream) return null;
+          return (
+            <div className="mt-1.5">
+              <button
+                type="button"
+                onClick={() => setExplainerOpen((v) => !v)}
+                className="text-[11px] font-medium text-amber-700 dark:text-amber-300 underline-offset-2 hover:underline"
+                data-testid="button-pre-trade-explainer-toggle"
+                aria-expanded={explainerOpen}
+                aria-controls={explainerPanelId}
+              >
+                {explainerOpen
+                  ? t.analyze.pre_trade_warning_explainer_hide
+                  : t.analyze.pre_trade_warning_explainer_btn}
+              </button>
+              {explainerOpen && (
+                <div id={explainerPanelId} className="mt-1.5 rounded-md bg-amber-500/[0.06] border border-amber-500/30 p-2 space-y-1 text-[11px] leading-snug text-amber-900 dark:text-amber-100">
+                  {dict ? (
+                    <>
+                      <p className="font-semibold">{dict.headline}</p>
+                      <p>{dict.what}</p>
+                      <p>
+                        <span className="font-medium text-emerald-700 dark:text-emerald-300">↑ {t.analyze.explainer_if_higher_label}: </span>
+                        {dict.if_higher}
+                      </p>
+                      <p>
+                        <span className="font-medium text-red-700 dark:text-red-300">↓ {t.analyze.explainer_if_lower_label}: </span>
+                        {dict.if_lower}
+                      </p>
+                    </>
+                  ) : (
+                    <p>{upstream}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
@@ -498,6 +592,7 @@ export default function AnalyzePage() {
   // the chart they just got isn't yanked out from under them mid-comparison.
   const [result, setResult] = useState<Analysis | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
+  const { enabled: mentalChecklistEnabled } = useMentalChecklistPref();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -817,6 +912,8 @@ export default function AnalyzePage() {
           )}
 
           {finalInstrument && <PreTradeWarning instrument={finalInstrument} />}
+
+          {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist />}
 
           <Button
             className="w-full h-12 text-base"
