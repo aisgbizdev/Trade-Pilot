@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
+// Stub the live-price anchor so this suite only exercises the Yahoo
+// resilience path. `getIndicators` now calls `getLivePriceFor` to
+// re-anchor candle prices to the live feed, which would otherwise add
+// extra fetch calls and break the fetch-count assertions here.
+vi.mock("../live-prices.js", () => ({
+  getLivePriceFor: vi.fn(async () => null),
+}));
+
 import {
   getIndicators,
   clearIndicatorsCache,
