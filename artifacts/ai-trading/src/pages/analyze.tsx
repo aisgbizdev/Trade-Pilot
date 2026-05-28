@@ -26,6 +26,7 @@ import type { CalendarEvent } from "@/hooks/use-calendar";
 import { useTranslation } from "@/lib/i18n";
 import { explainerFor } from "@/lib/event-explainers";
 import { MentalChecklist } from "@/components/mental-checklist";
+import { LocalSentimentWidget } from "@/components/local-sentiment-widget";
 import { useMentalChecklistPref } from "@/hooks/use-mental-checklist";
 
 function formatPrice(price: number, instrument: string): string {
@@ -926,6 +927,8 @@ export default function AnalyzePage() {
               </div>
             </Card>
           )}
+
+          {finalInstrument && <LocalSentimentWidget instrument={finalInstrument} />}
 
           {finalInstrument && <PreTradeWarning instrument={finalInstrument} />}
 

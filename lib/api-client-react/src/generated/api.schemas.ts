@@ -1342,6 +1342,24 @@ export interface JournalStats {
   worstSession?: JournalGroupStat | null;
 }
 
+/**
+ * Anonymised long-vs-short aggregate for an instrument over the last `windowDays`, gated when sample is too small to safely de-identify.
+ */
+export interface JournalSentiment {
+  instrument: string;
+  windowDays: number;
+  minSampleSize: number;
+  minDistinctTraders: number;
+  /** Number of directional (buy/sell) entries in the window. Null when `gated` is true (suppressed to prevent membership inference on thin instruments). */
+  sampleSize: number | null;
+  /** Number of distinct user IDs contributing entries. Null when `gated` is true. */
+  distinctTraders: number | null;
+  /** True when sample is below thresholds; percentages, sampleSize, and distinctTraders are all null. */
+  gated: boolean;
+  buyPct: number | null;
+  sellPct: number | null;
+}
+
 export type ListJournalEntriesParams = {
   instrument?: string;
   outcome?: ListJournalEntriesOutcome;
@@ -1364,6 +1382,10 @@ export const ListJournalEntriesOutcome = {
   open: "open",
   skipped: "skipped",
 } as const;
+
+export type GetJournalSentimentParams = {
+  instrument: string;
+};
 
 export type GetJournalStatsParams = {
   from?: string;

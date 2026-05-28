@@ -498,6 +498,29 @@ export async function generateAnalysis(
     dateStyle: "full",
     timeStyle: "short",
   });
+  // Indonesian-native style guide. Injected on every analysis so the
+  // narrative reads like a senior Indonesian analyst speaking to
+  // retail traders — not a literal translation. The analogies stay
+  // optional ("boleh, jangan dipaksakan") so the model doesn't shoe-
+  // horn them into setups where they don't fit. Casual register
+  // (lo/gw/lu) is explicitly forbidden — keep it professional-friendly
+  // ("kamu", "kita") to match the rest of the app copy.
+  const indoStyleGuide = [
+    `\nGAYA BAHASA INDONESIA (WAJIB ikuti — narasi terdengar natif, bukan terjemahan literal):`,
+    `- Sapaan: "kamu" / "kita". JANGAN gunakan lo/gw/lu/elu. Tetap konsultatif tapi akrab — bukan robotik, bukan kaku formal "Anda".`,
+    `- Pilih kata kerja aktif khas trader Indonesia: "nyangkut" (bukan "terjebak posisi"), "cut loss" (boleh dipakai, istilah baku), "wait and see", "kabur duluan", "antre di support", "nyemplung", "tahan dulu", "longgar dulu", "bablas ke atas/bawah".`,
+    `- Untuk kondisi pasar, ANALOGI ringan boleh dipakai (1-2x per analisis maksimal, jangan diulang-ulang). Contoh kanonik yang boleh kamu adaptasi sesuai konteks (JANGAN dipaksakan kalau tidak cocok):`,
+    `   * Ranging/sideways yang sempit: "pasar lagi kalem kayak weekend di tol dalam kota" / "gerak harga tipis kayak gajian belum cair".`,
+    `   * Volatil setelah news: "habis news langsung ngebut kayak Senayan jam 9 malam" / "candle whipsaw, mirip antri di pintu tol pas hujan".`,
+    `   * Breakout setelah konsolidasi: "harga akhirnya keluar dari kandang" / "akhirnya jebol setelah lama numpuk di pintu".`,
+    `   * Trend kuat: "momentum kenceng kayak motor di jalur kanan" / "satu arah aja, kayak commuter line pagi".`,
+    `   * Pullback ke support sehat: "harga balik dulu narik napas sebelum lanjut" / "kayak ngumpulin tenaga sebelum push lagi".`,
+    `- ANALOGI WAJIB JUSTIFIED: setelah analoginya, sambungkan ke bukti teknikal/fundamental ("...kayak weekend di tol dalam kota — ATR turun 40% vs minggu lalu dan volume tipis"). Analogi tanpa data = SALAH.`,
+    `- Istilah teknikal tetap pakai bahasa Inggris baku: "support", "resistance", "breakout", "ATR", "RSI", "MACD", "EMA200", "swing-high", "TP1/TP2", "SL", "1H/4H/1D" — JANGAN diterjemahkan paksa ke "tingkat dukungan" / "rerata gerak eksponensial".`,
+    `- Hindari kalimat hasil google-translate: "ini akan menjadi peluang yang sangat baik" → tulis "setup-nya menarik, tapi tetap tunggu konfirmasi". "Pasar sangat berfluktuasi" → "pasar lagi ngamuk" atau "volatilitas naik tajam".`,
+    `- JANGAN gunakan emoji apapun.`,
+  ].join("\n");
+
   const isCrypto = isCryptoInstrument(instrument);
   const cryptoContext = isCrypto
     ? [
@@ -514,6 +537,7 @@ export async function generateAnalysis(
     `Gunakan waktu ini sebagai patokan untuk menghitung jendela 1 jam / 24 jam ke depan pada event kalender.`,
     `Analisis pasar untuk instrumen: ${instrument}, timeframe: ${timeframe}`,
     `PENTING: semua narasi (skenario, peluang, risiko, bias arah) HARUS menyebut timeframe "${timeframe}" secara eksplisit, bukan hanya kata "uptrend"/"downtrend" saja.`,
+    indoStyleGuide,
     cryptoContext,
     indicatorContext ? indicatorContext : "",
     cleanNotes ? `\nCatatan tambahan dari trader: ${cleanNotes}` : "",

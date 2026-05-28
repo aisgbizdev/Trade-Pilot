@@ -180,6 +180,104 @@ router.get(
   },
 );
 
+// GET /api/journal/sentiment — anonymised long-vs-short aggregate for
+// a single instrument over the last N days, sourced from journal
+// entries across ALL users. The point is "67% trader TP Indo lagi
+// long XAU/USD" — data nobody else has — without leaking which
+// specific user took which side.
+//
+// Privacy gate: results are only returned when the window contains
+// BOTH at least `MIN_ENTRIES` entries AND `MIN_TRADERS` distinct
+// userIds. Below either threshold we return `gated: true` and null
+// percentages so the UI shows a "not enough data yet" placeholder.
+// This prevents re-identification in low-volume buckets (e.g. an
+// obscure instrument with two entries from the same trader).
+//
+// `outcome` is intentionally NOT filtered: a fresh "open" entry is
+// still a directional vote. Skipped trades ARE excluded because they
+// represent the user deciding NOT to take that direction.
+//
+// Auth: requires login but is rate-limited via the existing journal
+// read limiter — the response carries no PII so all authenticated
+// users see the same numbers for the same instrument.
+const SENTIMENT_WINDOW_DAYS = 7;
+const SENTIMENT_MIN_ENTRIES = 5;
+const SENTIMENT_MIN_TRADERS = 3;
+
+router.get(
+  "/journal/sentiment",
+  requireAuth,
+  journalReadLimiter,
+  async (req: AuthRequest, res) => {
+    const querySchema = z.object({
+      instrument: z.string().trim().min(1).max(64),
+    });
+    const parsed = querySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid instrument" });
+      return;
+    }
+    const { instrument } = parsed.data;
+    const windowStart = new Date(
+      Date.now() - SENTIMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+    );
+
+    const rows = await db
+      .select({
+        userId: tradeJournal.userId,
+        side: tradeJournal.side,
+        outcome: tradeJournal.outcome,
+      })
+      .from(tradeJournal)
+      .where(
+        and(
+          eq(tradeJournal.instrument, instrument),
+          gte(tradeJournal.tradedAt, windowStart),
+        ),
+      );
+
+    // Skipped entries represent "decided not to take this trade" — no
+    // directional vote — so they're dropped from the sample entirely.
+    // Counting them would also inflate `sampleSize` past the privacy
+    // gate without contributing any usable signal.
+    const directional = rows.filter(
+      (r) =>
+        (r.side === "buy" || r.side === "sell") && r.outcome !== "skipped",
+    );
+    const buys = directional.filter((r) => r.side === "buy").length;
+    const sells = directional.filter((r) => r.side === "sell").length;
+    const distinctTraders = new Set(directional.map((r) => r.userId)).size;
+    const sampleSize = directional.length;
+
+    const gated =
+      sampleSize < SENTIMENT_MIN_ENTRIES ||
+      distinctTraders < SENTIMENT_MIN_TRADERS;
+
+    const buyPct =
+      !gated && sampleSize > 0 ? Math.round((buys / sampleSize) * 100) : null;
+    const sellPct =
+      !gated && sampleSize > 0 ? Math.round((sells / sampleSize) * 100) : null;
+
+    // When the cohort is below either threshold we deliberately suppress
+    // `sampleSize` and `distinctTraders` as well — exposing the raw
+    // counts would let an attacker repeatedly probe the endpoint and
+    // infer whether a specific (small) trader population is active on
+    // thin instruments. Below threshold we only confirm that we're
+    // gated and echo the thresholds themselves.
+    res.json({
+      instrument,
+      windowDays: SENTIMENT_WINDOW_DAYS,
+      minSampleSize: SENTIMENT_MIN_ENTRIES,
+      minDistinctTraders: SENTIMENT_MIN_TRADERS,
+      sampleSize: gated ? null : sampleSize,
+      distinctTraders: gated ? null : distinctTraders,
+      gated,
+      buyPct,
+      sellPct,
+    });
+  },
+);
+
 // GET /api/journal/stats — summary stats across the user's journal
 // (win rate, average P/L %, best/worst instrument, best/worst session).
 // Computed in JS over the full result set rather than via SQL — journal

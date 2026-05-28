@@ -512,6 +512,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /journal/sentiment:
+    get:
+      operationId: getJournalSentiment
+      tags: [trade-journal]
+      summary: Anonymised long-vs-short aggregate for an instrument across all users (last 7 days)
+      parameters:
+        - in: query
+          name: instrument
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sentiment snapshot (gated when sample is too small)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalSentiment"
+        "400":
+          description: Invalid instrument
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /journal/stats:
     get:
       operationId: getJournalStats
@@ -3941,3 +3972,43 @@ components:
           nullable: true
       required:
         - totals
+
+    JournalSentiment:
+      type: object
+      description: "Anonymised long-vs-short aggregate for an instrument over the last `windowDays`, gated when sample is too small to safely de-identify."
+      properties:
+        instrument:
+          type: string
+        windowDays:
+          type: integer
+        minSampleSize:
+          type: integer
+        minDistinctTraders:
+          type: integer
+        sampleSize:
+          type: integer
+          nullable: true
+          description: "Number of directional (buy/sell) entries in the window. Null when `gated` is true (suppressed to prevent membership inference on thin instruments)."
+        distinctTraders:
+          type: integer
+          nullable: true
+          description: "Number of distinct user IDs contributing entries. Null when `gated` is true."
+        gated:
+          type: boolean
+          description: "True when sample is below thresholds; percentages, sampleSize, and distinctTraders are all null."
+        buyPct:
+          type: integer
+          nullable: true
+        sellPct:
+          type: integer
+          nullable: true
+      required:
+        - instrument
+        - windowDays
+        - minSampleSize
+        - minDistinctTraders
+        - sampleSize
+        - distinctTraders
+        - gated
+        - buyPct
+        - sellPct

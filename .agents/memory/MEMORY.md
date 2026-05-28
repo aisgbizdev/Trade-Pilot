@@ -1,0 +1,2 @@
+- [Sentiment privacy gating](sentiment-privacy-gating.md) — gated aggregates must suppress raw cohort counts too, not just the percentages, or attackers can probe for membership inference on thin instruments.
+- [Orval query options need queryKey](orval-query-key.md) — when passing a `query: {...}` options object to a generated orval hook, you must also pass `queryKey` (use the generated `get*QueryKey(params)` helper) or typecheck fails.

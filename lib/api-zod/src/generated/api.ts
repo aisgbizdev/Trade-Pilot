@@ -353,6 +353,43 @@ export const CreateJournalEntryBody = zod.object({
 });
 
 /**
+ * @summary Anonymised long-vs-short aggregate for an instrument across all users (last 7 days)
+ */
+export const GetJournalSentimentQueryParams = zod.object({
+  instrument: zod.coerce.string(),
+});
+
+export const GetJournalSentimentResponse = zod
+  .object({
+    instrument: zod.string(),
+    windowDays: zod.number(),
+    minSampleSize: zod.number(),
+    minDistinctTraders: zod.number(),
+    sampleSize: zod
+      .number()
+      .nullable()
+      .describe(
+        "Number of directional (buy\/sell) entries in the window. Null when `gated` is true (suppressed to prevent membership inference on thin instruments).",
+      ),
+    distinctTraders: zod
+      .number()
+      .nullable()
+      .describe(
+        "Number of distinct user IDs contributing entries. Null when `gated` is true.",
+      ),
+    gated: zod
+      .boolean()
+      .describe(
+        "True when sample is below thresholds; percentages, sampleSize, and distinctTraders are all null.",
+      ),
+    buyPct: zod.number().nullable(),
+    sellPct: zod.number().nullable(),
+  })
+  .describe(
+    "Anonymised long-vs-short aggregate for an instrument over the last `windowDays`, gated when sample is too small to safely de-identify.",
+  );
+
+/**
  * @summary Summary stats for the user's trade journal (win rate, avg P/L, best/worst)
  */
 export const GetJournalStatsQueryParams = zod.object({

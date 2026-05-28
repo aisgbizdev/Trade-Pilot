@@ -13,6 +13,10 @@ const INSTRUMENT_CURRENCIES: Record<string, string[]> = {
   "EUR/USD": ["EUR", "USD"],
   "GBP/USD": ["GBP", "USD"],
   "USD/JPY": ["JPY", "USD"],
+  // USD/IDR also picks up Indonesian-domestic releases (CPI/trade
+  // balance/BI rate decisions) tagged as IDR-currency events below;
+  // see CRYPTO_CALENDAR_EVENTS / BI_CALENDAR_EVENTS for the curated
+  // sets the upstream feed doesn't cover.
   "USD/IDR": ["IDR", "USD"],
   "DXY": ["USD"],
   "AUD/USD": ["AUD", "USD"],
@@ -53,6 +57,49 @@ const CRYPTO_CALENDAR_EVENTS: CalendarRaw[] = [
   { date: "2027-01-15", currency: "CRYPTO", event: "US spot crypto ETF — next listing review window (estimated)", impact: "★★" },
 ];
 
+// Curated Bank Indonesia / Indonesia-domestic macro calendar. Same
+// rationale as CRYPTO_CALENDAR_EVENTS: the upstream feed covers
+// Fed/ECB/BoE/CB heavyweights but treats Indonesia as a footnote, so
+// USD/IDR traders lose the BI 7DRR rate decision that often moves the
+// pair more than any US print. Maintained by hand: BI Board of
+// Governors meeting cadence is monthly (Bulanan, RDG-BI), CPI is
+// monthly via BPS, and big-ticket items like budget readings come at
+// known windows. Adding new entries: keep `currency: "IDR"` so the
+// USD/IDR pair picks them up via INSTRUMENT_CURRENCIES; set `region:
+// "ID"` so the UI can prioritise them above generic upstream IDR
+// items; impact ★★★ for BI 7DRR + CPI, ★★ for trade balance / FX
+// reserves, ★ otherwise.
+//
+// Time policy: events without a published wall-clock are stored as
+// date-only — the date filter still picks them up correctly through
+// `eventEpochMs`'s null fallback. BI rate-decision pressers typically
+// land 14:00 WIB ≈ 07:00 UTC, so we record that when known.
+const BI_CALENDAR_EVENTS: CalendarRaw[] = [
+  // BI 7-Day Reverse Repo Rate (7DRR) — monthly Board of Governors
+  // meeting. Wall-clock 07:00 UTC ≈ 14:00 WIB press conference.
+  // All entries carry `region: "ID"` so the UI can prioritise them
+  // above generic upstream IDR-currency items.
+  { date: "2026-06-18", time: "2026-06-18 07:00", currency: "IDR", event: "BI 7DRR Rate Decision (RDG-BI)", impact: "★★★", region: "ID" },
+  { date: "2026-07-23", time: "2026-07-23 07:00", currency: "IDR", event: "BI 7DRR Rate Decision (RDG-BI)", impact: "★★★", region: "ID" },
+  { date: "2026-08-20", time: "2026-08-20 07:00", currency: "IDR", event: "BI 7DRR Rate Decision (RDG-BI)", impact: "★★★", region: "ID" },
+  { date: "2026-09-17", time: "2026-09-17 07:00", currency: "IDR", event: "BI 7DRR Rate Decision (RDG-BI)", impact: "★★★", region: "ID" },
+  { date: "2026-10-22", time: "2026-10-22 07:00", currency: "IDR", event: "BI 7DRR Rate Decision (RDG-BI)", impact: "★★★", region: "ID" },
+  { date: "2026-11-19", time: "2026-11-19 07:00", currency: "IDR", event: "BI 7DRR Rate Decision (RDG-BI)", impact: "★★★", region: "ID" },
+  { date: "2026-12-17", time: "2026-12-17 07:00", currency: "IDR", event: "BI 7DRR Rate Decision (RDG-BI)", impact: "★★★", region: "ID" },
+  // BPS releases — monthly CPI (early month) and trade balance (mid).
+  { date: "2026-06-02", currency: "IDR", event: "Indonesia CPI YoY (BPS)", impact: "★★★", region: "ID" },
+  { date: "2026-07-01", currency: "IDR", event: "Indonesia CPI YoY (BPS)", impact: "★★★", region: "ID" },
+  { date: "2026-08-03", currency: "IDR", event: "Indonesia CPI YoY (BPS)", impact: "★★★", region: "ID" },
+  { date: "2026-09-01", currency: "IDR", event: "Indonesia CPI YoY (BPS)", impact: "★★★", region: "ID" },
+  { date: "2026-06-15", currency: "IDR", event: "Indonesia Trade Balance (BPS)", impact: "★★", region: "ID" },
+  { date: "2026-07-15", currency: "IDR", event: "Indonesia Trade Balance (BPS)", impact: "★★", region: "ID" },
+  { date: "2026-08-17", currency: "IDR", event: "Indonesia Trade Balance (BPS)", impact: "★★", region: "ID" },
+  // BI foreign-exchange reserves — monthly, ~7th business day.
+  { date: "2026-06-08", currency: "IDR", event: "BI FX Reserves", impact: "★★", region: "ID" },
+  { date: "2026-07-07", currency: "IDR", event: "BI FX Reserves", impact: "★★", region: "ID" },
+  { date: "2026-08-07", currency: "IDR", event: "BI FX Reserves", impact: "★★", region: "ID" },
+];
+
 const IMPACT_RANK: Record<string, number> = {
   "★★★": 3,
   "★★": 2,
@@ -68,6 +115,9 @@ interface CalendarRaw {
   actual?: string | null;
   forecast?: string | null;
   previous?: string | null;
+  // Region tag for events sourced from a curated regional feed (e.g.
+  // "ID" for BI / BPS). Upstream feed leaves this undefined.
+  region?: string;
 }
 
 export interface CalendarEvent {
@@ -84,6 +134,14 @@ export interface CalendarEvent {
   actual: string | null;
   forecast: string | null;
   previous: string | null;
+  // ISO-3166 alpha-2 region tag for events sourced from a curated
+  // region-specific feed (currently only "ID" for Bank Indonesia /
+  // BPS). Upstream events leave this `null`. Field is optional so
+  // older test fixtures and any consumer that ignores it stay happy;
+  // omit ⇒ no regional priority. UI uses it to prioritise local
+  // releases above generic IDR-currency entries the upstream feed
+  // sometimes mislabels.
+  region?: string | null;
 }
 
 async function fetchCalendar(): Promise<CalendarRaw[]> {
@@ -144,6 +202,7 @@ function normalize(raw: CalendarRaw): CalendarEvent {
     actual: raw.actual ?? null,
     forecast: raw.forecast ?? null,
     previous: raw.previous ?? null,
+    region: raw.region ?? null,
   };
 }
 
@@ -173,7 +232,17 @@ export async function getRelevantCalendar(
   const includeCrypto = currencies.some((c) =>
     c === "CRYPTO" || c === "BTC" || c === "ETH" || c === "SOL" || c === "BNB" || c === "XRP",
   );
-  const all = includeCrypto ? [...upstream, ...CRYPTO_CALENDAR_EVENTS] : upstream;
+  // Indonesian-domestic releases (BI 7DRR, CPI YoY, trade balance,
+  // FX reserves) are merged whenever the instrument's currency set
+  // includes IDR — currently just USD/IDR. The upstream feed rarely
+  // covers BI Board meetings so duplicate risk is low; if it ever
+  // does, the curated entry sorts first via the region:"ID" tie-break
+  // below and the duplicate slot is naturally trimmed by `maxItems`.
+  const includeId = currencies.includes("IDR");
+  const merged: CalendarRaw[] = [...upstream];
+  if (includeCrypto) merged.push(...CRYPTO_CALENDAR_EVENTS);
+  if (includeId) merged.push(...BI_CALENDAR_EVENTS);
+  const all = merged;
 
   const cutoffMs = Date.now() - lookbackHours * 60 * 60 * 1000;
 
@@ -196,10 +265,11 @@ export async function getRelevantCalendar(
       (a, b) =>
         (IMPACT_RANK[b.impact ?? ""] ?? 0) -
           (IMPACT_RANK[a.impact ?? ""] ?? 0) ||
-        // Tie-break by absolute time so that within the same impact
-        // tier the earlier wall-clock event wins. Without this, two
-        // same-day ★★★ events come back in upstream-feed order and the
-        // warning path can truncate the imminent one first.
+        // Within the same impact tier, prefer region-tagged ("ID")
+        // entries above generic upstream items so a USD/IDR trader
+        // sees the BI 7DRR meeting above a same-day generic FOMC item
+        // when both are ★★★. Tie-broken further by absolute time.
+        (b.region === "ID" ? 1 : 0) - (a.region === "ID" ? 1 : 0) ||
         (a.epochMs ?? Number.POSITIVE_INFINITY) -
           (b.epochMs ?? Number.POSITIVE_INFINITY),
     )

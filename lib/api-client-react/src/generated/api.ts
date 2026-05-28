@@ -52,6 +52,7 @@ import type {
   GetAllAnalysesParams,
   GetAllUsersParams,
   GetBroadcastsParams,
+  GetJournalSentimentParams,
   GetJournalStatsParams,
   GetNotificationsParams,
   GetOutboundClickStatsParams,
@@ -59,6 +60,7 @@ import type {
   HealthStatus,
   JournalEntry,
   JournalEntryList,
+  JournalSentiment,
   JournalStats,
   ListAnalysesParams,
   ListJournalEntriesParams,
@@ -1692,6 +1694,106 @@ export const useCreateJournalEntry = <
 > => {
   return useMutation(getCreateJournalEntryMutationOptions(options));
 };
+
+/**
+ * @summary Anonymised long-vs-short aggregate for an instrument across all users (last 7 days)
+ */
+export const getGetJournalSentimentUrl = (
+  params: GetJournalSentimentParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/journal/sentiment?${stringifiedParams}`
+    : `/api/journal/sentiment`;
+};
+
+export const getJournalSentiment = async (
+  params: GetJournalSentimentParams,
+  options?: RequestInit,
+): Promise<JournalSentiment> => {
+  return customFetch<JournalSentiment>(getGetJournalSentimentUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetJournalSentimentQueryKey = (
+  params?: GetJournalSentimentParams,
+) => {
+  return [`/api/journal/sentiment`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetJournalSentimentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJournalSentiment>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: GetJournalSentimentParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getJournalSentiment>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetJournalSentimentQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getJournalSentiment>>
+  > = ({ signal }) =>
+    getJournalSentiment(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getJournalSentiment>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetJournalSentimentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJournalSentiment>>
+>;
+export type GetJournalSentimentQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Anonymised long-vs-short aggregate for an instrument across all users (last 7 days)
+ */
+
+export function useGetJournalSentiment<
+  TData = Awaited<ReturnType<typeof getJournalSentiment>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: GetJournalSentimentParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getJournalSentiment>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetJournalSentimentQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Summary stats for the user's trade journal (win rate, avg P/L, best/worst)

@@ -7,6 +7,7 @@ import { OnboardingModal, isOnboardingDone } from "@/components/onboarding-modal
 import { NewsWidget } from "@/components/news-widget";
 import { CalendarWidget } from "@/components/calendar-widget";
 import { DashboardLivePrices } from "@/components/dashboard-live-prices";
+import { UsdIdrCard } from "@/components/usd-idr-card";
 import { WatchlistSection } from "@/components/watchlist-section";
 import { EnablePushCard } from "@/components/enable-push-card";
 import {
@@ -327,6 +328,8 @@ export default function DashboardPage() {
         )}
 
         <WatchlistSection />
+
+        <UsdIdrCard />
 
         <DashboardLivePrices />
 
