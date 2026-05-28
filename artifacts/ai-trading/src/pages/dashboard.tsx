@@ -218,19 +218,11 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground -mb-2" data-testid="section-market-now">
-          {t.dashboard.section_market_now}
-        </h2>
-
         <WatchlistSection />
 
         <DashboardLivePrices />
 
         <UsdIdrCard />
-
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground -mb-2" data-testid="section-whats-happening">
-          {t.dashboard.section_whats_happening}
-        </h2>
 
         <CalendarWidget limit={6} />
 

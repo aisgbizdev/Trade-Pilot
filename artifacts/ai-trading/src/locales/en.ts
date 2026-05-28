@@ -136,8 +136,6 @@ export const en = {
     watchlist_added_toast: "Added to watchlist",
     watchlist_removed_toast: "Removed from watchlist",
     watchlist_error_toast: "Could not update watchlist",
-    section_market_now: "Market Now",
-    section_whats_happening: "What's Happening",
     section_track_record: "Your Track Record",
     section_history: "Your History",
   },
