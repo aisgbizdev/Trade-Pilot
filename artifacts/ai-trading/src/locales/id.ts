@@ -138,8 +138,6 @@ export const id: Translations = {
     watchlist_added_toast: "Ditambahkan ke watchlist",
     watchlist_removed_toast: "Dihapus dari watchlist",
     watchlist_error_toast: "Gagal memperbarui watchlist",
-    section_track_record: "Track Record Kamu",
-    section_history: "History Kamu",
   },
   analyze: {
     title: "Analisis Baru",
