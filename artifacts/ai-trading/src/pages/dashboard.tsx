@@ -218,6 +218,28 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground -mb-2" data-testid="section-market-now">
+          {t.dashboard.section_market_now}
+        </h2>
+
+        <WatchlistSection />
+
+        <DashboardLivePrices />
+
+        <UsdIdrCard />
+
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground -mb-2" data-testid="section-whats-happening">
+          {t.dashboard.section_whats_happening}
+        </h2>
+
+        <CalendarWidget limit={6} />
+
+        <NewsWidget limit={5} />
+
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground -mb-2" data-testid="section-track-record">
+          {t.dashboard.section_track_record}
+        </h2>
+
         <div className="grid grid-cols-3 gap-2.5">
           {[
             { label: t.dashboard.total_analyses, value: summaryLoading ? "—" : (summaryData?.totalAnalyses ?? 0), icon: Brain, gradient: "from-amber-400/20 to-yellow-500/20", iconColor: "text-amber-300" },
@@ -327,11 +349,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <WatchlistSection />
-
-        <UsdIdrCard />
-
-        <DashboardLivePrices />
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground -mb-2" data-testid="section-your-history">
+          {t.dashboard.section_history}
+        </h2>
 
         {instrumentsData?.instruments && instrumentsData.instruments.length > 0 && (
           <div>
@@ -431,9 +451,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-
-        <CalendarWidget limit={6} />
-        <NewsWidget limit={5} />
 
       </div>
     </Layout>
