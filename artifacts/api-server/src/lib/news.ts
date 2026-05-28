@@ -4,6 +4,7 @@
 // matches are sparse.
 
 import { getYahooFinanceNews, type YahooNewsItem } from "./news-yahoo";
+import { isCryptoInstrument } from "./crypto-instruments";
 
 const NEWS_API = "https://endpoapi-production-3202.up.railway.app/api/news-id";
 const NEWSMAKER_SOURCE = "Newsmaker.id";
@@ -23,7 +24,22 @@ const INSTRUMENT_KEYWORDS: Record<string, string[]> = {
   "AUD/USD": ["australia", "aud", "rba", "dolar", "komoditas"],
   "USD/CHF": ["swiss", "chf", "franc", "snb", "safe haven"],
   "HSI":     ["hongkong", "china", "tiongkok", "yuan", "hang seng", "csi"],
+  // Crypto: blend coin-specific terms with the cross-cutting macro
+  // crypto vocabulary so a generic "spot ETF approved" or "SEC sues
+  // exchange" headline still scores even when it doesn't name the coin.
+  "BTC/USD": ["bitcoin", "btc", "spot etf", "halving", "sec", "crypto", "kripto", "blockchain", "mining"],
+  "ETH/USD": ["ethereum", "eth", "ether", "merge", "shapella", "pectra", "staking", "layer 2", "l2", "crypto", "kripto"],
+  "SOL/USD": ["solana", "sol", "phantom", "jito", "dex", "memecoin", "crypto", "kripto"],
+  "BNB/USD": ["binance", "bnb", "cz", "changpeng", "bsc", "bnb chain", "crypto", "kripto"],
+  "XRP/USD": ["ripple", "xrp", "sec", "ondc", "cbdc", "remittance", "crypto", "kripto"],
 };
+
+// Crypto macro fallback. Surfaces broad crypto-market headlines (ETF
+// flows, exchange enforcement, regulator action) on any crypto pair
+// even when the coin-specific keyword set didn't score — mirrors the
+// per-asset macro fallback we use for forex / commodities.
+const CRYPTO_MACRO_PATTERN =
+  /\b(bitcoin|btc|ethereum|eth\b|crypto|kripto|spot\s+etf|halving|sec\b|cftc\b|coinbase|binance|stablecoin|usdt|usdc|defi|onchain|on[-\s]?chain|exchange\s+(?:hack|outage)|ripple)\b/i;
 
 // Macro keywords that surface an item even when the per-instrument
 // keyword filter scored zero. Lower-cased for case-insensitive match.
@@ -164,11 +180,14 @@ export async function getRelevantNews(
 
   // Macro fallback: if scored set is too thin, pull in items whose
   // title mentions a market-moving macro event regardless of the
-  // per-instrument keyword overlap.
+  // per-instrument keyword overlap. Crypto instruments use a different
+  // macro vocabulary (ETF flows, regulatory action, exchange events).
   if (kept.length < 2) {
+    const macroPattern = isCryptoInstrument(instrument)
+      ? CRYPTO_MACRO_PATTERN
+      : MACRO_FALLBACK_PATTERN;
     const macroFallback = scored.filter(
-      (s) =>
-        s.score === 0 && MACRO_FALLBACK_PATTERN.test(s.item.title),
+      (s) => s.score === 0 && macroPattern.test(s.item.title),
     );
     kept = [...kept, ...macroFallback];
   }

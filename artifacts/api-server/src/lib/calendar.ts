@@ -19,14 +19,39 @@ const INSTRUMENT_CURRENCIES: Record<string, string[]> = {
   "USD/CHF": ["CHF", "USD"],
   "HSI": ["CHN", "HKD"],
   // Crypto: Fed policy / CPI / risk-on macro still drive BTC & altcoin
-  // moves more than any coin-specific calendar item, so USD is the
-  // pragmatic default for surfacing relevant macro events.
-  "BTC/USD": ["USD"],
-  "ETH/USD": ["USD"],
-  "SOL/USD": ["USD"],
-  "BNB/USD": ["USD"],
-  "XRP/USD": ["USD"],
+  // moves more than any coin-specific calendar item, so USD stays in
+  // the relevance set. We also accept "CRYPTO" (cross-cutting events
+  // like ETF decisions) and the coin's own ticker so per-asset events
+  // (halving, network upgrades) surface only on the right pair.
+  "BTC/USD": ["USD", "CRYPTO", "BTC"],
+  "ETH/USD": ["USD", "CRYPTO", "ETH"],
+  "SOL/USD": ["USD", "CRYPTO", "SOL"],
+  "BNB/USD": ["USD", "CRYPTO", "BNB"],
+  "XRP/USD": ["USD", "CRYPTO", "XRP"],
 };
+
+// Curated crypto-event calendar. Hard-coded because there is no free
+// upstream feed that covers halving + protocol upgrades + headline
+// regulatory dates consistently. Maintained here on purpose: dates are
+// rare, slow-moving, and benefit from a human review (the upstream
+// macro feed already covers Fed/CPI/etc.).
+//
+// Adding new entries: keep `currency` aligned with `INSTRUMENT_CURRENCIES`
+// above ("CRYPTO" for market-wide events, coin ticker for asset-specific
+// ones), use UTC dates, and mark `impact` ★★★ only for true macro
+// movers (halving, ETF approval, blanket enforcement actions).
+const CRYPTO_CALENDAR_EVENTS: CalendarRaw[] = [
+  // Bitcoin halving — approximate date; refine ~6 months out.
+  { date: "2028-04-20", currency: "BTC", event: "Bitcoin Halving (estimated)", impact: "★★★" },
+  // Ethereum upgrade roadmap milestones (estimated activation windows).
+  { date: "2026-06-30", currency: "ETH", event: "Ethereum Pectra Upgrade — mainnet activation (estimated)", impact: "★★" },
+  { date: "2027-03-31", currency: "ETH", event: "Ethereum Fusaka Upgrade — mainnet activation (estimated)", impact: "★★" },
+  // XRP / Ripple regulatory milestones (SEC remand).
+  { date: "2026-07-01", currency: "XRP", event: "Ripple v SEC — remedies & disgorgement deadline (estimated)", impact: "★★" },
+  // Market-wide regulatory milestones.
+  { date: "2026-12-30", currency: "CRYPTO", event: "MiCA Stage 2 — full EU stablecoin & CASP regime in force", impact: "★★" },
+  { date: "2027-01-15", currency: "CRYPTO", event: "US spot crypto ETF — next listing review window (estimated)", impact: "★★" },
+];
 
 const IMPACT_RANK: Record<string, number> = {
   "★★★": 3,
@@ -141,7 +166,14 @@ export async function getRelevantCalendar(
   const lookbackHours = opts.lookbackHours ?? 24;
 
   const currencies = INSTRUMENT_CURRENCIES[instrument] ?? ["USD"];
-  const all = await fetchCalendar();
+  const upstream = await fetchCalendar();
+  // Merge curated crypto events into the relevance pool when the
+  // instrument's currency set actually overlaps. Forex/commodity pairs
+  // never see CRYPTO/BTC/ETH currencies, so this is a no-op for them.
+  const includeCrypto = currencies.some((c) =>
+    c === "CRYPTO" || c === "BTC" || c === "ETH" || c === "SOL" || c === "BNB" || c === "XRP",
+  );
+  const all = includeCrypto ? [...upstream, ...CRYPTO_CALENDAR_EVENTS] : upstream;
 
   const cutoffMs = Date.now() - lookbackHours * 60 * 60 * 1000;
 

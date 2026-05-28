@@ -20,6 +20,8 @@ import {
 const TRADINGVIEW_SYMBOLS: TradingViewSymbol[] = [
   { name: "OANDA:XAUUSD", displayName: "Gold" },
   { name: "BLACKBULL:BRENT", displayName: "Brent" },
+  { name: "BINANCE:BTCUSDT", displayName: "Bitcoin" },
+  { name: "BINANCE:ETHUSDT", displayName: "Ethereum" },
   { name: "VANTAGE:HK50", displayName: "Hang Seng" },
   { name: "SPREADEX:NIKKEI", displayName: "Nikkei" },
   { name: "OANDA:AUDUSD", displayName: "Aussie" },
@@ -31,6 +33,8 @@ const TRADINGVIEW_SYMBOLS: TradingViewSymbol[] = [
 
 const FALLBACK_INSTRUMENTS = [
   "XAU/USD",
+  "BTC/USD",
+  "ETH/USD",
   "EUR/USD",
   "GBP/USD",
   "USD/JPY",
@@ -44,6 +48,14 @@ function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/JPY") return price.toFixed(2);
   if (instrument === "XAU/USD") return price.toFixed(2);
   if (["BRENT"].includes(instrument)) return price.toFixed(2);
+  // Crypto: BTC/ETH render thousand-separated with no decimals; smaller
+  // alts get two decimals so SOL/BNB/XRP still read cleanly.
+  if (instrument === "BTC/USD" || instrument === "ETH/USD") {
+    return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  }
+  if (instrument === "SOL/USD" || instrument === "BNB/USD" || instrument === "XRP/USD") {
+    return price.toFixed(2);
+  }
   if (price > 1000)
     return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
   return price.toFixed(4);

@@ -19,6 +19,13 @@ const INSTRUMENT_TO_YAHOO_SYMBOL: Record<string, string> = {
   "AUD/USD": "AUDUSD=X",
   "USD/CHF": "CHF=X",
   "HSI": "^HSI",
+  // Crypto: Yahoo serves per-symbol headlines under the same RSS shape
+  // we use for FX, just with `BTC-USD` etc. as the symbol.
+  "BTC/USD": "BTC-USD",
+  "ETH/USD": "ETH-USD",
+  "SOL/USD": "SOL-USD",
+  "BNB/USD": "BNB-USD",
+  "XRP/USD": "XRP-USD",
 };
 
 export interface YahooRawItem {
