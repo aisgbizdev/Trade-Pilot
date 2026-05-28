@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { shouldFireCrossing } from "../user-price-alerts";
+import { KNOWN_INSTRUMENTS } from "../../routes/user-price-alerts";
+import { CRYPTO_INSTRUMENTS } from "../crypto-instruments";
+
+describe("KNOWN_INSTRUMENTS allowlist", () => {
+  it("accepts every supported crypto pair so price alerts can be created on them", () => {
+    for (const pair of CRYPTO_INSTRUMENTS) {
+      expect(KNOWN_INSTRUMENTS.has(pair)).toBe(true);
+    }
+  });
+
+  it("still keeps the core forex / commodity coverage", () => {
+    expect(KNOWN_INSTRUMENTS.has("XAU/USD")).toBe(true);
+    expect(KNOWN_INSTRUMENTS.has("EUR/USD")).toBe(true);
+    expect(KNOWN_INSTRUMENTS.has("USD/IDR")).toBe(true);
+  });
+
+  it("rejects an obviously bogus instrument string", () => {
+    expect(KNOWN_INSTRUMENTS.has("FOO/BAR")).toBe(false);
+  });
+});
 
 describe("shouldFireCrossing", () => {
   describe("direction = above", () => {

@@ -5,14 +5,19 @@ import { userPriceAlerts } from "@workspace/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { getLiveQuotes } from "../lib/live-prices";
+import { CRYPTO_INSTRUMENTS } from "../lib/crypto-instruments";
 import { logger } from "../lib/logger";
 
 const router = Router();
 
-const KNOWN_INSTRUMENTS = new Set([
+// Allowlist of instruments price alerts may target. Crypto pairs are
+// pulled from the shared crypto registry so a new altcoin added there
+// automatically becomes alertable — no second source of drift.
+export const KNOWN_INSTRUMENTS = new Set<string>([
   "XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY",
   "AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR",
   "HK50",
+  ...CRYPTO_INSTRUMENTS,
 ]);
 
 const createSchema = z.object({
