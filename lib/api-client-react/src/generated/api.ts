@@ -56,6 +56,7 @@ import type {
   GetJournalStatsParams,
   GetNotificationsParams,
   GetOutboundClickStatsParams,
+  GetPerformanceSummaryParams,
   GetPersonalAnalyticsParams,
   HealthStatus,
   JournalEntry,
@@ -69,6 +70,7 @@ import type {
   NotificationsList,
   OutboundClickBody,
   OutboundClickStats,
+  PerformanceSummary,
   PersonalAnalytics,
   PushPrefs,
   PushPrefsUpdate,
@@ -2060,6 +2062,113 @@ export const useDeleteJournalEntry = <
 > => {
   return useMutation(getDeleteJournalEntryMutationOptions(options));
 };
+
+/**
+ * Anonymised, aggregated outcome ledger across every analysis the AI
+has produced inside the rolling window. No per-user data is
+included — this is the AI's own track record. Every segment
+(by instrument, FX session, market condition) is gated by a
+minimum-sample guardrail so a 3-trade hot streak never reads
+as a confident win rate.
+
+ * @summary Public AI transparency dashboard (task
+ */
+export const getGetPerformanceSummaryUrl = (
+  params?: GetPerformanceSummaryParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/performance/summary?${stringifiedParams}`
+    : `/api/performance/summary`;
+};
+
+export const getPerformanceSummary = async (
+  params?: GetPerformanceSummaryParams,
+  options?: RequestInit,
+): Promise<PerformanceSummary> => {
+  return customFetch<PerformanceSummary>(getGetPerformanceSummaryUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPerformanceSummaryQueryKey = (
+  params?: GetPerformanceSummaryParams,
+) => {
+  return [`/api/performance/summary`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetPerformanceSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPerformanceSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetPerformanceSummaryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPerformanceSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPerformanceSummaryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPerformanceSummary>>
+  > = ({ signal }) =>
+    getPerformanceSummary(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPerformanceSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPerformanceSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPerformanceSummary>>
+>;
+export type GetPerformanceSummaryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Public AI transparency dashboard (task
+ */
+
+export function useGetPerformanceSummary<
+  TData = Awaited<ReturnType<typeof getPerformanceSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetPerformanceSummaryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPerformanceSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPerformanceSummaryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Behavioural insights about the caller as a trader (task

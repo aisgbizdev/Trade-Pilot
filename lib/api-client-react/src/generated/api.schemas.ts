@@ -1429,6 +1429,97 @@ export interface TraderMirrorResponse {
 }
 
 /**
+ * Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins / (wins + losses) — only trades that actually triggered. `hitRate` is wins / total resolved (expired included).
+ */
+export interface PerformanceBucket {
+  key: string;
+  triggered: number;
+  wins: number;
+  losses: number;
+  expired: number;
+  total: number;
+  winRate: number | null;
+  hitRate: number | null;
+}
+
+/**
+ * A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.
+ */
+export interface PerformanceSegment {
+  gated: boolean;
+  need: number;
+  have: number;
+  buckets: PerformanceBucket[];
+}
+
+export interface PerformanceOverall {
+  triggered: number;
+  wins: number;
+  losses: number;
+  expired: number;
+  total: number;
+  winRate: number | null;
+  hitRate: number | null;
+}
+
+export type PerformanceBannerSeverity =
+  (typeof PerformanceBannerSeverity)[keyof typeof PerformanceBannerSeverity];
+
+export const PerformanceBannerSeverity = {
+  ok: "ok",
+  watch: "watch",
+  warn: "warn",
+} as const;
+
+/**
+ * Honesty banner comparing the last `recentDays` hit-rate against the 30-day baseline. `severity: warn` fires only when recent is >=15pp below baseline AND both windows cleared the minimum-sample guardrail.
+ */
+export interface PerformanceBanner {
+  severity: PerformanceBannerSeverity;
+  recentDays: number;
+  recentSample: number;
+  baselineSample: number;
+  recentHitRate: number | null;
+  baselineHitRate: number | null;
+  delta: number | null;
+}
+
+export type PerformanceSummaryWindowDays =
+  (typeof PerformanceSummaryWindowDays)[keyof typeof PerformanceSummaryWindowDays];
+
+export const PerformanceSummaryWindowDays = {
+  NUMBER_30: 30,
+  NUMBER_90: 90,
+} as const;
+
+/**
+ * Sample-size guardrails the server enforces — published so the UI's honesty copy can quote them directly instead of hardcoding.
+ */
+export interface PerformanceMinSamples {
+  /** Minimum resolved analyses per bucket before that bucket renders. */
+  bucket: number;
+  /** Minimum resolved analyses overall before any segment renders. */
+  overall: number;
+  /** Minimum resolved analyses in the recent window before the current-state banner makes a claim. */
+  banner: number;
+}
+
+/**
+ * Public AI transparency snapshot for the rolling `windowDays` window (task #164).
+ */
+export interface PerformanceSummary {
+  windowDays: PerformanceSummaryWindowDays;
+  generatedAt: string;
+  windowStart: string | null;
+  minSamples: PerformanceMinSamples;
+  overall: PerformanceOverall;
+  banner: PerformanceBanner;
+  byInstrument: PerformanceSegment;
+  bySession: PerformanceSegment;
+  byCondition: PerformanceSegment;
+}
+
+/**
  * Anonymised long-vs-short aggregate for an instrument over the last `windowDays`, gated when sample is too small to safely de-identify.
  */
 export interface JournalSentiment {
@@ -1477,6 +1568,21 @@ export type GetJournalStatsParams = {
   from?: string;
   to?: string;
 };
+
+export type GetPerformanceSummaryParams = {
+  /**
+   * Rolling window in days. Only 30 or 90 are accepted; anything else falls back to 30.
+   */
+  window?: GetPerformanceSummaryWindow;
+};
+
+export type GetPerformanceSummaryWindow =
+  (typeof GetPerformanceSummaryWindow)[keyof typeof GetPerformanceSummaryWindow];
+
+export const GetPerformanceSummaryWindow = {
+  NUMBER_30: 30,
+  NUMBER_90: 90,
+} as const;
 
 export type ListAnalysesParams = {
   mode?: ListAnalysesMode;

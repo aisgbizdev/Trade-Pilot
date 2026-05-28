@@ -32,6 +32,8 @@ tags:
     description: Manual post-trade journal entries (task #161)
   - name: trader-mirror
     description: Personal trader mirror — behavioural insights (task #162)
+  - name: performance
+    description: Public AI transparency dashboard — aggregated outcome ledger (task #164)
 paths:
   /healthz:
     get:
@@ -648,6 +650,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /performance/summary:
+    get:
+      operationId: getPerformanceSummary
+      tags: [performance]
+      summary: Public AI transparency dashboard (task #164)
+      description: |
+        Anonymised, aggregated outcome ledger across every analysis the AI
+        has produced inside the rolling window. No per-user data is
+        included — this is the AI's own track record. Every segment
+        (by instrument, FX session, market condition) is gated by a
+        minimum-sample guardrail so a 3-trade hot streak never reads
+        as a confident win rate.
+      parameters:
+        - name: window
+          in: query
+          description: Rolling window in days. Only 30 or 90 are accepted; anything else falls back to 30.
+          schema:
+            type: integer
+            enum: [30, 90]
+            default: 30
+      responses:
+        "200":
+          description: AI transparency summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PerformanceSummary"
 
   /mirror/insights:
     get:
@@ -4116,6 +4146,153 @@ components:
         timezone:
           type: string
       required: [insights, highlights, timezone]
+
+    PerformanceBucket:
+      type: object
+      description: "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins / (wins + losses) — only trades that actually triggered. `hitRate` is wins / total resolved (expired included)."
+      properties:
+        key:
+          type: string
+        triggered:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        expired:
+          type: integer
+        total:
+          type: integer
+        winRate:
+          type: number
+          nullable: true
+        hitRate:
+          type: number
+          nullable: true
+      required: [key, triggered, wins, losses, expired, total, winRate, hitRate]
+
+    PerformanceSegment:
+      type: object
+      description: "A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket."
+      properties:
+        gated:
+          type: boolean
+        need:
+          type: integer
+        have:
+          type: integer
+        buckets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PerformanceBucket"
+      required: [gated, need, have, buckets]
+
+    PerformanceOverall:
+      type: object
+      properties:
+        triggered:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        expired:
+          type: integer
+        total:
+          type: integer
+        winRate:
+          type: number
+          nullable: true
+        hitRate:
+          type: number
+          nullable: true
+      required: [triggered, wins, losses, expired, total, winRate, hitRate]
+
+    PerformanceBanner:
+      type: object
+      description: "Honesty banner comparing the last `recentDays` hit-rate against the 30-day baseline. `severity: warn` fires only when recent is >=15pp below baseline AND both windows cleared the minimum-sample guardrail."
+      properties:
+        severity:
+          type: string
+          enum: [ok, watch, warn]
+        recentDays:
+          type: integer
+        recentSample:
+          type: integer
+        baselineSample:
+          type: integer
+        recentHitRate:
+          type: number
+          nullable: true
+        baselineHitRate:
+          type: number
+          nullable: true
+        delta:
+          type: number
+          nullable: true
+      required:
+        - severity
+        - recentDays
+        - recentSample
+        - baselineSample
+        - recentHitRate
+        - baselineHitRate
+        - delta
+
+    PerformanceSummary:
+      type: object
+      description: "Public AI transparency snapshot for the rolling `windowDays` window (task #164)."
+      properties:
+        windowDays:
+          type: integer
+          enum: [30, 90]
+        generatedAt:
+          type: string
+          format: date-time
+        windowStart:
+          type: string
+          format: date-time
+          nullable: true
+        minSamples:
+          $ref: "#/components/schemas/PerformanceMinSamples"
+        overall:
+          $ref: "#/components/schemas/PerformanceOverall"
+        banner:
+          $ref: "#/components/schemas/PerformanceBanner"
+        byInstrument:
+          $ref: "#/components/schemas/PerformanceSegment"
+        bySession:
+          $ref: "#/components/schemas/PerformanceSegment"
+        byCondition:
+          $ref: "#/components/schemas/PerformanceSegment"
+      required:
+        - windowDays
+        - generatedAt
+        - windowStart
+        - minSamples
+        - overall
+        - banner
+        - byInstrument
+        - bySession
+        - byCondition
+
+    PerformanceMinSamples:
+      type: object
+      description: "Sample-size guardrails the server enforces — published so the UI's honesty copy can quote them directly instead of hardcoding."
+      properties:
+        bucket:
+          type: integer
+          description: "Minimum resolved analyses per bucket before that bucket renders."
+        overall:
+          type: integer
+          description: "Minimum resolved analyses overall before any segment renders."
+        banner:
+          type: integer
+          description: "Minimum resolved analyses in the recent window before the current-state banner makes a claim."
+      required:
+        - bucket
+        - overall
+        - banner
 
     JournalSentiment:
       type: object

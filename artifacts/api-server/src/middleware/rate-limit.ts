@@ -159,6 +159,19 @@ export const journalReadLimiter = buildLimiter({
     "Terlalu banyak permintaan jurnal. Coba lagi sebentar lagi. / Too many journal requests. Try again in a moment.",
 });
 
+// Per-IP limiter for the public AI transparency dashboard (task #164).
+// Endpoint is intentionally unauthenticated so anyone can audit the
+// AI's track record, so the key is just the caller IP. Generous cap
+// because the page polls between window tabs and refetches on locale
+// changes; the goal is only to deflect obvious scraping.
+export const performanceLimiter = buildLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak permintaan. Coba lagi sebentar lagi. / Too many requests. Try again in a moment.",
+});
+
 setInterval(() => {
   const now = Date.now();
   for (const limiter of [
@@ -170,6 +183,7 @@ setInterval(() => {
     pushTestLimiter,
     journalWriteLimiter,
     journalReadLimiter,
+    performanceLimiter,
   ]) {
     for (const [k, b] of limiter.store) {
       if (b.resetAt <= now) limiter.store.delete(k);

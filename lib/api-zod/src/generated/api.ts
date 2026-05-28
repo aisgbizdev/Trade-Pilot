@@ -556,6 +556,155 @@ export const DeleteJournalEntryResponse = zod.object({
 });
 
 /**
+ * Anonymised, aggregated outcome ledger across every analysis the AI
+has produced inside the rolling window. No per-user data is
+included — this is the AI's own track record. Every segment
+(by instrument, FX session, market condition) is gated by a
+minimum-sample guardrail so a 3-trade hot streak never reads
+as a confident win rate.
+
+ * @summary Public AI transparency dashboard (task
+ */
+export const getPerformanceSummaryQueryWindowDefault = 30;
+
+export const GetPerformanceSummaryQueryParams = zod.object({
+  window: zod
+    .union([zod.literal(30), zod.literal(90)])
+    .default(getPerformanceSummaryQueryWindowDefault)
+    .describe(
+      "Rolling window in days. Only 30 or 90 are accepted; anything else falls back to 30.",
+    ),
+});
+
+export const GetPerformanceSummaryResponse = zod
+  .object({
+    windowDays: zod.union([zod.literal(30), zod.literal(90)]),
+    generatedAt: zod.coerce.date(),
+    windowStart: zod.coerce.date().nullable(),
+    minSamples: zod
+      .object({
+        bucket: zod
+          .number()
+          .describe(
+            "Minimum resolved analyses per bucket before that bucket renders.",
+          ),
+        overall: zod
+          .number()
+          .describe(
+            "Minimum resolved analyses overall before any segment renders.",
+          ),
+        banner: zod
+          .number()
+          .describe(
+            "Minimum resolved analyses in the recent window before the current-state banner makes a claim.",
+          ),
+      })
+      .describe(
+        "Sample-size guardrails the server enforces — published so the UI's honesty copy can quote them directly instead of hardcoding.",
+      ),
+    overall: zod.object({
+      triggered: zod.number(),
+      wins: zod.number(),
+      losses: zod.number(),
+      expired: zod.number(),
+      total: zod.number(),
+      winRate: zod.number().nullable(),
+      hitRate: zod.number().nullable(),
+    }),
+    banner: zod
+      .object({
+        severity: zod.enum(["ok", "watch", "warn"]),
+        recentDays: zod.number(),
+        recentSample: zod.number(),
+        baselineSample: zod.number(),
+        recentHitRate: zod.number().nullable(),
+        baselineHitRate: zod.number().nullable(),
+        delta: zod.number().nullable(),
+      })
+      .describe(
+        "Honesty banner comparing the last `recentDays` hit-rate against the 30-day baseline. `severity: warn` fires only when recent is >=15pp below baseline AND both windows cleared the minimum-sample guardrail.",
+      ),
+    byInstrument: zod
+      .object({
+        gated: zod.boolean(),
+        need: zod.number(),
+        have: zod.number(),
+        buckets: zod.array(
+          zod
+            .object({
+              key: zod.string(),
+              triggered: zod.number(),
+              wins: zod.number(),
+              losses: zod.number(),
+              expired: zod.number(),
+              total: zod.number(),
+              winRate: zod.number().nullable(),
+              hitRate: zod.number().nullable(),
+            })
+            .describe(
+              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
+            ),
+        ),
+      })
+      .describe(
+        "A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.",
+      ),
+    bySession: zod
+      .object({
+        gated: zod.boolean(),
+        need: zod.number(),
+        have: zod.number(),
+        buckets: zod.array(
+          zod
+            .object({
+              key: zod.string(),
+              triggered: zod.number(),
+              wins: zod.number(),
+              losses: zod.number(),
+              expired: zod.number(),
+              total: zod.number(),
+              winRate: zod.number().nullable(),
+              hitRate: zod.number().nullable(),
+            })
+            .describe(
+              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
+            ),
+        ),
+      })
+      .describe(
+        "A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.",
+      ),
+    byCondition: zod
+      .object({
+        gated: zod.boolean(),
+        need: zod.number(),
+        have: zod.number(),
+        buckets: zod.array(
+          zod
+            .object({
+              key: zod.string(),
+              triggered: zod.number(),
+              wins: zod.number(),
+              losses: zod.number(),
+              expired: zod.number(),
+              total: zod.number(),
+              winRate: zod.number().nullable(),
+              hitRate: zod.number().nullable(),
+            })
+            .describe(
+              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
+            ),
+        ),
+      })
+      .describe(
+        "A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.",
+      ),
+  })
+  .describe(
+    "Public AI transparency snapshot for the rolling `windowDays` window (task #164).",
+  );
+
+/**
  * @summary Behavioural insights about the caller as a trader (task
  */
 export const GetTraderMirrorInsightsResponse = zod.object({

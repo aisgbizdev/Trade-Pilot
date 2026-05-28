@@ -28,6 +28,7 @@ import LegalPage from "@/pages/legal";
 import MindsetPage from "@/pages/mindset";
 import JournalPage from "@/pages/journal";
 import MirrorPage from "@/pages/mirror";
+import PerformancePage, { PerformanceMethodologyPage } from "@/pages/performance";
 import { SplashScreen } from "@/components/splash-screen";
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
@@ -83,6 +84,8 @@ function Router() {
         <Route path="/terms">
           <LegalPage kind="terms" />
         </Route>
+        <Route path="/performance" component={PerformancePage} />
+        <Route path="/performance/methodology" component={PerformanceMethodologyPage} />
         <Route path="/dashboard">
           <ProtectedRoute>
             <DashboardPage />

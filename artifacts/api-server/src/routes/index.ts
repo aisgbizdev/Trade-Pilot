@@ -16,6 +16,7 @@ import watchlistRouter from "./watchlist";
 import userPriceAlertsRouter from "./user-price-alerts";
 import tradeJournalRouter from "./trade-journal";
 import traderMirrorRouter from "./trader-mirror";
+import performanceRouter from "./performance";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(watchlistRouter);
 router.use(userPriceAlertsRouter);
 router.use(tradeJournalRouter);
 router.use(traderMirrorRouter);
+router.use(performanceRouter);
 
 export default router;
