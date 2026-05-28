@@ -85,8 +85,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label },
     { href: "/history", icon: Clock, label: t.nav.history },
     { href: "/analytics", icon: BarChart3, label: t.nav.analytics },
-    { href: "/profile", icon: User, label: t.nav.profile },
   ];
+
+  const profileActive = location === "/profile" || location.startsWith("/profile/");
+  const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "";
 
   const handleMarkAllRead = () => {
     markAll.mutate(undefined, {
@@ -147,6 +149,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
               : <Moon className="w-4 h-4 text-muted-foreground" />
             }
           </button>
+          {user && (
+            <Link
+              href="/profile"
+              data-testid="link-header-profile"
+              aria-label={t.nav.profile}
+              className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-full text-[12px] font-semibold transition-colors",
+                profileActive
+                  ? "bg-primary/15 text-primary ring-2 ring-primary/40"
+                  : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+              )}
+            >
+              {profileInitial ? (
+                <span>{profileInitial}</span>
+              ) : (
+                <User className="w-4 h-4" />
+              )}
+            </Link>
+          )}
           {user && (
             <Popover open={bellOpen} onOpenChange={setBellOpen}>
               <PopoverTrigger asChild>
