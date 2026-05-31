@@ -101,7 +101,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto relative md:shadow-2xl md:shadow-black/40 md:border-x md:border-border/50">
+    <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg mx-auto relative md:shadow-2xl md:shadow-black/40 md:border-x md:border-border/50 lg:max-w-6xl lg:shadow-none lg:border-x-0">
       <header className="sticky top-0 z-40 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="flex items-center gap-2">
           {!isMainNav && (
@@ -132,6 +132,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </Link>
         </div>
+        <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
+          {navItems.map(({ href, icon: Icon, label }) => {
+            const active = location === href || location.startsWith(href + "/");
+            return (
+              <Link
+                key={href}
+                href={href}
+                data-testid={`nav-desktop-${href.replace("/", "")}`}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary dark:bg-primary/20"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
         <div className="flex items-center gap-1">
           <LanguageToggle />
           <button
@@ -268,7 +290,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <ContinuousTicker />
 
-      <main className="flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+72px)] overflow-y-auto">
+      <main className="flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+72px)] lg:pb-8 overflow-y-auto">
         {children}
 
         <footer className="border-t border-border/50 px-4 py-4 mt-6 text-center space-y-2">
@@ -315,7 +337,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </footer>
       </main>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 lg:hidden">
         <div className="mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] rounded-2xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-2xl shadow-black/20">
           <div className="flex items-center justify-around py-2 px-1">
             {navItems.map(({ href, icon: Icon, label }) => {

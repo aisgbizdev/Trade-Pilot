@@ -32,7 +32,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background max-w-lg mx-auto w-full relative md:shadow-2xl md:shadow-black/40 md:border-x md:border-border/50">
+    <div className="min-h-[100dvh] flex flex-col bg-background max-w-lg mx-auto w-full relative md:shadow-2xl md:shadow-black/40 md:border-x md:border-border/50 lg:max-w-5xl lg:shadow-none lg:border-x-0">
       {/* Sticky group: header + ContinuousTicker stay pinned to the top
           together while the page scrolls. Wrapping them in a single sticky
           container is what keeps the ticker from disappearing on scroll —
@@ -89,8 +89,8 @@ export default function LandingPage() {
             <div className="absolute bottom-0 left-4 w-40 h-40 bg-orange-500/8 rounded-full blur-2xl" />
           </div>
 
-          <div className="relative z-10">
-            <h1 className="text-[2rem] font-extrabold leading-[1.15] mb-4 text-white" data-testid="text-hero-headline">
+          <div className="relative z-10 lg:max-w-xl lg:mx-auto">
+            <h1 className="text-[2rem] lg:text-[2.75rem] font-extrabold leading-[1.15] mb-4 text-white" data-testid="text-hero-headline">
               <span className="gradient-text">{t.landing.tagline_part1}</span>
               <br />
               <span className="text-white">{t.landing.tagline_part2}</span>
@@ -156,7 +156,7 @@ export default function LandingPage() {
           className="px-4 pt-2 pb-10"
           data-testid="section-value-props"
         >
-          <ul className="space-y-2.5">
+          <ul className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-3">
             {t.landing.value_props.map((text, idx) => {
               const Icon = VALUE_PROP_ICONS[idx] ?? Brain;
               return (
@@ -215,7 +215,7 @@ export default function LandingPage() {
         )}
 
         {/* BOTTOM CTA */}
-        <section className="px-4 pb-8">
+        <section className="px-4 pb-8 lg:max-w-2xl lg:mx-auto lg:w-full">
           <div className="relative rounded-2xl overflow-hidden">
             <div className="hero-gradient p-6 text-center">
               <div className="absolute inset-0">

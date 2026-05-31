@@ -98,13 +98,13 @@ export default function AnalyticsPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 space-y-5">
-        <div>
+      <div className="px-4 py-5 space-y-5 lg:px-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-5 lg:items-start">
+        <div className="lg:col-span-2">
           <h1 className="text-xl font-bold text-foreground">{t.analytics.title}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{t.analytics.subtitle}</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 lg:col-span-2">
           {[
             { label: t.analytics.all_time, value: analytics.totalAllTime },
             { label: t.analytics.this_month, value: analytics.totalThisMonth },
@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
         )}
 
         {analytics.weeklyData?.length > 0 && (
-          <Card className="p-4">
+          <Card className="p-4 lg:col-span-2">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h3 className="text-sm font-semibold text-foreground">{t.analytics.weekly_chart}</h3>
               <div

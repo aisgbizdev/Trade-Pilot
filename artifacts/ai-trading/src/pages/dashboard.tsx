@@ -126,12 +126,12 @@ export default function DashboardPage() {
     <Layout>
       {user && !onboardingDone && <OnboardingModal open userId={user.id} />}
 
-      <div className="px-4 py-5 space-y-5">
+      <div className="px-4 py-5 space-y-5 lg:px-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-5 lg:items-start">
 
         <EnablePushCard />
 
         {SHOW_SPONSOR && !liveBannerDismissed && (
-          <div className="relative" data-testid="card-live-analisa">
+          <div className="relative lg:col-span-2" data-testid="card-live-analisa">
             <a
               href="https://www.tiktok.com/@solid.prime"
               target="_blank"
@@ -183,7 +183,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between lg:col-span-2">
           <div>
             <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-0.5">{t.dashboard.welcome}</p>
             <h1 className="text-xl font-extrabold text-foreground" data-testid="text-display-name">
@@ -200,7 +200,7 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <div className="flex gap-2 p-1 bg-muted rounded-xl">
+        <div className="flex gap-2 p-1 bg-muted rounded-xl lg:col-span-2">
           {(["beginner", "pro"] as const).map((mode) => (
             <button
               key={mode}

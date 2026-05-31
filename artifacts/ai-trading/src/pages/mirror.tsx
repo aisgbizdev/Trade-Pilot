@@ -39,8 +39,8 @@ export default function MirrorPage() {
 
   return (
     <Layout>
-      <main className="flex-1 px-4 pt-3 pb-24 space-y-3" data-testid="page-mirror">
-        <header className="space-y-1">
+      <main className="flex-1 px-4 pt-3 pb-24 lg:px-6 lg:pb-8 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start" data-testid="page-mirror">
+        <header className="space-y-1 lg:col-span-2">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
             <h1 className="text-xl font-bold text-foreground leading-tight">
@@ -53,19 +53,19 @@ export default function MirrorPage() {
         </header>
 
         {isLoading && (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex items-center justify-center py-16 lg:col-span-2">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
         {isError && (
-          <Card className="p-4 border-destructive/40">
+          <Card className="p-4 border-destructive/40 lg:col-span-2">
             <p className="text-sm text-destructive">{tm.load_failed}</p>
           </Card>
         )}
 
         {data && data.insights.overallGated && (
-          <Card className="p-5 space-y-3" data-testid="card-mirror-empty">
+          <Card className="p-5 space-y-3 lg:col-span-2" data-testid="card-mirror-empty">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold text-foreground">
@@ -92,7 +92,7 @@ export default function MirrorPage() {
           <>
             {data.highlights.length > 0 && (
               <Card
-                className="p-4 space-y-2 bg-gradient-to-br from-primary/10 to-transparent border-primary/30"
+                className="p-4 space-y-2 bg-gradient-to-br from-primary/10 to-transparent border-primary/30 lg:col-span-2"
                 data-testid="card-mirror-highlights"
               >
                 <h2 className="text-[11px] font-semibold text-primary uppercase tracking-wide">
