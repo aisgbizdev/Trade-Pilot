@@ -126,7 +126,7 @@ export default function DashboardPage() {
     <Layout>
       {user && !onboardingDone && <OnboardingModal open userId={user.id} />}
 
-      <div className="px-4 py-5 space-y-5 lg:px-6">
+      <div className="px-4 py-5 space-y-5 md:px-6">
 
         <EnablePushCard />
 
@@ -218,29 +218,29 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <div className="space-y-5 lg:space-y-0 lg:columns-2 lg:gap-x-5">
+        <div className="space-y-5 md:space-y-0 md:columns-2 md:gap-x-5">
 
-        <div className="lg:mb-5 lg:break-inside-avoid">
+        <div className="md:mb-5 md:break-inside-avoid">
           <WatchlistSection />
         </div>
 
-        <div className="lg:mb-5 lg:break-inside-avoid">
+        <div className="md:mb-5 md:break-inside-avoid">
           <DashboardLivePrices />
         </div>
 
-        <div className="lg:mb-5 lg:break-inside-avoid">
+        <div className="md:mb-5 md:break-inside-avoid">
           <UsdIdrCard />
         </div>
 
-        <div className="lg:mb-5 lg:break-inside-avoid">
+        <div className="md:mb-5 md:break-inside-avoid">
           <CalendarWidget limit={6} />
         </div>
 
-        <div className="lg:mb-5 lg:break-inside-avoid">
+        <div className="md:mb-5 md:break-inside-avoid">
           <NewsWidget limit={5} />
         </div>
 
-        <div className="grid grid-cols-3 gap-2.5 lg:mb-5 lg:break-inside-avoid">
+        <div className="grid grid-cols-3 gap-2.5 md:mb-5 md:break-inside-avoid">
           {[
             { label: t.dashboard.total_analyses, value: summaryLoading ? "—" : (summaryData?.totalAnalyses ?? 0), icon: Brain, gradient: "from-amber-400/20 to-yellow-500/20", iconColor: "text-amber-300" },
             { label: t.dashboard.beginner_mode, value: summaryLoading ? "—" : (summaryData?.beginnerCount ?? 0), icon: Sparkles, gradient: "from-yellow-400/20 to-amber-500/20", iconColor: "text-yellow-300" },
@@ -259,7 +259,7 @@ export default function DashboardPage() {
         </div>
         {outcomesData && outcomesData.total > 0 && (
           <div
-            className="bg-card border border-border rounded-2xl p-4 space-y-3 lg:mb-5 lg:break-inside-avoid"
+            className="bg-card border border-border rounded-2xl p-4 space-y-3 md:mb-5 md:break-inside-avoid"
             data-testid="card-outcomes-summary"
           >
             <div>
@@ -341,7 +341,7 @@ export default function DashboardPage() {
           </div>
         )}
         {summaryData?.avgConfidenceMin != null && summaryData.avgConfidenceMax != null && (
-          <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center justify-between lg:mb-5 lg:break-inside-avoid" data-testid="stat-avg-confidence">
+          <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center justify-between md:mb-5 md:break-inside-avoid" data-testid="stat-avg-confidence">
             <span className="text-xs text-muted-foreground">{t.dashboard.avg_confidence ?? "Avg. Confidence"}</span>
             <span className="text-sm font-bold text-primary">
               {Math.round(summaryData.avgConfidenceMin)}–{Math.round(summaryData.avgConfidenceMax)}%
@@ -350,7 +350,7 @@ export default function DashboardPage() {
         )}
 
         {instrumentsData?.instruments && instrumentsData.instruments.length > 0 && (
-          <div className="lg:mb-5 lg:break-inside-avoid">
+          <div className="md:mb-5 md:break-inside-avoid">
             <h2 className="text-sm font-bold text-foreground mb-2.5">{t.dashboard.last_analyzed}</h2>
             <div className="flex gap-2 flex-wrap">
               {instrumentsData.instruments.map((inst) => (

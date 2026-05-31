@@ -160,7 +160,7 @@ export default function JournalPage() {
 
   return (
     <Layout>
-      <div className="px-4 pb-24 pt-2 space-y-4 lg:px-6 lg:pb-8">
+      <div className="px-4 pb-24 pt-2 space-y-4 md:px-6 lg:pb-8">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -399,7 +399,7 @@ export default function JournalPage() {
             </p>
           </Card>
         ) : (
-          <div className="space-y-2 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3" data-testid="list-journal-entries">
+          <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3" data-testid="list-journal-entries">
             {entries.map((entry) => (
               <JournalEntryRow
                 key={entry.id}

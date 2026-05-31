@@ -711,7 +711,7 @@ export default function AnalyzePage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 lg:max-w-3xl lg:mx-auto">
+      <div className="px-4 py-5 md:max-w-3xl md:mx-auto">
         <div className="flex items-center gap-3 mb-5">
           <button
             onClick={() => setLocation("/dashboard")}

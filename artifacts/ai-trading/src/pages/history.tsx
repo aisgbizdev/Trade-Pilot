@@ -715,7 +715,7 @@ export default function HistoryPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-2 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3 lg:items-start">
+          <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3 md:items-start">
             {analyses.map((a) => {
               const valid = new Date(a.validUntil) > new Date();
               const mc = a.marketCondition ? MARKET_CONDITION_LABELS[a.marketCondition] : undefined;
@@ -813,7 +813,7 @@ export default function HistoryPage() {
               );
             })}
 
-            <div className="flex gap-2 pt-2 lg:col-span-2">
+            <div className="flex gap-2 pt-2 md:col-span-2">
               <Button
                 variant="outline"
                 size="sm"
