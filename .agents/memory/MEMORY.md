@@ -3,3 +3,4 @@
 - [Object-storage avatar hardening](object-storage-avatar-hardening.md) — GCS presigned-URL uploads aren't bound to client-claimed contentType; need objectPath whitelist on writes + serve-time image-only check + nosniff to block stored-XSS.
 - [wouter Link renders an anchor](wouter-link-anchor.md) — style the Link directly + aria-current; don't copy the bottom-nav's <Link><button> (nested interactive a11y bug).
 - [Dashboard desktop masonry](dashboard-desktop-masonry.md) — desktop dashboard widgets use CSS multicol (lg:columns-2), not grid auto-flow, to avoid odd trailing gaps while keeping mobile DOM order/spacing identical.
+- [Tablet-only width constraint](tablet-only-width-constraint.md) — to narrow content at tablet while leaving desktop full-width, use `md:max-w-3xl md:mx-auto lg:max-w-none` (Layout caps at md:max-w-4xl/lg:max-w-6xl).

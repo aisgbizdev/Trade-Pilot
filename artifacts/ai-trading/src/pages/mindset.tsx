@@ -85,7 +85,7 @@ export default function MindsetPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 space-y-4">
+      <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
         {!active ? (
           <>
             <div className="flex items-center gap-3">

@@ -171,7 +171,7 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 space-y-4">
+      <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
         <h1 className="text-xl font-bold text-foreground">{t.profile.title}</h1>
 
         <Card className="p-4">

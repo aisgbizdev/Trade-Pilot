@@ -236,7 +236,7 @@ export default function NotificationsPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5">
+      <div className="px-4 py-5 md:max-w-3xl md:mx-auto lg:max-w-none">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h1 className="text-xl font-bold text-foreground">{t.notifications.title}</h1>

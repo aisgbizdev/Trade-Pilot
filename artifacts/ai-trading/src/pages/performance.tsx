@@ -222,7 +222,7 @@ export default function PerformancePage() {
 
   return (
     <Layout>
-      <main className="flex-1 px-4 pt-3 pb-24 space-y-3" data-testid="page-performance">
+      <main className="flex-1 px-4 pt-3 pb-24 space-y-3 md:max-w-3xl md:mx-auto lg:max-w-none" data-testid="page-performance">
         <header className="space-y-2">
           <div className="flex items-center gap-2">
             <Activity className="w-5 h-5 text-primary" />
@@ -410,7 +410,7 @@ export function PerformanceMethodologyPage() {
   ];
   return (
     <Layout>
-      <main className="flex-1 px-4 pt-3 pb-24 space-y-4" data-testid="page-performance-methodology">
+      <main className="flex-1 px-4 pt-3 pb-24 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none" data-testid="page-performance-methodology">
         <Link
           href="/performance"
           className="inline-flex items-center gap-1 text-[12px] text-muted-foreground"

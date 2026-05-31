@@ -1611,7 +1611,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
   return (
     <Layout>
-      <div className="px-4 py-5 space-y-4">
+      <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setLocation("/history")}

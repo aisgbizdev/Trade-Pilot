@@ -25,7 +25,7 @@ export default function DailySummaryPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5">
+      <div className="px-4 py-5 md:max-w-3xl md:mx-auto lg:max-w-none">
         <div className="flex items-center gap-2 mb-1">
           <Sunrise className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-bold text-foreground">{t.daily_summary.page_title}</h1>
