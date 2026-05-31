@@ -39,8 +39,8 @@ export default function MirrorPage() {
 
   return (
     <Layout>
-      <main className="flex-1 px-4 pt-3 pb-24 md:px-6 lg:pb-8 space-y-3 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 md:items-start" data-testid="page-mirror">
-        <header className="space-y-1 md:col-span-2">
+      <main className="flex-1 px-4 pt-3 pb-24 md:px-6 lg:pb-8 space-y-3" data-testid="page-mirror">
+        <header className="space-y-1">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
             <h1 className="text-xl font-bold text-foreground leading-tight">
@@ -53,19 +53,19 @@ export default function MirrorPage() {
         </header>
 
         {isLoading && (
-          <div className="flex items-center justify-center py-16 md:col-span-2">
+          <div className="flex items-center justify-center py-16">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
         {isError && (
-          <Card className="p-4 border-destructive/40 md:col-span-2">
+          <Card className="p-4 border-destructive/40">
             <p className="text-sm text-destructive">{tm.load_failed}</p>
           </Card>
         )}
 
         {data && data.insights.overallGated && (
-          <Card className="p-5 space-y-3 md:col-span-2" data-testid="card-mirror-empty">
+          <Card className="p-5 space-y-3" data-testid="card-mirror-empty">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold text-foreground">
@@ -92,7 +92,7 @@ export default function MirrorPage() {
           <>
             {data.highlights.length > 0 && (
               <Card
-                className="p-4 space-y-2 bg-gradient-to-br from-primary/10 to-transparent border-primary/30 md:col-span-2"
+                className="p-4 space-y-2 bg-gradient-to-br from-primary/10 to-transparent border-primary/30"
                 data-testid="card-mirror-highlights"
               >
                 <h2 className="text-[11px] font-semibold text-primary uppercase tracking-wide">
@@ -113,46 +113,56 @@ export default function MirrorPage() {
               </Card>
             )}
 
-            <CategoryCard
-              icon={<Clock className="w-4 h-4" />}
-              title={tm.sessions_title}
-              subtitle={tm.sessions_subtitle}
-              block={data.insights.sessions as GatedBlock}
-              renderBest={(s) => keyLabel(s.key, "session", tm)}
-              tm={tm}
-              dataTestId="card-mirror-sessions"
-            />
+            <div className="space-y-3 md:space-y-0 md:columns-2 md:gap-x-4">
+              <div className="md:mb-4 md:break-inside-avoid">
+                <CategoryCard
+                  icon={<Clock className="w-4 h-4" />}
+                  title={tm.sessions_title}
+                  subtitle={tm.sessions_subtitle}
+                  block={data.insights.sessions as GatedBlock}
+                  renderBest={(s) => keyLabel(s.key, "session", tm)}
+                  tm={tm}
+                  dataTestId="card-mirror-sessions"
+                />
+              </div>
 
-            <CategoryCard
-              icon={<TrendingUp className="w-4 h-4" />}
-              title={tm.instruments_title}
-              subtitle={tm.instruments_subtitle}
-              block={data.insights.instruments as GatedBlock}
-              renderBest={(s) => s.key}
-              tm={tm}
-              dataTestId="card-mirror-instruments"
-            />
+              <div className="md:mb-4 md:break-inside-avoid">
+                <CategoryCard
+                  icon={<TrendingUp className="w-4 h-4" />}
+                  title={tm.instruments_title}
+                  subtitle={tm.instruments_subtitle}
+                  block={data.insights.instruments as GatedBlock}
+                  renderBest={(s) => s.key}
+                  tm={tm}
+                  dataTestId="card-mirror-instruments"
+                />
+              </div>
 
-            <CategoryCard
-              icon={<Clock className="w-4 h-4" />}
-              title={tm.timing_title}
-              subtitle={tm.timing_subtitle}
-              block={data.insights.timing as GatedBlock}
-              renderBest={(s) => keyLabel(s.key, "time", tm)}
-              tm={tm}
-              dataTestId="card-mirror-timing"
-            />
+              <div className="md:mb-4 md:break-inside-avoid">
+                <CategoryCard
+                  icon={<Clock className="w-4 h-4" />}
+                  title={tm.timing_title}
+                  subtitle={tm.timing_subtitle}
+                  block={data.insights.timing as GatedBlock}
+                  renderBest={(s) => keyLabel(s.key, "time", tm)}
+                  tm={tm}
+                  dataTestId="card-mirror-timing"
+                />
+              </div>
 
-            <PostLossCard
-              tm={tm}
-              block={data.insights.postLoss as GatedBlock}
-            />
+              <div className="md:mb-4 md:break-inside-avoid">
+                <PostLossCard
+                  tm={tm}
+                  block={data.insights.postLoss as GatedBlock}
+                />
+              </div>
 
-            <div className="lg:col-span-2">
-              <ExitDisciplineCard
-                tm={tm}
-                block={data.insights.exitDiscipline as GatedBlock}
-              />
+              <div className="md:mb-4 md:break-inside-avoid">
+                <ExitDisciplineCard
+                  tm={tm}
+                  block={data.insights.exitDiscipline as GatedBlock}
+                />
+              </div>
             </div>
           </>
         )}

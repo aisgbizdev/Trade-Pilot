@@ -98,13 +98,13 @@ export default function AnalyticsPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 space-y-5 md:px-6 md:space-y-0 md:grid md:grid-cols-2 md:gap-5 md:items-start">
-        <div className="md:col-span-2">
+      <div className="px-4 py-5 space-y-5 md:px-6">
+        <div>
           <h1 className="text-xl font-bold text-foreground">{t.analytics.title}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{t.analytics.subtitle}</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 md:col-span-2">
+        <div className="grid grid-cols-3 gap-3">
           {[
             { label: t.analytics.all_time, value: analytics.totalAllTime },
             { label: t.analytics.this_month, value: analytics.totalThisMonth },
@@ -119,8 +119,9 @@ export default function AnalyticsPage() {
           ))}
         </div>
 
+        <div className="space-y-5 md:space-y-0 md:columns-2 md:gap-x-5">
         {analytics.topInstruments?.length > 0 && (
-          <Card className="p-4">
+          <Card className="p-4 md:mb-5 md:break-inside-avoid">
             <h3 className="text-sm font-semibold text-foreground mb-3">{t.analytics.top_instruments}</h3>
             <div className="space-y-2">
               {analytics.topInstruments.map((item, i) => (
@@ -138,15 +139,15 @@ export default function AnalyticsPage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="p-4">
+        <div className="grid grid-cols-2 gap-3 md:contents">
+          <Card className="p-4 md:mb-5 md:break-inside-avoid">
             <h3 className="text-xs text-muted-foreground mb-1">{t.analytics.dominant_mode}</h3>
             <p className="text-base font-bold text-foreground capitalize" data-testid="text-dominant-mode">
               {analytics.dominantMode === "beginner" ? t.common.beginner : t.common.pro}
             </p>
           </Card>
 
-          <Card className="p-4 flex flex-col items-center">
+          <Card className="p-4 flex flex-col items-center md:mb-5 md:break-inside-avoid">
             <div className="flex items-center gap-1 mb-2 self-start">
               <h3 className="text-xs text-muted-foreground">{t.analytics.self_accuracy}</h3>
               <Info className="w-3 h-3 text-muted-foreground" />
@@ -163,9 +164,10 @@ export default function AnalyticsPage() {
             )}
           </Card>
         </div>
+        </div>
 
         {analytics.accuracyRate !== null && analytics.accuracyRate !== undefined && (
-          <Card className="p-3 bg-muted/50 border-dashed lg:col-span-2">
+          <Card className="p-3 bg-muted/50 border-dashed">
             <div className="flex gap-2">
               <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -176,7 +178,7 @@ export default function AnalyticsPage() {
         )}
 
         {analytics.weeklyData?.length > 0 && (
-          <Card className="p-4 md:col-span-2">
+          <Card className="p-4">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h3 className="text-sm font-semibold text-foreground">{t.analytics.weekly_chart}</h3>
               <div
