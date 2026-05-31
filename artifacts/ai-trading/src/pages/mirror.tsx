@@ -148,10 +148,12 @@ export default function MirrorPage() {
               block={data.insights.postLoss as GatedBlock}
             />
 
-            <ExitDisciplineCard
-              tm={tm}
-              block={data.insights.exitDiscipline as GatedBlock}
-            />
+            <div className="lg:col-span-2">
+              <ExitDisciplineCard
+                tm={tm}
+                block={data.insights.exitDiscipline as GatedBlock}
+              />
+            </div>
           </>
         )}
       </main>

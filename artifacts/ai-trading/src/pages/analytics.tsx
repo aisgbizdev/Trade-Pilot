@@ -165,7 +165,7 @@ export default function AnalyticsPage() {
         </div>
 
         {analytics.accuracyRate !== null && analytics.accuracyRate !== undefined && (
-          <Card className="p-3 bg-muted/50 border-dashed">
+          <Card className="p-3 bg-muted/50 border-dashed lg:col-span-2">
             <div className="flex gap-2">
               <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
