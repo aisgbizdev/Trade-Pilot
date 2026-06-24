@@ -209,6 +209,10 @@ describe("POST /api/analyses with timeframe 30m", () => {
           expect.objectContaining({ event: "FOMC Rate Decision" }),
         ]),
       }),
+      // Seventh arg is the live-price anchor. The live feed isn't mocked
+      // here so getLivePriceFor resolves to null (instrument not in the
+      // cached payload), which is the expected "no live anchor" value.
+      null,
     );
 
     // The persisted snapshot is also returned in the response so the

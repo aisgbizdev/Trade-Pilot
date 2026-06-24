@@ -44,6 +44,7 @@ const TradePlanSchema = z.object({
 });
 
 export type TradePlan = z.infer<typeof TradePlanSchema>;
+export type TradeSide = z.infer<typeof TradeSideSchema>;
 
 /**
  * The model is asked to record which news headlines and calendar
@@ -474,6 +475,92 @@ function buildFastIntradayFallback(mode: "beginner" | "pro", timeframe: string):
   };
 }
 
+// ---------------------------------------------------------------------------
+// Trade-plan numeric hygiene
+//
+// The model free-texts every price level (entry/SL/TP) AND the
+// riskRewardRatio string. Because the ratio is authored independently of the
+// levels, it routinely drifts out of sync with the numbers shown right above
+// it on the card ("perbandingan ratio yg dibawah suka salah"). We recompute it
+// from the model's OWN entry/SL/TP1 so the displayed ratio is always
+// internally consistent, and fall back to "n/a" when the levels are
+// descriptive (no parseable price) — the honest state for a wait/no-anchor plan.
+// ---------------------------------------------------------------------------
+
+// Pull the representative price out of a free-text level. Entry zones are
+// ranges ("1.0850 – 1.0865") → midpoint; SL/TP are usually single numbers.
+// Returns null when nothing numeric is present ("menunggu konfirmasi ...").
+//
+// Timeframe tokens (H1, M15, 4H, 30m, 1D ...) are stripped FIRST so their
+// digits can't be mistaken for a price — e.g. "di atas 4680 setelah breakout
+// H1" must parse to 4680, not the mean of [4680, 1].
+export function parseLevelPrice(raw: string): number | null {
+  if (!raw) return null;
+  const cleaned = raw
+    .replace(/,/g, "") // thousands separators; "." is the decimal point
+    .replace(/\b[HMDWhmdw]\d{1,3}\b/g, " ") // H1, M15, D1, W1
+    .replace(/\b\d{1,3}[mhdwMHDW]\b/g, " "); // 1m, 30m, 4h, 1D, 1W
+  const matches = cleaned.match(/\d+(?:\.\d+)?/g);
+  if (!matches || matches.length === 0) return null;
+  const nums = matches.map(Number).filter((n) => Number.isFinite(n));
+  if (nums.length === 0) return null;
+  if (nums.length === 1) return nums[0]!;
+  // Two or more numbers → treat the first two as a range and use the
+  // midpoint (the representative price of an entry zone). Extra trailing
+  // numbers are ignored rather than averaged in.
+  return (nums[0]! + nums[1]!) / 2;
+}
+
+// Recompute "1:X.X" from entry → TP1 (reward) vs entry → SL (risk).
+// Returns null when any level is non-numeric or the risk leg is zero. When a
+// `side` is given, the levels must straddle the entry in the correct
+// direction (buy: SL below, TP above; sell: SL above, TP below) — otherwise
+// the plan is internally contradictory and we report "n/a" rather than a
+// misleading ratio.
+export function computeRiskReward(
+  entryZone: string,
+  stopLoss: string,
+  takeProfit1: string,
+  side?: "buy" | "sell",
+): string | null {
+  const entry = parseLevelPrice(entryZone);
+  const sl = parseLevelPrice(stopLoss);
+  const tp1 = parseLevelPrice(takeProfit1);
+  if (entry === null || sl === null || tp1 === null) return null;
+  if (side === "buy" && !(sl < entry && tp1 > entry)) return null;
+  if (side === "sell" && !(sl > entry && tp1 < entry)) return null;
+  const risk = Math.abs(entry - sl);
+  const reward = Math.abs(tp1 - entry);
+  if (!(risk > 0) || !Number.isFinite(reward)) return null;
+  const ratio = reward / risk;
+  if (!Number.isFinite(ratio) || ratio <= 0) return null;
+  return `1:${ratio.toFixed(1)}`;
+}
+
+// Replace each side's riskRewardRatio with the value implied by its own
+// levels so the card never shows a ratio that contradicts the prices above it.
+export function reconcileTradePlanRiskReward(plan: TradePlan): TradePlan {
+  const fixSide = (side: TradeSide, dir: "buy" | "sell"): TradeSide => ({
+    ...side,
+    riskRewardRatio:
+      computeRiskReward(side.entryZone, side.stopLoss, side.takeProfit1, dir) ??
+      "n/a",
+  });
+  return {
+    ...plan,
+    buy: fixSide(plan.buy, "buy"),
+    sell: fixSide(plan.sell, "sell"),
+  };
+}
+
+// Apply post-processing hygiene to a validated AI output before returning it.
+function finalizeOutput(out: AIOutput): AIOutput {
+  return {
+    ...out,
+    tradePlan: reconcileTradePlanRiskReward(out.tradePlan),
+  } as AIOutput;
+}
+
 export async function generateAnalysis(
   instrument: string,
   timeframe: string,
@@ -481,6 +568,7 @@ export async function generateAnalysis(
   notes?: string,
   indicatorContext?: string,
   fundamentalSnapshot?: FundamentalSnapshot | null,
+  livePrice?: number | null,
 ): Promise<AIOutput> {
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
   const selectedModel =
@@ -532,6 +620,23 @@ export async function generateAnalysis(
       ].join("\n")
     : "";
 
+  // Live mid-price anchor. The indicator block (which carries "Harga
+  // terakhir") is best-effort and frequently absent — instruments Yahoo
+  // doesn't cover for indicators, or a transient upstream miss. When it's
+  // missing the model has no price to anchor to and, per its prompt rules,
+  // falls back to a "wait" plan with descriptive levels instead of concrete
+  // numbers ("angkanya gak keluar"). Feeding the 15s-cached live-feed price
+  // as an explicit anchor lets it produce real entry/SL/TP without indicators.
+  const livePriceAnchor =
+    typeof livePrice === "number" && Number.isFinite(livePrice)
+      ? [
+          `\n=== HARGA LIVE (anchor utama) ===`,
+          `Harga terakhir: ${livePrice} (${instrument}, harga live saat analisis)`,
+          `WAJIB pakai angka ini sebagai anchor untuk semua level di tradePlan (entry/SL/TP) dengan harga konkret. JANGAN set preferredSide="wait" hanya karena indikator teknikal tidak tersedia — kamu sudah punya harga acuan ini.`,
+          `===`,
+        ].join("\n")
+      : "";
+
   const baseUserMessage = [
     `Waktu analisis sekarang: ${nowIsoUtc} (UTC) — atau ${nowJakarta} WIB.`,
     `Gunakan waktu ini sebagai patokan untuk menghitung jendela 1 jam / 24 jam ke depan pada event kalender.`,
@@ -539,6 +644,7 @@ export async function generateAnalysis(
     `PENTING: semua narasi (skenario, peluang, risiko, bias arah) HARUS menyebut timeframe "${timeframe}" secara eksplisit, bukan hanya kata "uptrend"/"downtrend" saja.`,
     indoStyleGuide,
     cryptoContext,
+    livePriceAnchor,
     indicatorContext ? indicatorContext : "",
     cleanNotes ? `\nCatatan tambahan dari trader: ${cleanNotes}` : "",
   ]
@@ -625,7 +731,7 @@ export async function generateAnalysis(
       retryParsed.fundamentalCitations,
       snapshot,
     );
-    if (retryCheck.ok) return retryParsed;
+    if (retryCheck.ok) return finalizeOutput(retryParsed);
     // Hard fail after the corrective retry — the route turns this into
     // an HTTP 502 / quota refund, which is preferable to returning
     // ungrounded fundamental prose.
@@ -637,5 +743,5 @@ export async function generateAnalysis(
     );
   }
 
-  return parsed;
+  return finalizeOutput(parsed);
 }

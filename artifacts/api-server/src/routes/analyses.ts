@@ -12,6 +12,7 @@ import {
   type FundamentalSnapshot,
 } from "../lib/openai";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
+import { getLivePriceFor } from "../lib/live-prices";
 import {
   getRelevantNews,
   formatNewsForPrompt,
@@ -431,7 +432,24 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   //     renders the SAME fundamental context the model was shown.
   let fetchedNews: NewsItem[] = [];
   let fetchedCalendar: CalendarEvent[] = [];
+  // Live mid-price anchor for the AI's trade plan. Independent of the
+  // best-effort indicator fetch below — when indicators are missing this is
+  // the only price the model gets, so it can still emit concrete entry/SL/TP
+  // instead of falling back to a descriptive "wait" plan. Null when the feed
+  // doesn't cover this instrument (futures-only); the model then anchors to
+  // the indicator block's last close as before.
+  let livePrice: number | null = null;
+  // Bound the live-price lookup: the upstream forex fetch has no timeout of
+  // its own, so without this a stalled feed could hang the whole analysis.
+  // Best-effort — null just means "no live anchor", same as no coverage.
+  const livePriceAnchor = Promise.race([
+    getLivePriceFor(instrument),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+  ]);
   await Promise.allSettled([
+    livePriceAnchor.then((p) => {
+      livePrice = p;
+    }),
     indicatorTf
       ? getIndicators(instrument, indicatorTf).then((ind) => {
           if (ind) {
@@ -530,6 +548,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         userInputContext,
         indicatorContext,
         fundamentalSnapshot,
+        livePrice,
       );
     } catch (aiErr) {
       void trackAiError();
@@ -580,6 +599,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           userInputContext,
           indicatorContext,
           fundamentalSnapshot,
+          livePrice,
         );
       } catch (aiErr) {
         return { kind: "aiError" };
