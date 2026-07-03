@@ -7,6 +7,7 @@ import {
   Zap,
   Target,
   ArrowUpRight,
+  Lightbulb,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
@@ -14,6 +15,8 @@ import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ContinuousTicker } from "@/components/continuous-ticker";
+import { LandingProductPreview } from "@/components/landing-product-preview";
+import { LandingFaq } from "@/components/landing-faq";
 
 // One icon per value-prop, in display order. Hard-coded here so locale
 // files stay pure strings and translators don't have to deal with icon
@@ -213,6 +216,35 @@ export default function LandingPage() {
             </div>
           </section>
         )}
+
+        {/* PRODUCT PREVIEW — illustrative mock of the analysis result UI */}
+        <LandingProductPreview />
+
+        {/* PHILOSOPHY STRIP — differentiates Trade Pilot from blind signal groups */}
+        <section
+          className="px-4 pb-10"
+          data-testid="section-philosophy"
+        >
+          <div className="rounded-2xl border border-border bg-card px-5 py-5 flex gap-4 items-start md:items-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/15 to-yellow-500/10 border border-amber-400/20 flex items-center justify-center shrink-0">
+              <Lightbulb className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-foreground mb-1">
+                {t.landing.philosophy_title}
+              </h2>
+              <p className="text-[13px] text-muted-foreground leading-relaxed">
+                {t.landing.philosophy_body}
+              </p>
+              <p className="text-[11px] text-amber-500/80 mt-1.5 font-medium">
+                {t.landing.philosophy_subtext}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <LandingFaq />
 
         {/* BOTTOM CTA */}
         <section className="px-4 pb-8 md:max-w-2xl md:mx-auto md:w-full">
