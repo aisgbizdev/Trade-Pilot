@@ -27,7 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 
-const MAIN_NAV_PATHS = ["/dashboard", "/analyze", "/journal", "/mirror", "/history", "/analytics", "/profile"];
+const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/analytics", "/profile"];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
