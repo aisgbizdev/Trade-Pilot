@@ -36,3 +36,9 @@ id = "3IADm6wwMONdFG79V9a5j"
 uri = "file://artifacts/ai-trading/public/apple-touch-icon-180.png"
 type = "image"
 title = "New iOS home-screen icon (180×180)"
+
+[[outputs]]
+id = "SowRumtfA_uVp2LHqTmif"
+uri = "file://attached_assets/USER_MANUAL_1783178332882.md"
+type = "text"
+title = "Buku Panduan Pengguna — Trade Pilot (Updated)"
