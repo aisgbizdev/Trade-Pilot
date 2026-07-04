@@ -60,6 +60,8 @@ vi.mock("@workspace/api-client-react", () => ({
   getGetRecentInstrumentsQueryKey: () => ["recent"],
   useGetAnalysisQuota: () => ({ data: undefined }),
   getGetAnalysisQuotaQueryKey: () => ["quota"],
+  useListAnalyses: () => ({ data: undefined }),
+  getListAnalysesQueryKey: () => ["analyses"],
   // LocalSentimentWidget on the Analyze page calls this; the widget
   // hides itself when `data` is undefined, which is exactly what we
   // want in these tests — they aren't asserting on sentiment UI.

@@ -1053,7 +1053,12 @@ export default function AnalyzePage() {
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-sm font-semibold text-foreground truncate">{a.instrument}</span>
                         <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground shrink-0">{a.timeframe}</span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">{a.mode === "beginner" ? t.common.beginner : t.common.pro}</span>
+                        {(() => {
+                          const b = (a as { tradingBias?: string | null }).tradingBias;
+                          if (b?.startsWith("bullish")) return <TrendingUp className="w-3.5 h-3.5 text-green-500 shrink-0" />;
+                          if (b?.startsWith("bearish")) return <TrendingDown className="w-3.5 h-3.5 text-red-500 shrink-0" />;
+                          return <Minus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
+                        })()}
                       </div>
                       <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
                         {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: dateLocale })}

@@ -64,6 +64,8 @@ vi.mock("@workspace/api-client-react", () => ({
   getGetRecentInstrumentsQueryKey: () => ["recent"],
   useGetAnalysisQuota: () => ({ data: undefined }),
   getGetAnalysisQuotaQueryKey: () => ["quota"],
+  useListAnalyses: () => ({ data: undefined }),
+  getListAnalysesQueryKey: () => ["analyses"],
 }));
 
 vi.mock("wouter", () => ({
