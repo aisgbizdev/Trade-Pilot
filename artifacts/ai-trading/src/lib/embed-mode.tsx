@@ -1,12 +1,12 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 const STORAGE_KEY = "tp_embed";
 
 /** Returns true if embed mode should be active for this session. */
 function detectEmbed(): boolean {
-  // ENV var — for dedicated embed-only deployments
-  const envMode = (import.meta.env as Record<string, string | undefined>)["VITE_EMBED_MODE"];
-  if (envMode === "true") return true;
+  // ENV var — supports both VITE_EMBED_MODE (Vite convention) and EMBED_MODE (plain).
+  const env = import.meta.env as Record<string, string | undefined>;
+  if (env["VITE_EMBED_MODE"] === "true" || env["EMBED_MODE"] === "true") return true;
   // sessionStorage — keeps embed mode active within the same browser tab
   if (sessionStorage.getItem(STORAGE_KEY) === "1") return true;
   // URL param — the canonical entry point (?embed=1)
