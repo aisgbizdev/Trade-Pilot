@@ -420,6 +420,9 @@ export const en = {
     required_instrument: "Instrument is required",
     required_side: "Pick a direction (buy or sell)",
     invalid_price: "Enter a valid number",
+    already_journaled: "Already journaled ✓",
+    view_in_journal: "View in journal",
+    save_success: "Trade logged successfully",
   },
   mirror: {
     title: "Trader Mirror",

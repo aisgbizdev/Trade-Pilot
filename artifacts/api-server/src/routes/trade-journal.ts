@@ -668,6 +668,41 @@ router.delete(
   },
 );
 
+// GET /api/journal/for-analysis/:analysisId — returns the first journal
+// entry the authenticated user linked to a specific analysis. Used by
+// the analysis-detail page to check whether a "Catat di Jurnal" entry
+// already exists so it can surface a "Sudah dicatat ✓" state instead
+// of the empty CTA button. Returns 404 when no entry is found.
+router.get(
+  "/journal/for-analysis/:analysisId",
+  requireAuth,
+  journalReadLimiter,
+  async (req: AuthRequest, res) => {
+    const analysisId = Number(req.params["analysisId"]);
+    if (!Number.isFinite(analysisId) || analysisId <= 0) {
+      res.status(400).json({ error: "Invalid analysisId" });
+      return;
+    }
+    const [row] = await db
+      .select()
+      .from(tradeJournal)
+      .where(
+        and(
+          eq(tradeJournal.userId, req.userId!),
+          eq(tradeJournal.analysisId, analysisId),
+        ),
+      )
+      .limit(1);
+    if (!row) {
+      res
+        .status(404)
+        .json({ error: "No journal entry found for this analysis" });
+      return;
+    }
+    res.json(serialize(row));
+  },
+);
+
 // Suppress unused-import warning — `sql` is intentionally available
 // for future hand-rolled aggregate queries if journal volume grows.
 void sql;

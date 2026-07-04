@@ -1,4 +1,4 @@
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   ChevronLeft,
   Clock,
@@ -58,6 +58,8 @@ import {
   getGetAnalysisAlertsQueryKey,
   useGetPushSubscriptionStatus,
   useSetAnalysisNote,
+  useGetJournalEntryForAnalysis,
+  getGetJournalEntryForAnalysisQueryKey,
   type Analysis,
   type Feedback,
   type TradePlan,
@@ -639,21 +641,95 @@ function LogTradeButton({
   analysisId,
   instrument,
   preferredSide,
+  analysisCreatedAt,
+  timeframe,
   t,
 }: {
   analysisId: number;
   instrument: string;
   preferredSide: string | null;
+  analysisCreatedAt: string;
+  timeframe: string;
   t: T;
 }) {
   const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Check whether this analysis already has a linked journal entry.
+  // 404 → no entry (isError = true, data = undefined).
+  const { data: linkedEntry, isLoading: checkingEntry } =
+    useGetJournalEntryForAnalysis(analysisId, {
+      query: {
+        queryKey: getGetJournalEntryForAnalysisQueryKey(analysisId),
+        retry: false,
+        staleTime: 5 * 60_000,
+      },
+    });
+
   const side: "buy" | "sell" | undefined =
     preferredSide === "buy" || preferredSide === "sell"
       ? preferredSide
       : undefined;
+
+  const defaultNote = `Timeframe: ${timeframe}`;
+
+  const handleSaved = () => {
+    // Invalidate the for-analysis query so the button flips to "Sudah dicatat ✓"
+    queryClient.invalidateQueries({
+      queryKey: getGetJournalEntryForAnalysisQueryKey(analysisId),
+    });
+  };
+
+  // While checking, render a skeleton placeholder so the layout doesn't pop
+  if (checkingEntry) {
+    return (
+      <Card className="p-3 flex items-center justify-between gap-3 opacity-50 animate-pulse">
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="w-4 h-4 text-primary shrink-0" />
+          <div className="h-4 w-32 bg-muted rounded" />
+        </div>
+        <div className="h-8 w-24 bg-muted rounded" />
+      </Card>
+    );
+  }
+
+  // Entry already exists → show "Sudah dicatat ✓" with a link to the journal
+  if (linkedEntry) {
+    return (
+      <Card
+        className="p-3 flex items-center justify-between gap-3"
+        data-testid="card-log-trade"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              {t.journal.log_trade_from_analysis}
+            </p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 leading-snug font-medium">
+              {t.journal.already_journaled}
+            </p>
+          </div>
+        </div>
+        <Link href="/journal">
+          <Button
+            size="sm"
+            variant="outline"
+            data-testid="button-view-journal-entry"
+          >
+            {t.journal.view_in_journal}
+          </Button>
+        </Link>
+      </Card>
+    );
+  }
+
   return (
     <>
-      <Card className="p-3 flex items-center justify-between gap-3" data-testid="card-log-trade">
+      <Card
+        className="p-3 flex items-center justify-between gap-3"
+        data-testid="card-log-trade"
+      >
         <div className="flex items-center gap-2 min-w-0">
           <BookOpen className="w-4 h-4 text-primary shrink-0" />
           <div className="min-w-0">
@@ -680,6 +756,9 @@ function LogTradeButton({
         analysisId={analysisId}
         defaultInstrument={instrument}
         defaultSide={side}
+        defaultTradedAt={analysisCreatedAt}
+        defaultNote={defaultNote}
+        onSaved={handleSaved}
       />
     </>
   );
@@ -1807,6 +1886,8 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           analysisId={analysis.id}
           instrument={analysis.instrument}
           preferredSide={tradePlan?.preferredSide ?? null}
+          analysisCreatedAt={analysis.createdAt}
+          timeframe={analysis.timeframe}
           t={t}
         />
 

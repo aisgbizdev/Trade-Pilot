@@ -422,6 +422,9 @@ export const id: Translations = {
     required_instrument: "Instrumen wajib diisi",
     required_side: "Pilih arah (buy atau sell)",
     invalid_price: "Masukkan angka yang valid",
+    already_journaled: "Sudah dicatat ✓",
+    view_in_journal: "Lihat di jurnal",
+    save_success: "Trade berhasil dicatat",
   },
   mirror: {
     title: "Cermin Trader",

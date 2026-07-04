@@ -54,7 +54,14 @@ interface LogTradeDialogProps {
   defaultInstrument?: string;
   defaultSide?: Side;
   defaultEntryPrice?: string;
+  // ISO string to pre-fill the traded-at datetime (e.g. analysis.createdAt)
+  defaultTradedAt?: string;
+  // Pre-filled note text (e.g. timeframe info from the linked analysis)
+  defaultNote?: string;
   analysisId?: number | null;
+  // Called after a NEW entry is successfully created (not on edit).
+  // Used by the analysis-detail LogTradeButton to refresh its linked-entry state.
+  onSaved?: () => void;
   // When provided, the dialog runs in edit mode (PATCH) against the
   // existing entry instead of POSTing a new row.
   editing?: JournalEntry | null;
@@ -66,7 +73,10 @@ export function LogTradeDialog({
   defaultInstrument,
   defaultSide,
   defaultEntryPrice,
+  defaultTradedAt,
+  defaultNote,
   analysisId,
+  onSaved,
   editing,
 }: LogTradeDialogProps) {
   const { t } = useTranslation();
@@ -108,11 +118,15 @@ export function LogTradeDialog({
       setQuantity("");
       setOutcome("open");
       setMood("");
-      setNote("");
-      setTradedAt(toLocalInputValue(new Date().toISOString()));
+      setNote(defaultNote ?? "");
+      setTradedAt(
+        defaultTradedAt
+          ? toLocalInputValue(defaultTradedAt)
+          : toLocalInputValue(new Date().toISOString()),
+      );
     }
     setError(null);
-  }, [open, editing, defaultInstrument, defaultSide, defaultEntryPrice]);
+  }, [open, editing, defaultInstrument, defaultSide, defaultEntryPrice, defaultTradedAt, defaultNote]);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -155,6 +169,10 @@ export function LogTradeDialog({
       queryClient.invalidateQueries({
         queryKey: getGetJournalStatsQueryKey(),
       });
+      if (!editing) {
+        onSaved?.();
+        toast({ title: t.journal.save_success });
+      }
       onOpenChange(false);
     };
     const onErr = () => {
