@@ -303,6 +303,17 @@
     50% { transform: translateY(-6px); }
   }
 
+  @keyframes nav-unlock-pulse {
+    0%   { box-shadow: 0 0 0 0   hsl(var(--primary) / 0.7); }
+    40%  { box-shadow: 0 0 0 6px hsl(var(--primary) / 0.35); }
+    70%  { box-shadow: 0 0 0 10px hsl(var(--primary) / 0); }
+    100% { box-shadow: 0 0 0 0   hsl(var(--primary) / 0); }
+  }
+
+  .nav-unlock-pulse {
+    animation: nav-unlock-pulse 0.8s ease-out 3;
+  }
+
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
   }

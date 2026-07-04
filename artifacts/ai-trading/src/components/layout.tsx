@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, BookOpen, Sparkles, Settings } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
@@ -115,6 +115,46 @@ export function Layout({ children }: { children: React.ReactNode }) {
     ? EMBED_NAV
     : FULL_NAV.filter((item) => totalAnalyses >= item.minCount);
 
+  const prevNavHrefsRef = useRef<Set<string> | null>(null);
+  const [newlyUnlocked, setNewlyUnlocked] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentHrefs = new Set(navItems.map((i) => i.href));
+    if (prevNavHrefsRef.current === null) {
+      prevNavHrefsRef.current = currentHrefs;
+      return;
+    }
+    const prevHrefs = prevNavHrefsRef.current;
+    prevNavHrefsRef.current = currentHrefs;
+
+    const justUnlocked: string[] = [];
+    for (const href of currentHrefs) {
+      if (!prevHrefs.has(href)) {
+        const key = `nav_celebrated_${href}`;
+        if (!sessionStorage.getItem(key)) {
+          justUnlocked.push(href);
+          sessionStorage.setItem(key, "1");
+        }
+      }
+    }
+
+    if (justUnlocked.length > 0) {
+      setNewlyUnlocked((prev) => {
+        const next = new Set(prev);
+        justUnlocked.forEach((h) => next.add(h));
+        return next;
+      });
+    }
+  }, [navItems]);
+
+  const clearUnlocked = (href: string) => {
+    setNewlyUnlocked((prev) => {
+      const next = new Set(prev);
+      next.delete(href);
+      return next;
+    });
+  };
+
   const profileActive = location === "/profile" || location.startsWith("/profile/");
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "";
   const profileAvatar = avatarSrc(user?.avatarUrl);
@@ -162,17 +202,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active = location === href || location.startsWith(href + "/");
+            const isNew = newlyUnlocked.has(href);
             return (
               <Link
                 key={href}
                 href={href}
                 data-testid={`nav-desktop-${href.replace("/", "")}`}
                 aria-current={active ? "page" : undefined}
+                onAnimationEnd={isNew ? () => clearUnlocked(href) : undefined}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors",
                   active
                     ? "bg-primary/10 text-primary dark:bg-primary/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  isNew && "nav-unlock-pulse"
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -382,15 +425,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-around py-2 px-1">
             {navItems.map(({ href, icon: Icon, label }) => {
               const active = location === href || location.startsWith(href + "/");
+              const isNew = newlyUnlocked.has(href);
               return (
                 <Link key={href} href={href}>
                   <button
                     data-testid={`nav-${href.replace("/", "")}`}
+                    onAnimationEnd={isNew ? () => clearUnlocked(href) : undefined}
                     className={cn(
                       "flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200",
                       active
                         ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                      isNew && "nav-unlock-pulse"
                     )}
                   >
                     <div className={cn(
