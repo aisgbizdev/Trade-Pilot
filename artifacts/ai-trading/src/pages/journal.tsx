@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "wouter";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { Link, useSearch } from "wouter";
 import {
   BookOpen,
   Filter,
@@ -90,6 +90,12 @@ export default function JournalPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const dateLocale = lang === "id" ? idLocale : enUS;
+  const search = useSearch();
+  const highlightId = useMemo(() => {
+    const params = new URLSearchParams(search);
+    const raw = params.get("highlightId");
+    return raw ? Number(raw) : null;
+  }, [search]);
 
   const [filterInstrument, setFilterInstrument] = useState<string>("");
   const [filterOutcome, setFilterOutcome] = useState<string>("");
@@ -98,6 +104,8 @@ export default function JournalPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<JournalEntry | null>(null);
+  const [highlightActive, setHighlightActive] = useState(false);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
 
   const listParams: ListJournalEntriesParams = useMemo(() => {
     const p: ListJournalEntriesParams = {};
@@ -150,6 +158,20 @@ export default function JournalPage() {
       },
     );
   };
+
+  useEffect(() => {
+    if (!highlightId || entries.length === 0) return;
+    const found = entries.find((e) => e.id === highlightId);
+    if (!found) return;
+    setHighlightActive(true);
+    requestAnimationFrame(() => {
+      if (highlightRef.current) {
+        highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+    const timer = setTimeout(() => setHighlightActive(false), 2500);
+    return () => clearTimeout(timer);
+  }, [highlightId, entries]);
 
   const sessionLabel = (key: string): string => {
     if (key === "asia") return t.journal.session_asia;
@@ -400,19 +422,24 @@ export default function JournalPage() {
           </Card>
         ) : (
           <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3" data-testid="list-journal-entries">
-            {entries.map((entry) => (
-              <JournalEntryRow
-                key={entry.id}
-                entry={entry}
-                onEdit={() => {
-                  setEditing(entry);
-                  setDialogOpen(true);
-                }}
-                onDelete={() => handleDelete(entry)}
-                dateLocale={dateLocale}
-                tJournal={t.journal}
-              />
-            ))}
+            {entries.map((entry) => {
+              const isHighlighted = entry.id === highlightId;
+              return (
+                <JournalEntryRow
+                  key={entry.id}
+                  entry={entry}
+                  onEdit={() => {
+                    setEditing(entry);
+                    setDialogOpen(true);
+                  }}
+                  onDelete={() => handleDelete(entry)}
+                  dateLocale={dateLocale}
+                  tJournal={t.journal}
+                  highlighted={isHighlighted && highlightActive}
+                  highlightRef={isHighlighted ? highlightRef : undefined}
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -531,12 +558,16 @@ function JournalEntryRow({
   onDelete,
   dateLocale,
   tJournal,
+  highlighted,
+  highlightRef,
 }: {
   entry: JournalEntry;
   onEdit: () => void;
   onDelete: () => void;
   dateLocale: Locale;
   tJournal: ReturnType<typeof useTranslation>["t"]["journal"];
+  highlighted?: boolean;
+  highlightRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const isBuy = entry.side === "buy";
   const pnlPct =
@@ -545,7 +576,14 @@ function JournalEntryRow({
   const tradedAt = new Date(entry.tradedAt);
 
   return (
-    <Card className="p-3 space-y-2" data-testid={`journal-entry-${entry.id}`}>
+    <Card
+      ref={highlightRef}
+      className={cn(
+        "p-3 space-y-2 transition-colors duration-700",
+        highlighted && "ring-2 ring-primary bg-primary/5",
+      )}
+      data-testid={`journal-entry-${entry.id}`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">

@@ -711,7 +711,7 @@ function LogTradeButton({
             </p>
           </div>
         </div>
-        <Link href="/journal">
+        <Link href={`/journal?highlightId=${linkedEntry.id}`}>
           <Button
             size="sm"
             variant="outline"
