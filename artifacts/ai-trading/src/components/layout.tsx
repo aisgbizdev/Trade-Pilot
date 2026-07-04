@@ -10,7 +10,10 @@ import {
   getGetNotificationsQueryKey,
   useMarkAllNotificationsRead,
   useUpdateProfile,
+  useGetAnalysesSummary,
+  getGetAnalysesSummaryQueryKey,
   type NotificationsList,
+  type AnalysesSummary,
 } from "@workspace/api-client-react";
 import { useEmbedMode } from "@/lib/embed-mode";
 import { useQueryClient } from "@tanstack/react-query";
@@ -52,6 +55,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
   );
 
+  const { data: analysesSummaryData, isLoading: analysesSummaryLoading } = useGetAnalysesSummary({
+    query: {
+      enabled: !!user && !isEmbed,
+      queryKey: getGetAnalysesSummaryQueryKey(),
+    },
+  });
+
+  const totalAnalyses = analysesSummaryLoading
+    ? Infinity
+    : ((analysesSummaryData as AnalysesSummary | undefined)?.totalAnalyses ?? Infinity);
+
   const markAll = useMarkAllNotificationsRead();
 
   useEffect(() => {
@@ -90,14 +104,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   const FULL_NAV = [
-    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze },
-    { href: "/journal", icon: BookOpen, label: t.journal.nav_label },
-    { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label },
-    { href: "/history", icon: Clock, label: t.nav.history },
-    { href: "/analytics", icon: BarChart3, label: t.nav.analytics },
+    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
+    { href: "/journal", icon: BookOpen, label: t.journal.nav_label, minCount: 1 },
+    { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label, minCount: 5 },
+    { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
+    { href: "/analytics", icon: BarChart3, label: t.nav.analytics, minCount: 5 },
   ];
 
-  const navItems = isEmbed ? EMBED_NAV : FULL_NAV;
+  const navItems = isEmbed
+    ? EMBED_NAV
+    : FULL_NAV.filter((item) => totalAnalyses >= item.minCount);
 
   const profileActive = location === "/profile" || location.startsWith("/profile/");
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "";
