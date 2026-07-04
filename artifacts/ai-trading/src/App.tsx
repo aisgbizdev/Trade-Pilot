@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,7 +13,6 @@ import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
-import DashboardPage from "@/pages/dashboard";
 import AnalyzePage from "@/pages/analyze";
 import AnalysisDetailPage from "@/pages/analysis-detail";
 import HistoryPage from "@/pages/history";
@@ -88,9 +87,7 @@ function Router() {
         <Route path="/performance" component={PerformancePage} />
         <Route path="/performance/methodology" component={PerformanceMethodologyPage} />
         <Route path="/dashboard">
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
+          <Redirect to="/analyze" />
         </Route>
         <Route path="/analyze">
           <ProtectedRoute>
