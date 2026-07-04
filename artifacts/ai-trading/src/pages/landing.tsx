@@ -1,4 +1,5 @@
-import { Link } from "wouter";
+import { useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { BrandLogo } from "@/components/brand-logo";
 import {
   ChevronRight,
@@ -17,6 +18,8 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { ContinuousTicker } from "@/components/continuous-ticker";
 import { LandingProductPreview } from "@/components/landing-product-preview";
 import { LandingFaq } from "@/components/landing-faq";
+import { useAuth } from "@/components/auth-provider";
+import { useEmbedMode } from "@/lib/embed-mode";
 
 // One icon per value-prop, in display order. Hard-coded here so locale
 // files stay pure strings and translators don't have to deal with icon
@@ -26,6 +29,17 @@ const VALUE_PROP_ICONS = [Brain, Zap, Target];
 export default function LandingPage() {
   const { t } = useTranslation();
   const trackOutbound = useTrackOutbound();
+  const isEmbed = useEmbedMode();
+  const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isEmbed || isLoading) return;
+    setLocation(isAuthenticated ? "/analyze" : "/login");
+  }, [isEmbed, isAuthenticated, isLoading, setLocation]);
+
+  // Don't render the marketing page while redirecting in embed mode
+  if (isEmbed) return null;
 
   const stats = [
     { value: "AI", label: t.landing.stats_model },

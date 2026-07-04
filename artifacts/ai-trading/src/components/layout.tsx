@@ -10,8 +10,12 @@ import {
   getGetNotificationsQueryKey,
   useMarkAllNotificationsRead,
   useUpdateProfile,
+  useGetAnalysesSummary,
+  getGetAnalysesSummaryQueryKey,
   type NotificationsList,
+  type AnalysesSummary,
 } from "@workspace/api-client-react";
+import { useEmbedMode } from "@/lib/embed-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -33,11 +37,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { t, lang } = useTranslation();
+  const isEmbed = useEmbedMode();
   const trackOutbound = useTrackOutbound();
   const updateProfile = useUpdateProfile();
   const queryClient = useQueryClient();
   const dateLocale = lang === "id" ? idLocale : enUS;
   const [bellOpen, setBellOpen] = useState(false);
+
+  const { data: analysesSummary } = useGetAnalysesSummary({
+    query: {
+      enabled: !!user && !isEmbed,
+      queryKey: getGetAnalysesSummaryQueryKey(),
+      staleTime: 5 * 60 * 1000,
+    },
+  });
+  // null = data not yet loaded → show all nav items to avoid a flash of missing tabs
+  const totalAnalyses: number | null = analysesSummary !== undefined
+    ? ((analysesSummary as AnalysesSummary)?.totalAnalyses ?? 0)
+    : null;
 
   const { data: notifData } = useGetNotifications(
     { unreadOnly: true },
@@ -79,14 +96,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const unreadCount = notifications.length;
   const isMainNav = MAIN_NAV_PATHS.includes(location);
 
-  const navItems = [
-    { href: "/dashboard", icon: LayoutDashboard, label: t.nav.dashboard },
-    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze },
-    { href: "/journal", icon: BookOpen, label: t.journal.nav_label },
-    { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label },
-    { href: "/history", icon: Clock, label: t.nav.history },
-    { href: "/analytics", icon: BarChart3, label: t.nav.analytics },
+  // Full-version nav with progressive disclosure.
+  // minCount = minimum number of analyses before this tab is revealed.
+  // null totalAnalyses = data still loading → show everything to avoid a flash.
+  const FULL_NAV = [
+    { href: "/dashboard", icon: LayoutDashboard, label: t.nav.dashboard, minCount: 0 },
+    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
+    { href: "/journal", icon: BookOpen, label: t.journal.nav_label, minCount: 1 },
+    { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label, minCount: 5 },
+    { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
+    { href: "/analytics", icon: BarChart3, label: t.nav.analytics, minCount: 1 },
   ];
+
+  // Embed nav: simplified 3-tab layout for broker iframe context.
+  const EMBED_NAV = [
+    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
+    { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
+    { href: "/profile", icon: User, label: t.nav.profile, minCount: 0 },
+  ];
+
+  const navItems = isEmbed
+    ? EMBED_NAV
+    : FULL_NAV.filter(item => totalAnalyses === null || totalAnalyses >= item.minCount);
 
   const profileActive = location === "/profile" || location.startsWith("/profile/");
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "";
@@ -115,10 +146,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
           )}
           <Link
-            href="/dashboard"
+            href={isEmbed ? "/analyze" : "/dashboard"}
             className="flex items-center gap-2 -m-1 p-1 rounded-lg hover:bg-muted/40 transition-colors"
             data-testid="link-brand-home"
-            aria-label={t.nav.dashboard}
+            aria-label={isEmbed ? t.nav.analyze : t.nav.dashboard}
           >
             <BrandLogo className="w-8 h-8" />
             <div className="flex flex-col">
@@ -155,6 +186,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="flex items-center gap-1">
+          {isEmbed && (
+            <a
+              href={window.location.origin + (import.meta.env.BASE_URL || "/")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1 text-[11px] text-muted-foreground hover:text-amber-400 transition-colors px-2 py-1 rounded-lg hover:bg-muted mr-1"
+              data-testid="link-embed-full-version"
+              aria-label={t.common.embed_full_version}
+            >
+              <ExternalLink className="w-3 h-3" />
+              {t.common.embed_full_version}
+            </a>
+          )}
           <LanguageToggle />
           <button
             data-testid="button-theme-toggle"

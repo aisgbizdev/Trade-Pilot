@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/components/auth-provider";
 import { InstallPromptProvider } from "@/hooks/use-install-prompt";
+import { EmbedProvider } from "@/lib/embed-mode";
 import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
@@ -177,10 +178,12 @@ function App() {
           <TooltipProvider>
             <InstallPromptProvider>
               <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                <AuthProvider>
-                  <ThemeSync />
-                  <Router />
-                </AuthProvider>
+                <EmbedProvider>
+                  <AuthProvider>
+                    <ThemeSync />
+                    <Router />
+                  </AuthProvider>
+                </EmbedProvider>
               </WouterRouter>
             </InstallPromptProvider>
             <SplashScreen />

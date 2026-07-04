@@ -15,6 +15,7 @@ export const id: Translations = {
     confidence: "keyakinan",
     all: "Semua",
     clear_filters: "Hapus filter",
+    embed_full_version: "Versi lengkap ↗",
   },
   nav: {
     dashboard: "Dashboard",

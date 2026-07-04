@@ -13,6 +13,7 @@ export const en = {
     confidence: "confidence",
     all: "All",
     clear_filters: "Clear filters",
+    embed_full_version: "Full version ↗",
   },
   nav: {
     dashboard: "Dashboard",
