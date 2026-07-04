@@ -50,7 +50,7 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       if (location === "/login" || location === "/register") {
-        setLocation("/dashboard");
+        setLocation("/analyze");
       }
     }
   }, [isAuthenticated, isLoading, location, setLocation]);

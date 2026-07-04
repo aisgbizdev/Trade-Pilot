@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, BookOpen, Sparkles, Settings } from "lucide-react";
+import { TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, BookOpen, Sparkles, Settings } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
@@ -90,7 +90,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   const FULL_NAV = [
-    { href: "/dashboard", icon: LayoutDashboard, label: t.nav.dashboard },
     { href: "/analyze", icon: TrendingUp, label: t.nav.analyze },
     { href: "/journal", icon: BookOpen, label: t.journal.nav_label },
     { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label },
@@ -127,10 +126,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
           )}
           <Link
-            href={isEmbed ? "/analyze" : "/dashboard"}
+            href="/analyze"
             className="flex items-center gap-2 -m-1 p-1 rounded-lg hover:bg-muted/40 transition-colors"
             data-testid="link-brand-home"
-            aria-label={isEmbed ? t.nav.analyze : t.nav.dashboard}
+            aria-label={t.nav.analyze}
           >
             <BrandLogo className="w-8 h-8" />
             <div className="flex flex-col">

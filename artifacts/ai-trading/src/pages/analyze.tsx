@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
+import { formatDistanceToNow } from "date-fns";
+import { id as idLocale, enUS } from "date-fns/locale";
 import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, ChevronDown, ChevronUp, Newspaper, AlertTriangle } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -10,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
-import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
+import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useListAnalyses, getListAnalysesQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { TradingViewMiniChart, type MiniChartDateRange } from "@/components/tradingview-mini-chart";
 import { instrumentToTradingViewSymbol, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
@@ -578,7 +580,8 @@ function LivePriceChip({ instrument }: { instrument: string }) {
 
 export default function AnalyzePage() {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const dateLocale = lang === "id" ? idLocale : enUS;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
@@ -632,6 +635,12 @@ export default function AnalyzePage() {
     query: { queryKey: getGetRecentInstrumentsQueryKey(), staleTime: 60_000 },
   });
   const recentInstruments = (recentData as RecentInstruments | undefined)?.instruments?.slice(0, 3) ?? [];
+
+  const { data: recentAnalysesData } = useListAnalyses(
+    { page: 1, limit: 3 },
+    { query: { queryKey: getListAnalysesQueryKey({ page: 1, limit: 3 }), staleTime: 30_000 } }
+  );
+  const recentAnalyses = (recentAnalysesData as { analyses?: Analysis[] } | undefined)?.analyses ?? [];
 
   const finalInstrument = customInstrument.trim() || selectedInstrument;
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
@@ -713,13 +722,6 @@ export default function AnalyzePage() {
     <Layout>
       <div className="px-4 py-5 md:max-w-3xl md:mx-auto">
         <div className="flex items-center gap-3 mb-5">
-          <button
-            onClick={() => setLocation("/dashboard")}
-            className="p-2 rounded-lg hover:bg-muted transition-colors"
-            data-testid="button-back"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
           <div className="flex-1">
             <h1 className="text-lg font-bold text-foreground">{t.analyze.title}</h1>
             <p className="text-xs text-muted-foreground">
@@ -1034,6 +1036,31 @@ export default function AnalyzePage() {
                 >
                   {t.analyze.view_full_analysis}
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {recentAnalyses.length > 0 && (
+            <div className="pt-2 border-t border-border/40" data-testid="section-recent-analyses">
+              <h2 className="text-sm font-semibold text-foreground mb-2.5">{t.dashboard.recent_analyses}</h2>
+              <div className="space-y-2">
+                {recentAnalyses.map((a) => (
+                  <Link key={a.id} href={`/analyses/${a.id}`}>
+                    <div
+                      className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all cursor-pointer"
+                      data-testid={`recent-analysis-${a.id}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-semibold text-foreground truncate">{a.instrument}</span>
+                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground shrink-0">{a.timeframe}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{a.mode === "beginner" ? t.common.beginner : t.common.pro}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                        {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: dateLocale })}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
           )}
