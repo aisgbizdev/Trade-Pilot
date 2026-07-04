@@ -35,7 +35,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (!isEmbed || isLoading) return;
-    setLocation(isAuthenticated ? "/analyze" : "/login");
+    setLocation(isAuthenticated ? "/analyze?embed=1" : "/login?embed=1");
   }, [isEmbed, isAuthenticated, isLoading, setLocation]);
 
   // Don't render the marketing page while redirecting in embed mode

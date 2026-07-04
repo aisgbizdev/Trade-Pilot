@@ -16,13 +16,13 @@ function detectEmbed(): boolean {
 const EmbedContext = createContext(false);
 
 export function EmbedProvider({ children }: { children: React.ReactNode }) {
-  const [embed, setEmbed] = useState(false);
-
-  useEffect(() => {
+  // Lazy initial state so the correct value is available on the very first render —
+  // avoids a flash of the marketing landing page before the effect runs.
+  const [embed] = useState(() => {
     const active = detectEmbed();
     if (active) sessionStorage.setItem(STORAGE_KEY, "1");
-    setEmbed(active);
-  }, []);
+    return active;
+  });
 
   return <EmbedContext.Provider value={embed}>{children}</EmbedContext.Provider>;
 }

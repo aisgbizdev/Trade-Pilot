@@ -10,10 +10,7 @@ import {
   getGetNotificationsQueryKey,
   useMarkAllNotificationsRead,
   useUpdateProfile,
-  useGetAnalysesSummary,
-  getGetAnalysesSummaryQueryKey,
   type NotificationsList,
-  type AnalysesSummary,
 } from "@workspace/api-client-react";
 import { useEmbedMode } from "@/lib/embed-mode";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,18 +40,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const dateLocale = lang === "id" ? idLocale : enUS;
   const [bellOpen, setBellOpen] = useState(false);
-
-  const { data: analysesSummary } = useGetAnalysesSummary({
-    query: {
-      enabled: !!user && !isEmbed,
-      queryKey: getGetAnalysesSummaryQueryKey(),
-      staleTime: 5 * 60 * 1000,
-    },
-  });
-  // null = data not yet loaded → show all nav items to avoid a flash of missing tabs
-  const totalAnalyses: number | null = analysesSummary !== undefined
-    ? ((analysesSummary as AnalysesSummary)?.totalAnalyses ?? 0)
-    : null;
 
   const { data: notifData } = useGetNotifications(
     { unreadOnly: true },
@@ -96,28 +81,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const unreadCount = notifications.length;
   const isMainNav = MAIN_NAV_PATHS.includes(location);
 
-  // Full-version nav with progressive disclosure.
-  // minCount = minimum number of analyses before this tab is revealed.
-  // null totalAnalyses = data still loading → show everything to avoid a flash.
-  const FULL_NAV = [
-    { href: "/dashboard", icon: LayoutDashboard, label: t.nav.dashboard, minCount: 0 },
-    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
-    { href: "/journal", icon: BookOpen, label: t.journal.nav_label, minCount: 1 },
-    { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label, minCount: 5 },
-    { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
-    { href: "/analytics", icon: BarChart3, label: t.nav.analytics, minCount: 1 },
-  ];
-
-  // Embed nav: simplified 3-tab layout for broker iframe context.
+  // Embed mode: simplified 3-tab layout for broker iframe context.
+  // Full mode: original tabs unchanged.
   const EMBED_NAV = [
-    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
-    { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
-    { href: "/profile", icon: User, label: t.nav.profile, minCount: 0 },
+    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze },
+    { href: "/history", icon: Clock, label: t.nav.history },
+    { href: "/profile", icon: User, label: t.nav.profile },
   ];
 
-  const navItems = isEmbed
-    ? EMBED_NAV
-    : FULL_NAV.filter(item => totalAnalyses === null || totalAnalyses >= item.minCount);
+  const FULL_NAV = [
+    { href: "/dashboard", icon: LayoutDashboard, label: t.nav.dashboard },
+    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze },
+    { href: "/journal", icon: BookOpen, label: t.journal.nav_label },
+    { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label },
+    { href: "/history", icon: Clock, label: t.nav.history },
+    { href: "/analytics", icon: BarChart3, label: t.nav.analytics },
+  ];
+
+  const navItems = isEmbed ? EMBED_NAV : FULL_NAV;
 
   const profileActive = location === "/profile" || location.startsWith("/profile/");
   const profileInitial = user?.email?.trim()?.[0]?.toUpperCase() ?? "";
