@@ -2412,9 +2412,11 @@ components:
           $ref: "#/components/schemas/User"
         message:
           type: string
+        token:
+          type: string
+          description: Session token for mobile Bearer auth. Only present when a new session was created (login or register).
       required:
         - user
-        - message
 
     RegisterBody:
       type: object

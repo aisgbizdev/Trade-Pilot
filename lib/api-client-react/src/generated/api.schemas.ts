@@ -200,7 +200,9 @@ export interface User {
 
 export interface AuthResponse {
   user: User;
-  message: string;
+  message?: string;
+  /** Session token for mobile Bearer auth. Only present when a new session was created (login or register). */
+  token?: string;
 }
 
 export type RegisterBodySelectedMode =

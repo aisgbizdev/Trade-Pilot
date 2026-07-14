@@ -130,6 +130,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
   void notifyAdminsUserCreated(user.displayName);
 
   res.status(201).json({
+    token,
     user: {
       id: user.id,
       email: user.email,
@@ -192,6 +193,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   });
 
   res.json({
+    token,
     user: {
       id: user.id,
       email: user.email,
@@ -206,7 +208,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
 });
 
 router.post("/auth/logout", requireAuth, async (req: AuthRequest, res) => {
-  const token = req.cookies?.["session_token"];
+  const token = req.sessionToken;
   if (token) {
     await db.delete(sessions).where(eq(sessions.token, token));
   }

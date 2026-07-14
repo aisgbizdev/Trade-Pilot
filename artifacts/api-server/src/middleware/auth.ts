@@ -6,6 +6,7 @@ import { eq, and, gt } from "drizzle-orm";
 export interface AuthRequest extends Request {
   userId?: number;
   userRole?: string;
+  sessionToken?: string;
 }
 
 export async function requireAuth(
@@ -36,6 +37,7 @@ export async function requireAuth(
   }
 
   req.userId = session.userId;
+  req.sessionToken = token;
 
   const [user] = await db
     .select({ role: users.role })

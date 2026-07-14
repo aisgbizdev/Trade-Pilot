@@ -65,7 +65,13 @@ export const LoginResponse = zod.object({
     onboardingCompleted: zod.boolean(),
     createdAt: zod.coerce.date(),
   }),
-  message: zod.string(),
+  message: zod.string().optional(),
+  token: zod
+    .string()
+    .optional()
+    .describe(
+      "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
+    ),
 });
 
 /**
