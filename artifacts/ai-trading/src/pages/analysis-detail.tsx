@@ -20,6 +20,9 @@ import {
   Newspaper,
   CalendarClock,
   ExternalLink,
+  RotateCcw,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -535,6 +538,22 @@ function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
 }
 
 function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
+  const [copied, setCopied] = useState<"buy" | "sell" | null>(null);
+
+  const copyLevels = (side: TradeSide, kind: "buy" | "sell") => {
+    const text = [
+      `${t.analysis_detail.trade_plan_entry}: ${side.entryZone}`,
+      `SL: ${side.stopLoss}`,
+      `TP1: ${side.takeProfit1}`,
+      `TP2: ${side.takeProfit2}`,
+      `R:R ${side.riskRewardRatio}`,
+    ].join(" | ");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 2000);
+    }).catch(() => {});
+  };
+
   const preferredLabel =
     plan.preferredSide === "buy"
       ? t.analysis_detail.trade_plan_preferred_buy
@@ -594,6 +613,18 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
             {side.rationale}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => copyLevels(side, kind)}
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          data-testid={`button-copy-levels-${kind}`}
+        >
+          {copied === kind ? (
+            <><Check className="w-3 h-3 text-green-500" /><span className="text-green-500">{t.analysis_detail.copy_levels_copied}</span></>
+          ) : (
+            <><Copy className="w-3 h-3" /><span>{t.analysis_detail.copy_levels}</span></>
+          )}
+        </button>
       </div>
     );
   };
@@ -1724,6 +1755,14 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               />
             </div>
           </div>
+          <Link
+            href={`/analyze?instrument=${encodeURIComponent(analysis.instrument)}&timeframe=${analysis.timeframe}`}
+            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 whitespace-nowrap shrink-0 px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
+            data-testid="button-re-analyze"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{t.analysis_detail.re_analyze}</span>
+          </Link>
         </div>
 
         {/* PRIMARY METRICS: Bias + Confidence + Risk */}

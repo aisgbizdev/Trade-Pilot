@@ -855,6 +855,9 @@ export const id: Translations = {
     fundamental_refresh_kind_calendar: "event",
     fundamental_refresh_kind_mixed: "item",
     citations_label: "Sumber yang dirujuk:",
+    re_analyze: "Analisis Ulang",
+    copy_levels: "Salin level",
+    copy_levels_copied: "Tersalin!",
   },
   admin: {
     all_analyses: "Semua Analisis",

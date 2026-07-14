@@ -616,7 +616,16 @@ export default function AnalyzePage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const inst = params.get("instrument");
-    if (inst) setSelectedInstrument(inst);
+    const tf = params.get("timeframe");
+    if (inst) {
+      setSelectedInstrument(inst);
+      if (CRYPTO_INSTRUMENTS_PICKER.includes(inst)) setActiveTab("crypto");
+      else if (FOREX_INSTRUMENTS.includes(inst)) setActiveTab("forex");
+      else setActiveTab("futures");
+    }
+    if (tf && (TIMEFRAMES as readonly string[]).includes(tf)) {
+      setSelectedTimeframe(tf);
+    }
   }, []);
 
   useEffect(() => {

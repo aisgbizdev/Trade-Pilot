@@ -853,6 +853,9 @@ export const en = {
     chart_section_title: "Price Chart",
     chart_open_full: "Open full chart",
     chart_unavailable: "Chart unavailable. Your browser or network may be blocking TradingView. You can still review the analysis below.",
+    re_analyze: "Analyze Again",
+    copy_levels: "Copy levels",
+    copy_levels_copied: "Copied!",
   },
   admin: {
     all_analyses: "All Analyses",
