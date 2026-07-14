@@ -718,6 +718,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /journal/for-analysis/{analysisId}:
+    get:
+      operationId: getJournalEntryForAnalysis
+      tags: [trade-journal]
+      summary: Get the journal entry linked to a specific analysis
+      description: Returns the first journal entry the authenticated user linked to a specific analysis. Returns 404 when no entry is found.
+      parameters:
+        - name: analysisId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Journal entry found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No journal entry found for this analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /performance/summary:
     get:
       operationId: getPerformanceSummary

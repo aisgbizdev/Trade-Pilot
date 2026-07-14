@@ -621,6 +621,51 @@ export const DeleteJournalEntryResponse = zod.object({
 });
 
 /**
+ * Returns the first journal entry the authenticated user linked to a specific analysis. Returns 404 when no entry is found.
+ * @summary Get the journal entry linked to a specific analysis
+ */
+export const GetJournalEntryForAnalysisParams = zod.object({
+  analysisId: zod.coerce.number(),
+});
+
+export const GetJournalEntryForAnalysisResponse = zod
+  .object({
+    id: zod.number(),
+    analysisId: zod
+      .number()
+      .nullish()
+      .describe(
+        "Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.",
+      ),
+    instrument: zod.string(),
+    side: zod.enum(["buy", "sell"]),
+    entryPrice: zod.string().nullish(),
+    exitPrice: zod.string().nullish(),
+    quantity: zod.string().nullish(),
+    pnlAmount: zod
+      .string()
+      .nullish()
+      .describe(
+        "Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.",
+      ),
+    pnlPercent: zod
+      .string()
+      .nullish()
+      .describe(
+        "Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.",
+      ),
+    outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]),
+    mood: zod.string().nullish(),
+    note: zod.string().nullish(),
+    tradedAt: zod.coerce.date(),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  })
+  .describe(
+    "A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.",
+  );
+
+/**
  * Anonymised, aggregated outcome ledger across every analysis the AI
 has produced inside the rolling window. No per-user data is
 included — this is the AI's own track record. Every segment

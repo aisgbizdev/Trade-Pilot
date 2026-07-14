@@ -2244,6 +2244,102 @@ export const useDeleteJournalEntry = <
 };
 
 /**
+ * Returns the first journal entry the authenticated user linked to a specific analysis. Returns 404 when no entry is found.
+ * @summary Get the journal entry linked to a specific analysis
+ */
+export const getGetJournalEntryForAnalysisUrl = (analysisId: number) => {
+  return `/api/journal/for-analysis/${analysisId}`;
+};
+
+export const getJournalEntryForAnalysis = async (
+  analysisId: number,
+  options?: RequestInit,
+): Promise<JournalEntry> => {
+  return customFetch<JournalEntry>(
+    getGetJournalEntryForAnalysisUrl(analysisId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetJournalEntryForAnalysisQueryKey = (analysisId: number) => {
+  return [`/api/journal/for-analysis/${analysisId}`] as const;
+};
+
+export const getGetJournalEntryForAnalysisQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJournalEntryForAnalysis>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  analysisId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getJournalEntryForAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetJournalEntryForAnalysisQueryKey(analysisId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getJournalEntryForAnalysis>>
+  > = ({ signal }) =>
+    getJournalEntryForAnalysis(analysisId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!analysisId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getJournalEntryForAnalysis>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetJournalEntryForAnalysisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJournalEntryForAnalysis>>
+>;
+export type GetJournalEntryForAnalysisQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get the journal entry linked to a specific analysis
+ */
+
+export function useGetJournalEntryForAnalysis<
+  TData = Awaited<ReturnType<typeof getJournalEntryForAnalysis>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  analysisId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getJournalEntryForAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetJournalEntryForAnalysisQueryOptions(
+    analysisId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * Anonymised, aggregated outcome ledger across every analysis the AI
 has produced inside the rolling window. No per-user data is
 included — this is the AI's own track record. Every segment
