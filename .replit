@@ -123,7 +123,7 @@ externalPort = 5173
 [userenv]
 
 [userenv.shared]
-OPENAI_MODEL = "gpt-4o"
+OPENAI_MODEL = "gpt-4o-mini"
 VAPID_PUBLIC_KEY = "BCy2eUxjgQhGCK-Mti151i1Imkl2A79b9WUeb5I8huNGKZyO6VjhwgzoxW5vhR4xCZs350A82KvxxLYLb5oYaHs"
 VAPID_EMAIL = "mailto:admin@aitradingassistant.app"
 
