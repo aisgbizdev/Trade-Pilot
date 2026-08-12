@@ -2312,6 +2312,103 @@ export const GetOutboundClickStatsResponse = zod.object({
 });
 
 /**
+ * @summary Feature-usage, device, browser, and country breakdown from analytics events
+ */
+export const getAdminAnalyticsUsageQueryDaysDefault = 30;
+
+export const GetAdminAnalyticsUsageQueryParams = zod.object({
+  days: zod.coerce
+    .number()
+    .default(getAdminAnalyticsUsageQueryDaysDefault)
+    .describe("Window size in days. Defaults to 30. Clamped 1..365."),
+});
+
+export const GetAdminAnalyticsUsageResponse = zod.object({
+  windowDays: zod.number(),
+  dailyActivity: zod.array(
+    zod.object({
+      date: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  featureBreakdown: zod.array(
+    zod.object({
+      eventType: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  deviceBreakdown: zod.array(
+    zod.object({
+      deviceType: zod.string().nullable(),
+      count: zod.number(),
+    }),
+  ),
+  browserBreakdown: zod.array(
+    zod.object({
+      browser: zod.string().nullable(),
+      count: zod.number(),
+    }),
+  ),
+  countryBreakdown: zod.array(
+    zod.object({
+      country: zod.string().nullable(),
+      count: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary AI (OpenAI) token usage and estimated cost breakdown
+ */
+export const getAdminAnalyticsTokensQueryDaysDefault = 30;
+
+export const GetAdminAnalyticsTokensQueryParams = zod.object({
+  days: zod.coerce
+    .number()
+    .default(getAdminAnalyticsTokensQueryDaysDefault)
+    .describe("Window size in days. Defaults to 30. Clamped 1..365."),
+});
+
+export const GetAdminAnalyticsTokensResponse = zod.object({
+  windowDays: zod.number(),
+  dailyTokens: zod.array(
+    zod.object({
+      date: zod.string(),
+      totalTokens: zod.number(),
+      estimatedCostUsd: zod.number(),
+    }),
+  ),
+  byModel: zod.array(
+    zod.object({
+      model: zod.string(),
+      totalTokens: zod.number(),
+      estimatedCostUsd: zod.number(),
+      callCount: zod.number(),
+    }),
+  ),
+  byInstrument: zod.array(
+    zod.object({
+      instrument: zod.string().nullable(),
+      totalTokens: zod.number(),
+      estimatedCostUsd: zod.number(),
+    }),
+  ),
+  topUsers: zod.array(
+    zod.object({
+      userId: zod.number(),
+      email: zod.string(),
+      totalTokens: zod.number(),
+      estimatedCostUsd: zod.number(),
+    }),
+  ),
+  totals: zod.object({
+    totalTokens: zod.number(),
+    totalCostUsd: zod.number(),
+    totalCalls: zod.number(),
+  }),
+});
+
+/**
  * Fire-and-forget telemetry. Auth is optional — most surfaces are
 reachable while signed out (splash, landing). Always returns 204
 even when validation rejects the body so a malformed beacon never
@@ -2335,6 +2432,40 @@ export const RecordOutboundClickBody = zod.object({
     .enum(["sg-berjangka", "tiktok"])
     .describe("Partner the click was directed to"),
   lang: zod.enum(["en", "id"]).optional().describe("UI language at click time"),
+});
+
+/**
+ * Fire-and-forget app-usage telemetry (admin analytics dashboard).
+Auth is optional — page views happen pre-login too (landing,
+login). Always returns 204 even when validation rejects the body
+so a malformed beacon never blocks navigation. Device/browser/OS
+and country are resolved server-side from the request itself
+(User-Agent + IP) — never trust client-supplied values for these.
+
+ * @summary Record a page-view or key-action analytics event
+ */
+export const TrackAnalyticsEventBody = zod.object({
+  eventType: zod
+    .enum([
+      "page_view",
+      "analysis_created",
+      "trade_logged",
+      "alert_armed",
+      "feedback_submitted",
+    ])
+    .describe(
+      "Server validates against a fixed allowlist — unknown values are silently dropped, never persisted as-is",
+    ),
+  path: zod
+    .string()
+    .optional()
+    .describe("Route path at event time (mainly for page_view)"),
+  metadata: zod
+    .record(zod.string(), zod.unknown())
+    .nullish()
+    .describe(
+      "Small free-form context (e.g. {instrument, timeframe}). Capped server-side to a few KB.",
+    ),
 });
 
 /**

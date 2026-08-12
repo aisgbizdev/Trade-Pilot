@@ -1071,6 +1071,109 @@ export interface OutboundClickStats {
   byTarget: OutboundClickStatsByTargetItem[];
 }
 
+/**
+ * Server validates against a fixed allowlist — unknown values are silently dropped, never persisted as-is
+ */
+export type AnalyticsEventBodyEventType =
+  (typeof AnalyticsEventBodyEventType)[keyof typeof AnalyticsEventBodyEventType];
+
+export const AnalyticsEventBodyEventType = {
+  page_view: "page_view",
+  analysis_created: "analysis_created",
+  trade_logged: "trade_logged",
+  alert_armed: "alert_armed",
+  feedback_submitted: "feedback_submitted",
+} as const;
+
+/**
+ * Small free-form context (e.g. {instrument, timeframe}). Capped server-side to a few KB.
+ */
+export type AnalyticsEventBodyMetadata = { [key: string]: unknown } | null;
+
+export interface AnalyticsEventBody {
+  /** Server validates against a fixed allowlist — unknown values are silently dropped, never persisted as-is */
+  eventType: AnalyticsEventBodyEventType;
+  /** Route path at event time (mainly for page_view) */
+  path?: string;
+  /** Small free-form context (e.g. {instrument, timeframe}). Capped server-side to a few KB. */
+  metadata?: AnalyticsEventBodyMetadata;
+}
+
+export type AnalyticsUsageStatsDailyActivityItem = {
+  date: string;
+  count: number;
+};
+
+export type AnalyticsUsageStatsFeatureBreakdownItem = {
+  eventType: string;
+  count: number;
+};
+
+export type AnalyticsUsageStatsDeviceBreakdownItem = {
+  deviceType: string | null;
+  count: number;
+};
+
+export type AnalyticsUsageStatsBrowserBreakdownItem = {
+  browser: string | null;
+  count: number;
+};
+
+export type AnalyticsUsageStatsCountryBreakdownItem = {
+  country: string | null;
+  count: number;
+};
+
+export interface AnalyticsUsageStats {
+  windowDays: number;
+  dailyActivity: AnalyticsUsageStatsDailyActivityItem[];
+  featureBreakdown: AnalyticsUsageStatsFeatureBreakdownItem[];
+  deviceBreakdown: AnalyticsUsageStatsDeviceBreakdownItem[];
+  browserBreakdown: AnalyticsUsageStatsBrowserBreakdownItem[];
+  countryBreakdown: AnalyticsUsageStatsCountryBreakdownItem[];
+}
+
+export type AnalyticsTokenStatsDailyTokensItem = {
+  date: string;
+  totalTokens: number;
+  estimatedCostUsd: number;
+};
+
+export type AnalyticsTokenStatsByModelItem = {
+  model: string;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  callCount: number;
+};
+
+export type AnalyticsTokenStatsByInstrumentItem = {
+  instrument: string | null;
+  totalTokens: number;
+  estimatedCostUsd: number;
+};
+
+export type AnalyticsTokenStatsTopUsersItem = {
+  userId: number;
+  email: string;
+  totalTokens: number;
+  estimatedCostUsd: number;
+};
+
+export type AnalyticsTokenStatsTotals = {
+  totalTokens: number;
+  totalCostUsd: number;
+  totalCalls: number;
+};
+
+export interface AnalyticsTokenStats {
+  windowDays: number;
+  dailyTokens: AnalyticsTokenStatsDailyTokensItem[];
+  byModel: AnalyticsTokenStatsByModelItem[];
+  byInstrument: AnalyticsTokenStatsByInstrumentItem[];
+  topUsers: AnalyticsTokenStatsTopUsersItem[];
+  totals: AnalyticsTokenStatsTotals;
+}
+
 export type UserWithStatsRole =
   (typeof UserWithStatsRole)[keyof typeof UserWithStatsRole];
 
@@ -1676,6 +1779,20 @@ export type GetNotificationsParams = {
 export type GetOutboundClickStatsParams = {
   /**
    * Window size for the "recent" totals. Defaults to 30. Clamped 1..365.
+   */
+  days?: number;
+};
+
+export type GetAdminAnalyticsUsageParams = {
+  /**
+   * Window size in days. Defaults to 30. Clamped 1..365.
+   */
+  days?: number;
+};
+
+export type GetAdminAnalyticsTokensParams = {
+  /**
+   * Window size in days. Defaults to 30. Clamped 1..365.
    */
   days?: number;
 };

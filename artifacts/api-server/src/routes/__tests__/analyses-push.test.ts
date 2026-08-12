@@ -8,17 +8,21 @@ vi.mock("../../lib/openai", async () => {
   return {
     ...actual,
     generateAnalysis: vi.fn(async () => ({
-      marketCondition: "ranging" as const,
-      riskLevel: "low" as const,
-      confidenceMin: 55,
-      confidenceMax: 70,
-      tradingBias: "neutral" as const,
-      opportunity: "Tunggu breakout struktur untuk konfirmasi.",
-      risk: "Sideways panjang bisa kasih sinyal palsu.",
-      mainScenario: "Sideways menuju resistance.",
-      alternativeScenario: "Breakdown ke support.",
-      whyReason: "Likuiditas tipis, range jelas.",
-      failureConditions: "Close di luar range.",
+      output: {
+        marketCondition: "ranging" as const,
+        riskLevel: "low" as const,
+        confidenceMin: 55,
+        confidenceMax: 70,
+        tradingBias: "neutral" as const,
+        opportunity: "Tunggu breakout struktur untuk konfirmasi.",
+        risk: "Sideways panjang bisa kasih sinyal palsu.",
+        mainScenario: "Sideways menuju resistance.",
+        alternativeScenario: "Breakdown ke support.",
+        whyReason: "Likuiditas tipis, range jelas.",
+        failureConditions: "Close di luar range.",
+      },
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, callCount: 1 },
+      model: "gpt-4o-mock",
     })),
   };
 });

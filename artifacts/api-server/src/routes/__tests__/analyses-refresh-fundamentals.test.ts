@@ -22,23 +22,27 @@ vi.mock("../../lib/openai", async () => {
   return {
     ...actual,
     generateAnalysis: vi.fn(async () => ({
-      marketCondition: "ranging" as const,
-      riskLevel: "low" as const,
-      confidenceMin: 55,
-      confidenceMax: 70,
-      tradingBias: "neutral" as const,
-      opportunity: "Tunggu konfirmasi.",
-      risk: "Sinyal palsu di sideways.",
-      mainScenario: "Sideways menuju resistance.",
-      alternativeScenario: "Breakdown ke support.",
-      whyReason: "Likuiditas tipis, range jelas.",
-      failureConditions: "Close di luar range.",
-      // Both citations are "real" against the initial news/calendar
-      // mocks below — drift against fresh data is what we test.
-      fundamentalCitations: {
-        newsTitles: ["EUR rises on dovish ECB minutes"],
-        calendarEvents: ["FOMC Rate Decision USD"],
+      output: {
+        marketCondition: "ranging" as const,
+        riskLevel: "low" as const,
+        confidenceMin: 55,
+        confidenceMax: 70,
+        tradingBias: "neutral" as const,
+        opportunity: "Tunggu konfirmasi.",
+        risk: "Sinyal palsu di sideways.",
+        mainScenario: "Sideways menuju resistance.",
+        alternativeScenario: "Breakdown ke support.",
+        whyReason: "Likuiditas tipis, range jelas.",
+        failureConditions: "Close di luar range.",
+        // Both citations are "real" against the initial news/calendar
+        // mocks below — drift against fresh data is what we test.
+        fundamentalCitations: {
+          newsTitles: ["EUR rises on dovish ECB minutes"],
+          calendarEvents: ["FOMC Rate Decision USD"],
+        },
       },
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, callCount: 1 },
+      model: "gpt-4o-mock",
     })),
   };
 });

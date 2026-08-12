@@ -1,16 +1,19 @@
 import { Router } from "express";
 import { db } from "../lib/db";
-import { analyses, feedback, users } from "@workspace/db/schema";
+import { analyses, feedback, users, aiTokenUsage } from "@workspace/db/schema";
 import { eq, and, or, desc, count, sql, gte, lte, ilike, inArray } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import {
   generateAnalysis,
   getValidUntil,
   citationMatchesAny,
+  type AIOutput,
   type BeginnerAIOutput,
   type ProAIOutput,
   type FundamentalSnapshot,
+  type AnalysisTokenUsage,
 } from "../lib/openai";
+import { estimateCostUsd } from "../lib/model-pricing";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
 import { getLivePriceFor } from "../lib/live-prices";
 import {
@@ -387,7 +390,10 @@ export function setAnalysisQuotaConfig(perHour: number, perDay: number): void {
   ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(String(perDay), ANALYSIS_QUOTA_PER_DAY);
 }
 
-type AIResult = Awaited<ReturnType<typeof generateAnalysis>>;
+// The AI output shape (kept as its own alias rather than deriving from
+// `generateAnalysis`'s return type, since that now also carries token
+// usage/model metadata — see `AnalysisTokenUsage` for that half).
+type AIResult = AIOutput;
 type AnalysisRow = typeof analyses.$inferSelect;
 type QuotaOutcome =
   | { kind: "ok"; analysis: AnalysisRow }
@@ -540,8 +546,10 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
   if (isPrivilegedRole) {
     let aiResult: AIResult;
+    let tokenUsage: AnalysisTokenUsage;
+    let usedModel: string;
     try {
-      aiResult = await generateAnalysis(
+      ({ output: aiResult, usage: tokenUsage, model: usedModel } = await generateAnalysis(
         instrument,
         timeframe,
         typedMode,
@@ -549,13 +557,27 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         indicatorContext,
         fundamentalSnapshot,
         livePrice,
-      );
+      ));
     } catch (aiErr) {
       void trackAiError();
       res.status(502).json({ error: "Layanan AI sedang tidak tersedia. Silakan coba lagi dalam beberapa saat." });
       return;
     }
     const [analysis] = await db.insert(analyses).values(buildInsertValues(aiResult)).returning();
+    await db.insert(aiTokenUsage).values({
+      userId,
+      analysisId: analysis.id,
+      model: usedModel,
+      promptTokens: tokenUsage.promptTokens,
+      completionTokens: tokenUsage.completionTokens,
+      totalTokens: tokenUsage.totalTokens,
+      callCount: tokenUsage.callCount,
+      estimatedCostUsd: estimateCostUsd(usedModel, tokenUsage.promptTokens, tokenUsage.completionTokens).toFixed(6),
+      instrument,
+      timeframe,
+    }).catch((err) => {
+      logger.warn({ err }, "[analyses] failed to record AI token usage");
+    });
     outcome = { kind: "ok", analysis };
   } else {
     // Atomically: take a per-user xact-scoped advisory lock, count usage,
@@ -591,8 +613,10 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       }
 
       let aiResult: AIResult;
+      let tokenUsage: AnalysisTokenUsage;
+      let usedModel: string;
       try {
-        aiResult = await generateAnalysis(
+        ({ output: aiResult, usage: tokenUsage, model: usedModel } = await generateAnalysis(
           instrument,
           timeframe,
           typedMode,
@@ -600,12 +624,26 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           indicatorContext,
           fundamentalSnapshot,
           livePrice,
-        );
+        ));
       } catch (aiErr) {
         return { kind: "aiError" };
       }
 
       const [analysis] = await tx.insert(analyses).values(buildInsertValues(aiResult)).returning();
+      await tx.insert(aiTokenUsage).values({
+        userId,
+        analysisId: analysis.id,
+        model: usedModel,
+        promptTokens: tokenUsage.promptTokens,
+        completionTokens: tokenUsage.completionTokens,
+        totalTokens: tokenUsage.totalTokens,
+        callCount: tokenUsage.callCount,
+        estimatedCostUsd: estimateCostUsd(usedModel, tokenUsage.promptTokens, tokenUsage.completionTokens).toFixed(6),
+        instrument,
+        timeframe,
+      }).catch((err) => {
+        logger.warn({ err }, "[analyses] failed to record AI token usage");
+      });
       return { kind: "ok", analysis };
     });
   }

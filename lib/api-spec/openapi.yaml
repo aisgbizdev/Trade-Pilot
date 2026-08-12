@@ -1581,6 +1581,58 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/analytics/usage:
+    get:
+      operationId: getAdminAnalyticsUsage
+      tags: [admin]
+      summary: Feature-usage, device, browser, and country breakdown from analytics events
+      parameters:
+        - name: days
+          in: query
+          description: Window size in days. Defaults to 30. Clamped 1..365.
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Usage analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsUsageStats"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/analytics/tokens:
+    get:
+      operationId: getAdminAnalyticsTokens
+      tags: [admin]
+      summary: AI (OpenAI) token usage and estimated cost breakdown
+      parameters:
+        - name: days
+          in: query
+          description: Window size in days. Defaults to 30. Clamped 1..365.
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Token usage analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsTokenStats"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /events/outbound-click:
     post:
       operationId: recordOutboundClick
@@ -1597,6 +1649,28 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/OutboundClickBody"
+      responses:
+        "204":
+          description: Recorded (or silently dropped)
+
+  /events/track:
+    post:
+      operationId: trackAnalyticsEvent
+      tags: [events]
+      summary: Record a page-view or key-action analytics event
+      description: |
+        Fire-and-forget app-usage telemetry (admin analytics dashboard).
+        Auth is optional — page views happen pre-login too (landing,
+        login). Always returns 204 even when validation rejects the body
+        so a malformed beacon never blocks navigation. Device/browser/OS
+        and country are resolved server-side from the request itself
+        (User-Agent + IP) — never trust client-supplied values for these.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyticsEventBody"
       responses:
         "204":
           description: Recorded (or silently dropped)
@@ -3734,6 +3808,171 @@ components:
         - totalInWindow
         - byPlacement
         - byTarget
+
+    AnalyticsEventBody:
+      type: object
+      properties:
+        eventType:
+          type: string
+          description: Server validates against a fixed allowlist — unknown values are silently dropped, never persisted as-is
+          enum:
+            - page_view
+            - analysis_created
+            - trade_logged
+            - alert_armed
+            - feedback_submitted
+        path:
+          type: string
+          description: Route path at event time (mainly for page_view)
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Small free-form context (e.g. {instrument, timeframe}). Capped server-side to a few KB.
+      required:
+        - eventType
+
+    AnalyticsUsageStats:
+      type: object
+      properties:
+        windowDays:
+          type: integer
+        dailyActivity:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              count:
+                type: integer
+            required: [date, count]
+        featureBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              eventType:
+                type: string
+              count:
+                type: integer
+            required: [eventType, count]
+        deviceBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              deviceType:
+                type: string
+                nullable: true
+              count:
+                type: integer
+            required: [deviceType, count]
+        browserBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              browser:
+                type: string
+                nullable: true
+              count:
+                type: integer
+            required: [browser, count]
+        countryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              country:
+                type: string
+                nullable: true
+              count:
+                type: integer
+            required: [country, count]
+      required:
+        - windowDays
+        - dailyActivity
+        - featureBreakdown
+        - deviceBreakdown
+        - browserBreakdown
+        - countryBreakdown
+
+    AnalyticsTokenStats:
+      type: object
+      properties:
+        windowDays:
+          type: integer
+        dailyTokens:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              totalTokens:
+                type: integer
+              estimatedCostUsd:
+                type: number
+            required: [date, totalTokens, estimatedCostUsd]
+        byModel:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: string
+              totalTokens:
+                type: integer
+              estimatedCostUsd:
+                type: number
+              callCount:
+                type: integer
+            required: [model, totalTokens, estimatedCostUsd, callCount]
+        byInstrument:
+          type: array
+          items:
+            type: object
+            properties:
+              instrument:
+                type: string
+                nullable: true
+              totalTokens:
+                type: integer
+              estimatedCostUsd:
+                type: number
+            required: [instrument, totalTokens, estimatedCostUsd]
+        topUsers:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: integer
+              email:
+                type: string
+              totalTokens:
+                type: integer
+              estimatedCostUsd:
+                type: number
+            required: [userId, email, totalTokens, estimatedCostUsd]
+        totals:
+          type: object
+          properties:
+            totalTokens:
+              type: integer
+            totalCostUsd:
+              type: number
+            totalCalls:
+              type: integer
+          required: [totalTokens, totalCostUsd, totalCalls]
+      required:
+        - windowDays
+        - dailyTokens
+        - byModel
+        - byInstrument
+        - topUsers
+        - totals
 
     UserWithStats:
       type: object

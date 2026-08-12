@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
+import { useTrackEvent } from "@/hooks/use-track-event";
 
 export interface RefreshableAnalysis {
   id: number;
@@ -22,6 +23,7 @@ export function useRefreshAnalysis() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const createAnalysis = useCreateAnalysis();
+  const trackEvent = useTrackEvent();
   const [refreshingIds, setRefreshingIds] = useState<ReadonlySet<number>>(
     () => new Set()
   );
@@ -46,6 +48,10 @@ export function useRefreshAnalysis() {
             userInputContext: trimmedNotes ? trimmedNotes : undefined,
           },
         });
+        trackEvent("analysis_created", {
+          instrument: analysis.instrument,
+          timeframe: analysis.timeframe,
+        });
         const suffix =
           trimmedNotes && analysis.carriedOver ? "?carried_over=1" : "";
         setLocation(`/analyses/${result.id}${suffix}`);
@@ -66,7 +72,7 @@ export function useRefreshAnalysis() {
         });
       }
     },
-    [createAnalysis, setLocation, toast, t]
+    [createAnalysis, setLocation, toast, t, trackEvent]
   );
 
   const isRefreshing = useCallback(

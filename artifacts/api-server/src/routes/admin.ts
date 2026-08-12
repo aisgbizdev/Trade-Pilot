@@ -8,8 +8,10 @@ import {
   broadcasts,
   feedback,
   outboundClicks,
+  analyticsEvents,
+  aiTokenUsage,
 } from "@workspace/db/schema";
-import { eq, and, count, desc, sql, ilike, or, inArray, gte, lte } from "drizzle-orm";
+import { eq, and, count, sum, desc, sql, ilike, or, inArray, gte, lte } from "drizzle-orm";
 import {
   requireAdmin,
   requireSuperAdmin,
@@ -175,6 +177,173 @@ router.get(
     });
   },
 );
+
+// Clamps + parses the `?days=` query param shared by every windowed
+// analytics endpoint below. Mirrors the outbound-clicks/stats pattern.
+function parseWindowDays(raw: unknown): number {
+  const n = Number(raw ?? 30);
+  return Number.isFinite(n) ? Math.min(365, Math.max(1, Math.floor(n))) : 30;
+}
+
+const dayBucket = sql<string>`to_char(${analyticsEvents.createdAt}, 'YYYY-MM-DD')`;
+
+router.get("/admin/analytics/usage", requireAdmin, async (req: AuthRequest, res) => {
+  const windowDays = parseWindowDays(req.query["days"]);
+  const windowStart = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+  const inWindow = gte(analyticsEvents.createdAt, windowStart);
+
+  const dailyActivityRaw = await db
+    .select({ date: dayBucket, count: count(analyticsEvents.id) })
+    .from(analyticsEvents)
+    .where(inWindow)
+    .groupBy(dayBucket)
+    .orderBy(dayBucket);
+
+  const featureBreakdownRaw = await db
+    .select({ eventType: analyticsEvents.eventType, count: count(analyticsEvents.id) })
+    .from(analyticsEvents)
+    .where(inWindow)
+    .groupBy(analyticsEvents.eventType)
+    .orderBy(desc(count(analyticsEvents.id)));
+
+  const deviceBreakdownRaw = await db
+    .select({ deviceType: analyticsEvents.deviceType, count: count(analyticsEvents.id) })
+    .from(analyticsEvents)
+    .where(inWindow)
+    .groupBy(analyticsEvents.deviceType)
+    .orderBy(desc(count(analyticsEvents.id)));
+
+  const browserBreakdownRaw = await db
+    .select({ browser: analyticsEvents.browser, count: count(analyticsEvents.id) })
+    .from(analyticsEvents)
+    .where(inWindow)
+    .groupBy(analyticsEvents.browser)
+    .orderBy(desc(count(analyticsEvents.id)));
+
+  const countryBreakdownRaw = await db
+    .select({ country: analyticsEvents.country, count: count(analyticsEvents.id) })
+    .from(analyticsEvents)
+    .where(inWindow)
+    .groupBy(analyticsEvents.country)
+    .orderBy(desc(count(analyticsEvents.id)));
+
+  res.json({
+    windowDays,
+    dailyActivity: dailyActivityRaw.map((r) => ({ date: r.date, count: Number(r.count) })),
+    featureBreakdown: featureBreakdownRaw.map((r) => ({
+      eventType: r.eventType,
+      count: Number(r.count),
+    })),
+    deviceBreakdown: deviceBreakdownRaw.map((r) => ({
+      deviceType: r.deviceType,
+      count: Number(r.count),
+    })),
+    browserBreakdown: browserBreakdownRaw.map((r) => ({
+      browser: r.browser,
+      count: Number(r.count),
+    })),
+    countryBreakdown: countryBreakdownRaw.map((r) => ({
+      country: r.country,
+      count: Number(r.count),
+    })),
+  });
+});
+
+const tokenDayBucket = sql<string>`to_char(${aiTokenUsage.createdAt}, 'YYYY-MM-DD')`;
+
+router.get("/admin/analytics/tokens", requireAdmin, async (req: AuthRequest, res) => {
+  const windowDays = parseWindowDays(req.query["days"]);
+  const windowStart = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+  const inWindow = gte(aiTokenUsage.createdAt, windowStart);
+
+  const dailyTokensRaw = await db
+    .select({
+      date: tokenDayBucket,
+      totalTokens: sum(aiTokenUsage.totalTokens),
+      estimatedCostUsd: sum(aiTokenUsage.estimatedCostUsd),
+    })
+    .from(aiTokenUsage)
+    .where(inWindow)
+    .groupBy(tokenDayBucket)
+    .orderBy(tokenDayBucket);
+
+  const byModelRaw = await db
+    .select({
+      model: aiTokenUsage.model,
+      totalTokens: sum(aiTokenUsage.totalTokens),
+      estimatedCostUsd: sum(aiTokenUsage.estimatedCostUsd),
+      callCount: sum(aiTokenUsage.callCount),
+    })
+    .from(aiTokenUsage)
+    .where(inWindow)
+    .groupBy(aiTokenUsage.model)
+    .orderBy(desc(sum(aiTokenUsage.totalTokens)));
+
+  const byInstrumentRaw = await db
+    .select({
+      instrument: aiTokenUsage.instrument,
+      totalTokens: sum(aiTokenUsage.totalTokens),
+      estimatedCostUsd: sum(aiTokenUsage.estimatedCostUsd),
+    })
+    .from(aiTokenUsage)
+    .where(inWindow)
+    .groupBy(aiTokenUsage.instrument)
+    .orderBy(desc(sum(aiTokenUsage.totalTokens)));
+
+  const topUsersRaw = await db
+    .select({
+      userId: aiTokenUsage.userId,
+      email: users.email,
+      totalTokens: sum(aiTokenUsage.totalTokens),
+      estimatedCostUsd: sum(aiTokenUsage.estimatedCostUsd),
+    })
+    .from(aiTokenUsage)
+    .innerJoin(users, eq(aiTokenUsage.userId, users.id))
+    .where(inWindow)
+    .groupBy(aiTokenUsage.userId, users.email)
+    .orderBy(desc(sum(aiTokenUsage.totalTokens)))
+    .limit(10);
+
+  const [totalsRaw] = await db
+    .select({
+      totalTokens: sum(aiTokenUsage.totalTokens),
+      totalCostUsd: sum(aiTokenUsage.estimatedCostUsd),
+      totalCalls: sum(aiTokenUsage.callCount),
+    })
+    .from(aiTokenUsage)
+    .where(inWindow);
+
+  res.json({
+    windowDays,
+    dailyTokens: dailyTokensRaw.map((r) => ({
+      date: r.date,
+      totalTokens: Number(r.totalTokens ?? 0),
+      estimatedCostUsd: Number(r.estimatedCostUsd ?? 0),
+    })),
+    byModel: byModelRaw.map((r) => ({
+      model: r.model,
+      totalTokens: Number(r.totalTokens ?? 0),
+      estimatedCostUsd: Number(r.estimatedCostUsd ?? 0),
+      callCount: Number(r.callCount ?? 0),
+    })),
+    byInstrument: byInstrumentRaw.map((r) => ({
+      instrument: r.instrument,
+      totalTokens: Number(r.totalTokens ?? 0),
+      estimatedCostUsd: Number(r.estimatedCostUsd ?? 0),
+    })),
+    topUsers: topUsersRaw.map((r) => ({
+      userId: r.userId,
+      email: r.email,
+      totalTokens: Number(r.totalTokens ?? 0),
+      estimatedCostUsd: Number(r.estimatedCostUsd ?? 0),
+    })),
+    totals: {
+      totalTokens: Number(totalsRaw?.totalTokens ?? 0),
+      totalCostUsd: Number(totalsRaw?.totalCostUsd ?? 0),
+      totalCalls: Number(totalsRaw?.totalCalls ?? 0),
+    },
+  });
+});
 
 router.get("/admin/analyses", requireAdmin, async (req: AuthRequest, res) => {
   const page = Number(req.query["page"] ?? 1);

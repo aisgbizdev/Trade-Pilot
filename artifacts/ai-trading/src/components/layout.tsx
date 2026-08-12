@@ -20,6 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
+import { useTrackEvent } from "@/hooks/use-track-event";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "./language-toggle";
@@ -39,6 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { t, lang } = useTranslation();
   const isEmbed = useEmbedMode();
   const trackOutbound = useTrackOutbound();
+  const trackEvent = useTrackEvent();
   const updateProfile = useUpdateProfile();
   const queryClient = useQueryClient();
   const dateLocale = lang === "id" ? idLocale : enUS;
@@ -90,6 +92,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
       es.close();
     };
   }, [user, queryClient]);
+
+  // Single integration point for page-view analytics: every page that
+  // renders through <Layout> gets tracked automatically on navigation,
+  // without each page file needing its own tracking call. `landing.tsx`
+  // and `login.tsx` don't use <Layout> and are tracked directly instead.
+  useEffect(() => {
+    trackEvent("page_view");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]);
 
   const notifications = (notifData as NotificationsList | undefined)?.notifications ?? [];
   const unreadCount = notifications.length;

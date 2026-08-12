@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
+import { useTrackEvent } from "@/hooks/use-track-event";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -29,6 +30,7 @@ const VALUE_PROP_ICONS = [Brain, Zap, Target];
 export default function LandingPage() {
   const { t } = useTranslation();
   const trackOutbound = useTrackOutbound();
+  const trackEvent = useTrackEvent();
   const isEmbed = useEmbedMode();
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -37,6 +39,13 @@ export default function LandingPage() {
     if (!isEmbed || isLoading) return;
     setLocation(isAuthenticated ? "/analyze?embed=1" : "/login?embed=1");
   }, [isEmbed, isAuthenticated, isLoading, setLocation]);
+
+  // Not wrapped in <Layout> (which tracks page views for every other
+  // route) — highest-value pre-auth funnel page, tracks itself directly.
+  useEffect(() => {
+    trackEvent("page_view");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Don't render the marketing page while redirecting in embed mode
   if (isEmbed) return null;

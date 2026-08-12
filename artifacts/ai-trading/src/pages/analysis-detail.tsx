@@ -85,6 +85,7 @@ import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
+import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
 
 type T = ReturnType<typeof useTranslation>["t"];
@@ -1035,6 +1036,7 @@ function AnalysisAlertsCard({
   t: T;
 }) {
   const { toast } = useToast();
+  const trackEvent = useTrackEvent();
   const queryClient = useQueryClient();
   const statusQuery = useGetAnalysisAlerts(analysisId);
   const pushStatusQuery = useGetPushSubscriptionStatus();
@@ -1060,7 +1062,10 @@ function AnalysisAlertsCard({
       armMutation.mutate(
         { id: analysisId },
         {
-          onSuccess: invalidate,
+          onSuccess: () => {
+            trackEvent("alert_armed", { analysisId });
+            invalidate();
+          },
           onError: () =>
             toast({
               title: t.analysis_detail.alerts_arm_error,
@@ -1550,6 +1555,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const { toast } = useToast();
   const { t, lang } = useTranslation();
   const submitFeedback = useSubmitFeedback();
+  const trackEvent = useTrackEvent();
   const { refresh, isRefreshing: isRowRefreshing } = useRefreshAnalysis();
   const isRefreshing = isRowRefreshing(id);
 
@@ -1683,6 +1689,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQueryKey(id) });
+      trackEvent("feedback_submitted", { analysisId: id });
       setFeedbackSubmitted(true);
       toast({ title: t.analysis_detail.feedback_saved });
     } catch {

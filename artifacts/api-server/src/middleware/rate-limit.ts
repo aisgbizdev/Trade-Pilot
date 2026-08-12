@@ -172,6 +172,18 @@ export const performanceLimiter = buildLimiter({
     "Terlalu banyak permintaan. Coba lagi sebentar lagi. / Too many requests. Try again in a moment.",
 });
 
+// Per-IP limiter for POST /events/track (page-view + key-action analytics
+// pings, task: admin analytics dashboard). Endpoint is unauthenticated-
+// tolerant like outbound-click telemetry, so it's reachable by anyone —
+// this only exists to deflect obvious flooding, not to shape normal
+// traffic (a real user's page views + a handful of actions stay well
+// under this in any given minute).
+export const trackEventLimiter = buildLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  keyFn: (req) => clientIp(req),
+});
+
 setInterval(() => {
   const now = Date.now();
   for (const limiter of [
@@ -184,6 +196,7 @@ setInterval(() => {
     journalWriteLimiter,
     journalReadLimiter,
     performanceLimiter,
+    trackEventLimiter,
   ]) {
     for (const [k, b] of limiter.store) {
       if (b.resetAt <= now) limiter.store.delete(k);

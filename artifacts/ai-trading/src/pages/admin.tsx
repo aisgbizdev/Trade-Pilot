@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
   Loader2,
   ChevronLeft,
@@ -11,6 +12,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Users as UsersIcon,
+  Activity,
+  Coins,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +32,8 @@ import {
   useGetAdminStats,
   getGetAdminStatsQueryKey,
   useGetOutboundClickStats,
+  useGetAdminAnalyticsUsage,
+  useGetAdminAnalyticsTokens,
   useGetAllAnalyses,
   getGetAllAnalysesQueryKey,
   useBroadcastNotification,
@@ -285,6 +290,316 @@ function SponsorClicksPanel() {
             </div>
           ))}
         </div>
+      )}
+    </Card>
+  );
+}
+
+const ANALYTICS_DAY_RANGES = [7, 30, 90] as const;
+
+function DayRangeToggle({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (days: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
+      {ANALYTICS_DAY_RANGES.map((days) => (
+        <button
+          key={days}
+          type="button"
+          onClick={() => onChange(days)}
+          data-testid={`analytics-days-${days}`}
+          className={cn(
+            "px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
+            value === days
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {days}d
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function BreakdownRows({
+  items,
+  emptyLabel,
+  formatLabel,
+}: {
+  items: Array<{ label: string | null | undefined; count: number }>;
+  emptyLabel: string;
+  formatLabel: (label: string | null | undefined) => string;
+}) {
+  const top = items.slice(0, 6);
+  if (top.length === 0) {
+    return <p className="text-xs text-muted-foreground text-center py-2">{emptyLabel}</p>;
+  }
+  return (
+    <div className="space-y-1.5">
+      {top.map((row, i) => (
+        <div key={`${row.label ?? "unknown"}-${i}`} className="flex items-center justify-between">
+          <span className="text-sm text-foreground">{formatLabel(row.label)}</span>
+          <Badge variant="secondary" className="text-xs">{row.count}x</Badge>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Who's using what, from what device, in what country — driven by the
+// generic `analytics_events` log (page views + a handful of key actions;
+// see hooks/use-track-event.ts on the client and routes/events.ts on the
+// server). Device/browser/country are resolved server-side, never
+// client-claimed.
+function UsageAnalyticsPanel() {
+  const { t } = useTranslation();
+  const [days, setDays] = useState(30);
+  const { data, isLoading } = useGetAdminAnalyticsUsage({ days });
+
+  const chartData = (data?.dailyActivity ?? []).map((d) => ({ date: d.date.slice(5), count: d.count }));
+
+  return (
+    <Card className="p-4 space-y-4" data-testid="card-usage-analytics">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Activity className="w-4 h-4" /> {t.admin.usage_analytics_title}
+          </h3>
+          <p className="text-[11px] text-muted-foreground">{t.admin.usage_analytics_subtitle}</p>
+        </div>
+        <DayRangeToggle value={days} onChange={setDays} />
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : !data || data.dailyActivity.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4">{t.admin.usage_analytics_empty}</p>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={140}>
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                }}
+                formatter={(value: number) => [value, t.admin.usage_analytics_events_label]}
+              />
+              <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                {chartData.map((_, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={index === chartData.length - 1 ? "hsl(var(--primary))" : "hsl(var(--muted))"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {t.admin.usage_analytics_by_feature}
+              </h4>
+              <BreakdownRows
+                items={(data.featureBreakdown ?? []).map((r) => ({ label: r.eventType, count: r.count }))}
+                emptyLabel={t.admin.usage_analytics_no_data}
+                formatLabel={(label) => label ?? t.admin.usage_analytics_unknown}
+              />
+            </div>
+            <div>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {t.admin.usage_analytics_by_device}
+              </h4>
+              <BreakdownRows
+                items={(data.deviceBreakdown ?? []).map((r) => ({ label: r.deviceType, count: r.count }))}
+                emptyLabel={t.admin.usage_analytics_no_data}
+                formatLabel={(label) => label ?? t.admin.usage_analytics_unknown}
+              />
+            </div>
+            <div>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {t.admin.usage_analytics_by_browser}
+              </h4>
+              <BreakdownRows
+                items={(data.browserBreakdown ?? []).map((r) => ({ label: r.browser, count: r.count }))}
+                emptyLabel={t.admin.usage_analytics_no_data}
+                formatLabel={(label) => label ?? t.admin.usage_analytics_unknown}
+              />
+            </div>
+            <div>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {t.admin.usage_analytics_by_country}
+              </h4>
+              <BreakdownRows
+                items={(data.countryBreakdown ?? []).map((r) => ({ label: r.country, count: r.count }))}
+                emptyLabel={t.admin.usage_analytics_no_data}
+                formatLabel={(label) => label ?? t.admin.usage_analytics_unknown}
+              />
+            </div>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// AI (OpenAI) token spend — estimated, not billed cost (see
+// lib/model-pricing.ts on the server for the static per-model pricing
+// table). Every analysis generation (main call + any retries) logs one
+// row here regardless of which return path it took.
+function TokenUsagePanel() {
+  const { t } = useTranslation();
+  const [days, setDays] = useState(30);
+  const { data, isLoading } = useGetAdminAnalyticsTokens({ days });
+
+  const chartData = (data?.dailyTokens ?? []).map((d) => ({ date: d.date.slice(5), tokens: d.totalTokens }));
+  const fmtCost = (usd: number) => `$${usd.toFixed(usd < 1 ? 4 : 2)}`;
+  const fmtTokens = (n: number) => n.toLocaleString();
+
+  return (
+    <Card className="p-4 space-y-4" data-testid="card-token-usage">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Coins className="w-4 h-4" /> {t.admin.token_usage_title}
+          </h3>
+          <p className="text-[11px] text-muted-foreground">{t.admin.token_usage_subtitle}</p>
+        </div>
+        <DayRangeToggle value={days} onChange={setDays} />
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : !data || data.totals.totalCalls === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4">{t.admin.token_usage_empty}</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg border border-border/60 p-2.5 text-center">
+              <div className="text-lg font-bold text-primary" data-testid="stat-token-total-cost">
+                {fmtCost(data.totals.totalCostUsd)}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{t.admin.token_usage_total_cost}</div>
+            </div>
+            <div className="rounded-lg border border-border/60 p-2.5 text-center">
+              <div className="text-lg font-bold text-foreground" data-testid="stat-token-total-tokens">
+                {fmtTokens(data.totals.totalTokens)}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{t.admin.token_usage_total_tokens}</div>
+            </div>
+            <div className="rounded-lg border border-border/60 p-2.5 text-center">
+              <div className="text-lg font-bold text-foreground" data-testid="stat-token-total-calls">
+                {fmtTokens(data.totals.totalCalls)}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{t.admin.token_usage_total_calls}</div>
+            </div>
+          </div>
+
+          <ResponsiveContainer width="100%" height={140}>
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                }}
+                formatter={(value: number) => [fmtTokens(value), t.admin.token_usage_tokens_label]}
+              />
+              <Bar dataKey="tokens" radius={[3, 3, 0, 0]}>
+                {chartData.map((_, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={index === chartData.length - 1 ? "hsl(var(--primary))" : "hsl(var(--muted))"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {t.admin.token_usage_by_model}
+              </h4>
+              <div className="space-y-1.5">
+                {data.byModel.slice(0, 6).map((row) => (
+                  <div key={row.model} className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">{row.model}</span>
+                    <Badge variant="secondary" className="text-xs">{fmtCost(row.estimatedCostUsd)}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {t.admin.token_usage_by_instrument}
+              </h4>
+              <div className="space-y-1.5">
+                {data.byInstrument.slice(0, 6).map((row, i) => (
+                  <div key={`${row.instrument ?? "unknown"}-${i}`} className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">{row.instrument ?? t.admin.usage_analytics_unknown}</span>
+                    <Badge variant="secondary" className="text-xs">{fmtCost(row.estimatedCostUsd)}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {data.topUsers.length > 0 && (
+            <div>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {t.admin.token_usage_top_users}
+              </h4>
+              <div className="divide-y divide-border">
+                {data.topUsers.map((row) => (
+                  <div key={row.userId} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0">
+                    <span className="text-sm text-foreground truncate">{row.email}</span>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {fmtTokens(row.totalTokens)} · {fmtCost(row.estimatedCostUsd)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </Card>
   );
@@ -806,6 +1121,9 @@ function AdminContent() {
                 </div>
               </Card>
             )}
+
+            <UsageAnalyticsPanel />
+            <TokenUsagePanel />
 
             {SHOW_SPONSOR && <SponsorClicksPanel />}
           </>

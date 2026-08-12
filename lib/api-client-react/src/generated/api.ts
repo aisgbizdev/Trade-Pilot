@@ -28,6 +28,9 @@ import type {
   AnalysisNoteResponse,
   AnalysisOutcomesSummary,
   AnalysisQuota,
+  AnalyticsEventBody,
+  AnalyticsTokenStats,
+  AnalyticsUsageStats,
   AuthResponse,
   BroadcastNotificationBody,
   BroadcastSendResult,
@@ -48,6 +51,8 @@ import type {
   FilterPreset,
   FilterPresetList,
   ForgotPasswordQuestionBody,
+  GetAdminAnalyticsTokensParams,
+  GetAdminAnalyticsUsageParams,
   GetAdminFeedbackParams,
   GetAllAnalysesParams,
   GetAllUsersParams,
@@ -4907,6 +4912,212 @@ export function useGetOutboundClickStats<
 }
 
 /**
+ * @summary Feature-usage, device, browser, and country breakdown from analytics events
+ */
+export const getGetAdminAnalyticsUsageUrl = (
+  params?: GetAdminAnalyticsUsageParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/analytics/usage?${stringifiedParams}`
+    : `/api/admin/analytics/usage`;
+};
+
+export const getAdminAnalyticsUsage = async (
+  params?: GetAdminAnalyticsUsageParams,
+  options?: RequestInit,
+): Promise<AnalyticsUsageStats> => {
+  return customFetch<AnalyticsUsageStats>(
+    getGetAdminAnalyticsUsageUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAdminAnalyticsUsageQueryKey = (
+  params?: GetAdminAnalyticsUsageParams,
+) => {
+  return [`/api/admin/analytics/usage`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAdminAnalyticsUsageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminAnalyticsUsage>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetAdminAnalyticsUsageParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminAnalyticsUsage>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminAnalyticsUsageQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminAnalyticsUsage>>
+  > = ({ signal }) =>
+    getAdminAnalyticsUsage(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAnalyticsUsage>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminAnalyticsUsageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminAnalyticsUsage>>
+>;
+export type GetAdminAnalyticsUsageQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Feature-usage, device, browser, and country breakdown from analytics events
+ */
+
+export function useGetAdminAnalyticsUsage<
+  TData = Awaited<ReturnType<typeof getAdminAnalyticsUsage>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetAdminAnalyticsUsageParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminAnalyticsUsage>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminAnalyticsUsageQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary AI (OpenAI) token usage and estimated cost breakdown
+ */
+export const getGetAdminAnalyticsTokensUrl = (
+  params?: GetAdminAnalyticsTokensParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/analytics/tokens?${stringifiedParams}`
+    : `/api/admin/analytics/tokens`;
+};
+
+export const getAdminAnalyticsTokens = async (
+  params?: GetAdminAnalyticsTokensParams,
+  options?: RequestInit,
+): Promise<AnalyticsTokenStats> => {
+  return customFetch<AnalyticsTokenStats>(
+    getGetAdminAnalyticsTokensUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAdminAnalyticsTokensQueryKey = (
+  params?: GetAdminAnalyticsTokensParams,
+) => {
+  return [`/api/admin/analytics/tokens`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAdminAnalyticsTokensQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminAnalyticsTokens>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetAdminAnalyticsTokensParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminAnalyticsTokens>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminAnalyticsTokensQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminAnalyticsTokens>>
+  > = ({ signal }) =>
+    getAdminAnalyticsTokens(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAnalyticsTokens>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminAnalyticsTokensQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminAnalyticsTokens>>
+>;
+export type GetAdminAnalyticsTokensQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary AI (OpenAI) token usage and estimated cost breakdown
+ */
+
+export function useGetAdminAnalyticsTokens<
+  TData = Awaited<ReturnType<typeof getAdminAnalyticsTokens>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetAdminAnalyticsTokensParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminAnalyticsTokens>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminAnalyticsTokensQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * Fire-and-forget telemetry. Auth is optional — most surfaces are
 reachable while signed out (splash, landing). Always returns 204
 even when validation rejects the body so a malformed beacon never
@@ -4995,6 +5206,99 @@ export const useRecordOutboundClick = <
   TContext
 > => {
   return useMutation(getRecordOutboundClickMutationOptions(options));
+};
+
+/**
+ * Fire-and-forget app-usage telemetry (admin analytics dashboard).
+Auth is optional — page views happen pre-login too (landing,
+login). Always returns 204 even when validation rejects the body
+so a malformed beacon never blocks navigation. Device/browser/OS
+and country are resolved server-side from the request itself
+(User-Agent + IP) — never trust client-supplied values for these.
+
+ * @summary Record a page-view or key-action analytics event
+ */
+export const getTrackAnalyticsEventUrl = () => {
+  return `/api/events/track`;
+};
+
+export const trackAnalyticsEvent = async (
+  analyticsEventBody: AnalyticsEventBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getTrackAnalyticsEventUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(analyticsEventBody),
+  });
+};
+
+export const getTrackAnalyticsEventMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof trackAnalyticsEvent>>,
+    TError,
+    { data: BodyType<AnalyticsEventBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof trackAnalyticsEvent>>,
+  TError,
+  { data: BodyType<AnalyticsEventBody> },
+  TContext
+> => {
+  const mutationKey = ["trackAnalyticsEvent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof trackAnalyticsEvent>>,
+    { data: BodyType<AnalyticsEventBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return trackAnalyticsEvent(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TrackAnalyticsEventMutationResult = NonNullable<
+  Awaited<ReturnType<typeof trackAnalyticsEvent>>
+>;
+export type TrackAnalyticsEventMutationBody = BodyType<AnalyticsEventBody>;
+export type TrackAnalyticsEventMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Record a page-view or key-action analytics event
+ */
+export const useTrackAnalyticsEvent = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof trackAnalyticsEvent>>,
+    TError,
+    { data: BodyType<AnalyticsEventBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof trackAnalyticsEvent>>,
+  TError,
+  { data: BodyType<AnalyticsEventBody> },
+  TContext
+> => {
+  return useMutation(getTrackAnalyticsEventMutationOptions(options));
 };
 
 /**

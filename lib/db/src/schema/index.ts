@@ -6,6 +6,7 @@ import {
   boolean,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -732,3 +733,58 @@ export const guardrailEvents = pgTable("guardrail_events", {
 
 export type GuardrailEvent = typeof guardrailEvents.$inferSelect;
 export type NewGuardrailEvent = typeof guardrailEvents.$inferInsert;
+
+// Generic app-usage telemetry: one row per page view or key action
+// (see the server-side eventType allowlist in routes/events.ts).
+// userId is nullable — most page views happen pre-login (landing,
+// login). Device/browser/os are parsed server-side from the request's
+// User-Agent; country is resolved server-side from the request IP.
+// The raw IP is deliberately NOT persisted here — only the derived
+// country — to keep stored personal data to a minimum.
+export const analyticsEvents = pgTable("analytics_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  eventType: text("event_type").notNull(),
+  path: text("path"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  userAgent: text("user_agent"),
+  deviceType: text("device_type"),
+  browser: text("browser"),
+  os: text("os"),
+  country: text("country"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type NewAnalyticsEvent = typeof analyticsEvents.$inferInsert;
+
+// One row per AI analysis generation (main model call + any schema/
+// citation-correction retries), capturing OpenAI token usage and an
+// estimated USD cost so admin can track AI spend over time. analysisId
+// is nullable because usage is recorded even when the final output is
+// the synthetic fast-intraday fallback (no `analyses` row exists yet
+// for that path in some cases) or when the digest batch job runs it
+// without persisting a user-facing analysis row.
+export const aiTokenUsage = pgTable("ai_token_usage", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  analysisId: integer("analysis_id").references(() => analyses.id, {
+    onDelete: "set null",
+  }),
+  model: text("model").notNull(),
+  promptTokens: integer("prompt_tokens").notNull(),
+  completionTokens: integer("completion_tokens").notNull(),
+  totalTokens: integer("total_tokens").notNull(),
+  callCount: integer("call_count").notNull(),
+  estimatedCostUsd: numeric("estimated_cost_usd", { precision: 10, scale: 6 }).notNull(),
+  instrument: text("instrument"),
+  timeframe: text("timeframe"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type AiTokenUsage = typeof aiTokenUsage.$inferSelect;
+export type NewAiTokenUsage = typeof aiTokenUsage.$inferInsert;

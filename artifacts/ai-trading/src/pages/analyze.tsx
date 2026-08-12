@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
+import { useTrackEvent } from "@/hooks/use-track-event";
 import { Layout } from "@/components/layout";
 import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useListAnalyses, getListAnalysesQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
@@ -585,6 +586,7 @@ export default function AnalyzePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
+  const trackEvent = useTrackEvent();
   const queryClient = useQueryClient();
   const { data: quota } = useGetAnalysisQuota({
     query: { queryKey: getGetAnalysisQuotaQueryKey(), staleTime: 30_000 },
@@ -682,6 +684,7 @@ export default function AnalyzePage() {
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQuotaQueryKey() });
+      trackEvent("analysis_created", { instrument: finalInstrument, timeframe: selectedTimeframe });
       // Show the trade-plan chart inline so users can sanity-check the AI's
       // entry/SL/TP against the live tape immediately. Detail page is still
       // a click away via the CTA below.

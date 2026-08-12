@@ -3,12 +3,14 @@ import {
   analyses,
   dailyDigests,
   users,
+  aiTokenUsage,
   type Analysis,
   type DailyDigest,
 } from "@workspace/db/schema";
 import { db } from "./db";
 import { logger } from "./logger";
 import { generateAnalysis, getValidUntil } from "./openai";
+import { estimateCostUsd } from "./model-pricing";
 import { createNotification } from "./create-notification";
 
 // Default instrument basket used when the user has no watchlist (or the
@@ -150,7 +152,11 @@ async function resolveAnalysisForInstrument(
   }
 
   try {
-    const aiResult = await generateAnalysis(instrument, DIGEST_TIMEFRAME, DIGEST_MODE);
+    const { output: aiResult, usage: tokenUsage, model: usedModel } = await generateAnalysis(
+      instrument,
+      DIGEST_TIMEFRAME,
+      DIGEST_MODE,
+    );
     const validUntil = getValidUntil(DIGEST_TIMEFRAME);
     const [inserted] = await db
       .insert(analyses)
@@ -180,6 +186,20 @@ async function resolveAnalysisForInstrument(
           (aiResult as { failureConditions?: string }).failureConditions ?? null,
       })
       .returning();
+    await db.insert(aiTokenUsage).values({
+      userId,
+      analysisId: inserted.id,
+      model: usedModel,
+      promptTokens: tokenUsage.promptTokens,
+      completionTokens: tokenUsage.completionTokens,
+      totalTokens: tokenUsage.totalTokens,
+      callCount: tokenUsage.callCount,
+      estimatedCostUsd: estimateCostUsd(usedModel, tokenUsage.promptTokens, tokenUsage.completionTokens).toFixed(6),
+      instrument,
+      timeframe: DIGEST_TIMEFRAME,
+    }).catch((err) => {
+      logger.warn({ err }, "[daily-summary] failed to record AI token usage");
+    });
     return inserted;
   } catch (err) {
     logger.warn({ err, userId, instrument }, "Daily digest analysis generation failed");

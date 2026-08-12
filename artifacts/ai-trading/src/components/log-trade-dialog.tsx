@@ -30,6 +30,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
+import { useTrackEvent } from "@/hooks/use-track-event";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
@@ -81,6 +82,7 @@ export function LogTradeDialog({
 }: LogTradeDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const trackEvent = useTrackEvent();
   const queryClient = useQueryClient();
   const createMutation = useCreateJournalEntry();
   const updateMutation = useUpdateJournalEntry();
@@ -170,6 +172,7 @@ export function LogTradeDialog({
         queryKey: getGetJournalStatsQueryKey(),
       });
       if (!editing) {
+        trackEvent("trade_logged", { instrument: body.instrument, side: body.side });
         onSaved?.();
         toast({ title: t.journal.save_success });
       }

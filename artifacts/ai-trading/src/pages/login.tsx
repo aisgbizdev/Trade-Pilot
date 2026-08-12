@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,9 +15,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BrandLogo } from "@/components/brand-logo";
+import { useTrackEvent } from "@/hooks/use-track-event";
 
 export default function LoginPage() {
   const { t } = useTranslation();
+  const trackEvent = useTrackEvent();
+  // Not wrapped in <Layout> (which tracks page views for every other
+  // route), so this pre-auth funnel page tracks itself directly.
+  useEffect(() => {
+    trackEvent("page_view");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [resetSuccess] = useState(() => {
     const val = sessionStorage.getItem("password_reset_success");

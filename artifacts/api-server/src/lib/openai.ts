@@ -384,13 +384,22 @@ export function validateFundamentalCitations(
   return { ok: true };
 }
 
+// Token usage reported by a single OpenAI call. `null` when the SDK
+// response didn't include a `usage` block (shouldn't normally happen,
+// but the type keeps callers honest rather than assuming zeros).
+export interface CallTokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 async function callOpenAI(
   systemPrompt: string,
   userMessage: string,
   model: string,
   maxTokens?: number,
   timeoutMs?: number,
-): Promise<unknown> {
+): Promise<{ data: unknown; usage: CallTokenUsage | null }> {
   const request = openai.chat.completions.create({
     model,
     messages: [
@@ -412,7 +421,14 @@ async function callOpenAI(
 
   const content = response.choices[0]?.message?.content;
   if (!content) throw new Error("No response from AI");
-  return JSON.parse(content);
+  const usage = response.usage
+    ? {
+        promptTokens: response.usage.prompt_tokens,
+        completionTokens: response.usage.completion_tokens,
+        totalTokens: response.usage.total_tokens,
+      }
+    : null;
+  return { data: JSON.parse(content), usage };
 }
 
 function buildFastIntradayFallback(mode: "beginner" | "pro", timeframe: string): AIOutput {
@@ -561,6 +577,24 @@ function finalizeOutput(out: AIOutput): AIOutput {
   } as AIOutput;
 }
 
+// Total token usage accumulated across every `callOpenAI` invocation a
+// single `generateAnalysis` call makes (1st attempt + up to 2 retries).
+// `callCount` only counts calls that actually completed — a call that
+// throws (timeout, API error) contributes nothing, since no usage is
+// recoverable for it (see the `Promise.race` timeout note on `callOpenAI`).
+export interface AnalysisTokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  callCount: number;
+}
+
+export interface GenerateAnalysisResult {
+  output: AIOutput;
+  usage: AnalysisTokenUsage;
+  model: string;
+}
+
 export async function generateAnalysis(
   instrument: string,
   timeframe: string,
@@ -569,7 +603,7 @@ export async function generateAnalysis(
   indicatorContext?: string,
   fundamentalSnapshot?: FundamentalSnapshot | null,
   livePrice?: number | null,
-): Promise<AIOutput> {
+): Promise<GenerateAnalysisResult> {
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
   const selectedModel =
     isFastIntraday
@@ -670,10 +704,44 @@ export async function generateAnalysis(
     return parsed.data;
   };
 
+  // Accumulates usage across every `callOpenAI` call this invocation
+  // makes (1st attempt + up to 2 retries) so the caller can persist one
+  // token-usage row per generation regardless of which return path is
+  // taken — including the synthetic fast-intraday fallback, since real
+  // tokens may have been spent before that path was hit (e.g. a schema-
+  // validation failure on a completed call).
+  const usage: AnalysisTokenUsage = {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    callCount: 0,
+  };
+  const wrap = (out: AIOutput): GenerateAnalysisResult => ({
+    output: out,
+    usage: { ...usage },
+    model: selectedModel,
+  });
+  const trackedCallOpenAI = async (
+    prompt: string,
+    message: string,
+    model: string,
+    maxTok?: number,
+    timeout?: number,
+  ): Promise<unknown> => {
+    const { data, usage: callUsage } = await callOpenAI(prompt, message, model, maxTok, timeout);
+    usage.callCount += 1;
+    if (callUsage) {
+      usage.promptTokens += callUsage.promptTokens;
+      usage.completionTokens += callUsage.completionTokens;
+      usage.totalTokens += callUsage.totalTokens;
+    }
+    return data;
+  };
+
   // First attempt.
   let raw: unknown;
   try {
-    raw = await callOpenAI(
+    raw = await trackedCallOpenAI(
       effectiveSystemPrompt,
       baseUserMessage,
       selectedModel,
@@ -681,7 +749,7 @@ export async function generateAnalysis(
       fastIntradayTimeoutMs,
     );
   } catch (e) {
-    if (isFastIntraday) return buildFastIntradayFallback(mode, timeframe);
+    if (isFastIntraday) return wrap(buildFastIntradayFallback(mode, timeframe));
     throw e;
   }
   let parsed: AIOutput;
@@ -689,7 +757,7 @@ export async function generateAnalysis(
     parsed = parseAttempt(raw);
   } catch (e) {
     if (isFastIntraday) {
-      return buildFastIntradayFallback(mode, timeframe);
+      return wrap(buildFastIntradayFallback(mode, timeframe));
     }
     // Validation failed on first try — rerun with a corrective hint
     // before giving up. Schema errors are usually missing or wrong
@@ -697,7 +765,7 @@ export async function generateAnalysis(
     // typically fixes them without paying for a third call.
     const correction =
       "\n\n[KOREKSI WAJIB] Output JSON sebelumnya gagal validasi. Pastikan SEMUA field wajib hadir dengan tipe & enum yang benar, dan kembalikan HANYA objek JSON tanpa markdown.";
-    raw = await callOpenAI(
+    raw = await trackedCallOpenAI(
       effectiveSystemPrompt,
       baseUserMessage + correction,
       selectedModel,
@@ -716,10 +784,10 @@ export async function generateAnalysis(
 
   if (!citationCheck.ok) {
     if (isFastIntraday) {
-      return buildFastIntradayFallback(mode, timeframe);
+      return wrap(buildFastIntradayFallback(mode, timeframe));
     }
     const correction = `\n\n[KOREKSI WAJIB — GROUNDING] ${citationCheck.reason} Output ulang analisis menggunakan HANYA judul berita / nama event yang BENAR-BENAR ada di blok BERITA TERKINI RELEVAN dan KALENDER EKONOMI RELEVAN di atas. Jika tidak ada item yang relevan, kosongkan fundamentalCitations.newsTitles / fundamentalCitations.calendarEvents dan tulis "Tidak ada katalis fundamental signifikan terdeteksi pada window ini" pada blok fundamental yang sesuai.`;
-    const retryRaw = await callOpenAI(
+    const retryRaw = await trackedCallOpenAI(
       effectiveSystemPrompt,
       baseUserMessage + correction,
       selectedModel,
@@ -731,7 +799,7 @@ export async function generateAnalysis(
       retryParsed.fundamentalCitations,
       snapshot,
     );
-    if (retryCheck.ok) return finalizeOutput(retryParsed);
+    if (retryCheck.ok) return wrap(finalizeOutput(retryParsed));
     // Hard fail after the corrective retry — the route turns this into
     // an HTTP 502 / quota refund, which is preferable to returning
     // ungrounded fundamental prose.
@@ -743,5 +811,5 @@ export async function generateAnalysis(
     );
   }
 
-  return finalizeOutput(parsed);
+  return wrap(finalizeOutput(parsed));
 }
