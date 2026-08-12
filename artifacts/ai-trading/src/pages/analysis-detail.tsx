@@ -530,6 +530,8 @@ function scenarioCText(bias: BiasKey, t: T): string {
   return t.analysis_detail.scenario_c_template_directional;
 }
 
+const QUICK_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
+
 const INDICATOR_TIMEFRAMES = new Set<IndicatorTimeframe>(["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"]);
 function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
   return INDICATOR_TIMEFRAMES.has(tf as IndicatorTimeframe)
@@ -1596,6 +1598,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
   const [refreshNotes, setRefreshNotes] = useState("");
   const [executionOpen, setExecutionOpen] = useState(false);
+  const [quickTimeframe, setQuickTimeframe] = useState<string | null>(null);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const carriedOver = typeof window !== "undefined" &&
@@ -1624,6 +1627,25 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const analysis = data as AnalysisWithFeedback | undefined;
 
   const existingFeedback = analysis?.feedback;
+
+  // Default the quick-timeframe picker to the timeframe of whatever
+  // analysis is currently on screen, and re-sync it whenever the user
+  // navigates to a different analysis (id change) or the row loads in.
+  useEffect(() => {
+    setQuickTimeframe(analysis?.timeframe ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, analysis?.timeframe]);
+
+  const handleQuickReanalyze = () => {
+    if (!analysis || !quickTimeframe) return;
+    refresh({
+      id: analysis.id,
+      instrument: analysis.instrument,
+      timeframe: quickTimeframe,
+      mode: analysis.mode,
+      userInputContext: analysis.userInputContext,
+    });
+  };
 
   const openRefreshDialog = () => {
     if (!analysis) return;
@@ -1764,6 +1786,57 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             <span className="hidden sm:inline">{t.analysis_detail.re_analyze}</span>
           </Link>
         </div>
+
+        {/* Quick timeframe switch — same instrument, pick a different
+            timeframe and fire a fresh analysis without leaving this page
+            or re-selecting the instrument. Defaults to the current
+            analysis's timeframe; result navigation is handled by
+            `useRefreshAnalysis`, same as the "Refresh Analysis" flow. */}
+        <Card className="p-3 space-y-2.5" data-testid="card-quick-timeframe">
+          <div>
+            <p className="text-xs font-semibold text-foreground">
+              {t.analysis_detail.quick_timeframe_title}
+            </p>
+            <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+              {t.analysis_detail.quick_timeframe_hint}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                type="button"
+                onClick={() => setQuickTimeframe(tf)}
+                disabled={isRefreshing}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors disabled:opacity-50",
+                  quickTimeframe === tf
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 text-foreground border-border hover:bg-muted",
+                )}
+                data-testid={`button-quick-timeframe-${tf}`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={handleQuickReanalyze}
+            disabled={isRefreshing || !quickTimeframe}
+            data-testid="button-quick-analyze"
+          >
+            {isRefreshing ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t.analyze.loading[refreshMsgIndex]}
+              </span>
+            ) : (
+              t.analysis_detail.quick_timeframe_btn
+            )}
+          </Button>
+        </Card>
 
         {/* PRIMARY METRICS: Bias + Confidence + Risk */}
         <Card className="p-4 space-y-4" data-testid="card-primary-metrics">

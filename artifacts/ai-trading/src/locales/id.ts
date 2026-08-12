@@ -858,6 +858,9 @@ export const id: Translations = {
     re_analyze: "Analisis Ulang",
     copy_levels: "Salin level",
     copy_levels_copied: "Tersalin!",
+    quick_timeframe_title: "Ganti Timeframe",
+    quick_timeframe_hint: "Instrumen sama, timeframe berbeda — langsung analisis tanpa keluar dari halaman ini.",
+    quick_timeframe_btn: "Analisis timeframe ini",
   },
   admin: {
     all_analyses: "Semua Analisis",

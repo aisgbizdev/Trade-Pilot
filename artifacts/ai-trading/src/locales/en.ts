@@ -856,6 +856,9 @@ export const en = {
     re_analyze: "Analyze Again",
     copy_levels: "Copy levels",
     copy_levels_copied: "Copied!",
+    quick_timeframe_title: "Change Timeframe",
+    quick_timeframe_hint: "Same instrument, different timeframe — analyze without leaving this page.",
+    quick_timeframe_btn: "Analyze this timeframe",
   },
   admin: {
     all_analyses: "All Analyses",
