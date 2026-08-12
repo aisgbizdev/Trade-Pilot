@@ -225,30 +225,33 @@ router.post("/analyses/guardrails/telemetry", requireAuth, async (req: AuthReque
 });
 
 router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
-  const isPrivilegedRole =
-    req.userRole === "user" ||
-    req.userRole === "admin" ||
-    req.userRole === "super_admin";
+  const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
+  const { perHour, perDay } = await getEffectiveQuota(req.userId!);
   if (isPrivilegedRole) {
     res.json({
       unlimited: true,
-      hourly: { limit: ANALYSIS_QUOTA_PER_HOUR, used: 0, remaining: ANALYSIS_QUOTA_PER_HOUR },
-      daily: { limit: ANALYSIS_QUOTA_PER_DAY, used: 0, remaining: ANALYSIS_QUOTA_PER_DAY },
+      hourly: { limit: perHour, used: 0, remaining: perHour },
+      daily: { limit: perDay, used: 0, remaining: perDay },
     });
     return;
   }
 
-  const now = new Date();
-  const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
+  // Compute the "last hour" / "last 24h" cutoffs in Postgres itself
+  // (now() - interval) rather than as JS `Date` params compared against
+  // `createdAt`, a `timestamp` column with no timezone. node-postgres
+  // serializes an outgoing `Date` parameter for a no-tz column using the
+  // API server process's OS timezone, while `createdAt` itself is
+  // written via Postgres-side `defaultNow()` (server session tz, GMT
+  // here) — on a non-UTC host those two clocks disagree, and for the
+  // narrow 1h window that's enough to make it never match. Keeping the
+  // whole comparison server-side sidesteps the mismatch entirely.
   const [usage] = await db
     .select({
-      hourly: sql<number>`sum(case when ${analyses.createdAt} >= ${hourAgo} then 1 else 0 end)`,
-      daily: sql<number>`sum(case when ${analyses.createdAt} >= ${dayAgo} then 1 else 0 end)`,
+      hourly: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '1 hour' then 1 else 0 end)`,
+      daily: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '24 hours' then 1 else 0 end)`,
     })
     .from(analyses)
-    .where(and(eq(analyses.userId, req.userId!), gte(analyses.createdAt, dayAgo)));
+    .where(and(eq(analyses.userId, req.userId!), sql`${analyses.createdAt} >= now() - interval '24 hours'`));
 
   const hourlyUsed = Number(usage?.hourly ?? 0);
   const dailyUsed = Number(usage?.daily ?? 0);
@@ -256,14 +259,14 @@ router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
   res.json({
     unlimited: false,
     hourly: {
-      limit: ANALYSIS_QUOTA_PER_HOUR,
+      limit: perHour,
       used: hourlyUsed,
-      remaining: Math.max(0, ANALYSIS_QUOTA_PER_HOUR - hourlyUsed),
+      remaining: Math.max(0, perHour - hourlyUsed),
     },
     daily: {
-      limit: ANALYSIS_QUOTA_PER_DAY,
+      limit: perDay,
       used: dailyUsed,
-      remaining: Math.max(0, ANALYSIS_QUOTA_PER_DAY - dailyUsed),
+      remaining: Math.max(0, perDay - dailyUsed),
     },
   });
 });
@@ -390,6 +393,25 @@ export function setAnalysisQuotaConfig(perHour: number, perDay: number): void {
   ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(String(perDay), ANALYSIS_QUOTA_PER_DAY);
 }
 
+// Per-user quota, falling back to the global admin-configured default for
+// whichever of hour/day the user doesn't have a custom override set
+// (admin dashboard → RecentSignupsPanel → UserQuotaEditor).
+async function getEffectiveQuota(userId: number): Promise<{ perHour: number; perDay: number }> {
+  const [row] = await db
+    .select({
+      customQuotaPerHour: users.customQuotaPerHour,
+      customQuotaPerDay: users.customQuotaPerDay,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const globalCfg = getAnalysisQuotaConfig();
+  return {
+    perHour: row?.customQuotaPerHour ?? globalCfg.perHour,
+    perDay: row?.customQuotaPerDay ?? globalCfg.perDay,
+  };
+}
+
 // The AI output shape (kept as its own alias rather than deriving from
 // `generateAnalysis`'s return type, since that now also carries token
 // usage/model metadata — see `AnalysisTokenUsage` for that half).
@@ -398,8 +420,8 @@ type AnalysisRow = typeof analyses.$inferSelect;
 type QuotaOutcome =
   | { kind: "ok"; analysis: AnalysisRow }
   | { kind: "busy" }
-  | { kind: "hour"; used: number }
-  | { kind: "day"; used: number }
+  | { kind: "hour"; used: number; limit: number }
+  | { kind: "day"; used: number; limit: number }
   | { kind: "aiError" };
 
 router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
@@ -417,10 +439,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
   const userId = req.userId!;
   const typedMode = mode as "beginner" | "pro";
-  const isPrivilegedRole =
-    req.userRole === "user" ||
-    req.userRole === "admin" ||
-    req.userRole === "super_admin";
+  const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
 
   // External context fetches are pure HTTP — do them outside any transaction.
@@ -583,6 +602,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     // Atomically: take a per-user xact-scoped advisory lock, count usage,
     // call AI, and insert. The lock auto-releases on COMMIT/ROLLBACK so
     // concurrent requests for the same user cannot bypass the quota.
+    const { perHour, perDay } = await getEffectiveQuota(userId);
     outcome = await db.transaction<QuotaOutcome>(async (tx) => {
       const lockRow = await tx.execute(
         sql`SELECT pg_try_advisory_xact_lock(${ANALYSIS_LOCK_NAMESPACE}::int, ${userId}::int) AS acquired`
@@ -590,26 +610,26 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       const acquired = (lockRow.rows?.[0] as { acquired?: boolean } | undefined)?.acquired === true;
       if (!acquired) return { kind: "busy" };
 
-      const now = new Date();
-      const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
+      // See the identical comment on GET /analyses/quota above — cutoffs
+      // are computed in Postgres (now() - interval) rather than as JS
+      // `Date` params, to avoid the client-OS-timezone-vs-server-session-tz
+      // mismatch that silently broke the hourly bucket for non-UTC hosts.
       const [usage] = await tx
         .select({
-          hourly: sql<number>`sum(case when ${analyses.createdAt} >= ${hourAgo} then 1 else 0 end)`,
-          daily: sql<number>`sum(case when ${analyses.createdAt} >= ${dayAgo} then 1 else 0 end)`,
+          hourly: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '1 hour' then 1 else 0 end)`,
+          daily: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '24 hours' then 1 else 0 end)`,
         })
         .from(analyses)
-        .where(and(eq(analyses.userId, userId), gte(analyses.createdAt, dayAgo)));
+        .where(and(eq(analyses.userId, userId), sql`${analyses.createdAt} >= now() - interval '24 hours'`));
 
       const hourlyCount = Number(usage?.hourly ?? 0);
       const dailyCount = Number(usage?.daily ?? 0);
 
-      if (hourlyCount >= ANALYSIS_QUOTA_PER_HOUR) {
-        return { kind: "hour", used: hourlyCount };
+      if (hourlyCount >= perHour) {
+        return { kind: "hour", used: hourlyCount, limit: perHour };
       }
-      if (dailyCount >= ANALYSIS_QUOTA_PER_DAY) {
-        return { kind: "day", used: dailyCount };
+      if (dailyCount >= perDay) {
+        return { kind: "day", used: dailyCount, limit: perDay };
       }
 
       let aiResult: AIResult;
@@ -657,15 +677,15 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   }
   if (outcome.kind === "hour") {
     res.status(429).set("Retry-After", "3600").json({
-      error: `Batas analisis per jam tercapai (${ANALYSIS_QUOTA_PER_HOUR} analisis/jam). Silakan coba lagi dalam beberapa saat.`,
-      quota: { scope: "hour", limit: ANALYSIS_QUOTA_PER_HOUR, used: outcome.used },
+      error: `Batas analisis per jam tercapai (${outcome.limit} analisis/jam). Silakan coba lagi dalam beberapa saat.`,
+      quota: { scope: "hour", limit: outcome.limit, used: outcome.used },
     });
     return;
   }
   if (outcome.kind === "day") {
     res.status(429).set("Retry-After", "86400").json({
-      error: `Batas analisis harian tercapai (${ANALYSIS_QUOTA_PER_DAY} analisis/hari). Silakan coba lagi besok.`,
-      quota: { scope: "day", limit: ANALYSIS_QUOTA_PER_DAY, used: outcome.used },
+      error: `Batas analisis harian tercapai (${outcome.limit} analisis/hari). Silakan coba lagi besok.`,
+      quota: { scope: "day", limit: outcome.limit, used: outcome.used },
     });
     return;
   }

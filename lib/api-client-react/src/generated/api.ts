@@ -97,12 +97,14 @@ import type {
   TraderMirrorResponse,
   UpdateJournalEntryBody,
   UpdateProfileBody,
+  UpdateUserQuotaBody,
   UpdateUserRoleBody,
   UploadUrlRequest,
   UploadUrlResponse,
   User,
   UserPriceAlert,
   UserPriceAlertList,
+  UserQuota,
   UsersList,
   VerifySecurityAnswerBody,
   Watchlist,
@@ -6601,6 +6603,97 @@ export const useAddUserTag = <
   TContext
 > => {
   return useMutation(getAddUserTagMutationOptions(options));
+};
+
+/**
+ * Each field is either a positive integer (override for just this
+user) or null (clear the override, revert to the global default
+from PATCH /superadmin/quota-settings).
+
+ * @summary Set or clear a per-user analysis-quota override
+ */
+export const getUpdateUserQuotaUrl = (id: number) => {
+  return `/api/superadmin/users/${id}/quota`;
+};
+
+export const updateUserQuota = async (
+  id: number,
+  updateUserQuotaBody: UpdateUserQuotaBody,
+  options?: RequestInit,
+): Promise<UserQuota> => {
+  return customFetch<UserQuota>(getUpdateUserQuotaUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateUserQuotaBody),
+  });
+};
+
+export const getUpdateUserQuotaMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserQuota>>,
+    TError,
+    { id: number; data: BodyType<UpdateUserQuotaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateUserQuota>>,
+  TError,
+  { id: number; data: BodyType<UpdateUserQuotaBody> },
+  TContext
+> => {
+  const mutationKey = ["updateUserQuota"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateUserQuota>>,
+    { id: number; data: BodyType<UpdateUserQuotaBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateUserQuota(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateUserQuotaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateUserQuota>>
+>;
+export type UpdateUserQuotaMutationBody = BodyType<UpdateUserQuotaBody>;
+export type UpdateUserQuotaMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Set or clear a per-user analysis-quota override
+ */
+export const useUpdateUserQuota = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserQuota>>,
+    TError,
+    { id: number; data: BodyType<UpdateUserQuotaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateUserQuota>>,
+  TError,
+  { id: number; data: BodyType<UpdateUserQuotaBody> },
+  TContext
+> => {
+  return useMutation(getUpdateUserQuotaMutationOptions(options));
 };
 
 /**

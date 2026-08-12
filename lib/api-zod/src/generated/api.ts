@@ -2919,6 +2919,18 @@ export const GetAllUsersResponse = zod.object({
       selectedMode: zod.enum(["beginner", "pro"]),
       analysisCount: zod.number(),
       tags: zod.array(zod.string()),
+      customQuotaPerHour: zod
+        .number()
+        .nullish()
+        .describe(
+          "Per-user analysis-quota override. Null = uses the global default.",
+        ),
+      customQuotaPerDay: zod
+        .number()
+        .nullish()
+        .describe(
+          "Per-user analysis-quota override. Null = uses the global default.",
+        ),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -3008,6 +3020,34 @@ export const AddUserTagBody = zod.object({
 
 export const AddUserTagResponse = zod.object({
   tags: zod.array(zod.string()),
+});
+
+/**
+ * Each field is either a positive integer (override for just this
+user) or null (clear the override, revert to the global default
+from PATCH /superadmin/quota-settings).
+
+ * @summary Set or clear a per-user analysis-quota override
+ */
+export const UpdateUserQuotaParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateUserQuotaBody = zod.object({
+  customQuotaPerHour: zod
+    .number()
+    .nullable()
+    .describe("Positive integer to set an override, or null to clear it."),
+  customQuotaPerDay: zod
+    .number()
+    .nullable()
+    .describe("Positive integer to set an override, or null to clear it."),
+});
+
+export const UpdateUserQuotaResponse = zod.object({
+  id: zod.number(),
+  customQuotaPerHour: zod.number().nullable(),
+  customQuotaPerDay: zod.number().nullable(),
 });
 
 /**

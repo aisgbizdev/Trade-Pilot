@@ -695,6 +695,8 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
       onboardingCompleted: users.onboardingCompleted,
       createdAt: users.createdAt,
       analysisCount: count(analyses.id),
+      customQuotaPerHour: users.customQuotaPerHour,
+      customQuotaPerDay: users.customQuotaPerDay,
     })
     .from(users)
     .leftJoin(analyses, eq(analyses.userId, users.id))
@@ -833,6 +835,49 @@ router.delete(
     const id = Number(req.params["id"]);
     const tag = String(req.body?.tag ?? req.query["tag"] ?? "").trim();
     await removeUserTag(id, tag, res);
+  },
+);
+
+// Per-user analysis-quota override (admin dashboard → RecentSignupsPanel
+// → UserQuotaEditor). Each field is either a positive integer (sets an
+// override for just this user) or `null` (clears it, reverting the user
+// to the global default from PATCH /superadmin/quota-settings above).
+router.patch(
+  "/superadmin/users/:id/quota",
+  requireSuperAdmin,
+  async (req: AuthRequest, res) => {
+    const id = Number(req.params["id"]);
+    if (!Number.isFinite(id)) {
+      res.status(400).json({ error: "ID tidak valid" });
+      return;
+    }
+
+    const parseQuotaField = (raw: unknown): number | null | undefined => {
+      if (raw === null) return null;
+      const n = Number(raw);
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : undefined;
+    };
+    const customQuotaPerHour = parseQuotaField(req.body?.customQuotaPerHour);
+    const customQuotaPerDay = parseQuotaField(req.body?.customQuotaPerDay);
+    if (customQuotaPerHour === undefined || customQuotaPerDay === undefined) {
+      res.status(400).json({ error: "Quota harus angka > 0 atau null" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set({ customQuotaPerHour, customQuotaPerDay })
+      .where(eq(users.id, id))
+      .returning({
+        id: users.id,
+        customQuotaPerHour: users.customQuotaPerHour,
+        customQuotaPerDay: users.customQuotaPerDay,
+      });
+    if (!updated) {
+      res.status(404).json({ error: "User tidak ditemukan" });
+      return;
+    }
+    res.json(updated);
   },
 );
 

@@ -1199,7 +1199,24 @@ export interface UserWithStats {
   selectedMode: UserWithStatsSelectedMode;
   analysisCount: number;
   tags: string[];
+  /** Per-user analysis-quota override. Null = uses the global default. */
+  customQuotaPerHour?: number | null;
+  /** Per-user analysis-quota override. Null = uses the global default. */
+  customQuotaPerDay?: number | null;
   createdAt: string;
+}
+
+export interface UpdateUserQuotaBody {
+  /** Positive integer to set an override, or null to clear it. */
+  customQuotaPerHour: number | null;
+  /** Positive integer to set an override, or null to clear it. */
+  customQuotaPerDay: number | null;
+}
+
+export interface UserQuota {
+  id: number;
+  customQuotaPerHour: number | null;
+  customQuotaPerDay: number | null;
 }
 
 export interface UsersList {

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
+import { UserQuotaEditor } from "@/components/user-quota-editor";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import {
@@ -276,6 +277,9 @@ function AdminUsersContent() {
                       <SelectItem value="super_admin">{t.profile.role_super_admin}</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="mt-2 pt-2 border-t border-border/60">
+                  <UserQuotaEditor user={u} />
                 </div>
               </Card>
             ))}

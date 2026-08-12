@@ -231,6 +231,12 @@ export const users = pgTable("users", {
   // matter where the wrong-answer attempts come from.
   failedResetAttempts: integer("failed_reset_attempts").notNull().default(0),
   resetLockedUntil: timestamp("reset_locked_until"),
+  // Per-user analysis-quota override (admin dashboard). Null means "use
+  // the global default" (see ANALYSIS_QUOTA_PER_HOUR/PER_DAY in
+  // routes/analyses.ts, itself admin-configurable). A non-null value
+  // overrides just this one user, independent of the global setting.
+  customQuotaPerHour: integer("custom_quota_per_hour"),
+  customQuotaPerDay: integer("custom_quota_per_day"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

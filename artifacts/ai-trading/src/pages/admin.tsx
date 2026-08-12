@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
+import { UserQuotaEditor } from "@/components/user-quota-editor";
 import {
   useGetAdminStats,
   getGetAdminStatsQueryKey,
@@ -644,8 +645,9 @@ function RecentSignupsPanel() {
       ) : (
         <div className="divide-y divide-border">
           {users.map((u) => (
-            <div key={u.id} className="py-3 first:pt-0 last:pb-0">
+            <div key={u.id} className="py-3 first:pt-0 last:pb-0 space-y-2">
               <UserTagEditor user={u} knownTags={knownTags} />
+              <UserQuotaEditor user={u} />
             </div>
           ))}
         </div>

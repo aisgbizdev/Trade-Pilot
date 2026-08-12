@@ -2115,6 +2115,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /superadmin/users/{id}/quota:
+    patch:
+      operationId: updateUserQuota
+      tags: [superadmin]
+      summary: Set or clear a per-user analysis-quota override
+      description: |
+        Each field is either a positive integer (override for just this
+        user) or null (clear the override, revert to the global default
+        from PATCH /superadmin/quota-settings).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserQuotaBody"
+      responses:
+        "200":
+          description: Updated quota override for the user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserQuota"
+        "400":
+          description: Invalid quota value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /superadmin/users/{id}/tags/{tag}:
     delete:
       operationId: removeUserTag
@@ -3995,6 +4042,14 @@ components:
           type: array
           items:
             type: string
+        customQuotaPerHour:
+          type: integer
+          nullable: true
+          description: Per-user analysis-quota override. Null = uses the global default.
+        customQuotaPerDay:
+          type: integer
+          nullable: true
+          description: Per-user analysis-quota override. Null = uses the global default.
         createdAt:
           type: string
           format: date-time
@@ -4007,6 +4062,37 @@ components:
         - analysisCount
         - tags
         - createdAt
+
+    UpdateUserQuotaBody:
+      type: object
+      properties:
+        customQuotaPerHour:
+          type: integer
+          nullable: true
+          description: Positive integer to set an override, or null to clear it.
+        customQuotaPerDay:
+          type: integer
+          nullable: true
+          description: Positive integer to set an override, or null to clear it.
+      required:
+        - customQuotaPerHour
+        - customQuotaPerDay
+
+    UserQuota:
+      type: object
+      properties:
+        id:
+          type: integer
+        customQuotaPerHour:
+          type: integer
+          nullable: true
+        customQuotaPerDay:
+          type: integer
+          nullable: true
+      required:
+        - id
+        - customQuotaPerHour
+        - customQuotaPerDay
 
     UsersList:
       type: object
