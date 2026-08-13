@@ -159,6 +159,16 @@ export const en = {
     watchlist_removed_toast: "Removed from watchlist",
     watchlist_error_toast: "Could not update watchlist",
   },
+  quota_dialog: {
+    title_hour: "Hourly Limit Reached",
+    desc_hour: "You've hit your analysis limit for this hour. Try again shortly.",
+    title_day: "Daily Limit Reached",
+    desc_day: "You've hit your analysis limit for today. Try again tomorrow.",
+    title_concurrent: "Previous Analysis Still Running",
+    desc_concurrent: "Your last analysis is still being processed. Wait a few seconds and try again.",
+    used_of_limit: "{used} of {limit} analyses used",
+    ok_btn: "Got it",
+  },
   analyze: {
     title: "New Analysis",
     mode_label: "Mode",

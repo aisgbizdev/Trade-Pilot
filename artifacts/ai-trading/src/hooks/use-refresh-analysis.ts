@@ -8,6 +8,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackEvent } from "@/hooks/use-track-event";
+import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 
 export interface RefreshableAnalysis {
   id: number;
@@ -56,12 +57,19 @@ export function useRefreshAnalysis() {
           trimmedNotes && analysis.carriedOver ? "?carried_over=1" : "";
         setLocation(`/analyses/${result.id}${suffix}`);
       } catch (err: unknown) {
-        const apiErr = err as { data?: { error?: string } };
-        toast({
-          title: t.analysis_detail.refresh_failed,
-          description: apiErr?.data?.error ?? t.analyze.failed_desc,
-          variant: "destructive",
-        });
+        const apiErr = err as {
+          status?: number;
+          data?: { error?: string; quota?: { scope: QuotaScope; limit?: number; used?: number } };
+        };
+        if (apiErr?.status === 429 && apiErr.data?.quota) {
+          showQuotaDialog(apiErr.data.quota);
+        } else {
+          toast({
+            title: t.analysis_detail.refresh_failed,
+            description: apiErr?.data?.error ?? t.analyze.failed_desc,
+            variant: "destructive",
+          });
+        }
       } finally {
         inFlightRef.current.delete(analysis.id);
         setRefreshingIds((prev) => {

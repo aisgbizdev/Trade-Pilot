@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import { useTrackEvent } from "@/hooks/use-track-event";
+import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
 import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useListAnalyses, getListAnalysesQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
@@ -694,16 +695,23 @@ export default function AnalyzePage() {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     } catch (err: unknown) {
-      const apiErr = err as { status?: number; data?: { error?: string } };
+      const apiErr = err as {
+        status?: number;
+        data?: { error?: string; quota?: { scope: QuotaScope; limit?: number; used?: number } };
+      };
       const isQuota = apiErr?.status === 429;
       if (isQuota) {
         queryClient.invalidateQueries({ queryKey: getGetAnalysisQuotaQueryKey() });
       }
-      toast({
-        title: isQuota ? t.analyze.quota_title : t.analyze.failed_title,
-        description: apiErr?.data?.error ?? t.analyze.failed_desc,
-        variant: "destructive",
-      });
+      if (isQuota && apiErr.data?.quota) {
+        showQuotaDialog(apiErr.data.quota);
+      } else {
+        toast({
+          title: isQuota ? t.analyze.quota_title : t.analyze.failed_title,
+          description: apiErr?.data?.error ?? t.analyze.failed_desc,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }

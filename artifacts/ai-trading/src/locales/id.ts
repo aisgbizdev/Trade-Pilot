@@ -161,6 +161,16 @@ export const id: Translations = {
     watchlist_removed_toast: "Dihapus dari watchlist",
     watchlist_error_toast: "Gagal memperbarui watchlist",
   },
+  quota_dialog: {
+    title_hour: "Batas Analisis Per Jam Tercapai",
+    desc_hour: "Kamu sudah mencapai batas analisis untuk jam ini. Coba lagi dalam beberapa saat.",
+    title_day: "Batas Analisis Harian Tercapai",
+    desc_day: "Kamu sudah mencapai batas analisis untuk hari ini. Coba lagi besok.",
+    title_concurrent: "Analisis Sebelumnya Masih Diproses",
+    desc_concurrent: "Analisis terakhir kamu masih diproses. Tunggu beberapa detik lalu coba lagi.",
+    used_of_limit: "{used} dari {limit} analisis terpakai",
+    ok_btn: "Mengerti",
+  },
   analyze: {
     title: "Analisis Baru",
     mode_label: "Mode",

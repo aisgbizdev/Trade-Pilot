@@ -1,6 +1,7 @@
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { QuotaDialog } from "@/components/quota-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/lib/i18n";
@@ -185,6 +186,7 @@ function App() {
             </InstallPromptProvider>
             <SplashScreen />
             <Toaster />
+            <QuotaDialog />
           </TooltipProvider>
         </LanguageProvider>
       </ThemeProvider>
