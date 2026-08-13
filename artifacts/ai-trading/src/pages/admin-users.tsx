@@ -241,7 +241,7 @@ function AdminUsersContent() {
                       {(u as { createdAt?: string }).createdAt
                         ? ` · ${t.admin.users_registered_on.replace(
                             "{date}",
-                            format(new Date((u as { createdAt: string }).createdAt), "dd MMM yyyy", { locale: dateLocale }),
+                            format(new Date((u as { createdAt: string }).createdAt), "dd MMM yyyy, HH:mm", { locale: dateLocale }),
                           )}`
                         : ""}
                     </p>

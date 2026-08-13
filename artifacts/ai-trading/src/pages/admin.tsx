@@ -137,7 +137,7 @@ function UserTagEditor({
           </p>
           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
           <p className="text-[10px] text-muted-foreground/80">
-            {user.role} · {format(new Date(user.createdAt), "d MMM yyyy", { locale: dateLocale })}
+            {user.role} · {format(new Date(user.createdAt), "d MMM yyyy, HH:mm", { locale: dateLocale })}
           </p>
         </div>
       </div>
