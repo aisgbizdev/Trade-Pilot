@@ -8,6 +8,7 @@ import {
   parseLevelPrice,
   computeRiskReward,
   reconcileTradePlanRiskReward,
+  sanitizeTradePlanLevels,
   type TradePlan,
 } from "../openai";
 
@@ -142,5 +143,139 @@ describe("reconcileTradePlanRiskReward", () => {
     const fixed = reconcileTradePlanRiskReward(plan);
     expect(fixed.buy.riskRewardRatio).toBe("n/a");
     expect(fixed.sell.riskRewardRatio).toBe("n/a");
+  });
+});
+
+describe("sanitizeTradePlanLevels", () => {
+  it("leaves a correctly-ordered buy/sell plan untouched", () => {
+    const plan: TradePlan = {
+      preferredSide: "buy",
+      buy: {
+        entryZone: "100",
+        stopLoss: "95",
+        takeProfit1: "110",
+        takeProfit2: "120",
+        riskRewardRatio: "1:2",
+        rationale: "x",
+      },
+      sell: {
+        entryZone: "100",
+        stopLoss: "105",
+        takeProfit1: "90",
+        takeProfit2: "80",
+        riskRewardRatio: "1:2",
+        rationale: "y",
+      },
+    };
+    const sanitized = sanitizeTradePlanLevels(plan);
+    expect(sanitized).toEqual(plan);
+  });
+
+  it("replaces a buy side whose SL/TP are structured like a sell (SL above entry, TP below)", () => {
+    // Mirrors the real bug report: "buy" scenario with entry ~4397,
+    // stopLoss 4401 (above entry), takeProfit1/2 4382/4375 (below entry) —
+    // that's a short's price structure mislabeled as a buy.
+    const plan: TradePlan = {
+      preferredSide: "buy",
+      buy: {
+        entryZone: "4397.16",
+        stopLoss: "4401.00",
+        takeProfit1: "4382.21",
+        takeProfit2: "4375.00",
+        riskRewardRatio: "n/a",
+        rationale: "Konfluensi resistance di 4397.16",
+      },
+      sell: {
+        entryZone: "4382.21",
+        stopLoss: "4390.00",
+        takeProfit1: "4375.00",
+        takeProfit2: "4365.00",
+        riskRewardRatio: "1:0.9",
+        rationale: "Konfluensi support kuat",
+      },
+    };
+    const sanitized = sanitizeTradePlanLevels(plan);
+    expect(sanitized.buy.entryZone).toBe("tunggu konfirmasi ulang");
+    expect(sanitized.buy.stopLoss).toBe("n/a");
+    expect(sanitized.buy.takeProfit1).toBe("n/a");
+    expect(sanitized.buy.takeProfit2).toBe("n/a");
+    expect(sanitized.buy.riskRewardRatio).toBe("n/a");
+    expect(sanitized.buy.rationale).toMatch(/tidak konsisten/);
+    // The sell side was internally consistent and must be left alone.
+    expect(sanitized.sell).toEqual(plan.sell);
+  });
+
+  it("replaces a sell side whose SL/TP are structured like a buy", () => {
+    const plan: TradePlan = {
+      preferredSide: "sell",
+      buy: {
+        entryZone: "100",
+        stopLoss: "95",
+        takeProfit1: "110",
+        takeProfit2: "120",
+        riskRewardRatio: "1:2",
+        rationale: "x",
+      },
+      sell: {
+        entryZone: "100",
+        stopLoss: "95", // below entry — should be above for a sell
+        takeProfit1: "110", // above entry — should be below for a sell
+        takeProfit2: "120",
+        riskRewardRatio: "1:2",
+        rationale: "y",
+      },
+    };
+    const sanitized = sanitizeTradePlanLevels(plan);
+    expect(sanitized.sell.entryZone).toBe("tunggu konfirmasi ulang");
+    expect(sanitized.sell.stopLoss).toBe("n/a");
+    expect(sanitized.buy).toEqual(plan.buy);
+  });
+
+  it("flags a side whose takeProfit2 is not further than takeProfit1 in the trade direction", () => {
+    const plan: TradePlan = {
+      preferredSide: "buy",
+      buy: {
+        entryZone: "100",
+        stopLoss: "95",
+        takeProfit1: "110",
+        takeProfit2: "105", // closer than TP1, not a valid "further target"
+        riskRewardRatio: "1:2",
+        rationale: "x",
+      },
+      sell: {
+        entryZone: "100",
+        stopLoss: "105",
+        takeProfit1: "90",
+        takeProfit2: "80",
+        riskRewardRatio: "1:2",
+        rationale: "y",
+      },
+    };
+    const sanitized = sanitizeTradePlanLevels(plan);
+    expect(sanitized.buy.entryZone).toBe("tunggu konfirmasi ulang");
+  });
+
+  it("leaves purely descriptive (no-anchor / wait) levels untouched", () => {
+    const plan: TradePlan = {
+      preferredSide: "wait",
+      buy: {
+        entryZone: "tunggu pullback terkonfirmasi",
+        stopLoss: "n/a",
+        takeProfit1: "n/a",
+        takeProfit2: "n/a",
+        riskRewardRatio: "n/a",
+        rationale: "Timeframe sangat cepat, noise tinggi.",
+      },
+      sell: {
+        entryZone: "tunggu rejection terkonfirmasi",
+        stopLoss: "n/a",
+        takeProfit1: "n/a",
+        takeProfit2: "n/a",
+        riskRewardRatio: "n/a",
+        rationale: "Timeframe sangat cepat, noise tinggi.",
+      },
+    };
+    const sanitized = sanitizeTradePlanLevels(plan);
+    expect(sanitized).toEqual(plan);
   });
 });

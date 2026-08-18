@@ -569,11 +569,67 @@ export function reconcileTradePlanRiskReward(plan: TradePlan): TradePlan {
   };
 }
 
+// The model occasionally mixes up which side a set of levels belongs to —
+// e.g. a "buy" scenario whose stopLoss sits ABOVE entry and whose
+// takeProfit1/2 sit BELOW entry, which is a short's price structure wearing
+// a "buy" label. `computeRiskReward` already refuses to compute a ratio for
+// levels like that (falls back to "n/a"), but until now nothing stopped the
+// contradictory raw prices themselves from still being displayed. This
+// checks the same buy/sell straddle-direction rule and, when violated,
+// swaps the whole side for an honest "levels didn't check out, wait for a
+// fresh analysis" placeholder instead of showing numbers that point the
+// wrong way for the labeled side.
+const INCONSISTENT_TRADE_PLAN_NOTE =
+  "Level untuk skenario ini tidak konsisten dari AI (arah SL/TP tidak sesuai sisi buy/sell) — tunggu re-analisa untuk skenario yang lebih akurat.";
+
+// Purely descriptive levels (no numbers at all, e.g. the "wait for
+// confirmation" fallback) are a legitimate no-anchor plan, not a
+// contradiction — only numeric, mis-ordered levels count as inconsistent.
+function isTradePlanSideConsistent(
+  side: TradeSide,
+  dir: "buy" | "sell",
+): boolean {
+  const entry = parseLevelPrice(side.entryZone);
+  const sl = parseLevelPrice(side.stopLoss);
+  const tp1 = parseLevelPrice(side.takeProfit1);
+  const tp2 = parseLevelPrice(side.takeProfit2);
+  if (entry === null || sl === null || tp1 === null) return true;
+  if (dir === "buy") {
+    if (!(sl < entry && tp1 > entry)) return false;
+    if (tp2 !== null && !(tp2 > tp1)) return false;
+  } else {
+    if (!(sl > entry && tp1 < entry)) return false;
+    if (tp2 !== null && !(tp2 < tp1)) return false;
+  }
+  return true;
+}
+
+export function sanitizeTradePlanLevels(plan: TradePlan): TradePlan {
+  const sanitizeSide = (side: TradeSide, dir: "buy" | "sell"): TradeSide => {
+    if (isTradePlanSideConsistent(side, dir)) return side;
+    return {
+      entryZone: "tunggu konfirmasi ulang",
+      stopLoss: "n/a",
+      takeProfit1: "n/a",
+      takeProfit2: "n/a",
+      riskRewardRatio: "n/a",
+      rationale: INCONSISTENT_TRADE_PLAN_NOTE,
+    };
+  };
+  return {
+    ...plan,
+    buy: sanitizeSide(plan.buy, "buy"),
+    sell: sanitizeSide(plan.sell, "sell"),
+  };
+}
+
 // Apply post-processing hygiene to a validated AI output before returning it.
 function finalizeOutput(out: AIOutput): AIOutput {
   return {
     ...out,
-    tradePlan: reconcileTradePlanRiskReward(out.tradePlan),
+    tradePlan: reconcileTradePlanRiskReward(
+      sanitizeTradePlanLevels(out.tradePlan),
+    ),
   } as AIOutput;
 }
 
