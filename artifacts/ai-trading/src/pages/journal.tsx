@@ -182,14 +182,14 @@ export default function JournalPage() {
 
   return (
     <Layout>
-      <div className="px-4 pb-24 pt-2 space-y-4 md:px-6 lg:pb-8">
+      <div className="px-4 pb-24 pt-2 space-y-6 md:px-6 lg:pb-8">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <BookOpen className="w-5 h-5 text-primary shrink-0" />
             <div className="min-w-0">
               <h1
-                className="text-lg font-bold text-foreground leading-tight"
+                className="text-xl font-bold text-foreground leading-tight"
                 data-testid="text-journal-title"
               >
                 {t.journal.title}

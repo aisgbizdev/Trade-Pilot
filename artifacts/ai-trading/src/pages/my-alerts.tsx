@@ -45,26 +45,26 @@ export default function MyAlertsPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 md:max-w-3xl md:mx-auto lg:max-w-none">
-        <div className="mb-5">
-          <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
+      <div className="px-4 py-6 md:max-w-3xl md:mx-auto lg:max-w-none space-y-6">
+        <header className="space-y-1">
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <Bell className="w-5 h-5 text-primary" />
             {t.alerts.page_title}
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground">
             {t.alerts.page_subtitle}
           </p>
-        </div>
+        </header>
 
         {isLoading ? (
           <p className="text-sm text-muted-foreground">{t.common.loading}</p>
         ) : alerts.length === 0 ? (
-          <Card className="p-6 text-center" data-testid="card-alerts-empty">
-            <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+          <Card className="p-6 text-center space-y-1" data-testid="card-alerts-empty">
+            <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-1" />
             <p className="text-sm font-semibold text-foreground">
               {t.alerts.list_empty_title}
             </p>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {t.alerts.list_empty_desc}
             </p>
           </Card>

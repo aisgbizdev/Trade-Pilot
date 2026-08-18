@@ -179,7 +179,57 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg md:max-w-4xl lg:max-w-6xl mx-auto relative">
+    <div className="min-h-[100dvh] bg-background flex justify-center">
+    <div className="flex w-full lg:max-w-6xl">
+      <aside
+        className="hidden lg:flex lg:flex-col lg:w-56 lg:shrink-0 lg:sticky lg:top-0 lg:h-[100dvh] lg:py-6 lg:px-3 border-r border-border/50"
+        aria-label="Sidebar"
+      >
+        <Link
+          href="/analyze"
+          className="flex items-center gap-2 px-2 mb-6 rounded-lg hover:bg-muted/40 transition-colors"
+          data-testid="link-brand-sidebar"
+          aria-label={t.nav.analyze}
+        >
+          <BrandLogo className="w-8 h-8" />
+          <div className="flex flex-col">
+            <span className="font-bold text-[13px] leading-none tracking-tight">
+              <span className="gradient-text">Trade</span>
+              <span className="text-foreground"> Pilot</span>
+            </span>
+            <span className="text-[9px] text-muted-foreground leading-none mt-0.5 tracking-wide uppercase">
+              {user?.selectedMode === "pro" ? t.common.pro : t.common.beginner} Mode
+            </span>
+          </div>
+        </Link>
+        <nav className="flex flex-col gap-1" aria-label="Primary">
+          {navItems.map(({ href, icon: Icon, label }) => {
+            const active = location === href || location.startsWith(href + "/");
+            const isNew = newlyUnlocked.has(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                data-testid={`nav-desktop-${href.replace("/", "")}`}
+                aria-current={active ? "page" : undefined}
+                onAnimationEnd={isNew ? () => clearUnlocked(href) : undefined}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary dark:bg-primary/20"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  isNew && "nav-unlock-pulse"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <div className="flex flex-col flex-1 min-w-0 max-w-lg md:max-w-4xl lg:max-w-none mx-auto lg:mx-0 relative">
       <header className="sticky top-0 z-40 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="flex items-center gap-2">
           {!isMainNav && (
@@ -194,7 +244,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
           <Link
             href="/analyze"
-            className="flex items-center gap-2 -m-1 p-1 rounded-lg hover:bg-muted/40 transition-colors"
+            className="flex items-center gap-2 -m-1 p-1 rounded-lg hover:bg-muted/40 transition-colors lg:hidden"
             data-testid="link-brand-home"
             aria-label={t.nav.analyze}
           >
@@ -210,31 +260,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </Link>
         </div>
-        <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
-          {navItems.map(({ href, icon: Icon, label }) => {
-            const active = location === href || location.startsWith(href + "/");
-            const isNew = newlyUnlocked.has(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                data-testid={`nav-desktop-${href.replace("/", "")}`}
-                aria-current={active ? "page" : undefined}
-                onAnimationEnd={isNew ? () => clearUnlocked(href) : undefined}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors",
-                  active
-                    ? "bg-primary/10 text-primary dark:bg-primary/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
-                  isNew && "nav-unlock-pulse"
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
         <div className="flex items-center gap-1">
           {isEmbed && (
             <a
@@ -302,7 +327,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 >
                   <Bell className="w-4 h-4 text-muted-foreground" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-lg shadow-amber-500/40">
+                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-sm">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
@@ -310,7 +335,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </PopoverTrigger>
               <PopoverContent
                 align="end"
-                className="w-80 p-0 rounded-2xl overflow-hidden border border-border/60 shadow-2xl"
+                className="w-80 p-0 rounded-xl overflow-hidden border border-border/60 shadow-lg"
               >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                   <div>
@@ -432,7 +457,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 lg:hidden">
-        <div className="mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] rounded-2xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-2xl shadow-black/20">
+        <div className="mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] rounded-xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-lg">
           <div className="flex items-center justify-around py-2 px-1">
             {navItems.map(({ href, icon: Icon, label }) => {
               const active = location === href || location.startsWith(href + "/");
@@ -464,6 +489,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </nav>
+      </div>
+    </div>
     </div>
   );
 }

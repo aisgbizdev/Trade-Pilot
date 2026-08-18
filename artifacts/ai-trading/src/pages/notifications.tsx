@@ -236,8 +236,8 @@ export default function NotificationsPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 md:max-w-3xl md:mx-auto lg:max-w-none">
-        <div className="flex items-center justify-between mb-5">
+      <div className="px-4 py-6 md:max-w-3xl md:mx-auto lg:max-w-none space-y-6">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-foreground">{t.notifications.title}</h1>
             {unreadCount > 0 && (
@@ -261,7 +261,7 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        <Card className="p-4 mb-5" id="notification-settings" data-testid="card-notification-settings">
+        <Card className="p-4" id="notification-settings" data-testid="card-notification-settings">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-primary/10 mt-0.5">
               {isPushEnabled ? (
@@ -270,7 +270,7 @@ export default function NotificationsPage() {
                 <Bell className="w-4 h-4 text-muted-foreground" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
@@ -295,7 +295,7 @@ export default function NotificationsPage() {
                 )}
               </div>
 
-              <div className="mt-2">
+              <div>
                 {isPushPending && (
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -339,7 +339,7 @@ export default function NotificationsPage() {
               </div>
 
               {(isPushEnabled || showInstallCta) && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
                   {isPushEnabled && (
                     <Button
                       type="button"
@@ -385,8 +385,8 @@ export default function NotificationsPage() {
         </Card>
 
         {pushPrefs && (
-          <Card className="p-4 mb-5">
-            <div className="mb-3">
+          <Card className="p-4 space-y-3">
+            <div>
               <p className="text-sm font-semibold text-foreground">
                 {t.notifications.push_prefs_title}
               </p>
@@ -528,8 +528,8 @@ export default function NotificationsPage() {
         )}
 
         {pushPrefs && (
-          <Card className="p-4 mb-5" data-testid="card-guardrail-prefs">
-            <div className="mb-3">
+          <Card className="p-4 space-y-3" data-testid="card-guardrail-prefs">
+            <div>
               <p className="text-sm font-semibold text-foreground">
                 {t.notifications.guardrail_section_title}
               </p>
@@ -608,32 +608,32 @@ export default function NotificationsPage() {
 
         {pushPrefs?.disengageNoticeCategory && (
           <Card
-            className="p-4 mb-5 border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/20"
+            className="p-4 space-y-3 border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/20"
             data-testid="card-disengage-banner"
           >
-            <p className="text-sm font-semibold text-foreground">
-              {t.notifications.push_disengage_banner_title}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              {t.notifications.push_disengage_banner_body}
-            </p>
-            <div className="mt-3">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleDismissDisengageBanner}
-                disabled={updatePushPrefs.isPending}
-                data-testid="button-dismiss-disengage-banner"
-              >
-                {t.notifications.push_disengage_banner_dismiss}
-              </Button>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {t.notifications.push_disengage_banner_title}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {t.notifications.push_disengage_banner_body}
+              </p>
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDismissDisengageBanner}
+              disabled={updatePushPrefs.isPending}
+              data-testid="button-dismiss-disengage-banner"
+            >
+              {t.notifications.push_disengage_banner_dismiss}
+            </Button>
           </Card>
         )}
 
         {pushPrefs && (
-          <Card className="p-4 mb-5">
-            <div className="mb-3">
+          <Card className="p-4 space-y-3">
+            <div>
               <p className="text-sm font-semibold text-foreground">
                 {t.notifications.push_session_section_title}
               </p>
@@ -667,8 +667,8 @@ export default function NotificationsPage() {
         )}
 
         {pushPrefs && (
-          <Card className="p-4 mb-5">
-            <div className="mb-3">
+          <Card className="p-4 space-y-3">
+            <div>
               <p className="text-sm font-semibold text-foreground">
                 {t.notifications.push_engage_section_title}
               </p>
@@ -714,8 +714,8 @@ export default function NotificationsPage() {
         )}
 
         {dailySummary && (
-          <Card className="p-4 mb-5">
-            <div className="flex items-start gap-3 mb-3">
+          <Card className="p-4 space-y-3">
+            <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10 mt-0.5">
                 <Sunrise className="w-4 h-4 text-primary" />
               </div>
@@ -738,7 +738,7 @@ export default function NotificationsPage() {
               </div>
             </div>
             {dailySummary.settings.enabled && (
-              <div className="grid grid-cols-2 gap-3 mt-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="ds-time" className="text-xs text-muted-foreground">
                     {t.daily_summary.time_label}
@@ -780,7 +780,7 @@ export default function NotificationsPage() {
                 </div>
               </div>
             )}
-            <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2">
               <p className="text-[10px] text-muted-foreground">
                 {dailySummary.settings.lastSentDate
                   ? `${t.daily_summary.last_sent}: ${dailySummary.settings.lastSentDate}`

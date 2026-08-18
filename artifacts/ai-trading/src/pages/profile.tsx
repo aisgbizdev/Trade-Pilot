@@ -171,11 +171,11 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
+      <div className="px-4 py-6 space-y-6 md:max-w-3xl md:mx-auto lg:max-w-none">
         <h1 className="text-xl font-bold text-foreground">{t.profile.title}</h1>
 
-        <Card className="p-4">
-          <div className="flex items-center gap-3 mb-4">
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center gap-3">
             <div className="relative">
               <button
                 type="button"
@@ -183,7 +183,7 @@ export default function ProfilePage() {
                 disabled={avatarUploading}
                 data-testid="button-avatar-upload"
                 aria-label={t.profile.avatar_change}
-                className="relative w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-2xl overflow-hidden ring-2 ring-border/60 hover:ring-primary/60 transition-all disabled:opacity-60"
+                className="relative w-16 h-16 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-2xl overflow-hidden ring-2 ring-border/60 hover:ring-primary/60 transition-all disabled:opacity-60"
               >
                 {avatarUrl ? (
                   <img
@@ -280,8 +280,8 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">{t.profile.theme_label}</h3>
+        <Card className="p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">{t.profile.theme_label}</h3>
           <div className="flex gap-2">
             <button
               onClick={() => handleThemeToggle("light")}
@@ -466,23 +466,24 @@ export default function ProfilePage() {
           )}
         </Card>
 
-        <Card className="p-4">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
+        <Card className="p-2">
+          <button
+            type="button"
+            className="w-full flex items-center gap-3 text-left p-2 rounded-lg hover:bg-muted/60 transition-colors"
             onClick={() => setLocation("/my-alerts")}
             data-testid="button-go-my-alerts"
           >
-            <Bell className="w-4 h-4 mr-2" />
-            {t.alerts.page_title}
-          </Button>
-        </Card>
-
-        <Card className="p-4">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">{t.alerts.page_title}</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </button>
           <button
             type="button"
-            className="w-full flex items-center gap-3 text-left p-2 -mx-2 rounded-lg hover:bg-muted/60 transition-colors"
+            className="w-full flex items-center gap-3 text-left p-2 rounded-lg hover:bg-muted/60 transition-colors"
             onClick={() => setLocation("/notifications#settings")}
             data-testid="button-go-notification-settings"
           >
@@ -542,8 +543,8 @@ export default function ProfilePage() {
         </Card>
 
         {(user?.role === "admin" || user?.role === "super_admin") && (
-          <Card className="p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3">{t.profile.admin_panel}</h3>
+          <Card className="p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">{t.profile.admin_panel}</h3>
             <div className="space-y-2">
               <Button
                 variant="outline"
@@ -572,23 +573,25 @@ export default function ProfilePage() {
 
         {SHOW_SPONSOR && (
           <Card
-            className="p-4 border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10"
+            className="p-4 space-y-3 border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10"
             data-testid="card-solid-prime-cta"
           >
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t.brand.sponsored_by}
-              </span>
-              <span className="text-sm font-extrabold tracking-wide text-amber-500 dark:text-amber-300">
-                SOLID PRIME
-              </span>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t.brand.sponsored_by}
+                </span>
+                <span className="text-sm font-extrabold tracking-wide text-amber-500 dark:text-amber-300">
+                  SOLID PRIME
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground/80 leading-snug">
+                {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
+              </p>
+              <p className="text-xs text-foreground/85 leading-relaxed">
+                {t.brand.open_account_subtitle}
+              </p>
             </div>
-            <p className="text-[10px] text-muted-foreground/80 mb-2 leading-snug">
-              {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
-            </p>
-            <p className="text-xs text-foreground/85 leading-relaxed mb-3">
-              {t.brand.open_account_subtitle}
-            </p>
             <Button asChild className="w-full btn-premium font-semibold">
               <a
                 href="https://www.sg-berjangka.com"

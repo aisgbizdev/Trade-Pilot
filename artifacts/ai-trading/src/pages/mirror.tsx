@@ -39,7 +39,7 @@ export default function MirrorPage() {
 
   return (
     <Layout>
-      <main className="flex-1 px-4 pt-3 pb-24 md:px-6 lg:pb-8 space-y-3" data-testid="page-mirror">
+      <main className="flex-1 px-4 pt-3 pb-24 md:px-6 lg:pb-8 space-y-6" data-testid="page-mirror">
         <header className="space-y-1">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
