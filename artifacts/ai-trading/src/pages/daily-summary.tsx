@@ -25,33 +25,35 @@ export default function DailySummaryPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 md:max-w-3xl md:mx-auto lg:max-w-none">
-        <div className="flex items-center gap-2 mb-1">
-          <Sunrise className="w-5 h-5 text-primary" />
-          <h1 className="text-xl font-bold text-foreground">{t.daily_summary.page_title}</h1>
-        </div>
-        <p className="text-xs text-muted-foreground mb-5">{t.daily_summary.page_subtitle}</p>
+      <div className="px-4 py-6 md:max-w-3xl md:mx-auto lg:max-w-none space-y-6">
+        <header className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Sunrise className="w-5 h-5 text-primary" />
+            <h1 className="text-xl font-bold text-foreground">{t.daily_summary.page_title}</h1>
+          </div>
+          <p className="text-xs text-muted-foreground">{t.daily_summary.page_subtitle}</p>
+        </header>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : !data?.today ? (
-          <Card className="p-6 text-center">
-            <Sunrise className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
+          <Card className="p-6 text-center space-y-3">
+            <Sunrise className="w-10 h-10 text-muted-foreground/50 mx-auto" />
             <p className="text-sm text-muted-foreground">
               {t.daily_summary.no_digest_yet}
             </p>
             <Link href="/notifications">
-              <a className="inline-block mt-4 text-xs text-primary hover:underline">
+              <a className="inline-block text-xs text-primary hover:underline">
                 {t.daily_summary.section_title} →
               </a>
             </Link>
           </Card>
         ) : (
           <div className="space-y-3">
-            <Card className="p-4">
-              <div className="flex items-center justify-between gap-2 mb-2">
+            <Card className="p-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
                   {data.today.digestDate}
                 </p>
@@ -65,8 +67,8 @@ export default function DailySummaryPage() {
             </Card>
 
             {data.today.analyses.map((a) => (
-              <Card key={a.id} className="p-4" data-testid={`card-digest-analysis-${a.id}`}>
-                <div className="flex items-center justify-between gap-2 mb-2">
+              <Card key={a.id} className="p-4 space-y-2" data-testid={`card-digest-analysis-${a.id}`}>
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     {biasIcon(a.tradingBias)}
                     <p className="text-sm font-semibold text-foreground">{a.instrument}</p>
@@ -80,7 +82,7 @@ export default function DailySummaryPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2">
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   {a.tradingBias && (
                     <span>
                       {t.daily_summary.bias_label}:{" "}
@@ -95,7 +97,7 @@ export default function DailySummaryPage() {
                   )}
                 </div>
                 {a.mainScenario && (
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 mb-3">
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                     {a.mainScenario}
                   </p>
                 )}

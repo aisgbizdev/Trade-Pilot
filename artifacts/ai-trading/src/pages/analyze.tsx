@@ -658,6 +658,17 @@ export default function AnalyzePage() {
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
   const [alertModalOpen, setAlertModalOpen] = useState(false);
 
+  // Presentation-only: the instrument picker (favorites + tabs + grid +
+  // custom input) is the single bulkiest block on this page. Once the user
+  // taps a concrete preset choice, collapse it into a compact one-line
+  // summary so a first-time user isn't staring at a full grid of buttons
+  // the whole time they're filling in timeframe/notes — purely a UI
+  // convenience, doesn't touch selection state itself. Collapse is only
+  // triggered from explicit "pick" clicks (recent/favorite/grid buttons),
+  // never from typing in the custom-instrument field, so the field never
+  // gets yanked out from under an actively-typing user.
+  const [instrumentPanelOpen, setInstrumentPanelOpen] = useState(true);
+
   // Imperative handle exposed by AntiPatternGuardrails. When the user
   // clicks Analyse despite any active warnings we call it so the
   // component can fire `proceeded: true` telemetry — supports the
@@ -740,18 +751,21 @@ export default function AnalyzePage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5 md:max-w-3xl md:mx-auto">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1">
-            <h1 className="text-lg font-bold text-foreground">{t.analyze.title}</h1>
-            <p className="text-xs text-muted-foreground">
-              {t.analyze.mode_label}: {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
+      <div className="px-4 py-6 md:max-w-3xl md:mx-auto space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">{t.analyze.title}</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {t.analyze.mode_label}:{" "}
+              <span className="font-medium text-foreground">
+                {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
+              </span>
             </p>
           </div>
           {canShowQuotaChip && hourlyQuota && dailyQuota && (
             <span
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
+                "inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold border shrink-0",
                 hourlyQuota.remaining === 0 || dailyQuota.remaining === 0
                   ? "bg-destructive/10 border-destructive/40 text-destructive"
                   : hourlyQuota.remaining <= 1 || dailyQuota.remaining <= 3
@@ -766,91 +780,106 @@ export default function AnalyzePage() {
           )}
         </div>
 
-        <div className="mb-4 flex justify-start">
-          <MarketSessionsBadge instrument={finalInstrument || undefined} />
-        </div>
+        <MarketSessionsBadge instrument={finalInstrument || undefined} />
 
-        <div className="space-y-5">
-          {recentInstruments.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-2">{t.dashboard.last_analyzed}</h2>
-              <div className="flex gap-2 flex-wrap">
-                {recentInstruments.map((r) => (
-                  <button
-                    key={r.instrument}
-                    onClick={() => { setSelectedInstrument(r.instrument); setCustomInstrument(""); }}
-                    data-testid={`button-recent-${r.instrument}`}
-                    className={cn(
-                      "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all flex items-center gap-1.5",
-                      selectedInstrument === r.instrument && !customInstrument
-                        ? "bg-primary/10 border-primary text-primary"
-                        : "bg-background border-border text-foreground hover:border-primary/50"
-                    )}
-                  >
-                    <span>{r.instrument}</span>
-                    <span className="text-muted-foreground text-[10px]">{r.mode === "beginner" ? t.common.beginner : t.common.pro}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
+        {recentInstruments.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
-            <FavoritesSection
-              selectedInstrument={selectedInstrument}
-              hasCustom={Boolean(customInstrument)}
-              onSelect={(inst) => { setSelectedInstrument(inst); setCustomInstrument(""); }}
-            />
-            <div className="flex gap-2 mb-3">
-              {(["futures", "forex", "crypto"] as const).map((tab) => (
+            <h2 className="text-sm font-semibold text-foreground mb-2">{t.dashboard.last_analyzed}</h2>
+            <div className="flex gap-2 flex-wrap">
+              {recentInstruments.map((r) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  data-testid={`tab-${tab}`}
+                  key={r.instrument}
+                  onClick={() => { setSelectedInstrument(r.instrument); setCustomInstrument(""); setInstrumentPanelOpen(false); }}
+                  data-testid={`button-recent-${r.instrument}`}
                   className={cn(
-                    "flex-1 py-2 text-sm font-medium rounded-lg border transition-all",
-                    activeTab === tab
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border"
+                    "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all flex items-center gap-1.5",
+                    selectedInstrument === r.instrument && !customInstrument
+                      ? "bg-primary/10 border-primary text-primary"
+                      : "bg-background border-border text-foreground hover:border-primary/50"
                   )}
                 >
-                  {tab === "futures"
-                    ? t.analyze.tab_futures
-                    : tab === "forex"
-                      ? t.analyze.tab_forex
-                      : t.analyze.tab_crypto}
+                  <span>{r.instrument}</span>
+                  <span className="text-muted-foreground text-[10px]">{r.mode === "beginner" ? t.common.beginner : t.common.pro}</span>
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {instrumentsForTab(activeTab).map((inst) => (
-                <div
-                  key={inst}
-                  className={cn(
-                    "flex items-center gap-1 pr-1 rounded-lg border transition-all",
-                    selectedInstrument === inst && !customInstrument
-                      ? "bg-primary/10 border-primary"
-                      : "bg-background border-border hover:border-primary/50"
-                  )}
-                >
+          </div>
+        )}
+
+        <Collapsible open={instrumentPanelOpen} onOpenChange={setInstrumentPanelOpen}>
+          <Card className="p-4 space-y-3">
+            <CollapsibleTrigger
+              className="w-full flex items-center justify-between gap-2 text-left"
+              data-testid="button-toggle-instrument-panel"
+            >
+              {finalInstrument && !instrumentPanelOpen ? (
+                <span className="text-sm text-foreground">
+                  <span className="text-muted-foreground">{t.analyze.select_instrument}:</span>{" "}
+                  <span className="font-semibold" data-testid="text-selected-instrument-summary">{finalInstrument}</span>
+                </span>
+              ) : (
+                <h2 className="text-sm font-semibold text-foreground">{t.analyze.select_instrument}</h2>
+              )}
+              {instrumentPanelOpen ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
+              )}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+              <FavoritesSection
+                selectedInstrument={selectedInstrument}
+                hasCustom={Boolean(customInstrument)}
+                onSelect={(inst) => { setSelectedInstrument(inst); setCustomInstrument(""); setInstrumentPanelOpen(false); }}
+              />
+              <div className="flex gap-2">
+                {(["futures", "forex", "crypto"] as const).map((tab) => (
                   <button
-                    onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
-                    data-testid={`button-instrument-${inst}`}
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    data-testid={`tab-${tab}`}
                     className={cn(
-                      "flex-1 py-2.5 text-sm font-medium text-left pl-3",
-                      selectedInstrument === inst && !customInstrument
-                        ? "text-primary"
-                        : "text-foreground"
+                      "flex-1 py-2 text-sm font-medium rounded-lg border transition-all",
+                      activeTab === tab
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border"
                     )}
                   >
-                    {inst}
+                    {tab === "futures"
+                      ? t.analyze.tab_futures
+                      : tab === "forex"
+                        ? t.analyze.tab_forex
+                        : t.analyze.tab_crypto}
                   </button>
-                  <WatchlistStar instrument={inst} size="sm" />
-                </div>
-              ))}
-            </div>
-            <div className="mt-3">
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {instrumentsForTab(activeTab).map((inst) => (
+                  <div
+                    key={inst}
+                    className={cn(
+                      "flex items-center gap-1 pr-1 rounded-lg border transition-all",
+                      selectedInstrument === inst && !customInstrument
+                        ? "bg-primary/10 border-primary"
+                        : "bg-background border-border hover:border-primary/50"
+                    )}
+                  >
+                    <button
+                      onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); setInstrumentPanelOpen(false); }}
+                      data-testid={`button-instrument-${inst}`}
+                      className={cn(
+                        "flex-1 py-2.5 text-sm font-medium text-left pl-3",
+                        selectedInstrument === inst && !customInstrument
+                          ? "text-primary"
+                          : "text-foreground"
+                      )}
+                    >
+                      {inst}
+                    </button>
+                    <WatchlistStar instrument={inst} size="sm" />
+                  </div>
+                ))}
+              </div>
               <input
                 type="text"
                 placeholder={t.analyze.or_type}
@@ -862,241 +891,240 @@ export default function AnalyzePage() {
                 className="w-full px-3 py-2.5 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 data-testid="input-custom-instrument"
               />
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
+        <Card className="p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">{t.analyze.select_timeframe}</h2>
+          <div className="flex flex-wrap gap-2">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setSelectedTimeframe(tf)}
+                data-testid={`button-timeframe-${tf}`}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium rounded-lg border transition-all",
+                  selectedTimeframe === tf
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-foreground border-border hover:border-primary/50"
+                )}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">{t.analyze.notes_label}</h2>
+          {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
+          <Textarea
+            placeholder={t.analyze.notes_placeholder}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={6}
+            className="resize-y text-sm leading-relaxed min-h-[140px]"
+            data-testid="textarea-notes"
+          />
+          <p className="text-[10px] text-muted-foreground flex items-start gap-1 leading-relaxed">
+            <span className="text-primary mt-0.5" aria-hidden="true">ℹ</span>
+            {t.analyze.broker_warning}
+          </p>
+        </Card>
+
+        {finalInstrument && selectedTimeframe && (
+          <Card className="p-4 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{t.analyze.instrument_label}:</span>
+              <span className="font-semibold text-foreground">{finalInstrument}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{t.analyze.current_price}:</span>
+              <LivePriceChip instrument={finalInstrument} />
+            </div>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setAlertModalOpen(true)}
+                data-testid="button-set-alert"
+                className="text-xs gap-1.5"
+              >
+                <Bell className="w-3.5 h-3.5" />
+                {t.analyze.set_alert_btn}
+              </Button>
+            </div>
+            <div className="space-y-2" data-testid="mini-chart-section">
+              <TradingViewMiniChart
+                symbol={instrumentToTradingViewSymbol(finalInstrument)}
+                dateRange={miniChartRange}
+                height={180}
+              />
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t.widgets.mini_chart_range_title}
+                </h3>
+                <div className="flex gap-1" role="group" aria-label={t.widgets.mini_chart_range_title}>
+                  {(["1D", "1W", "1M", "3M", "1Y"] as const).map((r) => {
+                    const labelKey = `mini_chart_range_${r.toLowerCase()}` as
+                      | "mini_chart_range_1d"
+                      | "mini_chart_range_1w"
+                      | "mini_chart_range_1m"
+                      | "mini_chart_range_3m"
+                      | "mini_chart_range_1y";
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setMiniChartRange(r)}
+                        data-testid={`button-mini-chart-range-${r}`}
+                        aria-pressed={miniChartRange === r}
+                        className={cn(
+                          "px-2.5 py-1 text-[11px] font-medium rounded-md border transition-all",
+                          miniChartRange === r
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:border-primary/50",
+                        )}
+                      >
+                        {t.widgets[labelKey]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
+              <span className="font-semibold text-foreground">{selectedTimeframe}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{t.analyze.mode_label}:</span>
+              <span className="font-semibold text-foreground">
+                {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
+              </span>
+            </div>
+          </Card>
+        )}
+
+        {finalInstrument && <LocalSentimentWidget instrument={finalInstrument} />}
+
+        {finalInstrument && <PreTradeWarning instrument={finalInstrument} />}
+
+        {finalInstrument && (
+          <AntiPatternGuardrails
+            instrument={finalInstrument}
+            proceedHandleRef={guardrailProceedRef}
+            onCoolingOffChange={setCoolingOffActive}
+          />
+        )}
+        <CoolingOffBreathingDialog
+          open={breathingOpen}
+          onClose={() => setBreathingOpen(false)}
+          onContinueAnyway={() => {
+            setBreathingOpen(false);
+            void runAnalysis();
+          }}
+          lossPnlPercent={coolingOffLoss}
+        />
+
+        {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist />}
+
+        <Button
+          className="w-full h-12 text-base"
+          onClick={handleSubmit}
+          disabled={isLoading || !finalInstrument || !selectedTimeframe}
+          data-testid="button-submit-analysis"
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
+            </div>
+          ) : t.analyze.submit_btn}
+        </Button>
+
+        {result && (
+          <div
+            ref={resultRef}
+            className="space-y-3 pt-2"
+            data-testid="analyze-result-section"
+            data-analysis-id={result.id}
+          >
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                {t.analyze.result_preview_title}
+              </h2>
+              <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+                {t.analyze.result_preview_subtitle}
+              </p>
+            </div>
+            <AnalysisChartSection
+              instrument={result.instrument}
+              timeframe={result.timeframe}
+              tradePlan={result.tradePlan ?? null}
+              analysisCreatedAt={result.createdAt}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setResult(null);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                data-testid="button-new-analysis"
+              >
+                {t.analyze.new_analysis}
+              </Button>
+              <Button
+                onClick={() => setLocation(`/analyses/${result.id}`)}
+                data-testid="button-view-full-analysis"
+              >
+                {t.analyze.view_full_analysis}
+              </Button>
             </div>
           </div>
+        )}
 
-          <div>
-            <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_timeframe}</h2>
-            <div className="flex flex-wrap gap-2">
-              {TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setSelectedTimeframe(tf)}
-                  data-testid={`button-timeframe-${tf}`}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium rounded-lg border transition-all",
-                    selectedTimeframe === tf
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:border-primary/50"
-                  )}
-                >
-                  {tf}
-                </button>
+        {recentAnalyses.length > 0 && (
+          <div className="pt-2 border-t border-border/40" data-testid="section-recent-analyses">
+            <h2 className="text-sm font-semibold text-foreground mb-2.5">{t.dashboard.recent_analyses}</h2>
+            <div className="space-y-2">
+              {recentAnalyses.map((a) => (
+                <Link key={a.id} href={`/analyses/${a.id}`}>
+                  <div
+                    className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all cursor-pointer"
+                    data-testid={`recent-analysis-${a.id}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-semibold text-foreground truncate">{a.instrument}</span>
+                      <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground shrink-0">{a.timeframe}</span>
+                      {(() => {
+                        const b = (a as { tradingBias?: string | null }).tradingBias;
+                        if (b?.startsWith("bullish")) return <TrendingUp className="w-3.5 h-3.5 text-green-500 shrink-0" />;
+                        if (b?.startsWith("bearish")) return <TrendingDown className="w-3.5 h-3.5 text-red-500 shrink-0" />;
+                        return <Minus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
+                      })()}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                      {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: dateLocale })}
+                    </span>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>
+        )}
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">{t.analyze.notes_label}</h2>
-            </div>
-            {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
-            <Textarea
-              placeholder={t.analyze.notes_placeholder}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={6}
-              className="resize-y text-sm leading-relaxed min-h-[140px]"
-              data-testid="textarea-notes"
-            />
-            <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed">
-              <span className="text-primary mt-0.5" aria-hidden="true">ℹ</span>
-              {t.analyze.broker_warning}
-            </p>
-          </div>
+        <EconomicCalendarSection />
 
-          {finalInstrument && selectedTimeframe && (
-            <Card className="p-3 bg-muted/50 border-dashed">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{t.analyze.instrument_label}:</span>
-                <span className="font-semibold text-foreground">{finalInstrument}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-muted-foreground">{t.analyze.current_price}:</span>
-                <LivePriceChip instrument={finalInstrument} />
-              </div>
-              <div className="mt-2 flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setAlertModalOpen(true)}
-                  data-testid="button-set-alert"
-                  className="text-xs gap-1.5"
-                >
-                  <Bell className="w-3.5 h-3.5" />
-                  {t.analyze.set_alert_btn}
-                </Button>
-              </div>
-              <div className="mt-3 space-y-2" data-testid="mini-chart-section">
-                <TradingViewMiniChart
-                  symbol={instrumentToTradingViewSymbol(finalInstrument)}
-                  dateRange={miniChartRange}
-                  height={180}
-                />
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                    {t.widgets.mini_chart_range_title}
-                  </h3>
-                  <div className="flex gap-1" role="group" aria-label={t.widgets.mini_chart_range_title}>
-                    {(["1D", "1W", "1M", "3M", "1Y"] as const).map((r) => {
-                      const labelKey = `mini_chart_range_${r.toLowerCase()}` as
-                        | "mini_chart_range_1d"
-                        | "mini_chart_range_1w"
-                        | "mini_chart_range_1m"
-                        | "mini_chart_range_3m"
-                        | "mini_chart_range_1y";
-                      return (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setMiniChartRange(r)}
-                          data-testid={`button-mini-chart-range-${r}`}
-                          aria-pressed={miniChartRange === r}
-                          className={cn(
-                            "px-2.5 py-1 text-[11px] font-medium rounded-md border transition-all",
-                            miniChartRange === r
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-muted-foreground border-border hover:border-primary/50",
-                          )}
-                        >
-                          {t.widgets[labelKey]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm mt-3">
-                <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
-                <span className="font-semibold text-foreground">{selectedTimeframe}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-muted-foreground">{t.analyze.mode_label}:</span>
-                <span className="font-semibold text-foreground">
-                  {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
-                </span>
-              </div>
-            </Card>
-          )}
-
-          {finalInstrument && <LocalSentimentWidget instrument={finalInstrument} />}
-
-          {finalInstrument && <PreTradeWarning instrument={finalInstrument} />}
-
-          {finalInstrument && (
-            <AntiPatternGuardrails
-              instrument={finalInstrument}
-              proceedHandleRef={guardrailProceedRef}
-              onCoolingOffChange={setCoolingOffActive}
-            />
-          )}
-          <CoolingOffBreathingDialog
-            open={breathingOpen}
-            onClose={() => setBreathingOpen(false)}
-            onContinueAnyway={() => {
-              setBreathingOpen(false);
-              void runAnalysis();
-            }}
-            lossPnlPercent={coolingOffLoss}
-          />
-
-
-          {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist />}
-
-          <Button
-            className="w-full h-12 text-base"
-            onClick={handleSubmit}
-            disabled={isLoading || !finalInstrument || !selectedTimeframe}
-            data-testid="button-submit-analysis"
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
-              </div>
-            ) : t.analyze.submit_btn}
-          </Button>
-
-          {result && (
-            <div
-              ref={resultRef}
-              className="space-y-3 pt-2"
-              data-testid="analyze-result-section"
-              data-analysis-id={result.id}
-            >
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {t.analyze.result_preview_title}
-                </h2>
-                <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
-                  {t.analyze.result_preview_subtitle}
-                </p>
-              </div>
-              <AnalysisChartSection
-                instrument={result.instrument}
-                timeframe={result.timeframe}
-                tradePlan={result.tradePlan ?? null}
-                analysisCreatedAt={result.createdAt}
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setResult(null);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  data-testid="button-new-analysis"
-                >
-                  {t.analyze.new_analysis}
-                </Button>
-                <Button
-                  onClick={() => setLocation(`/analyses/${result.id}`)}
-                  data-testid="button-view-full-analysis"
-                >
-                  {t.analyze.view_full_analysis}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {recentAnalyses.length > 0 && (
-            <div className="pt-2 border-t border-border/40" data-testid="section-recent-analyses">
-              <h2 className="text-sm font-semibold text-foreground mb-2.5">{t.dashboard.recent_analyses}</h2>
-              <div className="space-y-2">
-                {recentAnalyses.map((a) => (
-                  <Link key={a.id} href={`/analyses/${a.id}`}>
-                    <div
-                      className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all cursor-pointer"
-                      data-testid={`recent-analysis-${a.id}`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-semibold text-foreground truncate">{a.instrument}</span>
-                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground shrink-0">{a.timeframe}</span>
-                        {(() => {
-                          const b = (a as { tradingBias?: string | null }).tradingBias;
-                          if (b?.startsWith("bullish")) return <TrendingUp className="w-3.5 h-3.5 text-green-500 shrink-0" />;
-                          if (b?.startsWith("bearish")) return <TrendingDown className="w-3.5 h-3.5 text-red-500 shrink-0" />;
-                          return <Minus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
-                        })()}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                        {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: dateLocale })}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <EconomicCalendarSection />
-
-          <p className="text-xs text-muted-foreground text-center leading-relaxed">
+        <div className="space-y-1.5 text-center">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {t.analyze.disclaimer}
           </p>
           <p
-            className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 text-center leading-relaxed"
+            className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 leading-relaxed"
             data-testid="text-risk-disclaimer-short"
           >
             {t.analyze.risk_disclaimer_short}

@@ -65,7 +65,7 @@ export default function LegalPage({ kind }: LegalPageProps) {
           {doc.intro}
         </p>
 
-        <div className="space-y-7">
+        <div className="space-y-6">
           {doc.sections.map((section, idx) => (
             <section
               key={idx}

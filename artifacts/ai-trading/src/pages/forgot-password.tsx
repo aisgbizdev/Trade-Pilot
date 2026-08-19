@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
-import { ArrowLeft, Eye, EyeOff, TrendingUp, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +19,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation, fromCanonicalSecurityQuestion } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
+import { BrandLogo } from "@/components/brand-logo";
 
 const passwordSchema = (mismatchMsg: string) =>
   z.object({
@@ -116,15 +117,14 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center">
       <div className="w-full max-w-md flex flex-col flex-1">
-      <div className="flex justify-end px-4 pt-4">
-        <LanguageToggle />
-      </div>
-      <div className="flex flex-col items-center px-6 py-4">
-        <div className="w-full max-w-sm">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-primary-foreground" />
-            </div>
+        <div className="flex justify-end px-4 pt-4">
+          <LanguageToggle />
+        </div>
+        <div className="flex flex-col items-center px-6 py-4">
+          <div className="w-full max-w-sm">
+          <div className="flex items-center justify-center gap-2 mb-5">
+            <BrandLogo className="w-10 h-10" />
+            <span className="text-xl font-bold text-foreground">Trade Pilot</span>
           </div>
 
           {step !== "done" && (
@@ -142,7 +142,7 @@ export default function ForgotPasswordPage() {
               <p className="text-sm text-muted-foreground mb-6">{t.auth.forgot_subtitle}</p>
               <form onSubmit={emailForm.handleSubmit(handleEmailSubmit)} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">{t.auth.email_registered_label}</label>
+                  <label className="text-sm font-medium text-foreground">{t.auth.email_registered_label}</label>
                   <Input
                     {...emailForm.register("email")}
                     type="email"
@@ -167,7 +167,7 @@ export default function ForgotPasswordPage() {
               </div>
               <form onSubmit={answerForm.handleSubmit(handleAnswerSubmit)} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">{t.auth.security_answer_label}</label>
+                  <label className="text-sm font-medium text-foreground">{t.auth.security_answer_label}</label>
                   <Input
                     {...answerForm.register("answer")}
                     placeholder={t.auth.answer_placeholder}
@@ -259,8 +259,8 @@ export default function ForgotPasswordPage() {
               </Button>
             </div>
           )}
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

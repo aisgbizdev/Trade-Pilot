@@ -410,33 +410,33 @@ export default function HistoryPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5">
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">{t.history.title}</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {total > 0 ? `${total} ${t.history.total_analyses}` : t.history.no_data_yet}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              data-testid="button-toggle-filters"
-              className={cn(
-                "p-2 rounded-xl transition-colors relative",
-                showFilters || hasActiveFilters
-                  ? "bg-primary/10 text-primary"
-                  : "hover:bg-muted text-muted-foreground"
-              )}
-            >
-              <Filter className="w-4 h-4" />
-              {hasActiveFilters && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
-              )}
-            </button>
+      <div className="px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">{t.history.title}</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {total > 0 ? `${total} ${t.history.total_analyses}` : t.history.no_data_yet}
+            </p>
           </div>
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            data-testid="button-toggle-filters"
+            className={cn(
+              "p-2 rounded-xl transition-colors relative shrink-0",
+              showFilters || hasActiveFilters
+                ? "bg-primary/10 text-primary"
+                : "hover:bg-muted text-muted-foreground"
+            )}
+          >
+            <Filter className="w-4 h-4" />
+            {hasActiveFilters && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+            )}
+          </button>
+        </div>
 
-          <div className="mt-3 relative">
+        <Card className="p-4 space-y-3">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
             <input
               type="search"
@@ -463,7 +463,7 @@ export default function HistoryPage() {
 
           {(presets.length > 0 || hasActiveFilters) && (
             <div
-              className="mt-2 flex flex-wrap gap-1.5 items-center"
+              className="flex flex-wrap gap-1.5 items-center"
               data-testid="preset-row"
             >
               <Bookmark className="w-3 h-3 text-muted-foreground" />
@@ -540,7 +540,7 @@ export default function HistoryPage() {
 
           {activeChips.length > 0 && (
             <div
-              className="mt-2 flex flex-wrap gap-1.5 items-center"
+              className="flex flex-wrap gap-1.5 items-center"
               data-testid="active-filters-row"
             >
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mr-1">
@@ -568,7 +568,7 @@ export default function HistoryPage() {
           )}
 
           {showFilters && (
-            <div className="mt-3 p-3 rounded-xl border border-border bg-muted/30 space-y-3" data-testid="filter-panel">
+            <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-3" data-testid="filter-panel">
               <div>
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Mode</p>
                 <div className="flex gap-2">
@@ -683,14 +683,14 @@ export default function HistoryPage() {
               )}
             </div>
           )}
-        </div>
+        </Card>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : analyses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="history-empty-state">
+          <Card className="flex flex-col items-center justify-center py-12 px-4 text-center" data-testid="history-empty-state">
             <TrendingUp className="w-12 h-12 text-muted-foreground opacity-40 mb-3" />
             <p className="text-sm font-medium text-foreground">
               {hasActiveFilters
@@ -713,7 +713,7 @@ export default function HistoryPage() {
                 </Button>
               </Link>
             )}
-          </div>
+          </Card>
         ) : (
           <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3 md:items-start">
             {analyses.map((a) => {

@@ -210,7 +210,7 @@ export default function LandingPage() {
             is finalized; intentionally kept in the codebase for fast revival. */}
         {SHOW_SPONSOR && (
           <section className="px-4 pb-8" data-testid="section-solid-prime-cta">
-            <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 p-5">
+            <div className="rounded-xl border border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 p-5">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t.brand.sponsored_by}
@@ -248,7 +248,7 @@ export default function LandingPage() {
           className="px-4 pb-10"
           data-testid="section-philosophy"
         >
-          <div className="rounded-2xl border border-border bg-card px-5 py-5 flex gap-4 items-start md:items-center">
+          <div className="rounded-xl border border-border bg-card px-5 py-5 flex gap-4 items-start md:items-center">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/15 to-yellow-500/10 border border-amber-400/20 flex items-center justify-center shrink-0">
               <Lightbulb className="w-5 h-5 text-amber-400" />
             </div>
