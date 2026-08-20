@@ -85,7 +85,7 @@ export default function MindsetPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-6 space-y-6 md:max-w-3xl md:mx-auto lg:max-w-none">
+      <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
         {!active ? (
           <>
             <div className="flex items-center gap-3">
@@ -97,7 +97,7 @@ export default function MindsetPage() {
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <div className="flex-1">
-                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-primary" />
                   {t.mindset.title}
                 </h1>
@@ -143,7 +143,7 @@ export default function MindsetPage() {
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+            <p className="text-[10px] text-muted-foreground text-center leading-relaxed pt-2">
               {t.mindset.disclaimer}
             </p>
           </>

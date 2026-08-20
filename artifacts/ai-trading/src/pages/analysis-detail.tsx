@@ -233,7 +233,7 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
   const color = biasColor(bias);
   const counts = biasToCounts(bias);
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
@@ -658,7 +658,7 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
         {renderSide(plan.buy, "buy")}
         {renderSide(plan.sell, "sell")}
       </div>
-      <div className="flex gap-2 items-start bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md p-3">
+      <div className="flex gap-2 items-start bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md p-2.5">
         <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
         <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
           {t.analysis_detail.trade_plan_disclaimer}
@@ -1605,19 +1605,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [refreshNotes, setRefreshNotes] = useState("");
   const [executionOpen, setExecutionOpen] = useState(false);
   const [quickTimeframe, setQuickTimeframe] = useState<string | null>(null);
-  // Progressive-disclosure state for secondary "why/detail" sections on
-  // this page (task: beginner "information overload" feedback). Each
-  // defaults CLOSED via plain useState — never toggled reactively from a
-  // useEffect — so nothing can rip content out from under an in-progress
-  // user interaction (see AnalysisNotesCard for the bug that pattern
-  // caused elsewhere). Read-only display data, so default-collapsed is
-  // safe here; the user taps to expand.
-  const [marketContextOpen, setMarketContextOpen] = useState(false);
-  const [indicatorsOpen, setIndicatorsOpen] = useState(false);
-  const [invalidationOpen, setInvalidationOpen] = useState(false);
-  const [oppRiskOpen, setOppRiskOpen] = useState(false);
-  const [scenariosOpen, setScenariosOpen] = useState(false);
-  const [proDetailsOpen, setProDetailsOpen] = useState(false);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const carriedOver = typeof window !== "undefined" &&
@@ -1763,7 +1750,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
   return (
     <Layout>
-      <div className="px-4 py-6 space-y-6 md:max-w-3xl md:mx-auto lg:max-w-none">
+      <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setLocation("/history")}
@@ -1774,7 +1761,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-foreground" data-testid="text-instrument">
+              <h1 className="text-lg font-bold text-foreground" data-testid="text-instrument">
                 {analysis.instrument}
               </h1>
               <Badge variant="outline" className="text-xs">
@@ -1812,7 +1799,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             or re-selecting the instrument. Defaults to the current
             analysis's timeframe; result navigation is handled by
             `useRefreshAnalysis`, same as the "Refresh Analysis" flow. */}
-        <Card className="p-4 space-y-3" data-testid="card-quick-timeframe">
+        <Card className="p-3 space-y-2.5" data-testid="card-quick-timeframe">
           <div>
             <p className="text-xs font-semibold text-foreground">
               {t.analysis_detail.quick_timeframe_title}
@@ -1913,7 +1900,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </div>
 
           {confidenceReason && (
-            <div className="bg-muted/40 rounded-md p-3 flex gap-2" data-testid="card-confidence-reason">
+            <div className="bg-muted/40 rounded-md p-2.5 flex gap-2" data-testid="card-confidence-reason">
               <HelpCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
               <div className="flex-1">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
@@ -1948,7 +1935,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
           {isExpired && (
             <Button
-              className="w-full"
+              className="w-full mt-2"
               onClick={openRefreshDialog}
               disabled={isRefreshing}
               data-testid="button-refresh-analysis"
@@ -2039,82 +2026,37 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         />
 
         {/* Market Context Summary — same card the user saw on the Analyze tab,
-            rendered from the indicator-tally snapshot stored at analysis time.
-            Collapsed by default (supporting "why" detail, not the core
-            verdict) so a beginner isn't hit with another card immediately
-            after the trade plan. */}
+            rendered from the indicator-tally snapshot stored at analysis time. */}
         {analysis.techBuyCount != null &&
           analysis.techSellCount != null &&
           analysis.techNeutralCount != null && (
-            <Card className="overflow-hidden" data-testid="card-market-context-section">
-              <Collapsible open={marketContextOpen} onOpenChange={setMarketContextOpen}>
-                <CollapsibleTrigger
-                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                  data-testid="button-toggle-market-context"
-                >
-                  <div className="flex items-center gap-2 text-left">
-                    {marketContextOpen ? (
-                      <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                    )}
-                    <p className="text-sm font-semibold text-foreground">
-                      {t.analyze.market_context_title}
-                    </p>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="p-4 pt-0 border-t border-border">
-                    <MarketContextSummary
-                      buy={analysis.techBuyCount}
-                      sell={analysis.techSellCount}
-                      neutral={analysis.techNeutralCount}
-                      mode={isBeginnerMode ? "beginner" : "pro"}
-                    />
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
+            <MarketContextSummary
+              buy={analysis.techBuyCount}
+              sell={analysis.techSellCount}
+              neutral={analysis.techNeutralCount}
+              mode={isBeginnerMode ? "beginner" : "pro"}
+            />
           )}
 
         {/* Live Technical Indicators panel — moved from the Analyze tab so
             users get the full indicator picture in ONE place (the saved
             analysis). Data is live (re-fetched from the upstream feed) so we
-            warn that it may differ from the snapshot the AI saw. Collapsed
-            by default — same "supporting detail" rationale as above. */}
+            warn that it may differ from the snapshot the AI saw. */}
         {indicatorTimeframe && (
-          <Card className="overflow-hidden" data-testid="card-indicators-section">
-            <Collapsible open={indicatorsOpen} onOpenChange={setIndicatorsOpen}>
-              <CollapsibleTrigger
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                data-testid="button-toggle-technical-indicators"
-              >
-                <div className="flex items-center gap-2 text-left">
-                  {indicatorsOpen ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-sm font-bold text-foreground">
-                      {t.analysis_detail.indicators_section_title}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                      {t.analysis_detail.indicators_section_note}
-                    </p>
-                  </div>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 pt-0 border-t border-border">
-                  <TechnicalIndicatorsPanel
-                    instrument={analysis.instrument}
-                    mode={isBeginnerMode ? "beginner" : "pro"}
-                    timeframe={indicatorTimeframe}
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+          <Card className="p-4 space-y-3" data-testid="card-indicators-section">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">
+                {t.analysis_detail.indicators_section_title}
+              </h3>
+              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                {t.analysis_detail.indicators_section_note}
+              </p>
+            </div>
+            <TechnicalIndicatorsPanel
+              instrument={analysis.instrument}
+              mode={isBeginnerMode ? "beginner" : "pro"}
+              timeframe={indicatorTimeframe}
+            />
           </Card>
         )}
 
@@ -2144,209 +2086,118 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </Card>
         )}
 
-        {/* Invalidation conditions — "why it could go wrong" detail, not a
-            live/armed warning (that's the separate price-alerts card
-            above), so it's a collapse candidate like the other
-            supporting-detail sections. Defaults closed; the icon + red
-            accent stay on the trigger so it's still visually distinct
-            even collapsed. */}
+        {/* HIGH PRIORITY: Invalidation conditions */}
         {invalidationItems.length > 0 && (
           <Card
-            className="overflow-hidden border-l-4 border-l-red-500 dark:border-l-red-400 bg-red-50/40 dark:bg-red-950/20"
+            className="p-4 border-l-4 border-l-red-500 dark:border-l-red-400 bg-red-50/40 dark:bg-red-950/20"
             data-testid="card-invalidation"
           >
-            <Collapsible open={invalidationOpen} onOpenChange={setInvalidationOpen}>
-              <CollapsibleTrigger
-                className="w-full flex items-center justify-between p-4 hover:bg-red-100/40 dark:hover:bg-red-900/10 transition-colors"
-                data-testid="button-toggle-invalidation"
-              >
-                <div className="flex items-start gap-2 text-left">
-                  <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-                  <div>
-                    <h3 className="text-sm font-bold text-red-700 dark:text-red-400">
-                      {t.analysis_detail.invalidation_title}
-                    </h3>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {t.analysis_detail.invalidation_subtitle}
-                    </p>
-                  </div>
-                </div>
-                {invalidationOpen ? (
-                  <ChevronDown className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-                )}
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-4 pb-4 pl-11">
-                  <ul className="space-y-1.5" data-testid="list-invalidation">
-                    {invalidationItems.map((item, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-foreground">
-                        <span className="text-red-500 mt-0.5">•</span>
-                        <span className="leading-snug">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
-        )}
-
-        {/* OPPORTUNITY vs RISK — supporting narrative detail, collapsed by
-            default. Trigger label composes the two existing card titles
-            ("Opportunity" + "Risk") rather than adding a new string. */}
-        {(analysis.opportunity || analysis.risk) && (
-          <Card className="overflow-hidden" data-testid="card-opp-risk-section">
-            <Collapsible open={oppRiskOpen} onOpenChange={setOppRiskOpen}>
-              <CollapsibleTrigger
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                data-testid="button-toggle-opp-risk"
-              >
-                <div className="flex items-center gap-2 text-left">
-                  {oppRiskOpen ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                  )}
-                  <p className="text-sm font-semibold text-foreground">
-                    {t.analysis_detail.opportunity_title} &amp; {t.analysis_detail.risk_title}
-                  </p>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 pt-0 border-t border-border"
-                  data-testid="grid-opp-risk"
-                >
-                  {analysis.opportunity && (
-                    <Card
-                      className="p-4 border-l-4 border-l-emerald-500 dark:border-l-emerald-400"
-                      data-testid="card-opportunity"
-                    >
-                      <div className="flex gap-2 mb-2">
-                        <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                          {t.analysis_detail.opportunity_title}
-                        </h3>
-                      </div>
-                      <p className="text-sm text-foreground leading-relaxed">{analysis.opportunity}</p>
-                    </Card>
-                  )}
-                  {analysis.risk && (
-                    <Card
-                      className="p-4 border-l-4 border-l-amber-500 dark:border-l-amber-400"
-                      data-testid="card-risk"
-                    >
-                      <div className="flex gap-2 mb-2">
-                        <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                        <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400">
-                          {t.analysis_detail.risk_title}
-                        </h3>
-                      </div>
-                      <p className="text-sm text-foreground leading-relaxed">{analysis.risk}</p>
-                    </Card>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
-        )}
-
-        {/* SCENARIOS A / B / C — narrative "what if" detail, collapsed by
-            default. Reuses the existing (previously-unused) `scenarios_section`
-            copy key for the trigger label. */}
-        <Card className="overflow-hidden" data-testid="card-scenarios">
-          <Collapsible open={scenariosOpen} onOpenChange={setScenariosOpen}>
-            <CollapsibleTrigger
-              className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-              data-testid="button-toggle-scenarios"
-            >
-              <div className="flex items-center gap-2 text-left">
-                {scenariosOpen ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                )}
-                <p className="text-sm font-semibold text-foreground">
-                  {t.analysis_detail.scenarios_section}
-                </p>
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="p-4 pt-0 space-y-4 border-t border-border">
-                {scenarioAContent && (
-                  <Section title={t.analysis_detail.scenario_a} content={scenarioAContent} />
-                )}
-                {scenarioBContent && (
-                  <Section title={t.analysis_detail.scenario_b} content={scenarioBContent} />
-                )}
-                <div data-testid="section-scenario-c">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                    {t.analysis_detail.scenario_c}
+            <div className="flex gap-2.5">
+              <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div>
+                  <h3 className="text-sm font-bold text-red-700 dark:text-red-400">
+                    {t.analysis_detail.invalidation_title}
                   </h3>
-                  <p className="text-sm text-foreground leading-relaxed">
-                    {scenarioCText(bias ?? "neutral", t)}
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {t.analysis_detail.invalidation_subtitle}
                   </p>
                 </div>
+                <ul className="space-y-1.5" data-testid="list-invalidation">
+                  {invalidationItems.map((item, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-foreground">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      <span className="leading-snug">{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
+            </div>
+          </Card>
+        )}
+
+        {/* OPPORTUNITY vs RISK */}
+        {(analysis.opportunity || analysis.risk) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="grid-opp-risk">
+            {analysis.opportunity && (
+              <Card
+                className="p-4 border-l-4 border-l-emerald-500 dark:border-l-emerald-400"
+                data-testid="card-opportunity"
+              >
+                <div className="flex gap-2 mb-2">
+                  <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                    {t.analysis_detail.opportunity_title}
+                  </h3>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">{analysis.opportunity}</p>
+              </Card>
+            )}
+            {analysis.risk && (
+              <Card
+                className="p-4 border-l-4 border-l-amber-500 dark:border-l-amber-400"
+                data-testid="card-risk"
+              >
+                <div className="flex gap-2 mb-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                    {t.analysis_detail.risk_title}
+                  </h3>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">{analysis.risk}</p>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* SCENARIOS A / B / C */}
+        <Card className="p-4 space-y-4" data-testid="card-scenarios">
+          {scenarioAContent && (
+            <Section title={t.analysis_detail.scenario_a} content={scenarioAContent} />
+          )}
+          {scenarioBContent && (
+            <Section title={t.analysis_detail.scenario_b} content={scenarioBContent} />
+          )}
+          <div data-testid="section-scenario-c">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+              {t.analysis_detail.scenario_c}
+            </h3>
+            <p className="text-sm text-foreground leading-relaxed">
+              {scenarioCText(bias ?? "neutral", t)}
+            </p>
+          </div>
         </Card>
 
-        {/* PRO MODE: Technical + Fundamental + Market context — dense
-            in-depth narrative, collapsed by default. No single existing
-            copy key covers all three factors together, so the trigger
-            label is a short hardcoded generic word per the "Detail"-style
-            fallback rule. */}
+        {/* PRO MODE: Technical + Fundamental + Market context */}
         {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
-          <Card className="overflow-hidden" data-testid="card-pro-details">
-            <Collapsible open={proDetailsOpen} onOpenChange={setProDetailsOpen}>
-              <CollapsibleTrigger
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                data-testid="button-toggle-pro-details"
-              >
-                <div className="flex items-center gap-2 text-left">
-                  {proDetailsOpen ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                  )}
-                  <p className="text-sm font-semibold text-foreground">Detailed Factors</p>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 pt-0 space-y-4 border-t border-border">
-                  <Section title={t.analysis_detail.pro_factor_technical} content={analysis.keyDriversTechnical} />
-                  {/* Inline source chips next to the AI's fundamental + market-
-                      context narrative (task #89) — duplicate the chip block
-                      under both because the AI tends to reference fundamental
-                      catalysts in either / both depending on the prompt. */}
-                  <Section
-                    title={t.analysis_detail.pro_factor_fundamental}
-                    content={analysis.keyDriversFundamental}
-                    citations={
-                      <CitationChips
-                        citations={analysis.fundamentalCitations}
-                        context={analysis.fundamentalContext}
-                        t={t}
-                      />
-                    }
-                  />
-                  <Section
-                    title={t.analysis_detail.pro_factor_market_context}
-                    content={analysis.marketContext}
-                    citations={
-                      <CitationChips
-                        citations={analysis.fundamentalCitations}
-                        context={analysis.fundamentalContext}
-                        t={t}
-                      />
-                    }
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+          <Card className="p-4 space-y-4" data-testid="card-pro-details">
+            <Section title={t.analysis_detail.pro_factor_technical} content={analysis.keyDriversTechnical} />
+            {/* Inline source chips next to the AI's fundamental + market-
+                context narrative (task #89) — duplicate the chip block
+                under both because the AI tends to reference fundamental
+                catalysts in either / both depending on the prompt. */}
+            <Section
+              title={t.analysis_detail.pro_factor_fundamental}
+              content={analysis.keyDriversFundamental}
+              citations={
+                <CitationChips
+                  citations={analysis.fundamentalCitations}
+                  context={analysis.fundamentalContext}
+                  t={t}
+                />
+              }
+            />
+            <Section
+              title={t.analysis_detail.pro_factor_market_context}
+              content={analysis.marketContext}
+              citations={
+                <CitationChips
+                  citations={analysis.fundamentalCitations}
+                  context={analysis.fundamentalContext}
+                  t={t}
+                />
+              }
+            />
           </Card>
         )}
 
@@ -2401,7 +2252,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                     </p>
                   </div>
                 </div>
-                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md p-3 flex gap-2">
+                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md p-3 flex gap-2 mt-3">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
                     {t.analysis_detail.execution_insight_disclaimer}
@@ -2429,14 +2280,14 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </div>
         </Card>
 
-        <Card className="p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold text-foreground mb-3">
             {existingFeedback || feedbackSubmitted
               ? t.analysis_detail.feedback_your
               : t.analysis_detail.feedback_title}
           </h3>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-3">
             <button
               onClick={() => setFeedbackType("useful")}
               data-testid="button-feedback-useful"

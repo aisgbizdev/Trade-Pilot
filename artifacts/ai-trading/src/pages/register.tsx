@@ -64,11 +64,11 @@ export default function RegisterPage() {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center">
       <div className="w-full max-w-md flex flex-col flex-1">
-        <div className="flex justify-end px-4 pt-4">
-          <LanguageToggle />
-        </div>
-        <div className="flex flex-col items-center px-6 py-4">
-          <div className="w-full max-w-sm">
+      <div className="flex justify-end px-4 pt-4">
+        <LanguageToggle />
+      </div>
+      <div className="flex flex-col items-center px-6 py-4">
+        <div className="w-full max-w-sm">
           <div className="flex items-center justify-center gap-2 mb-5">
             <BrandLogo className="w-10 h-10" />
             <span className="text-xl font-bold text-foreground">Trade Pilot</span>

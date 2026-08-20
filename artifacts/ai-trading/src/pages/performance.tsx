@@ -222,13 +222,13 @@ export default function PerformancePage() {
 
   return (
     <Layout>
-      <main className="flex-1 px-4 pt-6 pb-24 space-y-6 md:max-w-3xl md:mx-auto lg:max-w-none" data-testid="page-performance">
-        <header className="space-y-3">
-          <div className="flex items-center gap-2.5">
-            <Activity className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground leading-tight tracking-tight">{tp.title}</h1>
+      <main className="flex-1 px-4 pt-3 pb-24 space-y-3 md:max-w-3xl md:mx-auto lg:max-w-none" data-testid="page-performance">
+        <header className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-primary" />
+            <h1 className="text-xl font-bold text-foreground leading-tight">{tp.title}</h1>
           </div>
-          <p className="text-[13px] text-muted-foreground leading-snug">{tp.subtitle}</p>
+          <p className="text-[12px] text-muted-foreground leading-snug">{tp.subtitle}</p>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div
               role="tablist"
@@ -299,7 +299,7 @@ export default function PerformancePage() {
           <>
             <Banner banner={summary.banner} bannerNeed={summary.minSamples.banner} t={t} />
 
-            <Card className="p-4 space-y-4" data-testid="performance-overall">
+            <Card className="p-4 space-y-3" data-testid="performance-overall">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
                   {tp.overall_title.replace("{days}", String(summary.windowDays))}
@@ -308,10 +308,10 @@ export default function PerformancePage() {
                   {tp.overall_total.replace("{n}", String(summary.overall.total))}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <p className="text-[11px] text-muted-foreground">{tp.overall_win_rate}</p>
-                  <p className="text-3xl font-bold text-emerald-400 tabular-nums" data-testid="overall-win-rate">
+                  <p className="text-2xl font-bold text-emerald-400 tabular-nums" data-testid="overall-win-rate">
                     {fmtPct(summary.overall.winRate)}
                   </p>
                   <p className="text-[10px] text-muted-foreground leading-snug">
@@ -320,7 +320,7 @@ export default function PerformancePage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-[11px] text-muted-foreground">{tp.overall_hit_rate}</p>
-                  <p className="text-3xl font-bold text-foreground tabular-nums" data-testid="overall-hit-rate">
+                  <p className="text-2xl font-bold text-foreground tabular-nums" data-testid="overall-hit-rate">
                     {fmtPct(summary.overall.hitRate)}
                   </p>
                   <p className="text-[10px] text-muted-foreground leading-snug">
@@ -410,7 +410,7 @@ export function PerformanceMethodologyPage() {
   ];
   return (
     <Layout>
-      <main className="flex-1 px-4 pt-6 pb-24 space-y-6 md:max-w-3xl md:mx-auto lg:max-w-none" data-testid="page-performance-methodology">
+      <main className="flex-1 px-4 pt-3 pb-24 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none" data-testid="page-performance-methodology">
         <Link
           href="/performance"
           className="inline-flex items-center gap-1 text-[12px] text-muted-foreground"
@@ -419,9 +419,9 @@ export function PerformanceMethodologyPage() {
           <ChevronLeft className="w-3.5 h-3.5" />
           {tp.title}
         </Link>
-        <header className="space-y-2">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">{tp.methodology_title}</h1>
-          <p className="text-[13px] text-muted-foreground leading-snug">{tp.methodology_intro}</p>
+        <header className="space-y-1">
+          <h1 className="text-xl font-bold text-foreground">{tp.methodology_title}</h1>
+          <p className="text-[12px] text-muted-foreground leading-snug">{tp.methodology_intro}</p>
         </header>
         <div className="space-y-3">
           {sections.map((s) => (
