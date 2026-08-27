@@ -36,9 +36,30 @@ app.use(
     },
   }),
 );
+// Store-readiness hardening: reflecting `origin: true` for every request
+// means ANY website can make credentialed (cookie-bearing) requests to
+// this API on a logged-in user's behalf — CORS is the only thing standing
+// between "site X reads your session" and not. The production app is
+// same-origin (the api-server serves the ai-trading SPA itself, see
+// below), so the only *legitimate* cross-origin browser callers are the
+// production domain itself (for any preview/edge deployment that isn't
+// perfectly same-origin) plus local dev servers. Native mobile HTTP
+// clients are unaffected either way — CORS is a browser-only mechanism.
+const PRODUCTION_ORIGIN = "https://tradepilot.id";
+const DEV_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 app.use(
   cors({
-    origin: true,
+    origin(origin, callback) {
+      // No Origin header at all (native apps, curl, server-to-server) —
+      // nothing for a browser-enforced CORS check to protect here.
+      if (!origin) return callback(null, true);
+      if (origin === PRODUCTION_ORIGIN) return callback(null, true);
+      if (process.env["NODE_ENV"] !== "production" && DEV_ORIGIN_PATTERN.test(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );

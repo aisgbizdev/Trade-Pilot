@@ -7,6 +7,11 @@ export interface NotificationEvent {
     title: string;
     message: string;
     type?: string | null;
+    // Store-readiness (P2-B2): carried on the SSE event too so a client
+    // can render/act on a fresh notification without a full refetch.
+    category?: string | null;
+    actionType?: string | null;
+    actionId?: string | null;
     createdAt?: string;
   };
 }

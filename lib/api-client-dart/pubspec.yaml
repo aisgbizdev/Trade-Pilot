@@ -1,6 +1,7 @@
 name: trade_pilot_api_client
 version: 0.1.0
-description: Generated Dart/Dio client for the Trade Pilot API.
+description: OpenAPI API client
+homepage: homepage
 
 
 environment:

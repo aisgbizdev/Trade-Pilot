@@ -45,6 +45,7 @@ import type {
   DailySummaryResponse,
   DailySummarySettings,
   DailySummarySettingsUpdate,
+  DeleteAccountBody,
   ErrorResponse,
   Feedback,
   FeedbackBody,
@@ -72,6 +73,8 @@ import type {
   ListJournalEntriesParams,
   LoginBody,
   MessageResponse,
+  NativePushRegisterBody,
+  NativePushUnregisterBody,
   NotificationsList,
   OutboundClickBody,
   OutboundClickStats,
@@ -1209,6 +1212,93 @@ export const useChangeSecurityQuestion = <
   TContext
 > => {
   return useMutation(getChangeSecurityQuestionMutationOptions(options));
+};
+
+/**
+ * Re-authenticates with `currentPassword`, then permanently deletes the authenticated user's account and every row that references it (analyses, notifications, sessions, push subscriptions, native push devices, journal entries, watchlist, alerts, etc.) via cascading foreign keys. Cannot be used to delete another user's account — the target is always the authenticated caller.
+ * @summary Permanently delete the current user's own account
+ */
+export const getDeleteAccountUrl = () => {
+  return `/api/auth/account`;
+};
+
+export const deleteAccount = async (
+  deleteAccountBody: DeleteAccountBody,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getDeleteAccountUrl(), {
+    ...options,
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(deleteAccountBody),
+  });
+};
+
+export const getDeleteAccountMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAccount>>,
+    TError,
+    { data: BodyType<DeleteAccountBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAccount>>,
+  TError,
+  { data: BodyType<DeleteAccountBody> },
+  TContext
+> => {
+  const mutationKey = ["deleteAccount"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAccount>>,
+    { data: BodyType<DeleteAccountBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return deleteAccount(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAccount>>
+>;
+export type DeleteAccountMutationBody = BodyType<DeleteAccountBody>;
+export type DeleteAccountMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Permanently delete the current user's own account
+ */
+export const useDeleteAccount = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAccount>>,
+    TError,
+    { data: BodyType<DeleteAccountBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAccount>>,
+  TError,
+  { data: BodyType<DeleteAccountBody> },
+  TContext
+> => {
+  return useMutation(getDeleteAccountMutationOptions(options));
 };
 
 /**
@@ -4733,6 +4823,181 @@ export const useSendPushTest = <
   TContext
 > => {
   return useMutation(getSendPushTestMutationOptions(options));
+};
+
+/**
+ * Upserts on the globally-unique device token: if the same physical device token was previously registered under a different account, ownership transfers to the current authenticated user (the correct behavior when a device logs out and a different user logs in).
+ * @summary Register (or transfer ownership of) a native push device token
+ */
+export const getRegisterNativePushDeviceUrl = () => {
+  return `/api/native-push/register`;
+};
+
+export const registerNativePushDevice = async (
+  nativePushRegisterBody: NativePushRegisterBody,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getRegisterNativePushDeviceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(nativePushRegisterBody),
+  });
+};
+
+export const getRegisterNativePushDeviceMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerNativePushDevice>>,
+    TError,
+    { data: BodyType<NativePushRegisterBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerNativePushDevice>>,
+  TError,
+  { data: BodyType<NativePushRegisterBody> },
+  TContext
+> => {
+  const mutationKey = ["registerNativePushDevice"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerNativePushDevice>>,
+    { data: BodyType<NativePushRegisterBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerNativePushDevice(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterNativePushDeviceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerNativePushDevice>>
+>;
+export type RegisterNativePushDeviceMutationBody =
+  BodyType<NativePushRegisterBody>;
+export type RegisterNativePushDeviceMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Register (or transfer ownership of) a native push device token
+ */
+export const useRegisterNativePushDevice = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerNativePushDevice>>,
+    TError,
+    { data: BodyType<NativePushRegisterBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerNativePushDevice>>,
+  TError,
+  { data: BodyType<NativePushRegisterBody> },
+  TContext
+> => {
+  return useMutation(getRegisterNativePushDeviceMutationOptions(options));
+};
+
+/**
+ * @summary Remove the caller's own native push device registration
+ */
+export const getUnregisterNativePushDeviceUrl = () => {
+  return `/api/native-push/unregister`;
+};
+
+export const unregisterNativePushDevice = async (
+  nativePushUnregisterBody: NativePushUnregisterBody,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getUnregisterNativePushDeviceUrl(), {
+    ...options,
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(nativePushUnregisterBody),
+  });
+};
+
+export const getUnregisterNativePushDeviceMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unregisterNativePushDevice>>,
+    TError,
+    { data: BodyType<NativePushUnregisterBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unregisterNativePushDevice>>,
+  TError,
+  { data: BodyType<NativePushUnregisterBody> },
+  TContext
+> => {
+  const mutationKey = ["unregisterNativePushDevice"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unregisterNativePushDevice>>,
+    { data: BodyType<NativePushUnregisterBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return unregisterNativePushDevice(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnregisterNativePushDeviceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unregisterNativePushDevice>>
+>;
+export type UnregisterNativePushDeviceMutationBody =
+  BodyType<NativePushUnregisterBody>;
+export type UnregisterNativePushDeviceMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Remove the caller's own native push device registration
+ */
+export const useUnregisterNativePushDevice = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unregisterNativePushDevice>>,
+    TError,
+    { data: BodyType<NativePushUnregisterBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unregisterNativePushDevice>>,
+  TError,
+  { data: BodyType<NativePushUnregisterBody> },
+  TContext
+> => {
+  return useMutation(getUnregisterNativePushDeviceMutationOptions(options));
 };
 
 /**

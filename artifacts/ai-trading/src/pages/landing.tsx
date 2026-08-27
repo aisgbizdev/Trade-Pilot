@@ -328,6 +328,22 @@ export default function LandingPage() {
           >
             {t.legal.terms_link}
           </Link>
+          <span className="text-muted-foreground/50">·</span>
+          <Link
+            href="/support"
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="link-footer-support"
+          >
+            {t.legal.support_link}
+          </Link>
+          <span className="text-muted-foreground/50">·</span>
+          <Link
+            href="/delete-account"
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="link-footer-delete-account"
+          >
+            {t.legal.delete_account_link}
+          </Link>
         </div>
         {SHOW_SPONSOR && (
           <p className="text-[10px] text-muted-foreground/70">

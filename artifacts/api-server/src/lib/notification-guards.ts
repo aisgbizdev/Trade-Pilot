@@ -12,8 +12,28 @@ const DEFAULT_QUIET_START_HOUR = 22; // 22:00 inclusive
 const DEFAULT_QUIET_END_HOUR = 7; // 07:00 exclusive
 
 export interface QuietHoursUser {
-  /** IANA timezone the quiet-hours window is interpreted in. */
+  /** IANA timezone the quiet-hours window is interpreted in (legacy fallback). */
   dailySummaryTimezone?: string | null;
+  /** Store-readiness (P2-B4.1): per-user quiet-hours override. `false` disables
+   * quiet hours entirely for this user; omitted/`true`/`null` keeps them on. */
+  quietHoursEnabled?: boolean | null;
+  /** "HH:MM" 24h local time. Falls back to the function's default when unset/invalid. */
+  quietHoursStart?: string | null;
+  /** "HH:MM" 24h local time. Falls back to the function's default when unset/invalid. */
+  quietHoursEnd?: string | null;
+  /** Preferred over `dailySummaryTimezone` when both are present. */
+  notificationTimezone?: string | null;
+}
+
+/** Parse "HH:MM" into an hour-of-day integer (0-23); minutes are ignored to
+ * keep this function's hour-bucket comparison model. Returns `fallback` for
+ * anything that isn't a well-formed, in-range HH:MM string. */
+function parseQuietHour(value: string | null | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return fallback;
+  const hour = Number(match[1]);
+  return Number.isInteger(hour) && hour >= 0 && hour <= 23 ? hour : fallback;
 }
 
 /**
@@ -55,9 +75,10 @@ export function withinQuietHours(
   now: Date = new Date(),
   opts: { startHour?: number; endHour?: number } = {},
 ): boolean {
-  const start = opts.startHour ?? DEFAULT_QUIET_START_HOUR;
-  const end = opts.endHour ?? DEFAULT_QUIET_END_HOUR;
-  const tz = user.dailySummaryTimezone || DEFAULT_TIMEZONE;
+  if (user.quietHoursEnabled === false) return false;
+  const start = opts.startHour ?? parseQuietHour(user.quietHoursStart, DEFAULT_QUIET_START_HOUR);
+  const end = opts.endHour ?? parseQuietHour(user.quietHoursEnd, DEFAULT_QUIET_END_HOUR);
+  const tz = user.notificationTimezone || user.dailySummaryTimezone || DEFAULT_TIMEZONE;
   const hour = hourInTimezone(now, tz);
   if (start === end) return false;
   if (start < end) {

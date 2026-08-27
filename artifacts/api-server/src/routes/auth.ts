@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { notifyAdminsUserCreated } from "../lib/jobs";
+import { notifyAdminsUserCreated, notifySuperAdminsUserDeleted } from "../lib/jobs";
+import { notifyCriticalSecurityEvent, notifyLoginAlert } from "../lib/security-notification";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { db } from "../lib/db";
@@ -7,6 +8,8 @@ import {
   users,
   sessions,
   passwordResetTokens,
+  pushSubscriptions,
+  nativePushDevices,
 } from "@workspace/db/schema";
 import { eq, and, gt, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -17,7 +20,10 @@ import {
   loginLimiter,
   registerLimiter,
   forgotPasswordResetLimiter,
+  accountDeletionLimiter,
 } from "../middleware/rate-limit";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -192,6 +198,8 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
     expires: expiresAt,
   });
 
+  void notifyLoginAlert(user.id);
+
   res.json({
     token,
     user: {
@@ -357,6 +365,8 @@ router.patch("/auth/password", requireAuth, async (req: AuthRequest, res) => {
     .set({ passwordHash, updatedAt: new Date() })
     .where(eq(users.id, req.userId!));
 
+  void notifyCriticalSecurityEvent(req.userId!, "password_changed");
+
   res.json({ message: "Password berhasil diubah" });
 });
 
@@ -409,6 +419,8 @@ router.patch("/auth/security-question", requireAuth, async (req: AuthRequest, re
     .update(users)
     .set({ securityQuestion, securityAnswerHash, updatedAt: new Date() })
     .where(eq(users.id, req.userId!));
+
+  void notifyCriticalSecurityEvent(req.userId!, "security_question_changed");
 
   res.json({ message: "Pertanyaan keamanan berhasil diubah" });
 });
@@ -621,5 +633,97 @@ router.post("/auth/forgot-password/reset", forgotPasswordResetLimiter, async (re
 
   res.json({ message: "Password berhasil direset" });
 });
+
+// Store-readiness (P0): self-service account deletion. `DELETE /api/account`
+// (recommended in the brief) is deliberately placed here as `/auth/account`
+// instead of a standalone one-route router — every other account-lifecycle
+// operation (register/login/logout/profile/password/security-question)
+// already lives in this file, and this is one more of the same kind, not a
+// new domain.
+const deleteAccountSchema = z
+  .object({
+    currentPassword: z
+      .string({ invalid_type_error: "Password wajib diisi" })
+      .min(1, "Password wajib diisi"),
+  })
+  .strict();
+
+router.delete(
+  "/auth/account",
+  requireAuth,
+  accountDeletionLimiter,
+  async (req: AuthRequest, res) => {
+    const parsed = deleteAccountSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      res.status(400).json({ error: first?.message ?? "Password wajib diisi" });
+      return;
+    }
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, req.userId!))
+      .limit(1);
+
+    // requireAuth already guarantees the row exists (it was just read to
+    // populate req.userId/req.userRole), but a generic error here rather
+    // than a crash keeps this endpoint's error surface consistent with
+    // every other account route.
+    if (!user) {
+      res.status(404).json({ error: "User tidak ditemukan" });
+      return;
+    }
+
+    const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: "Password salah" });
+      return;
+    }
+
+    // Best-effort GCS cleanup of the user's avatar. Deliberately OUTSIDE
+    // the DB transaction below and never allowed to fail the deletion —
+    // an orphaned storage object is a minor cleanup issue, not a reason
+    // to leave the account (and all its data) undeleted.
+    if (user.avatarUrl) {
+      try {
+        const objectStorageService = new ObjectStorageService();
+        await objectStorageService.deleteObjectEntity(user.avatarUrl);
+      } catch (err) {
+        if (!(err instanceof ObjectNotFoundError)) {
+          logger.warn({ err, userId: user.id }, "Failed to delete avatar during account deletion");
+        }
+      }
+    }
+
+    // Every user-owned table references `users.id` with `onDelete:
+    // "cascade"` (analyses, feedback, notifications, sessions,
+    // push_subscriptions, native_push_devices, journal entries, watchlist,
+    // filter presets, price alerts, daily digests, user tags, etc.) — a
+    // single delete on the `users` row is sufficient to remove every
+    // relation. `outbound_clicks`/`analytics_events` use `onDelete: "set
+    // null"` instead, which is the intentional anonymize-not-delete
+    // behavior for telemetry rows (no PII beyond a now-null user
+    // reference). Wrapped in a transaction purely for atomicity with the
+    // explicit push-channel deletes below (which are already covered by
+    // cascade, but making them explicit here keeps the "what gets
+    // removed" list self-documenting and immune to a future FK change
+    // silently breaking cleanup).
+    await db.transaction(async (tx) => {
+      await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, user.id));
+      await tx.delete(nativePushDevices).where(eq(nativePushDevices.userId, user.id));
+      await tx.delete(sessions).where(eq(sessions.userId, user.id));
+      await tx.delete(users).where(eq(users.id, user.id));
+    });
+
+    res.clearCookie("session_token");
+
+    void notifySuperAdminsUserDeleted(user.displayName).catch((err) => {
+      logger.warn({ err, userId: user.id }, "Failed to notify admins of self-deletion");
+    });
+
+    res.json({ message: "Akun berhasil dihapus" });
+  },
+);
 
 export default router;

@@ -244,6 +244,18 @@ export const ChangeSecurityQuestionResponse = zod.object({
 });
 
 /**
+ * Re-authenticates with `currentPassword`, then permanently deletes the authenticated user's account and every row that references it (analyses, notifications, sessions, push subscriptions, native push devices, journal entries, watchlist, alerts, etc.) via cascading foreign keys. Cannot be used to delete another user's account — the target is always the authenticated caller.
+ * @summary Permanently delete the current user's own account
+ */
+export const DeleteAccountBody = zod.object({
+  currentPassword: zod.string(),
+});
+
+export const DeleteAccountResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Get the current user's instrument watchlist
  */
 export const GetWatchlistResponse = zod.object({
@@ -1989,6 +2001,24 @@ export const GetNotificationsResponse = zod.object({
       message: zod.string(),
       type: zod.enum(["info", "warning", "error"]),
       readAt: zod.coerce.date().nullish(),
+      category: zod
+        .string()
+        .nullish()
+        .describe(
+          'Category slug used by the anti-annoyance\/frequency-cap engine (e.g. \"market_news\", \"security_alert\"). Informational for clients — not itself a tap-target.',
+        ),
+      actionType: zod
+        .enum(["open_notification", "open_analysis"])
+        .nullish()
+        .describe(
+          "Allowlisted tap-target. Clients should treat any value they don't recognise the same as null (no special action, just mark read) so new action types can be added without breaking older clients.",
+        ),
+      actionId: zod
+        .string()
+        .nullish()
+        .describe(
+          'The id `actionType` refers to (e.g. an analysis id for \"open_analysis\").',
+        ),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -2162,6 +2192,39 @@ export const GetPushPrefsResponse = zod.object({
     .describe(
       "Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.",
     ),
+  pushAnalysisCompleted: zod
+    .boolean()
+    .describe("OS push when an AI analysis finishes processing."),
+  pushTpSlHit: zod
+    .boolean()
+    .describe("OS push when a tracked trade plan's TP or SL level is crossed."),
+  pushLoginAlert: zod
+    .boolean()
+    .describe(
+      "OS push on a new login. The in-app notification is always created regardless of this toggle.",
+    ),
+  nativePushEnabled: zod
+    .boolean()
+    .describe(
+      "Master switch for native (FCM) push delivery to registered mobile devices.",
+    ),
+  webPushEnabled: zod
+    .boolean()
+    .describe(
+      "Master switch for Web Push (VAPID) delivery to subscribed browsers.",
+    ),
+  quietHoursEnabled: zod
+    .boolean()
+    .describe("When false, quiet hours are disabled entirely for this user."),
+  quietHoursStart: zod
+    .string()
+    .describe("HH:MM 24h local time quiet hours begin."),
+  quietHoursEnd: zod.string().describe("HH:MM 24h local time quiet hours end."),
+  notificationTimezone: zod
+    .string()
+    .describe(
+      "IANA timezone quietHoursStart\/quietHoursEnd are interpreted in.",
+    ),
 });
 
 /**
@@ -2189,6 +2252,15 @@ export const UpdatePushPrefsBody = zod.object({
   guardrailOvertrading: zod.boolean().optional(),
   guardrailHighRisk: zod.boolean().optional(),
   coolingOffEnabled: zod.boolean().optional(),
+  pushAnalysisCompleted: zod.boolean().optional(),
+  pushTpSlHit: zod.boolean().optional(),
+  pushLoginAlert: zod.boolean().optional(),
+  nativePushEnabled: zod.boolean().optional(),
+  webPushEnabled: zod.boolean().optional(),
+  quietHoursEnabled: zod.boolean().optional(),
+  quietHoursStart: zod.string().optional().describe("HH:MM 24h local time."),
+  quietHoursEnd: zod.string().optional().describe("HH:MM 24h local time."),
+  notificationTimezone: zod.string().optional().describe("IANA timezone."),
 });
 
 export const UpdatePushPrefsResponse = zod.object({
@@ -2239,6 +2311,39 @@ export const UpdatePushPrefsResponse = zod.object({
     .describe(
       "Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.",
     ),
+  pushAnalysisCompleted: zod
+    .boolean()
+    .describe("OS push when an AI analysis finishes processing."),
+  pushTpSlHit: zod
+    .boolean()
+    .describe("OS push when a tracked trade plan's TP or SL level is crossed."),
+  pushLoginAlert: zod
+    .boolean()
+    .describe(
+      "OS push on a new login. The in-app notification is always created regardless of this toggle.",
+    ),
+  nativePushEnabled: zod
+    .boolean()
+    .describe(
+      "Master switch for native (FCM) push delivery to registered mobile devices.",
+    ),
+  webPushEnabled: zod
+    .boolean()
+    .describe(
+      "Master switch for Web Push (VAPID) delivery to subscribed browsers.",
+    ),
+  quietHoursEnabled: zod
+    .boolean()
+    .describe("When false, quiet hours are disabled entirely for this user."),
+  quietHoursStart: zod
+    .string()
+    .describe("HH:MM 24h local time quiet hours begin."),
+  quietHoursEnd: zod.string().describe("HH:MM 24h local time quiet hours end."),
+  notificationTimezone: zod
+    .string()
+    .describe(
+      "IANA timezone quietHoursStart\/quietHoursEnd are interpreted in.",
+    ),
 });
 
 /**
@@ -2255,6 +2360,38 @@ export const SendPushTestResponse = zod.object({
     .describe(
       "Number of subscription endpoints the test push was dispatched to",
     ),
+});
+
+/**
+ * Upserts on the globally-unique device token: if the same physical device token was previously registered under a different account, ownership transfers to the current authenticated user (the correct behavior when a device logs out and a different user logs in).
+ * @summary Register (or transfer ownership of) a native push device token
+ */
+export const registerNativePushDeviceBodyTokenMin = 20;
+export const registerNativePushDeviceBodyTokenMax = 4096;
+
+export const RegisterNativePushDeviceBody = zod.object({
+  token: zod
+    .string()
+    .min(registerNativePushDeviceBodyTokenMin)
+    .max(registerNativePushDeviceBodyTokenMax),
+  platform: zod.enum(["android", "ios"]),
+});
+
+/**
+ * @summary Remove the caller's own native push device registration
+ */
+export const unregisterNativePushDeviceBodyTokenMin = 20;
+export const unregisterNativePushDeviceBodyTokenMax = 4096;
+
+export const UnregisterNativePushDeviceBody = zod.object({
+  token: zod
+    .string()
+    .min(unregisterNativePushDeviceBodyTokenMin)
+    .max(unregisterNativePushDeviceBodyTokenMax),
+});
+
+export const UnregisterNativePushDeviceResponse = zod.object({
+  message: zod.string(),
 });
 
 /**

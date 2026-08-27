@@ -16,6 +16,7 @@ import 'package:trade_pilot_api_client/src/api/daily_summary_api.dart';
 import 'package:trade_pilot_api_client/src/api/events_api.dart';
 import 'package:trade_pilot_api_client/src/api/filter_presets_api.dart';
 import 'package:trade_pilot_api_client/src/api/health_api.dart';
+import 'package:trade_pilot_api_client/src/api/native_push_api.dart';
 import 'package:trade_pilot_api_client/src/api/notifications_api.dart';
 import 'package:trade_pilot_api_client/src/api/performance_api.dart';
 import 'package:trade_pilot_api_client/src/api/push_api.dart';
@@ -160,6 +161,12 @@ class TradePilotApiClient {
   /// by doing that all interceptors will not be executed
   HealthApi getHealthApi() {
     return HealthApi(dio, serializers);
+  }
+
+  /// Get NativePushApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  NativePushApi getNativePushApi() {
+    return NativePushApi(dio, serializers);
   }
 
   /// Get NotificationsApi instance, base route and serializer can be overridden by a given but be careful,

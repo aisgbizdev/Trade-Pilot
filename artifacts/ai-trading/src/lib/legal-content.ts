@@ -55,7 +55,7 @@ const PRIVACY_EN: LegalDocument = {
     {
       heading: "4. Data Retention",
       paragraphs: [
-        "Account data is retained for as long as your account is active. You may request deletion of your account at any time by contacting us. We will remove your account and the analyses associated with it within a reasonable period, subject to obligations to retain certain data for legal, security, or fraud-prevention purposes.",
+        "Account data is retained for as long as your account is active. You can permanently delete your own account at any time from Profile > Delete Account inside the app, or by contacting us. Self-service deletion removes your account and every record tied to it (analyses, notifications, alerts, journal entries, push subscriptions, and similar) immediately. Aggregate or anonymized records that no longer identify you (for example, anonymized analytics events) may be retained, as may records we are legally required to keep for security or fraud-prevention purposes.",
       ],
     },
     {
@@ -134,7 +134,7 @@ const PRIVACY_ID: LegalDocument = {
     {
       heading: "4. Penyimpanan Data",
       paragraphs: [
-        "Data akun disimpan selama akun Anda aktif. Anda dapat meminta penghapusan akun kapan saja dengan menghubungi kami. Kami akan menghapus akun Anda beserta analisis yang terkait dalam jangka waktu yang wajar, dengan tetap memenuhi kewajiban hukum, keamanan, atau pencegahan kecurangan tertentu.",
+        "Data akun disimpan selama akun Anda aktif. Anda dapat menghapus akun Anda sendiri kapan saja melalui Profil > Hapus Akun di dalam aplikasi, atau dengan menghubungi kami. Penghapusan mandiri langsung menghapus akun Anda beserta seluruh data yang terkait (analisis, notifikasi, alert, catatan jurnal, langganan push, dan sejenisnya). Data agregat atau anonim yang tidak lagi mengidentifikasi Anda (misalnya event analitik yang sudah dianonimkan) dapat tetap disimpan, begitu juga data yang wajib kami simpan secara hukum untuk keperluan keamanan atau pencegahan kecurangan.",
       ],
     },
     {
@@ -412,11 +412,151 @@ const TERMS_ID: LegalDocument = {
   ],
 };
 
-export type LegalKind = "privacy" | "terms";
+const SUPPORT_EN: LegalDocument = {
+  title: "Support",
+  lastUpdatedLabel: "Last updated",
+  lastUpdated: LAST_UPDATED_EN,
+  intro:
+    "Need help with your Trade Pilot account, or have a question about how the app works? Here's how to reach us.",
+  sections: [
+    {
+      heading: "1. Contact",
+      paragraphs: [
+        `For any support request, email us at ${CONTACT_EMAIL}. Please include your account email and a description of the issue so we can help as quickly as possible.`,
+      ],
+    },
+    {
+      heading: "2. Reporting an Account Problem",
+      paragraphs: [
+        "If you're locked out, notice suspicious activity, or something in the app isn't working as expected, email us with your account email, the device/browser you're using, and what you were trying to do when the problem occurred.",
+      ],
+    },
+    {
+      heading: "3. Requesting Data Access, Correction, or Deletion",
+      paragraphs: [
+        "You can permanently delete your own account at any time from Profile > Delete Account inside the app — see the Delete Account page for exactly what that removes. If you'd rather not delete your account but want to access, correct, or export your data, or if you can't sign in to delete it yourself, email us and we'll assist.",
+      ],
+    },
+    {
+      heading: "4. Related Pages",
+      paragraphs: [
+        "See our Privacy Policy and Terms of Service for how we handle your data and the rules of using Trade Pilot, and the Delete Account page for details on account deletion.",
+      ],
+    },
+  ],
+};
+
+const SUPPORT_ID: LegalDocument = {
+  title: "Bantuan",
+  lastUpdatedLabel: "Terakhir diperbarui",
+  lastUpdated: LAST_UPDATED_ID,
+  intro:
+    "Butuh bantuan terkait akun Trade Pilot, atau ada pertanyaan soal cara kerja aplikasi? Berikut cara menghubungi kami.",
+  sections: [
+    {
+      heading: "1. Kontak",
+      paragraphs: [
+        `Untuk permintaan bantuan apa pun, kirim email ke ${CONTACT_EMAIL}. Sertakan email akun Anda dan deskripsi masalahnya supaya kami bisa membantu secepat mungkin.`,
+      ],
+    },
+    {
+      heading: "2. Melaporkan Masalah Akun",
+      paragraphs: [
+        "Jika Anda terkunci dari akun, melihat aktivitas mencurigakan, atau ada bagian aplikasi yang tidak berjalan semestinya, kirim email dengan email akun Anda, perangkat/browser yang dipakai, dan apa yang sedang Anda lakukan saat masalah terjadi.",
+      ],
+    },
+    {
+      heading: "3. Meminta Akses, Koreksi, atau Penghapusan Data",
+      paragraphs: [
+        "Anda dapat menghapus akun Anda sendiri kapan saja melalui Profil > Hapus Akun di dalam aplikasi — lihat halaman Hapus Akun untuk detail data apa saja yang dihapus. Jika Anda tidak ingin menghapus akun tapi ingin mengakses, mengoreksi, atau mengekspor data Anda, atau tidak bisa login untuk menghapusnya sendiri, kirim email dan kami akan bantu.",
+      ],
+    },
+    {
+      heading: "4. Halaman Terkait",
+      paragraphs: [
+        "Lihat Kebijakan Privasi dan Syarat Layanan kami untuk tahu bagaimana kami menangani data Anda dan aturan menggunakan Trade Pilot, serta halaman Hapus Akun untuk detail penghapusan akun.",
+      ],
+    },
+  ],
+};
+
+const DELETE_ACCOUNT_EN: LegalDocument = {
+  title: "Delete Account",
+  lastUpdatedLabel: "Last updated",
+  lastUpdated: LAST_UPDATED_EN,
+  intro:
+    "You're always free to permanently delete your Trade Pilot account. Here's exactly how, and what happens when you do.",
+  sections: [
+    {
+      heading: "1. How to Delete Your Account",
+      paragraphs: [
+        "Sign in, go to Profile, and choose Delete Account. You'll be asked to confirm your current password and explicitly confirm the deletion. This is self-service and takes effect immediately — there is no waiting period.",
+        `If you can't sign in, email us at ${CONTACT_EMAIL} from your account's email address and we'll verify and process the deletion for you.`,
+      ],
+    },
+    {
+      heading: "2. What Gets Deleted",
+      paragraphs: [
+        "Your profile (email, display name, password, security question), every analysis you've generated, notifications, price alerts, journal entries, watchlist, saved filters, push notification subscriptions (web and mobile), and your active sessions — all removed immediately and permanently. This cannot be undone.",
+      ],
+    },
+    {
+      heading: "3. What May Be Retained",
+      paragraphs: [
+        "Aggregate or anonymized records that no longer identify you (for example, anonymized analytics events) may remain. Records we are legally required to retain for security, audit, or fraud-prevention purposes may also be kept, independent of your account.",
+      ],
+    },
+    {
+      heading: "4. Prefer Not to Delete Everything?",
+      paragraphs: [
+        `If you only want to stop receiving certain notifications, you can adjust that in Profile > Notification Settings without deleting your account. For any other request — accessing, correcting, or exporting your data — email ${CONTACT_EMAIL}.`,
+      ],
+    },
+  ],
+};
+
+const DELETE_ACCOUNT_ID: LegalDocument = {
+  title: "Hapus Akun",
+  lastUpdatedLabel: "Terakhir diperbarui",
+  lastUpdated: LAST_UPDATED_ID,
+  intro:
+    "Anda selalu bebas menghapus akun Trade Pilot Anda secara permanen. Berikut caranya, dan apa yang terjadi setelahnya.",
+  sections: [
+    {
+      heading: "1. Cara Menghapus Akun",
+      paragraphs: [
+        "Login, buka Profil, lalu pilih Hapus Akun. Anda akan diminta memasukkan kata sandi saat ini dan mengonfirmasi penghapusan secara eksplisit. Proses ini mandiri (self-service) dan berlaku langsung — tidak ada masa tunggu.",
+        `Jika Anda tidak bisa login, kirim email ke ${CONTACT_EMAIL} dari alamat email akun Anda dan kami akan memverifikasi serta memproses penghapusannya untuk Anda.`,
+      ],
+    },
+    {
+      heading: "2. Data yang Dihapus",
+      paragraphs: [
+        "Profil Anda (email, nama tampilan, kata sandi, pertanyaan keamanan), semua analisis yang pernah Anda buat, notifikasi, price alert, catatan jurnal, watchlist, filter tersimpan, langganan notifikasi push (web maupun mobile), dan sesi aktif Anda — semuanya dihapus langsung dan permanen. Tindakan ini tidak dapat dibatalkan.",
+      ],
+    },
+    {
+      heading: "3. Data yang Mungkin Dipertahankan",
+      paragraphs: [
+        "Data agregat atau anonim yang tidak lagi mengidentifikasi Anda (misalnya event analitik yang sudah dianonimkan) dapat tetap ada. Data yang wajib kami simpan secara hukum untuk keperluan keamanan, audit, atau pencegahan kecurangan juga dapat tetap disimpan, terlepas dari akun Anda.",
+      ],
+    },
+    {
+      heading: "4. Tidak Ingin Menghapus Semuanya?",
+      paragraphs: [
+        `Jika Anda hanya ingin berhenti menerima notifikasi tertentu, Anda bisa mengaturnya di Profil > Pengaturan Notifikasi tanpa menghapus akun. Untuk permintaan lain — mengakses, mengoreksi, atau mengekspor data Anda — kirim email ke ${CONTACT_EMAIL}.`,
+      ],
+    },
+  ],
+};
+
+export type LegalKind = "privacy" | "terms" | "support" | "delete-account";
 
 const documents: Record<LegalKind, Record<Language, LegalDocument>> = {
   privacy: { en: PRIVACY_EN, id: PRIVACY_ID },
   terms: { en: TERMS_EN, id: TERMS_ID },
+  support: { en: SUPPORT_EN, id: SUPPORT_ID },
+  "delete-account": { en: DELETE_ACCOUNT_EN, id: DELETE_ACCOUNT_ID },
 };
 
 export function getLegalDocument(

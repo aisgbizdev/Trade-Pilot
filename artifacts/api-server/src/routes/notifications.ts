@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../lib/db";
 import { notifications } from "@workspace/db/schema";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { notificationsEmitter } from "../lib/notifications-emitter";
 import { resetDisengageStreak } from "../lib/auto-disengage";
@@ -39,18 +39,28 @@ router.get("/notifications/stream", requireAuth, (req: AuthRequest, res) => {
 router.get("/notifications", requireAuth, async (req: AuthRequest, res) => {
   const unreadOnly = req.query["unreadOnly"] === "true";
 
-  const rows = await db
-    .select()
-    .from(notifications)
-    .where(
-      unreadOnly
-        ? and(eq(notifications.userId, req.userId!), isNull(notifications.readAt))
-        : eq(notifications.userId, req.userId!)
-    )
-    .orderBy(desc(notifications.createdAt))
-    .limit(50);
+  // `unreadCount` is always computed from the FULL set (not filtered by
+  // `unreadOnly`) and always scoped to the authenticated user only — it's
+  // the badge count, independent of whichever slice of the list the
+  // caller happens to be viewing right now.
+  const [rows, [countRow]] = await Promise.all([
+    db
+      .select()
+      .from(notifications)
+      .where(
+        unreadOnly
+          ? and(eq(notifications.userId, req.userId!), isNull(notifications.readAt))
+          : eq(notifications.userId, req.userId!)
+      )
+      .orderBy(desc(notifications.createdAt))
+      .limit(50),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, req.userId!), isNull(notifications.readAt))),
+  ]);
 
-  res.json({ notifications: rows });
+  res.json({ notifications: rows, unreadCount: countRow?.count ?? 0 });
 });
 
 router.patch("/notifications/:id/read", requireAuth, async (req: AuthRequest, res) => {

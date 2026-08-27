@@ -16,6 +16,8 @@ tags:
     description: Analysis operations
   - name: notifications
     description: Notification operations
+  - name: native-push
+    description: Native (FCM) mobile push device registration
   - name: admin
     description: Admin operations
   - name: superadmin
@@ -341,6 +343,50 @@ paths:
                 $ref: "#/components/schemas/MessageResponse"
         "401":
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/account:
+    delete:
+      operationId: deleteAccount
+      tags: [auth]
+      summary: Permanently delete the current user's own account
+      description: >-
+        Re-authenticates with `currentPassword`, then permanently deletes the
+        authenticated user's account and every row that references it
+        (analyses, notifications, sessions, push subscriptions, native push
+        devices, journal entries, watchlist, alerts, etc.) via cascading
+        foreign keys. Cannot be used to delete another user's account — the
+        target is always the authenticated caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteAccountBody"
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Missing currentPassword
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated, or wrong current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many deletion attempts
           content:
             application/json:
               schema:
@@ -1536,6 +1582,79 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /native-push/register:
+    post:
+      operationId: registerNativePushDevice
+      tags: [native-push]
+      summary: Register (or transfer ownership of) a native push device token
+      description: >-
+        Upserts on the globally-unique device token: if the same physical
+        device token was previously registered under a different account,
+        ownership transfers to the current authenticated user (the correct
+        behavior when a device logs out and a different user logs in).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NativePushRegisterBody"
+      responses:
+        "201":
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid token or platform
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /native-push/unregister:
+    delete:
+      operationId: unregisterNativePushDevice
+      tags: [native-push]
+      summary: Remove the caller's own native push device registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NativePushUnregisterBody"
+      responses:
+        "200":
+          description: Device removed (idempotent — also 200 if it wasn't registered, or belonged to someone else)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/stats:
     get:
       operationId: getAdminStats
@@ -2289,6 +2408,30 @@ components:
       required:
         - endpoint
 
+    NativePushRegisterBody:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 4096
+        platform:
+          type: string
+          enum: [android, ios]
+      required:
+        - token
+        - platform
+
+    NativePushUnregisterBody:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 4096
+      required:
+        - token
+
     PushSubscriptionStatus:
       type: object
       properties:
@@ -2344,6 +2487,36 @@ components:
         coolingOffEnabled:
           type: boolean
           description: Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.
+        pushAnalysisCompleted:
+          type: boolean
+          description: OS push when an AI analysis finishes processing.
+        pushTpSlHit:
+          type: boolean
+          description: OS push when a tracked trade plan's TP or SL level is crossed.
+        pushLoginAlert:
+          type: boolean
+          description: OS push on a new login. The in-app notification is always created regardless of this toggle.
+        nativePushEnabled:
+          type: boolean
+          description: Master switch for native (FCM) push delivery to registered mobile devices.
+        webPushEnabled:
+          type: boolean
+          description: Master switch for Web Push (VAPID) delivery to subscribed browsers.
+        quietHoursEnabled:
+          type: boolean
+          description: When false, quiet hours are disabled entirely for this user.
+        quietHoursStart:
+          type: string
+          description: HH:MM 24h local time quiet hours begin.
+          example: "22:00"
+        quietHoursEnd:
+          type: string
+          description: HH:MM 24h local time quiet hours end.
+          example: "07:00"
+        notificationTimezone:
+          type: string
+          description: IANA timezone quietHoursStart/quietHoursEnd are interpreted in.
+          example: Asia/Jakarta
       required:
         - pushExpiry
         - pushBroadcast
@@ -2360,6 +2533,15 @@ components:
         - guardrailOvertrading
         - guardrailHighRisk
         - coolingOffEnabled
+        - pushAnalysisCompleted
+        - pushTpSlHit
+        - pushLoginAlert
+        - nativePushEnabled
+        - webPushEnabled
+        - quietHoursEnabled
+        - quietHoursStart
+        - quietHoursEnd
+        - notificationTimezone
 
     PushTestResult:
       type: object
@@ -2409,6 +2591,30 @@ components:
           type: boolean
         coolingOffEnabled:
           type: boolean
+        pushAnalysisCompleted:
+          type: boolean
+        pushTpSlHit:
+          type: boolean
+        pushLoginAlert:
+          type: boolean
+        nativePushEnabled:
+          type: boolean
+        webPushEnabled:
+          type: boolean
+        quietHoursEnabled:
+          type: boolean
+        quietHoursStart:
+          type: string
+          description: HH:MM 24h local time.
+          example: "22:00"
+        quietHoursEnd:
+          type: string
+          description: HH:MM 24h local time.
+          example: "07:00"
+        notificationTimezone:
+          type: string
+          description: IANA timezone.
+          example: Asia/Jakarta
 
     DailySummarySettings:
       type: object
@@ -2730,6 +2936,14 @@ components:
       required:
         - currentPassword
         - newPassword
+
+    DeleteAccountBody:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+      required:
+        - currentPassword
 
     ChangeSecurityQuestionBody:
       type: object
@@ -3609,6 +3823,26 @@ components:
           type: string
           format: date-time
           nullable: true
+        category:
+          type: string
+          nullable: true
+          description: >-
+            Category slug used by the anti-annoyance/frequency-cap engine
+            (e.g. "market_news", "security_alert"). Informational for
+            clients — not itself a tap-target.
+        actionType:
+          type: string
+          nullable: true
+          enum: [open_notification, open_analysis]
+          description: >-
+            Allowlisted tap-target. Clients should treat any value they
+            don't recognise the same as null (no special action, just mark
+            read) so new action types can be added without breaking older
+            clients.
+        actionId:
+          type: string
+          nullable: true
+          description: The id `actionType` refers to (e.g. an analysis id for "open_analysis").
         createdAt:
           type: string
           format: date-time

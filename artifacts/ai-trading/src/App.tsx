@@ -82,8 +82,19 @@ function Router() {
         <Route path="/privacy">
           <LegalPage kind="privacy" />
         </Route>
+        {/* Canonical route is /privacy; /privacy-policy is a common alias
+            app-store reviewers and links elsewhere may expect. */}
+        <Route path="/privacy-policy">
+          <Redirect to="/privacy" />
+        </Route>
         <Route path="/terms">
           <LegalPage kind="terms" />
+        </Route>
+        <Route path="/support">
+          <LegalPage kind="support" />
+        </Route>
+        <Route path="/delete-account">
+          <LegalPage kind="delete-account" />
         </Route>
         <Route path="/performance" component={PerformancePage} />
         <Route path="/performance/methodology" component={PerformanceMethodologyPage} />

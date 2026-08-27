@@ -189,6 +189,16 @@ export class ObjectStorageService {
     return normalizedPath;
   }
 
+  // Store-readiness (P0 account deletion): best-effort delete of a
+  // previously-uploaded object (currently only ever an avatar). Callers
+  // must treat any rejection as non-fatal — losing a stray GCS object is
+  // vastly preferable to failing the account-deletion transaction over a
+  // storage-cleanup detail.
+  async deleteObjectEntity(objectPath: string): Promise<void> {
+    const file = await this.getObjectEntityFile(objectPath);
+    await file.delete();
+  }
+
   async canAccessObjectEntity({
     userId,
     objectFile,

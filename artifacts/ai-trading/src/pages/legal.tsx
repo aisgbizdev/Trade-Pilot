@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "wouter";
 import { ChevronLeft } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -13,7 +14,14 @@ interface LegalPageProps {
 export default function LegalPage({ kind }: LegalPageProps) {
   const { lang, t } = useTranslation();
   const doc = getLegalDocument(kind, lang);
-  const testIdPrefix = kind === "privacy" ? "page-privacy" : "page-terms";
+  const testIdPrefix = `page-${kind}`;
+
+  // This SPA has no SSR/prerendering, so `document.title` is the only
+  // per-page metadata that's actually reachable — set it directly rather
+  // than pulling in a head-management library for four static pages.
+  useEffect(() => {
+    document.title = `${doc.title} — Trade Pilot`;
+  }, [doc.title]);
 
   return (
     <div
@@ -102,6 +110,20 @@ export default function LegalPage({ kind }: LegalPageProps) {
             data-testid="link-terms"
           >
             {t.legal.terms_link}
+          </Link>
+          <Link
+            href="/delete-account"
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="link-delete-account"
+          >
+            {t.legal.delete_account_link}
+          </Link>
+          <Link
+            href="/support"
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="link-support"
+          >
+            {t.legal.support_link}
           </Link>
         </nav>
       </main>

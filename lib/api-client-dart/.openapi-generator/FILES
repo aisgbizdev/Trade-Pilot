@@ -51,6 +51,7 @@ doc/DailySummaryResponse.md
 doc/DailySummarySettings.md
 doc/DailySummarySettingsUpdate.md
 doc/DailySummaryToday.md
+doc/DeleteAccountBody.md
 doc/ErrorResponse.md
 doc/EventsApi.md
 doc/Feedback.md
@@ -80,6 +81,9 @@ doc/LoginBody.md
 doc/MessageResponse.md
 doc/MirrorGatedInsight.md
 doc/MirrorGroupStat.md
+doc/NativePushApi.md
+doc/NativePushRegisterBody.md
+doc/NativePushUnregisterBody.md
 doc/Notification.md
 doc/NotificationsApi.md
 doc/NotificationsList.md
@@ -151,6 +155,7 @@ lib/src/api/daily_summary_api.dart
 lib/src/api/events_api.dart
 lib/src/api/filter_presets_api.dart
 lib/src/api/health_api.dart
+lib/src/api/native_push_api.dart
 lib/src/api/notifications_api.dart
 lib/src/api/performance_api.dart
 lib/src/api/push_api.dart
@@ -214,6 +219,7 @@ lib/src/model/daily_summary_settings.dart
 lib/src/model/daily_summary_settings_update.dart
 lib/src/model/daily_summary_today.dart
 lib/src/model/date.dart
+lib/src/model/delete_account_body.dart
 lib/src/model/error_response.dart
 lib/src/model/feedback.dart
 lib/src/model/feedback_body.dart
@@ -240,6 +246,8 @@ lib/src/model/login_body.dart
 lib/src/model/message_response.dart
 lib/src/model/mirror_gated_insight.dart
 lib/src/model/mirror_group_stat.dart
+lib/src/model/native_push_register_body.dart
+lib/src/model/native_push_unregister_body.dart
 lib/src/model/notification.dart
 lib/src/model/notifications_list.dart
 lib/src/model/outbound_click_body.dart
@@ -297,3 +305,7 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
+test/delete_account_body_test.dart
+test/native_push_api_test.dart
+test/native_push_register_body_test.dart
+test/native_push_unregister_body_test.dart

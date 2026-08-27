@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 import 'package:trade_pilot_api_client/src/model/auth_response.dart';
 import 'package:trade_pilot_api_client/src/model/change_password_body.dart';
 import 'package:trade_pilot_api_client/src/model/change_security_question_body.dart';
+import 'package:trade_pilot_api_client/src/model/delete_account_body.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/forgot_password_question_body.dart';
 import 'package:trade_pilot_api_client/src/model/login_body.dart';
@@ -168,6 +169,101 @@ class AuthApi {
     try {
       const _type = FullType(ChangeSecurityQuestionBody);
       _bodyData = _serializers.serialize(changeSecurityQuestionBody, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    MessageResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(MessageResponse),
+      ) as MessageResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<MessageResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Permanently delete the current user&#39;s own account
+  /// Re-authenticates with &#x60;currentPassword&#x60;, then permanently deletes the authenticated user&#39;s account and every row that references it (analyses, notifications, sessions, push subscriptions, native push devices, journal entries, watchlist, alerts, etc.) via cascading foreign keys. Cannot be used to delete another user&#39;s account — the target is always the authenticated caller.
+  ///
+  /// Parameters:
+  /// * [deleteAccountBody] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<MessageResponse>> deleteAccount({ 
+    required DeleteAccountBody deleteAccountBody,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/account';
+    final _options = Options(
+      method: r'DELETE',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(DeleteAccountBody);
+      _bodyData = _serializers.serialize(deleteAccountBody, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(

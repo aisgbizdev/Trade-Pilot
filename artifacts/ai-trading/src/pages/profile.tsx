@@ -6,6 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Layout } from "@/components/layout";
 import { useMentalChecklistPref } from "@/hooks/use-mental-checklist";
 import { useAuth } from "@/components/auth-provider";
@@ -17,6 +28,7 @@ import {
   useChangePassword,
   useChangeSecurityQuestion,
   useLogout,
+  useDeleteAccount,
   getGetMeQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,6 +50,11 @@ export default function ProfilePage() {
   const changePassword = useChangePassword();
   const changeSecurityQuestion = useChangeSecurityQuestion();
   const logout = useLogout();
+  const deleteAccount = useDeleteAccount();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { enabled: mentalChecklistEnabled, setEnabled: setMentalChecklistEnabled } = useMentalChecklistPref();
 
   const [editingName, setEditingName] = useState(false);
@@ -167,6 +184,22 @@ export default function ProfilePage() {
     // dev-mode 401 overlay caused by zombie refetches after the
     // session cookie is cleared.
     window.location.assign("/");
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError(null);
+    try {
+      await deleteAccount.mutateAsync({ data: { currentPassword: deletePassword } });
+      // Same full-teardown pattern as logout: the account (and its
+      // session) is already gone server-side, so there's nothing left to
+      // cancel/clear beyond forcing every mounted component to unmount.
+      queryClient.cancelQueries();
+      queryClient.clear();
+      window.location.assign("/");
+    } catch (err) {
+      const apiErr = err as { data?: { error?: string } };
+      setDeleteError(apiErr?.data?.error ?? t.profile.delete_account_error_generic);
+    }
   };
 
   return (
@@ -604,6 +637,102 @@ export default function ProfilePage() {
             </Button>
           </Card>
         )}
+
+        <Card className="p-4 space-y-3" data-testid="card-delete-account">
+          <div>
+            <h3 className="text-sm font-semibold text-destructive flex items-center gap-1.5">
+              <Trash2 className="w-4 h-4" />
+              {t.profile.delete_account_title}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              {t.profile.delete_account_description}
+            </p>
+          </div>
+          <AlertDialog
+            open={deleteDialogOpen}
+            onOpenChange={(open) => {
+              setDeleteDialogOpen(open);
+              if (!open) {
+                setDeletePassword("");
+                setDeleteConfirmed(false);
+                setDeleteError(null);
+              }
+            }}
+          >
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                data-testid="button-open-delete-account"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {t.profile.delete_account_button}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent data-testid="dialog-delete-account">
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t.profile.delete_account_confirm_title}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t.profile.delete_account_confirm_description}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="delete-account-password"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    {t.profile.delete_account_password_label}
+                  </label>
+                  <Input
+                    id="delete-account-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    data-testid="input-delete-account-password"
+                  />
+                </div>
+                <label className="flex items-start gap-2 text-xs text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={deleteConfirmed}
+                    onChange={(e) => setDeleteConfirmed(e.target.checked)}
+                    data-testid="checkbox-delete-account-confirm"
+                  />
+                  <span>{t.profile.delete_account_checkbox_label}</span>
+                </label>
+                {deleteError && (
+                  <p className="text-xs text-destructive" data-testid="text-delete-account-error">
+                    {deleteError}
+                  </p>
+                )}
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel data-testid="button-cancel-delete-account">
+                  {t.common.cancel}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  data-testid="button-confirm-delete-account"
+                  disabled={!deletePassword || !deleteConfirmed || deleteAccount.isPending}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={(e) => {
+                    // Always prevent the default auto-close so an error
+                    // response keeps the dialog open with the message
+                    // visible — success navigates away via
+                    // window.location.assign in the handler instead.
+                    e.preventDefault();
+                    void handleDeleteAccount();
+                  }}
+                >
+                  {deleteAccount.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  {t.profile.delete_account_confirm_button}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </Card>
 
         <Button
           variant="destructive"

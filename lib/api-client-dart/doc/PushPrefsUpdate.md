@@ -24,6 +24,15 @@ Name | Type | Description | Notes
 **guardrailOvertrading** | **bool** |  | [optional] 
 **guardrailHighRisk** | **bool** |  | [optional] 
 **coolingOffEnabled** | **bool** |  | [optional] 
+**pushAnalysisCompleted** | **bool** |  | [optional] 
+**pushTpSlHit** | **bool** |  | [optional] 
+**pushLoginAlert** | **bool** |  | [optional] 
+**nativePushEnabled** | **bool** |  | [optional] 
+**webPushEnabled** | **bool** |  | [optional] 
+**quietHoursEnabled** | **bool** |  | [optional] 
+**quietHoursStart** | **String** | HH:MM 24h local time. | [optional] 
+**quietHoursEnd** | **String** | HH:MM 24h local time. | [optional] 
+**notificationTimezone** | **String** | IANA timezone. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

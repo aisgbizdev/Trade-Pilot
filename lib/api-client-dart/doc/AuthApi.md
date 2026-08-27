@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**changePassword**](AuthApi.md#changepassword) | **PATCH** /auth/password | Change own password
 [**changeSecurityQuestion**](AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
+[**deleteAccount**](AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
 [**getForgotPasswordQuestion**](AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [**getMe**](AuthApi.md#getme) | **GET** /auth/me | Get current user
 [**login**](AuthApi.md#login) | **POST** /auth/login | Login user
@@ -87,6 +88,49 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **changeSecurityQuestionBody** | [**ChangeSecurityQuestionBody**](ChangeSecurityQuestionBody.md)|  | 
+
+### Return type
+
+[**MessageResponse**](MessageResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deleteAccount**
+> MessageResponse deleteAccount(deleteAccountBody)
+
+Permanently delete the current user's own account
+
+Re-authenticates with `currentPassword`, then permanently deletes the authenticated user's account and every row that references it (analyses, notifications, sessions, push subscriptions, native push devices, journal entries, watchlist, alerts, etc.) via cascading foreign keys. Cannot be used to delete another user's account — the target is always the authenticated caller.
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAuthApi();
+final DeleteAccountBody deleteAccountBody = ; // DeleteAccountBody | 
+
+try {
+    final response = api.deleteAccount(deleteAccountBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->deleteAccount: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **deleteAccountBody** | [**DeleteAccountBody**](DeleteAccountBody.md)|  | 
 
 ### Return type
 

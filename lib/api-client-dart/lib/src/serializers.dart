@@ -60,6 +60,7 @@ import 'package:trade_pilot_api_client/src/model/daily_summary_response.dart';
 import 'package:trade_pilot_api_client/src/model/daily_summary_settings.dart';
 import 'package:trade_pilot_api_client/src/model/daily_summary_settings_update.dart';
 import 'package:trade_pilot_api_client/src/model/daily_summary_today.dart';
+import 'package:trade_pilot_api_client/src/model/delete_account_body.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/feedback.dart';
 import 'package:trade_pilot_api_client/src/model/feedback_body.dart';
@@ -86,6 +87,8 @@ import 'package:trade_pilot_api_client/src/model/login_body.dart';
 import 'package:trade_pilot_api_client/src/model/message_response.dart';
 import 'package:trade_pilot_api_client/src/model/mirror_gated_insight.dart';
 import 'package:trade_pilot_api_client/src/model/mirror_group_stat.dart';
+import 'package:trade_pilot_api_client/src/model/native_push_register_body.dart';
+import 'package:trade_pilot_api_client/src/model/native_push_unregister_body.dart';
 import 'package:trade_pilot_api_client/src/model/notification.dart';
 import 'package:trade_pilot_api_client/src/model/notifications_list.dart';
 import 'package:trade_pilot_api_client/src/model/outbound_click_body.dart';
@@ -190,6 +193,7 @@ part 'serializers.g.dart';
   DailySummarySettings,
   DailySummarySettingsUpdate,
   DailySummaryToday,
+  DeleteAccountBody,
   ErrorResponse,
   Feedback,
   FeedbackBody,
@@ -216,6 +220,8 @@ part 'serializers.g.dart';
   MessageResponse,
   MirrorGatedInsight,
   MirrorGroupStat,
+  NativePushRegisterBody,
+  NativePushUnregisterBody,
   Notification,
   NotificationsList,
   OutboundClickBody,

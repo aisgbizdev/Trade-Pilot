@@ -118,6 +118,25 @@ export const alertLevelEnum = pgEnum("alert_level", ["entry", "sl", "tp1", "tp2"
 // later).
 export const alertDirectionEnum = pgEnum("alert_direction", ["above", "below"]);
 
+// Allowlisted notification tap-targets (store-readiness: actionable
+// notifications). Deliberately a closed enum rather than a free-form URL —
+// the client resolves `actionType` + `actionId` to an in-app navigation
+// itself, so a compromised/legacy producer can never smuggle an arbitrary
+// redirect through a notification payload. Extend this list (with a
+// migration) only when a new tap-target is actually wired up end-to-end.
+export const notificationActionTypeEnum = pgEnum("notification_action_type", [
+  "open_notification",
+  "open_analysis",
+]);
+
+// Native push device platform (FCM). Kept separate from Web Push, which
+// has no platform concept (browser subscriptions are identified purely by
+// endpoint/keys).
+export const nativePushPlatformEnum = pgEnum("native_push_platform", [
+  "android",
+  "ios",
+]);
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -237,6 +256,33 @@ export const users = pgTable("users", {
   // overrides just this one user, independent of the global setting.
   customQuotaPerHour: integer("custom_quota_per_hour"),
   customQuotaPerDay: integer("custom_quota_per_day"),
+  // Store-readiness (P2-B4.1): three more push categories, following the
+  // exact opt-out pattern as every other `push*` column above — false
+  // suppresses OS push only, the in-app notification row still lands.
+  pushAnalysisCompleted: boolean("push_analysis_completed").notNull().default(true),
+  pushTpSlHit: boolean("push_tp_sl_hit").notNull().default(true),
+  // Security-relevant, but still a *preference* for the OS pop-up only —
+  // critical security notices (password/email/recovery changes) always
+  // create the in-app row regardless of this toggle; see
+  // `lib/security-notification.ts`.
+  pushLoginAlert: boolean("push_login_alert").notNull().default(true),
+  // Per-channel master switches (P2-B3). `nativePushEnabled` gates FCM
+  // delivery to `native_push_devices`; `webPushEnabled` gates the existing
+  // VAPID Web Push delivery to `push_subscriptions`. Independent of the
+  // per-category toggles above — a category must be both "on" and its
+  // channel must be "on" for that channel to actually fire.
+  nativePushEnabled: boolean("native_push_enabled").notNull().default(true),
+  webPushEnabled: boolean("web_push_enabled").notNull().default(true),
+  // User-configurable quiet hours (P2-B4.1), read by
+  // `lib/notification-guards.ts`'s `withinQuietHours`. Falls back to the
+  // function's own defaults (22:00-07:00, Asia/Jakarta) when disabled or
+  // when `notificationTimezone` isn't set — see that file for the exact
+  // fallback chain (`notificationTimezone` -> legacy `dailySummaryTimezone`
+  // -> "Asia/Jakarta").
+  quietHoursEnabled: boolean("quiet_hours_enabled").notNull().default(true),
+  quietHoursStart: text("quiet_hours_start").notNull().default("22:00"),
+  quietHoursEnd: text("quiet_hours_end").notNull().default("07:00"),
+  notificationTimezone: text("notification_timezone").notNull().default("Asia/Jakarta"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -374,6 +420,15 @@ export const notifications = pgTable(
     // event twice to the same user. Postgres unique constraints allow
     // multiple NULLs, so legacy rows without a key coexist fine.
     dedupeKey: text("dedupe_key"),
+    // Store-readiness (P2-B2): allowlisted tap-target for actionable
+    // notifications. `actionId` is the id of the entity `actionType`
+    // refers to (e.g. an analysis id when actionType="open_analysis").
+    // Both nullable — a plain informational notification has neither, and
+    // the client falls back to "just mark it read" for any
+    // actionType/actionId combination it doesn't recognise, so older
+    // clients stay forward-compatible with new action types added later.
+    actionType: notificationActionTypeEnum("action_type"),
+    actionId: text("action_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({
@@ -389,6 +444,27 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   auth: text("auth").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Store-readiness (P2-B3): native push (FCM) device registrations, kept as
+// a table separate from `push_subscriptions` (Web Push/VAPID) because the
+// shapes don't overlap at all — a device token has no p256dh/auth keys,
+// and a Web Push endpoint has no platform. `token` is globally unique
+// (not per-user) because the same physical device token can only ever
+// belong to one account at a time; registering it again from a different
+// account transfers ownership via upsert (see routes/native-push.ts) —
+// this is the correct behavior for a shared/re-logged-in device.
+export const nativePushDevices = pgTable("native_push_devices", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull(),
+  platform: nativePushPlatformEnum("platform").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  lastSeenAt: timestamp("last_seen_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  tokenUnique: uniqueIndex("native_push_devices_token_unique").on(t.token),
+}));
 
 export const userTags = pgTable(
   "user_tags",

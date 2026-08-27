@@ -80,27 +80,63 @@ router.get("/push/subscription-status", requireAuth, async (req: AuthRequest, re
 
 const SESSION_VALUES = ["tokyo", "london", "newyork"] as const;
 
-const prefsSchema = z.object({
-  pushExpiry: z.boolean().optional(),
-  pushBroadcast: z.boolean().optional(),
-  pushDailySummary: z.boolean().optional(),
-  pushMarketNews: z.boolean().optional(),
-  pushCalendarEvents: z.boolean().optional(),
-  pushPriceAnomaly: z.boolean().optional(),
-  pushWeeklyRecap: z.boolean().optional(),
-  pushSignalFlip: z.boolean().optional(),
-  marketOpenSessions: z.array(z.enum(SESSION_VALUES)).optional(),
-  pushDormancyNudge: z.boolean().optional(),
-  pushOnboarding: z.boolean().optional(),
-  dismissDisengageNotice: z.boolean().optional(),
-  // Anti-pattern guardrail opt-outs (task #163). Co-located on the
-  // push-prefs endpoint because the settings UI groups them under the
-  // same "what we surface to you" notifications panel.
-  guardrailRevenge: z.boolean().optional(),
-  guardrailOvertrading: z.boolean().optional(),
-  guardrailHighRisk: z.boolean().optional(),
-  coolingOffEnabled: z.boolean().optional(),
-});
+// "HH:MM" 24h, zero-padded hour/minute (matches the `daily_summary_time`
+// convention already used elsewhere on this table).
+const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function isValidIanaTimezone(tz: string): boolean {
+  try {
+    // Throws RangeError for an unrecognised zone name — this is the
+    // standard, dependency-free way to validate an IANA timezone string.
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const prefsSchema = z
+  .object({
+    pushExpiry: z.boolean().optional(),
+    pushBroadcast: z.boolean().optional(),
+    pushDailySummary: z.boolean().optional(),
+    pushMarketNews: z.boolean().optional(),
+    pushCalendarEvents: z.boolean().optional(),
+    pushPriceAnomaly: z.boolean().optional(),
+    pushWeeklyRecap: z.boolean().optional(),
+    pushSignalFlip: z.boolean().optional(),
+    marketOpenSessions: z.array(z.enum(SESSION_VALUES)).optional(),
+    pushDormancyNudge: z.boolean().optional(),
+    pushOnboarding: z.boolean().optional(),
+    dismissDisengageNotice: z.boolean().optional(),
+    // Anti-pattern guardrail opt-outs (task #163). Co-located on the
+    // push-prefs endpoint because the settings UI groups them under the
+    // same "what we surface to you" notifications panel.
+    guardrailRevenge: z.boolean().optional(),
+    guardrailOvertrading: z.boolean().optional(),
+    guardrailHighRisk: z.boolean().optional(),
+    coolingOffEnabled: z.boolean().optional(),
+    // Store-readiness (P2-B4.1).
+    pushAnalysisCompleted: z.boolean().optional(),
+    pushTpSlHit: z.boolean().optional(),
+    pushLoginAlert: z.boolean().optional(),
+    nativePushEnabled: z.boolean().optional(),
+    webPushEnabled: z.boolean().optional(),
+    quietHoursEnabled: z.boolean().optional(),
+    quietHoursStart: z
+      .string()
+      .regex(HH_MM, "Waktu harus berformat HH:MM")
+      .optional(),
+    quietHoursEnd: z
+      .string()
+      .regex(HH_MM, "Waktu harus berformat HH:MM")
+      .optional(),
+    notificationTimezone: z
+      .string()
+      .refine(isValidIanaTimezone, "Zona waktu tidak valid")
+      .optional(),
+  })
+  .strict();
 
 const PREF_SELECT = {
   pushExpiry: users.pushExpiry,
@@ -119,6 +155,15 @@ const PREF_SELECT = {
   guardrailOvertrading: users.guardrailOvertrading,
   guardrailHighRisk: users.guardrailHighRisk,
   coolingOffEnabled: users.coolingOffEnabled,
+  pushAnalysisCompleted: users.pushAnalysisCompleted,
+  pushTpSlHit: users.pushTpSlHit,
+  pushLoginAlert: users.pushLoginAlert,
+  nativePushEnabled: users.nativePushEnabled,
+  webPushEnabled: users.webPushEnabled,
+  quietHoursEnabled: users.quietHoursEnabled,
+  quietHoursStart: users.quietHoursStart,
+  quietHoursEnd: users.quietHoursEnd,
+  notificationTimezone: users.notificationTimezone,
 } as const;
 
 router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
@@ -235,6 +280,15 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
   if (typeof d.guardrailOvertrading === "boolean") updates["guardrailOvertrading"] = d.guardrailOvertrading;
   if (typeof d.guardrailHighRisk === "boolean") updates["guardrailHighRisk"] = d.guardrailHighRisk;
   if (typeof d.coolingOffEnabled === "boolean") updates["coolingOffEnabled"] = d.coolingOffEnabled;
+  if (typeof d.pushAnalysisCompleted === "boolean") updates["pushAnalysisCompleted"] = d.pushAnalysisCompleted;
+  if (typeof d.pushTpSlHit === "boolean") updates["pushTpSlHit"] = d.pushTpSlHit;
+  if (typeof d.pushLoginAlert === "boolean") updates["pushLoginAlert"] = d.pushLoginAlert;
+  if (typeof d.nativePushEnabled === "boolean") updates["nativePushEnabled"] = d.nativePushEnabled;
+  if (typeof d.webPushEnabled === "boolean") updates["webPushEnabled"] = d.webPushEnabled;
+  if (typeof d.quietHoursEnabled === "boolean") updates["quietHoursEnabled"] = d.quietHoursEnabled;
+  if (typeof d.quietHoursStart === "string") updates["quietHoursStart"] = d.quietHoursStart;
+  if (typeof d.quietHoursEnd === "string") updates["quietHoursEnd"] = d.quietHoursEnd;
+  if (typeof d.notificationTimezone === "string") updates["notificationTimezone"] = d.notificationTimezone;
 
   if (reEnabled.length > 0) {
     const nowIso = new Date().toISOString();

@@ -9,13 +9,20 @@ vi.mock("../webpush", () => ({
   sendPushToAllSubscribed: vi.fn(async () => {}),
 }));
 
+vi.mock("../native-push", () => ({
+  sendNativePushToUser: vi.fn(async () => {}),
+  sendNativePushToUsers: vi.fn(async () => {}),
+}));
+
 import { sendPushToUser } from "../webpush";
+import { sendNativePushToUser } from "../native-push";
 import { notificationsEmitter } from "../notifications-emitter";
 import { createNotification, createNotificationsForUsers } from "../create-notification";
 import { db } from "../db";
 import { users, notifications } from "@workspace/db/schema";
 
 const sendPushToUserMock = sendPushToUser as unknown as ReturnType<typeof vi.fn>;
+const sendNativePushToUserMock = sendNativePushToUser as unknown as ReturnType<typeof vi.fn>;
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `notif-helper-${RUN_ID}`;
@@ -58,6 +65,8 @@ afterAll(async () => {
 beforeEach(() => {
   sendPushToUserMock.mockClear();
   sendPushToUserMock.mockImplementation(async () => {});
+  sendNativePushToUserMock.mockClear();
+  sendNativePushToUserMock.mockImplementation(async () => {});
 });
 
 describe("createNotification", () => {
@@ -271,6 +280,83 @@ describe("createNotificationsForUsers", () => {
       .where(inArray(notifications.userId, [alice, bob]));
     const failRows = rows.filter((r) => r.title === "Bulk Push Fail");
     expect(failRows.length).toBe(2);
+  });
+});
+
+describe("createNotification — native push (P2-B3) + actionType/actionId (P2-B2)", () => {
+  it("calls sendNativePushToUser alongside sendPushToUser when push is provided", async () => {
+    await createNotification(
+      alice,
+      { title: "Dual Channel", message: "Body" },
+      { url: "/", tag: "dual" },
+    );
+    expect(sendPushToUserMock).toHaveBeenCalledTimes(1);
+    expect(sendNativePushToUserMock).toHaveBeenCalledTimes(1);
+    const [calledUserId] = sendNativePushToUserMock.mock.calls[0] as [number];
+    expect(calledUserId).toBe(alice);
+  });
+
+  it("persists actionType/actionId on the row and forwards them (plus the new row's id) to native push", async () => {
+    await createNotification(
+      bob,
+      { title: "Actionable", message: "Tap me", actionType: "open_analysis", actionId: "42" },
+      { url: "/analyses/42" },
+    );
+
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, bob));
+    const found = rows.find((r) => r.title === "Actionable");
+    expect(found?.actionType).toBe("open_analysis");
+    expect(found?.actionId).toBe("42");
+
+    const [, payload] = sendNativePushToUserMock.mock.calls[0] as [
+      number,
+      { actionType?: string | null; actionId?: string | null; notificationId?: number | null },
+    ];
+    expect(payload.actionType).toBe("open_analysis");
+    expect(payload.actionId).toBe("42");
+    expect(payload.notificationId).toBe(found?.id);
+  });
+
+  it("Web Push still fires when Native Push rejects", async () => {
+    sendNativePushToUserMock.mockImplementationOnce(async () => {
+      throw new Error("fcm boom");
+    });
+    await expect(
+      createNotification(alice, { title: "Native Fails", message: "Web should still fire" }, { url: "/" }),
+    ).resolves.toBe(true);
+    expect(sendPushToUserMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("Native Push still fires when Web Push rejects", async () => {
+    sendPushToUserMock.mockImplementationOnce(async () => {
+      throw new Error("webpush boom");
+    });
+    await expect(
+      createNotification(bob, { title: "Web Fails", message: "Native should still fire" }, { url: "/" }),
+    ).resolves.toBe(true);
+    expect(sendNativePushToUserMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("the in-app notification row is still inserted when BOTH push channels reject", async () => {
+    sendPushToUserMock.mockImplementationOnce(async () => {
+      throw new Error("webpush boom");
+    });
+    sendNativePushToUserMock.mockImplementationOnce(async () => {
+      throw new Error("fcm boom");
+    });
+
+    await expect(
+      createNotification(alice, { title: "Both Fail", message: "Row must still exist" }, { url: "/" }),
+    ).resolves.toBe(true);
+
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, alice));
+    expect(rows.find((r) => r.title === "Both Fail")).toBeTruthy();
+  });
+
+  it("does not call sendNativePushToUser when push is omitted or null", async () => {
+    await createNotification(alice, { title: "No Push A", message: "x" });
+    await createNotification(alice, { title: "No Push B", message: "x" }, null);
+    expect(sendNativePushToUserMock).not.toHaveBeenCalled();
   });
 });
 

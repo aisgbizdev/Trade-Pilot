@@ -89,6 +89,7 @@ Class | Method | HTTP request | Description
 [*AnalysesApi*](doc/AnalysesApi.md) | [**submitFeedback**](doc/AnalysesApi.md#submitfeedback) | **POST** /analyses/{id}/feedback | Submit feedback for analysis
 [*AuthApi*](doc/AuthApi.md) | [**changePassword**](doc/AuthApi.md#changepassword) | **PATCH** /auth/password | Change own password
 [*AuthApi*](doc/AuthApi.md) | [**changeSecurityQuestion**](doc/AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
+[*AuthApi*](doc/AuthApi.md) | [**deleteAccount**](doc/AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
 [*AuthApi*](doc/AuthApi.md) | [**getForgotPasswordQuestion**](doc/AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /auth/me | Get current user
 [*AuthApi*](doc/AuthApi.md) | [**login**](doc/AuthApi.md#login) | **POST** /auth/login | Login user
@@ -106,6 +107,8 @@ Class | Method | HTTP request | Description
 [*FilterPresetsApi*](doc/FilterPresetsApi.md) | [**listFilterPresets**](doc/FilterPresetsApi.md#listfilterpresets) | **GET** /filter-presets | List the signed-in user&#39;s saved filter presets
 [*FilterPresetsApi*](doc/FilterPresetsApi.md) | [**renameFilterPreset**](doc/FilterPresetsApi.md#renamefilterpreset) | **PATCH** /filter-presets/{id} | Rename an existing preset
 [*HealthApi*](doc/HealthApi.md) | [**healthCheck**](doc/HealthApi.md#healthcheck) | **GET** /healthz | Health check
+[*NativePushApi*](doc/NativePushApi.md) | [**registerNativePushDevice**](doc/NativePushApi.md#registernativepushdevice) | **POST** /native-push/register | Register (or transfer ownership of) a native push device token
+[*NativePushApi*](doc/NativePushApi.md) | [**unregisterNativePushDevice**](doc/NativePushApi.md#unregisternativepushdevice) | **DELETE** /native-push/unregister | Remove the caller&#39;s own native push device registration
 [*NotificationsApi*](doc/NotificationsApi.md) | [**getNotifications**](doc/NotificationsApi.md#getnotifications) | **GET** /notifications | Get notifications for current user
 [*NotificationsApi*](doc/NotificationsApi.md) | [**markAllNotificationsRead**](doc/NotificationsApi.md#markallnotificationsread) | **PATCH** /notifications/read-all | Mark all notifications as read
 [*NotificationsApi*](doc/NotificationsApi.md) | [**markNotificationRead**](doc/NotificationsApi.md#marknotificationread) | **PATCH** /notifications/{id}/read | Mark single notification as read
@@ -193,6 +196,7 @@ Class | Method | HTTP request | Description
  - [DailySummarySettings](doc/DailySummarySettings.md)
  - [DailySummarySettingsUpdate](doc/DailySummarySettingsUpdate.md)
  - [DailySummaryToday](doc/DailySummaryToday.md)
+ - [DeleteAccountBody](doc/DeleteAccountBody.md)
  - [ErrorResponse](doc/ErrorResponse.md)
  - [Feedback](doc/Feedback.md)
  - [FeedbackBody](doc/FeedbackBody.md)
@@ -219,6 +223,8 @@ Class | Method | HTTP request | Description
  - [MessageResponse](doc/MessageResponse.md)
  - [MirrorGatedInsight](doc/MirrorGatedInsight.md)
  - [MirrorGroupStat](doc/MirrorGroupStat.md)
+ - [NativePushRegisterBody](doc/NativePushRegisterBody.md)
+ - [NativePushUnregisterBody](doc/NativePushUnregisterBody.md)
  - [Notification](doc/Notification.md)
  - [NotificationsList](doc/NotificationsList.md)
  - [OutboundClickBody](doc/OutboundClickBody.md)

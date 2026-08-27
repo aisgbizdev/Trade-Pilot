@@ -35,6 +35,31 @@ export interface PushUnsubscribeBody {
   endpoint: string;
 }
 
+export type NativePushRegisterBodyPlatform =
+  (typeof NativePushRegisterBodyPlatform)[keyof typeof NativePushRegisterBodyPlatform];
+
+export const NativePushRegisterBodyPlatform = {
+  android: "android",
+  ios: "ios",
+} as const;
+
+export interface NativePushRegisterBody {
+  /**
+   * @minLength 20
+   * @maxLength 4096
+   */
+  token: string;
+  platform: NativePushRegisterBodyPlatform;
+}
+
+export interface NativePushUnregisterBody {
+  /**
+   * @minLength 20
+   * @maxLength 4096
+   */
+  token: string;
+}
+
 export interface PushSubscriptionStatus {
   subscribed: boolean;
 }
@@ -73,6 +98,24 @@ export interface PushPrefs {
   guardrailHighRisk: boolean;
   /** Opt-in 30-minute countdown after a significant loss before showing the analyse button warning. */
   coolingOffEnabled: boolean;
+  /** OS push when an AI analysis finishes processing. */
+  pushAnalysisCompleted: boolean;
+  /** OS push when a tracked trade plan's TP or SL level is crossed. */
+  pushTpSlHit: boolean;
+  /** OS push on a new login. The in-app notification is always created regardless of this toggle. */
+  pushLoginAlert: boolean;
+  /** Master switch for native (FCM) push delivery to registered mobile devices. */
+  nativePushEnabled: boolean;
+  /** Master switch for Web Push (VAPID) delivery to subscribed browsers. */
+  webPushEnabled: boolean;
+  /** When false, quiet hours are disabled entirely for this user. */
+  quietHoursEnabled: boolean;
+  /** HH:MM 24h local time quiet hours begin. */
+  quietHoursStart: string;
+  /** HH:MM 24h local time quiet hours end. */
+  quietHoursEnd: string;
+  /** IANA timezone quietHoursStart/quietHoursEnd are interpreted in. */
+  notificationTimezone: string;
 }
 
 export interface PushTestResult {
@@ -107,6 +150,18 @@ export interface PushPrefsUpdate {
   guardrailOvertrading?: boolean;
   guardrailHighRisk?: boolean;
   coolingOffEnabled?: boolean;
+  pushAnalysisCompleted?: boolean;
+  pushTpSlHit?: boolean;
+  pushLoginAlert?: boolean;
+  nativePushEnabled?: boolean;
+  webPushEnabled?: boolean;
+  quietHoursEnabled?: boolean;
+  /** HH:MM 24h local time. */
+  quietHoursStart?: string;
+  /** HH:MM 24h local time. */
+  quietHoursEnd?: string;
+  /** IANA timezone. */
+  notificationTimezone?: string;
 }
 
 export interface DailySummarySettings {
@@ -316,6 +371,10 @@ export interface ChangePasswordBody {
   currentPassword: string;
   /** @minLength 6 */
   newPassword: string;
+}
+
+export interface DeleteAccountBody {
+  currentPassword: string;
 }
 
 export interface ChangeSecurityQuestionBody {
@@ -877,6 +936,18 @@ export const NotificationType = {
   error: "error",
 } as const;
 
+/**
+ * Allowlisted tap-target. Clients should treat any value they don't recognise the same as null (no special action, just mark read) so new action types can be added without breaking older clients.
+ */
+export type NotificationActionType =
+  | (typeof NotificationActionType)[keyof typeof NotificationActionType]
+  | null;
+
+export const NotificationActionType = {
+  open_notification: "open_notification",
+  open_analysis: "open_analysis",
+} as const;
+
 export interface Notification {
   id: number;
   userId?: number | null;
@@ -885,6 +956,12 @@ export interface Notification {
   message: string;
   type: NotificationType;
   readAt?: string | null;
+  /** Category slug used by the anti-annoyance/frequency-cap engine (e.g. "market_news", "security_alert"). Informational for clients — not itself a tap-target. */
+  category?: string | null;
+  /** Allowlisted tap-target. Clients should treat any value they don't recognise the same as null (no special action, just mark read) so new action types can be added without breaking older clients. */
+  actionType?: NotificationActionType;
+  /** The id `actionType` refers to (e.g. an analysis id for "open_analysis"). */
+  actionId?: string | null;
   createdAt: string;
 }
 

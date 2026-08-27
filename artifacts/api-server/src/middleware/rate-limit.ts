@@ -130,6 +130,37 @@ export const pushTestLimiter = buildLimiter({
     "Terlalu banyak tes notifikasi. Coba lagi sebentar lagi. / Too many test notifications. Try again in a bit.",
 });
 
+// Store-readiness (P2-B3): per-user limiter for native-push device
+// register/unregister. A device re-registers on every app foreground in
+// some client implementations, so the cap is generous — this only exists
+// to blunt abuse (e.g. a compromised client hammering the endpoint), not
+// to interfere with normal app usage.
+export const nativePushRegisterLimiter = buildLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  keyFn: (req) => {
+    const id = (req as Request & { userId?: number }).userId;
+    return typeof id === "number" ? `user-${id}` : clientIp(req);
+  },
+  message:
+    "Terlalu banyak pendaftaran perangkat. Coba lagi sebentar lagi. / Too many device registrations. Try again in a bit.",
+});
+
+// Store-readiness (P0): per-user limiter for the destructive account-
+// deletion endpoint. Deliberately tight — this is a one-way, catastrophic
+// action, so there is no legitimate reason to hit it more than a couple
+// times in a day (retry after a failed attempt).
+export const accountDeletionLimiter = buildLimiter({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 5,
+  keyFn: (req) => {
+    const id = (req as Request & { userId?: number }).userId;
+    return typeof id === "number" ? `user-${id}` : clientIp(req);
+  },
+  message:
+    "Terlalu banyak percobaan penghapusan akun. Coba lagi besok atau hubungi support. / Too many account deletion attempts. Try again tomorrow or contact support.",
+});
+
 // Per-user limiter for the manual trade-journal endpoints (task #161).
 // Write path is gated tighter than read because journal entries land
 // directly in the user's permanent record — accidental double-submit
@@ -193,6 +224,8 @@ setInterval(() => {
     registerLimiter,
     forgotPasswordResetLimiter,
     pushTestLimiter,
+    nativePushRegisterLimiter,
+    accountDeletionLimiter,
     journalWriteLimiter,
     journalReadLimiter,
     performanceLimiter,

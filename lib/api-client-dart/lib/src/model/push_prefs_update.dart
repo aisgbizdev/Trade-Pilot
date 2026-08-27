@@ -28,6 +28,15 @@ part 'push_prefs_update.g.dart';
 /// * [guardrailOvertrading] 
 /// * [guardrailHighRisk] 
 /// * [coolingOffEnabled] 
+/// * [pushAnalysisCompleted] 
+/// * [pushTpSlHit] 
+/// * [pushLoginAlert] 
+/// * [nativePushEnabled] 
+/// * [webPushEnabled] 
+/// * [quietHoursEnabled] 
+/// * [quietHoursStart] - HH:MM 24h local time.
+/// * [quietHoursEnd] - HH:MM 24h local time.
+/// * [notificationTimezone] - IANA timezone.
 @BuiltValue()
 abstract class PushPrefsUpdate implements Built<PushPrefsUpdate, PushPrefsUpdateBuilder> {
   @BuiltValueField(wireName: r'pushExpiry')
@@ -79,6 +88,36 @@ abstract class PushPrefsUpdate implements Built<PushPrefsUpdate, PushPrefsUpdate
 
   @BuiltValueField(wireName: r'coolingOffEnabled')
   bool? get coolingOffEnabled;
+
+  @BuiltValueField(wireName: r'pushAnalysisCompleted')
+  bool? get pushAnalysisCompleted;
+
+  @BuiltValueField(wireName: r'pushTpSlHit')
+  bool? get pushTpSlHit;
+
+  @BuiltValueField(wireName: r'pushLoginAlert')
+  bool? get pushLoginAlert;
+
+  @BuiltValueField(wireName: r'nativePushEnabled')
+  bool? get nativePushEnabled;
+
+  @BuiltValueField(wireName: r'webPushEnabled')
+  bool? get webPushEnabled;
+
+  @BuiltValueField(wireName: r'quietHoursEnabled')
+  bool? get quietHoursEnabled;
+
+  /// HH:MM 24h local time.
+  @BuiltValueField(wireName: r'quietHoursStart')
+  String? get quietHoursStart;
+
+  /// HH:MM 24h local time.
+  @BuiltValueField(wireName: r'quietHoursEnd')
+  String? get quietHoursEnd;
+
+  /// IANA timezone.
+  @BuiltValueField(wireName: r'notificationTimezone')
+  String? get notificationTimezone;
 
   PushPrefsUpdate._();
 
@@ -213,6 +252,69 @@ class _$PushPrefsUpdateSerializer implements PrimitiveSerializer<PushPrefsUpdate
       yield serializers.serialize(
         object.coolingOffEnabled,
         specifiedType: const FullType(bool),
+      );
+    }
+    if (object.pushAnalysisCompleted != null) {
+      yield r'pushAnalysisCompleted';
+      yield serializers.serialize(
+        object.pushAnalysisCompleted,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.pushTpSlHit != null) {
+      yield r'pushTpSlHit';
+      yield serializers.serialize(
+        object.pushTpSlHit,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.pushLoginAlert != null) {
+      yield r'pushLoginAlert';
+      yield serializers.serialize(
+        object.pushLoginAlert,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.nativePushEnabled != null) {
+      yield r'nativePushEnabled';
+      yield serializers.serialize(
+        object.nativePushEnabled,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.webPushEnabled != null) {
+      yield r'webPushEnabled';
+      yield serializers.serialize(
+        object.webPushEnabled,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.quietHoursEnabled != null) {
+      yield r'quietHoursEnabled';
+      yield serializers.serialize(
+        object.quietHoursEnabled,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.quietHoursStart != null) {
+      yield r'quietHoursStart';
+      yield serializers.serialize(
+        object.quietHoursStart,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.quietHoursEnd != null) {
+      yield r'quietHoursEnd';
+      yield serializers.serialize(
+        object.quietHoursEnd,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.notificationTimezone != null) {
+      yield r'notificationTimezone';
+      yield serializers.serialize(
+        object.notificationTimezone,
+        specifiedType: const FullType(String),
       );
     }
   }
@@ -365,6 +467,78 @@ class _$PushPrefsUpdateSerializer implements PrimitiveSerializer<PushPrefsUpdate
           ) as bool?;
           if (valueDes == null) continue;
           result.coolingOffEnabled = valueDes;
+          break;
+        case r'pushAnalysisCompleted':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.pushAnalysisCompleted = valueDes;
+          break;
+        case r'pushTpSlHit':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.pushTpSlHit = valueDes;
+          break;
+        case r'pushLoginAlert':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.pushLoginAlert = valueDes;
+          break;
+        case r'nativePushEnabled':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.nativePushEnabled = valueDes;
+          break;
+        case r'webPushEnabled':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.webPushEnabled = valueDes;
+          break;
+        case r'quietHoursEnabled':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.quietHoursEnabled = valueDes;
+          break;
+        case r'quietHoursStart':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.quietHoursStart = valueDes;
+          break;
+        case r'quietHoursEnd':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.quietHoursEnd = valueDes;
+          break;
+        case r'notificationTimezone':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.notificationTimezone = valueDes;
           break;
         default:
           unhandled.add(key);
