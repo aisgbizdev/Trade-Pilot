@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { TradePlan } from "@workspace/api-client-react";
-import { buildAdaptivePlanRecommendation, buildAdaptivePositionPlan } from "./adaptive-position-plan";
+import type { StandardTradingRuleInstrument, TradePlan } from "@workspace/api-client-react";
+import {
+  buildAdaptivePlanRecommendation,
+  buildAdaptivePositionPlan,
+  createAdaptivePlanFingerprint,
+} from "./adaptive-position-plan";
 
 const TRADE_PLAN: TradePlan = {
   preferredSide: "buy",
@@ -22,13 +26,34 @@ const TRADE_PLAN: TradePlan = {
   },
 };
 
+const GOLD_RULE: StandardTradingRuleInstrument = {
+  code: "XUL10",
+  product: "Gold (Loco London)",
+  contractSize: 10,
+  contractUnit: "troy ounce",
+  tradingDays: "Monday–Friday",
+  tradingHours: { summer: "06:00–03:30 WIB", winter: "06:00–04:30 WIB" },
+  initialMarginUsdPerLot: 100,
+  facilityFeeUsdPerLotPerSide: 1.5,
+  vatPercent: 11,
+  rolloverUsdPerLotPerNight: 0.5,
+  priceSource: "Telequote",
+  priceGuidance: "Last Trade",
+  minimumSpread: "USD 0.40 / troy ounce / side",
+  maximumSpread: "USD 1.00 / troy ounce / side",
+  hecticSpread: "Based on market conditions",
+  minimumPriceMovement: "USD 0.01 / troy ounce",
+  limitStopRange: "USD 6–USD 20",
+  deliveryBy: "Cash settlement",
+};
+
 const VALID_INPUT = {
   instrument: "XAU/USD",
   tradePlan: TRADE_PLAN,
+  standardRule: GOLD_RULE,
   equity: 100_000,
   freeMargin: 100_000,
   existingExposure: 0,
-  marginPerLot: 1_000,
   initialLot: 0.01,
   accountTier: "micro" as const,
   levels: 3,
@@ -54,7 +79,7 @@ describe("buildAdaptivePositionPlan", () => {
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
-      marginPerLot: 1_000,
+      standardRule: GOLD_RULE,
       preference: "balanced",
       context: SUPPORTIVE_CONTEXT,
     });
@@ -81,7 +106,7 @@ describe("buildAdaptivePositionPlan", () => {
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
-      marginPerLot: 1_000,
+      standardRule: GOLD_RULE,
       preference: "balanced",
       context: SUPPORTIVE_CONTEXT,
     });
@@ -89,7 +114,7 @@ describe("buildAdaptivePositionPlan", () => {
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
-      marginPerLot: 1_000,
+      standardRule: GOLD_RULE,
       preference: "balanced",
       context: { ...SUPPORTIVE_CONTEXT, timeframe: "5m" },
     });
@@ -107,7 +132,7 @@ describe("buildAdaptivePositionPlan", () => {
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
-      marginPerLot: 1_000,
+      standardRule: GOLD_RULE,
       preference: "balanced",
       context: {
         ...SUPPORTIVE_CONTEXT,
@@ -139,7 +164,7 @@ describe("buildAdaptivePositionPlan", () => {
         instrument: "XAU/USD",
         tradePlan: TRADE_PLAN,
         availableMargin: 100_000,
-        marginPerLot: 1_000,
+        standardRule: GOLD_RULE,
         preference: "active",
         context,
       });
@@ -155,7 +180,7 @@ describe("buildAdaptivePositionPlan", () => {
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
-      marginPerLot: 1_000,
+      standardRule: GOLD_RULE,
       preference: "active",
       context: {
         ...SUPPORTIVE_CONTEXT,
@@ -184,11 +209,19 @@ describe("buildAdaptivePositionPlan", () => {
     const result = buildAdaptivePositionPlan(VALID_INPUT);
 
     expect(result.valid).toBe(true);
+    expect(result.rule).toMatchObject({
+      contractSize: GOLD_RULE.contractSize,
+      minMovement: 0.01,
+      marginPerLot: GOLD_RULE.initialMarginUsdPerLot,
+      source: "TP Standard Trading Rules",
+    });
     expect(result.buy?.ladder).toHaveLength(4);
     expect(result.sell?.ladder).toHaveLength(4);
     expect(result.buy?.ladder[0].price).toBe(2301);
     expect(result.buy?.ladder[1].price).toBeLessThan(result.buy?.ladder[0].price ?? 0);
     expect(result.sell?.ladder[1].price).toBeGreaterThan(result.sell?.ladder[0].price ?? 0);
+    expect(result.buy?.marginRequired).toBe(4);
+    expect(result.buy?.ladder.map((level) => level.lot)).toEqual([0.01, 0.01, 0.01, 0.01]);
     expect(TRADE_PLAN.buy.entryZone).toBe("2,300.00–2,302.00");
     expect(TRADE_PLAN.sell.stopLoss).toBe("2,312.00");
   });
@@ -198,7 +231,7 @@ describe("buildAdaptivePositionPlan", () => {
       ...VALID_INPUT,
       equity: null,
       freeMargin: null,
-      marginPerLot: null,
+      standardRule: null,
     });
 
     expect(result.valid).toBe(false);
@@ -206,7 +239,7 @@ describe("buildAdaptivePositionPlan", () => {
       expect.arrayContaining([
         "Account equity is required.",
         "Free margin is required.",
-        "Margin per lot is required.",
+        "TP Standard Trading Rules are unavailable for this instrument.",
       ]),
     );
   });
@@ -235,7 +268,6 @@ describe("buildAdaptivePositionPlan", () => {
       initialLot: 1,
       equity: 1_000_000,
       freeMargin: 1_000_000,
-      marginPerLot: 1_000,
     });
 
     expect(micro.valid).toBe(false);
@@ -272,6 +304,59 @@ describe("buildAdaptivePositionPlan", () => {
 
     expect(result.valid).toBe(false);
     expect(result.buy).toBeNull();
-    expect(result.errors).toContain("Adaptive rules are currently defined for Gold and Brent only.");
+    expect(result.errors).toContain("Adaptive position planning requires a supported TP Standard Trading Rules instrument.");
+  });
+
+  it("rejects position calculations when TP Standard Trading Rules are unavailable", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      standardRule: null,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.rule).toBeNull();
+    expect(result.errors).toContain("TP Standard Trading Rules are unavailable for this instrument.");
+  });
+
+  it("invalidates saved recommendations when the plan, timeframe, or refreshed fundamentals change", () => {
+    const base = {
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      context: SUPPORTIVE_CONTEXT,
+      standardRule: GOLD_RULE,
+    };
+    const original = createAdaptivePlanFingerprint(base);
+    const changedTimeframe = createAdaptivePlanFingerprint({
+      ...base,
+      context: { ...SUPPORTIVE_CONTEXT, timeframe: "4h" },
+    });
+    const changedPlan = createAdaptivePlanFingerprint({
+      ...base,
+      tradePlan: {
+        ...TRADE_PLAN,
+        buy: { ...TRADE_PLAN.buy, stopLoss: "2,288.00" },
+      },
+    });
+    const refreshedFundamentals = createAdaptivePlanFingerprint({
+      ...base,
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        fundamentalContext: {
+          newsItems: [{
+            id: "fresh-news",
+            title: "Fresh policy update",
+            summary: "New information.",
+            source: "Newsmaker.id",
+            url: null,
+            publishedAt: "2026-08-27T12:00:00.000Z",
+          }],
+          calendarEvents: [],
+        },
+      },
+    });
+
+    expect(changedTimeframe).not.toBe(original);
+    expect(changedPlan).not.toBe(original);
+    expect(refreshedFundamentals).not.toBe(original);
   });
 });

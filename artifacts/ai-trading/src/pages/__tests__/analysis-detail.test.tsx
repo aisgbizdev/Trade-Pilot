@@ -57,6 +57,60 @@ const ANALYSIS_PAYLOAD = {
   feedback: null,
 };
 
+const STANDARD_RULES_PAYLOAD = {
+  name: "TP Standard Trading Rules",
+  version: "2026.02",
+  effectiveDate: "2026-02-01",
+  sourceDocument: "Test source",
+  fixedRate: { usd: 1, idr: 10_000, label: "USD 1 = IDR 10.000" },
+  account: {
+    minimumDepositUsd: 500,
+    minimumLot: 0.1,
+    maximumLot: 0.9,
+    maintenanceMarginPercent: 70,
+    marginCallBelowPercent: 70,
+    marginCallRestorePercent: 100,
+    autoLiquidationAtOrBelowPercent: 30,
+    equityReviewThresholdUsd: 2_500,
+    equityReviewThresholdIdr: 25_000_000,
+  },
+  transactionFormula: "Test formula",
+  instruments: [{
+    code: "XUL10",
+    product: "Gold (Loco London)",
+    contractSize: 10,
+    contractUnit: "troy ounce",
+    tradingDays: "Monday–Friday",
+    tradingHours: { summer: "06:00–03:30 WIB", winter: "06:00–04:30 WIB" },
+    initialMarginUsdPerLot: 100,
+    facilityFeeUsdPerLotPerSide: 1.5,
+    vatPercent: 11,
+    rolloverUsdPerLotPerNight: 0.5,
+    priceSource: "Telequote",
+    priceGuidance: "Last Trade",
+    minimumSpread: "USD 0.40 / troy ounce / side",
+    maximumSpread: "USD 1.00 / troy ounce / side",
+    hecticSpread: "Based on market conditions",
+    minimumPriceMovement: "USD 0.01 / troy ounce",
+    limitStopRange: "USD 6–USD 20",
+    deliveryBy: "Cash settlement",
+  }],
+  disclaimer: { id: "Test disclaimer", en: "Test disclaimer" },
+  relationshipDisclosure: { id: "Test disclosure", en: "Test disclosure" },
+};
+
+function standardRulesHandler(status = 200): FetchHandler {
+  return (url, init) => {
+    if ((init?.method ?? "GET").toUpperCase() === "GET" && url.includes("/api/trading-rules/standard")) {
+      return jsonResponse(
+        status >= 400 ? { error: "Rules temporarily unavailable" } : STANDARD_RULES_PAYLOAD,
+        status,
+      );
+    }
+    return null;
+  };
+}
+
 function getAnalysisHandler(opts: {
   status?: number;
   body?: unknown;
@@ -150,6 +204,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
         },
       }),
       feedbackHandler(),
+      standardRulesHandler(),
     ]);
     const { Wrapper } = makeWrapper();
 
@@ -160,6 +215,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
+    await screen.findByText(/standard rule uses 100 margin/i);
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
@@ -167,13 +223,13 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(reasoning.textContent).toMatch(/Why this plan was chosen/i);
     expect(reasoning.textContent).toMatch(/favor the rise scenario/i);
     expect(reasoning.textContent).toMatch(/Technical snapshot: 12 support up, 4 support down/i);
-    expect(screen.getByTestId("adaptive-plan-buy").textContent).toMatch(/Extra stages may be considered/i);
+    expect(screen.getByTestId("adaptive-plan-buy").textContent).toMatch(/manual checkpoints/i);
     expect(screen.getByTestId("adaptive-plan-sell").textContent).toMatch(/initial entry only/i);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v2:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v3:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -185,6 +241,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
         },
       }),
       feedbackHandler(),
+      standardRulesHandler(),
     ]);
     const { Wrapper } = makeWrapper();
 
@@ -194,9 +251,35 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       </Wrapper>,
     );
 
-    expect(await screen.findByTestId("input-adaptive-available-margin")).toHaveValue(100000);
+    await screen.findByText(/standard rule uses 100 margin/i);
+    expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    localStorage.removeItem(`trade-pilot:adaptive-plan:v2:${ANALYSIS_ID}`);
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v3:${ANALYSIS_ID}`)).toBeNull();
+  });
+
+  it("fails closed when TP Standard Trading Rules cannot be loaded", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(503),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("adaptive-plan-rules-unavailable");
+    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
+    expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
   });
 });
 

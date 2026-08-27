@@ -4,10 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import type { TradePlan } from "@workspace/api-client-react";
+import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-client-react";
 import type { Translations } from "@/locales/en";
 import {
   buildAdaptivePlanRecommendation,
+  createAdaptivePlanFingerprint,
+  getAdaptiveStandardRuleCode,
   type AdaptiveAnalysisContext,
   type AdaptivePlanContext,
   type AdaptivePlanDecision,
@@ -39,7 +41,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v2:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v3:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -104,6 +106,20 @@ function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, 
   }
 }
 
+function stageReason(
+  level: AdaptiveSidePositionPlan["ladder"][number],
+  lang: "en" | "id",
+  copy: AdaptiveCopy,
+): string {
+  if (level.level === 0) return copy.adaptive_stage_initial_reason;
+  return copy.adaptive_stage_add_reason
+    .replace("{level}", String(level.level))
+    .replace("{price}", formatNumber(level.price, lang, 4))
+    .replace("{distance}", formatNumber(level.distanceFromEntry, lang, 4))
+    .replace("{lot}", formatNumber(level.lot, lang))
+    .replace("{risk}", formatNumber(level.riskToStopForLot, lang));
+}
+
 function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPlan; lang: "en" | "id"; copy: AdaptiveCopy; decision: AdaptivePlanDecision }) {
   const isBuy = plan.side === "buy";
   const scenarioIsPreferred = decision.preferredSide === "both" || decision.preferredSide === plan.side;
@@ -135,7 +151,7 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
               <td className="py-1.5 text-right tabular-nums">{formatNumber(level.price, lang, 4)}</td>
               <td className="py-1.5 text-right tabular-nums">{formatNumber(level.lot, lang)}</td>
               <td className="py-1.5 text-right tabular-nums">{formatNumber(level.cumulativeLots, lang)}</td>
-              <td className="py-1.5 pl-3 text-muted-foreground min-w-40">{level.level === 0 ? copy.adaptive_stage_initial_reason : copy.adaptive_stage_add_reason}</td>
+              <td className="py-1.5 pl-3 text-muted-foreground min-w-52">{stageReason(level, lang, copy)}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -148,38 +164,66 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   const [open, setOpen] = useState(true);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
-  const marginPerLot = 100;
+  const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError } = useGetStandardTradingRules({
+    query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
+  });
+  const standardRuleCode = getAdaptiveStandardRuleCode(instrument);
+  const standardRule = standardRules?.instruments.find((rule) => rule.code === standardRuleCode) ?? null;
+  const rulesAvailable = !isRulesLoading && !isRulesError && standardRule !== null;
+  const fingerprint = createAdaptivePlanFingerprint({
+    instrument,
+    tradePlan,
+    context,
+    standardRule: rulesAvailable ? standardRule : null,
+  });
+  const rulesUnavailable = !isRulesLoading && !rulesAvailable;
 
   useEffect(() => {
+    if (isRulesLoading) return;
     setForm(DEFAULT_FORM);
     setRecommendation(null);
+    if (!rulesAvailable) {
+      localStorage.removeItem(storageKey(analysisId));
+      return;
+    }
     try {
       const stored = localStorage.getItem(storageKey(analysisId));
       if (!stored) return;
       const parsed: unknown = JSON.parse(stored);
       if (!isRecord(parsed)) return;
+      if (parsed.fingerprint !== fingerprint) {
+        localStorage.removeItem(storageKey(analysisId));
+        return;
+      }
       if (isStoredForm(parsed.form)) setForm({ ...DEFAULT_FORM, ...parsed.form });
-      if (isStoredRecommendation(parsed.recommendation)) setRecommendation(parsed.recommendation);
+      if (isStoredRecommendation(parsed.recommendation)) {
+        setRecommendation(parsed.recommendation);
+      }
     } catch {
       // A malformed local draft should not block Standard Analysis.
     }
-  }, [analysisId]);
+  }, [analysisId, fingerprint, isRulesLoading, rulesAvailable]);
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((previous) => ({ ...previous, [field]: value }));
     setRecommendation(null);
   };
   const calculate = () => {
+    if (!rulesAvailable) {
+      setRecommendation(null);
+      localStorage.removeItem(storageKey(analysisId));
+      return;
+    }
     const next = buildAdaptivePlanRecommendation({
       instrument,
       tradePlan,
       availableMargin: numberValue(form.availableMargin),
-      marginPerLot,
+      standardRule,
       preference: form.preference,
       context,
     });
     setRecommendation(next);
-    localStorage.setItem(storageKey(analysisId), JSON.stringify({ form, recommendation: next }));
+    localStorage.setItem(storageKey(analysisId), JSON.stringify({ fingerprint, form, recommendation: next }));
   };
   const reset = () => {
     setForm(DEFAULT_FORM);
@@ -207,7 +251,9 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
             <Input type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-available-margin" />
             <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_available_margin_help}</span>
           </label>
-          {marginPerLot != null && <p className="text-[11px] text-muted-foreground">{copy.adaptive_margin_rule.replace("{amount}", formatNumber(marginPerLot, lang))}</p>}
+          {isRulesLoading && <p className="text-[11px] text-muted-foreground" data-testid="adaptive-plan-rules-loading">{copy.adaptive_rules_loading}</p>}
+          {rulesAvailable && <p className="text-[11px] text-muted-foreground">{copy.adaptive_margin_rule.replace("{amount}", formatNumber(standardRule.initialMarginUsdPerLot, lang))}</p>}
+          {rulesUnavailable && <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300" data-testid="adaptive-plan-rules-unavailable">{copy.adaptive_rules_error}</div>}
         </div>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_preference_title}</h4>
@@ -227,7 +273,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" onClick={calculate} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
+          <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {!recommendation && <p className="text-[11px] text-muted-foreground flex items-start gap-1.5"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />{copy.adaptive_ready}</p>}

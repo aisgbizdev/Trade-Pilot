@@ -72,6 +72,7 @@ async function signIn(page: Page, user: TestUser) {
 const STUB_ID_RE_ANALYZE = 9_999_970;
 const STUB_ID_COPY_LEVELS = 9_999_960;
 const STUB_ID_STANDARD_REGRESSION = 9_999_950;
+const STUB_ID_ADAPTIVE_REFRESH = 9_999_940;
 
 function buildStubAnalysis(id: number) {
   const now = new Date();
@@ -132,6 +133,17 @@ function buildStubAnalysis(id: number) {
     feedback: null,
   };
 }
+
+type AdaptiveRefreshAnalysis = Omit<
+  ReturnType<typeof buildStubAnalysis>,
+  "riskLevel" | "fundamentalContext"
+> & {
+  riskLevel: "low";
+  fundamentalContext: {
+    newsItems: Array<Record<string, string | null>>;
+    calendarEvents: Array<Record<string, string | null>>;
+  };
+};
 
 /** Navigate to the analysis detail page via the Analyze form submit flow. */
 async function reachDetailPage(
@@ -305,9 +317,129 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("adaptive-plan-valid")).toHaveCount(0);
     await expect(page.getByTestId("adaptive-plan-invalid")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
-      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:${analysisId}`),
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v3:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+test.describe("Adaptive plan manual safeguards (real Chromium + refreshed context)", () => {
+  test("uses the standard rules, discards a saved plan after fundamental refresh, and refuses extra stages", async ({
+    page,
+    baseURL,
+  }) => {
+    const user = await registerUser(baseURL!, "adaptive-refresh");
+    await signIn(page, user);
+
+    let currentAnalysis: AdaptiveRefreshAnalysis = {
+      ...buildStubAnalysis(STUB_ID_ADAPTIVE_REFRESH),
+      riskLevel: "low" as const,
+      fundamentalContext: { newsItems: [], calendarEvents: [] },
+    };
+    const refreshedAt = new Date().toISOString();
+
+    await page.route(
+      `**/api/analyses/${STUB_ID_ADAPTIVE_REFRESH}/refresh-fundamentals`,
+      async (route: Route) => {
+        if (route.request().method() !== "POST") return route.fallback();
+        currentAnalysis = {
+          ...currentAnalysis,
+          fundamentalContext: {
+            newsItems: [],
+            calendarEvents: [{
+              date: "2026-08-27",
+              time: "14:30",
+              currency: "USD",
+              event: "Central-bank rate decision",
+              impact: "★★★",
+              actual: null,
+              forecast: null,
+              previous: null,
+            }],
+          },
+        };
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            fundamentalContext: currentAnalysis.fundamentalContext,
+            refreshedAt,
+            drift: { totalCitations: 0, missingCitations: [] },
+          }),
+        });
+      },
+    );
+    await page.route(`**/api/analyses/${STUB_ID_ADAPTIVE_REFRESH}`, async (route: Route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(currentAnalysis),
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    await page.route("**/api/analyses", async (route: Route) => {
+      if (route.request().method() === "POST") {
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify(currentAnalysis),
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    await page.goto("/analyze");
+    await page.getByTestId("button-instrument-XAU/USD").click();
+    await page.getByTestId("button-submit-analysis").click();
+    await page.getByTestId("button-view-full-analysis").click();
+    await page.waitForURL(new RegExp(`/analyses/${STUB_ID_ADAPTIVE_REFRESH}$`), {
+      timeout: 30_000,
+    });
+
+    const marginInput = page.getByTestId("input-adaptive-available-margin");
+    await expect(marginInput).toBeVisible();
+    await expect(page.getByText(/standard rule uses 100 margin|aturan standar memakai margin 100/i)).toBeVisible();
+    await marginInput.fill("100000");
+    await page.getByTestId("button-calculate-adaptive-plan").click();
+    await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/L1/);
+
+    const storedBeforeRefresh = await page.evaluate(
+      (analysisId) => (
+        globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v3:${analysisId}`),
+      STUB_ID_ADAPTIVE_REFRESH,
+    );
+    expect(storedBeforeRefresh).not.toBeNull();
+
+    await page.getByTestId("button-refresh-fundamentals").click();
+    await expect(page.getByTestId("fundamental-calendar-list")).toContainText("Central-bank rate decision");
+    await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
+    await expect(marginInput).toHaveValue("");
+    const storedAfterRefresh = await page.evaluate(
+      (analysisId) => (
+        globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v3:${analysisId}`),
+      STUB_ID_ADAPTIVE_REFRESH,
+    );
+    expect(storedAfterRefresh).toBeNull();
+
+    await marginInput.fill("100000");
+    await page.getByTestId("button-calculate-adaptive-plan").click();
+    await expect(page.getByTestId("adaptive-plan-reasoning")).toContainText(/high-impact|dampak tinggi/i);
+    await expect(page.getByTestId("adaptive-plan-buy")).not.toContainText(/L1/);
+
+    // Standard Plan levels remain the source plan throughout; only the
+    // optional adaptive recommendation has been discarded and re-evaluated.
+    await expect(page.getByTestId("trade-plan-buy-entry")).toHaveText("2350.0");
+    await expect(page.getByTestId("trade-plan-buy-sl")).toHaveText("2345.0");
   });
 });

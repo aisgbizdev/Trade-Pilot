@@ -1,4 +1,9 @@
-import type { FundamentalContext, TradePlan, TradeSide } from "@workspace/api-client-react";
+import type {
+  FundamentalContext,
+  StandardTradingRuleInstrument,
+  TradePlan,
+  TradeSide,
+} from "@workspace/api-client-react";
 
 export type AdaptiveMarket = "gold" | "brent";
 export type AccountTier = "micro" | "mini" | "regular";
@@ -67,16 +72,18 @@ export interface AdaptiveRule {
   label: string;
   contractSize: number;
   minMovement: number;
+  marginPerLot: number;
   maxGapPercent: number;
+  source: "TP Standard Trading Rules";
 }
 
 export interface AdaptivePositionPlanInput {
   instrument: string;
   tradePlan: TradePlan;
+  standardRule: StandardTradingRuleInstrument | null;
   equity: number | null;
   freeMargin: number | null;
   existingExposure: number | null;
-  marginPerLot: number | null;
   initialLot: number | null;
   accountTier: AccountTier;
   levels: number;
@@ -90,6 +97,8 @@ export interface AdaptiveLadderLevel {
   lot: number;
   cumulativeLots: number;
   estimatedRiskToStop: number;
+  distanceFromEntry: number;
+  riskToStopForLot: number;
   reason: string;
 }
 
@@ -127,19 +136,13 @@ export interface AdaptivePlanRecommendation {
   decision: AdaptivePlanDecision;
 }
 
-const MARKET_RULES: Record<AdaptiveMarket, AdaptiveRule> = {
+const MARKET_GUARDRAILS: Record<AdaptiveMarket, Pick<AdaptiveRule, "label" | "maxGapPercent">> = {
   gold: {
-    market: "gold",
     label: "Gold",
-    contractSize: 10,
-    minMovement: 0.01,
     maxGapPercent: 1,
   },
   brent: {
-    market: "brent",
     label: "Brent Oil",
-    contractSize: 100,
-    minMovement: 0.01,
     maxGapPercent: 2,
   },
 };
@@ -176,6 +179,17 @@ function marketForInstrument(instrument: string): AdaptiveMarket | null {
   return null;
 }
 
+function standardCodeForMarket(market: AdaptiveMarket): StandardTradingRuleInstrument["code"] {
+  return market === "gold" ? "XUL10" : "BCO10_BBJ";
+}
+
+export function getAdaptiveStandardRuleCode(
+  instrument: string,
+): StandardTradingRuleInstrument["code"] | null {
+  const market = marketForInstrument(instrument);
+  return market ? standardCodeForMarket(market) : null;
+}
+
 function numericValues(value: string | number | null | undefined): number[] {
   if (value == null) return [];
   return String(value)
@@ -183,6 +197,36 @@ function numericValues(value: string | number | null | undefined): number[] {
     .match(/-?\d+(?:\.\d+)?/g)
     ?.map(Number)
     .filter(Number.isFinite) ?? [];
+}
+
+function ruleFromStandardTradingRules(
+  instrument: string,
+  standardRule: StandardTradingRuleInstrument | null | undefined,
+): AdaptiveRule | null {
+  const market = marketForInstrument(instrument);
+  if (!market || !standardRule || standardRule.code !== standardCodeForMarket(market)) return null;
+
+  const minMovement = numericValues(standardRule.minimumPriceMovement)[0];
+  if (
+    !Number.isFinite(standardRule.contractSize) ||
+    standardRule.contractSize <= 0 ||
+    !Number.isFinite(minMovement) ||
+    minMovement <= 0 ||
+    !Number.isFinite(standardRule.initialMarginUsdPerLot) ||
+    standardRule.initialMarginUsdPerLot <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    market,
+    label: MARKET_GUARDRAILS[market].label,
+    contractSize: standardRule.contractSize,
+    minMovement,
+    marginPerLot: standardRule.initialMarginUsdPerLot,
+    maxGapPercent: MARKET_GUARDRAILS[market].maxGapPercent,
+    source: "TP Standard Trading Rules",
+  };
 }
 
 function priceFromTradeSide(side: TradeSide, field: "entryZone" | "stopLoss" | "takeProfit1" | "takeProfit2"): number | null {
@@ -278,8 +322,6 @@ function sidePlan(
   tradeSide: TradeSide,
   input: AdaptivePositionPlanInput,
   rule: AdaptiveRule,
-  contractSize: number,
-  marginPerLot: number,
   levels = input.levels,
 ): AdaptiveSidePositionPlan | null {
   const entry = priceFromTradeSide(tradeSide, "entryZone");
@@ -289,16 +331,20 @@ function sidePlan(
   const distance = side === "buy" ? entry - stopLoss : stopLoss - entry;
   const ladder: AdaptiveLadderLevel[] = [];
   let cumulativeLots = input.initialLot;
-  let estimatedCycleLoss = distance * contractSize * input.initialLot;
+  const initialLot = roundLot(input.initialLot);
+  let estimatedCycleLoss = distance * rule.contractSize * initialLot;
 
   ladder.push({
     level: 0,
     price: roundPrice(entry, rule.minMovement),
-    lot: input.initialLot,
-    cumulativeLots,
+    lot: initialLot,
+    cumulativeLots: initialLot,
     estimatedRiskToStop: estimatedCycleLoss,
+    distanceFromEntry: 0,
+    riskToStopForLot: estimatedCycleLoss,
     reason: "Initial market entry from the Standard Plan.",
   });
+  cumulativeLots = initialLot;
 
   for (let level = 1; level <= levels; level += 1) {
     const adverseFraction = level / (input.levels + 1);
@@ -306,10 +352,11 @@ function sidePlan(
       side === "buy"
         ? entry - distance * adverseFraction
         : entry + distance * adverseFraction;
-    const previousLot = ladder[ladder.length - 1].lot;
-    const lot = roundLot(previousLot * 1.5);
+    // Every add uses the same conservative lot as the initial entry. This
+    // keeps staging from becoming a mechanically escalating martingale.
+    const lot = initialLot;
     cumulativeLots = roundLot(cumulativeLots + lot);
-    const riskToStop = (side === "buy" ? price - stopLoss : stopLoss - price) * contractSize * lot;
+    const riskToStop = (side === "buy" ? price - stopLoss : stopLoss - price) * rule.contractSize * lot;
     estimatedCycleLoss += riskToStop;
     ladder.push({
       level,
@@ -317,7 +364,9 @@ function sidePlan(
       lot,
       cumulativeLots,
       estimatedRiskToStop: estimatedCycleLoss,
-      reason: `Add only after price reaches predefined adverse level ${level}; stop adding at the next invalidation or guardrail breach.`,
+      distanceFromEntry: Math.abs(entry - price),
+      riskToStopForLot: riskToStop,
+      reason: `Manual checkpoint ${level}: level must be reachable, the analysis must remain aligned, invalidation must be clear, and no new fundamental risk may require review. The adverse price move alone is not a trigger; equal lot sizing trades lower escalation risk for a higher cumulative exposure if every checkpoint is used.`,
     });
   }
 
@@ -328,27 +377,71 @@ function sidePlan(
     takeProfit1: priceFromTradeSide(tradeSide, "takeProfit1"),
     takeProfit2: priceFromTradeSide(tradeSide, "takeProfit2"),
     totalLots: cumulativeLots,
-    marginRequired: cumulativeLots * marginPerLot,
+    marginRequired: cumulativeLots * rule.marginPerLot,
     estimatedCycleLoss,
     ladder,
   };
 }
 
-export function getAdaptiveMarketRule(instrument: string): AdaptiveRule | null {
-  const market = marketForInstrument(instrument);
-  return market ? MARKET_RULES[market] : null;
+export function getAdaptiveMarketRule(
+  instrument: string,
+  standardRule: StandardTradingRuleInstrument | null | undefined,
+): AdaptiveRule | null {
+  return ruleFromStandardTradingRules(instrument, standardRule);
+}
+
+/**
+ * A saved browser recommendation is only valid for the exact saved analysis
+ * snapshot and source-rule inputs that produced it. This includes the full
+ * fundamental snapshot, which changes after a fundamental refresh.
+ */
+export function createAdaptivePlanFingerprint({
+  instrument,
+  tradePlan,
+  context,
+  standardRule,
+}: {
+  instrument: string;
+  tradePlan: TradePlan;
+  context: AdaptiveAnalysisContext;
+  standardRule: StandardTradingRuleInstrument | null | undefined;
+}): string {
+  return JSON.stringify({
+    instrument,
+    tradePlan,
+    context: {
+      timeframe: context.timeframe ?? null,
+      marketCondition: context.marketCondition ?? null,
+      riskLevel: context.riskLevel ?? null,
+      tradingBias: context.tradingBias ?? null,
+      confidenceMin: context.confidenceMin ?? null,
+      confidenceMax: context.confidenceMax ?? null,
+      techBuyCount: context.techBuyCount ?? null,
+      techSellCount: context.techSellCount ?? null,
+      techNeutralCount: context.techNeutralCount ?? null,
+      fundamentalContext: context.fundamentalContext ?? null,
+    },
+    standardRule: standardRule
+      ? {
+          code: standardRule.code,
+          contractSize: standardRule.contractSize,
+          initialMarginUsdPerLot: standardRule.initialMarginUsdPerLot,
+          minimumPriceMovement: standardRule.minimumPriceMovement,
+        }
+      : null,
+  });
 }
 
 export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): AdaptivePositionPlanResult {
   const market = marketForInstrument(input.instrument);
-  const baseRule = market ? MARKET_RULES[market] : null;
+  const rule = ruleFromStandardTradingRules(input.instrument, input.standardRule);
   const errors: string[] = [];
 
-  if (!baseRule) errors.push("Adaptive rules are currently defined for Gold and Brent only.");
+  if (!market) errors.push("Adaptive position planning requires a supported TP Standard Trading Rules instrument.");
+  else if (!rule) errors.push("TP Standard Trading Rules are unavailable for this instrument.");
   if (input.equity == null || input.equity <= 0) errors.push("Account equity is required.");
   if (input.freeMargin == null || input.freeMargin <= 0) errors.push("Free margin is required.");
   if (input.existingExposure == null || input.existingExposure < 0) errors.push("Existing exposure is required.");
-  if (input.marginPerLot == null || input.marginPerLot <= 0) errors.push("Margin per lot is required.");
   if (input.initialLot == null || input.initialLot <= 0) errors.push("Initial lot is required.");
   if (!Number.isInteger(input.levels) || input.levels < 0 || input.levels > 6) {
     errors.push("Number of levels must be between 0 and 6.");
@@ -362,22 +455,17 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     errors.push(`Initial lot must be within the ${input.accountTier} tier range.`);
   }
 
-  if (!baseRule) {
+  if (!rule) {
     return { valid: false, market, rule: null, errors, assumptions: [], buy: null, sell: null };
   }
 
-  // Gold/Brent contract size, price precision, and gap threshold are fixed
-  // market guardrails. The user supplies account-specific margin only.
-  const rule = baseRule;
-
-  const marginPerLot = input.marginPerLot ?? 0;
   const maxCycleLoss = (input.equity ?? 0) * (input.maxCycleLossPercent / 100);
   const buyGeometryError = sideGeometryError("buy", input.tradePlan.buy);
   const sellGeometryError = sideGeometryError("sell", input.tradePlan.sell);
   if (buyGeometryError) errors.push(buyGeometryError);
   if (sellGeometryError) errors.push(sellGeometryError);
-  const buy = buyGeometryError ? null : sidePlan("buy", input.tradePlan.buy, input, rule, rule.contractSize, marginPerLot, input.sideLevels?.buy);
-  const sell = sellGeometryError ? null : sidePlan("sell", input.tradePlan.sell, input, rule, rule.contractSize, marginPerLot, input.sideLevels?.sell);
+  const buy = buyGeometryError ? null : sidePlan("buy", input.tradePlan.buy, input, rule, input.sideLevels?.buy);
+  const sell = sellGeometryError ? null : sidePlan("sell", input.tradePlan.sell, input, rule, input.sideLevels?.sell);
 
   const tierMax = tier.max;
   const plans = [buy, sell].filter((plan): plan is AdaptiveSidePositionPlan => plan != null);
@@ -385,7 +473,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     if (tierMax != null && plan.ladder.some((level) => level.lot > tierMax)) {
       errors.push(`The ${input.accountTier} tier caps each ladder entry at ${tierMax.toFixed(2)} lot.`);
     }
-    if ((input.existingExposure ?? 0) + plan.totalLots > (input.freeMargin ?? 0) / marginPerLot) {
+    if ((input.existingExposure ?? 0) + plan.totalLots > (input.freeMargin ?? 0) / rule.marginPerLot) {
       errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} exposure exceeds free-margin capacity.`);
     }
     if (plan.estimatedCycleLoss > maxCycleLoss) {
@@ -398,9 +486,9 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
 
   const tierText = tierMax == null ? `${tier.min.toFixed(2)} lot and above` : `${tier.min.toFixed(2)}–${tierMax.toFixed(2)} lot`;
   const assumptions = [
-    `Contract size: ${rule.contractSize} units per lot; margin is supplied by the user and is not inferred from a broker.`,
-    `Price movement is rounded to ${rule.minMovement}; a gap above ${rule.maxGapPercent}% is treated as an external execution risk.`,
-    `Initial entry uses the Standard Plan; each add is 1.5× the prior lot and remains subject to the ${input.accountTier} range (${tierText}).`,
+    `Contract size: ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot; margin: USD ${rule.marginPerLot} per lot from ${rule.source}.`,
+    `Minimum movement from ${rule.source}: ${rule.minMovement}; a gap above ${rule.maxGapPercent}% is treated as an external execution risk.`,
+    `Initial entry uses the Standard Plan; each manual add keeps the initial lot unchanged (${tierText}) to avoid a martingale multiplier. This trades lower escalation risk for less capacity as cumulative exposure grows.`,
     `Maximum cycle loss is ${input.maxCycleLossPercent}% of equity and includes the initial entry plus every planned add.`,
     "Broker auto-liquidation, spread, rollover, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
   ];
@@ -426,18 +514,19 @@ export function buildAdaptivePlanRecommendation({
   instrument,
   tradePlan,
   availableMargin,
-  marginPerLot,
+  standardRule,
   preference,
   context: analysisContext,
 }: {
   instrument: string;
   tradePlan: TradePlan;
   availableMargin: number | null;
-  marginPerLot: number | null;
+  standardRule: StandardTradingRuleInstrument | null;
   preference: AdaptiveRiskPreference;
   context?: AdaptiveAnalysisContext;
 }): AdaptivePlanRecommendation {
   const market = marketForInstrument(instrument);
+  const rule = ruleFromStandardTradingRules(instrument, standardRule);
   const context = normalizeContext(analysisContext);
   const reasonCodes: AdaptivePlanReasonCode[] = [];
   let posture: AdaptivePlanPosture = "scaling_allowed";
@@ -447,7 +536,7 @@ export function buildAdaptivePlanRecommendation({
       result: {
         valid: false,
         market,
-        rule: market ? MARKET_RULES[market] : null,
+        rule,
         errors: ["Available margin is required."],
         assumptions: [],
         buy: null,
@@ -458,13 +547,13 @@ export function buildAdaptivePlanRecommendation({
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
     };
   }
-  if (marginPerLot == null || marginPerLot <= 0) {
+  if (!rule) {
     return {
       result: {
         valid: false,
         market,
-        rule: market ? MARKET_RULES[market] : null,
-        errors: ["Standard margin rules are unavailable."],
+        rule: null,
+        errors: ["TP Standard Trading Rules are unavailable for this instrument."],
         assumptions: [],
         buy: null,
         sell: null,
@@ -474,6 +563,7 @@ export function buildAdaptivePlanRecommendation({
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
     };
   }
+  const marginPerLot = rule.marginPerLot;
 
   const profile = RECOMMENDATION_PROFILES[preference];
   let levels = profile.levels;
@@ -601,10 +691,10 @@ export function buildAdaptivePlanRecommendation({
     const result = buildAdaptivePositionPlan({
       instrument,
       tradePlan,
+      standardRule,
       equity: normalizedEquity,
       freeMargin: marginBudget,
       existingExposure: 0,
-      marginPerLot,
       initialLot,
       accountTier,
       levels,
@@ -648,7 +738,7 @@ export function buildAdaptivePlanRecommendation({
     result: fallback ?? {
       valid: false,
       market,
-      rule: market ? MARKET_RULES[market] : null,
+      rule,
       errors: ["No safe position size is available."],
       assumptions: [],
       buy: null,
