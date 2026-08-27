@@ -1,0 +1,43 @@
+Sebagai pengaudit sistem dan *critical user*, keputusan strategi produk di layar Replit kamu ini **sangat cerdik secara bisnis (marketing/funneling), tapi menyimpan celah fatal jika tidak dieksekusi dengan *guardrails* yang ketat.**
+
+Menyembunyikan nama pialang (*broker-neutral UI*) sambil secara paksa (*hardcoded*) menerapkan trading rule pialang SPA tersebut di balik layar adalah langkah yang sering dipakai untuk *funneling*. Namun, dari sudut pandang audit, ini adalah **analisis kritis dan potensi jebakan teknisnya**:
+
+---
+
+**Sisi Positif & Keunggulan Strategi**
+
+* **Skalabilitas Brand (Broker-Neutral):** Aplikasi Trade Pilot (TP) tidak akan terlihat seperti "aplikasi jualan pialang X". Tampilannya bersih, elegan, dan bisa diterima pengguna umum tanpa kecurigaan bahwa ini adalah alat pemasaran terselubung.
+* **Keakuratan Risk Engine yang Sangat Tinggi:** Daripada AI menebak-nebak ukuran lot atau margin secara bebas (asal-asalan), memaksa sistem menggunakan spesifikasi kontrak nyata (XUL10 = 10 troy oz, BCO10_BBJ = 100 barrel, Fixed Rate USD 1 = Rp 10.000, max exposure 0,9 lot) membuat kalkulasi *Risk Engine* 100% presisi dan tidak mengawang-awang.
+
+---
+
+**Celah Fatal & Potensi Masalah (Blind Spots Auditor)**
+
+* **1. Masalah Slippage & Misleading Expectation pada User Broker Lain**
+* *Kritik:* Jika user biasa (misalnya user yang pakai broker offshore dengan spread tipis/floating rate) menggunakan fitur *Adaptive Plan* di TP, kalkulasi TP (yang didasarkan pada facility fee $1.5/lot, VAT 11%, dan fixed rate Rp 10.000) **tidak akan cocok dengan akun broker mereka**.
+* *Akibat:* User bisa menyalahkan TP jika hasil eksekusi manual di broker mereka berbeda jauh dari kalkulasi *worst-case scenario* TP.
+
+
+* **2. Pertanyaan Regulasi & Transparansi ("Disguised Broker Rules")**
+* *Kritik:* Jika aturan seperti *Margin Call (70%)* dan *Auto-Liquidation (30%)* ditampilkan secara generik tanpa menyebutkan bahwa ini adalah *standard SPA rules*, user bisa bingung kenapa batasnya sangat kaku.
+* *Solusi Audit:* Jangan sebut nama pialang, tetapi tuliskan sebagai **"Standard Contract Specification (Mini Account - Fixed Rate 10k)"** di panel transparansi/setting. Ini menjaga TP tetap netral secara merek, namun jujur secara spesifikasi teknis.
+
+
+
+---
+
+**Evaluasi Pemecahan Task di Replit**
+
+Urutan pengerjaan task yang diajukan di Replit sudah tepat:
+
+$$\text{Task 1 (Kunci Rule Gold \& Brent)} \longrightarrow \text{Task 3 (Regression Check Core TP)} \longrightarrow \text{Task 2 (Martingale Situasional Opt-In)}$$
+
+* **Task 3 ditaruh di tengah adalah langkah krusial:** Ini memastikan bahwa sebelum fitur *Adaptive/Martingale* disuntikkan, fitur *Standard Analysis TP* yang sudah stabil tidak ada yang *broken* / *buggy*.
+
+---
+
+**Rekomendasi Tindakan**
+
+Langkah ini sudah bisa dilanjutkan. Kamu bisa memberikan instruksi ke Agent Replit untuk menyetujui proposal task tersebut dengan satu syarat pengunci:
+
+> *"Lanjutkan ke **Task 1**. Pastikan seluruh spesifikasi kontrak (XUL10 & BCO10_BBJ) serta kalkulasi biaya (facility fee + VAT + fixed rate Rp 10.000) dikunci di modul Risk Engine di bawah label transparan **'Standard Contract Specification'**, tanpa mengubah atau merusak fitur Standard Analysis TP yang sudah berjalan."*
