@@ -1,5 +1,6 @@
-// Multi-source fundamental-news aggregator: Newsmaker.id + Yahoo
-// Finance per-symbol RSS, deduped, scored, with a macro keyword
+// Fundamental-news aggregator. Newsmaker.id is the only active source by
+// default; other adapters are opt-in once an approved feed is available.
+// Items are deduped, scored, with a macro keyword
 // fallback (FOMC / CPI / NFP / ECB / BoJ / OPEC) when per-instrument
 // matches are sparse.
 
@@ -14,6 +15,12 @@ import {
 const NEWS_API = "https://endpoapi-production-3202.up.railway.app/api/news-id";
 const NEWSMAKER_SOURCE = "Newsmaker.id";
 const YAHOO_SOURCE = "Yahoo Finance";
+const ACTIVE_NEWS_SOURCE_IDS = new Set(
+  (process.env["MARKET_NEWS_SOURCES"] ?? "newsmaker,yahoo")
+    .split(",")
+    .map((source) => source.trim().toLowerCase())
+    .filter(Boolean),
+);
 
 let newsmakerCache: { data: NewsmakerRaw[]; fetchedAt: number } | null = null;
 const CACHE_TTL = 2 * 60 * 1000;
@@ -256,9 +263,11 @@ export async function getRelevantNewsSnapshot(
   const [[newsmakerRes, yahooRes], configured] = await Promise.all([
     Promise.allSettled([
       fetchNewsmaker(),
-      getYahooFinanceNews(instrument, 8),
+      ACTIVE_NEWS_SOURCE_IDS.has("yahoo")
+        ? getYahooFinanceNews(instrument, 8)
+        : Promise.resolve([] as YahooNewsItem[]),
     ]),
-    getConfiguredNewsSources(instrument, 8),
+    getConfiguredNewsSources(instrument, 8, ACTIVE_NEWS_SOURCE_IDS),
   ]);
 
   const collected: NewsItem[] = [];
@@ -346,7 +355,7 @@ export async function getRelevantNewsSnapshot(
         id: "yahoo",
         label: YAHOO_SOURCE,
         tier: "standard",
-        configured: true,
+        configured: ACTIVE_NEWS_SOURCE_IDS.has("yahoo"),
         available: yahooRes.status === "fulfilled",
       },
       ...configured.sources,

@@ -215,8 +215,12 @@ async function fetchSource(
 export async function getConfiguredNewsSources(
   instrument: string,
   maxItems = 8,
+  enabledSourceIds?: ReadonlySet<string>,
 ): Promise<{ items: ConfiguredNewsItem[]; sources: ConfiguredNewsSourceStatus[] }> {
-  const results = await Promise.all(SOURCES.map((source) => fetchSource(source, instrument, maxItems)));
+  const activeSources = enabledSourceIds
+    ? SOURCES.filter((source) => enabledSourceIds.has(source.id))
+    : SOURCES;
+  const results = await Promise.all(activeSources.map((source) => fetchSource(source, instrument, maxItems)));
   return {
     items: results.flatMap((result) => result.items),
     sources: results.map((result) => result.status),

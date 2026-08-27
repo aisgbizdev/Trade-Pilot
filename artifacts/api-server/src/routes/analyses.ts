@@ -78,7 +78,11 @@ async function trackAiError(): Promise<void> {
 
 const router = Router();
 
-async function buildMarketRecheck(analysis: AnalysisRow): Promise<{
+async function buildMarketRecheck(
+  analysis: AnalysisRow,
+  newsLoader: () => Promise<{ items: NewsItem[]; sourceStatuses: NewsSourceStatus[] }> = () =>
+    getRelevantNewsSnapshot(analysis.instrument),
+): Promise<{
   fundamentalContext: FundamentalSnapshot;
   marketState: MarketIntelligence;
   refreshedAt: string;
@@ -92,7 +96,7 @@ async function buildMarketRecheck(analysis: AnalysisRow): Promise<{
 
   const indicatorTf = isSupportedIndicatorTimeframe(analysis.timeframe) ? analysis.timeframe : null;
   await Promise.allSettled([
-    getRelevantNewsSnapshot(analysis.instrument).then((snapshot) => {
+    newsLoader().then((snapshot) => {
       freshNews = snapshot.items;
       sourceStatuses = snapshot.sourceStatuses;
     }),
@@ -1073,7 +1077,13 @@ router.post(
     // Re-fetch news + calendar — never throw on upstream failure (mirrors the
     // create-analysis path). Either feed coming back empty is treated as
     // "nothing relevant in the window", not as an error to the user.
-    const recheck = await buildMarketRecheck(analysis);
+    // Keep the established refresh adapter as the source of the persisted
+    // news list (and its existing test seam). The read-only polling endpoint
+    // uses getRelevantNewsSnapshot above so it can expose source coverage.
+    const recheck = await buildMarketRecheck(analysis, async () => ({
+      items: await getRelevantNews(analysis.instrument),
+      sourceStatuses: [],
+    }));
     const freshSnapshot = recheck.fundamentalContext;
 
     // Compute drift using the SAME matching logic that grounds the model's

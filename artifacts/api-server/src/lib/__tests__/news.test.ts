@@ -50,7 +50,7 @@ describe("getRelevantNews — merge + dedupe", () => {
   const recentISO = (hoursAgo = 2) =>
     new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
 
-  it("dedupes the same headline syndicated to both sources by normalized title", async () => {
+  it("dedupes the same headline syndicated to both available sources by normalized title", async () => {
     const sharedTitle = "Gold rallies as Fed signals pause";
     globalThis.fetch = vi.fn(async () =>
       newsmakerResponse([
