@@ -67,7 +67,6 @@ vi.mock("@workspace/api-client-react", () => ({
   // want in these tests — they aren't asserting on sentiment UI.
   useGetJournalSentiment: () => ({ data: undefined, isLoading: false }),
   getGetJournalSentimentQueryKey: () => ["sentiment"],
-  useGetStandardTradingRules: () => ({ data: undefined, isLoading: false, isError: false }),
 }));
 
 vi.mock("wouter", () => ({

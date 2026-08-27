@@ -55,7 +55,6 @@ import {
   getGetAnalysisQueryKey,
   useSubmitFeedback,
   useRefreshFundamentals,
-  useGetMarketIntelligence,
   useGetAnalysisAlerts,
   useArmAnalysisAlerts,
   useCancelAnalysisAlerts,
@@ -73,7 +72,6 @@ import {
   type FundamentalNewsItem,
   type FundamentalCalendarEvent,
   type FundamentalDrift,
-  type MarketIntelligence,
   type AlertStatus,
   type AlertLevelRow,
 } from "@workspace/api-client-react";
@@ -1208,7 +1206,6 @@ function FundamentalContextCard({
   onRefresh,
   isRefreshing,
   refreshState,
-  marketState,
 }: {
   ctx: FundamentalContext;
   t: T;
@@ -1217,7 +1214,6 @@ function FundamentalContextCard({
   onRefresh: () => void;
   isRefreshing: boolean;
   refreshState: { refreshedAt: string; drift: FundamentalDrift } | null;
-  marketState?: MarketIntelligence | null;
 }) {
   const news = (ctx.newsItems ?? []).slice(0, 3);
   const events = (ctx.calendarEvents ?? []).slice(0, 5);
@@ -1249,28 +1245,6 @@ function FundamentalContextCard({
   const driftBanner = refreshState ? (
     <FundamentalDriftBanner state={refreshState} t={t} lang={lang} />
   ) : null;
-  const marketBanner = marketState ? (
-    <div
-      className={cn(
-        "rounded-md border px-3 py-2 text-xs",
-        marketState.status === "reaffirm" ? "border-green-300/60 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-300" :
-        marketState.status === "invalidate" ? "border-red-300/60 bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300" :
-        "border-amber-300/60 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
-      )}
-      role="status"
-      data-testid="market-intelligence-status"
-    >
-      <span className="font-semibold">
-        {marketState.status === "reaffirm" ? "Kondisi live mengonfirmasi rencana" :
-          marketState.status === "caution" ? "Waspada: gunakan entry saja" :
-          marketState.status === "hold_scaling" ? "Tahan scaling sampai kondisi terkonfirmasi" :
-          "Rencana tidak lagi valid"}
-      </span>
-      <span className="block mt-0.5 opacity-90">
-        Diperbarui {formatDistanceToNow(new Date(marketState.evaluatedAt), { addSuffix: true, locale: lang === "id" ? idLocale : undefined })}. Keputusan tetap manual.
-      </span>
-    </div>
-  ) : null;
 
   if (news.length === 0 && events.length === 0) {
     return (
@@ -1285,7 +1259,6 @@ function FundamentalContextCard({
           {refreshButton}
         </div>
         {driftBanner}
-        {marketBanner}
         <p className="text-xs text-muted-foreground leading-relaxed">
           {t.analysis_detail.fundamental_empty.replace("{instrument}", instrument)}
         </p>
@@ -1310,7 +1283,6 @@ function FundamentalContextCard({
       </div>
 
       {driftBanner}
-      {marketBanner}
 
       {news.length > 0 && (
         <div className="space-y-2" data-testid="fundamental-news-list">
@@ -1596,7 +1568,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [fundamentalRefresh, setFundamentalRefresh] = useState<{
     refreshedAt: string;
     drift: FundamentalDrift;
-    marketState?: MarketIntelligence;
   } | null>(null);
   const refreshFundamentalsMutation = useRefreshFundamentals({
     mutation: {
@@ -1604,7 +1575,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         setFundamentalRefresh({
           refreshedAt: resp.refreshedAt,
           drift: resp.drift,
-          marketState: resp.marketState,
         });
         queryClient.invalidateQueries({ queryKey: getGetAnalysisQueryKey(id) });
       },
@@ -1614,15 +1584,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           variant: "destructive",
         });
       },
-    },
-  });
-  const liveMarketQuery = useGetMarketIntelligence(id, {
-    query: {
-      queryKey: ["analysis-market-intelligence", id],
-      enabled: Number.isInteger(id) && id > 0,
-      refetchInterval: 60_000,
-      refetchIntervalInBackground: false,
-      staleTime: 15_000,
     },
   });
   const handleRefreshFundamentals = () => {
@@ -2017,7 +1978,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             onRefresh={handleRefreshFundamentals}
             isRefreshing={refreshFundamentalsMutation.isPending}
             refreshState={fundamentalRefresh}
-            marketState={fundamentalRefresh?.marketState ?? liveMarketQuery.data?.marketState ?? analysis.fundamentalContext.marketState}
           />
         )}
 
@@ -2044,11 +2004,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               techBuyCount: analysis.techBuyCount,
               techSellCount: analysis.techSellCount,
               techNeutralCount: analysis.techNeutralCount,
-              fundamentalContext: {
-                newsItems: analysis.fundamentalContext?.newsItems ?? [],
-                calendarEvents: analysis.fundamentalContext?.calendarEvents ?? [],
-                marketState: fundamentalRefresh?.marketState ?? liveMarketQuery.data?.marketState ?? analysis.fundamentalContext?.marketState,
-              },
+              fundamentalContext: analysis.fundamentalContext,
             }}
             lang={lang}
             copy={t.analysis_detail}

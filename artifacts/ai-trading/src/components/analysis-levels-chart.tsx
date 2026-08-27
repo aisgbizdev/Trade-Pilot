@@ -11,7 +11,6 @@ import {
 } from "lightweight-charts";
 import { useTheme } from "@/components/theme-provider";
 import type { TradePlan, TradePlanPreferredSide } from "@workspace/api-client-react";
-import type { AdaptivePositionPlanResult } from "@/lib/adaptive-position-plan";
 
 interface Candle {
   date: string;
@@ -46,10 +45,6 @@ interface AnalysisLevelsChartProps {
   // "AI saw up to here" vertical marker and to mute bars that
   // printed AFTER the call (i.e. bars the AI never saw).
   analysisCreatedAt?: string | Date | null;
-  /** Optional manual adaptive plan. Its stages are overlays only; Standard Plan levels stay unchanged. */
-  adaptivePlan?: AdaptivePositionPlanResult | null;
-  /** The manually selected scenario to emphasize on the chart. */
-  selectedAdaptiveSide?: "buy" | "sell" | null;
   height?: number | string;
   onLoadFailed?: (reason: string) => void;
 }
@@ -140,30 +135,6 @@ function buildLevels(
   return levels;
 }
 
-function buildAdaptiveLevels(
-  plan: AdaptivePositionPlanResult | null | undefined,
-  selectedSide: "buy" | "sell" | null | undefined,
-): LevelDef[] {
-  if (!plan?.valid) return [];
-  const levels: LevelDef[] = [];
-  for (const sidePlan of [plan.buy, plan.sell]) {
-    if (!sidePlan) continue;
-    if (selectedSide && sidePlan.side !== selectedSide) continue;
-    const color = sidePlan.side === "buy" ? "#2563eb" : "#9333ea";
-    const prefix = sidePlan.side.toUpperCase();
-    for (const level of sidePlan.ladder) {
-      levels.push({
-        key: `adaptive-${sidePlan.side}-${level.level}`,
-        price: level.price,
-        label: `${prefix} ${level.level === 0 ? "Start" : `L${level.level}`}`,
-        color,
-        testId: `chart-adaptive-${sidePlan.side}-${level.level}`,
-      });
-    }
-  }
-  return levels;
-}
-
 function toCssSize(value: number | string): string {
   if (typeof value === "number") return value > 0 ? `${value}px` : "100%";
   return value || "100%";
@@ -213,8 +184,6 @@ export function AnalysisLevelsChart({
   timeframe,
   tradePlan,
   analysisCreatedAt = null,
-  adaptivePlan = null,
-  selectedAdaptiveSide = null,
   height = 280,
   onLoadFailed,
 }: AnalysisLevelsChartProps) {
@@ -341,9 +310,7 @@ export function AnalysisLevelsChart({
     // When AI says "wait", show levels for BOTH sides faintly so the user
     // can see the structure either way. Otherwise lean into the chosen side.
     const sides: TradePlanPreferredSide[] =
-      selectedAdaptiveSide
-        ? [selectedAdaptiveSide]
-        : tradePlan.preferredSide === "wait"
+      tradePlan.preferredSide === "wait"
         ? ["buy", "sell"]
         : [tradePlan.preferredSide];
     for (const side of sides) {
@@ -360,18 +327,7 @@ export function AnalysisLevelsChart({
         priceLinesRef.current.push(line);
       }
     }
-    for (const lvl of buildAdaptiveLevels(adaptivePlan, selectedAdaptiveSide)) {
-      const line = series.createPriceLine({
-        price: lvl.price,
-        color: lvl.color,
-        lineWidth: 1,
-        lineStyle: LineStyle.Dotted,
-        axisLabelVisible: true,
-        title: lvl.label,
-      });
-      priceLinesRef.current.push(line);
-    }
-  }, [tradePlan, adaptivePlan, selectedAdaptiveSide, candles, state]);
+  }, [tradePlan, candles, state]);
 
   // Track the x-coordinate of the analysis-created cutoff so we can draw a
   // vertical marker line + badge as an HTML overlay. lightweight-charts has

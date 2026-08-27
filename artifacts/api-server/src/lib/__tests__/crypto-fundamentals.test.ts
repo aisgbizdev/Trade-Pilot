@@ -95,6 +95,7 @@ describe("crypto news — Yahoo per-symbol + crypto macro fallback", () => {
 
     const items = await getRelevantNews("BTC/USD", 5);
     expect(items.length).toBeGreaterThan(0);
+    // The Yahoo BTC-USD headline must come through.
     expect(items.some((i) => /bitcoin/i.test(i.title))).toBe(true);
     // The crypto-macro fallback should retain the ETF headline even
     // though it never says "bitcoin".

@@ -7,5 +7,3 @@
 - [Mobile Expo auth pattern](mobile-expo-auth-pattern.md) — orval mutations take `{ data: Body }`, mode required in CreateAnalysisBody, use `"/(tabs)"` not `"/(tabs)/"`, colors.radius lives alongside palette tokens.
 - [Replit deployment CORS origins](replit-deployment-cors-origins.md) — use exact runtime `REPLIT_DOMAINS` origins alongside custom domains; dev-domain-only CORS blocks browser registration after publishing.
 - [Situation-aware adaptive scaling](situation-aware-adaptive-scaling.md) — staged additions must fail closed unless the saved analysis context is complete and directionally aligned.
-- [PWA preview cache verification](pwa-preview-cache-verification.md) — a service worker can keep an old Vite module after restart; clear preview storage before diagnosing an apparent UI mismatch.
-- [Duplicate artifacts and publishing](duplicate-artifacts-publishing.md) — nested workspace copies can register duplicate paths and make production bundle the same apps repeatedly.

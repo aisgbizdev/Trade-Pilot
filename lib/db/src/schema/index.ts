@@ -38,12 +38,6 @@ export type FundamentalNewsItemShape = {
   source: string;
   url: string | null;
   publishedAt: string;
-  sourceTier?: "primary" | "standard" | "licensed";
-  sourceWeight?: number;
-  sourceLabels?: string[];
-  sourceCount?: number;
-  relevanceScore?: number;
-  impact?: "low" | "medium" | "high";
 };
 
 export type FundamentalCalendarEventShape = {
@@ -60,22 +54,6 @@ export type FundamentalCalendarEventShape = {
 export type FundamentalContextShape = {
   newsItems: FundamentalNewsItemShape[];
   calendarEvents: FundamentalCalendarEventShape[];
-  capturedAt?: string;
-  sourceStatuses?: Array<{
-    id: string;
-    label: string;
-    tier: "primary" | "standard" | "licensed";
-    configured: boolean;
-    available: boolean;
-  }>;
-  marketState?: {
-    status: "reaffirm" | "caution" | "hold_scaling" | "invalidate";
-    evaluatedAt: string;
-    reasonCodes: string[];
-    livePrice: number | null;
-    priceChangePercent: string | null;
-    technical: { buy: number; sell: number; neutral: number } | null;
-  };
 };
 
 // Provenance trail emitted by the AI: which news headlines + calendar

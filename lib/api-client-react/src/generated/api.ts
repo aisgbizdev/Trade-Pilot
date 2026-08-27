@@ -72,7 +72,6 @@ import type {
   ListAnalysesParams,
   ListJournalEntriesParams,
   LoginBody,
-  MarketIntelligenceResponse,
   MessageResponse,
   NativePushRegisterBody,
   NativePushUnregisterBody,
@@ -3560,99 +3559,6 @@ export const useRefreshFundamentals = <
 > => {
   return useMutation(getRefreshFundamentalsMutationOptions(options));
 };
-
-/**
- * Read-only evaluation of live price, technical state, calendar and multi-source news. It never changes a Standard Plan or executes trades.
-
- * @summary Recheck live market conditions for a saved analysis
- */
-export const getGetMarketIntelligenceUrl = (id: number) => {
-  return `/api/analyses/${id}/market-intelligence`;
-};
-
-export const getMarketIntelligence = async (
-  id: number,
-  options?: RequestInit,
-): Promise<MarketIntelligenceResponse> => {
-  return customFetch<MarketIntelligenceResponse>(
-    getGetMarketIntelligenceUrl(id),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
-};
-
-export const getGetMarketIntelligenceQueryKey = (id: number) => {
-  return [`/api/analyses/${id}/market-intelligence`] as const;
-};
-
-export const getGetMarketIntelligenceQueryOptions = <
-  TData = Awaited<ReturnType<typeof getMarketIntelligence>>,
-  TError = ErrorType<ErrorResponse>,
->(
-  id: number,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof getMarketIntelligence>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-
-  const queryKey =
-    queryOptions?.queryKey ?? getGetMarketIntelligenceQueryKey(id);
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getMarketIntelligence>>
-  > = ({ signal }) => getMarketIntelligence(id, { signal, ...requestOptions });
-
-  return {
-    queryKey,
-    queryFn,
-    enabled: !!id,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof getMarketIntelligence>>,
-    TError,
-    TData
-  > & { queryKey: QueryKey };
-};
-
-export type GetMarketIntelligenceQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getMarketIntelligence>>
->;
-export type GetMarketIntelligenceQueryError = ErrorType<ErrorResponse>;
-
-/**
- * @summary Recheck live market conditions for a saved analysis
- */
-
-export function useGetMarketIntelligence<
-  TData = Awaited<ReturnType<typeof getMarketIntelligence>>,
-  TError = ErrorType<ErrorResponse>,
->(
-  id: number,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof getMarketIntelligence>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetMarketIntelligenceQueryOptions(id, options);
-
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
-    queryKey: QueryKey;
-  };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
 
 /**
  * Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the "Alerts: ON · N levels armed" indicator on the analysis-detail page.

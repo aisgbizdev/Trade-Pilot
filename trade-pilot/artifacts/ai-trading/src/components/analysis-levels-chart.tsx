@@ -11,7 +11,6 @@ import {
 } from "lightweight-charts";
 import { useTheme } from "@/components/theme-provider";
 import type { TradePlan, TradePlanPreferredSide } from "@workspace/api-client-react";
-import type { AdaptivePositionPlanResult } from "@/lib/adaptive-position-plan";
 
 interface Candle {
   date: string;
@@ -46,7 +45,6 @@ interface AnalysisLevelsChartProps {
   // "AI saw up to here" vertical marker and to mute bars that
   // printed AFTER the call (i.e. bars the AI never saw).
   analysisCreatedAt?: string | Date | null;
-  adaptivePlan?: AdaptivePositionPlanResult | null;
   height?: number | string;
   onLoadFailed?: (reason: string) => void;
 }
@@ -137,26 +135,6 @@ function buildLevels(
   return levels;
 }
 
-function buildAdaptiveLevels(plan: AdaptivePositionPlanResult | null | undefined): LevelDef[] {
-  if (!plan?.valid) return [];
-  const levels: LevelDef[] = [];
-  for (const sidePlan of [plan.buy, plan.sell]) {
-    if (!sidePlan) continue;
-    const color = sidePlan.side === "buy" ? "#2563eb" : "#9333ea";
-    const prefix = sidePlan.side.toUpperCase();
-    for (const level of sidePlan.ladder) {
-      levels.push({
-        key: `adaptive-${sidePlan.side}-${level.level}`,
-        price: level.price,
-        label: `${prefix} ${level.level === 0 ? "Start" : `L${level.level}`}`,
-        color,
-        testId: `chart-adaptive-${sidePlan.side}-${level.level}`,
-      });
-    }
-  }
-  return levels;
-}
-
 function toCssSize(value: number | string): string {
   if (typeof value === "number") return value > 0 ? `${value}px` : "100%";
   return value || "100%";
@@ -206,7 +184,6 @@ export function AnalysisLevelsChart({
   timeframe,
   tradePlan,
   analysisCreatedAt = null,
-  adaptivePlan = null,
   height = 280,
   onLoadFailed,
 }: AnalysisLevelsChartProps) {
@@ -350,18 +327,7 @@ export function AnalysisLevelsChart({
         priceLinesRef.current.push(line);
       }
     }
-    for (const lvl of buildAdaptiveLevels(adaptivePlan)) {
-      const line = series.createPriceLine({
-        price: lvl.price,
-        color: lvl.color,
-        lineWidth: 1,
-        lineStyle: LineStyle.Dotted,
-        axisLabelVisible: true,
-        title: lvl.label,
-      });
-      priceLinesRef.current.push(line);
-    }
-  }, [tradePlan, adaptivePlan, candles, state]);
+  }, [tradePlan, candles, state]);
 
   // Track the x-coordinate of the analysis-created cutoff so we can draw a
   // vertical marker line + badge as an HTML overlay. lightweight-charts has

@@ -3,7 +3,6 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:trade_pilot_api_client/src/model/market_intelligence.dart';
 import 'package:trade_pilot_api_client/src/model/fundamental_context.dart';
 import 'package:trade_pilot_api_client/src/model/fundamental_drift.dart';
 import 'package:built_value/built_value.dart';
@@ -17,7 +16,6 @@ part 'refresh_fundamentals_response.g.dart';
 /// * [fundamentalContext] 
 /// * [refreshedAt] - Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the 'updated N minutes ago' banner.
 /// * [drift] 
-/// * [marketState] 
 @BuiltValue()
 abstract class RefreshFundamentalsResponse implements Built<RefreshFundamentalsResponse, RefreshFundamentalsResponseBuilder> {
   @BuiltValueField(wireName: r'fundamentalContext')
@@ -29,9 +27,6 @@ abstract class RefreshFundamentalsResponse implements Built<RefreshFundamentalsR
 
   @BuiltValueField(wireName: r'drift')
   FundamentalDrift get drift;
-
-  @BuiltValueField(wireName: r'marketState')
-  MarketIntelligence get marketState;
 
   RefreshFundamentalsResponse._();
 
@@ -70,11 +65,6 @@ class _$RefreshFundamentalsResponseSerializer implements PrimitiveSerializer<Ref
     yield serializers.serialize(
       object.drift,
       specifiedType: const FullType(FundamentalDrift),
-    );
-    yield r'marketState';
-    yield serializers.serialize(
-      object.marketState,
-      specifiedType: const FullType(MarketIntelligence),
     );
   }
 
@@ -119,13 +109,6 @@ class _$RefreshFundamentalsResponseSerializer implements PrimitiveSerializer<Ref
             specifiedType: const FullType(FundamentalDrift),
           ) as FundamentalDrift;
           result.drift.replace(valueDes);
-          break;
-        case r'marketState':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(MarketIntelligence),
-          ) as MarketIntelligence;
-          result.marketState.replace(valueDes);
           break;
         default:
           unhandled.add(key);

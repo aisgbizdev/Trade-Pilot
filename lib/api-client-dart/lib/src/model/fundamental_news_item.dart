@@ -3,7 +3,6 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -18,11 +17,6 @@ part 'fundamental_news_item.g.dart';
 /// * [source_] - Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.
 /// * [url] 
 /// * [publishedAt] 
-/// * [sourceTier] 
-/// * [sourceLabels] 
-/// * [sourceCount] 
-/// * [relevanceScore] 
-/// * [impact] 
 @BuiltValue()
 abstract class FundamentalNewsItem implements Built<FundamentalNewsItem, FundamentalNewsItemBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -43,23 +37,6 @@ abstract class FundamentalNewsItem implements Built<FundamentalNewsItem, Fundame
 
   @BuiltValueField(wireName: r'publishedAt')
   DateTime get publishedAt;
-
-  @BuiltValueField(wireName: r'sourceTier')
-  FundamentalNewsItemSourceTierEnum? get sourceTier;
-  // enum sourceTierEnum {  primary,  standard,  licensed,  };
-
-  @BuiltValueField(wireName: r'sourceLabels')
-  BuiltList<String>? get sourceLabels;
-
-  @BuiltValueField(wireName: r'sourceCount')
-  int? get sourceCount;
-
-  @BuiltValueField(wireName: r'relevanceScore')
-  num? get relevanceScore;
-
-  @BuiltValueField(wireName: r'impact')
-  FundamentalNewsItemImpactEnum? get impact;
-  // enum impactEnum {  low,  medium,  high,  };
 
   FundamentalNewsItem._();
 
@@ -114,41 +91,6 @@ class _$FundamentalNewsItemSerializer implements PrimitiveSerializer<Fundamental
       object.publishedAt,
       specifiedType: const FullType(DateTime),
     );
-    if (object.sourceTier != null) {
-      yield r'sourceTier';
-      yield serializers.serialize(
-        object.sourceTier,
-        specifiedType: const FullType(FundamentalNewsItemSourceTierEnum),
-      );
-    }
-    if (object.sourceLabels != null) {
-      yield r'sourceLabels';
-      yield serializers.serialize(
-        object.sourceLabels,
-        specifiedType: const FullType(BuiltList, [FullType(String)]),
-      );
-    }
-    if (object.sourceCount != null) {
-      yield r'sourceCount';
-      yield serializers.serialize(
-        object.sourceCount,
-        specifiedType: const FullType(int),
-      );
-    }
-    if (object.relevanceScore != null) {
-      yield r'relevanceScore';
-      yield serializers.serialize(
-        object.relevanceScore,
-        specifiedType: const FullType(num),
-      );
-    }
-    if (object.impact != null) {
-      yield r'impact';
-      yield serializers.serialize(
-        object.impact,
-        specifiedType: const FullType(FundamentalNewsItemImpactEnum),
-      );
-    }
   }
 
   @override
@@ -214,46 +156,6 @@ class _$FundamentalNewsItemSerializer implements PrimitiveSerializer<Fundamental
           ) as DateTime;
           result.publishedAt = valueDes;
           break;
-        case r'sourceTier':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(FundamentalNewsItemSourceTierEnum),
-          ) as FundamentalNewsItemSourceTierEnum?;
-          if (valueDes == null) continue;
-          result.sourceTier = valueDes;
-          break;
-        case r'sourceLabels':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(BuiltList, [FullType(String)]),
-          ) as BuiltList<String>?;
-          if (valueDes == null) continue;
-          result.sourceLabels.replace(valueDes);
-          break;
-        case r'sourceCount':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(int),
-          ) as int?;
-          if (valueDes == null) continue;
-          result.sourceCount = valueDes;
-          break;
-        case r'relevanceScore':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(num),
-          ) as num?;
-          if (valueDes == null) continue;
-          result.relevanceScore = valueDes;
-          break;
-        case r'impact':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(FundamentalNewsItemImpactEnum),
-          ) as FundamentalNewsItemImpactEnum?;
-          if (valueDes == null) continue;
-          result.impact = valueDes;
-          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -281,39 +183,5 @@ class _$FundamentalNewsItemSerializer implements PrimitiveSerializer<Fundamental
     );
     return result.build();
   }
-}
-
-class FundamentalNewsItemSourceTierEnum extends EnumClass {
-
-  @BuiltValueEnumConst(wireName: r'primary')
-  static const FundamentalNewsItemSourceTierEnum primary = _$fundamentalNewsItemSourceTierEnum_primary;
-  @BuiltValueEnumConst(wireName: r'standard')
-  static const FundamentalNewsItemSourceTierEnum standard = _$fundamentalNewsItemSourceTierEnum_standard;
-  @BuiltValueEnumConst(wireName: r'licensed')
-  static const FundamentalNewsItemSourceTierEnum licensed = _$fundamentalNewsItemSourceTierEnum_licensed;
-
-  static Serializer<FundamentalNewsItemSourceTierEnum> get serializer => _$fundamentalNewsItemSourceTierEnumSerializer;
-
-  const FundamentalNewsItemSourceTierEnum._(String name): super(name);
-
-  static BuiltSet<FundamentalNewsItemSourceTierEnum> get values => _$fundamentalNewsItemSourceTierEnumValues;
-  static FundamentalNewsItemSourceTierEnum valueOf(String name) => _$fundamentalNewsItemSourceTierEnumValueOf(name);
-}
-
-class FundamentalNewsItemImpactEnum extends EnumClass {
-
-  @BuiltValueEnumConst(wireName: r'low')
-  static const FundamentalNewsItemImpactEnum low = _$fundamentalNewsItemImpactEnum_low;
-  @BuiltValueEnumConst(wireName: r'medium')
-  static const FundamentalNewsItemImpactEnum medium = _$fundamentalNewsItemImpactEnum_medium;
-  @BuiltValueEnumConst(wireName: r'high')
-  static const FundamentalNewsItemImpactEnum high = _$fundamentalNewsItemImpactEnum_high;
-
-  static Serializer<FundamentalNewsItemImpactEnum> get serializer => _$fundamentalNewsItemImpactEnumSerializer;
-
-  const FundamentalNewsItemImpactEnum._(String name): super(name);
-
-  static BuiltSet<FundamentalNewsItemImpactEnum> get values => _$fundamentalNewsItemImpactEnumValues;
-  static FundamentalNewsItemImpactEnum valueOf(String name) => _$fundamentalNewsItemImpactEnumValueOf(name);
 }
 

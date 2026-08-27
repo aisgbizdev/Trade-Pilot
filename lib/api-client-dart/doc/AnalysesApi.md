@@ -17,7 +17,6 @@ Method | HTTP request | Description
 [**getAnalysisAlerts**](AnalysesApi.md#getanalysisalerts) | **GET** /analyses/{id}/alerts | Get price-alert status for an analysis
 [**getAnalysisOutcomesSummary**](AnalysesApi.md#getanalysisoutcomessummary) | **GET** /analyses/outcomes-summary | AI trade-plan outcome roll-up over the last 30 days
 [**getAnalysisQuota**](AnalysesApi.md#getanalysisquota) | **GET** /analyses/quota | Get current user&#39;s analysis quota usage
-[**getMarketIntelligence**](AnalysesApi.md#getmarketintelligence) | **GET** /analyses/{id}/market-intelligence | Recheck live market conditions for a saved analysis
 [**getPersonalAnalytics**](AnalysesApi.md#getpersonalanalytics) | **GET** /analyses/personal-analytics | Get personal analytics data
 [**getRecentInstruments**](AnalysesApi.md#getrecentinstruments) | **GET** /analyses/recent-instruments | Get 3 most recently analyzed instruments
 [**listAnalyses**](AnalysesApi.md#listanalyses) | **GET** /analyses | List user&#39;s analyses with filters
@@ -336,49 +335,6 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**AnalysisQuota**](AnalysisQuota.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **getMarketIntelligence**
-> MarketIntelligenceResponse getMarketIntelligence(id)
-
-Recheck live market conditions for a saved analysis
-
-Read-only evaluation of live price, technical state, calendar and multi-source news. It never changes a Standard Plan or executes trades. 
-
-### Example
-```dart
-import 'package:trade_pilot_api_client/api.dart';
-
-final api = TradePilotApiClient().getAnalysesApi();
-final int id = 56; // int | 
-
-try {
-    final response = api.getMarketIntelligence(id);
-    print(response);
-} on DioException catch (e) {
-    print('Exception when calling AnalysesApi->getMarketIntelligence: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
-
-### Return type
-
-[**MarketIntelligenceResponse**](MarketIntelligenceResponse.md)
 
 ### Authorization
 

@@ -1188,40 +1188,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /analyses/{id}/market-intelligence:
-    get:
-      operationId: getMarketIntelligence
-      tags: [analyses]
-      summary: Recheck live market conditions for a saved analysis
-      description: >
-        Read-only evaluation of live price, technical state, calendar and
-        multi-source news. It never changes a Standard Plan or executes trades.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Current manual-scaling safety status
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MarketIntelligenceResponse"
-        "401":
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Analysis not found or not owned by this user
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
   /analyses/{id}/alerts:
     get:
       operationId: getAnalysisAlerts
@@ -3186,19 +3152,6 @@ components:
         publishedAt:
           type: string
           format: date-time
-        sourceTier:
-          type: string
-          enum: [primary, standard, licensed]
-        sourceLabels:
-          type: array
-          items: { type: string }
-        sourceCount:
-          type: integer
-        relevanceScore:
-          type: number
-        impact:
-          type: string
-          enum: [low, medium, high]
       required:
         - id
         - title
@@ -3255,15 +3208,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FundamentalCalendarEvent"
-        capturedAt:
-          type: string
-          format: date-time
-        sourceStatuses:
-          type: array
-          items:
-            $ref: "#/components/schemas/FundamentalNewsSource"
-        marketState:
-          $ref: "#/components/schemas/MarketIntelligence"
       required:
         - newsItems
         - calendarEvents
@@ -3309,67 +3253,10 @@ components:
           description: "Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the 'updated N minutes ago' banner."
         drift:
           $ref: "#/components/schemas/FundamentalDrift"
-        marketState:
-          $ref: "#/components/schemas/MarketIntelligence"
       required:
         - fundamentalContext
         - refreshedAt
         - drift
-        - marketState
-
-    FundamentalNewsSource:
-      type: object
-      properties:
-        id: { type: string }
-        label: { type: string }
-        tier:
-          type: string
-          enum: [primary, standard, licensed]
-        configured: { type: boolean }
-        available: { type: boolean }
-      required: [id, label, tier, configured, available]
-
-    MarketIntelligence:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [reaffirm, caution, hold_scaling, invalidate]
-        evaluatedAt:
-          type: string
-          format: date-time
-        reasonCodes:
-          type: array
-          items: { type: string }
-        livePrice:
-          type: number
-          nullable: true
-        priceChangePercent:
-          type: string
-          nullable: true
-        technical:
-          type: object
-          nullable: true
-          properties:
-            buy: { type: integer }
-            sell: { type: integer }
-            neutral: { type: integer }
-          required: [buy, sell, neutral]
-      required: [status, evaluatedAt, reasonCodes, livePrice, priceChangePercent, technical]
-
-    MarketIntelligenceResponse:
-      type: object
-      properties:
-        marketState:
-          $ref: "#/components/schemas/MarketIntelligence"
-        sourceStatuses:
-          type: array
-          items:
-            $ref: "#/components/schemas/FundamentalNewsSource"
-        refreshedAt:
-          type: string
-          format: date-time
-      required: [marketState, sourceStatuses, refreshedAt]
 
     FundamentalCitations:
       type: object

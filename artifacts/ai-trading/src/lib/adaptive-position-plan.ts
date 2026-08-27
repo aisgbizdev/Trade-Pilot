@@ -2,7 +2,7 @@ import type { FundamentalContext, TradePlan, TradeSide } from "@workspace/api-cl
 
 export type AdaptiveMarket = "gold" | "brent";
 export type AccountTier = "micro" | "mini" | "regular";
-export type AdaptiveRiskPreference = "safe" | "balanced" | "active" | "aggressive" | "custom";
+export type AdaptiveRiskPreference = "safe" | "balanced" | "active";
 export type AdaptivePlanPosture = "scaling_allowed" | "entry_only" | "not_recommended";
 export type AdaptivePlanReasonCode =
   | "context_unavailable"
@@ -24,9 +24,6 @@ export type AdaptivePlanReasonCode =
   | "fundamental_present"
   | "fundamental_clear"
   | "fundamental_unavailable"
-  | "live_market_caution"
-  | "live_scaling_hold"
-  | "live_plan_invalidated"
   | "directional_conflict"
   | "staged_add_condition";
 
@@ -56,7 +53,6 @@ export interface AdaptivePlanContext {
     newsCount: number;
     eventCount: number;
     highImpactCount: number;
-    marketStatus: "reaffirm" | "caution" | "hold_scaling" | "invalidate" | null;
   };
 }
 
@@ -81,16 +77,10 @@ export interface AdaptivePositionPlanInput {
   freeMargin: number | null;
   existingExposure: number | null;
   marginPerLot: number | null;
-  minimumLot?: number | null;
-  maximumLot?: number | null;
-  facilityFeeUsdPerLotPerSide?: number | null;
-  vatPercent?: number | null;
   initialLot: number | null;
   accountTier: AccountTier;
   levels: number;
   maxCycleLossPercent: number;
-  /** Explicit account-currency loss cap. When set, this overrides the legacy percentage cap. */
-  maxLossAmount?: number | null;
   sideLevels?: { buy?: number; sell?: number };
 }
 
@@ -99,7 +89,6 @@ export interface AdaptiveLadderLevel {
   price: number;
   lot: number;
   cumulativeLots: number;
-  marginRequired: number;
   estimatedRiskToStop: number;
   reason: string;
 }
@@ -113,8 +102,6 @@ export interface AdaptiveSidePositionPlan {
   totalLots: number;
   marginRequired: number;
   estimatedCycleLoss: number;
-  potentialProfit: number;
-  breakEvenWinRate: number | null;
   ladder: AdaptiveLadderLevel[];
 }
 
@@ -123,21 +110,16 @@ export interface AdaptivePositionPlanResult {
   market: AdaptiveMarket | null;
   rule: AdaptiveRule | null;
   errors: string[];
-  sideErrors: Record<"buy" | "sell", string[]>;
   assumptions: string[];
   buy: AdaptiveSidePositionPlan | null;
   sell: AdaptiveSidePositionPlan | null;
-  marginAllocated: number;
-  marginBuffer: number;
-  maximumLoss: number;
-  potentialResult: number;
-  breakEvenWinRate: number | null;
 }
 
 export interface AdaptivePlanRecommendation {
   result: AdaptivePositionPlanResult;
   recommendation: {
-    riskPercent: number;
+    initialLot: number;
+    levels: number;
     marginBudget: number;
     maximumLoss: number;
   } | null;
@@ -171,12 +153,11 @@ const TIER_RANGES: Record<AccountTier, { min: number; max: number | null }> = {
 const RECOMMENDATION_PROFILES: Record<AdaptiveRiskPreference, {
   levels: number;
   marginUsage: number;
+  riskBudget: number;
 }> = {
-  safe: { levels: 1, marginUsage: 0.5 },
-  balanced: { levels: 2, marginUsage: 0.65 },
-  active: { levels: 3, marginUsage: 0.75 },
-  aggressive: { levels: 3, marginUsage: 0.75 },
-  custom: { levels: 2, marginUsage: 0.65 },
+  safe: { levels: 1, marginUsage: 0.5, riskBudget: 0.1 },
+  balanced: { levels: 2, marginUsage: 0.65, riskBudget: 0.15 },
+  active: { levels: 3, marginUsage: 0.75, riskBudget: 0.2 },
 };
 
 function marketForInstrument(instrument: string): AdaptiveMarket | null {
@@ -250,7 +231,6 @@ function normalizeContext(input?: AdaptiveAnalysisContext): AdaptivePlanContext 
       newsCount: fundamentalContext?.newsItems?.length ?? 0,
       eventCount: fundamentalContext?.calendarEvents?.length ?? 0,
       highImpactCount: fundamentalContext?.calendarEvents?.filter((event) => event.impact === "★★★").length ?? 0,
-      marketStatus: fundamentalContext?.marketState?.status ?? null,
     },
   };
 }
@@ -308,67 +288,48 @@ function sidePlan(
 
   const distance = side === "buy" ? entry - stopLoss : stopLoss - entry;
   const ladder: AdaptiveLadderLevel[] = [];
-  let cumulativeLots = roundLot(input.initialLot);
-  const costPerLot = Math.max(0, input.facilityFeeUsdPerLotPerSide ?? 0) * 2 * (1 + Math.max(0, input.vatPercent ?? 0) / 100);
-  let estimatedCycleLoss = distance * contractSize * cumulativeLots + cumulativeLots * costPerLot;
+  let cumulativeLots = input.initialLot;
+  let estimatedCycleLoss = distance * contractSize * input.initialLot;
 
   ladder.push({
     level: 0,
     price: roundPrice(entry, rule.minMovement),
     lot: input.initialLot,
     cumulativeLots,
-    marginRequired: input.initialLot * marginPerLot,
     estimatedRiskToStop: estimatedCycleLoss,
     reason: "Initial market entry from the Standard Plan.",
   });
 
   for (let level = 1; level <= levels; level += 1) {
-    const adverseFraction = level / (levels + 1);
+    const adverseFraction = level / (input.levels + 1);
     const price =
       side === "buy"
         ? entry - distance * adverseFraction
         : entry + distance * adverseFraction;
     const previousLot = ladder[ladder.length - 1].lot;
-    // Additions deliberately get smaller. This is staged exposure, not
-    // martingale: a losing move never increases the next order size.
-    const lot = Math.min(previousLot, Math.max(0.01, roundLot(previousLot * 0.65)));
+    const lot = roundLot(previousLot * 1.5);
     cumulativeLots = roundLot(cumulativeLots + lot);
     const riskToStop = (side === "buy" ? price - stopLoss : stopLoss - price) * contractSize * lot;
-    estimatedCycleLoss += riskToStop + lot * costPerLot;
+    estimatedCycleLoss += riskToStop;
     ladder.push({
       level,
       price: roundPrice(price, rule.minMovement),
       lot,
       cumulativeLots,
-      marginRequired: lot * marginPerLot,
       estimatedRiskToStop: estimatedCycleLoss,
       reason: `Add only after price reaches predefined adverse level ${level}; stop adding at the next invalidation or guardrail breach.`,
     });
   }
 
-  const takeProfit1 = priceFromTradeSide(tradeSide, "takeProfit1");
-  const takeProfit2 = priceFromTradeSide(tradeSide, "takeProfit2");
-  const potentialProfit = takeProfit2 == null
-    ? 0
-    : ladder.reduce((total, level) => {
-      const move = side === "buy" ? takeProfit2 - level.price : level.price - takeProfit2;
-      return total + Math.max(0, move) * contractSize * level.lot;
-    }, 0) - cumulativeLots * costPerLot;
-  const breakEvenWinRate = potentialProfit > 0
-    ? estimatedCycleLoss / (estimatedCycleLoss + potentialProfit)
-    : null;
-
   return {
     side,
     entry,
     stopLoss,
-    takeProfit1,
-    takeProfit2,
+    takeProfit1: priceFromTradeSide(tradeSide, "takeProfit1"),
+    takeProfit2: priceFromTradeSide(tradeSide, "takeProfit2"),
     totalLots: cumulativeLots,
     marginRequired: cumulativeLots * marginPerLot,
     estimatedCycleLoss,
-    potentialProfit,
-    breakEvenWinRate,
     ladder,
   };
 }
@@ -382,43 +343,27 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const market = marketForInstrument(input.instrument);
   const baseRule = market ? MARKET_RULES[market] : null;
   const errors: string[] = [];
-  const globalErrors: string[] = [];
-  const sideErrors: Record<"buy" | "sell", string[]> = { buy: [], sell: [] };
-  const addGlobalError = (message: string) => {
-    errors.push(message);
-    globalErrors.push(message);
-  };
 
-  if (!baseRule) addGlobalError("Adaptive rules are currently defined for Gold and Brent only.");
-  if (input.equity == null || input.equity <= 0) addGlobalError("Account equity is required.");
-  if (input.freeMargin == null || input.freeMargin <= 0) addGlobalError("Free margin is required.");
-  if (input.existingExposure == null || input.existingExposure < 0) addGlobalError("Existing exposure is required.");
-  if (input.marginPerLot == null || input.marginPerLot <= 0) addGlobalError("Margin per lot is required.");
-  if (input.initialLot == null || input.initialLot <= 0) addGlobalError("Initial lot is required.");
+  if (!baseRule) errors.push("Adaptive rules are currently defined for Gold and Brent only.");
+  if (input.equity == null || input.equity <= 0) errors.push("Account equity is required.");
+  if (input.freeMargin == null || input.freeMargin <= 0) errors.push("Free margin is required.");
+  if (input.existingExposure == null || input.existingExposure < 0) errors.push("Existing exposure is required.");
+  if (input.marginPerLot == null || input.marginPerLot <= 0) errors.push("Margin per lot is required.");
+  if (input.initialLot == null || input.initialLot <= 0) errors.push("Initial lot is required.");
   if (!Number.isInteger(input.levels) || input.levels < 0 || input.levels > 6) {
-    addGlobalError("Number of levels must be between 0 and 6.");
+    errors.push("Number of levels must be between 0 and 6.");
   }
   if (input.maxCycleLossPercent <= 0 || input.maxCycleLossPercent > 10) {
-    addGlobalError("Maximum cycle loss must be between 0.1% and 10%.");
-  }
-  if (input.maxLossAmount != null && (!Number.isFinite(input.maxLossAmount) || input.maxLossAmount <= 0)) {
-    addGlobalError("Maximum loss amount must be greater than zero.");
+    errors.push("Maximum cycle loss must be between 0.1% and 10%.");
   }
 
   const tier = TIER_RANGES[input.accountTier];
-  const minimumLot = input.minimumLot ?? 0;
-  const initialMinimumLot = input.minimumLot ?? tier.min;
-  const maximumLot = input.maximumLot ?? tier.max;
-  if (input.initialLot != null && (input.initialLot < initialMinimumLot || (maximumLot != null && input.initialLot > maximumLot))) {
-    addGlobalError(`Initial lot must be within the ${input.accountTier} tier range.`);
+  if (input.initialLot != null && (input.initialLot < tier.min || (tier.max != null && input.initialLot > tier.max))) {
+    errors.push(`Initial lot must be within the ${input.accountTier} tier range.`);
   }
 
   if (!baseRule) {
-    return {
-      valid: false, market, rule: null, errors, sideErrors, assumptions: [], buy: null, sell: null,
-      marginAllocated: 0, marginBuffer: input.freeMargin ?? 0, maximumLoss: input.maxLossAmount ?? 0,
-      potentialResult: 0, breakEvenWinRate: null,
-    };
+    return { valid: false, market, rule: null, errors, assumptions: [], buy: null, sell: null };
   }
 
   // Gold/Brent contract size, price precision, and gap threshold are fixed
@@ -426,82 +371,48 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const rule = baseRule;
 
   const marginPerLot = input.marginPerLot ?? 0;
-  const maxCycleLoss = input.maxLossAmount ?? (input.equity ?? 0) * (input.maxCycleLossPercent / 100);
+  const maxCycleLoss = (input.equity ?? 0) * (input.maxCycleLossPercent / 100);
   const buyGeometryError = sideGeometryError("buy", input.tradePlan.buy);
   const sellGeometryError = sideGeometryError("sell", input.tradePlan.sell);
-  // Older analyses can contain only one complete Standard Plan scenario. It
-  // must not make the usable, directionally aligned scenario unavailable.
-  // A malformed stop direction remains a hard error, however.
-  const buyIsIncomplete = buyGeometryError?.includes("incomplete") ?? false;
-  const sellIsIncomplete = sellGeometryError?.includes("incomplete") ?? false;
-  if (buyGeometryError) sideErrors.buy.push(buyGeometryError);
-  if (sellGeometryError) sideErrors.sell.push(sellGeometryError);
-  if (buyGeometryError && !buyIsIncomplete) errors.push(buyGeometryError);
-  if (sellGeometryError && !sellIsIncomplete) errors.push(sellGeometryError);
-  if (buyGeometryError && sellGeometryError && (buyIsIncomplete || sellIsIncomplete)) {
-    if (buyIsIncomplete) errors.push(buyGeometryError);
-    if (sellIsIncomplete) errors.push(sellGeometryError);
-  }
+  if (buyGeometryError) errors.push(buyGeometryError);
+  if (sellGeometryError) errors.push(sellGeometryError);
   const buy = buyGeometryError ? null : sidePlan("buy", input.tradePlan.buy, input, rule, rule.contractSize, marginPerLot, input.sideLevels?.buy);
   const sell = sellGeometryError ? null : sidePlan("sell", input.tradePlan.sell, input, rule, rule.contractSize, marginPerLot, input.sideLevels?.sell);
 
   const tierMax = tier.max;
   const plans = [buy, sell].filter((plan): plan is AdaptiveSidePositionPlan => plan != null);
   for (const plan of plans) {
-    const planErrors = sideErrors[plan.side];
-    const addSideError = (message: string) => {
-      errors.push(message);
-      planErrors.push(message);
-    };
-    if (minimumLot > 0 && plan.ladder.some((level) => level.lot < minimumLot)) {
-      addSideError(`Each ladder entry must be at least ${minimumLot.toFixed(2)} lot.`);
-    }
-    if (maximumLot != null && plan.ladder.some((level) => level.lot > maximumLot)) {
-      addSideError(`Each ladder entry is capped at ${maximumLot.toFixed(2)} lot.`);
-    }
-    if (maximumLot != null && (input.existingExposure ?? 0) + plan.totalLots > maximumLot) {
-      addSideError(`${plan.side === "buy" ? "Buy" : "Sell"} total open exposure exceeds the ${maximumLot.toFixed(2)} lot limit.`);
+    if (tierMax != null && plan.ladder.some((level) => level.lot > tierMax)) {
+      errors.push(`The ${input.accountTier} tier caps each ladder entry at ${tierMax.toFixed(2)} lot.`);
     }
     if ((input.existingExposure ?? 0) + plan.totalLots > (input.freeMargin ?? 0) / marginPerLot) {
-      addSideError(`${plan.side === "buy" ? "Buy" : "Sell"} exposure exceeds free-margin capacity.`);
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} exposure exceeds free-margin capacity.`);
     }
     if (plan.estimatedCycleLoss > maxCycleLoss) {
-      addSideError(`${plan.side === "buy" ? "Buy" : "Sell"} cycle loss exceeds the configured maximum.`);
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} cycle loss exceeds the configured maximum.`);
     }
     if (plan.ladder.some((level) => level.price === plan.stopLoss)) {
-      addSideError(`${plan.side === "buy" ? "Buy" : "Sell"} ladder overlaps the Standard Plan stop loss.`);
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} ladder overlaps the Standard Plan stop loss.`);
     }
   }
-  const marginAllocated = Math.max(...plans.map((plan) => plan.marginRequired), 0);
-  const potentialResult = Math.max(...plans.map((plan) => plan.potentialProfit), 0);
-  const plannedLoss = Math.max(...plans.map((plan) => plan.estimatedCycleLoss), 0);
-  const breakEvenWinRate = potentialResult > 0
-    ? plannedLoss / (plannedLoss + potentialResult)
-    : null;
 
   const tierText = tierMax == null ? `${tier.min.toFixed(2)} lot and above` : `${tier.min.toFixed(2)}–${tierMax.toFixed(2)} lot`;
   const assumptions = [
-    `Contract size: ${rule.contractSize} units per lot; margin and lot limits are supplied by TP Standard Rules.`,
+    `Contract size: ${rule.contractSize} units per lot; margin is supplied by the user and is not inferred from a broker.`,
     `Price movement is rounded to ${rule.minMovement}; a gap above ${rule.maxGapPercent}% is treated as an external execution risk.`,
-    `Initial entry uses the Standard Plan; each add is 65% of the prior lot and remains subject to the ${input.accountTier} range (${tierText}).`,
-    `Maximum cycle loss is ${input.maxLossAmount != null ? "the selected account-currency cap" : `${input.maxCycleLossPercent}% of equity`} and includes the initial entry plus every planned add.`,
-    "The loss estimate includes TP facility fees plus VAT for entry and exit. Spread, gaps, rollover, slippage, auto-liquidation, and rejected orders remain external risks.",
+    `Initial entry uses the Standard Plan; each add is 1.5× the prior lot and remains subject to the ${input.accountTier} range (${tierText}).`,
+    `Maximum cycle loss is ${input.maxCycleLossPercent}% of equity and includes the initial entry plus every planned add.`,
+    "Broker auto-liquidation, spread, rollover, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
   ];
 
   return {
-    valid: globalErrors.length === 0 && [buy, sell].some((plan) => plan != null && sideErrors[plan.side].length === 0),
+    valid: errors.length === 0,
     market,
     rule,
     errors,
-    sideErrors,
     assumptions,
     buy,
     sell,
-    marginAllocated,
-    marginBuffer: Math.max(0, (input.freeMargin ?? 0) - marginAllocated),
-    maximumLoss: maxCycleLoss,
-    potentialResult,
-    breakEvenWinRate,
   };
 }
 
@@ -515,27 +426,15 @@ export function buildAdaptivePlanRecommendation({
   instrument,
   tradePlan,
   availableMargin,
-  existingExposure,
   marginPerLot,
-  minimumLot,
-  maximumLot,
-  facilityFeeUsdPerLotPerSide,
-  vatPercent,
   preference,
-  riskPercent,
   context: analysisContext,
 }: {
   instrument: string;
   tradePlan: TradePlan;
   availableMargin: number | null;
-  existingExposure?: number | null;
   marginPerLot: number | null;
-  minimumLot?: number | null;
-  maximumLot?: number | null;
-  facilityFeeUsdPerLotPerSide?: number | null;
-  vatPercent?: number | null;
   preference: AdaptiveRiskPreference;
-  riskPercent: number | null;
   context?: AdaptiveAnalysisContext;
 }): AdaptivePlanRecommendation {
   const market = marketForInstrument(instrument);
@@ -543,7 +442,6 @@ export function buildAdaptivePlanRecommendation({
   const reasonCodes: AdaptivePlanReasonCode[] = [];
   let posture: AdaptivePlanPosture = "scaling_allowed";
   let preferredSide: AdaptivePlanDecision["preferredSide"] = "both";
-  let scalingSide: "buy" | "sell" | null = null;
   if (availableMargin == null || availableMargin <= 0) {
     return {
       result: {
@@ -551,28 +449,9 @@ export function buildAdaptivePlanRecommendation({
         market,
         rule: market ? MARKET_RULES[market] : null,
         errors: ["Available margin is required."],
-        sideErrors: { buy: [], sell: [] },
         assumptions: [],
         buy: null,
         sell: null,
-        marginAllocated: 0,
-        marginBuffer: 0,
-        maximumLoss: 0,
-        potentialResult: 0,
-        breakEvenWinRate: null,
-      },
-      recommendation: null,
-      context,
-      decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
-    };
-  }
-  if (existingExposure != null && (!Number.isFinite(existingExposure) || existingExposure < 0)) {
-    return {
-      result: {
-        valid: false, market, rule: market ? MARKET_RULES[market] : null,
-        errors: ["Current open lots must be zero or greater."], assumptions: [], buy: null, sell: null,
-        sideErrors: { buy: [], sell: [] },
-        marginAllocated: 0, marginBuffer: availableMargin ?? 0, maximumLoss: 0, potentialResult: 0, breakEvenWinRate: null,
       },
       recommendation: null,
       context,
@@ -586,38 +465,9 @@ export function buildAdaptivePlanRecommendation({
         market,
         rule: market ? MARKET_RULES[market] : null,
         errors: ["Standard margin rules are unavailable."],
-        sideErrors: { buy: [], sell: [] },
         assumptions: [],
         buy: null,
         sell: null,
-        marginAllocated: 0,
-        marginBuffer: availableMargin,
-        maximumLoss: 0,
-        potentialResult: 0,
-        breakEvenWinRate: null,
-      },
-      recommendation: null,
-      context,
-      decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
-    };
-  }
-
-  if (riskPercent == null || !Number.isFinite(riskPercent) || riskPercent <= 0 || riskPercent > 100) {
-    return {
-      result: {
-        valid: false,
-        market,
-        rule: market ? MARKET_RULES[market] : null,
-        errors: ["Enter a margin risk percentage between 0.01% and 100%."],
-        sideErrors: { buy: [], sell: [] },
-        assumptions: [],
-        buy: null,
-        sell: null,
-        marginAllocated: 0,
-        marginBuffer: availableMargin,
-        maximumLoss: 0,
-        potentialResult: 0,
-        breakEvenWinRate: null,
       },
       recommendation: null,
       context,
@@ -628,6 +478,7 @@ export function buildAdaptivePlanRecommendation({
   const profile = RECOMMENDATION_PROFILES[preference];
   let levels = profile.levels;
   let marginUsage = profile.marginUsage;
+  let riskBudget = profile.riskBudget;
 
   if (!hasCompleteContext(context)) {
     posture = "entry_only";
@@ -640,18 +491,21 @@ export function buildAdaptivePlanRecommendation({
     if (timeframeIsShort(context.timeframe)) {
       levels = 0;
       marginUsage = Math.min(marginUsage, 0.5);
+      riskBudget = Math.min(riskBudget, 0.08);
       posture = "entry_only";
       reasonCodes.push("short_timeframe");
     }
     if (context.riskLevel === "high") {
       levels = 0;
       marginUsage = Math.min(marginUsage, 0.5);
+      riskBudget = Math.min(riskBudget, 0.08);
       posture = "entry_only";
       reasonCodes.push("high_risk");
     }
     if (context.marketCondition === "volatile") {
       levels = 0;
       marginUsage = Math.min(marginUsage, 0.5);
+      riskBudget = Math.min(riskBudget, 0.08);
       posture = "entry_only";
       reasonCodes.push("volatile_market");
     }
@@ -678,11 +532,11 @@ export function buildAdaptivePlanRecommendation({
       posture = "entry_only";
       reasonCodes.push("neutral_bias");
     } else if (biasDirection === "buy") {
+      preferredSide = "buy";
       reasonCodes.push("trend_favors_buy", "trend_opposes_sell");
-      scalingSide = "buy";
     } else if (biasDirection === "sell") {
+      preferredSide = "sell";
       reasonCodes.push("trend_favors_sell", "trend_opposes_buy");
-      scalingSide = "sell";
     }
 
     if (context.marketCondition === "ranging") reasonCodes.push("range_supports_scaling");
@@ -697,149 +551,111 @@ export function buildAdaptivePlanRecommendation({
         reasonCodes.push("technical_mixed");
       } else if (buy > sell) {
         reasonCodes.push("technical_supports_buy");
-        if (scalingSide === "sell") {
+        if (preferredSide === "sell") {
           hasDirectionalConflict = true;
         } else {
-          scalingSide = "buy";
+          preferredSide = "buy";
         }
       } else {
         reasonCodes.push("technical_supports_sell");
-        if (scalingSide === "buy") {
+        if (preferredSide === "buy") {
           hasDirectionalConflict = true;
         } else {
-          scalingSide = "sell";
+          preferredSide = "sell";
         }
       }
     }
     if (hasDirectionalConflict) {
       levels = 0;
-      posture = "entry_only";
+      posture = "not_recommended";
+      preferredSide = "none";
       reasonCodes.push("directional_conflict");
     }
 
     if (context.fundamental.highImpactCount > 0) {
       levels = 0;
       marginUsage = Math.min(marginUsage, 0.5);
-      posture = "entry_only";
+      riskBudget = Math.min(riskBudget, 0.08);
+      if (posture !== "not_recommended") posture = "entry_only";
       reasonCodes.push("fundamental_high_impact");
     } else if (context.fundamental.newsCount + context.fundamental.eventCount > 0) {
       reasonCodes.push("fundamental_present");
     } else {
       reasonCodes.push("fundamental_clear");
     }
-    if (context.fundamental.marketStatus === "invalidate") {
-      levels = 0;
-      posture = "entry_only";
-      reasonCodes.push("live_plan_invalidated");
-    } else if (context.fundamental.marketStatus === "hold_scaling") {
-      levels = 0;
-      posture = "entry_only";
-      reasonCodes.push("live_scaling_hold");
-    } else if (context.fundamental.marketStatus === "caution") {
-      levels = 0;
-      posture = "entry_only";
-      reasonCodes.push("live_market_caution");
-    }
   }
 
   if (levels > 0) reasonCodes.push("staged_add_condition");
 
   const marginBudget = availableMargin * marginUsage;
-  const maximumLoss = availableMargin * (riskPercent / 100);
-  const normalizedMinimumLot = minimumLot ?? 0.1;
-  const normalizedMaximumLot = maximumLot ?? 0.9;
-  const sideLevels = levels > 0 && typeof scalingSide === "string"
-    ? { buy: scalingSide === "buy" ? levels : 0, sell: scalingSide === "sell" ? levels : 0 }
-    : { buy: 0, sell: 0 };
-  const candidates: Partial<Record<"buy" | "sell", AdaptivePositionPlanResult>> = {};
-  const sideInitialLots: Partial<Record<"buy" | "sell", number>> = {};
-  let fallback: AdaptivePositionPlanResult | null = null;
+  const maximumLoss = Math.max(availableMargin * riskBudget, 1);
+  // The low-level calculator uses a percent-of-equity guardrail. Supplying a
+  // normalized equity here gives it the same absolute loss ceiling without
+  // requiring the user to enter a separate equity figure.
+  const normalizedEquity = maximumLoss * 50;
 
-  for (const side of ["buy", "sell"] as const) {
-    for (let units = Math.floor(normalizedMaximumLot * 100); units >= Math.ceil(normalizedMinimumLot * 100); units -= 1) {
-      const initialLot = units / 100;
-      const accountTier: AccountTier = initialLot < 0.1 ? "micro" : initialLot <= 0.9 ? "mini" : "regular";
-      const result = buildAdaptivePositionPlan({
-        instrument,
-        tradePlan,
-        equity: maximumLoss,
-        freeMargin: marginBudget,
-        existingExposure: existingExposure ?? 0,
-        marginPerLot,
-        minimumLot: normalizedMinimumLot,
-        maximumLot: normalizedMaximumLot,
-        facilityFeeUsdPerLotPerSide,
-        vatPercent,
-        initialLot,
-        accountTier,
-        levels,
-        sideLevels,
-        maxCycleLossPercent: 2,
-        maxLossAmount: maximumLoss,
-      });
-      fallback ??= result;
-      if (result[side] && result.sideErrors[side].length === 0) {
-        candidates[side] = result;
-        sideInitialLots[side] = initialLot;
-        break;
+  let fallback: AdaptivePositionPlanResult | null = null;
+  for (let units = 90; units >= 1; units -= 1) {
+    const initialLot = units / 100;
+    const accountTier: AccountTier = initialLot < 0.1 ? "micro" : "mini";
+    const result = buildAdaptivePositionPlan({
+      instrument,
+      tradePlan,
+      equity: normalizedEquity,
+      freeMargin: marginBudget,
+      existingExposure: 0,
+      marginPerLot,
+      initialLot,
+      accountTier,
+      levels,
+      sideLevels:
+        preferredSide === "buy"
+          ? { buy: levels, sell: 0 }
+          : preferredSide === "sell"
+            ? { buy: 0, sell: levels }
+            : { buy: levels, sell: levels },
+      maxCycleLossPercent: 2,
+    });
+    fallback ??= result;
+    if (result.valid) {
+      if (posture === "not_recommended") {
+        return {
+          result: {
+            ...result,
+            valid: false,
+            errors: [...result.errors, "The technical snapshot conflicts with the market direction."],
+          },
+          recommendation: null,
+          context,
+          decision: { posture, preferredSide, reasonCodes },
+        };
       }
+      return {
+        result,
+        recommendation: {
+          initialLot,
+          levels,
+          marginBudget,
+          maximumLoss,
+        },
+        context,
+        decision: { posture, preferredSide, reasonCodes },
+      };
     }
   }
 
-  const buyResult = candidates.buy;
-  const sellResult = candidates.sell;
-  const buy = buyResult?.buy ?? null;
-  const sell = sellResult?.sell ?? null;
-  const result = buyResult ?? sellResult ?? fallback;
-  if (!result) {
-    return {
-      result: {
-        valid: false,
-        market,
-        rule: market ? MARKET_RULES[market] : null,
-        errors: ["No safe position size is available."],
-        sideErrors: { buy: [], sell: [] },
-        assumptions: [],
-        buy: null,
-        sell: null,
-        marginAllocated: 0,
-        marginBuffer: marginBudget,
-        maximumLoss,
-        potentialResult: 0,
-        breakEvenWinRate: null,
-      },
-      recommendation: null,
-      context,
-      decision: { posture, preferredSide: "both", reasonCodes },
-    };
-  }
-
-  const sideErrors = {
-    buy: buyResult?.sideErrors.buy ?? result.sideErrors.buy,
-    sell: sellResult?.sideErrors.sell ?? result.sideErrors.sell,
-  };
-  const errors = [...new Set([...sideErrors.buy, ...sideErrors.sell])];
-  const valid = Boolean(buy || sell);
-  const marginAllocated = Math.max(buy?.marginRequired ?? 0, sell?.marginRequired ?? 0);
-  const potentialResult = Math.max(buy?.potentialProfit ?? 0, sell?.potentialProfit ?? 0);
-  const plannedLoss = Math.max(buy?.estimatedCycleLoss ?? 0, sell?.estimatedCycleLoss ?? 0);
-
   return {
-    result: {
-      ...result,
-      valid,
-      errors,
-      sideErrors,
-      buy,
-      sell,
-      marginAllocated,
-      marginBuffer: Math.max(0, marginBudget - marginAllocated),
-      maximumLoss,
-      potentialResult,
-      breakEvenWinRate: potentialResult > 0 ? plannedLoss / (plannedLoss + potentialResult) : null,
+    result: fallback ?? {
+      valid: false,
+      market,
+      rule: market ? MARKET_RULES[market] : null,
+      errors: ["No safe position size is available."],
+      assumptions: [],
+      buy: null,
+      sell: null,
     },
-    recommendation: valid ? { riskPercent, marginBudget, maximumLoss } : null,
+    recommendation: null,
     context,
-    decision: { posture: valid ? posture : "entry_only", preferredSide: "both", reasonCodes },
+    decision: { posture, preferredSide, reasonCodes },
   };
 }
