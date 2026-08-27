@@ -1,0 +1,165 @@
+Refactor the landing page (homepage) of the AI Trading Assistant MVP to improve clarity, positioning, and conversion.
+
+Goal:
+Make the landing page immediately communicate:
+- what the product does
+- why it is different from signal providers and trading robots
+- what the user will actually get
+
+Do NOT change backend logic, API, or authentication.
+Focus only on:
+- copywriting
+- section structure
+- UI presentation
+
+---
+
+## HERO SECTION (CRITICAL CHANGE)
+
+Replace current headline:
+“Honest & Structured Market Analysis”
+
+With:
+
+Option (preferred):
+“See the Market Clearly. Decide with Confidence.”
+
+---
+
+## HERO SUBTEXT
+
+Replace current defensive text:
+“Not a trading robot. Not magic signals…”
+
+With a more positive and clear statement:
+
+“AI-powered analysis that helps you understand the market — not just follow it.”
+
+OR
+
+“Built to help you think clearly before every trading decision.”
+
+---
+
+## CTA BUTTON
+
+Update primary CTA:
+
+From:
+“Start Free Analysis”
+
+To:
+“Start Your First Analysis — Free”
+
+Keep secondary CTA (Sign In) unchanged.
+
+---
+
+## ADD NEW SECTION — “WHAT YOU GET” (IMPORTANT)
+
+Insert a new section below hero:
+
+Title:
+“What You Actually Get”
+
+Show 4–5 cards:
+
+- Market Condition  
+  → trend, range, volatility explained clearly
+
+- Directional Bias  
+  → bullish / bearish / wait (no BUY/SELL)
+
+- Risk vs Opportunity  
+  → understand upside vs downside before acting
+
+- Scenario Breakdown  
+  → main scenario + alternative + wait option
+
+- Invalidation Logic  
+  → know when your idea is wrong
+
+Short descriptions under each.
+
+---
+
+## UPDATE EXISTING SECTION TITLE
+
+Change:
+
+“More Than Just Regular Indicators”
+
+To:
+
+“More Than Just Signals & Indicators”
+
+---
+
+## FEATURE CARDS REFINEMENT
+
+Keep existing cards, but adjust tone:
+
+1. “Powered by Generative AI”
+   → emphasize insight, not hype
+
+2. “Beginner & Pro Mode”
+   → clarify difference in output depth
+
+3. “Validity per Timeframe”
+   → keep as is (this is strong)
+
+4. Replace:
+   “Analysis, Not Signals”
+
+   With:
+   “No Signals. Just Clear Market Insight.”
+
+---
+
+## ADD VISUAL EXAMPLE (HIGH PRIORITY)
+
+Add a section:
+
+Title:
+“See How It Works”
+
+Include:
+- sample analysis UI mockup (static or simplified)
+- show:
+  - market condition
+  - bias
+  - risk
+  - scenario
+
+Purpose:
+Users must see what they will receive.
+
+---
+
+## TONE & LANGUAGE RULES
+
+- Avoid defensive tone
+- Avoid overpromising
+- Avoid “guarantee” language
+- Emphasize clarity, understanding, and decision-making
+
+---
+
+## DESIGN PRINCIPLE
+
+Landing page must:
+- feel premium
+- feel simple
+- communicate value in <5 seconds
+
+---
+
+## FINAL EXPECTATION
+
+User should immediately understand:
+
+“This helps me understand the market better before I trade.”
+
+Not:
+
+“This is another signal tool.”

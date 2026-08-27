@@ -1,0 +1,156 @@
+Refactor the AI analysis output and user experience of the existing AI Trading Assistant MVP.
+
+Goal:
+Maintain a clear directional insight (so users feel guided), while ensuring the system remains a decision-support tool — NOT a signal generator.
+
+This is a HYBRID approach:
+- Provide directional clarity (bullish / bearish / wait)
+- Provide risk and opportunity context
+- Avoid command-style outputs like BUY/SELL
+- Avoid giving exact execution numbers (entry, SL, TP)
+
+---
+
+## CORE POSITIONING (DO NOT BREAK)
+
+This system is:
+- a decision-support assistant
+- not a signal provider
+- not an execution engine
+
+The tone must feel:
+- helpful and clear
+- but NOT commanding
+- NOT promising outcomes
+
+---
+
+## STEP 1 — MAIN ANALYSIS VIEW (DEFAULT)
+
+Display the following:
+
+1. Market Condition
+   - trend / range / volatile
+
+2. Directional Bias (REQUIRED)
+   - Use:
+     "Bullish tendency"
+     "Bearish tendency"
+     "Neutral / Wait"
+   - DO NOT use BUY / SELL
+
+3. Scenario Breakdown
+   - Scenario A (dominant)
+   - Scenario B (alternative)
+   - Scenario C (wait / no-trade scenario)
+
+4. Invalidation (MOVE TO TOP PRIORITY)
+   - Display clearly near the top:
+     "This analysis becomes invalid if:"
+     - condition 1
+     - condition 2
+
+5. Opportunity vs Risk
+   - Show relative upside vs downside
+   - No guarantee language
+
+6. Confidence (as range)
+   - Example: 52%–60%
+   - MUST include explanation:
+     why confidence is not higher
+
+7. Explanation
+   - Beginner mode: simple, guided language
+   - Pro mode: structured, technical (technical + fundamental drivers)
+
+---
+
+## STEP 2 — EXECUTION INSIGHT (SECONDARY, OPTIONAL)
+
+Add a button:
+“View Execution Insight”
+
+Only after click, show:
+
+1. Conceptual execution guidance ONLY
+   - Example phrasing:
+     "If Scenario A continues, traders often watch areas near recent support/resistance"
+
+2. DO NOT include:
+   - exact entry price
+   - stop loss number
+   - take profit number
+
+3. Add disclaimer:
+   "These are conceptual examples, not fixed trading instructions."
+
+---
+
+## LANGUAGE RULES (CRITICAL)
+
+DO:
+- Use "tendency", "scenario", "possibility"
+- Emphasize uncertainty
+- Explain risk conditions
+
+DO NOT:
+- Use "BUY", "SELL"
+- Use command tone
+- Imply guaranteed outcome
+- Give exact trading numbers
+
+---
+
+## BEGINNER VS PRO MODE
+
+Beginner:
+- Use natural language:
+  "Cenderung naik / turun / tunggu dulu"
+- More explanation
+- Highlight risk clearly
+
+Pro:
+- Use:
+  "Bullish bias / Bearish bias / Neutral"
+- Compact structured output
+- Include technical + fundamental reasoning
+
+---
+
+## KEEP EXISTING SYSTEM
+
+DO NOT remove:
+- analysis history
+- feedback system
+- statistics
+- quota system
+- notification system
+
+DO NOT change:
+- database schema
+- API structure
+
+Only adjust:
+- AI output format
+- UI presentation of analysis
+
+---
+
+## DESIGN PRINCIPLE
+
+The system should:
+- feel as clear as a signal
+BUT
+- behave like a thinking assistant
+
+---
+
+## FINAL RULE
+
+User must feel:
+“I understand the situation better”
+
+NOT:
+“I was told exactly what to do”
+
+Implement this carefully without breaking current functionality.

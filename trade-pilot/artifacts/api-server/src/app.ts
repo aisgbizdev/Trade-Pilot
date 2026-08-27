@@ -47,6 +47,11 @@ app.use(
 // clients are unaffected either way — CORS is a browser-only mechanism.
 const PRODUCTION_ORIGIN = "https://tradepilot.id";
 const DEV_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const REPLIT_DEV_ORIGINS = new Set(
+  [process.env["REPLIT_DEV_DOMAIN"]]
+    .filter((domain): domain is string => Boolean(domain))
+    .flatMap((domain) => [`https://${domain}`, `http://${domain}`]),
+);
 
 app.use(
   cors({
@@ -55,7 +60,10 @@ app.use(
       // nothing for a browser-enforced CORS check to protect here.
       if (!origin) return callback(null, true);
       if (origin === PRODUCTION_ORIGIN) return callback(null, true);
-      if (process.env["NODE_ENV"] !== "production" && DEV_ORIGIN_PATTERN.test(origin)) {
+      if (
+        process.env["NODE_ENV"] !== "production" &&
+        (DEV_ORIGIN_PATTERN.test(origin) || REPLIT_DEV_ORIGINS.has(origin))
+      ) {
         return callback(null, true);
       }
       callback(new Error("Not allowed by CORS"));

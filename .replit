@@ -1,8 +1,8 @@
-modules = ["nodejs-24", "postgresql-16"]
+modules = ["nodejs-24", "python-3.11", "postgresql-16"]
 
 [deployment]
 router = "application"
-deploymentTarget = "autoscale"
+deploymentTarget = "cloudrun"
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
@@ -11,13 +11,89 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "api-server-test"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "ai-trading-test"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "e2e-test"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "typecheck"
+
+[[workflows.workflow]]
+name = "api-server-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run test"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "ai-trading-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/ai-trading run test"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "e2e-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/e2e run test"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "typecheck"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run typecheck"
+
+[workflows.workflow.metadata]
+isValidation = true
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
 
 [postMerge]
 path = "scripts/post-merge.sh"
-timeoutMs = 20000
+timeoutMs = 180000
+
+[userenv]
+
+[userenv.shared]
+OPENAI_MODEL = "gpt-4o"
+OPENAI_MODEL_FAST_INTRADAY = "gpt-4o-mini"
+VAPID_PUBLIC_KEY = "BCy2eUxjgQhGCK-Mti151i1Imkl2A79b9WUeb5I8huNGKZyO6VjhwgzoxW5vhR4xCZs350A82KvxxLYLb5oYaHs"
+VAPID_EMAIL = "mailto:admin@aitradingassistant.app"
 
 [nix]
 channel = "stable-25_05"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-56a22bf2-a464-4038-8154-57049cca11b4"

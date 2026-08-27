@@ -3,9 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "orval --config ./orval.config.ts && pnpm -w run typecheck:libs"
+    "codegen": "orval --config ./orval.config.ts && pnpm run codegen:dart && pnpm -w run typecheck:libs",
+    "codegen:dart": "openapi-generator-cli generate -i ./openapi.yaml -g dart-dio -o ../api-client-dart -p pubName=trade_pilot_api_client -p pubVersion=0.1.0"
   },
   "devDependencies": {
-    "orval": "^8.23.0"
+    "@openapitools/openapi-generator-cli": "^2.40.1",
+    "orval": "^8.5.2"
   }
 }

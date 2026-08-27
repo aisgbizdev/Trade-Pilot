@@ -1,8 +1,46 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import authRouter from "./auth";
+import analysesRouter from "./analyses";
+import filterPresetsRouter from "./filter-presets";
+import notificationsRouter from "./notifications";
+import adminRouter from "./admin";
+import quotesRouter from "./quotes";
+import historicalRouter from "./historical";
+import newsRouter from "./news";
+import calendarRouter from "./calendar";
+import pushRouter from "./push";
+import nativePushRouter from "./native-push";
+import eventsRouter from "./events";
+import dailySummaryRouter from "./daily-summary";
+import watchlistRouter from "./watchlist";
+import userPriceAlertsRouter from "./user-price-alerts";
+import tradeJournalRouter from "./trade-journal";
+import traderMirrorRouter from "./trader-mirror";
+import performanceRouter from "./performance";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
+router.use(analysesRouter);
+router.use(filterPresetsRouter);
+router.use(notificationsRouter);
+router.use(adminRouter);
+router.use(quotesRouter);
+router.use(historicalRouter);
+router.use(newsRouter);
+router.use(calendarRouter);
+router.use(pushRouter);
+router.use(nativePushRouter);
+router.use(eventsRouter);
+router.use(dailySummaryRouter);
+router.use(watchlistRouter);
+router.use(userPriceAlertsRouter);
+router.use(tradeJournalRouter);
+router.use(traderMirrorRouter);
+router.use(performanceRouter);
+router.use(storageRouter);
 
 export default router;
