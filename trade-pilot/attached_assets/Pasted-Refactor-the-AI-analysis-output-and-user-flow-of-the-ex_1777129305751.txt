@@ -1,0 +1,143 @@
+Refactor the AI analysis output and user flow of the existing AI Trading Assistant MVP.
+
+Goal:
+Transform the system from a “signal-like output” into a “decision-support flow” that still feels practical for beginners but forces better thinking.
+
+DO NOT change the core architecture, database, or authentication system.
+Focus only on:
+- AI output structure
+- UX flow for analysis result
+- wording and framing
+
+---
+
+## NEW ANALYSIS FLOW (CRITICAL)
+
+Split the analysis result into 2 steps:
+
+### STEP 1 — MARKET UNDERSTANDING (default view)
+
+Show ONLY:
+
+1. Market Condition
+   - trend / range / volatile
+
+2. Scenario Breakdown
+   - Scenario A (more dominant)
+   - Scenario B (alternative)
+   - Scenario C (no-trade / wait scenario)
+
+3. Risk Overview
+   - risk level
+   - what makes this setup fragile
+
+4. Invalidation (IMPORTANT — must be visible at the top)
+   - clearly state:
+     “This analysis becomes invalid if:”
+     - condition 1
+     - condition 2
+
+5. Confidence (as range, not single number)
+   - explain why it is not certain
+
+6. Short Explanation
+   - simple for beginner mode
+   - structured for pro mode
+
+IMPORTANT:
+- DO NOT show entry / SL / TP in Step 1
+- DO NOT show direct BUY / SELL wording
+
+---
+
+### STEP 2 — EXECUTION OPTIONS (hidden behind button)
+
+Add a button:
+
+“View Execution Scenarios”
+
+Only after user clicks, show:
+
+1. Scenario A execution example
+   - possible entry zone
+   - stop loss concept
+   - take profit concept
+
+2. Scenario B execution example
+
+3. Clear note:
+   “These are scenario examples, not guaranteed outcomes.”
+
+IMPORTANT:
+- Avoid command language like “Buy now”
+- Use phrasing like:
+  “If choosing Scenario A, traders often consider…”
+
+---
+
+## LANGUAGE RULES (VERY IMPORTANT)
+
+Replace:
+- “BUY / SELL”
+WITH:
+- “Bullish bias”
+- “Bearish bias”
+- “Wait / no-trade scenario”
+
+Avoid:
+- certainty tone
+- command tone
+
+Always include:
+- uncertainty
+- conditions where analysis can fail
+
+---
+
+## ADD THINKING FRICTION (LIGHT)
+
+Before showing execution (Step 2), add a small interaction:
+
+Example:
+- “Do you understand the scenario?”
+- or
+- “Continue to execution examples”
+
+This is required to slow down impulsive decisions.
+
+---
+
+## BEGINNER VS PRO MODE
+
+Beginner:
+- simpler language
+- more explanation
+- highlight risk clearly
+
+Pro:
+- compact
+- structured bullet points
+- include technical + fundamental drivers
+
+---
+
+## IMPORTANT CONSTRAINTS
+
+- Keep system as decision-support, NOT signal generator
+- Do not remove existing features (history, feedback, stats)
+- Do not break API contracts
+- Do not overcomplicate UI
+- Maintain mobile-first design
+
+---
+
+## DESIGN PRINCIPLE
+
+The system must:
+- feel easy like a signal
+BUT
+- behave like a thinking assistant
+
+---
+
+Implement this as a UI/UX and AI output refactor only.

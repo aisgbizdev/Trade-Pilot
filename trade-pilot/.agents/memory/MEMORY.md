@@ -1,0 +1,7 @@
+- [Postgres enum migration with Drizzle](pg-enum-add-value.md) — adding a value to a pgEnum needs an out-of-band `ALTER TYPE ... ADD VALUE`; drizzle-kit push won't do it idempotently and tsc compares against the live schema's d.ts.
+- [Time-windowed seed tests](time-windowed-seed-tests.md) — when a detector filters by `createdAt >= now - Ndays`, seed-by-`i*24h` going back N days drops the oldest row past the boundary; align the seed-hour or shorten the spacing.
+- [Object-storage avatar hardening](object-storage-avatar-hardening.md) — GCS presigned-URL uploads aren't bound to client-claimed contentType; need objectPath whitelist on writes + serve-time image-only check + nosniff to block stored-XSS.
+- [wouter Link renders an anchor](wouter-link-anchor.md) — style the Link directly + aria-current; don't copy the bottom-nav's <Link><button> (nested interactive a11y bug).
+- [Dashboard desktop masonry](dashboard-desktop-masonry.md) — desktop dashboard widgets use CSS multicol (lg:columns-2), not grid auto-flow, to avoid odd trailing gaps while keeping mobile DOM order/spacing identical.
+- [Tablet-only width constraint](tablet-only-width-constraint.md) — to narrow content at tablet while leaving desktop full-width, use `md:max-w-3xl md:mx-auto lg:max-w-none` (Layout caps at md:max-w-4xl/lg:max-w-6xl).
+- [Mobile Expo auth pattern](mobile-expo-auth-pattern.md) — orval mutations take `{ data: Body }`, mode required in CreateAnalysisBody, use `"/(tabs)"` not `"/(tabs)/"`, colors.radius lives alongside palette tokens.
