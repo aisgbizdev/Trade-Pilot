@@ -8,7 +8,11 @@ import type { TradePlan } from "@workspace/api-client-react";
 import type { Translations } from "@/locales/en";
 import {
   buildAdaptivePlanRecommendation,
+  type AdaptiveAnalysisContext,
+  type AdaptivePlanContext,
+  type AdaptivePlanDecision,
   type AdaptivePlanRecommendation,
+  type AdaptivePlanReasonCode,
   type AdaptiveRiskPreference,
   type AdaptiveSidePositionPlan,
 } from "@/lib/adaptive-position-plan";
@@ -19,6 +23,7 @@ interface Props {
   analysisId: number;
   instrument: string;
   tradePlan: TradePlan;
+  context: AdaptiveAnalysisContext;
   lang: "en" | "id";
   copy: AdaptiveCopy;
 }
@@ -34,7 +39,29 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v2:${analysisId}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isStoredForm(value: unknown): value is Partial<FormState> {
+  if (!isRecord(value)) return false;
+  return (value.availableMargin === undefined || typeof value.availableMargin === "string") &&
+    (value.preference === undefined || value.preference === "safe" || value.preference === "balanced" || value.preference === "active");
+}
+
+function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommendation {
+  if (!isRecord(value) || !isRecord(value.result) || !isRecord(value.context) || !isRecord(value.decision)) return false;
+  const fundamental = value.context.fundamental;
+  return typeof value.result.valid === "boolean" &&
+    isRecord(fundamental) &&
+    typeof fundamental.available === "boolean" &&
+    (value.decision.posture === "scaling_allowed" || value.decision.posture === "entry_only" || value.decision.posture === "not_recommended") &&
+    (value.decision.preferredSide === "buy" || value.decision.preferredSide === "sell" || value.decision.preferredSide === "both" || value.decision.preferredSide === "none") &&
+    Array.isArray(value.decision.reasonCodes) &&
+    value.decision.reasonCodes.every((code) => typeof code === "string");
 }
 
 function numberValue(value: string): number | null {
@@ -50,8 +77,39 @@ function formatNumber(value: number | null | undefined, lang: "en" | "id", maxim
   }).format(value);
 }
 
-function PlanSide({ plan, lang, copy }: { plan: AdaptiveSidePositionPlan; lang: "en" | "id"; copy: AdaptiveCopy }) {
+function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, copy: AdaptiveCopy): string {
+  const technical = context.technical;
+  switch (code) {
+    case "context_unavailable": return copy.adaptive_reason_context_unavailable;
+    case "short_timeframe": return copy.adaptive_reason_short_timeframe.replace("{timeframe}", context.timeframe ?? "—");
+    case "high_risk": return copy.adaptive_reason_high_risk;
+    case "volatile_market": return copy.adaptive_reason_volatile_market;
+    case "low_confidence": return copy.adaptive_reason_low_confidence.replace("{confidence}", String(context.confidenceMax ?? "—"));
+    case "range_supports_scaling": return copy.adaptive_reason_range_supports_scaling;
+    case "trend_favors_buy": return copy.adaptive_reason_trend_favors_buy;
+    case "trend_favors_sell": return copy.adaptive_reason_trend_favors_sell;
+    case "trend_opposes_buy": return copy.adaptive_reason_trend_opposes_buy;
+    case "trend_opposes_sell": return copy.adaptive_reason_trend_opposes_sell;
+    case "technical_supports_buy": return copy.adaptive_reason_technical_supports_buy.replace("{buy}", String(technical?.buy ?? 0)).replace("{sell}", String(technical?.sell ?? 0));
+    case "technical_supports_sell": return copy.adaptive_reason_technical_supports_sell.replace("{buy}", String(technical?.buy ?? 0)).replace("{sell}", String(technical?.sell ?? 0));
+    case "technical_mixed": return copy.adaptive_reason_technical_mixed;
+    case "technical_unavailable": return copy.adaptive_reason_technical_unavailable;
+    case "neutral_bias": return copy.adaptive_reason_neutral_bias;
+    case "fundamental_high_impact": return copy.adaptive_reason_fundamental_high_impact.replace("{count}", String(context.fundamental.highImpactCount));
+    case "fundamental_present": return copy.adaptive_reason_fundamental_present.replace("{news}", String(context.fundamental.newsCount)).replace("{events}", String(context.fundamental.eventCount));
+    case "fundamental_clear": return copy.adaptive_reason_fundamental_clear;
+    case "fundamental_unavailable": return copy.adaptive_reason_fundamental_unavailable;
+    case "directional_conflict": return copy.adaptive_reason_directional_conflict;
+    case "staged_add_condition": return copy.adaptive_reason_staged_add_condition;
+  }
+}
+
+function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPlan; lang: "en" | "id"; copy: AdaptiveCopy; decision: AdaptivePlanDecision }) {
   const isBuy = plan.side === "buy";
+  const scenarioIsPreferred = decision.preferredSide === "both" || decision.preferredSide === plan.side;
+  const stageGuidance = plan.ladder.length > 1 && scenarioIsPreferred
+    ? copy.adaptive_side_scaling_allowed
+    : copy.adaptive_side_entry_only;
   return (
     <div className={`rounded-md border-l-4 p-3 space-y-3 bg-muted/20 ${isBuy ? "border-l-emerald-500" : "border-l-red-500"}`} data-testid={`adaptive-plan-${plan.side}`}>
       <div className="flex items-center justify-between gap-2">
@@ -67,15 +125,17 @@ function PlanSide({ plan, lang, copy }: { plan: AdaptiveSidePositionPlan; lang: 
         <span className="text-muted-foreground">{copy.adaptive_cycle_loss}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.estimatedCycleLoss, lang)}</span>
         <span className="text-muted-foreground">{copy.adaptive_margin_required}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.marginRequired, lang)}</span>
       </div>
+        <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
       <div className="overflow-x-auto">
         <table className="w-full text-[11px]">
-          <thead className="text-muted-foreground border-b border-border/70"><tr><th className="text-left py-1 font-medium">{copy.adaptive_level}</th><th className="text-right py-1 font-medium">{copy.adaptive_price}</th><th className="text-right py-1 font-medium">{copy.adaptive_lot}</th><th className="text-right py-1 font-medium">{copy.adaptive_cumulative}</th></tr></thead>
+          <thead className="text-muted-foreground border-b border-border/70"><tr><th className="text-left py-1 font-medium">{copy.adaptive_level}</th><th className="text-right py-1 font-medium">{copy.adaptive_price}</th><th className="text-right py-1 font-medium">{copy.adaptive_lot}</th><th className="text-right py-1 font-medium">{copy.adaptive_cumulative}</th><th className="text-left py-1 pl-3 font-medium">{copy.adaptive_stage_reason}</th></tr></thead>
           <tbody>{plan.ladder.map((level) => (
             <tr key={`${plan.side}-${level.level}`} className="border-b border-border/40 last:border-0 align-top">
               <td className="py-1.5 pr-2 font-semibold">{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</td>
               <td className="py-1.5 text-right tabular-nums">{formatNumber(level.price, lang, 4)}</td>
               <td className="py-1.5 text-right tabular-nums">{formatNumber(level.lot, lang)}</td>
               <td className="py-1.5 text-right tabular-nums">{formatNumber(level.cumulativeLots, lang)}</td>
+              <td className="py-1.5 pl-3 text-muted-foreground min-w-40">{level.level === 0 ? copy.adaptive_stage_initial_reason : copy.adaptive_stage_add_reason}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -84,7 +144,7 @@ function PlanSide({ plan, lang, copy }: { plan: AdaptiveSidePositionPlan; lang: 
   );
 }
 
-export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, lang, copy }: Props) {
+export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, context, lang, copy }: Props) {
   const [open, setOpen] = useState(true);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
@@ -96,9 +156,10 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, lang, 
     try {
       const stored = localStorage.getItem(storageKey(analysisId));
       if (!stored) return;
-      const parsed = JSON.parse(stored) as { form?: Partial<FormState>; recommendation?: AdaptivePlanRecommendation };
-      if (parsed.form) setForm({ ...DEFAULT_FORM, ...parsed.form });
-      if (parsed.recommendation) setRecommendation(parsed.recommendation);
+      const parsed: unknown = JSON.parse(stored);
+      if (!isRecord(parsed)) return;
+      if (isStoredForm(parsed.form)) setForm({ ...DEFAULT_FORM, ...parsed.form });
+      if (isStoredRecommendation(parsed.recommendation)) setRecommendation(parsed.recommendation);
     } catch {
       // A malformed local draft should not block Standard Analysis.
     }
@@ -115,6 +176,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, lang, 
       availableMargin: numberValue(form.availableMargin),
       marginPerLot,
       preference: form.preference,
+      context,
     });
     setRecommendation(next);
     localStorage.setItem(storageKey(analysisId), JSON.stringify({ form, recommendation: next }));
@@ -169,6 +231,34 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, lang, 
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {!recommendation && <p className="text-[11px] text-muted-foreground flex items-start gap-1.5"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />{copy.adaptive_ready}</p>}
+        {recommendation && (
+          <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-2.5" data-testid="adaptive-plan-reasoning">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-foreground">{copy.adaptive_reasoning_title}</p>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {recommendation.decision.posture === "scaling_allowed"
+                    ? copy.adaptive_posture_scaling_allowed
+                    : recommendation.decision.posture === "entry_only"
+                      ? copy.adaptive_posture_entry_only
+                      : copy.adaptive_posture_not_recommended}
+                </p>
+              </div>
+              <Badge variant="outline" className="shrink-0 text-[10px]">{recommendation.context.timeframe ?? copy.adaptive_context_missing}</Badge>
+            </div>
+            <ul className="space-y-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {[...new Set(recommendation.decision.reasonCodes)].map((code) => (
+                <li key={code} className="flex gap-1.5"><span aria-hidden="true">•</span><span>{reasonText(code, recommendation.context, copy)}</span></li>
+              ))}
+            </ul>
+            <div className="border-t border-border/60 pt-2 grid gap-1 text-[10px] text-muted-foreground">
+              <p>{copy.adaptive_context_technical.replace("{buy}", String(recommendation.context.technical?.buy ?? "—")).replace("{sell}", String(recommendation.context.technical?.sell ?? "—")).replace("{neutral}", String(recommendation.context.technical?.neutral ?? "—"))}</p>
+              <p>{recommendation.context.fundamental.available
+                ? copy.adaptive_context_fundamental.replace("{news}", String(recommendation.context.fundamental.newsCount)).replace("{events}", String(recommendation.context.fundamental.eventCount)).replace("{highImpact}", String(recommendation.context.fundamental.highImpactCount))
+                : copy.adaptive_context_fundamental_unavailable}</p>
+            </div>
+          </div>
+        )}
         {recommendation && !recommendation.result.valid && <div className="border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 space-y-2" data-testid="adaptive-plan-invalid">
           <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{copy.adaptive_invalid_title}</p>
           <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{copy.adaptive_invalid_description}</p>
@@ -176,7 +266,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, lang, 
         {recommendation?.result.valid && recommendation.result.buy && recommendation.result.sell && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
           <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
           <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatNumber(selected.maximumLoss, lang))}</p></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} /><PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} decision={recommendation.decision} /><PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} decision={recommendation.decision} /></div>
           <div className="space-y-1.5 rounded-md border border-border p-3"><p className="text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</p><ol className="list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol></div>
           <div className="flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3"><AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" /><p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">{copy.adaptive_external_liquidation} {copy.adaptive_manual_only}</p></div>
         </div>}

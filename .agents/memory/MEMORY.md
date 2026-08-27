@@ -6,3 +6,4 @@
 - [Tablet-only width constraint](tablet-only-width-constraint.md) — to narrow content at tablet while leaving desktop full-width, use `md:max-w-3xl md:mx-auto lg:max-w-none` (Layout caps at md:max-w-4xl/lg:max-w-6xl).
 - [Mobile Expo auth pattern](mobile-expo-auth-pattern.md) — orval mutations take `{ data: Body }`, mode required in CreateAnalysisBody, use `"/(tabs)"` not `"/(tabs)/"`, colors.radius lives alongside palette tokens.
 - [Replit deployment CORS origins](replit-deployment-cors-origins.md) — use exact runtime `REPLIT_DOMAINS` origins alongside custom domains; dev-domain-only CORS blocks browser registration after publishing.
+- [Situation-aware adaptive scaling](situation-aware-adaptive-scaling.md) — staged additions must fail closed unless the saved analysis context is complete and directionally aligned.

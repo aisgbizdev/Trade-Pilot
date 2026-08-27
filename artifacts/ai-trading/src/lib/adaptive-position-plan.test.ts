@@ -35,14 +35,28 @@ const VALID_INPUT = {
   maxCycleLossPercent: 2,
 };
 
+const SUPPORTIVE_CONTEXT = {
+  timeframe: "1h",
+  marketCondition: "trending_up",
+  riskLevel: "low",
+  tradingBias: "bullish_strong",
+  confidenceMin: 65,
+  confidenceMax: 78,
+  techBuyCount: 14,
+  techSellCount: 4,
+  techNeutralCount: 3,
+  fundamentalContext: { newsItems: [], calendarEvents: [] },
+};
+
 describe("buildAdaptivePositionPlan", () => {
-  it("creates a safe recommendation from available margin without account-form inputs", () => {
+  it("creates a situation-aware recommendation from available margin without account-form inputs", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
       marginPerLot: 1_000,
       preference: "balanced",
+      context: SUPPORTIVE_CONTEXT,
     });
 
     expect(recommendation.result.valid).toBe(true);
@@ -51,6 +65,119 @@ describe("buildAdaptivePositionPlan", () => {
       marginBudget: 65_000,
     });
     expect(recommendation.recommendation?.initialLot).toBeGreaterThan(0);
+    expect(recommendation.decision).toMatchObject({
+      posture: "scaling_allowed",
+      preferredSide: "buy",
+    });
+    expect(recommendation.result.buy?.ladder).toHaveLength(3);
+    expect(recommendation.result.sell?.ladder).toHaveLength(1);
+    expect(recommendation.decision.reasonCodes).toEqual(
+      expect.arrayContaining(["trend_favors_buy", "technical_supports_buy", "staged_add_condition"]),
+    );
+  });
+
+  it("changes from staged scaling to entry-only on a shorter timeframe", () => {
+    const hourly = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 1_000,
+      preference: "balanced",
+      context: SUPPORTIVE_CONTEXT,
+    });
+    const shortTimeframe = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 1_000,
+      preference: "balanced",
+      context: { ...SUPPORTIVE_CONTEXT, timeframe: "5m" },
+    });
+
+    expect(hourly.recommendation?.levels).toBe(2);
+    expect(shortTimeframe.recommendation?.levels).toBe(0);
+    expect(shortTimeframe.decision.posture).toBe("entry_only");
+    expect(shortTimeframe.result.buy?.ladder).toHaveLength(1);
+    expect(shortTimeframe.result.sell?.ladder).toHaveLength(1);
+    expect(shortTimeframe.decision.reasonCodes).toContain("short_timeframe");
+  });
+
+  it("blocks staged plans when technical direction conflicts with market bias", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 1_000,
+      preference: "balanced",
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        marketCondition: "ranging",
+        techBuyCount: 3,
+        techSellCount: 15,
+      },
+    });
+
+    expect(recommendation.result.valid).toBe(false);
+    expect(recommendation.recommendation).toBeNull();
+    expect(recommendation.decision.posture).toBe("not_recommended");
+    expect(recommendation.decision.reasonCodes).toContain("directional_conflict");
+  });
+
+  it("fails closed when any required analysis input is unavailable", () => {
+    const incompleteContexts = [
+      { ...SUPPORTIVE_CONTEXT, timeframe: undefined },
+      { ...SUPPORTIVE_CONTEXT, marketCondition: undefined },
+      { ...SUPPORTIVE_CONTEXT, riskLevel: undefined },
+      { ...SUPPORTIVE_CONTEXT, tradingBias: undefined },
+      { ...SUPPORTIVE_CONTEXT, confidenceMax: undefined },
+      { ...SUPPORTIVE_CONTEXT, techBuyCount: undefined },
+      { ...SUPPORTIVE_CONTEXT, fundamentalContext: undefined },
+    ];
+
+    for (const context of incompleteContexts) {
+      const recommendation = buildAdaptivePlanRecommendation({
+        instrument: "XAU/USD",
+        tradePlan: TRADE_PLAN,
+        availableMargin: 100_000,
+        marginPerLot: 1_000,
+        preference: "active",
+        context,
+      });
+
+      expect(recommendation.recommendation?.levels).toBe(0);
+      expect(recommendation.decision.posture).toBe("entry_only");
+      expect(recommendation.decision.reasonCodes).toContain("context_unavailable");
+    }
+  });
+
+  it("uses high-impact calendar risk to reduce a complete plan to entry-only", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 1_000,
+      preference: "active",
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        fundamentalContext: {
+          newsItems: [],
+          calendarEvents: [{
+            date: "2026-08-27",
+            time: "14:30",
+            currency: "USD",
+            event: "US GDP",
+            impact: "★★★",
+            actual: null,
+            forecast: null,
+            previous: null,
+          }],
+        },
+      },
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.recommendation?.levels).toBe(0);
+    expect(recommendation.decision.reasonCodes).toContain("fundamental_high_impact");
   });
 
   it("builds independent buy and sell ladders without changing Standard Plan levels", () => {

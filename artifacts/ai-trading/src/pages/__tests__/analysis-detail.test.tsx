@@ -15,6 +15,26 @@ import {
 const ANALYSIS_ID = 555;
 const NOW = Date.now();
 
+const TRADE_PLAN = {
+  preferredSide: "buy",
+  buy: {
+    entryZone: "2,300.00–2,302.00",
+    stopLoss: "2,290.00",
+    takeProfit1: "2,315.00",
+    takeProfit2: "2,325.00",
+    riskRewardRatio: "1:1.5",
+    rationale: "Bullish structure remains intact.",
+  },
+  sell: {
+    entryZone: "2,300.00–2,302.00",
+    stopLoss: "2,312.00",
+    takeProfit1: "2,290.00",
+    takeProfit2: "2,280.00",
+    riskRewardRatio: "1:1.2",
+    rationale: "Alternative bearish scenario.",
+  },
+};
+
 const ANALYSIS_PAYLOAD = {
   id: ANALYSIS_ID,
   instrument: "XAU/USD",
@@ -116,6 +136,67 @@ describe("AnalysisDetailPage: happy-path render", () => {
     // Feedback CTAs render — the user can pick useful / not-useful.
     expect(screen.getByTestId("button-feedback-useful")).toBeInTheDocument();
     expect(screen.getByTestId("button-feedback-not-useful")).toBeInTheDocument();
+  });
+});
+
+describe("AnalysisDetailPage: situation-aware position recommendation", () => {
+  it("explains why only the aligned Buy scenario receives staged additions", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    const margin = await screen.findByTestId("input-adaptive-available-margin");
+    fireEvent.change(margin, { target: { value: "100000" } });
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+
+    const reasoning = await screen.findByTestId("adaptive-plan-reasoning");
+    expect(reasoning.textContent).toMatch(/Why this plan was chosen/i);
+    expect(reasoning.textContent).toMatch(/favor the rise scenario/i);
+    expect(reasoning.textContent).toMatch(/Technical snapshot: 12 support up, 4 support down/i);
+    expect(screen.getByTestId("adaptive-plan-buy").textContent).toMatch(/Extra stages may be considered/i);
+    expect(screen.getByTestId("adaptive-plan-sell").textContent).toMatch(/initial entry only/i);
+  });
+
+  it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
+    localStorage.setItem(
+      `trade-pilot:adaptive-plan:v2:${ANALYSIS_ID}`,
+      JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
+    );
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("input-adaptive-available-margin")).toHaveValue(100000);
+    expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
+    localStorage.removeItem(`trade-pilot:adaptive-plan:v2:${ANALYSIS_ID}`);
   });
 });
 

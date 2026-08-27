@@ -1987,13 +1987,25 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             narrative consultative while giving the user actionable numbers. */}
         {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
 
-        {/* Optional, deterministic situational martingale plan. It only reads
-            the Standard Plan and never changes its levels or executes orders. */}
+        {/* Deterministic, situation-aware scaling plan. It reads the saved
+            analysis context but never changes Standard Plan levels or executes orders. */}
         {tradePlan && (
           <AdaptivePositionPlan
             analysisId={analysis.id}
             instrument={analysis.instrument}
             tradePlan={tradePlan}
+            context={{
+              timeframe: analysis.timeframe,
+              marketCondition: analysis.marketCondition,
+              riskLevel: analysis.riskLevel,
+              tradingBias: analysis.tradingBias,
+              confidenceMin: analysis.confidenceMin,
+              confidenceMax: analysis.confidenceMax,
+              techBuyCount: analysis.techBuyCount,
+              techSellCount: analysis.techSellCount,
+              techNeutralCount: analysis.techNeutralCount,
+              fundamentalContext: analysis.fundamentalContext,
+            }}
             lang={lang}
             copy={t.analysis_detail}
           />
