@@ -77,6 +77,10 @@ function formatNumber(value: number | null | undefined, lang: "en" | "id", maxim
   }).format(value);
 }
 
+function formatMoney(value: number | null | undefined, lang: "en" | "id", maximumFractionDigits = 2): string {
+  return `$${formatNumber(value, lang, maximumFractionDigits)}`;
+}
+
 function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, copy: AdaptiveCopy): string {
   const technical = context.technical;
   switch (code) {
@@ -122,23 +126,24 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         <span className="text-muted-foreground">{copy.adaptive_entry}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.entry, lang, 4)}</span>
         <span className="text-muted-foreground">{copy.adaptive_stop}</span><span className="text-right font-semibold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</span>
-        <span className="text-muted-foreground">{copy.adaptive_cycle_loss}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.estimatedCycleLoss, lang)}</span>
-        <span className="text-muted-foreground">{copy.adaptive_margin_required}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.marginRequired, lang)}</span>
+        <span className="text-muted-foreground">{copy.adaptive_cycle_loss}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</span>
+        <span className="text-muted-foreground">{copy.adaptive_margin_required}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.marginRequired, lang)}</span>
       </div>
-        <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-[11px]">
-          <thead className="text-muted-foreground border-b border-border/70"><tr><th className="text-left py-1 font-medium">{copy.adaptive_level}</th><th className="text-right py-1 font-medium">{copy.adaptive_price}</th><th className="text-right py-1 font-medium">{copy.adaptive_lot}</th><th className="text-right py-1 font-medium">{copy.adaptive_cumulative}</th><th className="text-left py-1 pl-3 font-medium">{copy.adaptive_stage_reason}</th></tr></thead>
-          <tbody>{plan.ladder.map((level) => (
-            <tr key={`${plan.side}-${level.level}`} className="border-b border-border/40 last:border-0 align-top">
-              <td className="py-1.5 pr-2 font-semibold">{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</td>
-              <td className="py-1.5 text-right tabular-nums">{formatNumber(level.price, lang, 4)}</td>
-              <td className="py-1.5 text-right tabular-nums">{formatNumber(level.lot, lang)}</td>
-              <td className="py-1.5 text-right tabular-nums">{formatNumber(level.cumulativeLots, lang)}</td>
-              <td className="py-1.5 pl-3 text-muted-foreground min-w-40">{level.level === 0 ? copy.adaptive_stage_initial_reason : copy.adaptive_stage_add_reason}</td>
-            </tr>
-          ))}</tbody>
-        </table>
+      <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
+      <div className="grid gap-2">
+        {plan.ladder.map((level) => (
+          <div key={`${plan.side}-${level.level}`} className="rounded-md border border-border/70 bg-background/60 p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold">{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</span>
+              <span className="text-xs font-semibold tabular-nums">{formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+              <div><span className="block text-muted-foreground">{copy.adaptive_price}</span><strong className="block tabular-nums">{formatNumber(level.price, lang, 4)}</strong></div>
+              <div><span className="block text-muted-foreground">{copy.adaptive_cumulative}</span><strong className="block tabular-nums">{formatNumber(level.cumulativeLots, lang)} {copy.adaptive_lot}</strong></div>
+            </div>
+            <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{level.level === 0 ? copy.adaptive_stage_initial_reason : copy.adaptive_stage_add_reason}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -196,21 +201,24 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           <span className="min-w-0"><span className="block text-sm font-bold text-foreground flex items-center gap-1.5"><Calculator className="w-4 h-4 text-primary" />{copy.adaptive_title}</span><span className="block text-[11px] text-muted-foreground mt-0.5">{copy.adaptive_subtitle}</span></span>
         </span>
       </button>
-      {open && <div className="border-t border-border p-4 space-y-4" data-testid="adaptive-plan-content">
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-3 space-y-1.5">
-          <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">{copy.adaptive_description}</p>
-          <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">{copy.adaptive_standard_unchanged}</p>
+      {open && <div className="border-t border-border p-3 sm:p-4 space-y-3" data-testid="adaptive-plan-content">
+        <div className="flex items-start gap-2 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-2.5">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-700 dark:text-blue-300" />
+          <p className="text-[11px] font-medium text-blue-800 dark:text-blue-300 leading-relaxed">{copy.adaptive_standard_unchanged}</p>
         </div>
-        <div className="space-y-2">
-          <label className="block max-w-sm space-y-1">
-            <span className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_available_margin}</span>
-            <Input type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-available-margin" />
-            <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_available_margin_help}</span>
+        <div className="rounded-lg border-2 border-primary/35 bg-primary/[0.04] p-3 sm:p-4 space-y-2.5" data-testid="adaptive-margin-input-card">
+          <label className="block space-y-1.5">
+            <span className="block text-sm font-bold text-foreground">{copy.adaptive_available_margin}</span>
+            <span className="block text-[11px] text-muted-foreground">{copy.adaptive_available_margin_help}</span>
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-lg font-semibold text-primary" aria-hidden="true">$</span>
+              <Input type="number" min="0" step="any" inputMode="decimal" value={form.availableMargin} placeholder="100,000" aria-label={copy.adaptive_available_margin} onChange={(event) => updateField("availableMargin", event.target.value)} className="h-14 pl-8 text-xl font-semibold tracking-tight shadow-sm" data-testid="input-adaptive-available-margin" />
+            </div>
           </label>
-          {marginPerLot != null && <p className="text-[11px] text-muted-foreground">{copy.adaptive_margin_rule.replace("{amount}", formatNumber(marginPerLot, lang))}</p>}
+          {marginPerLot != null && <p className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_margin_rule.replace("{amount}", formatMoney(marginPerLot, lang))}</p>}
         </div>
         <div className="space-y-2">
-          <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_preference_title}</h4>
+          <h4 className="text-xs font-bold text-foreground">{copy.adaptive_preference_title}</h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label={copy.adaptive_preference_title}>
             {(["safe", "balanced", "active"] as const).map((preference) => {
               const labels = {
@@ -226,9 +234,9 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
             })}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" onClick={calculate} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
-          <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2">
+          <Button type="button" size="sm" onClick={calculate} className="h-11 w-full sm:w-auto" data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
+          <Button type="button" size="sm" variant="ghost" onClick={reset} className="w-full sm:w-auto" data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {!recommendation && <p className="text-[11px] text-muted-foreground flex items-start gap-1.5"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />{copy.adaptive_ready}</p>}
         {recommendation && (
@@ -246,16 +254,19 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               </div>
               <Badge variant="outline" className="shrink-0 text-[10px]">{recommendation.context.timeframe ?? copy.adaptive_context_missing}</Badge>
             </div>
-            <ul className="space-y-1.5 text-[11px] leading-relaxed text-muted-foreground">
-              {[...new Set(recommendation.decision.reasonCodes)].map((code) => (
-                <li key={code} className="flex gap-1.5"><span aria-hidden="true">•</span><span>{reasonText(code, recommendation.context, copy)}</span></li>
-              ))}
-            </ul>
-            <div className="border-t border-border/60 pt-2 grid gap-1 text-[10px] text-muted-foreground">
-              <p>{copy.adaptive_context_technical.replace("{buy}", String(recommendation.context.technical?.buy ?? "—")).replace("{sell}", String(recommendation.context.technical?.sell ?? "—")).replace("{neutral}", String(recommendation.context.technical?.neutral ?? "—"))}</p>
-              <p>{recommendation.context.fundamental.available
+            <details className="border-t border-border/60 pt-2">
+              <summary className="cursor-pointer text-[11px] font-semibold text-primary">{copy.adaptive_view_reasons}</summary>
+              <ul className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                {[...new Set(recommendation.decision.reasonCodes)].map((code) => (
+                  <li key={code} className="flex gap-1.5"><span aria-hidden="true">•</span><span>{reasonText(code, recommendation.context, copy)}</span></li>
+                ))}
+              </ul>
+            </details>
+            <div className="flex flex-wrap gap-1.5 border-t border-border/60 pt-2 text-[10px] text-muted-foreground">
+              <span className="rounded-full bg-muted px-2 py-1">{copy.adaptive_context_technical.replace("{buy}", String(recommendation.context.technical?.buy ?? "—")).replace("{sell}", String(recommendation.context.technical?.sell ?? "—")).replace("{neutral}", String(recommendation.context.technical?.neutral ?? "—"))}</span>
+              <span className="rounded-full bg-muted px-2 py-1">{recommendation.context.fundamental.available
                 ? copy.adaptive_context_fundamental.replace("{news}", String(recommendation.context.fundamental.newsCount)).replace("{events}", String(recommendation.context.fundamental.eventCount)).replace("{highImpact}", String(recommendation.context.fundamental.highImpactCount))
-                : copy.adaptive_context_fundamental_unavailable}</p>
+                : copy.adaptive_context_fundamental_unavailable}</span>
             </div>
           </div>
         )}
@@ -265,9 +276,9 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         </div>}
         {recommendation?.result.valid && recommendation.result.buy && recommendation.result.sell && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
           <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
-          <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatNumber(selected.maximumLoss, lang))}</p></div>
+          <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatMoney(selected.maximumLoss, lang))}</p></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} decision={recommendation.decision} /><PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} decision={recommendation.decision} /></div>
-          <div className="space-y-1.5 rounded-md border border-border p-3"><p className="text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</p><ol className="list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol></div>
+          <details className="rounded-md border border-border p-3"><summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</summary><ol className="mt-2 list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol></details>
           <div className="flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3"><AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" /><p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">{copy.adaptive_external_liquidation} {copy.adaptive_manual_only}</p></div>
         </div>}
       </div>}
