@@ -90,6 +90,9 @@ describe("buildAdaptivePositionPlan", () => {
       marginBudget: 65_000,
     });
     expect(recommendation.recommendation?.initialLot).toBeGreaterThan(0);
+    const initialLot = recommendation.recommendation?.initialLot ?? 0;
+    const lotScale = initialLot >= 0.1 ? 10 : 100;
+    expect(initialLot * lotScale).toBeCloseTo(Math.round(initialLot * lotScale), 8);
     expect(recommendation.decision).toMatchObject({
       posture: "scaling_allowed",
       preferredSide: "buy",
@@ -224,6 +227,34 @@ describe("buildAdaptivePositionPlan", () => {
     expect(result.buy?.ladder.map((level) => level.lot)).toEqual([0.01, 0.01, 0.01, 0.01]);
     expect(TRADE_PLAN.buy.entryZone).toBe("2,300.00–2,302.00");
     expect(TRADE_PLAN.sell.stopLoss).toBe("2,312.00");
+  });
+
+  it("keeps Micro and Mini lots on their tier-specific increments", () => {
+    const micro = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      initialLot: 0.03,
+      accountTier: "micro",
+      levels: 2,
+    });
+    const mini = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      initialLot: 0.3,
+      accountTier: "mini",
+      levels: 2,
+    });
+    const fractionalMini = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      initialLot: 0.35,
+      accountTier: "mini",
+      levels: 2,
+    });
+
+    expect(micro.valid).toBe(true);
+    expect(micro.buy?.ladder.map((level) => level.lot)).toEqual([0.03, 0.03, 0.03]);
+    expect(mini.valid).toBe(true);
+    expect(mini.buy?.ladder.map((level) => level.lot)).toEqual([0.3, 0.3, 0.3]);
+    expect(fractionalMini.valid).toBe(false);
+    expect(fractionalMini.errors.join(" ")).toMatch(/0.10 lot increments.*mini tier/i);
   });
 
   it("marks the plan invalid when required account inputs are missing", () => {

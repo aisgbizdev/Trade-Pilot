@@ -153,6 +153,12 @@ const TIER_RANGES: Record<AccountTier, { min: number; max: number | null }> = {
   regular: { min: 1, max: null },
 };
 
+const TIER_LOT_STEPS: Record<AccountTier, number> = {
+  micro: 0.01,
+  mini: 0.1,
+  regular: 1,
+};
+
 const RECOMMENDATION_PROFILES: Record<AdaptiveRiskPreference, {
   levels: number;
   marginUsage: number;
@@ -243,8 +249,13 @@ function roundPrice(value: number, minMovement: number): number {
   return Number(value.toFixed(decimals));
 }
 
-function roundLot(value: number): number {
-  return Number(value.toFixed(2));
+function roundLot(value: number, step = 0.01): number {
+  return Number((Math.round(value / step) * step).toFixed(2));
+}
+
+function isLotAligned(value: number, step: number): boolean {
+  const scaled = value / step;
+  return Math.abs(scaled - Math.round(scaled)) < 1e-9;
 }
 
 function normalizeBias(value: string | null | undefined): "bearish" | "bullish" | "neutral" | null {
@@ -330,8 +341,9 @@ function sidePlan(
 
   const distance = side === "buy" ? entry - stopLoss : stopLoss - entry;
   const ladder: AdaptiveLadderLevel[] = [];
+  const lotStep = TIER_LOT_STEPS[input.accountTier];
   let cumulativeLots = input.initialLot;
-  const initialLot = roundLot(input.initialLot);
+  const initialLot = roundLot(input.initialLot, lotStep);
   let estimatedCycleLoss = distance * rule.contractSize * initialLot;
 
   ladder.push({
@@ -355,7 +367,7 @@ function sidePlan(
     // Every add uses the same conservative lot as the initial entry. This
     // keeps staging from becoming a mechanically escalating martingale.
     const lot = initialLot;
-    cumulativeLots = roundLot(cumulativeLots + lot);
+    cumulativeLots = roundLot(cumulativeLots + lot, lotStep);
     const riskToStop = (side === "buy" ? price - stopLoss : stopLoss - price) * rule.contractSize * lot;
     estimatedCycleLoss += riskToStop;
     ladder.push({
@@ -451,8 +463,12 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   }
 
   const tier = TIER_RANGES[input.accountTier];
+  const lotStep = TIER_LOT_STEPS[input.accountTier];
   if (input.initialLot != null && (input.initialLot < tier.min || (tier.max != null && input.initialLot > tier.max))) {
     errors.push(`Initial lot must be within the ${input.accountTier} tier range.`);
+  }
+  if (input.initialLot != null && input.initialLot > 0 && !isLotAligned(input.initialLot, lotStep)) {
+    errors.push(`Initial lot must use ${lotStep.toFixed(2)} lot increments for the ${input.accountTier} tier.`);
   }
 
   if (!rule) {
@@ -685,8 +701,11 @@ export function buildAdaptivePlanRecommendation({
   const normalizedEquity = maximumLoss * 50;
 
   let fallback: AdaptivePositionPlanResult | null = null;
-  for (let units = 90; units >= 1; units -= 1) {
-    const initialLot = units / 100;
+  const lotCandidates = [
+    ...Array.from({ length: 9 }, (_, index) => (9 - index) / 10),
+    ...Array.from({ length: 9 }, (_, index) => (9 - index) / 100),
+  ];
+  for (const initialLot of lotCandidates) {
     const accountTier: AccountTier = initialLot < 0.1 ? "micro" : "mini";
     const result = buildAdaptivePositionPlan({
       instrument,
