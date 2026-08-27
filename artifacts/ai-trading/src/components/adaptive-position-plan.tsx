@@ -143,18 +143,32 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
       </div>
         <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
       <div className="overflow-x-auto">
-        <table className="w-full text-[11px]">
-          <thead className="text-muted-foreground border-b border-border/70"><tr><th className="text-left py-1 font-medium">{copy.adaptive_level}</th><th className="text-right py-1 font-medium">{copy.adaptive_price}</th><th className="text-right py-1 font-medium">{copy.adaptive_lot}</th><th className="text-right py-1 font-medium">{copy.adaptive_cumulative}</th><th className="text-left py-1 pl-3 font-medium">{copy.adaptive_stage_reason}</th></tr></thead>
+          <table className="w-full min-w-[24rem] text-[11px]">
+            <thead className="text-muted-foreground border-b border-border/70"><tr><th className="text-left whitespace-nowrap py-1 pr-3 font-medium">{copy.adaptive_level}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_price}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_lot}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_cumulative}</th></tr></thead>
           <tbody>{plan.ladder.map((level) => (
             <tr key={`${plan.side}-${level.level}`} className="border-b border-border/40 last:border-0 align-top">
-              <td className="py-1.5 pr-2 font-semibold">{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</td>
-              <td className="py-1.5 text-right tabular-nums">{formatNumber(level.price, lang, 4)}</td>
-              <td className="py-1.5 text-right tabular-nums">{formatNumber(level.lot, lang)}</td>
-              <td className="py-1.5 text-right tabular-nums">{formatNumber(level.cumulativeLots, lang)}</td>
-              <td className="py-1.5 pl-3 text-muted-foreground min-w-52">{stageReason(level, lang, copy)}</td>
+                <td className="py-1.5 pr-3 font-semibold whitespace-nowrap">{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatNumber(level.price, lang, 4)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatNumber(level.lot, lang)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatNumber(level.cumulativeLots, lang)}</td>
             </tr>
           ))}</tbody>
         </table>
+          <div className="mt-3 space-y-2 border-t border-border/60 pt-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.adaptive_stage_reason}</p>
+            {plan.ladder.map((level) => (
+              <div key={`${plan.side}-guidance-${level.level}`} className="rounded-md bg-background/60 px-2.5 py-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold text-foreground">
+                  <span>{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="tabular-nums">{formatNumber(level.price, lang, 4)}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="tabular-nums">{formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{stageReason(level, lang, copy)}</p>
+              </div>
+            ))}
+          </div>
       </div>
     </div>
   );
