@@ -5,13 +5,18 @@
 
 import { getYahooFinanceNews, type YahooNewsItem } from "./news-yahoo";
 import { isCryptoInstrument } from "./crypto-instruments";
+import {
+  clearConfiguredNewsCaches,
+  getConfiguredNewsSources,
+  type ConfiguredNewsItem,
+} from "./news-configured-sources";
 
 const NEWS_API = "https://endpoapi-production-3202.up.railway.app/api/news-id";
 const NEWSMAKER_SOURCE = "Newsmaker.id";
 const YAHOO_SOURCE = "Yahoo Finance";
 
 let newsmakerCache: { data: NewsmakerRaw[]; fetchedAt: number } | null = null;
-const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_TTL = 2 * 60 * 1000;
 
 const INSTRUMENT_KEYWORDS: Record<string, string[]> = {
   "XAU/USD": ["emas", "gold", "xau", "dolar", "fed", "inflasi", "safe haven", "logam mulia"],
@@ -55,6 +60,26 @@ export interface NewsItem {
   source: string;
   url: string | null;
   publishedAt: string; // ISO 8601
+  sourceTier?: "primary" | "standard" | "licensed";
+  sourceWeight?: number;
+  sourceLabels?: string[];
+  sourceCount?: number;
+  relevanceScore?: number;
+  impact?: "low" | "medium" | "high";
+}
+
+export interface NewsSourceStatus {
+  id: string;
+  label: string;
+  tier: "primary" | "standard" | "licensed";
+  configured: boolean;
+  available: boolean;
+}
+
+export interface RelevantNewsSnapshot {
+  items: NewsItem[];
+  sourceStatuses: NewsSourceStatus[];
+  fetchedAt: string;
 }
 
 interface NewsmakerRaw {
@@ -104,6 +129,12 @@ function newsmakerToItem(raw: NewsmakerRaw): NewsItem {
     source: NEWSMAKER_SOURCE,
     url: (raw.url ?? raw.link ?? null) || null,
     publishedAt: toIsoDate(raw.published_at ?? raw.date),
+    sourceTier: "primary",
+    sourceWeight: 0.85,
+    sourceLabels: [NEWSMAKER_SOURCE],
+    sourceCount: 1,
+    relevanceScore: 0,
+    impact: "low",
   };
 }
 
@@ -115,6 +146,22 @@ function yahooToItem(raw: YahooNewsItem): NewsItem {
     source: YAHOO_SOURCE,
     url: raw.url || null,
     publishedAt: raw.publishedAt,
+    sourceTier: "standard",
+    sourceWeight: 0.65,
+    sourceLabels: [YAHOO_SOURCE],
+    sourceCount: 1,
+    relevanceScore: 0,
+    impact: "low",
+  };
+}
+
+function configuredToItem(item: ConfiguredNewsItem): NewsItem {
+  return {
+    ...item,
+    sourceLabels: [item.source],
+    sourceCount: 1,
+    relevanceScore: 0,
+    impact: "low",
   };
 }
 
@@ -132,6 +179,54 @@ function scoreItem(item: NewsItem, keywords: string[]): number {
   return keywords.reduce((s, kw) => s + (text.includes(kw) ? 1 : 0), 0);
 }
 
+function classifyImpact(item: NewsItem): NewsItem["impact"] {
+  const content = `${item.title} ${item.summary}`;
+  if (/\b(fomc|cpi|nfp|non[\s-]?farm|rate\s+(decision|hike|cut)|opec|sanctions|tariff|war|bank\s+(run|failure)|exchange\s+(hack|outage)|etf\s+approval)\b/i.test(content)) {
+    return "high";
+  }
+  return MACRO_FALLBACK_PATTERN.test(content) || CRYPTO_MACRO_PATTERN.test(content)
+    ? "medium"
+    : "low";
+}
+
+function probablySameStory(left: NewsItem, right: NewsItem): boolean {
+  if (left.url && right.url && left.url === right.url) return true;
+  const a = normalizeTitle(left.title);
+  const b = normalizeTitle(right.title);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const aTokens = new Set(a.split(" ").filter((token) => token.length > 3));
+  const bTokens = new Set(b.split(" ").filter((token) => token.length > 3));
+  let shared = 0;
+  for (const token of aTokens) if (bTokens.has(token)) shared += 1;
+  return shared >= 4 && shared / Math.min(aTokens.size, bTokens.size) >= 0.8;
+}
+
+function mergeSyndicatedStories(items: NewsItem[]): NewsItem[] {
+  const merged: NewsItem[] = [];
+  for (const item of items) {
+    const duplicateIndex = merged.findIndex((existing) => probablySameStory(existing, item));
+    if (duplicateIndex === -1) {
+      merged.push(item);
+      continue;
+    }
+    const existing = merged[duplicateIndex]!;
+    const labels = Array.from(new Set([...(existing.sourceLabels ?? [existing.source]), ...(item.sourceLabels ?? [item.source])]));
+    const winner =
+      (item.sourceWeight ?? 0) > (existing.sourceWeight ?? 0) ||
+      ((item.sourceWeight ?? 0) === (existing.sourceWeight ?? 0) && publishedAtMs(item) > publishedAtMs(existing))
+        ? item
+        : existing;
+    merged[duplicateIndex] = {
+      ...winner,
+      sourceLabels: labels,
+      sourceCount: labels.length,
+      sourceWeight: Math.max(existing.sourceWeight ?? 0, item.sourceWeight ?? 0),
+    };
+  }
+  return merged;
+}
+
 // Recency policy for "Recent News". Without these bounds, an older
 // headline that happens to be keyword-dense (e.g. mentions emas + dolar
 // + inflasi + fed) outranks a fresh headline with a terse title and
@@ -147,10 +242,10 @@ function publishedAtMs(item: NewsItem): number {
 
 // Fetch + merge + dedupe + rank up to `maxItems` items for the
 // instrument. Never throws; returns [] when both upstream feeds fail.
-export async function getRelevantNews(
+export async function getRelevantNewsSnapshot(
   instrument: string,
   maxItems = 5,
-): Promise<NewsItem[]> {
+): Promise<RelevantNewsSnapshot> {
   const keywords = INSTRUMENT_KEYWORDS[instrument] ?? [
     "forex",
     "trading",
@@ -158,9 +253,12 @@ export async function getRelevantNews(
     "ekonomi",
   ];
 
-  const [newsmakerRes, yahooRes] = await Promise.allSettled([
-    fetchNewsmaker(),
-    getYahooFinanceNews(instrument, 8),
+  const [[newsmakerRes, yahooRes], configured] = await Promise.all([
+    Promise.allSettled([
+      fetchNewsmaker(),
+      getYahooFinanceNews(instrument, 8),
+    ]),
+    getConfiguredNewsSources(instrument, 8),
   ]);
 
   const collected: NewsItem[] = [];
@@ -170,30 +268,26 @@ export async function getRelevantNews(
   if (yahooRes.status === "fulfilled") {
     for (const raw of yahooRes.value) collected.push(yahooToItem(raw));
   }
+  for (const item of configured.items) collected.push(configuredToItem(item));
 
-  // Dedupe by URL first, then by normalized title — same headline
-  // syndicated to both sources should only appear once.
-  const seenUrls = new Set<string>();
-  const seenTitles = new Set<string>();
-  const deduped: NewsItem[] = [];
-  for (const item of collected) {
-    const titleKey = normalizeTitle(item.title);
-    if (item.url && seenUrls.has(item.url)) continue;
-    if (titleKey && seenTitles.has(titleKey)) continue;
-    if (item.url) seenUrls.add(item.url);
-    if (titleKey) seenTitles.add(titleKey);
-    deduped.push(item);
-  }
+  // A syndicated copy consolidates into one story with a provenance list.
+  // It earns only a bounded corroboration bonus below, never a full extra
+  // "confirmation" merely because several feeds repeated the same wire copy.
+  const deduped = mergeSyndicatedStories(collected);
 
   // Score everything. Yahoo items get a +1 baseline because they are
   // already symbol-scoped at the feed level — without that boost a
   // perfectly relevant headline would get filtered out merely because
   // it didn't repeat the keyword in its title.
-  const scored: ScoredItem[] = deduped.map((item) => ({
-    item,
-    score:
-      scoreItem(item, keywords) + (item.source === YAHOO_SOURCE ? 1 : 0),
-  }));
+  const scored: ScoredItem[] = deduped.map((item) => {
+    const relevanceScore = scoreItem(item, keywords) + (item.source === YAHOO_SOURCE ? 1 : 0);
+    item.relevanceScore = relevanceScore;
+    item.impact = classifyImpact(item);
+    return {
+      item,
+      score: relevanceScore + (item.sourceWeight ?? 0) * 0.4 + Math.min((item.sourceCount ?? 1) - 1, 2) * 0.2,
+    };
+  });
 
   // First pass: keep items with score > 0 (per-instrument relevant).
   let kept = scored.filter((s) => s.score > 0);
@@ -238,7 +332,34 @@ export async function getRelevantNews(
     return b.score - a.score || bt - at; // older tier: score, then recency
   });
 
-  return kept.slice(0, maxItems).map((s) => s.item);
+  return {
+    items: kept.slice(0, maxItems).map((s) => s.item),
+    sourceStatuses: [
+      {
+        id: "newsmaker",
+        label: NEWSMAKER_SOURCE,
+        tier: "primary",
+        configured: true,
+        available: newsmakerRes.status === "fulfilled",
+      },
+      {
+        id: "yahoo",
+        label: YAHOO_SOURCE,
+        tier: "standard",
+        configured: true,
+        available: yahooRes.status === "fulfilled",
+      },
+      ...configured.sources,
+    ],
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+export async function getRelevantNews(
+  instrument: string,
+  maxItems = 5,
+): Promise<NewsItem[]> {
+  return (await getRelevantNewsSnapshot(instrument, maxItems)).items;
 }
 
 // Strip prompt-injection patterns from external feed text before
@@ -288,4 +409,5 @@ export function formatNewsForPrompt(
 // Exposed for tests — lets a vitest case force fresh fetches.
 export function _clearNewsmakerCache(): void {
   newsmakerCache = null;
+  clearConfiguredNewsCaches();
 }

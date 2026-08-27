@@ -494,6 +494,24 @@ export interface TradePlan {
   sell: TradeSide;
 }
 
+export type FundamentalNewsItemSourceTier =
+  (typeof FundamentalNewsItemSourceTier)[keyof typeof FundamentalNewsItemSourceTier];
+
+export const FundamentalNewsItemSourceTier = {
+  primary: "primary",
+  standard: "standard",
+  licensed: "licensed",
+} as const;
+
+export type FundamentalNewsItemImpact =
+  (typeof FundamentalNewsItemImpact)[keyof typeof FundamentalNewsItemImpact];
+
+export const FundamentalNewsItemImpact = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
 /**
  * A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.
  */
@@ -505,6 +523,11 @@ export interface FundamentalNewsItem {
   source: string;
   url: string | null;
   publishedAt: string;
+  sourceTier?: FundamentalNewsItemSourceTier;
+  sourceLabels?: string[];
+  sourceCount?: number;
+  relevanceScore?: number;
+  impact?: FundamentalNewsItemImpact;
 }
 
 /**
@@ -522,12 +545,57 @@ export interface FundamentalCalendarEvent {
   previous: string | null;
 }
 
+export type FundamentalNewsSourceTier =
+  (typeof FundamentalNewsSourceTier)[keyof typeof FundamentalNewsSourceTier];
+
+export const FundamentalNewsSourceTier = {
+  primary: "primary",
+  standard: "standard",
+  licensed: "licensed",
+} as const;
+
+export interface FundamentalNewsSource {
+  id: string;
+  label: string;
+  tier: FundamentalNewsSourceTier;
+  configured: boolean;
+  available: boolean;
+}
+
+export type MarketIntelligenceStatus =
+  (typeof MarketIntelligenceStatus)[keyof typeof MarketIntelligenceStatus];
+
+export const MarketIntelligenceStatus = {
+  reaffirm: "reaffirm",
+  caution: "caution",
+  hold_scaling: "hold_scaling",
+  invalidate: "invalidate",
+} as const;
+
+export type MarketIntelligenceTechnical = {
+  buy: number;
+  sell: number;
+  neutral: number;
+} | null;
+
+export interface MarketIntelligence {
+  status: MarketIntelligenceStatus;
+  evaluatedAt: string;
+  reasonCodes: string[];
+  livePrice: number | null;
+  priceChangePercent: string | null;
+  technical: MarketIntelligenceTechnical;
+}
+
 /**
  * Snapshot of fundamental inputs the AI saw at analysis time.
  */
 export interface FundamentalContext {
   newsItems: FundamentalNewsItem[];
   calendarEvents: FundamentalCalendarEvent[];
+  capturedAt?: string;
+  sourceStatuses?: FundamentalNewsSource[];
+  marketState?: MarketIntelligence;
 }
 
 export type FundamentalDriftCitationKind =
@@ -564,6 +632,13 @@ export interface RefreshFundamentalsResponse {
   /** Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the 'updated N minutes ago' banner. */
   refreshedAt: string;
   drift: FundamentalDrift;
+  marketState: MarketIntelligence;
+}
+
+export interface MarketIntelligenceResponse {
+  marketState: MarketIntelligence;
+  sourceStatuses: FundamentalNewsSource[];
+  refreshedAt: string;
 }
 
 /**

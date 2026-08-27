@@ -24,6 +24,9 @@ export type AdaptivePlanReasonCode =
   | "fundamental_present"
   | "fundamental_clear"
   | "fundamental_unavailable"
+  | "live_market_caution"
+  | "live_scaling_hold"
+  | "live_plan_invalidated"
   | "directional_conflict"
   | "staged_add_condition";
 
@@ -53,6 +56,7 @@ export interface AdaptivePlanContext {
     newsCount: number;
     eventCount: number;
     highImpactCount: number;
+    marketStatus: "reaffirm" | "caution" | "hold_scaling" | "invalidate" | null;
   };
 }
 
@@ -250,6 +254,7 @@ function normalizeContext(input?: AdaptiveAnalysisContext): AdaptivePlanContext 
       newsCount: fundamentalContext?.newsItems?.length ?? 0,
       eventCount: fundamentalContext?.calendarEvents?.length ?? 0,
       highImpactCount: fundamentalContext?.calendarEvents?.filter((event) => event.impact === "★★★").length ?? 0,
+      marketStatus: fundamentalContext?.marketState?.status ?? null,
     },
   };
 }
@@ -711,6 +716,20 @@ export function buildAdaptivePlanRecommendation({
       reasonCodes.push("fundamental_present");
     } else {
       reasonCodes.push("fundamental_clear");
+    }
+    if (context.fundamental.marketStatus === "invalidate") {
+      levels = 0;
+      posture = "not_recommended";
+      preferredSide = "none";
+      reasonCodes.push("live_plan_invalidated");
+    } else if (context.fundamental.marketStatus === "hold_scaling") {
+      levels = 0;
+      posture = "entry_only";
+      reasonCodes.push("live_scaling_hold");
+    } else if (context.fundamental.marketStatus === "caution") {
+      levels = 0;
+      posture = "entry_only";
+      reasonCodes.push("live_market_caution");
     }
   }
 

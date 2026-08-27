@@ -22,6 +22,7 @@ import 'package:trade_pilot_api_client/src/model/date.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/feedback.dart';
 import 'package:trade_pilot_api_client/src/model/feedback_body.dart';
+import 'package:trade_pilot_api_client/src/model/market_intelligence_response.dart';
 import 'package:trade_pilot_api_client/src/model/personal_analytics.dart';
 import 'package:trade_pilot_api_client/src/model/recent_instruments.dart';
 import 'package:trade_pilot_api_client/src/model/refresh_fundamentals_response.dart';
@@ -638,6 +639,81 @@ class AnalysesApi {
     }
 
     return Response<AnalysisQuota>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Recheck live market conditions for a saved analysis
+  /// Read-only evaluation of live price, technical state, calendar and multi-source news. It never changes a Standard Plan or executes trades. 
+  ///
+  /// Parameters:
+  /// * [id] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [MarketIntelligenceResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<MarketIntelligenceResponse>> getMarketIntelligence({ 
+    required int id,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/analyses/{id}/market-intelligence'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(int)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    MarketIntelligenceResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(MarketIntelligenceResponse),
+      ) as MarketIntelligenceResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<MarketIntelligenceResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

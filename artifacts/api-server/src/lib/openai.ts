@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import { z } from "zod";
 import type { CalendarEvent } from "./calendar";
 import type { NewsItem } from "./news";
+import type { MarketIntelligence } from "./market-intelligence";
+import type { NewsSourceStatus } from "./news";
 import { isCryptoInstrument } from "./crypto-instruments";
 
 export const openai = new OpenAI({
@@ -288,6 +290,9 @@ function sanitizeNotes(notes: string): string {
 export interface FundamentalSnapshot {
   newsItems: NewsItem[];
   calendarEvents: CalendarEvent[];
+  capturedAt?: string;
+  sourceStatuses?: NewsSourceStatus[];
+  marketState?: MarketIntelligence;
 }
 
 function normalizeForCitationMatch(s: string): string {

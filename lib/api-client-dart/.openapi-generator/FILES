@@ -69,6 +69,7 @@ doc/FundamentalContext.md
 doc/FundamentalDrift.md
 doc/FundamentalDriftCitation.md
 doc/FundamentalNewsItem.md
+doc/FundamentalNewsSource.md
 doc/HealthApi.md
 doc/HealthStatus.md
 doc/JournalEntry.md
@@ -78,6 +79,9 @@ doc/JournalSentiment.md
 doc/JournalStats.md
 doc/JournalStatsTotals.md
 doc/LoginBody.md
+doc/MarketIntelligence.md
+doc/MarketIntelligenceResponse.md
+doc/MarketIntelligenceTechnical.md
 doc/MessageResponse.md
 doc/MirrorGatedInsight.md
 doc/MirrorGroupStat.md
@@ -243,6 +247,7 @@ lib/src/model/fundamental_context.dart
 lib/src/model/fundamental_drift.dart
 lib/src/model/fundamental_drift_citation.dart
 lib/src/model/fundamental_news_item.dart
+lib/src/model/fundamental_news_source.dart
 lib/src/model/health_status.dart
 lib/src/model/journal_entry.dart
 lib/src/model/journal_entry_list.dart
@@ -251,6 +256,9 @@ lib/src/model/journal_sentiment.dart
 lib/src/model/journal_stats.dart
 lib/src/model/journal_stats_totals.dart
 lib/src/model/login_body.dart
+lib/src/model/market_intelligence.dart
+lib/src/model/market_intelligence_response.dart
+lib/src/model/market_intelligence_technical.dart
 lib/src/model/message_response.dart
 lib/src/model/mirror_gated_insight.dart
 lib/src/model/mirror_group_stat.dart
@@ -319,4 +327,3 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/standard_trading_rule_text_test.dart

@@ -81,6 +81,7 @@ Class | Method | HTTP request | Description
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisAlerts**](doc/AnalysesApi.md#getanalysisalerts) | **GET** /analyses/{id}/alerts | Get price-alert status for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisOutcomesSummary**](doc/AnalysesApi.md#getanalysisoutcomessummary) | **GET** /analyses/outcomes-summary | AI trade-plan outcome roll-up over the last 30 days
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisQuota**](doc/AnalysesApi.md#getanalysisquota) | **GET** /analyses/quota | Get current user&#39;s analysis quota usage
+[*AnalysesApi*](doc/AnalysesApi.md) | [**getMarketIntelligence**](doc/AnalysesApi.md#getmarketintelligence) | **GET** /analyses/{id}/market-intelligence | Recheck live market conditions for a saved analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getPersonalAnalytics**](doc/AnalysesApi.md#getpersonalanalytics) | **GET** /analyses/personal-analytics | Get personal analytics data
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getRecentInstruments**](doc/AnalysesApi.md#getrecentinstruments) | **GET** /analyses/recent-instruments | Get 3 most recently analyzed instruments
 [*AnalysesApi*](doc/AnalysesApi.md) | [**listAnalyses**](doc/AnalysesApi.md#listanalyses) | **GET** /analyses | List user&#39;s analyses with filters
@@ -213,6 +214,7 @@ Class | Method | HTTP request | Description
  - [FundamentalDrift](doc/FundamentalDrift.md)
  - [FundamentalDriftCitation](doc/FundamentalDriftCitation.md)
  - [FundamentalNewsItem](doc/FundamentalNewsItem.md)
+ - [FundamentalNewsSource](doc/FundamentalNewsSource.md)
  - [HealthStatus](doc/HealthStatus.md)
  - [JournalEntry](doc/JournalEntry.md)
  - [JournalEntryList](doc/JournalEntryList.md)
@@ -221,6 +223,9 @@ Class | Method | HTTP request | Description
  - [JournalStats](doc/JournalStats.md)
  - [JournalStatsTotals](doc/JournalStatsTotals.md)
  - [LoginBody](doc/LoginBody.md)
+ - [MarketIntelligence](doc/MarketIntelligence.md)
+ - [MarketIntelligenceResponse](doc/MarketIntelligenceResponse.md)
+ - [MarketIntelligenceTechnical](doc/MarketIntelligenceTechnical.md)
  - [MessageResponse](doc/MessageResponse.md)
  - [MirrorGatedInsight](doc/MirrorGatedInsight.md)
  - [MirrorGroupStat](doc/MirrorGroupStat.md)

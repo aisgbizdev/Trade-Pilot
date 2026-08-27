@@ -15,11 +15,13 @@ import {
 } from "../lib/openai";
 import { estimateCostUsd } from "../lib/model-pricing";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
-import { getLivePriceFor } from "../lib/live-prices";
+import { getLivePriceFor, getLiveQuotes } from "../lib/live-prices";
 import {
   getRelevantNews,
+  getRelevantNewsSnapshot,
   formatNewsForPrompt,
   type NewsItem,
+  type NewsSourceStatus,
   _clearNewsmakerCache,
 } from "../lib/news";
 import { _clearYahooCache } from "../lib/news-yahoo";
@@ -42,6 +44,7 @@ import { resetDormancyStreak } from "../lib/dormancy";
 import { detectGuardrailSignals, GUARDRAIL_KINDS, type GuardrailKind } from "../lib/anti-pattern";
 import { guardrailEvents } from "@workspace/db/schema";
 import { z } from "zod";
+import { evaluateMarketIntelligence, type MarketIntelligence } from "../lib/market-intelligence";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -74,6 +77,62 @@ async function trackAiError(): Promise<void> {
 }
 
 const router = Router();
+
+async function buildMarketRecheck(analysis: AnalysisRow): Promise<{
+  fundamentalContext: FundamentalSnapshot;
+  marketState: MarketIntelligence;
+  refreshedAt: string;
+}> {
+  let freshNews: NewsItem[] = [];
+  let sourceStatuses: NewsSourceStatus[] = [];
+  let freshCalendar: CalendarEvent[] = [];
+  let livePrice: number | null = null;
+  let priceChangePercent: string | null = null;
+  let technical: { buy: number; sell: number; neutral: number } | null = null;
+
+  const indicatorTf = isSupportedIndicatorTimeframe(analysis.timeframe) ? analysis.timeframe : null;
+  await Promise.allSettled([
+    getRelevantNewsSnapshot(analysis.instrument).then((snapshot) => {
+      freshNews = snapshot.items;
+      sourceStatuses = snapshot.sourceStatuses;
+    }),
+    getRelevantCalendar(analysis.instrument).then((events) => {
+      freshCalendar = events;
+    }),
+    getLiveQuotes().then((payload) => {
+      const quote = payload.data.find((item) => item.instrument === analysis.instrument);
+      const rawPrice = quote?.price;
+      const numeric = typeof rawPrice === "number" ? rawPrice : Number(rawPrice);
+      livePrice = Number.isFinite(numeric) ? numeric : null;
+      priceChangePercent = quote?.changePercent ?? null;
+    }),
+    indicatorTf
+      ? getIndicators(analysis.instrument, indicatorTf).then((indicator) => {
+          if (indicator) technical = { ...indicator.overallSummary };
+        })
+      : Promise.resolve(),
+  ]);
+  const marketState = evaluateMarketIntelligence({
+    analysis,
+    news: freshNews,
+    sourceStatuses,
+    calendar: freshCalendar,
+    livePrice,
+    priceChangePercent,
+    technical,
+  });
+  return {
+    fundamentalContext: {
+      newsItems: freshNews,
+      calendarEvents: freshCalendar,
+      capturedAt: marketState.evaluatedAt,
+      sourceStatuses,
+      marketState,
+    },
+    marketState,
+    refreshedAt: marketState.evaluatedAt,
+  };
+}
 
 router.get("/analyses/summary", requireAuth, async (req: AuthRequest, res) => {
   const [result] = await db
@@ -1014,21 +1073,8 @@ router.post(
     // Re-fetch news + calendar — never throw on upstream failure (mirrors the
     // create-analysis path). Either feed coming back empty is treated as
     // "nothing relevant in the window", not as an error to the user.
-    let freshNews: NewsItem[] = [];
-    let freshCalendar: CalendarEvent[] = [];
-    await Promise.allSettled([
-      getRelevantNews(analysis.instrument).then((news) => {
-        freshNews = news;
-      }),
-      getRelevantCalendar(analysis.instrument).then((events) => {
-        freshCalendar = events;
-      }),
-    ]);
-
-    const freshSnapshot: FundamentalSnapshot = {
-      newsItems: freshNews,
-      calendarEvents: freshCalendar,
-    };
+    const recheck = await buildMarketRecheck(analysis);
+    const freshSnapshot = recheck.fundamentalContext;
 
     // Compute drift using the SAME matching logic that grounds the model's
     // citations at generation time, so an item that would have been
@@ -1052,7 +1098,6 @@ router.post(
       originalCitations.newsTitles.length +
       originalCitations.calendarEvents.length;
 
-    const refreshedAt = new Date();
     await db
       .update(analyses)
       .set({ fundamentalContext: freshSnapshot })
@@ -1060,7 +1105,7 @@ router.post(
 
     res.json({
       fundamentalContext: freshSnapshot,
-      refreshedAt: refreshedAt.toISOString(),
+      refreshedAt: recheck.refreshedAt,
       drift: {
         totalCitations,
         missingCitations,
@@ -1068,6 +1113,31 @@ router.post(
     });
   },
 );
+
+// Lightweight, read-only live market recheck. The detail page polls this
+// endpoint while open; it never alters the Standard Plan or submits an order.
+router.get("/analyses/:id/market-intelligence", requireAuth, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+  const [analysis] = await db
+    .select()
+    .from(analyses)
+    .where(and(eq(analyses.id, id), eq(analyses.userId, req.userId!)))
+    .limit(1);
+  if (!analysis) {
+    res.status(404).json({ error: "Analisis tidak ditemukan" });
+    return;
+  }
+  const recheck = await buildMarketRecheck(analysis);
+  res.json({
+    marketState: recheck.marketState,
+    sourceStatuses: recheck.fundamentalContext.sourceStatuses ?? [],
+    refreshedAt: recheck.refreshedAt,
+  });
+});
 
 // Price-alerts routes for task #110. The detail page's "Notify me when
 // price hits these levels" toggle drives POST (arm) / DELETE (cancel).

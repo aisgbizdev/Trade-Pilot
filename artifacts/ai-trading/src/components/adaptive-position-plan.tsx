@@ -98,6 +98,9 @@ function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, 
     case "fundamental_present": return copy.adaptive_reason_fundamental_present.replace("{news}", String(context.fundamental.newsCount)).replace("{events}", String(context.fundamental.eventCount));
     case "fundamental_clear": return copy.adaptive_reason_fundamental_clear;
     case "fundamental_unavailable": return copy.adaptive_reason_fundamental_unavailable;
+    case "live_market_caution": return "Kondisi pasar live perlu kehati-hatian; gunakan entry awal saja.";
+    case "live_scaling_hold": return "Scaling ditahan sampai harga, teknikal, dan fundamental kembali selaras.";
+    case "live_plan_invalidated": return "Pemeriksaan live menandai rencana ini tidak lagi valid.";
     case "directional_conflict": return copy.adaptive_reason_directional_conflict;
     case "staged_add_condition": return copy.adaptive_reason_staged_add_condition;
   }

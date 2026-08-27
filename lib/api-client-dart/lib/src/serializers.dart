@@ -76,6 +76,7 @@ import 'package:trade_pilot_api_client/src/model/fundamental_context.dart';
 import 'package:trade_pilot_api_client/src/model/fundamental_drift.dart';
 import 'package:trade_pilot_api_client/src/model/fundamental_drift_citation.dart';
 import 'package:trade_pilot_api_client/src/model/fundamental_news_item.dart';
+import 'package:trade_pilot_api_client/src/model/fundamental_news_source.dart';
 import 'package:trade_pilot_api_client/src/model/health_status.dart';
 import 'package:trade_pilot_api_client/src/model/journal_entry.dart';
 import 'package:trade_pilot_api_client/src/model/journal_entry_list.dart';
@@ -84,6 +85,9 @@ import 'package:trade_pilot_api_client/src/model/journal_sentiment.dart';
 import 'package:trade_pilot_api_client/src/model/journal_stats.dart';
 import 'package:trade_pilot_api_client/src/model/journal_stats_totals.dart';
 import 'package:trade_pilot_api_client/src/model/login_body.dart';
+import 'package:trade_pilot_api_client/src/model/market_intelligence.dart';
+import 'package:trade_pilot_api_client/src/model/market_intelligence_response.dart';
+import 'package:trade_pilot_api_client/src/model/market_intelligence_technical.dart';
 import 'package:trade_pilot_api_client/src/model/message_response.dart';
 import 'package:trade_pilot_api_client/src/model/mirror_gated_insight.dart';
 import 'package:trade_pilot_api_client/src/model/mirror_group_stat.dart';
@@ -215,6 +219,7 @@ part 'serializers.g.dart';
   FundamentalDrift,
   FundamentalDriftCitation,
   FundamentalNewsItem,
+  FundamentalNewsSource,
   HealthStatus,
   JournalEntry,
   JournalEntryList,
@@ -223,6 +228,9 @@ part 'serializers.g.dart';
   JournalStats,
   JournalStatsTotals,
   LoginBody,
+  MarketIntelligence,
+  MarketIntelligenceResponse,
+  MarketIntelligenceTechnical,
   MessageResponse,
   MirrorGatedInsight,
   MirrorGroupStat,
@@ -317,6 +325,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(Broadcast)]),
         () => ListBuilder<Broadcast>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FundamentalNewsSource)]),
+        () => ListBuilder<FundamentalNewsSource>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PersonalAnalyticsTopInstrumentsInner)]),

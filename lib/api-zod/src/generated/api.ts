@@ -1171,6 +1171,13 @@ export const ListAnalysesResponse = zod.object({
                   ),
                 url: zod.string().nullable(),
                 publishedAt: zod.coerce.date(),
+                sourceTier: zod
+                  .enum(["primary", "standard", "licensed"])
+                  .optional(),
+                sourceLabels: zod.array(zod.string()).optional(),
+                sourceCount: zod.number().optional(),
+                relevanceScore: zod.number().optional(),
+                impact: zod.enum(["low", "medium", "high"]).optional(),
               })
               .describe(
                 "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
@@ -1197,6 +1204,39 @@ export const ListAnalysesResponse = zod.object({
                 "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
               ),
           ),
+          capturedAt: zod.coerce.date().optional(),
+          sourceStatuses: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                label: zod.string(),
+                tier: zod.enum(["primary", "standard", "licensed"]),
+                configured: zod.boolean(),
+                available: zod.boolean(),
+              }),
+            )
+            .optional(),
+          marketState: zod
+            .object({
+              status: zod.enum([
+                "reaffirm",
+                "caution",
+                "hold_scaling",
+                "invalidate",
+              ]),
+              evaluatedAt: zod.coerce.date(),
+              reasonCodes: zod.array(zod.string()),
+              livePrice: zod.number().nullable(),
+              priceChangePercent: zod.string().nullable(),
+              technical: zod
+                .object({
+                  buy: zod.number(),
+                  sell: zod.number(),
+                  neutral: zod.number(),
+                })
+                .nullable(),
+            })
+            .optional(),
         })
         .nullish()
         .describe(
@@ -1399,6 +1439,13 @@ export const GetAnalysesSummaryResponse = zod.object({
                   ),
                 url: zod.string().nullable(),
                 publishedAt: zod.coerce.date(),
+                sourceTier: zod
+                  .enum(["primary", "standard", "licensed"])
+                  .optional(),
+                sourceLabels: zod.array(zod.string()).optional(),
+                sourceCount: zod.number().optional(),
+                relevanceScore: zod.number().optional(),
+                impact: zod.enum(["low", "medium", "high"]).optional(),
               })
               .describe(
                 "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
@@ -1425,6 +1472,39 @@ export const GetAnalysesSummaryResponse = zod.object({
                 "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
               ),
           ),
+          capturedAt: zod.coerce.date().optional(),
+          sourceStatuses: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                label: zod.string(),
+                tier: zod.enum(["primary", "standard", "licensed"]),
+                configured: zod.boolean(),
+                available: zod.boolean(),
+              }),
+            )
+            .optional(),
+          marketState: zod
+            .object({
+              status: zod.enum([
+                "reaffirm",
+                "caution",
+                "hold_scaling",
+                "invalidate",
+              ]),
+              evaluatedAt: zod.coerce.date(),
+              reasonCodes: zod.array(zod.string()),
+              livePrice: zod.number().nullable(),
+              priceChangePercent: zod.string().nullable(),
+              technical: zod
+                .object({
+                  buy: zod.number(),
+                  sell: zod.number(),
+                  neutral: zod.number(),
+                })
+                .nullable(),
+            })
+            .optional(),
         })
         .nullish()
         .describe(
@@ -1721,6 +1801,13 @@ export const GetAnalysisResponse = zod.object({
               ),
             url: zod.string().nullable(),
             publishedAt: zod.coerce.date(),
+            sourceTier: zod
+              .enum(["primary", "standard", "licensed"])
+              .optional(),
+            sourceLabels: zod.array(zod.string()).optional(),
+            sourceCount: zod.number().optional(),
+            relevanceScore: zod.number().optional(),
+            impact: zod.enum(["low", "medium", "high"]).optional(),
           })
           .describe(
             "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
@@ -1747,6 +1834,39 @@ export const GetAnalysisResponse = zod.object({
             "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
           ),
       ),
+      capturedAt: zod.coerce.date().optional(),
+      sourceStatuses: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            label: zod.string(),
+            tier: zod.enum(["primary", "standard", "licensed"]),
+            configured: zod.boolean(),
+            available: zod.boolean(),
+          }),
+        )
+        .optional(),
+      marketState: zod
+        .object({
+          status: zod.enum([
+            "reaffirm",
+            "caution",
+            "hold_scaling",
+            "invalidate",
+          ]),
+          evaluatedAt: zod.coerce.date(),
+          reasonCodes: zod.array(zod.string()),
+          livePrice: zod.number().nullable(),
+          priceChangePercent: zod.string().nullable(),
+          technical: zod
+            .object({
+              buy: zod.number(),
+              sell: zod.number(),
+              neutral: zod.number(),
+            })
+            .nullable(),
+        })
+        .optional(),
     })
     .nullish()
     .describe(
@@ -1882,6 +2002,13 @@ export const RefreshFundamentalsResponse = zod
                 ),
               url: zod.string().nullable(),
               publishedAt: zod.coerce.date(),
+              sourceTier: zod
+                .enum(["primary", "standard", "licensed"])
+                .optional(),
+              sourceLabels: zod.array(zod.string()).optional(),
+              sourceCount: zod.number().optional(),
+              relevanceScore: zod.number().optional(),
+              impact: zod.enum(["low", "medium", "high"]).optional(),
             })
             .describe(
               "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
@@ -1908,6 +2035,39 @@ export const RefreshFundamentalsResponse = zod
               "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
             ),
         ),
+        capturedAt: zod.coerce.date().optional(),
+        sourceStatuses: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              label: zod.string(),
+              tier: zod.enum(["primary", "standard", "licensed"]),
+              configured: zod.boolean(),
+              available: zod.boolean(),
+            }),
+          )
+          .optional(),
+        marketState: zod
+          .object({
+            status: zod.enum([
+              "reaffirm",
+              "caution",
+              "hold_scaling",
+              "invalidate",
+            ]),
+            evaluatedAt: zod.coerce.date(),
+            reasonCodes: zod.array(zod.string()),
+            livePrice: zod.number().nullable(),
+            priceChangePercent: zod.string().nullable(),
+            technical: zod
+              .object({
+                buy: zod.number(),
+                sell: zod.number(),
+                neutral: zod.number(),
+              })
+              .nullable(),
+          })
+          .optional(),
       })
       .describe("Snapshot of fundamental inputs the AI saw at analysis time."),
     refreshedAt: zod.coerce
@@ -1940,10 +2100,60 @@ export const RefreshFundamentalsResponse = zod
       .describe(
         "Summary of how many of the AI's original fundamental citations are no longer present in the freshly-fetched window.",
       ),
+    marketState: zod.object({
+      status: zod.enum(["reaffirm", "caution", "hold_scaling", "invalidate"]),
+      evaluatedAt: zod.coerce.date(),
+      reasonCodes: zod.array(zod.string()),
+      livePrice: zod.number().nullable(),
+      priceChangePercent: zod.string().nullable(),
+      technical: zod
+        .object({
+          buy: zod.number(),
+          sell: zod.number(),
+          neutral: zod.number(),
+        })
+        .nullable(),
+    }),
   })
   .describe(
     "Response from POST \/analyses\/{id}\/refresh-fundamentals — the freshly-fetched fundamental snapshot plus a drift report against the AI's original citations.",
   );
+
+/**
+ * Read-only evaluation of live price, technical state, calendar and multi-source news. It never changes a Standard Plan or executes trades.
+
+ * @summary Recheck live market conditions for a saved analysis
+ */
+export const GetMarketIntelligenceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetMarketIntelligenceResponse = zod.object({
+  marketState: zod.object({
+    status: zod.enum(["reaffirm", "caution", "hold_scaling", "invalidate"]),
+    evaluatedAt: zod.coerce.date(),
+    reasonCodes: zod.array(zod.string()),
+    livePrice: zod.number().nullable(),
+    priceChangePercent: zod.string().nullable(),
+    technical: zod
+      .object({
+        buy: zod.number(),
+        sell: zod.number(),
+        neutral: zod.number(),
+      })
+      .nullable(),
+  }),
+  sourceStatuses: zod.array(
+    zod.object({
+      id: zod.string(),
+      label: zod.string(),
+      tier: zod.enum(["primary", "standard", "licensed"]),
+      configured: zod.boolean(),
+      available: zod.boolean(),
+    }),
+  ),
+  refreshedAt: zod.coerce.date(),
+});
 
 /**
  * Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the "Alerts: ON · N levels armed" indicator on the analysis-detail page.
@@ -2862,6 +3072,13 @@ export const GetAllAnalysesResponse = zod.object({
                   ),
                 url: zod.string().nullable(),
                 publishedAt: zod.coerce.date(),
+                sourceTier: zod
+                  .enum(["primary", "standard", "licensed"])
+                  .optional(),
+                sourceLabels: zod.array(zod.string()).optional(),
+                sourceCount: zod.number().optional(),
+                relevanceScore: zod.number().optional(),
+                impact: zod.enum(["low", "medium", "high"]).optional(),
               })
               .describe(
                 "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
@@ -2888,6 +3105,39 @@ export const GetAllAnalysesResponse = zod.object({
                 "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
               ),
           ),
+          capturedAt: zod.coerce.date().optional(),
+          sourceStatuses: zod
+            .array(
+              zod.object({
+                id: zod.string(),
+                label: zod.string(),
+                tier: zod.enum(["primary", "standard", "licensed"]),
+                configured: zod.boolean(),
+                available: zod.boolean(),
+              }),
+            )
+            .optional(),
+          marketState: zod
+            .object({
+              status: zod.enum([
+                "reaffirm",
+                "caution",
+                "hold_scaling",
+                "invalidate",
+              ]),
+              evaluatedAt: zod.coerce.date(),
+              reasonCodes: zod.array(zod.string()),
+              livePrice: zod.number().nullable(),
+              priceChangePercent: zod.string().nullable(),
+              technical: zod
+                .object({
+                  buy: zod.number(),
+                  sell: zod.number(),
+                  neutral: zod.number(),
+                })
+                .nullable(),
+            })
+            .optional(),
         })
         .nullish()
         .describe(
