@@ -189,7 +189,10 @@ describe("computePerformanceSummary", () => {
   });
 
   it("fires `warn` banner when the last 7d hit-rate is >=15pp below the 30d baseline", async () => {
-    const now = new Date("2026-08-01T12:00:00Z");
+    // Banner statistics aggregate every user's resolved analyses. Use an
+    // isolated future window so unrelated development data cannot dilute the
+    // deliberately large recent-vs-baseline gap below.
+    const now = new Date("2099-08-01T12:00:00Z");
     const userId = await createUser();
     // Baseline (15 wins in days 8-29) plus a rough recent week (3 wins, 12 losses in last 5 days).
     for (let i = 0; i < 15; i++) {
