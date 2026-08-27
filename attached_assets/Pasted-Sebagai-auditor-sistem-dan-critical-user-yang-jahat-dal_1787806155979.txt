@@ -1,0 +1,66 @@
+Sebagai auditor sistem dan *critical user* yang jahat (dalam artian tidak gampang percaya dan menolak fitur yang cuma jualan "gimmick AI"), saya melihat diskusi di atas masih terlalu **idealistis dan penuh asumsi manis**.
+
+AI bawaan platform cenderung mengiyakan semua ide awal karena terdengar keren di atas kertas. Namun, begitu masuk ke dunia nyata (*real-market trading*), ide-ide ini punya **celah fatal** yang bisa menghancurkan *user experience* dan mengundang masalah legalitas/kepercayaan.
+
+Berikut adalah audit kritis, blind spots, dan rekomendasi perbaikan ekstrem sebelum kamu mulai *coding*.
+
+---
+
+**Audit Kritis & Blind Spots Utama**
+
+* **1. "Adaptive Position Ladder" (Martingale Halus) = Bom Waktu Psikologis & Margin Call**
+* **Kritik:** Mau diubah namanya jadi *Adaptive Position Plan* atau apapun, dasarnya tetaplah *averaging down* / *martingale*. Jika pasar *trending* kuat melawan *thesis* (misal: Gold *breakout* isu perang/inflasi), 4 level ladder ini akan terisi semua dengan sangat cepat.
+* **Celah:** Jika AI memblokir Level 3/4 di tengah jalan (*"Risk capacity tidak cukup"*), user justru akan terjebak dalam posisi *floating loss* besar dengan margin pas-pasan tanpa ada *exit plan* yang jelas. Ini lebih buruk daripada *cut loss* dari awal.
+
+
+* **2. Fitur "Cek Kecukupan Modal" Cenderung Bias Ke Broker/Deposit**
+* **Kritik:** Menampilkan pesan *"Kebutuhan modal estimated $2,400 (kurang $1,400)"* secara tidak langsung bertindak seperti salesman deposit.
+* **Celah:** Jika user nekat menambah dana karena angka rekomendasi AI, lalu akunnya tetap *margin call* karena pasar melesat terus, **siapa yang disalahkan?** Trade Pilot akan dicap sebagai aplikasi yang menjebak user untuk terus *top-up*.
+
+
+* **3. "Instrument Discovery" yang Terlalu Subjektif**
+* **Kritik:** Mengklaim AI bisa mencarikan instrumen yang "cocok" berdasarkan kondisi pasar saat itu sangat berisiko.
+* **Celah:** Volatilitas Gold dan Oil berganti status (*regime shift*) dalam hitungan menit akibat *newsflash*. AI yang menganalisis data 5 menit lalu bisa merekomendasikan instrumen yang 5 menit kemudian jadi sangat bahaya.
+
+
+
+---
+
+**Filter & Proteksi yang Harus Ditambahkan (Strict Constraints)**
+
+Agar fitur ini benar-benar tangguh dan transparan, jangan biarkan AI memberikan opsi tanpa **Batasan Keras (Hard Boundaries)**:
+
+**1. Re-evaluation Gate Sebelum Level Ladder Dibuka**
+
+* Jangan cuma mengandalkan "kapasitas risiko akun". Tambahkan **Invalidation Time Limits** dan **Volatility Spike Filter**.
+* *Aturan:* Jika volatilitas (*ATR*) melonjak lebih dari 150% dalam 1 jam terakhir atau ada *high-impact news* dalam 30 menit ke depan, sistem **wajib membekukan (lock)** semua level ladder berikutnya, terlepas dari seberapa besarnya modal user.
+
+**2. Opsi "Hard Cut Loss" di Semua Mode**
+
+* Pada mode *Adaptive Ladder*, harus tetap ada **Global Hard Stop Loss** (Max Drawdown Limit per Sesi/Cycle) dalam bentuk nominal Dolar atau % Equity (misal: Max rugi $150 dari total 4 level).
+* Jangan pernah biarkan posisi ladder melayang (*floating*) tanpa jangkar kerugian maksimal.
+
+**3. Transparansi Kalkulasi & Fitur "Simulasi Kehancuran" (Stress Test)**
+
+* Saat user memasukkan dana $1,000 dan memilih 4 level ladder, UI jangan cuma menampilkan *Estimated Requirement*.
+* Tampilkan panel **"Worst-Case Scenario"**: *"Jika 4 level tersentuh dan hit Stop Loss, akun Anda berkurang X% ($Y). Akun Anda hanya kuat menahan pergerakan harga sebesar Z pips."* Ini memaksa user sadar risiko realistisnya.
+
+**4. Penyesuaian Fitur "Kekurangan Modal"**
+
+* Alih-alih bilang *"Modal Anda Kurang $1,400"*, balik pendekatannya menjadi **Downscaling Otomatis**:
+* *"Dengan modal $1,000, struktur 4 level tidak aman. Sistem menyarankan menurunkan ukuran Lot menjadi 0.01 atau mengurangi jumlah level menjadi 2 level saja."*
+* Fokus utama sistem adalah **menyesuaikan strategi ke modal yang ada**, bukan menyesuaikan modal ke strategi yang rakus.
+
+
+
+---
+
+**Rekomendasi Roadmap Modifikasi Fitur**
+
+| Fitur | Pendekatan Ideal (AI "Iya-Iya Saja") | Pendekatan Auditor (Realistis & Aman) |
+| --- | --- | --- |
+| **Position Plan** | Menghitung zona entry L1-L4 berdasarkan teknikal & fundamental. | Wajib melampirkan **Global Invalidation Price** (jika tembus, semua ladder batal & auto close) + Stress Test. |
+| **Capital Check** | Menghitung *shortfall* modal & memberi opsi tambah dana/ubah mode. | **Hard Cap Auto-Adjust**: Otomatis mengecilkan lot size sampai sesuai dana $1,000 user. Mengubah opsi dari "Tambah Dana" ke "Kecilkan Risiko". |
+| **Instrument Discovery** | Merekomendasikan Gold/Oil berdasarkan tren terbaik. | Menampilkan **Risk Rating Instan** (misal: Gold = *High Volatility / Event Risk High*). Menyarankan instrumen yang *paling tenang* jika ekuitas user kecil. |
+
+Apakah pendekatan kritis seperti ini yang kamu harapkan untuk memperketat logika aplikasi sebelum masuk ke tahap pembuatan fitur?
