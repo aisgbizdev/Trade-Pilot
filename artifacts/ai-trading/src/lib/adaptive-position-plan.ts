@@ -2,6 +2,7 @@ import type { TradePlan, TradeSide } from "@workspace/api-client-react";
 
 export type AdaptiveMarket = "gold" | "brent";
 export type AccountTier = "micro" | "mini" | "regular";
+export type AdaptiveRiskPreference = "safe" | "balanced" | "active";
 
 export interface AdaptiveRule {
   market: AdaptiveMarket;
@@ -55,18 +56,28 @@ export interface AdaptivePositionPlanResult {
   sell: AdaptiveSidePositionPlan | null;
 }
 
+export interface AdaptivePlanRecommendation {
+  result: AdaptivePositionPlanResult;
+  recommendation: {
+    initialLot: number;
+    levels: number;
+    marginBudget: number;
+    maximumLoss: number;
+  } | null;
+}
+
 const MARKET_RULES: Record<AdaptiveMarket, AdaptiveRule> = {
   gold: {
     market: "gold",
     label: "Gold",
-    contractSize: 100,
+    contractSize: 10,
     minMovement: 0.01,
     maxGapPercent: 1,
   },
   brent: {
     market: "brent",
     label: "Brent Oil",
-    contractSize: 1000,
+    contractSize: 100,
     minMovement: 0.01,
     maxGapPercent: 2,
   },
@@ -76,6 +87,16 @@ const TIER_RANGES: Record<AccountTier, { min: number; max: number | null }> = {
   micro: { min: 0.01, max: 0.09 },
   mini: { min: 0.1, max: 0.9 },
   regular: { min: 1, max: null },
+};
+
+const RECOMMENDATION_PROFILES: Record<AdaptiveRiskPreference, {
+  levels: number;
+  marginUsage: number;
+  riskBudget: number;
+}> = {
+  safe: { levels: 1, marginUsage: 0.5, riskBudget: 0.1 },
+  balanced: { levels: 2, marginUsage: 0.65, riskBudget: 0.15 },
+  active: { levels: 3, marginUsage: 0.75, riskBudget: 0.2 },
 };
 
 function marketForInstrument(instrument: string): AdaptiveMarket | null {
@@ -275,5 +296,106 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     assumptions,
     buy,
     sell,
+  };
+}
+
+/**
+ * Builds a practical position-size recommendation from the user's available
+ * margin and the entry/stop levels already produced by the AI analysis.
+ * The risk cap is expressed as a portion of the margin reserved for this plan,
+ * so the UI does not need to ask beginners for equity, tiers, or lot math.
+ */
+export function buildAdaptivePlanRecommendation({
+  instrument,
+  tradePlan,
+  availableMargin,
+  marginPerLot,
+  preference,
+}: {
+  instrument: string;
+  tradePlan: TradePlan;
+  availableMargin: number | null;
+  marginPerLot: number | null;
+  preference: AdaptiveRiskPreference;
+}): AdaptivePlanRecommendation {
+  const market = marketForInstrument(instrument);
+  if (availableMargin == null || availableMargin <= 0) {
+    return {
+      result: {
+        valid: false,
+        market,
+        rule: market ? MARKET_RULES[market] : null,
+        errors: ["Available margin is required."],
+        assumptions: [],
+        buy: null,
+        sell: null,
+      },
+      recommendation: null,
+    };
+  }
+  if (marginPerLot == null || marginPerLot <= 0) {
+    return {
+      result: {
+        valid: false,
+        market,
+        rule: market ? MARKET_RULES[market] : null,
+        errors: ["Standard margin rules are unavailable."],
+        assumptions: [],
+        buy: null,
+        sell: null,
+      },
+      recommendation: null,
+    };
+  }
+
+  const profile = RECOMMENDATION_PROFILES[preference];
+  const marginBudget = availableMargin * profile.marginUsage;
+  const maximumLoss = Math.max(availableMargin * profile.riskBudget, 1);
+  // The low-level calculator uses a percent-of-equity guardrail. Supplying a
+  // normalized equity here gives it the same absolute loss ceiling without
+  // requiring the user to enter a separate equity figure.
+  const normalizedEquity = maximumLoss * 50;
+
+  let fallback: AdaptivePositionPlanResult | null = null;
+  for (let units = 90; units >= 1; units -= 1) {
+    const initialLot = units / 100;
+    const accountTier: AccountTier = initialLot < 0.1 ? "micro" : "mini";
+    const result = buildAdaptivePositionPlan({
+      instrument,
+      tradePlan,
+      equity: normalizedEquity,
+      freeMargin: marginBudget,
+      existingExposure: 0,
+      marginPerLot,
+      initialLot,
+      accountTier,
+      levels: profile.levels,
+      maxCycleLossPercent: 2,
+    });
+    fallback ??= result;
+    if (result.valid) {
+      return {
+        result,
+        recommendation: {
+          initialLot,
+          levels: profile.levels,
+          marginBudget,
+          maximumLoss,
+        },
+      };
+    }
+  }
+
+  return {
+    result: fallback ?? {
+      valid: false,
+      market,
+      rule: market ? MARKET_RULES[market] : null,
+      errors: ["No safe position size is available."],
+      assumptions: [],
+      buy: null,
+      sell: null,
+    },
+    recommendation: null,
   };
 }

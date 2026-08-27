@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TradePlan } from "@workspace/api-client-react";
-import { buildAdaptivePositionPlan } from "./adaptive-position-plan";
+import { buildAdaptivePlanRecommendation, buildAdaptivePositionPlan } from "./adaptive-position-plan";
 
 const TRADE_PLAN: TradePlan = {
   preferredSide: "buy",
@@ -36,6 +36,23 @@ const VALID_INPUT = {
 };
 
 describe("buildAdaptivePositionPlan", () => {
+  it("creates a safe recommendation from available margin without account-form inputs", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 1_000,
+      preference: "balanced",
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.recommendation).toMatchObject({
+      levels: 2,
+      marginBudget: 65_000,
+    });
+    expect(recommendation.recommendation?.initialLot).toBeGreaterThan(0);
+  });
+
   it("builds independent buy and sell ladders without changing Standard Plan levels", () => {
     const result = buildAdaptivePositionPlan(VALID_INPUT);
 
