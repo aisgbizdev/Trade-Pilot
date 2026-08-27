@@ -1,17 +1,17 @@
 kind = "design"
-previewPath = "/__mockup"
-title = "Canvas"
+previewPath = "/legacy-trade-pilot-mockup"
+title = "Legacy Canvas (disabled)"
 version = "1.0.0"
 id = "XegfDyZt7HqfW2Bb8Ghoy"
 
 [[services]]
-localPort = 8081
-name = "Component Preview Server"
-paths = ["/__mockup"]
+localPort = 18081
+name = "Legacy Component Preview Server"
+paths = ["/legacy-trade-pilot-mockup"]
 
 [services.env]
-PORT = "8081"
-BASE_PATH = "/__mockup"
+PORT = "18081"
+BASE_PATH = "/legacy-trade-pilot-mockup"
 
 [services.development]
-run = "pnpm --filter @workspace/mockup-sandbox run dev"
+run = "echo 'Legacy duplicate artifact is disabled'"
