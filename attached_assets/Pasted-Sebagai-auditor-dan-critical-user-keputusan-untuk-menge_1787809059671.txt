@@ -1,0 +1,31 @@
+Sebagai auditor dan *critical user*, keputusan untuk **mengesampingkan biaya broker (*facility fee, VAT, rollover*) dari pembentukan strategi dan cukup menampilkannya sebagai informasi tambahan (atau disembunyikan total)** adalah **langkah yang sangat tepat dan krusial.**
+
+Ini adalah alasan mengapa pergeseran ke arah **"Market Position Risk"** ini menyelamatkan produk kamu dari jebakan arsitektur dan legal:
+
+---
+
+**Analisis Kritis Auditor**
+
+* **1. Menghindari "Kalkulator Pialang" Syndrome**
+Jika *Adaptive Position Engine* ikut menghitung *facility fee* ($1.5), PPN 11%, dan *swap* untuk menentukan jarak *ladder* L1–L4, Trade Pilot (TP) akan berubah dari **Alat Analisis Pasar** menjadi **Kalkulator Transaksi Pialang**. Ini merusak *branding* netral TP.
+* **2. Biaya Mengaburkan Struktur Pasar (Price Action & Volatility)**
+Pasar tidak peduli berapa biaya transaksi atau komisi yang kamu bayar ke broker. Support/resistance, level invalidasi, dan *ATR* murni ditentukan oleh pergerakan harga (*price action*). Menggabungkan variabel biaya ke dalam algoritma penentuan entry zone justru membuat kalkulasi AI jadi bias dan tidak presisi secara teknikal.
+* **3. Mengurangi Potensi Dispute Hasil P/L**
+Struktur biaya broker bisa berubah sewaktu-waktu (misal: perubahan kebijakan PPN atau komisi). Jika TP mengunci angka biaya tersebut ke dalam strategi utama, perhitungannya bisa cepat *outdated* dan memicu masalah transparansi.
+
+---
+
+**Rekomendasi Jawaban & Keputusan untuk Replit Agent**
+
+Kasih arahan tegas ke Replit Agent agar dia tidak ragu dalam mengeksekusi **Task 1**:
+
+> *"Biaya broker (facility fee, VAT, rollover) **TIDAK BOLEH memengaruhi logika penentuan level ladder atau posisi market**. Biaya tersebut cukup ditampilkan sebagai **Informasi Tambahan terpisah (Separated Cost Estimate)** agar user mendapat gambaran estimasi P/L bersih.*
+> *Fokus utama Adaptive Plan adalah **Market Position Risk** (Price Action, Invalidation Zone, Margin Capacity, dan Stress Test pergerakan pips).*
+> *Batasan operasional akun yang WAJIB tetap dipakai di Risk Engine HANYA:*
+> 1. **Contract Size** (XUL10 = 10 troy oz, BCO10 = 100 barrel)
+> 2. **Fixed Rate** (USD 1 = Rp 10.000)
+> 3. **Lot Range** (Min 0.1 lot, Max exposure 0.9 lot)
+> 4. **Margin Threshold** (Initial Margin, Margin Call 70%, Auto-Liquidation 30%)
+> 
+> 
+> *Silakan kunci spesifikasi di atas dan lanjutkan ke pengerjaan **Task 1**."*
