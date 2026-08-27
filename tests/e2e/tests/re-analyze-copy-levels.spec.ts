@@ -71,6 +71,7 @@ async function signIn(page: Page, user: TestUser) {
 //   log-trade-button-flip.spec → 9_999_980
 const STUB_ID_RE_ANALYZE = 9_999_970;
 const STUB_ID_COPY_LEVELS = 9_999_960;
+const STUB_ID_STANDARD_REGRESSION = 9_999_950;
 
 function buildStubAnalysis(id: number) {
   const now = new Date();
@@ -271,5 +272,42 @@ test.describe("Copy Levels button (real Chromium + stubbed analysis)", () => {
 
     // 5. After ~2 s the button reverts to "Copy levels" / "Salin level".
     await expect(copyBuyBtn).toContainText(/Copy levels|Salin level/, { timeout: 4_000 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () => {
+  test("shows the unchanged Standard Buy/Sell levels without selecting Adaptive Plan", async ({
+    page,
+    baseURL,
+  }) => {
+    const stubAnalysis = buildStubAnalysis(STUB_ID_STANDARD_REGRESSION);
+    const user = await registerUser(baseURL!, "standard-regression");
+    await signIn(page, user);
+    await reachDetailPage(page, STUB_ID_STANDARD_REGRESSION, stubAnalysis);
+
+    await expect(page.getByTestId("card-trade-plan")).toBeVisible();
+    await expect(page.getByTestId("trade-plan-buy")).toBeVisible();
+    await expect(page.getByTestId("trade-plan-sell")).toBeVisible();
+    await expect(page.getByTestId("trade-plan-buy-entry")).toHaveText("2350.0");
+    await expect(page.getByTestId("trade-plan-buy-sl")).toHaveText("2345.0");
+    await expect(page.getByTestId("trade-plan-buy-tp1")).toHaveText("2358.0");
+    await expect(page.getByTestId("trade-plan-buy-tp2")).toHaveText("2365.0");
+    await expect(page.getByTestId("trade-plan-sell-entry")).toHaveText("2362.0");
+    await expect(page.getByTestId("trade-plan-sell-sl")).toHaveText("2368.0");
+    await expect(page.getByTestId("trade-plan-sell-tp1")).toHaveText("2354.0");
+    await expect(page.getByTestId("trade-plan-sell-tp2")).toHaveText("2346.0");
+
+    // Adaptive is opt-in. Merely loading Standard Analysis must not calculate
+    // or persist a ladder, and the Standard card remains the only plan state.
+    await expect(page.getByTestId("button-toggle-adaptive-plan")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-valid")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-plan-invalid")).toHaveCount(0);
+    const adaptiveStorage = await page.evaluate(
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:${analysisId}`),
+      STUB_ID_STANDARD_REGRESSION,
+    );
+    expect(adaptiveStorage).toBeNull();
   });
 });

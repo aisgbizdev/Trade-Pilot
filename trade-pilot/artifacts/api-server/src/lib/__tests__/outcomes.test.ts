@@ -155,4 +155,38 @@ describe("evaluateOutcome", () => {
     );
     expect(r.status).toBe("tp2_hit");
   });
+
+  it("scores only the Standard Plan when an Adaptive ladder is present", () => {
+    const adaptiveOnlyData = {
+      ...plan,
+      adaptivePlan: {
+        buy: {
+          ladder: [{ level: 1, price: 90, lot: 99 }],
+        },
+        sell: {
+          ladder: [{ level: 1, price: 110, lot: 99 }],
+        },
+      },
+    };
+
+    const standardResult = evaluateOutcome(
+      "buy",
+      plan,
+      [bar("2026-01-01T01:00:00Z", 106, 99)],
+      start,
+      validUntil,
+      validUntil + 1000,
+    );
+    const resultWithAdaptiveData = evaluateOutcome(
+      "buy",
+      adaptiveOnlyData,
+      [bar("2026-01-01T01:00:00Z", 106, 99)],
+      start,
+      validUntil,
+      validUntil + 1000,
+    );
+
+    expect(resultWithAdaptiveData).toEqual(standardResult);
+    expect(resultWithAdaptiveData.status).toBe("tp1_hit");
+  });
 });
