@@ -122,6 +122,12 @@ import 'package:trade_pilot_api_client/src/model/reset_token_response.dart';
 import 'package:trade_pilot_api_client/src/model/reset_user_password_body.dart';
 import 'package:trade_pilot_api_client/src/model/security_question_response.dart';
 import 'package:trade_pilot_api_client/src/model/set_analysis_note_request.dart';
+import 'package:trade_pilot_api_client/src/model/standard_trading_rule_account.dart';
+import 'package:trade_pilot_api_client/src/model/standard_trading_rule_instrument.dart';
+import 'package:trade_pilot_api_client/src/model/standard_trading_rule_instrument_trading_hours.dart';
+import 'package:trade_pilot_api_client/src/model/standard_trading_rule_text.dart';
+import 'package:trade_pilot_api_client/src/model/standard_trading_rules.dart';
+import 'package:trade_pilot_api_client/src/model/standard_trading_rules_fixed_rate.dart';
 import 'package:trade_pilot_api_client/src/model/tags_list.dart';
 import 'package:trade_pilot_api_client/src/model/trade_plan.dart';
 import 'package:trade_pilot_api_client/src/model/trade_side.dart';
@@ -255,6 +261,12 @@ part 'serializers.g.dart';
   ResetUserPasswordBody,
   SecurityQuestionResponse,
   SetAnalysisNoteRequest,
+  StandardTradingRuleAccount,
+  StandardTradingRuleInstrument,
+  StandardTradingRuleInstrumentTradingHours,
+  StandardTradingRuleText,
+  StandardTradingRules,
+  StandardTradingRulesFixedRate,
   TagsList,
   TradePlan,
   TradeSide,
@@ -289,6 +301,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OutboundClickStatsByPlacementInner)]),
         () => ListBuilder<OutboundClickStatsByPlacementInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StandardTradingRuleInstrument)]),
+        () => ListBuilder<StandardTradingRuleInstrument>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsUsageStatsDeviceBreakdownInner)]),

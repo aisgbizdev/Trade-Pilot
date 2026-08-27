@@ -140,6 +140,7 @@ Class | Method | HTTP request | Description
 [*TradeJournalApi*](doc/TradeJournalApi.md) | [**listJournalEntries**](doc/TradeJournalApi.md#listjournalentries) | **GET** /journal | List the current user&#39;s trade journal entries with optional filters
 [*TradeJournalApi*](doc/TradeJournalApi.md) | [**updateJournalEntry**](doc/TradeJournalApi.md#updatejournalentry) | **PATCH** /journal/{id} | Update an existing journal entry (e.g. close out an open trade)
 [*TraderMirrorApi*](doc/TraderMirrorApi.md) | [**getTraderMirrorInsights**](doc/TraderMirrorApi.md#gettradermirrorinsights) | **GET** /mirror/insights | Behavioural insights about the caller as a trader (task
+[*TradingRulesApi*](doc/TradingRulesApi.md) | [**getStandardTradingRules**](doc/TradingRulesApi.md#getstandardtradingrules) | **GET** /trading-rules/standard | Get the fixed TP Standard Trading Rules
 [*UserPriceAlertsApi*](doc/UserPriceAlertsApi.md) | [**createUserPriceAlert**](doc/UserPriceAlertsApi.md#createuserpricealert) | **POST** /user-price-alerts | Create a new price alert for an instrument
 [*UserPriceAlertsApi*](doc/UserPriceAlertsApi.md) | [**deleteUserPriceAlert**](doc/UserPriceAlertsApi.md#deleteuserpricealert) | **DELETE** /user-price-alerts/{id} | Delete one of the user&#39;s price alerts
 [*UserPriceAlertsApi*](doc/UserPriceAlertsApi.md) | [**listUserPriceAlerts**](doc/UserPriceAlertsApi.md#listuserpricealerts) | **GET** /user-price-alerts | List the current user&#39;s price alerts (active + recently triggered)
@@ -258,6 +259,12 @@ Class | Method | HTTP request | Description
  - [ResetUserPasswordBody](doc/ResetUserPasswordBody.md)
  - [SecurityQuestionResponse](doc/SecurityQuestionResponse.md)
  - [SetAnalysisNoteRequest](doc/SetAnalysisNoteRequest.md)
+ - [StandardTradingRuleAccount](doc/StandardTradingRuleAccount.md)
+ - [StandardTradingRuleInstrument](doc/StandardTradingRuleInstrument.md)
+ - [StandardTradingRuleInstrumentTradingHours](doc/StandardTradingRuleInstrumentTradingHours.md)
+ - [StandardTradingRuleText](doc/StandardTradingRuleText.md)
+ - [StandardTradingRules](doc/StandardTradingRules.md)
+ - [StandardTradingRulesFixedRate](doc/StandardTradingRulesFixedRate.md)
  - [TagsList](doc/TagsList.md)
  - [TradePlan](doc/TradePlan.md)
  - [TradeSide](doc/TradeSide.md)

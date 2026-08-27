@@ -24,6 +24,7 @@ import 'package:trade_pilot_api_client/src/api/storage_api.dart';
 import 'package:trade_pilot_api_client/src/api/superadmin_api.dart';
 import 'package:trade_pilot_api_client/src/api/trade_journal_api.dart';
 import 'package:trade_pilot_api_client/src/api/trader_mirror_api.dart';
+import 'package:trade_pilot_api_client/src/api/trading_rules_api.dart';
 import 'package:trade_pilot_api_client/src/api/user_price_alerts_api.dart';
 import 'package:trade_pilot_api_client/src/api/watchlist_api.dart';
 
@@ -209,6 +210,12 @@ class TradePilotApiClient {
   /// by doing that all interceptors will not be executed
   TraderMirrorApi getTraderMirrorApi() {
     return TraderMirrorApi(dio, serializers);
+  }
+
+  /// Get TradingRulesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  TradingRulesApi getTradingRulesApi() {
+    return TradingRulesApi(dio, serializers);
   }
 
   /// Get UserPriceAlertsApi instance, base route and serializer can be overridden by a given but be careful,

@@ -15,6 +15,71 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * Broker-neutral disclosure for the single TP Standard Trading Rules definition. This endpoint intentionally has no broker selector.
+ * @summary Get the fixed TP Standard Trading Rules
+ */
+export const GetStandardTradingRulesResponse = zod
+  .object({
+    name: zod.string(),
+    version: zod.string(),
+    effectiveDate: zod.coerce.date(),
+    sourceDocument: zod.string(),
+    fixedRate: zod.object({
+      usd: zod.number(),
+      idr: zod.number(),
+      label: zod.string(),
+    }),
+    account: zod.object({
+      minimumDepositUsd: zod.number(),
+      minimumLot: zod.number(),
+      maximumLot: zod.number(),
+      maintenanceMarginPercent: zod.number(),
+      marginCallBelowPercent: zod.number(),
+      marginCallRestorePercent: zod.number(),
+      autoLiquidationAtOrBelowPercent: zod.number(),
+      equityReviewThresholdUsd: zod.number(),
+      equityReviewThresholdIdr: zod.number(),
+    }),
+    transactionFormula: zod.string(),
+    instruments: zod.array(
+      zod.object({
+        code: zod.enum(["XUL10", "BCO10_BBJ"]),
+        product: zod.string(),
+        contractSize: zod.number(),
+        contractUnit: zod.enum(["troy ounce", "barrel"]),
+        tradingDays: zod.string(),
+        tradingHours: zod.object({
+          summer: zod.string(),
+          winter: zod.string(),
+        }),
+        initialMarginUsdPerLot: zod.number(),
+        facilityFeeUsdPerLotPerSide: zod.number(),
+        vatPercent: zod.number(),
+        rolloverUsdPerLotPerNight: zod.number(),
+        priceSource: zod.string(),
+        priceGuidance: zod.string(),
+        minimumSpread: zod.string(),
+        maximumSpread: zod.string(),
+        hecticSpread: zod.string(),
+        minimumPriceMovement: zod.string(),
+        limitStopRange: zod.string(),
+        deliveryBy: zod.string(),
+      }),
+    ),
+    disclaimer: zod.object({
+      id: zod.string(),
+      en: zod.string(),
+    }),
+    relationshipDisclosure: zod.object({
+      id: zod.string(),
+      en: zod.string(),
+    }),
+  })
+  .describe(
+    "The single broker-neutral ruleset used for TP Standard Trading Rules estimates.",
+  );
+
+/**
  * @summary Register new user
  */
 export const registerBodyPasswordMin = 6;

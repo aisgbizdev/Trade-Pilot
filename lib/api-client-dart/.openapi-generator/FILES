@@ -120,6 +120,12 @@ doc/ResetTokenResponse.md
 doc/ResetUserPasswordBody.md
 doc/SecurityQuestionResponse.md
 doc/SetAnalysisNoteRequest.md
+doc/StandardTradingRuleAccount.md
+doc/StandardTradingRuleInstrument.md
+doc/StandardTradingRuleInstrumentTradingHours.md
+doc/StandardTradingRuleText.md
+doc/StandardTradingRules.md
+doc/StandardTradingRulesFixedRate.md
 doc/StorageApi.md
 doc/SuperadminApi.md
 doc/TagsList.md
@@ -130,6 +136,7 @@ doc/TraderMirrorApi.md
 doc/TraderMirrorHighlight.md
 doc/TraderMirrorInsights.md
 doc/TraderMirrorResponse.md
+doc/TradingRulesApi.md
 doc/UpdateJournalEntryBody.md
 doc/UpdateProfileBody.md
 doc/UpdateUserQuotaBody.md
@@ -163,6 +170,7 @@ lib/src/api/storage_api.dart
 lib/src/api/superadmin_api.dart
 lib/src/api/trade_journal_api.dart
 lib/src/api/trader_mirror_api.dart
+lib/src/api/trading_rules_api.dart
 lib/src/api/user_price_alerts_api.dart
 lib/src/api/watchlist_api.dart
 lib/src/api_util.dart
@@ -281,6 +289,12 @@ lib/src/model/reset_token_response.dart
 lib/src/model/reset_user_password_body.dart
 lib/src/model/security_question_response.dart
 lib/src/model/set_analysis_note_request.dart
+lib/src/model/standard_trading_rule_account.dart
+lib/src/model/standard_trading_rule_instrument.dart
+lib/src/model/standard_trading_rule_instrument_trading_hours.dart
+lib/src/model/standard_trading_rule_text.dart
+lib/src/model/standard_trading_rules.dart
+lib/src/model/standard_trading_rules_fixed_rate.dart
 lib/src/model/tags_list.dart
 lib/src/model/trade_plan.dart
 lib/src/model/trade_side.dart
@@ -305,7 +319,4 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/delete_account_body_test.dart
-test/native_push_api_test.dart
-test/native_push_register_body_test.dart
-test/native_push_unregister_body_test.dart
+test/standard_trading_rule_text_test.dart

@@ -96,6 +96,7 @@ import type {
   ResetUserPasswordBody,
   SecurityQuestionResponse,
   SetAnalysisNoteBody,
+  StandardTradingRules,
   TagsList,
   TraderMirrorResponse,
   UpdateJournalEntryBody,
@@ -190,6 +191,83 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Broker-neutral disclosure for the single TP Standard Trading Rules definition. This endpoint intentionally has no broker selector.
+ * @summary Get the fixed TP Standard Trading Rules
+ */
+export const getGetStandardTradingRulesUrl = () => {
+  return `/api/trading-rules/standard`;
+};
+
+export const getStandardTradingRules = async (
+  options?: RequestInit,
+): Promise<StandardTradingRules> => {
+  return customFetch<StandardTradingRules>(getGetStandardTradingRulesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStandardTradingRulesQueryKey = () => {
+  return [`/api/trading-rules/standard`] as const;
+};
+
+export const getGetStandardTradingRulesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStandardTradingRules>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStandardTradingRules>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetStandardTradingRulesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getStandardTradingRules>>
+  > = ({ signal }) => getStandardTradingRules({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStandardTradingRules>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStandardTradingRulesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStandardTradingRules>>
+>;
+export type GetStandardTradingRulesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the fixed TP Standard Trading Rules
+ */
+
+export function useGetStandardTradingRules<
+  TData = Awaited<ReturnType<typeof getStandardTradingRules>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStandardTradingRules>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStandardTradingRulesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

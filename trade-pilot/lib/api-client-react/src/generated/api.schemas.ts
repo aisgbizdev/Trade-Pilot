@@ -5,6 +5,87 @@
  * AI Trading Assistant API
  * OpenAPI spec version: 0.1.0
  */
+export type StandardTradingRulesFixedRate = {
+  usd: number;
+  idr: number;
+  label: string;
+};
+
+export interface StandardTradingRuleAccount {
+  minimumDepositUsd: number;
+  minimumLot: number;
+  maximumLot: number;
+  maintenanceMarginPercent: number;
+  marginCallBelowPercent: number;
+  marginCallRestorePercent: number;
+  autoLiquidationAtOrBelowPercent: number;
+  equityReviewThresholdUsd: number;
+  equityReviewThresholdIdr: number;
+}
+
+export type StandardTradingRuleInstrumentCode =
+  (typeof StandardTradingRuleInstrumentCode)[keyof typeof StandardTradingRuleInstrumentCode];
+
+export const StandardTradingRuleInstrumentCode = {
+  XUL10: "XUL10",
+  BCO10_BBJ: "BCO10_BBJ",
+} as const;
+
+export type StandardTradingRuleInstrumentContractUnit =
+  (typeof StandardTradingRuleInstrumentContractUnit)[keyof typeof StandardTradingRuleInstrumentContractUnit];
+
+export const StandardTradingRuleInstrumentContractUnit = {
+  troy_ounce: "troy ounce",
+  barrel: "barrel",
+} as const;
+
+export type StandardTradingRuleInstrumentTradingHours = {
+  summer: string;
+  winter: string;
+};
+
+export interface StandardTradingRuleInstrument {
+  code: StandardTradingRuleInstrumentCode;
+  product: string;
+  contractSize: number;
+  contractUnit: StandardTradingRuleInstrumentContractUnit;
+  tradingDays: string;
+  tradingHours: StandardTradingRuleInstrumentTradingHours;
+  initialMarginUsdPerLot: number;
+  facilityFeeUsdPerLotPerSide: number;
+  vatPercent: number;
+  rolloverUsdPerLotPerNight: number;
+  priceSource: string;
+  priceGuidance: string;
+  minimumSpread: string;
+  maximumSpread: string;
+  hecticSpread: string;
+  minimumPriceMovement: string;
+  limitStopRange: string;
+  deliveryBy: string;
+}
+
+export interface StandardTradingRuleText {
+  id: string;
+  en: string;
+}
+
+/**
+ * The single broker-neutral ruleset used for TP Standard Trading Rules estimates.
+ */
+export interface StandardTradingRules {
+  name: string;
+  version: string;
+  effectiveDate: string;
+  sourceDocument: string;
+  fixedRate: StandardTradingRulesFixedRate;
+  account: StandardTradingRuleAccount;
+  transactionFormula: string;
+  instruments: StandardTradingRuleInstrument[];
+  disclaimer: StandardTradingRuleText;
+  relationshipDisclosure: StandardTradingRuleText;
+}
+
 export interface HealthStatus {
   status: string;
 }

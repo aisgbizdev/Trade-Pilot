@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: trading-rules
+    description: TP Standard Trading Rules disclosure
   - name: auth
     description: Authentication operations
   - name: analyses
@@ -51,6 +53,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /trading-rules/standard:
+    get:
+      operationId: getStandardTradingRules
+      tags: [trading-rules]
+      summary: Get the fixed TP Standard Trading Rules
+      description: "Broker-neutral disclosure for the single TP Standard Trading Rules definition. This endpoint intentionally has no broker selector."
+      responses:
+        "200":
+          description: Current standard rules and effective date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardTradingRules"
 
   /auth/register:
     post:
@@ -2344,6 +2360,124 @@ paths:
 
 components:
   schemas:
+    StandardTradingRules:
+      type: object
+      description: "The single broker-neutral ruleset used for TP Standard Trading Rules estimates."
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        effectiveDate:
+          type: string
+          format: date
+        sourceDocument:
+          type: string
+        fixedRate:
+          type: object
+          properties:
+            usd:
+              type: number
+            idr:
+              type: number
+            label:
+              type: string
+          required: [usd, idr, label]
+        account:
+          $ref: "#/components/schemas/StandardTradingRuleAccount"
+        transactionFormula:
+          type: string
+        instruments:
+          type: array
+          items:
+            $ref: "#/components/schemas/StandardTradingRuleInstrument"
+        disclaimer:
+          $ref: "#/components/schemas/StandardTradingRuleText"
+        relationshipDisclosure:
+          $ref: "#/components/schemas/StandardTradingRuleText"
+      required: [name, version, effectiveDate, sourceDocument, fixedRate, account, transactionFormula, instruments, disclaimer, relationshipDisclosure]
+
+    StandardTradingRuleText:
+      type: object
+      properties:
+        id:
+          type: string
+        en:
+          type: string
+      required: [id, en]
+
+    StandardTradingRuleAccount:
+      type: object
+      properties:
+        minimumDepositUsd:
+          type: number
+        minimumLot:
+          type: number
+        maximumLot:
+          type: number
+        maintenanceMarginPercent:
+          type: number
+        marginCallBelowPercent:
+          type: number
+        marginCallRestorePercent:
+          type: number
+        autoLiquidationAtOrBelowPercent:
+          type: number
+        equityReviewThresholdUsd:
+          type: number
+        equityReviewThresholdIdr:
+          type: number
+      required: [minimumDepositUsd, minimumLot, maximumLot, maintenanceMarginPercent, marginCallBelowPercent, marginCallRestorePercent, autoLiquidationAtOrBelowPercent, equityReviewThresholdUsd, equityReviewThresholdIdr]
+
+    StandardTradingRuleInstrument:
+      type: object
+      properties:
+        code:
+          type: string
+          enum: [XUL10, BCO10_BBJ]
+        product:
+          type: string
+        contractSize:
+          type: number
+        contractUnit:
+          type: string
+          enum: [troy ounce, barrel]
+        tradingDays:
+          type: string
+        tradingHours:
+          type: object
+          properties:
+            summer:
+              type: string
+            winter:
+              type: string
+          required: [summer, winter]
+        initialMarginUsdPerLot:
+          type: number
+        facilityFeeUsdPerLotPerSide:
+          type: number
+        vatPercent:
+          type: number
+        rolloverUsdPerLotPerNight:
+          type: number
+        priceSource:
+          type: string
+        priceGuidance:
+          type: string
+        minimumSpread:
+          type: string
+        maximumSpread:
+          type: string
+        hecticSpread:
+          type: string
+        minimumPriceMovement:
+          type: string
+        limitStopRange:
+          type: string
+        deliveryBy:
+          type: string
+      required: [code, product, contractSize, contractUnit, tradingDays, tradingHours, initialMarginUsdPerLot, facilityFeeUsdPerLotPerSide, vatPercent, rolloverUsdPerLotPerNight, priceSource, priceGuidance, minimumSpread, maximumSpread, hecticSpread, minimumPriceMovement, limitStopRange, deliveryBy]
+
     HealthStatus:
       type: object
       properties:
