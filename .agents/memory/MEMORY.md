@@ -5,3 +5,4 @@
 - [Dashboard desktop masonry](dashboard-desktop-masonry.md) — desktop dashboard widgets use CSS multicol (lg:columns-2), not grid auto-flow, to avoid odd trailing gaps while keeping mobile DOM order/spacing identical.
 - [Tablet-only width constraint](tablet-only-width-constraint.md) — to narrow content at tablet while leaving desktop full-width, use `md:max-w-3xl md:mx-auto lg:max-w-none` (Layout caps at md:max-w-4xl/lg:max-w-6xl).
 - [Mobile Expo auth pattern](mobile-expo-auth-pattern.md) — orval mutations take `{ data: Body }`, mode required in CreateAnalysisBody, use `"/(tabs)"` not `"/(tabs)/"`, colors.radius lives alongside palette tokens.
+- [Replit deployment CORS origins](replit-deployment-cors-origins.md) — use exact runtime `REPLIT_DOMAINS` origins alongside custom domains; dev-domain-only CORS blocks browser registration after publishing.

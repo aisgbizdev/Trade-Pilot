@@ -12,6 +12,7 @@ import {
   registerLimiter,
   forgotPasswordResetLimiter,
 } from "../../middleware/rate-limit";
+import { getConfiguredReplitOrigins } from "../../app";
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `auth-harden-${RUN_ID}`;
@@ -77,6 +78,23 @@ beforeEach(() => {
   loginLimiter.store.clear();
   registerLimiter.store.clear();
   forgotPasswordResetLimiter.store.clear();
+});
+
+describe("configured Replit CORS origins", () => {
+  it("allows explicit published Replit domains without allowing a wildcard", () => {
+    const origins = getConfiguredReplitOrigins([
+      "trade-pilot-23newsmaker.replit.app, https://preview.example.test",
+      "ignored.invalid:bad-port",
+    ]);
+
+    expect(origins).toEqual(
+      new Set([
+        "https://trade-pilot-23newsmaker.replit.app",
+        "https://preview.example.test",
+      ]),
+    );
+    expect(origins.has("https://another-app.replit.app")).toBe(false);
+  });
 });
 
 describe("PATCH /auth/profile validation", () => {

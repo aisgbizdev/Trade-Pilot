@@ -42,15 +42,39 @@ app.use(
 // between "site X reads your session" and not. The production app is
 // same-origin (the api-server serves the ai-trading SPA itself, see
 // below), so the only *legitimate* cross-origin browser callers are the
-// production domain itself (for any preview/edge deployment that isn't
-// perfectly same-origin) plus local dev servers. Native mobile HTTP
+// configured published domains plus local dev servers. Native mobile HTTP
 // clients are unaffected either way — CORS is a browser-only mechanism.
 const PRODUCTION_ORIGIN = "https://tradepilot.id";
 const DEV_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
-const REPLIT_DEV_ORIGINS = new Set(
-  [process.env["REPLIT_DEV_DOMAIN"]]
-    .filter((domain): domain is string => Boolean(domain))
-    .flatMap((domain) => [`https://${domain}`, `http://${domain}`]),
+
+export function getConfiguredReplitOrigins(
+  domainLists: readonly (string | undefined)[],
+): Set<string> {
+  const origins = new Set<string>();
+
+  for (const domainList of domainLists) {
+    for (const domain of domainList?.split(",") ?? []) {
+      const value = domain.trim();
+      if (!value) continue;
+
+      try {
+        const url = new URL(value.includes("://") ? value : `https://${value}`);
+        if (url.protocol === "https:") origins.add(url.origin);
+      } catch {
+        // An invalid environment value must not accidentally widen CORS.
+      }
+    }
+  }
+
+  return origins;
+}
+
+// In deployed artifacts REPLIT_DOMAINS contains the published domains.
+// In the workspace shell it contains the development domain, which is also
+// a legitimate preview origin. Keep both sources to support local previews
+// and published deployments without allowing wildcard Replit domains.
+const REPLIT_RUNTIME_ORIGINS = getConfiguredReplitOrigins(
+  [process.env["REPLIT_DOMAINS"], process.env["REPLIT_DEV_DOMAIN"]],
 );
 
 app.use(
@@ -60,9 +84,10 @@ app.use(
       // nothing for a browser-enforced CORS check to protect here.
       if (!origin) return callback(null, true);
       if (origin === PRODUCTION_ORIGIN) return callback(null, true);
+      if (REPLIT_RUNTIME_ORIGINS.has(origin)) return callback(null, true);
       if (
         process.env["NODE_ENV"] !== "production" &&
-        (DEV_ORIGIN_PATTERN.test(origin) || REPLIT_DEV_ORIGINS.has(origin))
+        DEV_ORIGIN_PATTERN.test(origin)
       ) {
         return callback(null, true);
       }
