@@ -87,6 +87,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
+import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -1985,6 +1986,18 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             entry / SL / TP / R:R the model produced — keeps the rest of the
             narrative consultative while giving the user actionable numbers. */}
         {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
+
+        {/* Optional, deterministic situational martingale plan. It only reads
+            the Standard Plan and never changes its levels or executes orders. */}
+        {tradePlan && (
+          <AdaptivePositionPlan
+            analysisId={analysis.id}
+            instrument={analysis.instrument}
+            tradePlan={tradePlan}
+            lang={lang}
+            copy={t.analysis_detail}
+          />
+        )}
 
         {/* Price alerts — opt-in push notifications that fire the first
             time live price touches one of the AI's entry / SL / TP levels.

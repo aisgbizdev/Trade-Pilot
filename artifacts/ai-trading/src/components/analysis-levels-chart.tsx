@@ -20,6 +20,23 @@ interface Candle {
   close: number;
 }
 
+function normalizeCandle(raw: unknown): Candle | null {
+  if (!raw || typeof raw !== "object") return null;
+  const candle = raw as Partial<Candle>;
+  const dateMs = typeof candle.date === "string" ? new Date(candle.date).getTime() : NaN;
+  const values = [candle.open, candle.high, candle.low, candle.close];
+  if (!Number.isFinite(dateMs) || values.some((value) => typeof value !== "number" || !Number.isFinite(value))) {
+    return null;
+  }
+  return {
+    date: candle.date as string,
+    open: candle.open as number,
+    high: candle.high as number,
+    low: candle.low as number,
+    close: candle.close as number,
+  };
+}
+
 interface AnalysisLevelsChartProps {
   instrument: string;
   timeframe: string;
@@ -205,9 +222,15 @@ export function AnalysisLevelsChart({
         }
         return res.json();
       })
-      .then((data: { candles?: Candle[] }) => {
+      .then((data: { candles?: unknown[] }) => {
         if (cancelled) return;
-        const list = Array.isArray(data.candles) ? data.candles : [];
+        // Upstream data occasionally includes a partially-populated newest
+        // candle. lightweight-charts throws on even one null OHLC field, so
+        // exclude malformed bars rather than letting the whole detail view
+        // crash before the user can read the Standard Plan.
+        const list = (Array.isArray(data.candles) ? data.candles : [])
+          .map(normalizeCandle)
+          .filter((candle): candle is Candle => candle != null);
         if (list.length === 0) throw new Error("empty");
         setCandles(list);
         setState("ready");

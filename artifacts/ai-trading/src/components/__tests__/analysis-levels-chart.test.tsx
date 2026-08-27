@@ -199,7 +199,7 @@ describe("AnalysisLevelsChart", () => {
     );
 
     // Entry skipped, SL + TP1 + TP2 remain ⇒ 3 lines, none labelled Entry.
-    expect(createdPriceLines).toHaveLength(3);
+    await waitFor(() => expect(createdPriceLines).toHaveLength(3));
     expect(createdPriceLines.map((l) => l.title)).toEqual(["SL", "TP1", "TP2"]);
     expect(createdPriceLines.find((l) => l.title.includes("Entry"))).toBeUndefined();
   });
