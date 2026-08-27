@@ -48,6 +48,8 @@ interface AnalysisLevelsChartProps {
   analysisCreatedAt?: string | Date | null;
   /** Optional manual adaptive plan. Its stages are overlays only; Standard Plan levels stay unchanged. */
   adaptivePlan?: AdaptivePositionPlanResult | null;
+  /** The manually selected scenario to emphasize on the chart. */
+  selectedAdaptiveSide?: "buy" | "sell" | null;
   height?: number | string;
   onLoadFailed?: (reason: string) => void;
 }
@@ -138,11 +140,15 @@ function buildLevels(
   return levels;
 }
 
-function buildAdaptiveLevels(plan: AdaptivePositionPlanResult | null | undefined): LevelDef[] {
+function buildAdaptiveLevels(
+  plan: AdaptivePositionPlanResult | null | undefined,
+  selectedSide: "buy" | "sell" | null | undefined,
+): LevelDef[] {
   if (!plan?.valid) return [];
   const levels: LevelDef[] = [];
   for (const sidePlan of [plan.buy, plan.sell]) {
     if (!sidePlan) continue;
+    if (selectedSide && sidePlan.side !== selectedSide) continue;
     const color = sidePlan.side === "buy" ? "#2563eb" : "#9333ea";
     const prefix = sidePlan.side.toUpperCase();
     for (const level of sidePlan.ladder) {
@@ -208,6 +214,7 @@ export function AnalysisLevelsChart({
   tradePlan,
   analysisCreatedAt = null,
   adaptivePlan = null,
+  selectedAdaptiveSide = null,
   height = 280,
   onLoadFailed,
 }: AnalysisLevelsChartProps) {
@@ -334,7 +341,9 @@ export function AnalysisLevelsChart({
     // When AI says "wait", show levels for BOTH sides faintly so the user
     // can see the structure either way. Otherwise lean into the chosen side.
     const sides: TradePlanPreferredSide[] =
-      tradePlan.preferredSide === "wait"
+      selectedAdaptiveSide
+        ? [selectedAdaptiveSide]
+        : tradePlan.preferredSide === "wait"
         ? ["buy", "sell"]
         : [tradePlan.preferredSide];
     for (const side of sides) {
@@ -351,7 +360,7 @@ export function AnalysisLevelsChart({
         priceLinesRef.current.push(line);
       }
     }
-    for (const lvl of buildAdaptiveLevels(adaptivePlan)) {
+    for (const lvl of buildAdaptiveLevels(adaptivePlan, selectedAdaptiveSide)) {
       const line = series.createPriceLine({
         price: lvl.price,
         color: lvl.color,
@@ -362,7 +371,7 @@ export function AnalysisLevelsChart({
       });
       priceLinesRef.current.push(line);
     }
-  }, [tradePlan, adaptivePlan, candles, state]);
+  }, [tradePlan, adaptivePlan, selectedAdaptiveSide, candles, state]);
 
   // Track the x-coordinate of the analysis-created cutoff so we can draw a
   // vertical marker line + badge as an HTML overlay. lightweight-charts has

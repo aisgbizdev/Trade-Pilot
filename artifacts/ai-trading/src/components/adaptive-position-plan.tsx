@@ -31,20 +31,18 @@ interface Props {
 
 interface FormState {
   availableMargin: string;
-  existingExposure: string;
+  riskPercent: string;
   preference: AdaptiveRiskPreference;
-  maxLossAmount: string;
 }
 
 const DEFAULT_FORM: FormState = {
   availableMargin: "",
-  existingExposure: "",
+  riskPercent: "2",
   preference: "safe",
-  maxLossAmount: "",
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v4:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v5:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -54,8 +52,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isStoredForm(value: unknown): value is Partial<FormState> {
   if (!isRecord(value)) return false;
   return (value.availableMargin === undefined || typeof value.availableMargin === "string") &&
-    (value.existingExposure === undefined || typeof value.existingExposure === "string") &&
-    (value.maxLossAmount === undefined || typeof value.maxLossAmount === "string") &&
+    (value.riskPercent === undefined || typeof value.riskPercent === "string") &&
     (value.preference === undefined || ["safe", "balanced", "active", "aggressive", "custom"].includes(String(value.preference)));
 }
 
@@ -106,21 +103,45 @@ function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, 
   }
 }
 
-function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPlan; lang: "en" | "id"; copy: AdaptiveCopy; decision: AdaptivePlanDecision }) {
-  const isBuy = plan.side === "buy";
-  const scenarioIsPreferred = decision.preferredSide === "both" || decision.preferredSide === plan.side;
-  const stageGuidance = plan.ladder.length > 1 && scenarioIsPreferred
+function PlanSide({ side, plan, errors, selected, onSelect, lang, copy }: {
+  side: "buy" | "sell";
+  plan: AdaptiveSidePositionPlan | null;
+  errors: string[];
+  selected: boolean;
+  onSelect: () => void;
+  lang: "en" | "id";
+  copy: AdaptiveCopy;
+}) {
+  const isBuy = side === "buy";
+  const stageGuidance = plan && plan.ladder.length > 1
     ? copy.adaptive_side_scaling_allowed
     : copy.adaptive_side_entry_only;
   return (
-    <div className={`rounded-md border-l-4 p-3 space-y-3 bg-muted/20 ${isBuy ? "border-l-emerald-500" : "border-l-red-500"}`} data-testid={`adaptive-plan-${plan.side}`}>
+    <div
+      className={`rounded-md border-l-4 p-3 space-y-3 bg-muted/20 cursor-pointer transition-colors ${isBuy ? "border-l-emerald-500" : "border-l-red-500"} ${selected ? "ring-2 ring-primary bg-primary/[0.06]" : "hover:bg-muted/50"}`}
+      data-testid={`adaptive-plan-${side}`}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+    >
       <div className="flex items-center justify-between gap-2">
         <h4 className={`text-sm font-bold flex items-center gap-1.5 ${isBuy ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
           {isBuy ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           {isBuy ? copy.adaptive_buy : copy.adaptive_sell}
         </h4>
-        <Badge variant="outline" className="text-[10px]">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</Badge>
+        <Badge variant={selected ? "default" : "outline"} className="text-[10px]">{selected ? copy.adaptive_selected : copy.adaptive_select_side}</Badge>
       </div>
+      {!plan ? (
+        <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">{errors[0] ?? copy.adaptive_side_unavailable}</p>
+      ) : <>
+        <Badge variant="outline" className="text-[10px]">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</Badge>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         <span className="text-muted-foreground">{copy.adaptive_entry}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.entry, lang, 4)}</span>
         <span className="text-muted-foreground">{copy.adaptive_stop}</span><span className="text-right font-semibold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</span>
@@ -146,6 +167,7 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
           </div>
         ))}
       </div>
+      </>}
     </div>
   );
 }
@@ -154,6 +176,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   const [open, setOpen] = useState(true);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
+  const [selectedSide, setSelectedSide] = useState<"buy" | "sell" | null>(null);
   const { data: standardRules, isLoading: rulesLoading, isError: rulesError } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
@@ -168,6 +191,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   useEffect(() => {
     setForm(DEFAULT_FORM);
     setRecommendation(null);
+    setSelectedSide(null);
     try {
       const stored = localStorage.getItem(storageKey(analysisId));
       if (!stored) return;
@@ -182,31 +206,34 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((previous) => ({ ...previous, [field]: value }));
     setRecommendation(null);
+    setSelectedSide(null);
   };
   const calculate = () => {
     const next = buildAdaptivePlanRecommendation({
       instrument,
       tradePlan,
       availableMargin: numberValue(form.availableMargin),
-      existingExposure: numberValue(form.existingExposure) ?? 0,
+      existingExposure: 0,
       marginPerLot,
       minimumLot: standardRules?.account?.minimumLot,
       maximumLot: standardRules?.account?.maximumLot,
       facilityFeeUsdPerLotPerSide: marginRule?.facilityFeeUsdPerLotPerSide,
       vatPercent: marginRule?.vatPercent,
       preference: form.preference,
-      maxLossAmount: form.preference === "custom" ? numberValue(form.maxLossAmount) : null,
+      riskPercent: numberValue(form.riskPercent),
       context,
     });
     setRecommendation(next);
+    setSelectedSide(null);
     localStorage.setItem(storageKey(analysisId), JSON.stringify({ form }));
   };
   const reset = () => {
     setForm(DEFAULT_FORM);
     setRecommendation(null);
+    setSelectedSide(null);
     localStorage.removeItem(storageKey(analysisId));
   };
-  const selected = recommendation?.recommendation;
+  const selectedPlan = selectedSide ? recommendation?.result[selectedSide] : null;
 
   return (
     <Card className="overflow-hidden" data-testid="card-adaptive-position-plan">
@@ -230,9 +257,9 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
             <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_available_margin_help}</span>
           </label>
           <label className="block max-w-sm space-y-1">
-            <span className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_existing_exposure}</span>
-            <Input type="number" min="0" step="0.01" value={form.existingExposure} placeholder="0" onChange={(event) => updateField("existingExposure", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-existing-exposure" />
-            <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_existing_exposure_help}</span>
+            <span className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_risk_percent}</span>
+            <Input type="number" min="0.01" max="100" step="0.01" value={form.riskPercent} onChange={(event) => updateField("riskPercent", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-risk-percent" />
+            <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_risk_percent_help}</span>
           </label>
           {rulesLoading && <p className="text-[11px] text-muted-foreground">{copy.adaptive_rules_loading}</p>}
           {rulesError || (!rulesLoading && !marginRule) ? <p className="text-[11px] text-amber-700 dark:text-amber-300">{copy.adaptive_rules_error}</p> : null}
@@ -255,13 +282,6 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               </button>;
             })}
           </div>
-          {form.preference === "custom" && (
-            <label className="block max-w-sm space-y-1">
-              <span className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_max_loss}</span>
-              <Input type="number" min="0.01" step="any" value={form.maxLossAmount} placeholder="0" onChange={(event) => updateField("maxLossAmount", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-max-loss" />
-              <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_max_loss_help}</span>
-            </label>
-          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="sm" onClick={calculate} disabled={rulesLoading || rulesError || !marginRule} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
@@ -301,26 +321,28 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{copy.adaptive_invalid_description}</p>
           {recommendation.result.errors.length > 0 && <ul className="list-disc space-y-0.5 pl-4 text-[10px] leading-relaxed text-amber-800 dark:text-amber-300">{recommendation.result.errors.map((error) => <li key={error}>{error}</li>)}</ul>}
         </div>}
-        {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
+        {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && <div className="space-y-3" data-testid="adaptive-plan-valid">
           <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
-          <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatMoney(selected.maximumLoss, lang))}</p></div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="adaptive-plan-metrics">
+           <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{selectedPlan ? copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selectedPlan.ladder[0]?.lot, lang, 2)).replace("{levels}", String(Math.max(0, selectedPlan.ladder.length - 1))).replace("{loss}", formatMoney(selectedPlan.estimatedCycleLoss, lang)) : copy.adaptive_choose_side_first}</p></div>
+           {selectedPlan && <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="adaptive-plan-metrics">
             {[
               [copy.adaptive_margin_available, formatMoney(numberValue(form.availableMargin), lang)],
-              [copy.adaptive_existing_exposure, `${formatNumber(numberValue(form.existingExposure) ?? 0, lang, 2)} ${copy.adaptive_lot}`],
-              [copy.adaptive_margin_allocated, formatMoney(recommendation.result.marginAllocated, lang)],
-              [copy.adaptive_margin_buffer, formatMoney(recommendation.result.marginBuffer, lang)],
-              [copy.adaptive_maximum_loss, formatMoney(recommendation.result.maximumLoss, lang)],
-              [copy.adaptive_potential_result, formatMoney(selected.potentialResult, lang)],
-              [copy.adaptive_break_even_rate, selected.breakEvenWinRate == null ? "—" : `${formatNumber(selected.breakEvenWinRate * 100, lang, 1)}%`],
+               [copy.adaptive_margin_allocated, formatMoney(selectedPlan.marginRequired, lang)],
+               [copy.adaptive_margin_buffer, formatMoney(Math.max(0, (recommendation.recommendation?.marginBudget ?? 0) - selectedPlan.marginRequired), lang)],
+               [copy.adaptive_maximum_loss, formatMoney(selectedPlan.estimatedCycleLoss, lang)],
+               [copy.adaptive_potential_result, formatMoney(selectedPlan.potentialProfit, lang)],
+               [copy.adaptive_break_even_rate, selectedPlan.breakEvenWinRate == null ? "—" : `${formatNumber(selectedPlan.breakEvenWinRate * 100, lang, 1)}%`],
               [copy.adaptive_confidence, `${formatNumber(recommendation.context.confidenceMin, lang, 0)}–${formatNumber(recommendation.context.confidenceMax, lang, 0)}%`],
             ].map(([label, value]) => <div key={label} className="rounded-md border border-border/70 bg-background/60 p-2"><span className="block text-[10px] text-muted-foreground">{label}</span><strong className="block text-xs tabular-nums">{value}</strong></div>)}
-          </div>
-          <div className="rounded-md border border-border/70 p-2" data-testid="adaptive-plan-chart">
+           </div>}
+           {selectedPlan && <div className="rounded-md border border-border/70 p-2" data-testid="adaptive-plan-chart">
             <p className="mb-1.5 text-[11px] font-semibold text-foreground">{copy.adaptive_chart_title}</p>
-            <AnalysisLevelsChart instrument={instrument} timeframe={context.timeframe ?? "1h"} tradePlan={tradePlan} adaptivePlan={recommendation.result} height={220} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{recommendation.result.buy && <PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} decision={recommendation.decision} />}{recommendation.result.sell && <PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} decision={recommendation.decision} />}</div>
+             <AnalysisLevelsChart instrument={instrument} timeframe={context.timeframe ?? "1h"} tradePlan={tradePlan} adaptivePlan={recommendation.result} selectedAdaptiveSide={selectedSide} height={220} />
+           </div>}
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+             <PlanSide side="buy" plan={recommendation.result.buy} errors={recommendation.result.sideErrors.buy} selected={selectedSide === "buy"} onSelect={() => setSelectedSide("buy")} lang={lang} copy={copy} />
+             <PlanSide side="sell" plan={recommendation.result.sell} errors={recommendation.result.sideErrors.sell} selected={selectedSide === "sell"} onSelect={() => setSelectedSide("sell")} lang={lang} copy={copy} />
+           </div>
           <div className="space-y-1.5 rounded-md border border-border p-3"><p className="text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</p><ol className="list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol></div>
           <div className="flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3"><AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" /><p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">{copy.adaptive_external_liquidation} {copy.adaptive_fee_included} {copy.adaptive_manual_only}</p></div>
         </div>}

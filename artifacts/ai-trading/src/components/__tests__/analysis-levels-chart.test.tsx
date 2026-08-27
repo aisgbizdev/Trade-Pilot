@@ -81,6 +81,7 @@ function renderChart(props: {
   instrument?: string;
   timeframe?: string;
   adaptivePlan?: AdaptivePositionPlanResult | null;
+  selectedAdaptiveSide?: "buy" | "sell" | null;
 }) {
   return render(
     <ThemeProvider>
@@ -89,6 +90,7 @@ function renderChart(props: {
         timeframe={props.timeframe ?? "1h"}
         tradePlan={props.tradePlan}
         adaptivePlan={props.adaptivePlan}
+        selectedAdaptiveSide={props.selectedAdaptiveSide}
         height={300}
       />
     </ThemeProvider>,
@@ -249,7 +251,7 @@ describe("AnalysisLevelsChart", () => {
       sell: makeSide({}),
     };
     const adaptivePlan: AdaptivePositionPlanResult = {
-      valid: true, market: "gold", rule: null, errors: [], assumptions: [],
+      valid: true, market: "gold", rule: null, errors: [], sideErrors: { buy: [], sell: [] }, assumptions: [],
       sell: null,
       buy: {
         side: "buy", entry: 2350, stopLoss: 2345, takeProfit1: 2360, takeProfit2: 2370,
@@ -267,5 +269,33 @@ describe("AnalysisLevelsChart", () => {
 
     await waitFor(() => expect(screen.getByTestId("analysis-levels-chart").getAttribute("data-state")).toBe("ready"));
     expect(createdPriceLines.map((line) => line.title)).toEqual(expect.arrayContaining(["BUY Entry", "SL", "TP1", "TP2", "BUY Start", "BUY L1"]));
+  });
+
+  it("shows the user-selected scenario on the adaptive chart", async () => {
+    const plan: TradePlan = {
+      preferredSide: "buy",
+      buy: makeSide({ entryZone: "2350", stopLoss: "2345", takeProfit1: "2360", takeProfit2: "2370" }),
+      sell: makeSide({ entryZone: "2352", stopLoss: "2357", takeProfit1: "2342", takeProfit2: "2335" }),
+    };
+    const adaptivePlan: AdaptivePositionPlanResult = {
+      valid: true, market: "gold", rule: null, errors: [], sideErrors: { buy: [], sell: [] }, assumptions: [],
+      buy: {
+        side: "buy", entry: 2350, stopLoss: 2345, takeProfit1: 2360, takeProfit2: 2370,
+        totalLots: 0.1, marginRequired: 10, estimatedCycleLoss: 5, potentialProfit: 20, breakEvenWinRate: 0.2,
+        ladder: [{ level: 0, price: 2350, lot: 0.1, cumulativeLots: 0.1, marginRequired: 10, estimatedRiskToStop: 5, reason: "Initial" }],
+      },
+      sell: {
+        side: "sell", entry: 2352, stopLoss: 2357, takeProfit1: 2342, takeProfit2: 2335,
+        totalLots: 0.1, marginRequired: 10, estimatedCycleLoss: 5, potentialProfit: 20, breakEvenWinRate: 0.2,
+        ladder: [{ level: 0, price: 2352, lot: 0.1, cumulativeLots: 0.1, marginRequired: 10, estimatedRiskToStop: 5, reason: "Initial" }],
+      },
+      marginAllocated: 10, marginBuffer: 90, maximumLoss: 10, potentialResult: 20, breakEvenWinRate: 0.2,
+    };
+
+    renderChart({ tradePlan: plan, instrument: "XAU/USD", adaptivePlan, selectedAdaptiveSide: "sell" });
+
+    await waitFor(() => expect(screen.getByTestId("analysis-levels-chart").getAttribute("data-state")).toBe("ready"));
+    expect(createdPriceLines.map((line) => line.title)).toEqual(expect.arrayContaining(["SELL Entry", "SELL Start"]));
+    expect(createdPriceLines.map((line) => line.title)).not.toContain("BUY Start");
   });
 });

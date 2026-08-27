@@ -156,7 +156,7 @@ describe("AnalysisDetailPage: happy-path render", () => {
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {
-  it("explains why only the aligned Buy scenario receives staged additions", async () => {
+  it("shows both manual scenarios while allowing stages only on the supported side", async () => {
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -177,7 +177,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
-    expect(screen.getByTestId("input-adaptive-existing-exposure")).toHaveValue(null);
+    expect(screen.getByTestId("input-adaptive-risk-percent")).toHaveValue(2);
     await waitFor(() => {
       expect(screen.getByTestId("button-calculate-adaptive-plan")).not.toBeDisabled();
     });
@@ -190,11 +190,15 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(reasoning.textContent).toMatch(/Technical snapshot: 12 support up, 4 support down/i);
     expect(screen.getByTestId("adaptive-plan-buy").textContent).toMatch(/Extra stages may be considered/i);
     expect(screen.getByTestId("adaptive-plan-sell").textContent).toMatch(/initial entry only/i);
+    expect(screen.getByTestId("adaptive-plan-buy")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("adaptive-plan-sell")).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByTestId("adaptive-plan-sell"));
+    expect(screen.getByTestId("adaptive-plan-sell")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v4:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v5:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -217,7 +221,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     expect(await screen.findByTestId("input-adaptive-available-margin")).toHaveValue(100000);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    localStorage.removeItem(`trade-pilot:adaptive-plan:v4:${ANALYSIS_ID}`);
+    localStorage.removeItem(`trade-pilot:adaptive-plan:v5:${ANALYSIS_ID}`);
   });
 });
 

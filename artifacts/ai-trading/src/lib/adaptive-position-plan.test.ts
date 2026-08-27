@@ -56,18 +56,18 @@ describe("buildAdaptivePositionPlan", () => {
       availableMargin: 100_000,
       marginPerLot: 1_000,
       preference: "balanced",
+      riskPercent: 2,
       context: SUPPORTIVE_CONTEXT,
     });
 
     expect(recommendation.result.valid).toBe(true);
     expect(recommendation.recommendation).toMatchObject({
-      levels: 2,
       marginBudget: 65_000,
+      maximumLoss: 2_000,
     });
-    expect(recommendation.recommendation?.initialLot).toBeGreaterThan(0);
     expect(recommendation.decision).toMatchObject({
       posture: "scaling_allowed",
-      preferredSide: "buy",
+      preferredSide: "both",
     });
     expect(recommendation.result.buy?.ladder).toHaveLength(3);
     expect(recommendation.result.sell?.ladder).toHaveLength(1);
@@ -83,6 +83,7 @@ describe("buildAdaptivePositionPlan", () => {
       availableMargin: 100_000,
       marginPerLot: 1_000,
       preference: "balanced",
+      riskPercent: 2,
       context: SUPPORTIVE_CONTEXT,
     });
     const shortTimeframe = buildAdaptivePlanRecommendation({
@@ -91,11 +92,11 @@ describe("buildAdaptivePositionPlan", () => {
       availableMargin: 100_000,
       marginPerLot: 1_000,
       preference: "balanced",
+      riskPercent: 2,
       context: { ...SUPPORTIVE_CONTEXT, timeframe: "5m" },
     });
 
-    expect(hourly.recommendation?.levels).toBe(2);
-    expect(shortTimeframe.recommendation?.levels).toBe(0);
+    expect(hourly.result.buy?.ladder).toHaveLength(3);
     expect(shortTimeframe.decision.posture).toBe("entry_only");
     expect(shortTimeframe.result.buy?.ladder).toHaveLength(1);
     expect(shortTimeframe.result.sell?.ladder).toHaveLength(1);
@@ -109,6 +110,7 @@ describe("buildAdaptivePositionPlan", () => {
       availableMargin: 100_000,
       marginPerLot: 1_000,
       preference: "balanced",
+      riskPercent: 2,
       context: {
         ...SUPPORTIVE_CONTEXT,
         marketCondition: "ranging",
@@ -117,9 +119,10 @@ describe("buildAdaptivePositionPlan", () => {
       },
     });
 
-    expect(recommendation.result.valid).toBe(false);
-    expect(recommendation.recommendation).toBeNull();
-    expect(recommendation.decision.posture).toBe("not_recommended");
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.result.buy?.ladder).toHaveLength(1);
+    expect(recommendation.result.sell?.ladder).toHaveLength(1);
+    expect(recommendation.decision.posture).toBe("entry_only");
     expect(recommendation.decision.reasonCodes).toContain("directional_conflict");
   });
 
@@ -141,10 +144,12 @@ describe("buildAdaptivePositionPlan", () => {
         availableMargin: 100_000,
         marginPerLot: 1_000,
         preference: "active",
+        riskPercent: 2,
         context,
       });
 
-      expect(recommendation.recommendation?.levels).toBe(0);
+      expect(recommendation.result.buy?.ladder).toHaveLength(1);
+      expect(recommendation.result.sell?.ladder).toHaveLength(1);
       expect(recommendation.decision.posture).toBe("entry_only");
       expect(recommendation.decision.reasonCodes).toContain("context_unavailable");
     }
@@ -157,6 +162,7 @@ describe("buildAdaptivePositionPlan", () => {
       availableMargin: 100_000,
       marginPerLot: 1_000,
       preference: "active",
+      riskPercent: 2,
       context: {
         ...SUPPORTIVE_CONTEXT,
         fundamentalContext: {
@@ -176,7 +182,8 @@ describe("buildAdaptivePositionPlan", () => {
     });
 
     expect(recommendation.result.valid).toBe(true);
-    expect(recommendation.recommendation?.levels).toBe(0);
+    expect(recommendation.result.buy?.ladder).toHaveLength(1);
+    expect(recommendation.result.sell?.ladder).toHaveLength(1);
     expect(recommendation.decision.reasonCodes).toContain("fundamental_high_impact");
   });
 
@@ -208,14 +215,14 @@ describe("buildAdaptivePositionPlan", () => {
     expect(result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(100);
   });
 
-  it("uses an explicit custom account-currency loss cap instead of a percentage-derived cap", () => {
+  it("calculates the maximum loss from the margin risk percentage", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
       marginPerLot: 100,
       preference: "custom",
-      maxLossAmount: 75,
+      riskPercent: 0.075,
       context: SUPPORTIVE_CONTEXT,
     });
 
@@ -228,18 +235,19 @@ describe("buildAdaptivePositionPlan", () => {
     expect(recommendation.result.breakEvenWinRate).toBeLessThan(1);
   });
 
-  it("requires a positive custom maximum loss before calculating a plan", () => {
+  it("requires a positive margin risk percentage before calculating a plan", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
       marginPerLot: 100,
       preference: "custom",
+      riskPercent: null,
       context: SUPPORTIVE_CONTEXT,
     });
 
     expect(recommendation.result.valid).toBe(false);
-    expect(recommendation.result.errors).toContain("Enter a maximum loss amount greater than zero.");
+    expect(recommendation.result.errors).toContain("Enter a margin risk percentage between 0.01% and 100%.");
   });
 
   it("allows the complete Standard Plan side when the opposing legacy scenario is incomplete", () => {
@@ -249,7 +257,7 @@ describe("buildAdaptivePositionPlan", () => {
       availableMargin: 100_000,
       marginPerLot: 100,
       preference: "custom",
-      maxLossAmount: 5_000,
+      riskPercent: 5,
       context: SUPPORTIVE_CONTEXT,
     });
 
@@ -269,7 +277,7 @@ describe("buildAdaptivePositionPlan", () => {
       facilityFeeUsdPerLotPerSide: 1.5,
       vatPercent: 11,
       preference: "custom",
-      maxLossAmount: 10,
+      riskPercent: 0.01,
       context: SUPPORTIVE_CONTEXT,
     });
 
@@ -299,24 +307,14 @@ describe("buildAdaptivePositionPlan", () => {
       facilityFeeUsdPerLotPerSide: 1.5,
       vatPercent: 11,
       preference: "balanced",
+      riskPercent: 2,
       context: SUPPORTIVE_CONTEXT,
     });
     expect(executableRecommendation.result.buy?.ladder.every((level) => level.lot >= 0.1)).toBe(true);
     expect(executableRecommendation.result.buy?.totalLots).toBeLessThanOrEqual(0.9);
 
-    const existingExposureCap = buildAdaptivePlanRecommendation({
-      instrument: "XAU/USD",
-      tradePlan: TRADE_PLAN,
-      availableMargin: 100_000,
-      existingExposure: 0.6,
-      marginPerLot: 100,
-      minimumLot: 0.1,
-      maximumLot: 0.9,
-      preference: "balanced",
-      context: SUPPORTIVE_CONTEXT,
-    });
-    expect(existingExposureCap.result.valid).toBe(false);
-    expect(existingExposureCap.result.errors.join(" ")).toMatch(/total open exposure exceeds/i);
+    // Existing open-lot input is intentionally not part of the user-facing
+    // flow; the selected scenario is calculated from margin and risk percent.
   });
 
   it("marks the plan invalid when required account inputs are missing", () => {
