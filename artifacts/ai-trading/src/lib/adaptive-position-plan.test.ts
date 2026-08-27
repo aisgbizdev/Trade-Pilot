@@ -193,6 +193,132 @@ describe("buildAdaptivePositionPlan", () => {
     expect(TRADE_PLAN.sell.stopLoss).toBe("2,312.00");
   });
 
+  it("keeps each additional stage at or below the prior lot and records stage margin", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      initialLot: 0.09,
+      levels: 3,
+      maxLossAmount: 100,
+    });
+
+    const ladder = result.buy?.ladder ?? [];
+    expect(ladder).toHaveLength(4);
+    expect(ladder.slice(1).every((level, index) => level.lot <= ladder[index]!.lot)).toBe(true);
+    expect(ladder.every((level) => level.marginRequired > 0)).toBe(true);
+    expect(result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(100);
+  });
+
+  it("uses an explicit custom account-currency loss cap instead of a percentage-derived cap", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 100,
+      preference: "custom",
+      maxLossAmount: 75,
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.recommendation?.maximumLoss).toBe(75);
+    expect(recommendation.result.maximumLoss).toBe(75);
+    expect(recommendation.result.marginAllocated).toBeGreaterThan(0);
+    expect(recommendation.result.marginBuffer).toBeGreaterThanOrEqual(0);
+    expect(recommendation.result.breakEvenWinRate).toBeGreaterThan(0);
+    expect(recommendation.result.breakEvenWinRate).toBeLessThan(1);
+  });
+
+  it("requires a positive custom maximum loss before calculating a plan", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 100,
+      preference: "custom",
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(false);
+    expect(recommendation.result.errors).toContain("Enter a maximum loss amount greater than zero.");
+  });
+
+  it("allows the complete Standard Plan side when the opposing legacy scenario is incomplete", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: { ...TRADE_PLAN, sell: { ...TRADE_PLAN.sell, entryZone: "", stopLoss: "" } },
+      availableMargin: 100_000,
+      marginPerLot: 100,
+      preference: "custom",
+      maxLossAmount: 5_000,
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.result.buy).not.toBeNull();
+    expect(recommendation.result.sell).toBeNull();
+  });
+
+  it("includes mandatory TP fees and VAT in the loss cap and never recommends below the TP minimum lot", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 100,
+      minimumLot: 0.1,
+      maximumLot: 0.9,
+      facilityFeeUsdPerLotPerSide: 1.5,
+      vatPercent: 11,
+      preference: "custom",
+      maxLossAmount: 10,
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(false);
+    expect(recommendation.result.errors.join(" ")).toMatch(/cycle loss exceeds/i);
+
+    const feeAwarePlan = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      minimumLot: 0.1,
+      maximumLot: 0.9,
+      initialLot: 0.1,
+      levels: 0,
+      maxLossAmount: 100,
+      facilityFeeUsdPerLotPerSide: 1.5,
+      vatPercent: 11,
+    });
+    // Buy distance is $11/oz × 10 units × 0.1 lot = $11; costs add $0.333.
+    expect(feeAwarePlan.buy?.estimatedCycleLoss).toBeCloseTo(11.333, 3);
+
+    const executableRecommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      marginPerLot: 100,
+      minimumLot: 0.1,
+      maximumLot: 0.9,
+      facilityFeeUsdPerLotPerSide: 1.5,
+      vatPercent: 11,
+      preference: "balanced",
+      context: SUPPORTIVE_CONTEXT,
+    });
+    expect(executableRecommendation.result.buy?.ladder.every((level) => level.lot >= 0.1)).toBe(true);
+    expect(executableRecommendation.result.buy?.totalLots).toBeLessThanOrEqual(0.9);
+
+    const existingExposureCap = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      existingExposure: 0.6,
+      marginPerLot: 100,
+      minimumLot: 0.1,
+      maximumLot: 0.9,
+      preference: "balanced",
+      context: SUPPORTIVE_CONTEXT,
+    });
+    expect(existingExposureCap.result.valid).toBe(false);
+    expect(existingExposureCap.result.errors.join(" ")).toMatch(/total open exposure exceeds/i);
+  });
+
   it("marks the plan invalid when required account inputs are missing", () => {
     const result = buildAdaptivePositionPlan({
       ...VALID_INPUT,

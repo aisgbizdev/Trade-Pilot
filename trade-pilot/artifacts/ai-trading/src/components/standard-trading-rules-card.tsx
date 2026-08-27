@@ -1,13 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, CircleAlert, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "@/lib/i18n";
-import {
-  useGetStandardTradingRules,
-} from "@workspace/api-client-react";
-
 type StandardTradingRulesCardProps = {
   instrument: string;
+};
+
+type StandardRule = {
+  code: string;
+  product: string;
+  contractSize: number;
+  contractUnit: string;
+  tradingDays: string;
+  tradingHours: { summer: string; winter: string };
+  initialMarginUsdPerLot: number;
+  facilityFeeUsdPerLotPerSide: number;
+  vatPercent: number;
+  rolloverUsdPerLotPerNight: number;
+  priceSource: string;
+  priceGuidance: string;
+  minimumSpread: string;
+  maximumSpread: string;
+  hecticSpread: string;
+  minimumPriceMovement: string;
+  limitStopRange: string;
+  deliveryBy: string;
+};
+
+type StandardRulesResponse = {
+  version: string;
+  effectiveDate: string;
+  fixedRate: { label: string };
+  account: { minimumLot: number; maximumLot: number; minimumDepositUsd: number; maintenanceMarginPercent: number; marginCallBelowPercent: number; marginCallRestorePercent: number; autoLiquidationAtOrBelowPercent: number };
+  instruments: StandardRule[];
+  sourceDocument: string;
+  transactionFormula: string;
+  disclaimer: { en: string; id: string };
+  relationshipDisclosure: { en: string; id: string };
 };
 
 function formatUsd(value: number): string {
@@ -19,11 +48,26 @@ export function StandardTradingRulesCard({
 }: StandardTradingRulesCardProps) {
   const { t, lang } = useTranslation();
   const [open, setOpen] = useState(false);
-  const { data, isLoading, isError } = useGetStandardTradingRules({
-    query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
-  });
+  const [data, setData] = useState<StandardRulesResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const code = instrument === "XAU/USD" ? "XUL10" : instrument === "BRENT" ? "BCO10_BBJ" : null;
   const rule = data?.instruments.find((item) => item.code === code);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    setIsError(false);
+    fetch("/api/trading-rules/standard", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("rules unavailable");
+        return response.json() as Promise<StandardRulesResponse>;
+      })
+      .then((next) => { if (!cancelled) setData(next); })
+      .catch(() => { if (!cancelled) setIsError(true); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   if (!code) return null;
 

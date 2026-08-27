@@ -74,11 +74,13 @@ vi.mock("lightweight-charts", () => {
 import { ThemeProvider } from "../theme-provider";
 import { AnalysisLevelsChart } from "../analysis-levels-chart";
 import type { TradePlan } from "@workspace/api-client-react";
+import type { AdaptivePositionPlanResult } from "@/lib/adaptive-position-plan";
 
 function renderChart(props: {
   tradePlan: TradePlan | null;
   instrument?: string;
   timeframe?: string;
+  adaptivePlan?: AdaptivePositionPlanResult | null;
 }) {
   return render(
     <ThemeProvider>
@@ -86,6 +88,7 @@ function renderChart(props: {
         instrument={props.instrument ?? "EUR/USD"}
         timeframe={props.timeframe ?? "1h"}
         tradePlan={props.tradePlan}
+        adaptivePlan={props.adaptivePlan}
         height={300}
       />
     </ThemeProvider>,
@@ -237,5 +240,32 @@ describe("AnalysisLevelsChart", () => {
     expect(titles.filter((t) => t === "SL")).toHaveLength(2);
     expect(titles.filter((t) => t === "TP1")).toHaveLength(2);
     expect(titles.filter((t) => t === "TP2")).toHaveLength(2);
+  });
+
+  it("overlays every manual stage alongside the unchanged Standard Plan levels", async () => {
+    const plan: TradePlan = {
+      preferredSide: "buy",
+      buy: makeSide({ entryZone: "2350", stopLoss: "2345", takeProfit1: "2360", takeProfit2: "2370" }),
+      sell: makeSide({}),
+    };
+    const adaptivePlan: AdaptivePositionPlanResult = {
+      valid: true, market: "gold", rule: null, errors: [], assumptions: [],
+      sell: null,
+      buy: {
+        side: "buy", entry: 2350, stopLoss: 2345, takeProfit1: 2360, takeProfit2: 2370,
+        totalLots: 0.16, marginRequired: 16, estimatedCycleLoss: 6, potentialProfit: 24,
+        breakEvenWinRate: 0.2,
+        ladder: [
+          { level: 0, price: 2350, lot: 0.1, cumulativeLots: 0.1, marginRequired: 10, estimatedRiskToStop: 5, reason: "Initial" },
+          { level: 1, price: 2347.5, lot: 0.06, cumulativeLots: 0.16, marginRequired: 16, estimatedRiskToStop: 6, reason: "Validated stage" },
+        ],
+      },
+      marginAllocated: 16, marginBuffer: 84, maximumLoss: 10, potentialResult: 24, breakEvenWinRate: 0.2,
+    };
+
+    renderChart({ tradePlan: plan, instrument: "XAU/USD", timeframe: "1h", adaptivePlan });
+
+    await waitFor(() => expect(screen.getByTestId("analysis-levels-chart").getAttribute("data-state")).toBe("ready"));
+    expect(createdPriceLines.map((line) => line.title)).toEqual(expect.arrayContaining(["BUY Entry", "SL", "TP1", "TP2", "BUY Start", "BUY L1"]));
   });
 });

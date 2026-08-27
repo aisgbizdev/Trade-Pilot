@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { AnalysisLevelsChart } from "@/components/analysis-levels-chart";
 import type { TradePlan } from "@workspace/api-client-react";
 import type { Translations } from "@/locales/en";
 import {
@@ -30,16 +31,20 @@ interface Props {
 
 interface FormState {
   availableMargin: string;
+  existingExposure: string;
   preference: AdaptiveRiskPreference;
+  maxLossAmount: string;
 }
 
 const DEFAULT_FORM: FormState = {
   availableMargin: "",
+  existingExposure: "",
   preference: "safe",
+  maxLossAmount: "",
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v2:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v4:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -49,19 +54,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isStoredForm(value: unknown): value is Partial<FormState> {
   if (!isRecord(value)) return false;
   return (value.availableMargin === undefined || typeof value.availableMargin === "string") &&
-    (value.preference === undefined || value.preference === "safe" || value.preference === "balanced" || value.preference === "active");
-}
-
-function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommendation {
-  if (!isRecord(value) || !isRecord(value.result) || !isRecord(value.context) || !isRecord(value.decision)) return false;
-  const fundamental = value.context.fundamental;
-  return typeof value.result.valid === "boolean" &&
-    isRecord(fundamental) &&
-    typeof fundamental.available === "boolean" &&
-    (value.decision.posture === "scaling_allowed" || value.decision.posture === "entry_only" || value.decision.posture === "not_recommended") &&
-    (value.decision.preferredSide === "buy" || value.decision.preferredSide === "sell" || value.decision.preferredSide === "both" || value.decision.preferredSide === "none") &&
-    Array.isArray(value.decision.reasonCodes) &&
-    value.decision.reasonCodes.every((code) => typeof code === "string");
+    (value.existingExposure === undefined || typeof value.existingExposure === "string") &&
+    (value.maxLossAmount === undefined || typeof value.maxLossAmount === "string") &&
+    (value.preference === undefined || ["safe", "balanced", "active", "aggressive", "custom"].includes(String(value.preference)));
 }
 
 function numberValue(value: string): number | null {
@@ -128,6 +123,8 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
         <span className="text-muted-foreground">{copy.adaptive_stop}</span><span className="text-right font-semibold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</span>
         <span className="text-muted-foreground">{copy.adaptive_cycle_loss}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</span>
         <span className="text-muted-foreground">{copy.adaptive_margin_required}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.marginRequired, lang)}</span>
+        <span className="text-muted-foreground">{copy.adaptive_potential_result}</span><span className="text-right font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatMoney(plan.potentialProfit, lang)}</span>
+        <span className="text-muted-foreground">{copy.adaptive_break_even_rate}</span><span className="text-right font-semibold tabular-nums">{plan.breakEvenWinRate == null ? "—" : `${formatNumber(plan.breakEvenWinRate * 100, lang, 1)}%`}</span>
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
       <div className="grid gap-2">
@@ -140,6 +137,7 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
             <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
               <div><span className="block text-muted-foreground">{copy.adaptive_price}</span><strong className="block tabular-nums">{formatNumber(level.price, lang, 4)}</strong></div>
               <div><span className="block text-muted-foreground">{copy.adaptive_cumulative}</span><strong className="block tabular-nums">{formatNumber(level.cumulativeLots, lang)} {copy.adaptive_lot}</strong></div>
+              <div><span className="block text-muted-foreground">{copy.adaptive_stage_margin}</span><strong className="block tabular-nums">{formatMoney(level.marginRequired, lang)}</strong></div>
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{level.level === 0 ? copy.adaptive_stage_initial_reason : copy.adaptive_stage_add_reason}</p>
           </div>
@@ -153,7 +151,34 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   const [open, setOpen] = useState(true);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
-  const marginPerLot = 100;
+  const [marginRule, setMarginRule] = useState<{ product: string; initialMarginUsdPerLot: number; facilityFeeUsdPerLotPerSide: number; vatPercent: number; minimumLot: number; maximumLot: number } | null>(null);
+  const [rulesLoading, setRulesLoading] = useState(true);
+  const [rulesError, setRulesError] = useState(false);
+  const instrumentCode = instrument.toUpperCase().includes("XAU") || instrument.toUpperCase().includes("GOLD")
+    ? "XUL10"
+    : instrument.toUpperCase().includes("BRENT") || instrument.toUpperCase().includes("BCO") || instrument.toUpperCase().includes("OIL")
+      ? "BCO10_BBJ"
+      : null;
+  const marginPerLot = marginRule?.initialMarginUsdPerLot ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    setRulesLoading(true);
+    setRulesError(false);
+    setMarginRule(null);
+    fetch("/api/trading-rules/standard", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("rules unavailable");
+        const data: unknown = await response.json();
+        if (!isRecord(data) || !Array.isArray(data.instruments)) throw new Error("rules malformed");
+        const rule = data.instruments.find((item): item is Record<string, unknown> => isRecord(item) && item.code === instrumentCode);
+        if (!rule || !isRecord(data.account) || typeof rule.product !== "string" || typeof rule.initialMarginUsdPerLot !== "number" || typeof rule.facilityFeeUsdPerLotPerSide !== "number" || typeof rule.vatPercent !== "number" || typeof data.account.minimumLot !== "number" || typeof data.account.maximumLot !== "number") throw new Error("instrument unavailable");
+        if (!cancelled) setMarginRule({ product: rule.product, initialMarginUsdPerLot: rule.initialMarginUsdPerLot, facilityFeeUsdPerLotPerSide: rule.facilityFeeUsdPerLotPerSide, vatPercent: rule.vatPercent, minimumLot: data.account.minimumLot, maximumLot: data.account.maximumLot });
+      })
+      .catch(() => { if (!cancelled) setRulesError(true); })
+      .finally(() => { if (!cancelled) setRulesLoading(false); });
+    return () => { cancelled = true; };
+  }, [instrumentCode]);
 
   useEffect(() => {
     setForm(DEFAULT_FORM);
@@ -164,7 +189,6 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
       const parsed: unknown = JSON.parse(stored);
       if (!isRecord(parsed)) return;
       if (isStoredForm(parsed.form)) setForm({ ...DEFAULT_FORM, ...parsed.form });
-      if (isStoredRecommendation(parsed.recommendation)) setRecommendation(parsed.recommendation);
     } catch {
       // A malformed local draft should not block Standard Analysis.
     }
@@ -179,12 +203,18 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
       instrument,
       tradePlan,
       availableMargin: numberValue(form.availableMargin),
+      existingExposure: numberValue(form.existingExposure) ?? 0,
       marginPerLot,
+      minimumLot: marginRule?.minimumLot,
+      maximumLot: marginRule?.maximumLot,
+      facilityFeeUsdPerLotPerSide: marginRule?.facilityFeeUsdPerLotPerSide,
+      vatPercent: marginRule?.vatPercent,
       preference: form.preference,
+      maxLossAmount: form.preference === "custom" ? numberValue(form.maxLossAmount) : null,
       context,
     });
     setRecommendation(next);
-    localStorage.setItem(storageKey(analysisId), JSON.stringify({ form, recommendation: next }));
+    localStorage.setItem(storageKey(analysisId), JSON.stringify({ form }));
   };
   const reset = () => {
     setForm(DEFAULT_FORM);
@@ -215,16 +245,24 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               <Input type="number" min="0" step="any" inputMode="decimal" value={form.availableMargin} placeholder="100,000" aria-label={copy.adaptive_available_margin} onChange={(event) => updateField("availableMargin", event.target.value)} className="h-14 pl-8 text-xl font-semibold tracking-tight shadow-sm" data-testid="input-adaptive-available-margin" />
             </div>
           </label>
-          {marginPerLot != null && <p className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_margin_rule.replace("{amount}", formatMoney(marginPerLot, lang))}</p>}
+          <label className="block space-y-1.5">
+            <span className="block text-sm font-bold text-foreground">{copy.adaptive_existing_exposure}</span>
+            <span className="block text-[11px] text-muted-foreground">{copy.adaptive_existing_exposure_help}</span>
+            <Input type="number" min="0" step="0.01" inputMode="decimal" value={form.existingExposure} placeholder="0" aria-label={copy.adaptive_existing_exposure} onChange={(event) => updateField("existingExposure", event.target.value)} className="h-10 text-sm shadow-sm" data-testid="input-adaptive-existing-exposure" />
+          </label>
+          {rulesLoading && <p className="text-[11px] text-muted-foreground">{copy.adaptive_rules_loading}</p>}
+          {rulesError || (!rulesLoading && !marginRule) ? <p className="text-[11px] text-amber-700 dark:text-amber-300">{copy.adaptive_rules_error}</p> : null}
+          {marginRule && <p className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_margin_rule.replace("{amount}", formatMoney(marginPerLot, lang)).replace("{instrument}", marginRule.product)}</p>}
         </div>
         <div className="space-y-2">
           <h4 className="text-xs font-bold text-foreground">{copy.adaptive_preference_title}</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label={copy.adaptive_preference_title}>
-            {(["safe", "balanced", "active"] as const).map((preference) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label={copy.adaptive_preference_title}>
+            {(["safe", "balanced", "aggressive", "custom"] as const).map((preference) => {
               const labels = {
                 safe: [copy.adaptive_preference_safe, copy.adaptive_preference_safe_desc],
                 balanced: [copy.adaptive_preference_balanced, copy.adaptive_preference_balanced_desc],
-                active: [copy.adaptive_preference_active, copy.adaptive_preference_active_desc],
+                aggressive: [copy.adaptive_preference_aggressive, copy.adaptive_preference_aggressive_desc],
+                custom: [copy.adaptive_preference_custom, copy.adaptive_preference_custom_desc],
               } as const;
               const selectedPreference = form.preference === preference;
               return <button key={preference} type="button" role="radio" aria-checked={selectedPreference} onClick={() => updateField("preference", preference)} className={`rounded-md border p-3 text-left transition-colors ${selectedPreference ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:bg-muted/50"}`} data-testid={`button-adaptive-preference-${preference}`}>
@@ -233,9 +271,10 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               </button>;
             })}
           </div>
+          {form.preference === "custom" && <label className="block max-w-sm space-y-1"><span className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_max_loss}</span><Input type="number" min="0.01" step="any" value={form.maxLossAmount} placeholder="0" onChange={(event) => updateField("maxLossAmount", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-max-loss" /><span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_max_loss_help}</span></label>}
         </div>
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2">
-          <Button type="button" size="sm" onClick={calculate} className="h-11 w-full sm:w-auto" data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
+          <Button type="button" size="sm" onClick={calculate} disabled={rulesLoading || rulesError || !marginRule} className="h-11 w-full sm:w-auto" data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={reset} className="w-full sm:w-auto" data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {!recommendation && <p className="text-[11px] text-muted-foreground flex items-start gap-1.5"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />{copy.adaptive_ready}</p>}
@@ -273,13 +312,27 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         {recommendation && !recommendation.result.valid && <div className="border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 space-y-2" data-testid="adaptive-plan-invalid">
           <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{copy.adaptive_invalid_title}</p>
           <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{copy.adaptive_invalid_description}</p>
+          {recommendation.result.errors.length > 0 && <ul className="list-disc space-y-0.5 pl-4 text-[10px] leading-relaxed text-amber-800 dark:text-amber-300">{recommendation.result.errors.map((error) => <li key={error}>{error}</li>)}</ul>}
         </div>}
-        {recommendation?.result.valid && recommendation.result.buy && recommendation.result.sell && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
+        {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
           <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
           <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatMoney(selected.maximumLoss, lang))}</p></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} decision={recommendation.decision} /><PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} decision={recommendation.decision} /></div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="adaptive-plan-metrics">
+            {[
+              [copy.adaptive_margin_available, formatMoney(numberValue(form.availableMargin), lang)],
+              [copy.adaptive_existing_exposure, `${formatNumber(numberValue(form.existingExposure) ?? 0, lang, 2)} ${copy.adaptive_lot}`],
+              [copy.adaptive_margin_allocated, formatMoney(recommendation.result.marginAllocated, lang)],
+              [copy.adaptive_margin_buffer, formatMoney(recommendation.result.marginBuffer, lang)],
+              [copy.adaptive_maximum_loss, formatMoney(recommendation.result.maximumLoss, lang)],
+              [copy.adaptive_potential_result, formatMoney(selected.potentialResult, lang)],
+              [copy.adaptive_break_even_rate, selected.breakEvenWinRate == null ? "—" : `${formatNumber(selected.breakEvenWinRate * 100, lang, 1)}%`],
+              [copy.adaptive_confidence, `${formatNumber(recommendation.context.confidenceMin, lang, 0)}–${formatNumber(recommendation.context.confidenceMax, lang, 0)}%`],
+            ].map(([label, value]) => <div key={label} className="rounded-md border border-border/70 bg-background/60 p-2"><span className="block text-[10px] text-muted-foreground">{label}</span><strong className="block text-xs tabular-nums">{value}</strong></div>)}
+          </div>
+          <div className="rounded-md border border-border/70 p-2" data-testid="adaptive-plan-chart"><p className="mb-1.5 text-[11px] font-semibold text-foreground">{copy.adaptive_chart_title}</p><AnalysisLevelsChart instrument={instrument} timeframe={context.timeframe ?? "1h"} tradePlan={tradePlan} adaptivePlan={recommendation.result} height={220} /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{recommendation.result.buy && <PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} decision={recommendation.decision} />}{recommendation.result.sell && <PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} decision={recommendation.decision} />}</div>
           <details className="rounded-md border border-border p-3"><summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</summary><ol className="mt-2 list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol></details>
-          <div className="flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3"><AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" /><p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">{copy.adaptive_external_liquidation} {copy.adaptive_manual_only}</p></div>
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3"><AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" /><p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">{copy.adaptive_external_liquidation} {copy.adaptive_fee_included} {copy.adaptive_manual_only}</p></div>
         </div>}
       </div>}
     </Card>

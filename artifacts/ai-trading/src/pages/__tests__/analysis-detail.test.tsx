@@ -95,6 +95,22 @@ function feedbackHandler(): FetchHandler {
   };
 }
 
+function standardTradingRulesHandler(): FetchHandler {
+  return (url, init) => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (method !== "GET" || !url.endsWith("/api/trading-rules/standard")) return null;
+    return jsonResponse({
+      instruments: [{
+        code: "XUL10",
+        product: "Gold (Loco London)",
+        contractSize: 10,
+        contractUnit: "troy ounce",
+        initialMarginUsdPerLot: 100,
+      }],
+    });
+  };
+}
+
 beforeEach(() => {
   localStorage.clear();
   window.history.replaceState({}, "", `/analyses/${ANALYSIS_ID}`);
@@ -150,6 +166,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
         },
       }),
       feedbackHandler(),
+      standardTradingRulesHandler(),
     ]);
     const { Wrapper } = makeWrapper();
 
@@ -160,6 +177,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
+    expect(screen.getByTestId("input-adaptive-existing-exposure")).toHaveValue(null);
+    await waitFor(() => {
+      expect(screen.getByTestId("button-calculate-adaptive-plan")).not.toBeDisabled();
+    });
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
@@ -173,7 +194,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v2:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v4:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -196,7 +217,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     expect(await screen.findByTestId("input-adaptive-available-margin")).toHaveValue(100000);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    localStorage.removeItem(`trade-pilot:adaptive-plan:v2:${ANALYSIS_ID}`);
+    localStorage.removeItem(`trade-pilot:adaptive-plan:v4:${ANALYSIS_ID}`);
   });
 });
 
