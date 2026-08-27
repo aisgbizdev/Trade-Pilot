@@ -3,3 +3,8 @@
 
 # No need to store the pnpm store twice.
 .local
+
+# A legacy nested workspace duplicate. The active application lives at
+# the repository root; excluding this copy prevents duplicate artifacts
+# and a multi-gigabyte deployment bundle.
+trade-pilot/
