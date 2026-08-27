@@ -3,3 +3,9 @@
 
 # No need to store the pnpm store twice.
 .local
+
+# This is a legacy workspace snapshot of the canonical root project. Keeping it
+# in the publish context duplicates artifacts, manifests, dependencies, and
+# service ports, which makes the Repl layer much larger and can stall Bundle.
+# The source remains in the workspace; production is built from /artifacts.
+trade-pilot/
