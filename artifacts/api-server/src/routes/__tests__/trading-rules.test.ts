@@ -26,6 +26,24 @@ describe("GET /trading-rules/standard", () => {
       expect.arrayContaining([
         expect.objectContaining({ code: "XUL10", contractSize: 10, minimumPriceMovement: "USD 0.01 / troy ounce" }),
         expect.objectContaining({ code: "BCO10_BBJ", contractSize: 100, minimumPriceMovement: "USD 0.01 / barrel" }),
+        expect.objectContaining({
+          code: "HKK50_BBJ",
+          contractSize: 5,
+          contractUnit: "USD/point",
+          initialMarginUsdPerLot: 100,
+          facilityFeeUsdPerLotPerSide: null,
+          rolloverUsdPerLotPerNight: 0.3,
+          minimumPriceMovement: "1 point",
+        }),
+        expect.objectContaining({
+          code: "JPK50_BBJ",
+          contractSize: 5,
+          contractUnit: "USD/point",
+          initialMarginUsdPerLot: 100,
+          facilityFeeUsdPerLotPerSide: null,
+          rolloverUsdPerLotPerNight: 0.2,
+          minimumPriceMovement: "5 points",
+        }),
       ]),
     );
     expect(response.body.disclaimer.id).toContain("TP Standard Trading Rules");

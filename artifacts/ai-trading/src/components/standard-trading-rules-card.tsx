@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, CircleAlert, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "@/lib/i18n";
+import { getAdaptiveStandardRuleCode } from "@/lib/adaptive-position-plan";
 import { useGetStandardTradingRules } from "@workspace/api-client-react";
 
 export function StandardTradingRulesCard({ instrument }: { instrument: string }) {
@@ -10,7 +11,7 @@ export function StandardTradingRulesCard({ instrument }: { instrument: string })
   const { data, isLoading, isError } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
-  const code = instrument === "XAU/USD" ? "XUL10" : instrument === "BRENT" ? "BCO10_BBJ" : null;
+  const code = getAdaptiveStandardRuleCode(instrument);
   const rule = data?.instruments.find((item) => item.code === code);
   const locale = lang === "id" ? "id-ID" : "en-US";
   const money = (value: number) => `USD ${value.toLocaleString("en-US", { minimumFractionDigits: value % 1 ? 1 : 0 })}`;
@@ -24,7 +25,7 @@ export function StandardTradingRulesCard({ instrument }: { instrument: string })
     [t.analyze.standard_rules_contract_size, `${rule.contractSize.toLocaleString(locale)} ${rule.contractUnit}`],
     [t.analyze.standard_rules_session, `${rule.tradingDays} · ${t.analyze.standard_rules_summer}: ${rule.tradingHours.summer} · ${t.analyze.standard_rules_winter}: ${rule.tradingHours.winter}`],
     [t.analyze.standard_rules_margin, `${money(rule.initialMarginUsdPerLot)} / ${data.account.minimumLot.toFixed(2)} lot · Mini (${data.fixedRate.label})`],
-    [t.analyze.standard_rules_fee, `${money(rule.facilityFeeUsdPerLotPerSide)} / lot / side + VAT ${rule.vatPercent}%`],
+    [t.analyze.standard_rules_fee, rule.facilityFeeUsdPerLotPerSide == null ? "—" : `${money(rule.facilityFeeUsdPerLotPerSide)} / lot / side + VAT ${rule.vatPercent}%`],
     [t.analyze.standard_rules_rollover, `${money(rule.rolloverUsdPerLotPerNight)} / lot / night + VAT ${rule.vatPercent}%`],
     [t.analyze.standard_rules_spread, `${t.analyze.standard_rules_min}: ${rule.minimumSpread} · ${t.analyze.standard_rules_max}: ${rule.maximumSpread}`],
     [t.analyze.standard_rules_hectic_spread, rule.hecticSpread],

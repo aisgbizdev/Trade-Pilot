@@ -35,7 +35,7 @@ part 'standard_trading_rule_instrument.g.dart';
 abstract class StandardTradingRuleInstrument implements Built<StandardTradingRuleInstrument, StandardTradingRuleInstrumentBuilder> {
   @BuiltValueField(wireName: r'code')
   StandardTradingRuleInstrumentCodeEnum get code;
-  // enum codeEnum {  XUL10,  BCO10_BBJ,  };
+  // enum codeEnum {  XUL10,  BCO10_BBJ,  HKK50_BBJ,  JPK50_BBJ,  };
 
   @BuiltValueField(wireName: r'product')
   String get product;
@@ -45,7 +45,7 @@ abstract class StandardTradingRuleInstrument implements Built<StandardTradingRul
 
   @BuiltValueField(wireName: r'contractUnit')
   StandardTradingRuleInstrumentContractUnitEnum get contractUnit;
-  // enum contractUnitEnum {  troy ounce,  barrel,  };
+  // enum contractUnitEnum {  troy ounce,  barrel,  USD/point,  };
 
   @BuiltValueField(wireName: r'tradingDays')
   String get tradingDays;
@@ -57,7 +57,7 @@ abstract class StandardTradingRuleInstrument implements Built<StandardTradingRul
   num get initialMarginUsdPerLot;
 
   @BuiltValueField(wireName: r'facilityFeeUsdPerLotPerSide')
-  num get facilityFeeUsdPerLotPerSide;
+  num? get facilityFeeUsdPerLotPerSide;
 
   @BuiltValueField(wireName: r'vatPercent')
   num get vatPercent;
@@ -148,9 +148,9 @@ class _$StandardTradingRuleInstrumentSerializer implements PrimitiveSerializer<S
       specifiedType: const FullType(num),
     );
     yield r'facilityFeeUsdPerLotPerSide';
-    yield serializers.serialize(
+    yield object.facilityFeeUsdPerLotPerSide == null ? null : serializers.serialize(
       object.facilityFeeUsdPerLotPerSide,
-      specifiedType: const FullType(num),
+      specifiedType: const FullType.nullable(num),
     );
     yield r'vatPercent';
     yield serializers.serialize(
@@ -277,8 +277,9 @@ class _$StandardTradingRuleInstrumentSerializer implements PrimitiveSerializer<S
         case r'facilityFeeUsdPerLotPerSide':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(num),
-          ) as num;
+            specifiedType: const FullType.nullable(num),
+          ) as num?;
+          if (valueDes == null) continue;
           result.facilityFeeUsdPerLotPerSide = valueDes;
           break;
         case r'vatPercent':
@@ -386,6 +387,10 @@ class StandardTradingRuleInstrumentCodeEnum extends EnumClass {
   static const StandardTradingRuleInstrumentCodeEnum XUL10 = _$standardTradingRuleInstrumentCodeEnum_XUL10;
   @BuiltValueEnumConst(wireName: r'BCO10_BBJ')
   static const StandardTradingRuleInstrumentCodeEnum BCO10_BBJ = _$standardTradingRuleInstrumentCodeEnum_BCO10_BBJ;
+  @BuiltValueEnumConst(wireName: r'HKK50_BBJ')
+  static const StandardTradingRuleInstrumentCodeEnum HKK50_BBJ = _$standardTradingRuleInstrumentCodeEnum_HKK50_BBJ;
+  @BuiltValueEnumConst(wireName: r'JPK50_BBJ')
+  static const StandardTradingRuleInstrumentCodeEnum JPK50_BBJ = _$standardTradingRuleInstrumentCodeEnum_JPK50_BBJ;
 
   static Serializer<StandardTradingRuleInstrumentCodeEnum> get serializer => _$standardTradingRuleInstrumentCodeEnumSerializer;
 
@@ -401,6 +406,8 @@ class StandardTradingRuleInstrumentContractUnitEnum extends EnumClass {
   static const StandardTradingRuleInstrumentContractUnitEnum troyOunce = _$standardTradingRuleInstrumentContractUnitEnum_troyOunce;
   @BuiltValueEnumConst(wireName: r'barrel')
   static const StandardTradingRuleInstrumentContractUnitEnum barrel = _$standardTradingRuleInstrumentContractUnitEnum_barrel;
+  @BuiltValueEnumConst(wireName: r'USD/point')
+  static const StandardTradingRuleInstrumentContractUnitEnum uSDSlashPoint = _$standardTradingRuleInstrumentContractUnitEnum_uSDSlashPoint;
 
   static Serializer<StandardTradingRuleInstrumentContractUnitEnum> get serializer => _$standardTradingRuleInstrumentContractUnitEnumSerializer;
 

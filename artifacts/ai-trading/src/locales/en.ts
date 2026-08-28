@@ -930,6 +930,8 @@ export const en = {
     adaptive_calculate: "Create recommendation",
     adaptive_reset: "Start over",
     adaptive_ready: "Choose the rules for your real account, enter free trading funds, then choose how conservatively they should be used.",
+    adaptive_unsupported_title: "Position planning is not available for this instrument",
+    adaptive_unsupported_description: "Analysis, Standard Plan levels, indicators, news, and the economic calendar remain available. Lot, margin, risk, and extra-layer calculations are available only for products with complete TP Standard Trading Rules: Gold, Brent Oil, Hang Seng, and Nikkei.",
     adaptive_rules_loading: "Preparing standard margin rules…",
     adaptive_rules_error: "No position recommendation is available: TP Standard Trading Rules for this instrument could not be loaded or are incomplete. Do not estimate margin, contract size, or minimum movement yourself.",
     adaptive_invalid_title: "No safe plan yet",

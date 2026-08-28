@@ -5,7 +5,7 @@ import type {
   TradeSide,
 } from "@workspace/api-client-react";
 
-export type AdaptiveMarket = "gold" | "brent";
+export type AdaptiveMarket = "gold" | "brent" | "hang_seng" | "nikkei";
 export type AccountTier = "micro" | "mini" | "regular";
 export type AdaptiveRiskPreference = "safe" | "balanced" | "active";
 export type AdaptivePlanPosture = "scaling_allowed" | "entry_only" | "not_recommended";
@@ -79,7 +79,7 @@ export interface AdaptiveRule {
   maximumLot: number | null;
   lotStep: number;
   minimumOpeningFunds: number | null;
-  maxGapPercent: number;
+  maxGapPercent: number | null;
   source: "TP Standard Trading Rules";
 }
 
@@ -152,6 +152,14 @@ const MARKET_GUARDRAILS: Record<AdaptiveMarket, Pick<AdaptiveRule, "label" | "ma
     label: "Brent Oil",
     maxGapPercent: 2,
   },
+  hang_seng: {
+    label: "Hang Seng Index",
+    maxGapPercent: null,
+  },
+  nikkei: {
+    label: "Nikkei Index",
+    maxGapPercent: null,
+  },
 };
 
 const ACCOUNT_TIER_SPECS: Record<AccountTier, {
@@ -207,11 +215,29 @@ function marketForInstrument(instrument: string): AdaptiveMarket | null {
   ) {
     return "brent";
   }
+  if (
+    normalized.includes("HKK50BBJ") ||
+    normalized === "HSI" ||
+    normalized.includes("HANGSENG")
+  ) {
+    return "hang_seng";
+  }
+  if (
+    normalized.includes("JPK50BBJ") ||
+    normalized.includes("NIKKEI")
+  ) {
+    return "nikkei";
+  }
   return null;
 }
 
 function standardCodeForMarket(market: AdaptiveMarket): StandardTradingRuleInstrument["code"] {
-  return market === "gold" ? "XUL10" : "BCO10_BBJ";
+  switch (market) {
+    case "gold": return "XUL10";
+    case "brent": return "BCO10_BBJ";
+    case "hang_seng": return "HKK50_BBJ";
+    case "nikkei": return "JPK50_BBJ";
+  }
 }
 
 export function getAdaptiveStandardRuleCode(
@@ -294,7 +320,7 @@ function priceFromTradeSide(side: TradeSide, field: "entryZone" | "stopLoss" | "
 
 function roundPrice(value: number, minMovement: number): number {
   const decimals = Math.max(0, (String(minMovement).split(".")[1] ?? "").length);
-  return Number(value.toFixed(decimals));
+  return Number((Math.round(value / minMovement) * minMovement).toFixed(decimals));
 }
 
 function roundLot(value: number, step = 0.01): number {
@@ -383,9 +409,11 @@ function sidePlan(
   rule: AdaptiveRule,
   levels = input.levels,
 ): AdaptiveSidePositionPlan | null {
-  const entry = priceFromTradeSide(tradeSide, "entryZone");
-  const stopLoss = priceFromTradeSide(tradeSide, "stopLoss");
-  if (entry == null || stopLoss == null || entry === stopLoss || input.initialLot == null) return null;
+  const rawEntry = priceFromTradeSide(tradeSide, "entryZone");
+  const rawStopLoss = priceFromTradeSide(tradeSide, "stopLoss");
+  if (rawEntry == null || rawStopLoss == null || rawEntry === rawStopLoss || input.initialLot == null) return null;
+  const entry = roundPrice(rawEntry, rule.minMovement);
+  const stopLoss = roundPrice(rawStopLoss, rule.minMovement);
 
   const distance = side === "buy" ? entry - stopLoss : stopLoss - entry;
   const ladder: AdaptiveLadderLevel[] = [];
@@ -434,8 +462,14 @@ function sidePlan(
     side,
     entry,
     stopLoss,
-    takeProfit1: priceFromTradeSide(tradeSide, "takeProfit1"),
-    takeProfit2: priceFromTradeSide(tradeSide, "takeProfit2"),
+    takeProfit1: (() => {
+      const value = priceFromTradeSide(tradeSide, "takeProfit1");
+      return value == null ? null : roundPrice(value, rule.minMovement);
+    })(),
+    takeProfit2: (() => {
+      const value = priceFromTradeSide(tradeSide, "takeProfit2");
+      return value == null ? null : roundPrice(value, rule.minMovement);
+    })(),
     totalLots: cumulativeLots,
     marginRequired: cumulativeLots * rule.marginPerLot,
     estimatedCycleLoss,
@@ -568,9 +602,12 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   }
 
   const tierText = tierMax == null ? `${rule.minimumLot.toFixed(2)} lot and above` : `${rule.minimumLot.toFixed(2)}–${tierMax.toFixed(2)} lot`;
+  const movementAssumption = rule.maxGapPercent == null
+    ? `Minimum movement from ${rule.source}: ${rule.minMovement}; no percentage gap limit is assumed because the source rule does not provide one.`
+    : `Minimum movement from ${rule.source}: ${rule.minMovement}; a gap above ${rule.maxGapPercent}% is treated as an external execution risk.`;
   const assumptions = [
     `${input.accountTier} profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
-    `Minimum movement from ${rule.source}: ${rule.minMovement}; a gap above ${rule.maxGapPercent}% is treated as an external execution risk.`,
+    movementAssumption,
     `Initial entry uses the Standard Plan; each manual add keeps the initial lot unchanged (${tierText}) to avoid a martingale multiplier. This trades lower escalation risk for less capacity as cumulative exposure grows.`,
     `Maximum cycle loss is ${input.maxCycleLossPercent}% of equity and includes the initial entry plus every planned add.`,
     "Broker auto-liquidation, spread, rollover, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",

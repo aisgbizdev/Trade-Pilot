@@ -199,8 +199,9 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
   const standardRuleCode = getAdaptiveStandardRuleCode(instrument);
+  const isAdaptiveInstrument = standardRuleCode !== null;
   const standardRule = standardRules?.instruments.find((rule) => rule.code === standardRuleCode) ?? null;
-  const rulesAvailable = !isRulesLoading && !isRulesError && standardRule !== null;
+  const rulesAvailable = isAdaptiveInstrument && !isRulesLoading && !isRulesError && standardRule !== null;
   const availableMargin = numberValue(form.availableMargin);
   const selectedRule = rulesAvailable
     ? getAdaptiveMarketRule(instrument, standardRule, form.accountTier)
@@ -213,7 +214,8 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
     context,
     standardRule: rulesAvailable ? standardRule : null,
   });
-  const rulesUnavailable = !isRulesLoading && !rulesAvailable;
+  const unsupportedInstrument = !isAdaptiveInstrument;
+  const rulesUnavailable = isAdaptiveInstrument && !isRulesLoading && !rulesAvailable;
 
   useEffect(() => {
     if (isRulesLoading) return;
@@ -280,6 +282,13 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         </div>
       </div>
       <div className="p-4 space-y-4" data-testid="adaptive-plan-content">
+        {unsupportedInstrument ? (
+          <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-1.5 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300" data-testid="adaptive-plan-unsupported">
+            <p className="text-xs font-bold">{copy.adaptive_unsupported_title}</p>
+            <p>{copy.adaptive_unsupported_description}</p>
+          </div>
+        ) : (
+        <>
         <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
@@ -411,6 +420,8 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           </div>
           <div className="space-y-1.5 rounded-md border border-border p-3"><p className="text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</p><ol className="list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol></div>
         </div>}
+        </>
+        )}
       </div>
     </Card>
   );

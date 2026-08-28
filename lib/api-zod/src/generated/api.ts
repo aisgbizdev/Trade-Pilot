@@ -43,17 +43,17 @@ export const GetStandardTradingRulesResponse = zod
     transactionFormula: zod.string(),
     instruments: zod.array(
       zod.object({
-        code: zod.enum(["XUL10", "BCO10_BBJ"]),
+        code: zod.enum(["XUL10", "BCO10_BBJ", "HKK50_BBJ", "JPK50_BBJ"]),
         product: zod.string(),
         contractSize: zod.number(),
-        contractUnit: zod.enum(["troy ounce", "barrel"]),
+        contractUnit: zod.enum(["troy ounce", "barrel", "USD/point"]),
         tradingDays: zod.string(),
         tradingHours: zod.object({
           summer: zod.string(),
           winter: zod.string(),
         }),
         initialMarginUsdPerLot: zod.number(),
-        facilityFeeUsdPerLotPerSide: zod.number(),
+        facilityFeeUsdPerLotPerSide: zod.number().nullable(),
         vatPercent: zod.number(),
         rolloverUsdPerLotPerNight: zod.number(),
         priceSource: zod.string(),

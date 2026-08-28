@@ -6,6 +6,7 @@ import {
   createAdaptivePlanFingerprint,
   getAdaptiveMarginCapacity,
   getAdaptiveMarketRule,
+  getAdaptiveStandardRuleCode,
 } from "./adaptive-position-plan";
 
 const TRADE_PLAN: TradePlan = {
@@ -47,6 +48,57 @@ const GOLD_RULE: StandardTradingRuleInstrument = {
   minimumPriceMovement: "USD 0.01 / troy ounce",
   limitStopRange: "USD 6–USD 20",
   deliveryBy: "Cash settlement",
+};
+
+const HANG_SENG_RULE: StandardTradingRuleInstrument = {
+  code: "HKK50_BBJ",
+  product: "Hang Seng Index",
+  contractSize: 5,
+  contractUnit: "USD/point",
+  tradingDays: "Monday–Friday",
+  tradingHours: { summer: "08:15–11:00, 12:00–15:30, 16:00–02:00 WIB", winter: "08:15–11:00, 12:00–15:30, 16:00–02:00 WIB" },
+  initialMarginUsdPerLot: 100,
+  facilityFeeUsdPerLotPerSide: null,
+  vatPercent: 11,
+  rolloverUsdPerLotPerNight: 0.3,
+  priceSource: "Telequote",
+  priceGuidance: "Last Trade",
+  minimumSpread: "5 points / side",
+  maximumSpread: "25 points / side",
+  hecticSpread: "Based on market conditions",
+  minimumPriceMovement: "1 point",
+  limitStopRange: "20–500 points",
+  deliveryBy: "Cash settlement",
+};
+
+const NIKKEI_RULE: StandardTradingRuleInstrument = {
+  ...HANG_SENG_RULE,
+  code: "JPK50_BBJ",
+  product: "Nikkei Index",
+  tradingHours: { summer: "06:30–13:55, 14:10–03:45 WIB", winter: "06:30–13:55, 14:10–03:45 WIB" },
+  rolloverUsdPerLotPerNight: 0.2,
+  minimumSpread: "10 points / side",
+  minimumPriceMovement: "5 points",
+};
+
+const INDEX_TRADE_PLAN: TradePlan = {
+  preferredSide: "buy",
+  buy: {
+    entryZone: "20,000–20,020",
+    stopLoss: "19,900",
+    takeProfit1: "20,150",
+    takeProfit2: "20,300",
+    riskRewardRatio: "1:1.3",
+    rationale: "Example index plan",
+  },
+  sell: {
+    entryZone: "20,000–20,020",
+    stopLoss: "20,120",
+    takeProfit1: "19,850",
+    takeProfit2: "19,700",
+    riskRewardRatio: "1:1.3",
+    rationale: "Example index plan",
+  },
 };
 
 const VALID_INPUT = {
@@ -494,7 +546,64 @@ describe("buildAdaptivePositionPlan", () => {
     );
   });
 
-  it("rejects assets that do not have a transparent Gold or Brent rule", () => {
+  it("uses the supplied Hang Seng and Nikkei point-based rules", () => {
+    const hangSeng = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      instrument: "HSI",
+      tradePlan: INDEX_TRADE_PLAN,
+      standardRule: HANG_SENG_RULE,
+      accountTier: "mini",
+      initialLot: 0.1,
+      levels: 1,
+    });
+    const nikkei = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      instrument: "NIKKEI",
+      tradePlan: {
+        ...INDEX_TRADE_PLAN,
+        buy: {
+          ...INDEX_TRADE_PLAN.buy,
+          entryZone: "38,001–38,004",
+          stopLoss: "37,900",
+          takeProfit1: "38,153",
+          takeProfit2: "38,307",
+        },
+        sell: {
+          ...INDEX_TRADE_PLAN.sell,
+          entryZone: "38,001–38,004",
+          stopLoss: "38,105",
+          takeProfit1: "37,847",
+          takeProfit2: "37,693",
+        },
+      },
+      standardRule: NIKKEI_RULE,
+      accountTier: "mini",
+      initialLot: 0.1,
+      levels: 1,
+    });
+
+    expect(hangSeng.valid).toBe(true);
+    expect(hangSeng.rule).toMatchObject({
+      market: "hang_seng",
+      contractSize: 5,
+      minMovement: 1,
+      marginAtMinimumLot: 100,
+    });
+    expect(hangSeng.buy?.marginRequired).toBe(200);
+    expect(nikkei.valid).toBe(true);
+    expect(nikkei.rule).toMatchObject({
+      market: "nikkei",
+      contractSize: 5,
+      minMovement: 5,
+      marginAtMinimumLot: 100,
+      maxGapPercent: null,
+    });
+    expect(nikkei.buy?.ladder.every((level) => level.price % 5 === 0)).toBe(true);
+    expect(nikkei.buy?.stopLoss % 5).toBe(0);
+    expect(nikkei.assumptions.join(" ")).toMatch(/no percentage gap limit is assumed/i);
+  });
+
+  it("rejects assets that do not have a transparent supported-product rule", () => {
     const result = buildAdaptivePositionPlan({
       ...VALID_INPUT,
       instrument: "EUR/USD",
@@ -503,6 +612,17 @@ describe("buildAdaptivePositionPlan", () => {
     expect(result.valid).toBe(false);
     expect(result.buy).toBeNull();
     expect(result.errors).toContain("Adaptive position planning requires a supported TP Standard Trading Rules instrument.");
+  });
+
+  it("limits the adaptive calculator to instruments with supplied rules", () => {
+    expect(getAdaptiveStandardRuleCode("XAU/USD")).toBe("XUL10");
+    expect(getAdaptiveStandardRuleCode("BRENT")).toBe("BCO10_BBJ");
+    expect(getAdaptiveStandardRuleCode("HSI")).toBe("HKK50_BBJ");
+    expect(getAdaptiveStandardRuleCode("HANG SENG")).toBe("HKK50_BBJ");
+    expect(getAdaptiveStandardRuleCode("NIKKEI")).toBe("JPK50_BBJ");
+    for (const instrument of ["EUR/USD", "DXY", "XAG/USD", "BTC/USD"]) {
+      expect(getAdaptiveStandardRuleCode(instrument)).toBeNull();
+    }
   });
 
   it("rejects position calculations when TP Standard Trading Rules are unavailable", () => {

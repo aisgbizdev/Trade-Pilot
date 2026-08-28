@@ -1,12 +1,12 @@
 export type StandardTradingRuleInstrument = {
-  code: "XUL10" | "BCO10_BBJ";
+  code: "XUL10" | "BCO10_BBJ" | "HKK50_BBJ" | "JPK50_BBJ";
   product: string;
   contractSize: number;
-  contractUnit: "troy ounce" | "barrel";
+  contractUnit: "troy ounce" | "barrel" | "USD/point";
   tradingDays: string;
   tradingHours: { summer: string; winter: string };
   initialMarginUsdPerLot: number;
-  facilityFeeUsdPerLotPerSide: number;
+  facilityFeeUsdPerLotPerSide: number | null;
   vatPercent: number;
   rolloverUsdPerLotPerNight: number;
   priceSource: string;
@@ -52,7 +52,7 @@ export const STANDARD_TRADING_RULES: StandardTradingRules = {
   name: "TP Standard Trading Rules",
   version: "2026.02",
   effectiveDate: "2026-02-01",
-  sourceDocument: "Solid Gold / Royal Assetindo Mini Account Trading Rules (Feb 2026)",
+  sourceDocument: "Solid Gold / Royal Assetindo Mini Account Trading Rules (Feb 2026); Royal Assetindo CDD Mini Index Trading Rules",
   fixedRate: { usd: 1, idr: 10_000, label: "USD 1 = IDR 10.000" },
   account: {
     minimumDepositUsd: 500,
@@ -106,6 +106,52 @@ export const STANDARD_TRADING_RULES: StandardTradingRules = {
       hecticSpread: "Based on market conditions",
       minimumPriceMovement: "USD 0.01 / barrel",
       limitStopRange: "USD 1–USD 20",
+      deliveryBy: "Cash settlement",
+    },
+    {
+      code: "HKK50_BBJ",
+      product: "Hang Seng Index",
+      contractSize: 5,
+      contractUnit: "USD/point",
+      tradingDays: "Monday–Friday",
+      tradingHours: {
+        summer: "08:15–11:00, 12:00–15:30, 16:00–02:00 WIB",
+        winter: "08:15–11:00, 12:00–15:30, 16:00–02:00 WIB",
+      },
+      initialMarginUsdPerLot: 100,
+      facilityFeeUsdPerLotPerSide: null,
+      vatPercent: 11,
+      rolloverUsdPerLotPerNight: 0.3,
+      priceSource: "Telequote",
+      priceGuidance: "Last Trade",
+      minimumSpread: "5 points / side",
+      maximumSpread: "25 points / side",
+      hecticSpread: "Based on market conditions",
+      minimumPriceMovement: "1 point",
+      limitStopRange: "20–500 points",
+      deliveryBy: "Cash settlement",
+    },
+    {
+      code: "JPK50_BBJ",
+      product: "Nikkei Index",
+      contractSize: 5,
+      contractUnit: "USD/point",
+      tradingDays: "Monday–Friday",
+      tradingHours: {
+        summer: "06:30–13:55, 14:10–03:45 WIB",
+        winter: "06:30–13:55, 14:10–03:45 WIB",
+      },
+      initialMarginUsdPerLot: 100,
+      facilityFeeUsdPerLotPerSide: null,
+      vatPercent: 11,
+      rolloverUsdPerLotPerNight: 0.2,
+      priceSource: "Telequote",
+      priceGuidance: "Last Trade",
+      minimumSpread: "10 points / side",
+      maximumSpread: "25 points / side",
+      hecticSpread: "Based on market conditions",
+      minimumPriceMovement: "5 points",
+      limitStopRange: "20–500 points",
       deliveryBy: "Cash settlement",
     },
   ],

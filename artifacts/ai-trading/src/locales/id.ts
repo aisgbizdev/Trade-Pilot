@@ -932,6 +932,8 @@ export const id: Translations = {
     adaptive_calculate: "Buat rekomendasi",
     adaptive_reset: "Mulai ulang",
     adaptive_ready: "Pilih aturan sesuai akun sebenarnya, masukkan dana bebas trading, lalu pilih seberapa konservatif dana akan digunakan.",
+    adaptive_unsupported_title: "Perencanaan posisi belum tersedia untuk instrumen ini",
+    adaptive_unsupported_description: "Analisis, level Standard Plan, indikator, berita, dan kalender ekonomi tetap tersedia. Kalkulasi lot, margin, risiko, dan layer tambahan hanya tersedia untuk produk dengan TP Standard Trading Rules lengkap: Gold, Brent Oil, Hang Seng, dan Nikkei.",
     adaptive_rules_loading: "Menyiapkan aturan margin standar…",
     adaptive_rules_error: "Rekomendasi posisi tidak tersedia: TP Standard Trading Rules untuk instrumen ini tidak dapat dimuat atau belum lengkap. Jangan memperkirakan margin, ukuran kontrak, atau minimum pergerakan sendiri.",
     adaptive_invalid_title: "Belum ada rencana yang aman",

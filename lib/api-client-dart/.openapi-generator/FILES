@@ -319,4 +319,3 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/standard_trading_rule_text_test.dart

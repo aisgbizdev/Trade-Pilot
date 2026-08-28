@@ -73,6 +73,8 @@ const STUB_ID_RE_ANALYZE = 9_999_970;
 const STUB_ID_COPY_LEVELS = 9_999_960;
 const STUB_ID_STANDARD_REGRESSION = 9_999_950;
 const STUB_ID_ADAPTIVE_REFRESH = 9_999_940;
+const STUB_ID_HSI_ADAPTIVE = 9_999_930;
+const STUB_ID_UNSUPPORTED_ADAPTIVE = 9_999_920;
 
 function buildStubAnalysis(id: number) {
   const now = new Date();
@@ -327,6 +329,56 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", () => {
+  test("enables Hang Seng rules while keeping unsupported products analysis-only", async ({
+    page,
+    baseURL,
+  }) => {
+    const hsiAnalysis = {
+      ...buildStubAnalysis(STUB_ID_HSI_ADAPTIVE),
+      instrument: "HSI",
+    };
+    const unsupportedAnalysis = {
+      ...buildStubAnalysis(STUB_ID_UNSUPPORTED_ADAPTIVE),
+      instrument: "EUR/USD",
+    };
+
+    const user = await registerUser(baseURL!, "adaptive-product-boundary");
+    await signIn(page, user);
+
+    await page.route(`**/api/analyses/${STUB_ID_HSI_ADAPTIVE}`, async (route: Route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(hsiAnalysis),
+      });
+    });
+    await page.route(`**/api/analyses/${STUB_ID_UNSUPPORTED_ADAPTIVE}`, async (route: Route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(unsupportedAnalysis),
+      });
+    });
+
+    await page.goto(`/analyses/${STUB_ID_HSI_ADAPTIVE}`);
+    await expect(page.getByTestId("text-instrument")).toHaveText("HSI");
+    await expect(page.getByTestId("card-trade-plan")).toBeVisible();
+    await expect(page.getByTestId("input-adaptive-available-margin")).toBeVisible();
+    await expect(page.getByTestId("button-calculate-adaptive-plan")).toBeEnabled();
+    await expect(page.getByTestId("adaptive-plan-unsupported")).toHaveCount(0);
+
+    await page.goto(`/analyses/${STUB_ID_UNSUPPORTED_ADAPTIVE}`);
+    await expect(page.getByTestId("text-instrument")).toHaveText("EUR/USD");
+    await expect(page.getByTestId("card-trade-plan")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-unsupported")).toBeVisible();
+    await expect(page.getByTestId("input-adaptive-available-margin")).toHaveCount(0);
+    await expect(page.getByTestId("button-calculate-adaptive-plan")).toHaveCount(0);
   });
 });
 

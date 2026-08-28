@@ -75,26 +75,48 @@ const STANDARD_RULES_PAYLOAD = {
     equityReviewThresholdIdr: 25_000_000,
   },
   transactionFormula: "Test formula",
-  instruments: [{
-    code: "XUL10",
-    product: "Gold (Loco London)",
-    contractSize: 10,
-    contractUnit: "troy ounce",
-    tradingDays: "Monday–Friday",
-    tradingHours: { summer: "06:00–03:30 WIB", winter: "06:00–04:30 WIB" },
-    initialMarginUsdPerLot: 100,
-    facilityFeeUsdPerLotPerSide: 1.5,
-    vatPercent: 11,
-    rolloverUsdPerLotPerNight: 0.5,
-    priceSource: "Telequote",
-    priceGuidance: "Last Trade",
-    minimumSpread: "USD 0.40 / troy ounce / side",
-    maximumSpread: "USD 1.00 / troy ounce / side",
-    hecticSpread: "Based on market conditions",
-    minimumPriceMovement: "USD 0.01 / troy ounce",
-    limitStopRange: "USD 6–USD 20",
-    deliveryBy: "Cash settlement",
-  }],
+  instruments: [
+    {
+      code: "XUL10",
+      product: "Gold (Loco London)",
+      contractSize: 10,
+      contractUnit: "troy ounce",
+      tradingDays: "Monday–Friday",
+      tradingHours: { summer: "06:00–03:30 WIB", winter: "06:00–04:30 WIB" },
+      initialMarginUsdPerLot: 100,
+      facilityFeeUsdPerLotPerSide: 1.5,
+      vatPercent: 11,
+      rolloverUsdPerLotPerNight: 0.5,
+      priceSource: "Telequote",
+      priceGuidance: "Last Trade",
+      minimumSpread: "USD 0.40 / troy ounce / side",
+      maximumSpread: "USD 1.00 / troy ounce / side",
+      hecticSpread: "Based on market conditions",
+      minimumPriceMovement: "USD 0.01 / troy ounce",
+      limitStopRange: "USD 6–USD 20",
+      deliveryBy: "Cash settlement",
+    },
+    {
+      code: "HKK50_BBJ",
+      product: "Hang Seng Index",
+      contractSize: 5,
+      contractUnit: "USD/point",
+      tradingDays: "Monday–Friday",
+      tradingHours: { summer: "08:15–11:00, 12:00–15:30, 16:00–02:00 WIB", winter: "08:15–11:00, 12:00–15:30, 16:00–02:00 WIB" },
+      initialMarginUsdPerLot: 100,
+      facilityFeeUsdPerLotPerSide: null,
+      vatPercent: 11,
+      rolloverUsdPerLotPerNight: 0.3,
+      priceSource: "Telequote",
+      priceGuidance: "Last Trade",
+      minimumSpread: "5 points / side",
+      maximumSpread: "25 points / side",
+      hecticSpread: "Based on market conditions",
+      minimumPriceMovement: "1 point",
+      limitStopRange: "20–500 points",
+      deliveryBy: "Cash settlement",
+    },
+  ],
   disclaimer: { id: "Test disclaimer", en: "Test disclaimer" },
   relationshipDisclosure: { id: "Test disclosure", en: "Test disclosure" },
 };
@@ -330,6 +352,62 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-plan-rules-unavailable");
     expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
+  });
+
+  it("keeps the full analysis available while hiding position calculations for other products", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          instrument: "EUR/USD",
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("adaptive-plan-unsupported")).toBeInTheDocument();
+    expect(screen.getByTestId("text-instrument")).toHaveTextContent("EUR/USD");
+    expect(screen.getByTestId("card-trade-plan")).toBeInTheDocument();
+    expect(screen.queryByTestId("input-adaptive-available-margin")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-calculate-adaptive-plan")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-plan-valid")).not.toBeInTheDocument();
+  });
+
+  it("enables the adaptive calculator for Hang Seng when its supplied rules are available", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          instrument: "HSI",
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: 0.1 lot requires \$100 margin/i);
+    expect(screen.getByTestId("input-adaptive-available-margin")).toBeInTheDocument();
+    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled();
+    expect(screen.queryByTestId("adaptive-plan-unsupported")).not.toBeInTheDocument();
   });
 });
 

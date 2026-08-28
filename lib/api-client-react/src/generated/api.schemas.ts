@@ -29,6 +29,8 @@ export type StandardTradingRuleInstrumentCode =
 export const StandardTradingRuleInstrumentCode = {
   XUL10: "XUL10",
   BCO10_BBJ: "BCO10_BBJ",
+  HKK50_BBJ: "HKK50_BBJ",
+  JPK50_BBJ: "JPK50_BBJ",
 } as const;
 
 export type StandardTradingRuleInstrumentContractUnit =
@@ -37,6 +39,7 @@ export type StandardTradingRuleInstrumentContractUnit =
 export const StandardTradingRuleInstrumentContractUnit = {
   troy_ounce: "troy ounce",
   barrel: "barrel",
+  "USD/point": "USD/point",
 } as const;
 
 export type StandardTradingRuleInstrumentTradingHours = {
@@ -52,7 +55,8 @@ export interface StandardTradingRuleInstrument {
   tradingDays: string;
   tradingHours: StandardTradingRuleInstrumentTradingHours;
   initialMarginUsdPerLot: number;
-  facilityFeeUsdPerLotPerSide: number;
+  /** @nullable */
+  facilityFeeUsdPerLotPerSide: number | null;
   vatPercent: number;
   rolloverUsdPerLotPerNight: number;
   priceSource: string;

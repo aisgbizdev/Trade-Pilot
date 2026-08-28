@@ -2434,14 +2434,14 @@ components:
       properties:
         code:
           type: string
-          enum: [XUL10, BCO10_BBJ]
+          enum: [XUL10, BCO10_BBJ, HKK50_BBJ, JPK50_BBJ]
         product:
           type: string
         contractSize:
           type: number
         contractUnit:
           type: string
-          enum: [troy ounce, barrel]
+          enum: [troy ounce, barrel, USD/point]
         tradingDays:
           type: string
         tradingHours:
@@ -2455,7 +2455,7 @@ components:
         initialMarginUsdPerLot:
           type: number
         facilityFeeUsdPerLotPerSide:
-          type: number
+          type: ["number", "null"]
         vatPercent:
           type: number
         rolloverUsdPerLotPerNight:
