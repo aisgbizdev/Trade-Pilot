@@ -4,7 +4,7 @@ import { useTheme } from "@/components/theme-provider";
 import { useTranslation } from "@/lib/i18n";
 
 export type MiniChartDateRange = "1D" | "1W" | "1M" | "3M" | "1Y";
-export const MINI_CHART_DEFAULT_HEIGHT = 260;
+const MINI_CHART_DEFAULT_HEIGHT = 260;
 
 interface TradingViewMiniChartProps {
   symbol: string;

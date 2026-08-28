@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, BookOpen, Sparkles, Settings } from "lucide-react";
+import { TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, CheckCheck, ExternalLink, Settings } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
@@ -116,8 +116,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const FULL_NAV = [
     { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
-    { href: "/journal", icon: BookOpen, label: t.journal.nav_label, minCount: 1 },
-    { href: "/mirror", icon: Sparkles, label: t.mirror.nav_label, minCount: 5 },
     { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
     { href: "/analytics", icon: BarChart3, label: t.nav.analytics, minCount: 5 },
   ];

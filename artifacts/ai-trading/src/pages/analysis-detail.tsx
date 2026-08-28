@@ -659,12 +659,6 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
         {renderSide(plan.buy, "buy")}
         {renderSide(plan.sell, "sell")}
       </div>
-      <div className="flex gap-2 items-start bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md p-2.5">
-        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-        <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
-          {t.analysis_detail.trade_plan_disclaimer}
-        </p>
-      </div>
     </Card>
   );
 }
@@ -1604,7 +1598,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [refreshMsgIndex, setRefreshMsgIndex] = useState(0);
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
   const [refreshNotes, setRefreshNotes] = useState("");
-  const [executionOpen, setExecutionOpen] = useState(false);
   const [quickTimeframe, setQuickTimeframe] = useState<string | null>(null);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -1809,7 +1802,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               {t.analysis_detail.quick_timeframe_hint}
             </p>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {QUICK_TIMEFRAMES.map((tf) => (
               <button
                 key={tf}
@@ -1827,23 +1820,23 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                 {tf}
               </button>
             ))}
+            <Button
+              size="sm"
+              className="h-8 shrink-0 px-2.5 text-xs"
+              onClick={handleQuickReanalyze}
+              disabled={isRefreshing || !quickTimeframe}
+              data-testid="button-quick-analyze"
+            >
+              {isRefreshing ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>{t.analyze.loading[refreshMsgIndex]}</span>
+                </span>
+              ) : (
+                t.analysis_detail.quick_timeframe_btn
+              )}
+            </Button>
           </div>
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={handleQuickReanalyze}
-            disabled={isRefreshing || !quickTimeframe}
-            data-testid="button-quick-analyze"
-          >
-            {isRefreshing ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {t.analyze.loading[refreshMsgIndex]}
-              </span>
-            ) : (
-              t.analysis_detail.quick_timeframe_btn
-            )}
-          </Button>
         </Card>
 
         <div
@@ -2201,66 +2194,46 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </Card>
         )}
 
-        {/* EXECUTION INSIGHT (Step 2 — collapsible) */}
+        {/* EXECUTION INSIGHT (Step 2) */}
         <Card className="overflow-hidden" data-testid="card-execution-insight">
-          <Collapsible open={executionOpen} onOpenChange={setExecutionOpen}>
-            <CollapsibleTrigger
-              className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-              data-testid="button-toggle-execution"
-            >
-              <div className="flex items-center gap-2 text-left">
-                {executionOpen ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                )}
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {t.analysis_detail.execution_insight_title}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t.analysis_detail.execution_insight_intro}
-                  </p>
-                </div>
+          <div className="flex items-start gap-2 border-b border-border p-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {t.analysis_detail.execution_insight_title}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {t.analysis_detail.execution_insight_intro}
+              </p>
+            </div>
+          </div>
+          <div className="p-4 space-y-3" data-testid="execution-insight-content">
+            <div className="space-y-3">
+              <div data-testid="exec-scenario-a">
+                <h4 className="text-xs font-semibold text-foreground mb-1">
+                  {t.analysis_detail.execution_scenario_a_label}
+                </h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {executionScenarioAText(bias ?? "neutral", t)}
+                </p>
               </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="p-4 pt-0 space-y-3 border-t border-border">
-                <div className="space-y-3 pt-3">
-                  <div data-testid="exec-scenario-a">
-                    <h4 className="text-xs font-semibold text-foreground mb-1">
-                      {t.analysis_detail.execution_scenario_a_label}
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {executionScenarioAText(bias ?? "neutral", t)}
-                    </p>
-                  </div>
-                  <div data-testid="exec-scenario-b">
-                    <h4 className="text-xs font-semibold text-foreground mb-1">
-                      {t.analysis_detail.execution_scenario_b_label}
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {t.analysis_detail.execution_scenario_b_template}
-                    </p>
-                  </div>
-                  <div data-testid="exec-scenario-c">
-                    <h4 className="text-xs font-semibold text-foreground mb-1">
-                      {t.analysis_detail.execution_scenario_c_label}
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {t.analysis_detail.execution_scenario_c_template}
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md p-3 flex gap-2 mt-3">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
-                    {t.analysis_detail.execution_insight_disclaimer}
-                  </p>
-                </div>
+              <div data-testid="exec-scenario-b">
+                <h4 className="text-xs font-semibold text-foreground mb-1">
+                  {t.analysis_detail.execution_scenario_b_label}
+                </h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {t.analysis_detail.execution_scenario_b_template}
+                </p>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
+              <div data-testid="exec-scenario-c">
+                <h4 className="text-xs font-semibold text-foreground mb-1">
+                  {t.analysis_detail.execution_scenario_c_label}
+                </h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {t.analysis_detail.execution_scenario_c_template}
+                </p>
+              </div>
+            </div>
+          </div>
         </Card>
 
         <Card className="p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">

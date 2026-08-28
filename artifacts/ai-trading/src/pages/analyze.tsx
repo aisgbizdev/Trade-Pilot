@@ -17,7 +17,6 @@ import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQuer
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import {
   TradingViewMiniChart,
-  MINI_CHART_DEFAULT_HEIGHT,
   type MiniChartDateRange,
 } from "@/components/tradingview-mini-chart";
 import { instrumentToTradingViewSymbol, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
@@ -907,7 +906,6 @@ export default function AnalyzePage() {
                 <TradingViewMiniChart
                   symbol={instrumentToTradingViewSymbol(finalInstrument)}
                   dateRange={miniChartRange}
-                  height={MINI_CHART_DEFAULT_HEIGHT}
                 />
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">

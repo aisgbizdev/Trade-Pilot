@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Calculator, ChevronDown, ChevronRight, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -180,7 +180,6 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
 }
 
 export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, context, lang, copy }: Props) {
-  const [open, setOpen] = useState(true);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
   const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError } = useGetStandardTradingRules({
@@ -253,13 +252,14 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
 
   return (
     <Card className="overflow-hidden" data-testid="card-adaptive-position-plan">
-      <button type="button" onClick={() => setOpen((value) => !value)} className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-muted/50 transition-colors" data-testid="button-toggle-adaptive-plan" aria-expanded={open}>
-        <span className="flex items-center gap-2 min-w-0">
-          {open ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-          <span className="min-w-0"><span className="block text-sm font-bold text-foreground flex items-center gap-1.5"><Calculator className="w-4 h-4 text-primary" />{copy.adaptive_title}</span><span className="block text-[11px] text-muted-foreground mt-0.5">{copy.adaptive_subtitle}</span></span>
-        </span>
-      </button>
-      {open && <div className="border-t border-border p-4 space-y-4" data-testid="adaptive-plan-content">
+      <div className="flex items-start gap-2 border-b border-border p-4">
+        <Calculator className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-foreground">{copy.adaptive_title}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{copy.adaptive_subtitle}</p>
+        </div>
+      </div>
+      <div className="p-4 space-y-4" data-testid="adaptive-plan-content">
         <div className="space-y-2">
           <label className="block max-w-sm space-y-1">
             <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_ready}</span>
@@ -331,9 +331,8 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatMoney(selected.maximumLoss, lang))}</p></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} decision={recommendation.decision} /><PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} decision={recommendation.decision} /></div>
           <div className="space-y-1.5 rounded-md border border-border p-3"><p className="text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</p><ol className="list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol></div>
-          <div className="flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3"><AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" /><p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">{copy.adaptive_external_liquidation} {copy.adaptive_manual_only}</p></div>
         </div>}
-      </div>}
+      </div>
     </Card>
   );
 }

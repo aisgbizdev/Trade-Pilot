@@ -43,6 +43,32 @@ function SignalCell({ signal, mode, testId }: { signal: RawSignal; mode: "beginn
   );
 }
 
+function IndicatorTile({
+  name,
+  value,
+  signal,
+  mode,
+}: {
+  name: string;
+  value: string;
+  signal: RawSignal;
+  mode: "beginner" | "pro";
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-border bg-background/40 p-2.5">
+      <p className="truncate text-xs font-medium text-muted-foreground" title={name}>
+        {name}
+      </p>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm font-mono text-foreground">
+          {value}
+        </span>
+        <SignalCell signal={signal} mode={mode} />
+      </div>
+    </div>
+  );
+}
+
 /**
  * Pro-mode raw signal label ("Buy"/"Sell"/"Neutral") shown as the
  * parenthetical under the descriptive label in the Speedometer. Returns
@@ -183,33 +209,37 @@ export function TechnicalIndicatorsPanel({
 
       <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
         <p className="text-xs text-muted-foreground uppercase tracking-wide">{t.analyze.oscillator_section}</p>
-        {[
-          { name: "RSI (14)", value: r(ind.rsi14.value), signal: ind.rsi14.signal },
-          { name: `MACD (12,26)`, value: r(ind.macd.macd, 4), signal: ind.macd.action },
-          { name: `Stochastic %K`, value: r(ind.stochastic.k), signal: ind.stochastic.signal },
-          { name: `Bollinger`, value: `${r(ind.bollinger.lower, 2)}–${r(ind.bollinger.upper, 2)}`, signal: ind.bollinger.signal },
-        ].map((row) => (
-          <div key={row.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-            <span className="text-sm text-muted-foreground">{row.name}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-mono text-foreground">{row.value}</span>
-              <SignalCell signal={row.signal as RawSignal} mode={mode} />
-            </div>
-          </div>
-        ))}
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          {[
+            { name: "RSI (14)", value: r(ind.rsi14.value), signal: ind.rsi14.signal },
+            { name: "MACD (12,26)", value: r(ind.macd.macd, 4), signal: ind.macd.action },
+            { name: "Stochastic %K", value: r(ind.stochastic.k), signal: ind.stochastic.signal },
+            { name: "Bollinger", value: `${r(ind.bollinger.lower, 2)}–${r(ind.bollinger.upper, 2)}`, signal: ind.bollinger.signal },
+          ].map((row) => (
+            <IndicatorTile
+              key={row.name}
+              name={row.name}
+              value={row.value}
+              signal={row.signal as RawSignal}
+              mode={mode}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
         <p className="text-xs text-muted-foreground uppercase tracking-wide">{t.analyze.moving_averages_section}</p>
-        {sortedMAs.map((ma) => (
-          <div key={`${ma.type}-${ma.period}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-            <span className="text-sm text-muted-foreground">{ma.type} ({ma.period})</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-mono text-foreground">{Number(ma.value).toFixed(ma.value > 100 ? 2 : 4)}</span>
-              <SignalCell signal={ma.signal} mode={mode} />
-            </div>
-          </div>
-        ))}
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          {sortedMAs.map((ma) => (
+            <IndicatorTile
+              key={`${ma.type}-${ma.period}`}
+              name={`${ma.type} (${ma.period})`}
+              value={Number(ma.value).toFixed(ma.value > 100 ? 2 : 4)}
+              signal={ma.signal}
+              mode={mode}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
