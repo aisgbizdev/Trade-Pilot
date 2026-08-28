@@ -2,9 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
-import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, ChevronDown, ChevronUp, Newspaper, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SetAlertModal } from "@/components/set-alert-modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -20,7 +19,6 @@ import { TradingViewMiniChart, type MiniChartDateRange } from "@/components/trad
 import { instrumentToTradingViewSymbol, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
 import { WatchlistStar, useWatchlist } from "@/components/watchlist-star";
 import type { Watchlist } from "@workspace/api-client-react";
-import { Star } from "lucide-react";
 import { MarketSessionsBadge } from "@/components/market-sessions-badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -331,8 +329,8 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
   );
 }
 
-const ECON_CAL_STORAGE_KEY = "analyze.economicCalendar.open";
 const ECON_CAL_CURRENCIES_KEY_BASE = "analyze.economicCalendar.currencies";
+const SHOW_SECONDARY_ANALYSIS_CARDS = false;
 
 function readStoredCurrencies(storageKey: string): string[] | null {
   try {
@@ -364,15 +362,6 @@ function EconomicCalendarSection() {
 
   const storageKey = `${ECON_CAL_CURRENCIES_KEY_BASE}.${user?.id ?? "anon"}`;
 
-  const [open, setOpen] = useState<boolean>(() => {
-    try {
-      const stored = sessionStorage.getItem(ECON_CAL_STORAGE_KEY);
-      if (stored === "true") return true;
-      if (stored === "false") return false;
-    } catch {}
-    return false;
-  });
-
   const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>(
     () => readStoredCurrencies(storageKey) ?? [],
   );
@@ -381,12 +370,6 @@ function EconomicCalendarSection() {
     const stored = readStoredCurrencies(storageKey);
     setSelectedCurrencies(stored ?? []);
   }, [storageKey]);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(ECON_CAL_STORAGE_KEY, String(open));
-    } catch {}
-  }, [open]);
 
   useEffect(() => {
     try {
@@ -411,152 +394,80 @@ function EconomicCalendarSection() {
   const allActive = effectiveCurrencies.length === 0;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className="p-3 space-y-2" data-testid="card-economic-calendar">
-        <CollapsibleTrigger
-          className="w-full flex items-center justify-between gap-2 text-left"
-          data-testid="button-toggle-economic-calendar"
-          aria-label={open ? t.analyze.economic_calendar_collapse : t.analyze.economic_calendar_expand}
-        >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Newspaper className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-foreground truncate">
-                {t.analyze.economic_calendar_section_title}
-              </h3>
-              {!open && (
-                <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
-                  {t.analyze.economic_calendar_section_hint}
-                </p>
-              )}
-            </div>
-          </div>
-          {open ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
-          )}
-        </CollapsibleTrigger>
-        <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
-          <div className="pt-1 space-y-2">
-            <p className="text-[10px] text-muted-foreground leading-snug">
-              {t.analyze.economic_calendar_section_hint}
-            </p>
-            <div
-              className="flex flex-wrap items-center gap-1.5"
-              role="group"
-              aria-label={t.analyze.economic_calendar_currency_filter_label}
-              data-testid="economic-calendar-currency-chips"
-            >
-              <button
-                type="button"
-                onClick={clearCurrencies}
-                aria-pressed={allActive}
-                data-testid="chip-economic-calendar-currency-all"
-                className={cn(
-                  "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors",
-                  allActive
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted/40 text-muted-foreground border-border hover:bg-muted",
-                )}
-              >
-                {t.analyze.economic_calendar_currency_filter_all}
-              </button>
-              {availableCurrencies.map((currency) => {
-                const active = effectiveCurrencies.includes(currency);
-                const flag = CURRENCY_FLAGS[currency] ?? "";
-                return (
-                  <button
-                    key={currency}
-                    type="button"
-                    onClick={() => toggleCurrency(currency)}
-                    aria-pressed={active}
-                    data-testid={`chip-economic-calendar-currency-${currency}`}
-                    className={cn(
-                      "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted/40 text-foreground border-border hover:bg-muted",
-                    )}
-                  >
-                    {flag ? <span className="mr-1" aria-hidden="true">{flag}</span> : null}
-                    {currency}
-                  </button>
-                );
-              })}
-            </div>
-            <p
-              className="text-[10px] text-muted-foreground"
-              data-testid="economic-calendar-currency-status"
-            >
-              {allActive
-                ? t.analyze.economic_calendar_currency_filter_all_active
-                : t.analyze.economic_calendar_currency_filter_active.replace(
-                    "{currencies}",
-                    effectiveCurrencies.join(", "),
-                  )}
-            </p>
-            <TradingViewEconomicCalendar
-              height={420}
-              importanceFilter="1"
-              countryFilter={countryFilter}
-            />
-          </div>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
-  );
-}
-
-function FavoritesSection({
-  selectedInstrument,
-  hasCustom,
-  onSelect,
-}: {
-  selectedInstrument: string;
-  hasCustom: boolean;
-  onSelect: (instrument: string) => void;
-}) {
-  const { t } = useTranslation();
-  const { data } = useWatchlist();
-  const items = (data as Watchlist | undefined)?.items ?? [];
-  if (items.length === 0) return null;
-  return (
-    <div className="mb-3" data-testid="favorites-section">
-      <div className="flex items-center gap-1.5 mb-2">
-        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" aria-hidden="true" />
-        <h3 className="text-xs font-semibold text-foreground">
-          {t.analyze.favorites_section_title}
-        </h3>
+    <Card className="p-3 space-y-2" data-testid="card-economic-calendar">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Newspaper className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold text-foreground truncate">
+            {t.analyze.economic_calendar_section_title}
+          </h3>
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {items.map((fav) => (
-          <div
-            key={fav.instrument}
+      <div className="pt-1 space-y-2">
+        <p className="text-[10px] text-muted-foreground leading-snug">
+          {t.analyze.economic_calendar_section_hint}
+        </p>
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label={t.analyze.economic_calendar_currency_filter_label}
+          data-testid="economic-calendar-currency-chips"
+        >
+          <button
+            type="button"
+            onClick={clearCurrencies}
+            aria-pressed={allActive}
+            data-testid="chip-economic-calendar-currency-all"
             className={cn(
-              "flex items-center gap-1 pr-1 rounded-lg border transition-all",
-              selectedInstrument === fav.instrument && !hasCustom
-                ? "bg-primary/10 border-primary"
-                : "bg-background border-border hover:border-primary/50",
+              "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors",
+              allActive
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/40 text-muted-foreground border-border hover:bg-muted",
             )}
           >
-            <button
-              onClick={() => onSelect(fav.instrument)}
-              data-testid={`button-favorite-${fav.instrument}`}
-              className={cn(
-                "flex-1 py-2.5 text-sm font-medium text-left pl-3",
-                selectedInstrument === fav.instrument && !hasCustom
-                  ? "text-primary"
-                  : "text-foreground",
+            {t.analyze.economic_calendar_currency_filter_all}
+          </button>
+          {availableCurrencies.map((currency) => {
+            const active = effectiveCurrencies.includes(currency);
+            const flag = CURRENCY_FLAGS[currency] ?? "";
+            return (
+              <button
+                key={currency}
+                type="button"
+                onClick={() => toggleCurrency(currency)}
+                aria-pressed={active}
+                data-testid={`chip-economic-calendar-currency-${currency}`}
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 text-foreground border-border hover:bg-muted",
+                )}
+              >
+                {flag ? <span className="mr-1" aria-hidden="true">{flag}</span> : null}
+                {currency}
+              </button>
+            );
+          })}
+        </div>
+        <p
+          className="text-[10px] text-muted-foreground"
+          data-testid="economic-calendar-currency-status"
+        >
+          {allActive
+            ? t.analyze.economic_calendar_currency_filter_all_active
+            : t.analyze.economic_calendar_currency_filter_active.replace(
+                "{currencies}",
+                effectiveCurrencies.join(", "),
               )}
-            >
-              {fav.instrument}
-            </button>
-            <WatchlistStar instrument={fav.instrument} size="sm" />
-          </div>
-        ))}
+        </p>
+        <TradingViewEconomicCalendar
+          height={420}
+          importanceFilter="1"
+          countryFilter={countryFilter}
+        />
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -863,11 +774,6 @@ export default function AnalyzePage() {
 
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
-            <FavoritesSection
-              selectedInstrument={selectedInstrument}
-              hasCustom={Boolean(customInstrument)}
-              onSelect={(inst) => { setSelectedInstrument(inst); setCustomInstrument(""); }}
-            />
             <div className="flex gap-2 mb-3">
               {(["futures", "forex", "crypto"] as const).map((tab) => (
                 <button
@@ -1048,11 +954,13 @@ export default function AnalyzePage() {
             </Card>
           )}
 
-          {finalInstrument && <LocalSentimentWidget instrument={finalInstrument} />}
+          {SHOW_SECONDARY_ANALYSIS_CARDS && finalInstrument && (
+            <LocalSentimentWidget instrument={finalInstrument} />
+          )}
 
           {finalInstrument && <PreTradeWarning instrument={finalInstrument} />}
 
-          {finalInstrument && (
+          {SHOW_SECONDARY_ANALYSIS_CARDS && finalInstrument && (
             <AntiPatternGuardrails
               instrument={finalInstrument}
               proceedHandleRef={guardrailProceedRef}

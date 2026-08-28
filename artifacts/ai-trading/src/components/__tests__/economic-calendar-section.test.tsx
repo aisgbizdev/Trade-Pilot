@@ -86,7 +86,7 @@ function Wrapper({ children }: { children: ReactNode }) {
   return <LanguageProvider>{children}</LanguageProvider>;
 }
 
-describe("Economic Calendar collapsible section on Analyze page", () => {
+describe("Economic Calendar section on Analyze page", () => {
   beforeEach(() => {
     sessionStorage.clear();
   });
@@ -94,35 +94,14 @@ describe("Economic Calendar collapsible section on Analyze page", () => {
     sessionStorage.clear();
   });
 
-  it("renders collapsed by default and does not mount the widget", () => {
+  it("renders open by default and mounts the widget immediately", () => {
     render(
       <Wrapper>
         <AnalyzePage />
       </Wrapper>,
     );
     expect(screen.getByTestId("card-economic-calendar")).toBeTruthy();
-    expect(screen.queryByTestId("tradingview-economic-calendar-mock")).toBeNull();
-  });
-
-  it("expands when the header is clicked and persists the open state in sessionStorage", () => {
-    render(
-      <Wrapper>
-        <AnalyzePage />
-      </Wrapper>,
-    );
-    const toggle = screen.getByTestId("button-toggle-economic-calendar");
-    fireEvent.click(toggle);
     expect(screen.getByTestId("tradingview-economic-calendar-mock")).toBeTruthy();
-    expect(sessionStorage.getItem("analyze.economicCalendar.open")).toBe("true");
-  });
-
-  it("starts open when sessionStorage already has the open preference", () => {
-    sessionStorage.setItem("analyze.economicCalendar.open", "true");
-    render(
-      <Wrapper>
-        <AnalyzePage />
-      </Wrapper>,
-    );
-    expect(screen.getByTestId("tradingview-economic-calendar-mock")).toBeTruthy();
+    expect(screen.queryByTestId("button-toggle-economic-calendar")).toBeNull();
   });
 });
