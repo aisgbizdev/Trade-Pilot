@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Calculator, ChevronDown, ChevronRight, Info, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, ChevronDown, ChevronRight, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -261,7 +261,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         </div>
         <div className="space-y-2">
           <label className="block max-w-sm space-y-1">
-            <span className="text-[11px] font-medium text-muted-foreground">{copy.adaptive_available_margin}</span>
+            <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_ready}</span>
             <Input type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-available-margin" />
             <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_available_margin_help}</span>
           </label>
@@ -290,7 +290,6 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
-        {!recommendation && <p className="text-[11px] text-muted-foreground flex items-start gap-1.5"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />{copy.adaptive_ready}</p>}
         {recommendation && (
           <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-2.5" data-testid="adaptive-plan-reasoning">
             <div className="flex items-start justify-between gap-3">
