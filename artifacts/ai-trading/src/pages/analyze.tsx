@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation, Link } from "wouter";
-import { formatDistanceToNow } from "date-fns";
-import { id as idLocale, enUS } from "date-fns/locale";
+import { useLocation } from "wouter";
 import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
 import { SetAlertModal } from "@/components/set-alert-modal";
@@ -13,7 +11,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
-import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useListAnalyses, getListAnalysesQueryKey, useUpdateProfile, getGetMeQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe, type User, type UserSelectedMode } from "@workspace/api-client-react";
+import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useUpdateProfile, getGetMeQueryKey, type RecentInstruments, type CreateAnalysisBodyTimeframe, type User, type UserSelectedMode } from "@workspace/api-client-react";
 import {
   TradingViewMiniChart,
   type MiniChartDateRange,
@@ -488,8 +486,7 @@ function LivePriceChip({ instrument }: { instrument: string }) {
 
 export default function AnalyzePage() {
   const { user } = useAuth();
-  const { t, lang } = useTranslation();
-  const dateLocale = lang === "id" ? idLocale : enUS;
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
@@ -552,12 +549,6 @@ export default function AnalyzePage() {
     query: { queryKey: getGetRecentInstrumentsQueryKey(), staleTime: 60_000 },
   });
   const recentInstruments = (recentData as RecentInstruments | undefined)?.instruments?.slice(0, 3) ?? [];
-
-  const { data: recentAnalysesData } = useListAnalyses(
-    { page: 1, limit: 3 },
-    { query: { queryKey: getListAnalysesQueryKey({ page: 1, limit: 3 }), staleTime: 30_000 } }
-  );
-  const recentAnalyses = (recentAnalysesData as { analyses?: Analysis[] } | undefined)?.analyses ?? [];
 
   const finalInstrument = customInstrument.trim() || selectedInstrument;
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
@@ -964,36 +955,6 @@ export default function AnalyzePage() {
               </div>
             ) : t.analyze.submit_btn}
           </Button>
-
-          {recentAnalyses.length > 0 && (
-            <div className="pt-2 border-t border-border/40" data-testid="section-recent-analyses">
-              <h2 className="text-sm font-semibold text-foreground mb-2.5">{t.dashboard.recent_analyses}</h2>
-              <div className="space-y-2">
-                {recentAnalyses.map((a) => (
-                  <Link key={a.id} href={`/analyses/${a.id}`}>
-                    <div
-                      className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all cursor-pointer"
-                      data-testid={`recent-analysis-${a.id}`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-semibold text-foreground truncate">{a.instrument}</span>
-                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground shrink-0">{a.timeframe}</span>
-                        {(() => {
-                          const b = (a as { tradingBias?: string | null }).tradingBias;
-                          if (b?.startsWith("bullish")) return <TrendingUp className="w-3.5 h-3.5 text-green-500 shrink-0" />;
-                          if (b?.startsWith("bearish")) return <TrendingDown className="w-3.5 h-3.5 text-red-500 shrink-0" />;
-                          return <Minus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
-                        })()}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                        {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: dateLocale })}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
 
           <EconomicCalendarSection />
 

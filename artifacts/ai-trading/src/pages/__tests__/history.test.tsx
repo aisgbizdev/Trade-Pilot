@@ -97,6 +97,7 @@ describe("HistoryPage: happy-path render", () => {
 
     expect(valid.textContent).toMatch(/XAU\/USD/);
     expect(valid.textContent).toMatch(/1h/);
+    expect(valid.querySelector('a[href="/analyses/101"]')).not.toBeNull();
     expect(expired.textContent).toMatch(/EUR\/USD/);
 
     // One-tap Re-analyze is available on every row, valid or expired.

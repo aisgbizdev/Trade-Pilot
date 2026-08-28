@@ -4,7 +4,8 @@
  * Covers happy-path render of the instrument tabs / timeframe grid, the
  * loading-of-quota chip, the disabled-state of the submit button until
  * both an instrument and a timeframe are chosen, the empty "no recent
- * instruments" branch, and a real form submission that hits the
+ * instruments" branch, the absence of the duplicated Recent Analyses
+ * section, and a real form submission that hits the
  * `POST /api/analyses` endpoint and direct navigation to the new detail page.
  *
  * Mocks `globalThis.fetch` for every API route consumed by the page and
@@ -136,7 +137,7 @@ describe("AnalyzePage: happy-path render", () => {
   it(
     "renders the futures tab, timeframe grid, quota chip, recent instruments, and a disabled submit button",
     async () => {
-      installFetchMock(pageHandlers({}));
+      const { calls } = installFetchMock(pageHandlers({}));
       const { Wrapper } = makeWrapper();
 
       render(
@@ -166,6 +167,19 @@ describe("AnalyzePage: happy-path render", () => {
       const chip = await screen.findByTestId("chip-quota");
       expect(chip.textContent).toMatch(/4\/5/);
       expect(chip.textContent).toMatch(/9\/10/);
+
+      // Saved analyses belong exclusively to History. Analyze must not
+      // render the duplicated section or request the paginated list.
+      expect(
+        screen.queryByTestId("section-recent-analyses"),
+      ).not.toBeInTheDocument();
+      expect(
+        calls.filter(
+          (c) =>
+            c.method === "GET" &&
+            /\/api\/analyses(\?|$)/.test(c.url),
+        ),
+      ).toHaveLength(0);
 
       // Recent instruments come from the API payload.
       expect(
