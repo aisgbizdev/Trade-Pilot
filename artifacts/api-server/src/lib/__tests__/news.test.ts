@@ -12,6 +12,7 @@ import {
   _sanitizePromptText,
   formatNewsForPrompt,
   getRelevantNews,
+  getTickerNews,
   type NewsItem,
 } from "../news";
 
@@ -100,6 +101,77 @@ describe("getRelevantNews — merge + dedupe", () => {
     const items = await getRelevantNews("BRENT");
     const sameUrl = items.filter((i) => i.url === sharedUrl);
     expect(sameUrl.length).toBe(1);
+  });
+});
+
+describe("getTickerNews — global multi-source feed", () => {
+  const recentISO = (hoursAgo = 2) =>
+    new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+
+  it("returns fresh Newsmaker and Yahoo headlines with cross-source dedupe", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse([
+        {
+          id: 21,
+          title: "Wall Street opens higher after jobs data",
+          url: "https://newsmaker.id/jobs",
+          date: recentISO(3),
+        },
+      ]),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([
+      {
+        title: "Gold rallies as Fed signals pause",
+        summary: "Yahoo Finance summary",
+        url: "https://finance.yahoo.com/gold",
+        publishedAt: recentISO(1),
+      },
+      {
+        title: "Gold rallies as Fed signals pause",
+        summary: "Syndicated duplicate",
+        url: "https://finance.yahoo.com/gold-duplicate",
+        publishedAt: recentISO(2),
+      },
+    ]);
+
+    const items = await getTickerNews(3);
+
+    expect(new Set(items.map((item) => item.source))).toEqual(
+      new Set(["Newsmaker.id", "Yahoo Finance"]),
+    );
+    expect(items.filter((item) => item.title.includes("Gold rallies")).length).toBe(1);
+    expect(items.every((item) => item.publishedAt !== new Date(0).toISOString())).toBe(true);
+  });
+
+  it("keeps Yahoo headlines when Newsmaker is unavailable", async () => {
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("Newsmaker unavailable");
+    }) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([
+      {
+        title: "Bitcoin ETF sees renewed inflows",
+        summary: "Yahoo Finance summary",
+        url: "https://finance.yahoo.com/bitcoin",
+        publishedAt: recentISO(1),
+      },
+    ]);
+
+    const items = await getTickerNews(3);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      source: "Yahoo Finance",
+      url: "https://finance.yahoo.com/bitcoin",
+    });
+  });
+
+  it("returns an honest empty feed when both upstream sources fail", async () => {
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("Newsmaker unavailable");
+    }) as unknown as typeof fetch;
+    mockedYahoo.mockRejectedValue(new Error("Yahoo unavailable"));
+
+    await expect(getTickerNews(3)).resolves.toEqual([]);
   });
 });
 

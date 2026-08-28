@@ -1,7 +1,7 @@
 import { cloneElement, isValidElement, type ReactElement } from "react";
 import { ArrowDown, ArrowUp, Newspaper } from "lucide-react";
 import { useLiveQuotes, type LiveQuote } from "@/hooks/use-live-quotes";
-import { useNews, type NewsArticle } from "@/hooks/use-news";
+import { useTickerNews, type NewsArticle } from "@/hooks/use-news";
 import { useTranslation } from "@/lib/i18n";
 
 const FALLBACK_INSTRUMENTS = [
@@ -129,10 +129,10 @@ function BreakingNewsBadge() {
 export function ContinuousTicker({ newsLimit = 3 }: { newsLimit?: number }) {
   const { t } = useTranslation();
   const { data: liveQuotesData } = useLiveQuotes();
-  const { data: newsData } = useNews();
+  const { data: newsData } = useTickerNews(newsLimit);
 
   const liveQuotes = liveQuotesData?.data ?? [];
-  const articles = newsData?.articles?.slice(0, newsLimit) ?? [];
+  const articles = newsData?.articles ?? [];
 
   const hasLive = liveQuotes.length > 0;
   const hasNews = articles.length > 0;

@@ -12,6 +12,17 @@ const YAHOO_SOURCE = "Yahoo Finance";
 
 let newsmakerCache: { data: NewsmakerRaw[]; fetchedAt: number } | null = null;
 const CACHE_TTL = 10 * 60 * 1000;
+const TICKER_CACHE_TTL = 10 * 60 * 1000;
+const TICKER_UPSTREAM_TIMEOUT_MS = 5_000;
+const TICKER_YAHOO_INSTRUMENTS = [
+  "XAU/USD",
+  "BRENT",
+  "EUR/USD",
+  "USD/JPY",
+  "HSI",
+  "BTC/USD",
+] as const;
+let tickerCache: { data: NewsItem[]; fetchedAt: number } | null = null;
 
 const INSTRUMENT_KEYWORDS: Record<string, string[]> = {
   "XAU/USD": ["emas", "gold", "xau", "dolar", "fed", "inflasi", "safe haven", "logam mulia"],
@@ -145,6 +156,64 @@ function publishedAtMs(item: NewsItem): number {
   return Number.isFinite(t) ? t : 0;
 }
 
+function dedupeNews(items: NewsItem[]): NewsItem[] {
+  const seenUrls = new Set<string>();
+  const seenTitles = new Set<string>();
+  const deduped: NewsItem[] = [];
+  for (const item of items) {
+    const titleKey = normalizeTitle(item.title);
+    if (item.url && seenUrls.has(item.url)) continue;
+    if (titleKey && seenTitles.has(titleKey)) continue;
+    if (item.url) seenUrls.add(item.url);
+    if (titleKey) seenTitles.add(titleKey);
+    deduped.push(item);
+  }
+  return deduped;
+}
+
+function rankTickerNews(items: NewsItem[], maxItems: number): NewsItem[] {
+  const now = Date.now();
+  const ranked = dedupeNews(items)
+    .filter((item) => {
+      const timestamp = publishedAtMs(item);
+      const age = now - timestamp;
+      return timestamp > 0 && age >= 0 && age <= NEWS_MAX_AGE_MS;
+    })
+    .sort((a, b) => publishedAtMs(b) - publishedAtMs(a));
+
+  const selected = ranked.slice(0, maxItems);
+  const sources = new Set(selected.map((item) => item.source));
+  const availableSources = new Set(ranked.map((item) => item.source));
+  if (selected.length > 1 && sources.size === 1 && availableSources.size > 1) {
+    const missingSource = [...availableSources].find((source) => !sources.has(source));
+    const replacement = ranked.find((item) => item.source === missingSource);
+    if (replacement) {
+      selected[selected.length - 1] = replacement;
+      selected.sort((a, b) => publishedAtMs(b) - publishedAtMs(a));
+    }
+  }
+  return selected;
+}
+
+function withTickerTimeout<T>(promise: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = setTimeout(
+      () => reject(new Error("Ticker news upstream timed out")),
+      TICKER_UPSTREAM_TIMEOUT_MS,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
 // Fetch + merge + dedupe + rank up to `maxItems` items for the
 // instrument. Never throws; returns [] when both upstream feeds fail.
 export async function getRelevantNews(
@@ -173,17 +242,7 @@ export async function getRelevantNews(
 
   // Dedupe by URL first, then by normalized title — same headline
   // syndicated to both sources should only appear once.
-  const seenUrls = new Set<string>();
-  const seenTitles = new Set<string>();
-  const deduped: NewsItem[] = [];
-  for (const item of collected) {
-    const titleKey = normalizeTitle(item.title);
-    if (item.url && seenUrls.has(item.url)) continue;
-    if (titleKey && seenTitles.has(titleKey)) continue;
-    if (item.url) seenUrls.add(item.url);
-    if (titleKey) seenTitles.add(titleKey);
-    deduped.push(item);
-  }
+  const deduped = dedupeNews(collected);
 
   // Score everything. Yahoo items get a +1 baseline because they are
   // already symbol-scoped at the feed level — without that boost a
@@ -241,6 +300,43 @@ export async function getRelevantNews(
   return kept.slice(0, maxItems).map((s) => s.item);
 }
 
+/**
+ * Build the global feed used by the top-of-page ticker. This is intentionally
+ * separate from getRelevantNews: the ticker has no selected instrument and
+ * must not change the relevance/ranking used by AI analysis or watchlist
+ * alerts.
+ */
+export async function getTickerNews(maxItems = 6): Promise<NewsItem[]> {
+  const limit = Math.max(1, Math.min(12, Math.floor(maxItems) || 6));
+  if (tickerCache && Date.now() - tickerCache.fetchedAt < TICKER_CACHE_TTL) {
+    return tickerCache.data.slice(0, limit);
+  }
+
+  const upstreamResults = await Promise.allSettled([
+    withTickerTimeout(fetchNewsmaker()),
+    ...TICKER_YAHOO_INSTRUMENTS.map((instrument) =>
+      withTickerTimeout(getYahooFinanceNews(instrument, 8)),
+    ),
+  ]);
+  const collected: NewsItem[] = [];
+
+  const [newsmakerResult, ...yahooResults] = upstreamResults;
+  if (newsmakerResult?.status === "fulfilled") {
+    for (const raw of newsmakerResult.value) {
+      collected.push(newsmakerToItem(raw));
+    }
+  }
+
+  for (const result of yahooResults) {
+    if (result.status !== "fulfilled") continue;
+    for (const raw of result.value) collected.push(yahooToItem(raw));
+  }
+
+  const ranked = rankTickerNews(collected, 12);
+  tickerCache = { data: ranked, fetchedAt: Date.now() };
+  return ranked.slice(0, limit);
+}
+
 // Strip prompt-injection patterns from external feed text before
 // splicing into the model context. Exported (with leading underscore,
 // matching `_clearNewsmakerCache`) so unit tests can hit it directly.
@@ -288,4 +384,5 @@ export function formatNewsForPrompt(
 // Exposed for tests — lets a vitest case force fresh fetches.
 export function _clearNewsmakerCache(): void {
   newsmakerCache = null;
+  tickerCache = null;
 }
