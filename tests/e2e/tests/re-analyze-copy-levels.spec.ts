@@ -311,11 +311,15 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("trade-plan-sell-tp1")).toHaveText("2354.0");
     await expect(page.getByTestId("trade-plan-sell-tp2")).toHaveText("2346.0");
 
-    // Adaptive is opt-in. Merely loading Standard Analysis must not calculate
-    // or persist a ladder, and the Standard card remains the only plan state.
-    await expect(page.getByTestId("button-toggle-adaptive-plan")).toBeVisible();
+    // Adaptive is always visible, but calculation remains opt-in. Merely
+    // loading Standard Analysis must not calculate or persist a ladder.
+    await expect(page.getByTestId("card-adaptive-position-plan")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-content")).toBeVisible();
+    await expect(page.getByTestId("button-toggle-adaptive-plan")).toHaveCount(0);
     await expect(page.getByTestId("adaptive-plan-valid")).toHaveCount(0);
     await expect(page.getByTestId("adaptive-plan-invalid")).toHaveCount(0);
+    await expect(page.getByTestId("card-log-trade")).toHaveCount(0);
+    await expect(page.getByTestId("card-user-journal-note")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
       (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v3:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
@@ -406,7 +410,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
 
     const marginInput = page.getByTestId("input-adaptive-available-margin");
     await expect(marginInput).toBeVisible();
-    await expect(page.getByText(/standard rule uses 100 margin|aturan standar memakai margin 100/i)).toBeVisible();
+    await expect(page.getByText(/standard rule uses \$?100 margin|aturan standar memakai margin \$?100/i)).toBeVisible();
     await marginInput.fill("100000");
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();

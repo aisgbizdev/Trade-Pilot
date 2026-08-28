@@ -199,7 +199,7 @@ test.describe("Nav thresholds – 0 analyses (brand-new user)", () => {
 // Scenario B — 1 analysis
 // ══════════════════════════════════════════════════════════════════════════
 test.describe("Nav thresholds – 1 analysis", () => {
-  test("desktop: Analyze, Journal, and History visible; Mirror and Analytics are hidden", async ({
+  test("desktop: only Analyze and History remain visible", async ({
     page,
     baseURL,
   }) => {
@@ -208,11 +208,11 @@ test.describe("Nav thresholds – 1 analysis", () => {
     await signIn(page, user);
     await page.goto("/analyze");
 
-    await assertDesktopNavVisible(page, ["analyze", "journal", "history"]);
-    await assertDesktopNavHidden(page, ["mirror", "analytics"]);
+    await assertDesktopNavVisible(page, ["analyze", "history"]);
+    await assertDesktopNavHidden(page, ["journal", "mirror", "analytics"]);
   });
 
-  test("mobile: Analyze, Journal, and History visible; Mirror and Analytics are hidden", async ({
+  test("mobile: only Analyze and History remain visible", async ({
     page,
     baseURL,
   }) => {
@@ -223,8 +223,8 @@ test.describe("Nav thresholds – 1 analysis", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/analyze");
 
-    await assertMobileNavVisible(page, ["analyze", "journal", "history"]);
-    await assertMobileNavHidden(page, ["mirror", "analytics"]);
+    await assertMobileNavVisible(page, ["analyze", "history"]);
+    await assertMobileNavHidden(page, ["journal", "mirror", "analytics"]);
   });
 });
 
@@ -232,22 +232,17 @@ test.describe("Nav thresholds – 1 analysis", () => {
 // Scenario C — 5 analyses
 // ══════════════════════════════════════════════════════════════════════════
 test.describe("Nav thresholds – 5 analyses", () => {
-  test("desktop: all five tabs are visible", async ({ page, baseURL }) => {
+  test("desktop: Analytics unlocks while Journal and Mirror stay hidden", async ({ page, baseURL }) => {
     const user = await registerUser(baseURL!, "5a");
     await stubAnalysesSummary(page, 5);
     await signIn(page, user);
     await page.goto("/analyze");
 
-    await assertDesktopNavVisible(page, [
-      "analyze",
-      "journal",
-      "mirror",
-      "history",
-      "analytics",
-    ]);
+    await assertDesktopNavVisible(page, ["analyze", "history", "analytics"]);
+    await assertDesktopNavHidden(page, ["journal", "mirror"]);
   });
 
-  test("mobile: all five tabs are visible", async ({ page, baseURL }) => {
+  test("mobile: Analytics unlocks while Journal and Mirror stay hidden", async ({ page, baseURL }) => {
     const user = await registerUser(baseURL!, "5b");
     await stubAnalysesSummary(page, 5);
     await signIn(page, user);
@@ -255,12 +250,7 @@ test.describe("Nav thresholds – 5 analyses", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/analyze");
 
-    await assertMobileNavVisible(page, [
-      "analyze",
-      "journal",
-      "mirror",
-      "history",
-      "analytics",
-    ]);
+    await assertMobileNavVisible(page, ["analyze", "history", "analytics"]);
+    await assertMobileNavHidden(page, ["journal", "mirror"]);
   });
 });
