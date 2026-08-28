@@ -729,6 +729,8 @@ export const en = {
     sessions_info_body: "This shows which global market sessions are currently open. It is useful context for Gold, forex, and other non-crypto instruments.",
     sessions_info_crypto_body: "Crypto trades 24/7, so it does not follow the London, Tokyo, or New York session schedule.",
     sessions_info_overlap: "When two sessions overlap, activity and liquidity are often higher.",
+    sessions_info_hours_title: "Typical session hours",
+    sessions_info_local_time: "Shown in {timezone}",
     sessions_info_note: "This is market context, not a trading signal or an automatic order trigger.",
     sessions_info_button: "Learn about market sessions",
     sessions_sydney: "Sydney",

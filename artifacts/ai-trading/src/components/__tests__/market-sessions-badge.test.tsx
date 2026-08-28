@@ -41,6 +41,11 @@ describe("MarketSessionsBadge", () => {
     expect(info).toHaveTextContent("global market sessions");
     expect(info).toHaveTextContent("Gold, forex");
     expect(info).toHaveTextContent("not a trading signal");
+    expect(info).toHaveTextContent("Typical session hours");
+    expect(screen.getByTestId("market-sessions-schedule")).toHaveTextContent(
+      "London",
+    );
+    expect(info.className).toContain("calc(100vw-2rem)");
   });
 
   it("explains why crypto does not use FX session times", async () => {

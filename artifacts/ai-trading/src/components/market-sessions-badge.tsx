@@ -5,6 +5,7 @@ import { useTranslation } from "@/lib/i18n";
 import {
   type SessionName,
   formatDuration,
+  formatLocalTime,
   getMarketStatus,
 } from "@/lib/market-sessions";
 import { isCryptoInstrument } from "@/lib/tradingview-symbols";
@@ -30,6 +31,25 @@ function useNow(intervalMs = 60_000): Date {
   return now;
 }
 
+const SESSION_SCHEDULE: readonly {
+  name: SessionName;
+  openUtcHour: number;
+  closeUtcHour: number;
+}[] = [
+  { name: "sydney", openUtcHour: 22, closeUtcHour: 7 },
+  { name: "tokyo", openUtcHour: 0, closeUtcHour: 9 },
+  { name: "london", openUtcHour: 8, closeUtcHour: 17 },
+  { name: "newYork", openUtcHour: 13, closeUtcHour: 22 },
+];
+
+function getLocalTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "local time";
+  } catch {
+    return "local time";
+  }
+}
+
 export interface MarketSessionsBadgeProps {
   className?: string;
   /** Override "now" — for tests/snapshots. */
@@ -43,14 +63,22 @@ export interface MarketSessionsBadgeProps {
   instrument?: string;
 }
 
-function SessionInfoPopover({ isCrypto }: { isCrypto: boolean }) {
-  const { t } = useTranslation();
+function SessionInfoPopover({
+  isCrypto,
+  reference,
+}: {
+  isCrypto: boolean;
+  reference: Date;
+}) {
+  const { lang, t } = useTranslation();
+  const locale = lang === "id" ? "id-ID" : "en-US";
+  const timeZone = getLocalTimeZone();
 
   return (
     <PopoverContent
       align="end"
       side="bottom"
-      className="w-[min(18rem,calc(100vw-2rem))] space-y-2 p-3 text-xs leading-relaxed"
+      className="max-h-[min(70vh,24rem)] w-[min(18rem,calc(100vw-2rem))] space-y-2 overflow-y-auto p-3 text-xs leading-relaxed"
       data-testid="market-sessions-info"
     >
       <p className="font-semibold text-foreground">
@@ -62,9 +90,45 @@ function SessionInfoPopover({ isCrypto }: { isCrypto: boolean }) {
           : t.widgets.sessions_info_body}
       </p>
       {!isCrypto && (
-        <p className="text-muted-foreground">
-          {t.widgets.sessions_info_overlap}
-        </p>
+        <>
+          <p className="text-muted-foreground">
+            {t.widgets.sessions_info_overlap}
+          </p>
+          <div className="space-y-1.5 border-t border-border/60 pt-2">
+            <p className="font-medium text-foreground">
+              {t.widgets.sessions_info_hours_title}
+            </p>
+            <p className="text-muted-foreground">
+              {t.widgets.sessions_info_local_time.replace(
+                "{timezone}",
+                timeZone,
+              )}
+            </p>
+            <ul
+              className="grid grid-cols-2 gap-x-3 gap-y-1 text-muted-foreground"
+              data-testid="market-sessions-schedule"
+            >
+              {SESSION_SCHEDULE.map((session) => (
+                <li key={session.name} className="flex justify-between gap-2">
+                  <span>{t.widgets[`sessions_${session.name === "newYork" ? "newyork" : session.name}` as "sessions_sydney" | "sessions_tokyo" | "sessions_london" | "sessions_newyork"]}</span>
+                  <span className="font-medium text-foreground">
+                    {formatLocalTime(
+                      session.openUtcHour,
+                      locale,
+                      reference,
+                    )}
+                    –
+                    {formatLocalTime(
+                      session.closeUtcHour,
+                      locale,
+                      reference,
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
       )}
       <p className="text-muted-foreground">{t.widgets.sessions_info_note}</p>
     </PopoverContent>
@@ -78,7 +142,7 @@ function SessionInfoButton() {
     <PopoverTrigger asChild>
       <button
         type="button"
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="relative -my-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         aria-label={t.widgets.sessions_info_button}
         data-testid="market-sessions-info-button"
       >
@@ -115,7 +179,7 @@ export function MarketSessionsBadge({ className, now: nowProp, instrument }: Mar
           </span>
           <SessionInfoButton />
         </span>
-        <SessionInfoPopover isCrypto />
+        <SessionInfoPopover isCrypto reference={now} />
       </Popover>
     );
   }
@@ -186,7 +250,7 @@ export function MarketSessionsBadge({ className, now: nowProp, instrument }: Mar
         )}
         <SessionInfoButton />
       </span>
-      <SessionInfoPopover isCrypto={false} />
+      <SessionInfoPopover isCrypto={false} reference={now} />
     </Popover>
   );
 }

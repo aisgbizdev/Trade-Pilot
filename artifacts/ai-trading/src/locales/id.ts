@@ -731,6 +731,8 @@ export const id: Translations = {
     sessions_info_body: "Ini menunjukkan sesi pasar global yang sedang buka. Informasi ini berguna sebagai konteks untuk Gold, forex, dan instrumen non-crypto lainnya.",
     sessions_info_crypto_body: "Crypto diperdagangkan 24/7, jadi tidak mengikuti jadwal sesi London, Tokyo, atau New York.",
     sessions_info_overlap: "Saat dua sesi overlap, aktivitas dan likuiditas biasanya lebih tinggi.",
+    sessions_info_hours_title: "Jam sesi secara umum",
+    sessions_info_local_time: "Ditampilkan dalam {timezone}",
     sessions_info_note: "Ini hanya konteks pasar, bukan sinyal trading atau pemicu order otomatis.",
     sessions_info_button: "Lihat arti sesi pasar",
     sessions_sydney: "Sydney",
