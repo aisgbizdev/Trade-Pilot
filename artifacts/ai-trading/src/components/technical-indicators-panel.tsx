@@ -14,7 +14,7 @@ function signalToCounts(signal: RawSignal): { buy: number; sell: number; neutral
   return { buy: 0, sell: 0, neutral: 1 };
 }
 
-/** Per-row signal: a tiny gauge + (in pro mode) the raw Buy/Sell/Neutral label. */
+/** Per-row signal: a compact gauge + (in pro mode) the raw Buy/Sell/Neutral label. */
 function SignalCell({ signal, mode, testId }: { signal: RawSignal; mode: "beginner" | "pro"; testId?: string }) {
   const { t } = useTranslation();
   const counts = signalToCounts(signal);
@@ -24,7 +24,7 @@ function SignalCell({ signal, mode, testId }: { signal: RawSignal; mode: "beginn
     t.analyze.signal_neutral;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-2">
       <SignalSpeedometer
         buy={counts.buy}
         sell={counts.sell}
@@ -35,7 +35,7 @@ function SignalCell({ signal, mode, testId }: { signal: RawSignal; mode: "beginn
         testId={testId}
       />
       {mode === "pro" && (
-        <span className="text-[10px] font-medium leading-none text-muted-foreground/70 min-w-[2.75rem] text-left tabular-nums">
+        <span className="text-xs font-medium leading-none text-muted-foreground/70 min-w-[3.5rem] text-left tabular-nums">
           {rawLabel}
         </span>
       )}
@@ -110,11 +110,11 @@ export function TechnicalIndicatorsPanel({
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400/20 to-yellow-500/20 flex items-center justify-center">
           <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
         </div>
-        <h3 className="text-sm font-bold text-foreground" data-testid="text-indicator-header">
+        <h3 className="text-base font-bold text-foreground" data-testid="text-indicator-header">
           {t.analyze.technical_indicators} — {timeframe}
         </h3>
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {dataLabel} · {ind.dataPoints} {t.analyze.candles}
           </span>
           {SHOW_NEWSMAKER && (
@@ -122,7 +122,7 @@ export function TechnicalIndicatorsPanel({
               href="https://newsmaker.id"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
               data-testid="link-indicators-source-newsmaker"
             >
               {t.widgets.source_newsmaker}
@@ -133,21 +133,21 @@ export function TechnicalIndicatorsPanel({
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">{t.analyze.price_label}</div>
-          <div className="text-sm font-bold text-foreground tabular-nums">{Number(ind.lastClose).toFixed(ind.lastClose > 100 ? 2 : 4)}</div>
+          <div className="text-xs text-muted-foreground mb-1">{t.analyze.price_label}</div>
+          <div className="text-base font-bold text-foreground tabular-nums">{Number(ind.lastClose).toFixed(ind.lastClose > 100 ? 2 : 4)}</div>
         </div>
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">{change1Label}</div>
+          <div className="text-xs text-muted-foreground mb-1">{change1Label}</div>
           <ChangeChip value={ind.change1dPct} />
         </div>
         <div className="bg-card border border-border rounded-xl p-2.5">
-          <div className="text-[10px] text-muted-foreground mb-1">{change20Label}</div>
+          <div className="text-xs text-muted-foreground mb-1">{change20Label}</div>
           <ChangeChip value={ind.change20dPct} />
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-4">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-3">{t.analyze.signal_summary}</p>
+        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3">{t.analyze.signal_summary}</p>
         <SignalSpeedometer
           buy={ind.overallSummary.buy}
           sell={ind.overallSummary.sell}
@@ -157,7 +157,7 @@ export function TechnicalIndicatorsPanel({
         />
         <div className="grid grid-cols-2 gap-2 mt-3">
           <div className="bg-muted/50 rounded-xl p-2 flex flex-col items-center">
-            <p className="text-[9px] text-muted-foreground mb-1">{t.analyze.oscillator_section}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t.analyze.oscillator_section}</p>
             <SignalSpeedometer
               buy={ind.oscillatorSummary.buy}
               sell={ind.oscillatorSummary.sell}
@@ -168,7 +168,7 @@ export function TechnicalIndicatorsPanel({
             />
           </div>
           <div className="bg-muted/50 rounded-xl p-2 flex flex-col items-center">
-            <p className="text-[9px] text-muted-foreground mb-1">{t.analyze.moving_avg_short}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t.analyze.moving_avg_short}</p>
             <SignalSpeedometer
               buy={ind.maSummary.buy}
               sell={ind.maSummary.sell}
@@ -181,31 +181,31 @@ export function TechnicalIndicatorsPanel({
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t.analyze.oscillator_section}</p>
+      <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
+        <p className="text-xs text-muted-foreground uppercase tracking-wide">{t.analyze.oscillator_section}</p>
         {[
           { name: "RSI (14)", value: r(ind.rsi14.value), signal: ind.rsi14.signal },
           { name: `MACD (12,26)`, value: r(ind.macd.macd, 4), signal: ind.macd.action },
           { name: `Stochastic %K`, value: r(ind.stochastic.k), signal: ind.stochastic.signal },
           { name: `Bollinger`, value: `${r(ind.bollinger.lower, 2)}–${r(ind.bollinger.upper, 2)}`, signal: ind.bollinger.signal },
         ].map((row) => (
-          <div key={row.name} className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{row.name}</span>
+          <div key={row.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <span className="text-sm text-muted-foreground">{row.name}</span>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-foreground">{row.value}</span>
+              <span className="text-sm font-mono text-foreground">{row.value}</span>
               <SignalCell signal={row.signal as RawSignal} mode={mode} />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t.analyze.moving_averages_section}</p>
+      <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
+        <p className="text-xs text-muted-foreground uppercase tracking-wide">{t.analyze.moving_averages_section}</p>
         {sortedMAs.map((ma) => (
-          <div key={`${ma.type}-${ma.period}`} className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{ma.type} ({ma.period})</span>
+          <div key={`${ma.type}-${ma.period}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <span className="text-sm text-muted-foreground">{ma.type} ({ma.period})</span>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-foreground">{Number(ma.value).toFixed(ma.value > 100 ? 2 : 4)}</span>
+              <span className="text-sm font-mono text-foreground">{Number(ma.value).toFixed(ma.value > 100 ? 2 : 4)}</span>
               <SignalCell signal={ma.signal} mode={mode} />
             </div>
           </div>

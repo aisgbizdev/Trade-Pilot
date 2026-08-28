@@ -86,7 +86,7 @@ export function SignalSpeedometer({
 
   // The wrapper width itself is sized per-preset (rather than `w-full` with a
   // `max-w` only on the SVG). Critically the `xs` preset uses an explicit
-  // pixel width + `shrink-0` so the mini gauge keeps its 56×~34px footprint
+  // pixel width + `shrink-0` so the row gauge keeps a clear 80×~48px footprint
   // even when it lives inside a tight flex-row alongside a fixed-width label
   // (see `SignalCell` in `technical-indicators-panel.tsx`). Without
   // `shrink-0`, a sibling with `min-w-[2.75rem]` would steal space and the
@@ -96,9 +96,9 @@ export function SignalSpeedometer({
   const sizing =
     size === "xs"
       ? {
-          wrapperW: "w-14 shrink-0",
-          strokeWidth: 6,
-          labelText: "text-[10px]",
+          wrapperW: "w-20 shrink-0",
+          strokeWidth: 7,
+          labelText: "text-xs",
           countText: "text-[8px]",
           labelMt: "mt-0",
         }
