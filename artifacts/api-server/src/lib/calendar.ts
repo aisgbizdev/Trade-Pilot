@@ -9,6 +9,7 @@ const CACHE_TTL = 30 * 60 * 1000;
 
 const INSTRUMENT_CURRENCIES: Record<string, string[]> = {
   "XAU/USD": ["USD", "GOLD"],
+  "XAG/USD": ["USD", "SILVER"],
   "BRENT": ["USD", "OIL", "OPEC"],
   "EUR/USD": ["EUR", "USD"],
   "GBP/USD": ["GBP", "USD"],
@@ -19,6 +20,9 @@ const INSTRUMENT_CURRENCIES: Record<string, string[]> = {
   // sets the upstream feed doesn't cover.
   "USD/IDR": ["IDR", "USD"],
   "DXY": ["USD"],
+  "NIKKEI": ["JPY"],
+  "DJIA": ["USD"],
+  "NASDAQ": ["USD"],
   "AUD/USD": ["AUD", "USD"],
   "USD/CHF": ["CHF", "USD"],
   "HSI": ["CHN", "HKD"],

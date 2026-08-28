@@ -74,6 +74,41 @@ describe("getRelevantCalendar — lookbackHours datetime precision", () => {
     expect(events[0]!.epochMs).toBe(Date.UTC(2026, 7, 29, 20, 30));
   });
 
+  it("uses the same normalized aliases for USD-priced and Japan-index instruments", async () => {
+    const NOW = new Date("2026-08-28T12:00:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+
+    globalThis.fetch = vi.fn(async () =>
+      calendarResponse([
+        {
+          date: "2026-08-29",
+          time: "2026-08-29 09:00",
+          currency: "US",
+          event: "US event",
+          actual: "-",
+        },
+        {
+          date: "2026-08-29",
+          time: "2026-08-29 09:30",
+          currency: "JPN",
+          event: "Japan event",
+          actual: "-",
+        },
+      ]),
+    ) as unknown as typeof fetch;
+
+    const [nasdaqEvents, nikkeiEvents] = await Promise.all([
+      getRelevantCalendar("NASDAQ"),
+      getRelevantCalendar("NIKKEI"),
+    ]);
+
+    expect(nasdaqEvents.map((event) => event.event)).toContain("US event");
+    expect(nasdaqEvents.map((event) => event.event)).not.toContain("Japan event");
+    expect(nikkeiEvents.map((event) => event.event)).toContain("Japan event");
+    expect(nikkeiEvents.map((event) => event.event)).not.toContain("US event");
+  });
+
   it("excludes an event that printed 30 hours ago when lookbackHours=24", async () => {
     // Pin "now" to a fixed instant so the cutoff math is deterministic.
     const NOW = new Date("2026-04-30T12:00:00Z");
