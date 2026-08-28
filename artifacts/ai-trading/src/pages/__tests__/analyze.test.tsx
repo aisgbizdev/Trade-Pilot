@@ -196,18 +196,25 @@ describe("AnalyzePage: happy-path render", () => {
       ) as HTMLButtonElement;
       expect(submit.disabled).toBe(true);
 
-      expect(screen.getByTestId("notes-helper-text")).toHaveTextContent(
-        "Share what you noticed on the chart or in the news",
-      );
       const notes = screen.getByTestId("textarea-notes");
-      expect(notes).toHaveAttribute(
-        "placeholder",
-        "Example: double-top, rising volume, waiting for breakout…",
-      );
+      expect(notes).toHaveAttribute("placeholder", "e.g. breakout above resistance");
+      expect(notes).toHaveClass("placeholder:italic");
       expect(notes).toHaveAttribute(
         "aria-describedby",
-        "notes-helper-text notes-broker-hint",
+        "analysis-notes-helper analysis-notes-broker-warning",
       );
+      expect(screen.getByTestId("notes-helper-text")).toHaveTextContent(
+        "Have a chart or news observation?",
+      );
+      expect(screen.getByTestId("notes-broker-hint")).toHaveTextContent(
+        "questions about brokers or trading companies",
+      );
+      expect(screen.getByText(
+        "Have a chart or news observation? Add it here — AI will use it as extra context. You can leave this blank.",
+      )).toBeInTheDocument();
+      expect(screen.getByText(
+        "Please don't use this field for questions about brokers or trading companies.",
+      )).toBeInTheDocument();
     },
   );
 });
@@ -358,6 +365,11 @@ describe("AnalyzePage: user actions", () => {
       fireEvent.click(screen.getByTestId("button-instrument-XAU/USD"));
       fireEvent.click(screen.getByTestId("button-timeframe-1h"));
     });
+    await act(async () => {
+      fireEvent.change(screen.getByTestId("textarea-notes"), {
+        target: { value: "I see a double-top on H4" },
+      });
+    });
     await waitFor(() => {
       expect(
         (screen.getByTestId("button-submit-analysis") as HTMLButtonElement).disabled,
@@ -373,10 +385,39 @@ describe("AnalyzePage: user actions", () => {
       );
       expect(posts).toHaveLength(1);
       expect(posts[0]?.body ? JSON.parse(posts[0].body) : null).toMatchObject({ mode: "pro" });
+      expect(posts[0]?.body ? JSON.parse(posts[0].body) : null).toMatchObject({
+        userInputContext: "I see a double-top on H4",
+      });
       expect(window.location.pathname).toBe("/analyses/42");
     });
     expect(screen.queryByTestId("analyze-result-section")).not.toBeInTheDocument();
     expect(screen.queryByTestId("button-view-full-analysis")).not.toBeInTheDocument();
+  });
+
+  it("renders the analysis context copy in Indonesian while keeping the field optional", async () => {
+    localStorage.setItem("app_lang", "id");
+    installFetchMock(pageHandlers({}));
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("textarea-notes");
+
+    expect(screen.getByTestId("textarea-notes")).toHaveAttribute(
+      "placeholder",
+      "Mis. breakout di atas resistance",
+    );
+    expect(screen.getByText(
+      "Ada pengamatan dari chart atau berita? Tulis di sini — AI akan memakainya sebagai konteks tambahan. Boleh dikosongkan.",
+    )).toBeInTheDocument();
+    expect(screen.getByText(
+      "Jangan gunakan kolom ini untuk pertanyaan tentang broker atau perusahaan pialang.",
+    )).toBeInTheDocument();
+    expect((screen.getByTestId("textarea-notes") as HTMLTextAreaElement).value).toBe("");
   });
 
   it("disables the submit button while a custom-instrument value is empty after clearing", async () => {

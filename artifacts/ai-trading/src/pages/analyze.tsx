@@ -825,28 +825,33 @@ export default function AnalyzePage() {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">{t.analyze.notes_label}</h2>
+              <div className="space-y-1">
+                <label htmlFor="analysis-notes" className="text-sm font-semibold text-foreground">
+                  {t.analyze.notes_label}
+                </label>
+                <p
+                  id="analysis-notes-helper"
+                  className="text-xs leading-relaxed text-muted-foreground"
+                  data-testid="notes-helper-text"
+                >
+                  {t.analyze.notes_helper}
+                </p>
+              </div>
             </div>
-            <p
-              id="notes-helper-text"
-              className="text-xs leading-relaxed text-muted-foreground"
-              data-testid="notes-helper-text"
-            >
-              {t.analyze.notes_helper}
-            </p>
             {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
             <Textarea
+              id="analysis-notes"
               placeholder={t.analyze.notes_placeholder}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              aria-describedby="notes-helper-text notes-broker-hint"
               rows={6}
-              className="min-h-[140px] resize-y text-sm leading-relaxed placeholder:italic placeholder:text-muted-foreground/70"
+              aria-describedby="analysis-notes-helper analysis-notes-broker-warning"
+              className="resize-y text-sm leading-relaxed min-h-[140px] text-foreground placeholder:text-muted-foreground/70 placeholder:italic"
               data-testid="textarea-notes"
             />
             <p
-              id="notes-broker-hint"
-              className="mt-1.5 flex items-start gap-1 text-[10px] leading-relaxed text-muted-foreground"
+              id="analysis-notes-broker-warning"
+              className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed"
               data-testid="notes-broker-hint"
             >
               <span className="text-primary mt-0.5" aria-hidden="true">ℹ</span>
