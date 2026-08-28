@@ -3,7 +3,6 @@ import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
-import { MarketContextSummary } from "./market-context-summary";
 import { SignalSpeedometer } from "./signal-speedometer";
 
 type RawSignal = "Buy" | "Sell" | "Neutral";
@@ -107,13 +106,6 @@ export function TechnicalIndicatorsPanel({
 
   return (
     <div className="space-y-3">
-      <MarketContextSummary
-        buy={ind.overallSummary.buy}
-        sell={ind.overallSummary.sell}
-        neutral={ind.overallSummary.neutral}
-        mode={mode}
-      />
-
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400/20 to-yellow-500/20 flex items-center justify-center">
           <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
