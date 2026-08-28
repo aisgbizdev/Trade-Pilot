@@ -215,16 +215,27 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
-    await screen.findByText(/standard rule uses 100 margin/i);
+    await screen.findByText(/standard rule uses \$100 margin/i);
+    expect(screen.queryByText(/existing AI analysis provides the direction/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-adaptive-preference-safe")).toHaveTextContent("Low Risk");
+    expect(screen.getByTestId("button-adaptive-preference-balanced")).toHaveTextContent("Medium Risk");
+    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent("High Risk");
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     const reasoning = await screen.findByTestId("adaptive-plan-reasoning");
+    const buyPlan = screen.getByTestId("adaptive-plan-buy");
+    const sellPlan = screen.getByTestId("adaptive-plan-sell");
     expect(reasoning.textContent).toMatch(/Why this plan was chosen/i);
     expect(reasoning.textContent).toMatch(/favor the rise scenario/i);
     expect(reasoning.textContent).toMatch(/Technical snapshot: 12 support up, 4 support down/i);
-    expect(screen.getByTestId("adaptive-plan-buy").textContent).toMatch(/manual checkpoints/i);
-    expect(screen.getByTestId("adaptive-plan-sell").textContent).toMatch(/initial entry only/i);
+    expect(screen.getAllByText("Layer")).toHaveLength(2);
+    expect(buyPlan.textContent).toMatch(/manual checkpoints/i);
+    expect(buyPlan.textContent).toMatch(/Cut Loss \/ SL/i);
+    expect(buyPlan.textContent).toMatch(/\$/);
+    expect(sellPlan.textContent).toMatch(/initial entry only/i);
+    expect(sellPlan.textContent).toMatch(/Cut Loss \/ SL/i);
+    expect(sellPlan.textContent).toMatch(/\$/);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
@@ -251,7 +262,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       </Wrapper>,
     );
 
-    await screen.findByText(/standard rule uses 100 margin/i);
+    await screen.findByText(/standard rule uses \$100 margin/i);
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
     expect(localStorage.getItem(`trade-pilot:adaptive-plan:v3:${ANALYSIS_ID}`)).toBeNull();
