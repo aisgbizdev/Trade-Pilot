@@ -2020,36 +2020,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           <AnalysisAlertsCard analysisId={analysis.id} t={t} />
         )}
 
-        {/* "Log this trade" — task #161 manual post-trade journal entry
-            scoped to this analysis. Opens a modal pre-filled with the
-            instrument + AI-preferred side; persists to `trade_journal`
-            keyed on this `analysisId`. Rendered above the private note
-            card so the journal CTA is the first journaling action the
-            user sees on the page. */}
-        <LogTradeButton
-          analysisId={analysis.id}
-          instrument={analysis.instrument}
-          preferredSide={tradePlan?.preferredSide ?? null}
-          analysisCreatedAt={analysis.createdAt}
-          timeframe={analysis.timeframe}
-          t={t}
-        />
-
-        {/* Private trading-journal note for this analysis (task #111).
-            Rendered for every saved analysis — having a journal entry
-            next to the AI's read is one of the most consistently-
-            recommended habits for serious traders. Never shown to other
-            users; never fed into the AI prompt. */}
-        <AnalysisNotesCard
-          analysisId={analysis.id}
-          initialNote={(analysis as { userNote?: string | null }).userNote ?? null}
-          initialUpdatedAt={
-            (analysis as { userNoteUpdatedAt?: string | null }).userNoteUpdatedAt ?? null
-          }
-          t={t}
-          lang={lang}
-        />
-
         {/* Market Context Summary — same card the user saw on the Analyze tab,
             rendered from the indicator-tally snapshot stored at analysis time. */}
         {analysis.techBuyCount != null &&
