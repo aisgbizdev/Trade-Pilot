@@ -33,7 +33,6 @@ import { useMentalChecklistPref } from "@/hooks/use-mental-checklist";
 import { AntiPatternGuardrails } from "@/components/anti-pattern-guardrails";
 import { CoolingOffBreathingDialog } from "@/components/cooling-off-breathing-dialog";
 import { useAntiPatternSignals } from "@/hooks/use-anti-pattern-signals";
-import { StandardTradingRulesCard } from "@/components/standard-trading-rules-card";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -876,8 +875,6 @@ export default function AnalyzePage() {
               {t.analyze.broker_warning}
             </p>
           </div>
-
-          {finalInstrument && <StandardTradingRulesCard instrument={finalInstrument} />}
 
           {finalInstrument && selectedTimeframe && (
             <Card className="p-3 bg-muted/50 border-dashed">
