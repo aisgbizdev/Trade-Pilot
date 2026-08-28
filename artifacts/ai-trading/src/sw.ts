@@ -12,30 +12,34 @@ import { NetworkFirst, CacheFirst } from "workbox-strategies";
 
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
-cleanupOutdatedCaches();
-
-// In dev (`devOptions: enabled: true`), vite-plugin-pwa substitutes
-// `__WB_MANIFEST` with a stub (e.g. `[{ url: '/index.html' }]`) that does
-// not include `offline.html`. Calling `createHandlerBoundToURL` for a URL
-// that isn't in the precache throws and aborts the entire SW evaluation,
-// which would also kill the `push` handler we need for testing. Only wire
-// the offline navigation fallback in production builds.
-precacheAndRoute(self.__WB_MANIFEST);
 self.skipWaiting();
 clientsClaim();
 
-registerRoute(
-  ({ url }: { url: URL }) => url.pathname.startsWith("/api/"),
-  new NetworkFirst({ cacheName: "api-cache", networkTimeoutSeconds: 10 })
-);
+if (import.meta.env.DEV) {
+  // Never cache Vite modules or the dev app shell. Stable request URLs such
+  // as /src/main.tsx otherwise get trapped by CacheFirst across restarts and
+  // make the preview render an older UI even though the source has changed.
+  // Keep the dev worker only for push-notification testing.
+  self.addEventListener("activate", (event) => {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))),
+    );
+  });
+} else {
+  cleanupOutdatedCaches();
+  precacheAndRoute(self.__WB_MANIFEST);
 
-registerRoute(
-  ({ request }: { request: Request }) =>
-    ["style", "script", "worker", "image", "font"].includes(request.destination),
-  new CacheFirst({ cacheName: "static-assets" })
-);
+  registerRoute(
+    ({ url }: { url: URL }) => url.pathname.startsWith("/api/"),
+    new NetworkFirst({ cacheName: "api-cache", networkTimeoutSeconds: 10 }),
+  );
 
-if (!import.meta.env.DEV) {
+  registerRoute(
+    ({ request }: { request: Request }) =>
+      ["style", "script", "worker", "image", "font"].includes(request.destination),
+    new CacheFirst({ cacheName: "static-assets" }),
+  );
+
   // SPA navigation fallback: every in-app route renders from the
   // precached `index.html` shell. The previous version of this file
   // pointed `NavigationRoute` directly at `offline.html`, which made

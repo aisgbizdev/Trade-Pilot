@@ -8,7 +8,6 @@ import { NewsWidget } from "@/components/news-widget";
 import { CalendarWidget } from "@/components/calendar-widget";
 import { DashboardLivePrices } from "@/components/dashboard-live-prices";
 import { UsdIdrCard } from "@/components/usd-idr-card";
-import { WatchlistSection } from "@/components/watchlist-section";
 import { EnablePushCard } from "@/components/enable-push-card";
 import {
   useGetAnalysesSummary, getGetAnalysesSummaryQueryKey,
@@ -219,10 +218,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-5 md:space-y-0 md:columns-2 md:gap-x-5">
-
-        <div className="md:mb-5 md:break-inside-avoid">
-          <WatchlistSection />
-        </div>
 
         <div className="md:mb-5 md:break-inside-avoid">
           <DashboardLivePrices />

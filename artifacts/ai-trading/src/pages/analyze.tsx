@@ -20,8 +20,6 @@ import {
   type MiniChartDateRange,
 } from "@/components/tradingview-mini-chart";
 import { instrumentToTradingViewSymbol, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
-import { WatchlistStar, useWatchlist } from "@/components/watchlist-star";
-import type { Watchlist } from "@workspace/api-client-react";
 import { MarketSessionsBadge } from "@/components/market-sessions-badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -47,6 +45,12 @@ function formatPrice(price: number, instrument: string): string {
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
 const CRYPTO_INSTRUMENTS_PICKER = ["BTC/USD", "ETH/USD", "SOL/USD", "BNB/USD", "XRP/USD"];
+const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
+  new Set(
+    [...FUTURES_INSTRUMENTS, ...FOREX_INSTRUMENTS, ...CRYPTO_INSTRUMENTS_PICKER]
+      .flatMap(instrumentToCurrencies),
+  ),
+);
 
 function instrumentsForTab(tab: "futures" | "forex" | "crypto"): string[] {
   switch (tab) {
@@ -349,18 +353,7 @@ function readStoredCurrencies(storageKey: string): string[] | null {
 function EconomicCalendarSection() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { data: watchlistData } = useWatchlist();
-  const watchlistItems = (watchlistData as Watchlist | undefined)?.items ?? [];
-
-  const availableCurrencies = (() => {
-    const seen = new Set<string>(["USD"]);
-    for (const item of watchlistItems) {
-      for (const c of instrumentToCurrencies(item.instrument)) {
-        seen.add(c);
-      }
-    }
-    return Array.from(seen);
-  })();
+  const availableCurrencies = AVAILABLE_CALENDAR_CURRENCIES;
 
   const storageKey = `${ECON_CAL_CURRENCIES_KEY_BASE}.${user?.id ?? "anon"}`;
 
@@ -799,29 +792,20 @@ export default function AnalyzePage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {instrumentsForTab(activeTab).map((inst) => (
-                <div
+                <button
                   key={inst}
+                  type="button"
+                  onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
+                  data-testid={`button-instrument-${inst}`}
                   className={cn(
-                    "flex items-center gap-1 pr-1 rounded-lg border transition-all",
+                    "w-full py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all",
                     selectedInstrument === inst && !customInstrument
-                      ? "bg-primary/10 border-primary"
-                      : "bg-background border-border hover:border-primary/50"
+                      ? "bg-primary/10 border-primary text-primary"
+                      : "bg-background border-border text-foreground hover:border-primary/50"
                   )}
                 >
-                  <button
-                    onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
-                    data-testid={`button-instrument-${inst}`}
-                    className={cn(
-                      "flex-1 py-2.5 text-sm font-medium text-left pl-3",
-                      selectedInstrument === inst && !customInstrument
-                        ? "text-primary"
-                        : "text-foreground"
-                    )}
-                  >
-                    {inst}
-                  </button>
-                  <WatchlistStar instrument={inst} size="sm" />
-                </div>
+                  {inst}
+                </button>
               ))}
             </div>
             <div className="mt-3">
