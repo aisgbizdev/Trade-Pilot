@@ -827,16 +827,28 @@ export default function AnalyzePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">{t.analyze.notes_label}</h2>
             </div>
+            <p
+              id="notes-helper-text"
+              className="text-xs leading-relaxed text-muted-foreground"
+              data-testid="notes-helper-text"
+            >
+              {t.analyze.notes_helper}
+            </p>
             {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
             <Textarea
               placeholder={t.analyze.notes_placeholder}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              aria-describedby="notes-helper-text notes-broker-hint"
               rows={6}
-              className="resize-y text-sm leading-relaxed min-h-[140px]"
+              className="min-h-[140px] resize-y text-sm leading-relaxed placeholder:italic placeholder:text-muted-foreground/70"
               data-testid="textarea-notes"
             />
-            <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed">
+            <p
+              id="notes-broker-hint"
+              className="mt-1.5 flex items-start gap-1 text-[10px] leading-relaxed text-muted-foreground"
+              data-testid="notes-broker-hint"
+            >
               <span className="text-primary mt-0.5" aria-hidden="true">ℹ</span>
               {t.analyze.broker_warning}
             </p>

@@ -195,6 +195,19 @@ describe("AnalyzePage: happy-path render", () => {
         "button-submit-analysis",
       ) as HTMLButtonElement;
       expect(submit.disabled).toBe(true);
+
+      expect(screen.getByTestId("notes-helper-text")).toHaveTextContent(
+        "Share what you noticed on the chart or in the news",
+      );
+      const notes = screen.getByTestId("textarea-notes");
+      expect(notes).toHaveAttribute(
+        "placeholder",
+        "Example: double-top, rising volume, waiting for breakout…",
+      );
+      expect(notes).toHaveAttribute(
+        "aria-describedby",
+        "notes-helper-text notes-broker-hint",
+      );
     },
   );
 });
@@ -281,6 +294,9 @@ describe("AnalyzePage: user actions", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-timeframe-1h"));
     });
+    fireEvent.change(screen.getByTestId("textarea-notes"), {
+      target: { value: "Waiting for a close above resistance" },
+    });
 
     await waitFor(() => {
       expect(
@@ -304,6 +320,9 @@ describe("AnalyzePage: user actions", () => {
       expect(payload?.instrument).toBe("XAU/USD");
       expect(payload?.timeframe).toBe("1h");
       expect(payload?.mode).toBe("beginner");
+      expect(payload?.userInputContext).toBe(
+        "Waiting for a close above resistance",
+      );
       expect(window.location.pathname).toBe("/analyses/4242");
     });
     expect(screen.queryByTestId("analyze-result-section")).not.toBeInTheDocument();
