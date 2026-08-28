@@ -15,7 +15,11 @@ import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
 import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useListAnalyses, getListAnalysesQueryKey, useUpdateProfile, getGetMeQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe, type User, type UserSelectedMode } from "@workspace/api-client-react";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
-import { TradingViewMiniChart, type MiniChartDateRange } from "@/components/tradingview-mini-chart";
+import {
+  TradingViewMiniChart,
+  MINI_CHART_DEFAULT_HEIGHT,
+  type MiniChartDateRange,
+} from "@/components/tradingview-mini-chart";
 import { instrumentToTradingViewSymbol, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
 import { WatchlistStar, useWatchlist } from "@/components/watchlist-star";
 import type { Watchlist } from "@workspace/api-client-react";
@@ -903,7 +907,7 @@ export default function AnalyzePage() {
                 <TradingViewMiniChart
                   symbol={instrumentToTradingViewSymbol(finalInstrument)}
                   dateRange={miniChartRange}
-                  height={180}
+                  height={MINI_CHART_DEFAULT_HEIGHT}
                 />
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">

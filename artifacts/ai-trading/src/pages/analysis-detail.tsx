@@ -1846,6 +1846,10 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </Button>
         </Card>
 
+        <div
+          className="grid items-start gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
+          data-testid="primary-metrics-chart-grid"
+        >
         {/* PRIMARY METRICS: Bias + Confidence + Risk */}
         <Card className="p-4 space-y-4" data-testid="card-primary-metrics">
           {bias && <BiasIndicator bias={bias} mode={analysis.mode} timeframe={analysis.timeframe} />}
@@ -1966,6 +1970,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           tradePlan={tradePlan}
           analysisCreatedAt={analysis.createdAt}
         />
+        </div>
 
         {/* Fundamental context — news + calendar the AI was given,
             shown directly under the bias gauge so users can audit it. */}
