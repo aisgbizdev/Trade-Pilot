@@ -23,7 +23,7 @@ export function StandardTradingRulesCard({ instrument }: { instrument: string })
     [t.analyze.standard_rules_fixed_rate, data.fixedRate.label],
     [t.analyze.standard_rules_contract_size, `${rule.contractSize.toLocaleString(locale)} ${rule.contractUnit}`],
     [t.analyze.standard_rules_session, `${rule.tradingDays} · ${t.analyze.standard_rules_summer}: ${rule.tradingHours.summer} · ${t.analyze.standard_rules_winter}: ${rule.tradingHours.winter}`],
-    [t.analyze.standard_rules_margin, `${money(rule.initialMarginUsdPerLot)} / lot (${data.fixedRate.label})`],
+    [t.analyze.standard_rules_margin, `${money(rule.initialMarginUsdPerLot)} / ${data.account.minimumLot.toFixed(2)} lot · Mini (${data.fixedRate.label})`],
     [t.analyze.standard_rules_fee, `${money(rule.facilityFeeUsdPerLotPerSide)} / lot / side + VAT ${rule.vatPercent}%`],
     [t.analyze.standard_rules_rollover, `${money(rule.rolloverUsdPerLotPerNight)} / lot / night + VAT ${rule.vatPercent}%`],
     [t.analyze.standard_rules_spread, `${t.analyze.standard_rules_min}: ${rule.minimumSpread} · ${t.analyze.standard_rules_max}: ${rule.maximumSpread}`],

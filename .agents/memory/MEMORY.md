@@ -9,3 +9,4 @@
 - [Situation-aware adaptive scaling](situation-aware-adaptive-scaling.md) — staged additions must fail closed unless the saved analysis context is complete and directionally aligned.
 - [Artifact mirror duplicate](artifact-mirror-duplicate.md) — validate and publish canonical root artifacts; the tracked trade-pilot tree creates duplicate workflow entries.
 - [Adaptive-plan cache versioning](adaptive-plan-cache-versioning.md) — bump the browser storage namespace whenever calculator semantics change, or saved recommendations can mask a correct fix.
+- [Account tier selection](account-tier-selection.md) — account type is explicit; funds determine capacity and suggestions only, while opening deposit stays separate from free trading margin.

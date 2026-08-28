@@ -4,6 +4,8 @@ import {
   buildAdaptivePlanRecommendation,
   buildAdaptivePositionPlan,
   createAdaptivePlanFingerprint,
+  getAdaptiveMarginCapacity,
+  getAdaptiveMarketRule,
 } from "./adaptive-position-plan";
 
 const TRADE_PLAN: TradePlan = {
@@ -74,12 +76,13 @@ const SUPPORTIVE_CONTEXT = {
 };
 
 describe("buildAdaptivePositionPlan", () => {
-  it("creates a situation-aware recommendation from available margin without account-form inputs", () => {
+  it("creates a situation-aware recommendation within the explicitly selected Mini tier", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
       availableMargin: 100_000,
       standardRule: GOLD_RULE,
+      accountTier: "mini",
       preference: "balanced",
       context: SUPPORTIVE_CONTEXT,
     });
@@ -91,9 +94,9 @@ describe("buildAdaptivePositionPlan", () => {
     });
     expect(recommendation.recommendation?.initialLot).toBeGreaterThan(0);
     const initialLot = recommendation.recommendation?.initialLot ?? 0;
-    expect(initialLot).toBeGreaterThanOrEqual(1);
-    const lotScale = initialLot >= 0.1 ? 10 : 100;
-    expect(initialLot * lotScale).toBeCloseTo(Math.round(initialLot * lotScale), 8);
+    expect(initialLot).toBeGreaterThanOrEqual(0.1);
+    expect(initialLot).toBeLessThanOrEqual(0.9);
+    expect(initialLot * 10).toBeCloseTo(Math.round(initialLot * 10), 8);
     expect(recommendation.decision).toMatchObject({
       posture: "scaling_allowed",
       preferredSide: "buy",
@@ -140,8 +143,9 @@ describe("buildAdaptivePositionPlan", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
       tradePlan: wideStopPlan,
-      availableMargin: 1_000,
+      availableMargin: 100,
       standardRule: GOLD_RULE,
+      accountTier: "micro",
       preference: "active",
       context: SUPPORTIVE_CONTEXT,
     });
@@ -308,9 +312,12 @@ describe("buildAdaptivePositionPlan", () => {
 
     expect(result.valid).toBe(true);
     expect(result.rule).toMatchObject({
-      contractSize: GOLD_RULE.contractSize,
+      accountTier: "micro",
+      contractSize: 1,
       minMovement: 0.01,
-      marginPerLot: GOLD_RULE.initialMarginUsdPerLot,
+      marginAtMinimumLot: 10,
+      marginPerLot: 1_000,
+      minimumLot: 0.01,
       source: "TP Standard Trading Rules",
     });
     expect(result.buy?.ladder).toHaveLength(4);
@@ -318,7 +325,7 @@ describe("buildAdaptivePositionPlan", () => {
     expect(result.buy?.ladder[0].price).toBe(2301);
     expect(result.buy?.ladder[1].price).toBeLessThan(result.buy?.ladder[0].price ?? 0);
     expect(result.sell?.ladder[1].price).toBeGreaterThan(result.sell?.ladder[0].price ?? 0);
-    expect(result.buy?.marginRequired).toBe(4);
+    expect(result.buy?.marginRequired).toBe(40);
     expect(result.buy?.ladder.map((level) => level.lot)).toEqual([0.01, 0.01, 0.01, 0.01]);
     expect(TRADE_PLAN.buy.entryZone).toBe("2,300.00–2,302.00");
     expect(TRADE_PLAN.sell.stopLoss).toBe("2,312.00");
@@ -350,6 +357,19 @@ describe("buildAdaptivePositionPlan", () => {
     expect(mini.buy?.ladder.map((level) => level.lot)).toEqual([0.3, 0.3, 0.3]);
     expect(fractionalMini.valid).toBe(false);
     expect(fractionalMini.errors.join(" ")).toMatch(/0.10 lot increments.*mini tier/i);
+  });
+
+  it("uses the agreed Micro, Mini, and Regular margin scales without auto-switching tiers", () => {
+    const microRule = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "micro");
+    const miniRule = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "mini");
+    const regularRule = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "regular");
+
+    expect(microRule).toMatchObject({ minimumLot: 0.01, marginAtMinimumLot: 10 });
+    expect(miniRule).toMatchObject({ minimumLot: 0.1, marginAtMinimumLot: 100 });
+    expect(regularRule).toMatchObject({ minimumLot: 1, marginAtMinimumLot: 1_000 });
+    expect(getAdaptiveMarginCapacity(20, microRule)).toBe(0.02);
+    expect(getAdaptiveMarginCapacity(50, miniRule)).toBe(0);
+    expect(getAdaptiveMarginCapacity(1_000, regularRule)).toBe(1);
   });
 
   it("marks the plan invalid when required account inputs are missing", () => {

@@ -9,7 +9,10 @@ import type { Translations } from "@/locales/en";
 import {
   buildAdaptivePlanRecommendation,
   createAdaptivePlanFingerprint,
+  getAdaptiveMarginCapacity,
+  getAdaptiveMarketRule,
   getAdaptiveStandardRuleCode,
+  type AccountTier,
   type AdaptiveAnalysisContext,
   type AdaptivePlanContext,
   type AdaptivePlanDecision,
@@ -32,16 +35,18 @@ interface Props {
 
 interface FormState {
   availableMargin: string;
+  accountTier: AccountTier;
   preference: AdaptiveRiskPreference;
 }
 
 const DEFAULT_FORM: FormState = {
   availableMargin: "",
+  accountTier: "mini",
   preference: "safe",
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v4:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v5:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,6 +56,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isStoredForm(value: unknown): value is Partial<FormState> {
   if (!isRecord(value)) return false;
   return (value.availableMargin === undefined || typeof value.availableMargin === "string") &&
+    (value.accountTier === undefined || value.accountTier === "micro" || value.accountTier === "mini" || value.accountTier === "regular") &&
     (value.preference === undefined || value.preference === "safe" || value.preference === "balanced" || value.preference === "active");
 }
 
@@ -82,6 +88,13 @@ function formatNumber(value: number | null | undefined, lang: "en" | "id", maxim
 function formatMoney(value: number | null | undefined, lang: "en" | "id", maximumFractionDigits = 2): string {
   const formatted = formatNumber(value, lang, maximumFractionDigits);
   return formatted === "—" ? formatted : `$${formatted}`;
+}
+
+function suggestedAccountTier(availableMargin: number | null): AccountTier | null {
+  if (availableMargin == null || availableMargin <= 0) return null;
+  if (availableMargin < 100) return "micro";
+  if (availableMargin < 1_000) return "mini";
+  return "regular";
 }
 
 function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, copy: AdaptiveCopy): string {
@@ -188,6 +201,12 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   const standardRuleCode = getAdaptiveStandardRuleCode(instrument);
   const standardRule = standardRules?.instruments.find((rule) => rule.code === standardRuleCode) ?? null;
   const rulesAvailable = !isRulesLoading && !isRulesError && standardRule !== null;
+  const availableMargin = numberValue(form.availableMargin);
+  const selectedRule = rulesAvailable
+    ? getAdaptiveMarketRule(instrument, standardRule, form.accountTier)
+    : null;
+  const marginCapacity = getAdaptiveMarginCapacity(availableMargin, selectedRule);
+  const suggestedTier = suggestedAccountTier(availableMargin);
   const fingerprint = createAdaptivePlanFingerprint({
     instrument,
     tradePlan,
@@ -235,8 +254,9 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
     const next = buildAdaptivePlanRecommendation({
       instrument,
       tradePlan,
-      availableMargin: numberValue(form.availableMargin),
+      availableMargin,
       standardRule,
+      accountTier: form.accountTier,
       preference: form.preference,
       context,
     });
@@ -260,9 +280,48 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         </div>
       </div>
       <div className="p-4 space-y-4" data-testid="adaptive-plan-content">
+        <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>
+        <div className="space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={copy.adaptive_account_title}>
+            {(["micro", "mini", "regular"] as const).map((accountTier) => {
+              const labels = {
+                micro: [copy.adaptive_account_micro, copy.adaptive_account_micro_desc],
+                mini: [copy.adaptive_account_mini, copy.adaptive_account_mini_desc],
+                regular: [copy.adaptive_account_regular, copy.adaptive_account_regular_desc],
+              } as const;
+              const selectedAccount = form.accountTier === accountTier;
+              return (
+                <button
+                  key={accountTier}
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedAccount}
+                  onClick={() => updateField("accountTier", accountTier)}
+                  className={`rounded-md border p-3 text-left transition-colors ${selectedAccount ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:bg-muted/50"}`}
+                  data-testid={`button-adaptive-account-${accountTier}`}
+                >
+                  <span className="block text-xs font-bold text-foreground">{labels[accountTier][0]}</span>
+                  <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">{labels[accountTier][1]}</span>
+                </button>
+              );
+            })}
+          </div>
+          {selectedRule && (
+            <div className="rounded-md bg-muted/50 p-2.5 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-account-rule">
+              <p>{copy.adaptive_account_rule
+                .replace("{tier}", copy[`adaptive_account_${form.accountTier}`])
+                .replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))
+                .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))}</p>
+              {selectedRule.minimumOpeningFunds != null && (
+                <p className="mt-1">{copy.adaptive_account_opening_minimum.replace("{amount}", formatMoney(selectedRule.minimumOpeningFunds, lang))}</p>
+              )}
+            </div>
+          )}
+        </div>
         <div className="space-y-2">
           <label className="block max-w-sm space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_ready}</span>
+            <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_available_margin}</span>
             <span className="relative block max-w-sm">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">$</span>
               <Input type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-available-margin" />
@@ -270,7 +329,24 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
             <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_available_margin_help}</span>
           </label>
           {isRulesLoading && <p className="text-[11px] text-muted-foreground" data-testid="adaptive-plan-rules-loading">{copy.adaptive_rules_loading}</p>}
-          {rulesAvailable && <p className="text-[11px] text-muted-foreground">{copy.adaptive_margin_rule.replace("{amount}", formatMoney(standardRule.initialMarginUsdPerLot, lang))}</p>}
+          {selectedRule && availableMargin != null && availableMargin > 0 && (
+            <div className="rounded-md border border-border p-2.5 text-[11px] leading-relaxed" data-testid="adaptive-margin-capacity">
+              <p className="font-semibold text-foreground">{copy.adaptive_capacity_title}</p>
+              <p className="mt-0.5 text-muted-foreground">
+                {marginCapacity > 0
+                  ? copy.adaptive_capacity_value.replace("{lot}", formatNumber(marginCapacity, lang, 2))
+                  : copy.adaptive_capacity_none.replace("{tier}", copy[`adaptive_account_${form.accountTier}`])}
+              </p>
+            </div>
+          )}
+          {suggestedTier && suggestedTier !== form.accountTier && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300" data-testid="adaptive-account-suggestion">
+              <p>{copy.adaptive_account_suggestion.replace("{tier}", copy[`adaptive_account_${suggestedTier}`])}</p>
+              <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => updateField("accountTier", suggestedTier)}>
+                {copy.adaptive_account_use_suggestion.replace("{tier}", copy[`adaptive_account_${suggestedTier}`])}
+              </Button>
+            </div>
+          )}
           {rulesUnavailable && <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300" data-testid="adaptive-plan-rules-unavailable">{copy.adaptive_rules_error}</div>}
         </div>
         <div className="space-y-2">
