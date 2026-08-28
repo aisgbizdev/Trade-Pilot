@@ -5,7 +5,7 @@
  * loading-of-quota chip, the disabled-state of the submit button until
  * both an instrument and a timeframe are chosen, the empty "no recent
  * instruments" branch, and a real form submission that hits the
- * `POST /api/analyses` endpoint.
+ * `POST /api/analyses` endpoint and direct navigation to the new detail page.
  *
  * Mocks `globalThis.fetch` for every API route consumed by the page and
  * by the surrounding `<Layout>` (`/api/auth/me`, unread-notifications
@@ -281,15 +281,19 @@ describe("AnalyzePage: user actions", () => {
 
     // The POST eventually fires with the picked instrument + timeframe.
     await waitFor(() => {
-      const post = calls.find(
+      const posts = calls.filter(
         (c) => c.method === "POST" && /\/api\/analyses(\?|$)/.test(c.url),
       );
-      expect(post).toBeDefined();
-      const payload = post?.body ? JSON.parse(post.body) : null;
+      expect(posts).toHaveLength(1);
+      const post = posts[0];
+      const payload = post.body ? JSON.parse(post.body) : null;
       expect(payload?.instrument).toBe("XAU/USD");
       expect(payload?.timeframe).toBe("1h");
       expect(payload?.mode).toBe("beginner");
+      expect(window.location.pathname).toBe("/analyses/4242");
     });
+    expect(screen.queryByTestId("analyze-result-section")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-view-full-analysis")).not.toBeInTheDocument();
   });
 
   it("switches the analysis mode and submits the selected Pro mode", async () => {
@@ -331,11 +335,15 @@ describe("AnalyzePage: user actions", () => {
     });
 
     await waitFor(() => {
-      const post = calls.find(
+      const posts = calls.filter(
         (c) => c.method === "POST" && /\/api\/analyses(\?|$)/.test(c.url),
       );
-      expect(post?.body ? JSON.parse(post.body) : null).toMatchObject({ mode: "pro" });
+      expect(posts).toHaveLength(1);
+      expect(posts[0]?.body ? JSON.parse(posts[0].body) : null).toMatchObject({ mode: "pro" });
+      expect(window.location.pathname).toBe("/analyses/42");
     });
+    expect(screen.queryByTestId("analyze-result-section")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-view-full-analysis")).not.toBeInTheDocument();
   });
 
   it("disables the submit button while a custom-instrument value is empty after clearing", async () => {

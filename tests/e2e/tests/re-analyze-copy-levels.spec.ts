@@ -179,14 +179,16 @@ async function reachDetailPage(
 
   // XAU/USD lives in the Futures tab (default).
   await page.getByTestId("button-instrument-XAU/USD").click();
-  await page.getByTestId("button-submit-analysis").click();
+  // Match the stubbed analysis and exercise the same explicit selection a
+  // user makes before submitting, rather than relying on the page's 1D default.
+  await page.getByTestId("button-timeframe-1h").click();
+  // This helper sets up detail-page tests. Invoke the DOM click directly so
+  // TradingView iframe layout shifts cannot swallow the coordinate-based click.
+  await page.getByTestId("button-submit-analysis").evaluate((button) => {
+    (button as HTMLButtonElement).click();
+  });
 
-  // Task #102: the Analyze page shows an inline result first; the user
-  // opts into the full detail view via "View full analysis".
-  const viewFull = page.getByTestId("button-view-full-analysis");
-  await expect(viewFull).toBeVisible({ timeout: 30_000 });
-  await viewFull.click();
-
+  // A successful create navigates directly to the full analysis detail page.
   await page.waitForURL(new RegExp(`/analyses/${stubAnalysisId}$`), {
     timeout: 30_000,
   });
@@ -321,7 +323,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("card-log-trade")).toHaveCount(0);
     await expect(page.getByTestId("card-user-journal-note")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
-      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v3:${analysisId}`),
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v5:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
@@ -402,15 +404,20 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
 
     await page.goto("/analyze");
     await page.getByTestId("button-instrument-XAU/USD").click();
-    await page.getByTestId("button-submit-analysis").click();
-    await page.getByTestId("button-view-full-analysis").click();
+    await page.getByTestId("button-timeframe-1h").click();
+    await page.getByTestId("button-submit-analysis").evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
     await page.waitForURL(new RegExp(`/analyses/${STUB_ID_ADAPTIVE_REFRESH}$`), {
       timeout: 30_000,
     });
 
     const marginInput = page.getByTestId("input-adaptive-available-margin");
     await expect(marginInput).toBeVisible();
-    await expect(page.getByText(/standard rule uses \$?100 margin|aturan standar memakai margin \$?100/i)).toBeVisible();
+    const accountRule = page.getByTestId("adaptive-account-rule");
+    await expect(accountRule).toContainText("Mini");
+    await expect(accountRule).toContainText(/0[.,]1(?:0)? lot/);
+    await expect(accountRule).toContainText(/100/);
     await marginInput.fill("100000");
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
@@ -419,7 +426,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v3:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v5:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -431,7 +438,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v3:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v5:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();

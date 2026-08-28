@@ -10,3 +10,4 @@
 - [Artifact mirror duplicate](artifact-mirror-duplicate.md) — validate and publish canonical root artifacts; the tracked trade-pilot tree creates duplicate workflow entries.
 - [Adaptive-plan cache versioning](adaptive-plan-cache-versioning.md) — bump the browser storage namespace whenever calculator semantics change, or saved recommendations can mask a correct fix.
 - [Account tier selection](account-tier-selection.md) — account type is explicit; funds determine capacity and suggestions only, while opening deposit stays separate from free trading margin.
+- [TradingView iframe e2e clicks](tradingview-iframe-e2e-clicks.md) — detail-test setup may need DOM click while widgets settle; keep a separate real-click smoke test for Analyze.

@@ -174,13 +174,15 @@ export function TechnicalIndicatorsPanel({
 
       <div className="bg-card border border-border rounded-2xl p-4">
         <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3">{t.analyze.signal_summary}</p>
-        <SignalSpeedometer
-          buy={ind.overallSummary.buy}
-          sell={ind.overallSummary.sell}
-          neutral={ind.overallSummary.neutral}
-          rawLabel={rawSignalLabel(ind.overallSummary.buy, ind.overallSummary.sell, mode, t)}
-          testId="speedometer-overall"
-        />
+        <div className="flex justify-center">
+          <SignalSpeedometer
+            buy={ind.overallSummary.buy}
+            sell={ind.overallSummary.sell}
+            neutral={ind.overallSummary.neutral}
+            rawLabel={rawSignalLabel(ind.overallSummary.buy, ind.overallSummary.sell, mode, t)}
+            testId="speedometer-overall"
+          />
+        </div>
         <div className="grid grid-cols-2 gap-2 mt-3">
           <div className="bg-muted/50 rounded-xl p-2 flex flex-col items-center">
             <p className="text-xs text-muted-foreground mb-1">{t.analyze.oscillator_section}</p>
@@ -209,7 +211,7 @@ export function TechnicalIndicatorsPanel({
 
       <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
         <p className="text-xs text-muted-foreground uppercase tracking-wide">{t.analyze.oscillator_section}</p>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2">
           {[
             { name: "RSI (14)", value: r(ind.rsi14.value), signal: ind.rsi14.signal },
             { name: "MACD (12,26)", value: r(ind.macd.macd, 4), signal: ind.macd.action },

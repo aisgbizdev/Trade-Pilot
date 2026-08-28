@@ -14,7 +14,6 @@ import { useTrackEvent } from "@/hooks/use-track-event";
 import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
 import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useListAnalyses, getListAnalysesQueryKey, useUpdateProfile, getGetMeQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe, type User, type UserSelectedMode } from "@workspace/api-client-react";
-import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import {
   TradingViewMiniChart,
   type MiniChartDateRange,
@@ -515,14 +514,6 @@ export default function AnalyzePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Most recently generated analysis. Kept on the page so we can render the
-  // trade-plan price-lines chart inline (task #102) without forcing a nav
-  // jump to the detail page first. The result keeps showing while the user
-  // tweaks inputs for a follow-up run — it only goes away once they hit
-  // "Start a new analysis" (which also scrolls them back to the top), so
-  // the chart they just got isn't yanked out from under them mid-comparison.
-  const [result, setResult] = useState<Analysis | null>(null);
-  const resultRef = useRef<HTMLDivElement | null>(null);
   const { enabled: mentalChecklistEnabled } = useMentalChecklistPref();
   const intendedModeRef = useRef<UserSelectedMode | null>(null);
 
@@ -600,14 +591,11 @@ export default function AnalyzePage() {
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQuotaQueryKey() });
       trackEvent("analysis_created", { instrument: finalInstrument, timeframe: selectedTimeframe });
-      // Show the trade-plan chart inline so users can sanity-check the AI's
-      // entry/SL/TP against the live tape immediately. Detail page is still
-      // a click away via the CTA below.
-      setResult(created);
-      // Defer the scroll until after the result section paints.
-      requestAnimationFrame(() => {
-        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+      // The create response already identifies the persisted analysis. Go
+      // straight to its detail page so one AI request does not feel like two
+      // separate analysis steps. The detail page loads this same ID; it does
+      // not create another analysis.
+      setLocation(`/analyses/${created.id}`);
     } catch (err: unknown) {
       const apiErr = err as {
         status?: number;
@@ -976,48 +964,6 @@ export default function AnalyzePage() {
               </div>
             ) : t.analyze.submit_btn}
           </Button>
-
-          {result && (
-            <div
-              ref={resultRef}
-              className="space-y-3 pt-2"
-              data-testid="analyze-result-section"
-              data-analysis-id={result.id}
-            >
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {t.analyze.result_preview_title}
-                </h2>
-                <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
-                  {t.analyze.result_preview_subtitle}
-                </p>
-              </div>
-              <AnalysisChartSection
-                instrument={result.instrument}
-                timeframe={result.timeframe}
-                tradePlan={result.tradePlan ?? null}
-                analysisCreatedAt={result.createdAt}
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setResult(null);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  data-testid="button-new-analysis"
-                >
-                  {t.analyze.new_analysis}
-                </Button>
-                <Button
-                  onClick={() => setLocation(`/analyses/${result.id}`)}
-                  data-testid="button-view-full-analysis"
-                >
-                  {t.analyze.view_full_analysis}
-                </Button>
-              </div>
-            </div>
-          )}
 
           {recentAnalyses.length > 0 && (
             <div className="pt-2 border-t border-border/40" data-testid="section-recent-analyses">
