@@ -153,6 +153,78 @@ describe("buildAdaptivePositionPlan", () => {
     expect(recommendation.result.sell?.ladder).toHaveLength(1);
   });
 
+  it("does not treat timeframe labels in Pro level descriptions as prices", () => {
+    const proStylePlan: TradePlan = {
+      ...TRADE_PLAN,
+      buy: {
+        ...TRADE_PLAN.buy,
+        entryZone: "di atas 2,302 setelah breakout H1",
+      },
+      sell: {
+        ...TRADE_PLAN.sell,
+        entryZone: "di bawah 2,300 setelah breakdown 4H",
+      },
+    };
+
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: proStylePlan,
+      availableMargin: 1_000,
+      standardRule: GOLD_RULE,
+      preference: "safe",
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.recommendation).not.toBeNull();
+    expect(recommendation.result.buy?.entry).toBe(2302);
+    expect(recommendation.result.sell?.entry).toBe(2300);
+  });
+
+  it("builds the preferred Pro side when the opposite trade-plan side is unavailable", () => {
+    const oneSidedProPlan: TradePlan = {
+      ...TRADE_PLAN,
+      preferredSide: "buy",
+      buy: {
+        ...TRADE_PLAN.buy,
+        entryZone: "4,456 – 4,480",
+        stopLoss: "4,450",
+      },
+      sell: {
+        entryZone: "n/a",
+        stopLoss: "n/a",
+        takeProfit1: "n/a",
+        takeProfit2: "n/a",
+        riskRewardRatio: "n/a",
+        rationale: "Skenario berlawanan belum memiliki level yang valid.",
+      },
+    };
+
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: oneSidedProPlan,
+      availableMargin: 1_000,
+      standardRule: GOLD_RULE,
+      preference: "safe",
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        riskLevel: "high",
+        tradingBias: "bullish",
+        confidenceMin: 60,
+        confidenceMax: 70,
+      },
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.recommendation).not.toBeNull();
+    expect(recommendation.decision).toMatchObject({
+      posture: "entry_only",
+      preferredSide: "buy",
+    });
+    expect(recommendation.result.buy).not.toBeNull();
+    expect(recommendation.result.sell).toBeNull();
+  });
+
   it("blocks staged plans when technical direction conflicts with market bias", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",

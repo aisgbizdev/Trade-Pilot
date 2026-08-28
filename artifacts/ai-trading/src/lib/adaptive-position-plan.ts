@@ -89,6 +89,7 @@ export interface AdaptivePositionPlanInput {
   levels: number;
   maxCycleLossPercent: number;
   sideLevels?: { buy?: number; sell?: number };
+  includedSides?: { buy: boolean; sell: boolean };
 }
 
 export interface AdaptiveLadderLevel {
@@ -200,6 +201,13 @@ function numericValues(value: string | number | null | undefined): number[] {
   if (value == null) return [];
   return String(value)
     .replace(/,/g, "")
+    // Level descriptions from Pro commonly include a timeframe, such as
+    // "di atas 4680 setelah breakout H1" or "pullback 4H". Those digits are
+    // metadata, not part of the price. Without stripping them, an entry
+    // zone can be parsed as a range between the price and the timeframe
+    // number, producing an incorrect distance and a false "no safe plan".
+    .replace(/\b[HMDWhmdw]\d{1,3}\b/g, " ")
+    .replace(/\b\d{1,3}[mhdwMHDW]\b/g, " ")
     .match(/-?\d+(?:\.\d+)?/g)
     ?.map(Number)
     .filter(Number.isFinite) ?? [];
@@ -448,9 +456,12 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const market = marketForInstrument(input.instrument);
   const rule = ruleFromStandardTradingRules(input.instrument, input.standardRule);
   const errors: string[] = [];
+  const includeBuy = input.includedSides?.buy ?? true;
+  const includeSell = input.includedSides?.sell ?? true;
 
   if (!market) errors.push("Adaptive position planning requires a supported TP Standard Trading Rules instrument.");
   else if (!rule) errors.push("TP Standard Trading Rules are unavailable for this instrument.");
+  if (!includeBuy && !includeSell) errors.push("At least one trade-plan side must be included.");
   if (input.equity == null || input.equity <= 0) errors.push("Account equity is required.");
   if (input.freeMargin == null || input.freeMargin <= 0) errors.push("Free margin is required.");
   if (input.existingExposure == null || input.existingExposure < 0) errors.push("Existing exposure is required.");
@@ -476,12 +487,12 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   }
 
   const maxCycleLoss = (input.equity ?? 0) * (input.maxCycleLossPercent / 100);
-  const buyGeometryError = sideGeometryError("buy", input.tradePlan.buy);
-  const sellGeometryError = sideGeometryError("sell", input.tradePlan.sell);
+  const buyGeometryError = includeBuy ? sideGeometryError("buy", input.tradePlan.buy) : null;
+  const sellGeometryError = includeSell ? sideGeometryError("sell", input.tradePlan.sell) : null;
   if (buyGeometryError) errors.push(buyGeometryError);
   if (sellGeometryError) errors.push(sellGeometryError);
-  const buy = buyGeometryError ? null : sidePlan("buy", input.tradePlan.buy, input, rule, input.sideLevels?.buy);
-  const sell = sellGeometryError ? null : sidePlan("sell", input.tradePlan.sell, input, rule, input.sideLevels?.sell);
+  const buy = !includeBuy || buyGeometryError ? null : sidePlan("buy", input.tradePlan.buy, input, rule, input.sideLevels?.buy);
+  const sell = !includeSell || sellGeometryError ? null : sidePlan("sell", input.tradePlan.sell, input, rule, input.sideLevels?.sell);
 
   const tierMax = tier.max;
   const plans = [buy, sell].filter((plan): plan is AdaptiveSidePositionPlan => plan != null);
@@ -699,6 +710,8 @@ export function buildAdaptivePlanRecommendation({
   // normalized equity here gives it the same absolute loss ceiling without
   // requiring the user to enter a separate equity figure.
   const normalizedEquity = maximumLoss * 50;
+  const buyPlanAvailable = sideGeometryError("buy", tradePlan.buy) === null;
+  const sellPlanAvailable = sideGeometryError("sell", tradePlan.sell) === null;
 
   let fallback: AdaptivePositionPlanResult | null = null;
   const lotCandidates = [
@@ -734,6 +747,12 @@ export function buildAdaptivePlanRecommendation({
             : preferredSide === "sell"
               ? { buy: 0, sell: candidateLevels }
               : { buy: candidateLevels, sell: candidateLevels },
+        includedSides:
+          preferredSide === "buy"
+            ? { buy: true, sell: sellPlanAvailable }
+            : preferredSide === "sell"
+              ? { buy: buyPlanAvailable, sell: true }
+              : { buy: buyPlanAvailable, sell: sellPlanAvailable },
         maxCycleLossPercent: 2,
       });
       fallback ??= result;

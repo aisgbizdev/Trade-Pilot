@@ -8,3 +8,4 @@
 - [Replit deployment CORS origins](replit-deployment-cors-origins.md) — use exact runtime `REPLIT_DOMAINS` origins alongside custom domains; dev-domain-only CORS blocks browser registration after publishing.
 - [Situation-aware adaptive scaling](situation-aware-adaptive-scaling.md) — staged additions must fail closed unless the saved analysis context is complete and directionally aligned.
 - [Artifact mirror duplicate](artifact-mirror-duplicate.md) — validate and publish canonical root artifacts; the tracked trade-pilot tree creates duplicate workflow entries.
+- [Adaptive-plan cache versioning](adaptive-plan-cache-versioning.md) — bump the browser storage namespace whenever calculator semantics change, or saved recommendations can mask a correct fix.
