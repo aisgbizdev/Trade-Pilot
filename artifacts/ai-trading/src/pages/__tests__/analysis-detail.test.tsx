@@ -242,9 +242,44 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(sellPlan.textContent).toMatch(/\$/);
   });
 
+  it("renders a valid Regular recommendation for USD 10,000", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    const margin = await screen.findByTestId("input-adaptive-available-margin");
+    await screen.findByTestId("adaptive-account-rule");
+    fireEvent.change(margin, { target: { value: "10000" } });
+    fireEvent.click(screen.getByTestId("button-adaptive-account-regular"));
+
+    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Regular: 1 lot requires \$1,000 margin/i);
+
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+
+    expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-plan-invalid")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/4 lot/i);
+  });
+
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v5:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v6:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -269,7 +304,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v5:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v6:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("fails closed when TP Standard Trading Rules cannot be loaded", async () => {

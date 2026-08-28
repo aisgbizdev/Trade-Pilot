@@ -159,7 +159,6 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
   maximumLot: number | null;
   lotStep: number;
   marginMultiplierFromMini: number;
-  contractMultiplierFromMini: number;
   minimumOpeningFunds: number | null;
 }> = {
   micro: {
@@ -167,7 +166,6 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: 0.09,
     lotStep: 0.01,
     marginMultiplierFromMini: 0.1,
-    contractMultiplierFromMini: 0.1,
     minimumOpeningFunds: 50,
   },
   mini: {
@@ -175,7 +173,6 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: 0.9,
     lotStep: 0.1,
     marginMultiplierFromMini: 1,
-    contractMultiplierFromMini: 1,
     minimumOpeningFunds: null,
   },
   regular: {
@@ -183,7 +180,6 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: null,
     lotStep: 1,
     marginMultiplierFromMini: 10,
-    contractMultiplierFromMini: 10,
     minimumOpeningFunds: null,
   },
 };
@@ -253,7 +249,10 @@ function ruleFromStandardTradingRules(
   const tier = ACCOUNT_TIER_SPECS[accountTier];
   const marginAtMinimumLot = standardRule.initialMarginUsdPerLot * tier.marginMultiplierFromMini;
   const marginPerLot = marginAtMinimumLot / tier.minimumLot;
-  const contractSize = standardRule.contractSize * tier.contractMultiplierFromMini;
+  // The lot value already carries the account-tier scale (0.01 Micro,
+  // 0.10 Mini, 1.00 Regular). Scaling contractSize again would count the
+  // tier twice and exaggerate Regular risk while understating Micro risk.
+  const contractSize = standardRule.contractSize;
   if (
     !Number.isFinite(contractSize) ||
     contractSize <= 0 ||

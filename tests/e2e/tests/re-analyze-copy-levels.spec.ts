@@ -323,7 +323,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("card-log-trade")).toHaveCount(0);
     await expect(page.getByTestId("card-user-journal-note")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
-      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v5:${analysisId}`),
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v6:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
@@ -418,6 +418,17 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(accountRule).toContainText("Mini");
     await expect(accountRule).toContainText(/0[.,]1(?:0)? lot/);
     await expect(accountRule).toContainText(/100/);
+
+    await marginInput.fill("10000");
+    await page.getByTestId("button-adaptive-account-regular").click();
+    await expect(accountRule).toContainText("Regular");
+    await expect(accountRule).toContainText(/1(?:[.,]0+)? lot/);
+    await expect(accountRule).toContainText(/1[.,]000/);
+    await page.getByTestId("button-calculate-adaptive-plan").click();
+    await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-invalid")).toHaveCount(0);
+
+    await page.getByTestId("button-adaptive-account-mini").click();
     await marginInput.fill("100000");
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
@@ -426,7 +437,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v5:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v6:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -438,7 +449,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v5:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v6:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();

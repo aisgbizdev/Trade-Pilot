@@ -108,6 +108,55 @@ describe("buildAdaptivePositionPlan", () => {
     );
   });
 
+  it("builds a safe Regular recommendation with USD 10,000 without scaling contract risk twice", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 10_000,
+      standardRule: GOLD_RULE,
+      accountTier: "regular",
+      preference: "safe",
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.recommendation).toMatchObject({
+      initialLot: 2,
+      levels: 1,
+      marginBudget: 5_000,
+      maximumLoss: 1_000,
+    });
+    expect(recommendation.result.rule).toMatchObject({
+      accountTier: "regular",
+      contractSize: 10,
+      minimumLot: 1,
+      marginAtMinimumLot: 1_000,
+    });
+    expect(recommendation.result.buy?.estimatedCycleLoss).toBe(330);
+    expect(recommendation.result.sell?.estimatedCycleLoss).toBe(220);
+  });
+
+  it("still rejects a Regular recommendation when the minimum lot exceeds the loss limit", () => {
+    const wideStopPlan: TradePlan = {
+      ...TRADE_PLAN,
+      buy: { ...TRADE_PLAN.buy, stopLoss: "2,180.00" },
+      sell: { ...TRADE_PLAN.sell, stopLoss: "2,422.00" },
+    };
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: wideStopPlan,
+      availableMargin: 10_000,
+      standardRule: GOLD_RULE,
+      accountTier: "regular",
+      preference: "safe",
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(false);
+    expect(recommendation.recommendation).toBeNull();
+    expect(recommendation.result.errors.join(" ")).toMatch(/cycle loss exceeds/i);
+  });
+
   it("changes from staged scaling to entry-only on a shorter timeframe", () => {
     const hourly = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
@@ -137,8 +186,8 @@ describe("buildAdaptivePositionPlan", () => {
   it("falls back to an entry-only plan when the requested layers exceed the loss budget", () => {
     const wideStopPlan: TradePlan = {
       ...TRADE_PLAN,
-      buy: { ...TRADE_PLAN.buy, stopLoss: "800.00" },
-      sell: { ...TRADE_PLAN.sell, stopLoss: "3,800.00" },
+      buy: { ...TRADE_PLAN.buy, stopLoss: "2,150.00" },
+      sell: { ...TRADE_PLAN.sell, stopLoss: "2,452.00" },
     };
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
@@ -313,7 +362,7 @@ describe("buildAdaptivePositionPlan", () => {
     expect(result.valid).toBe(true);
     expect(result.rule).toMatchObject({
       accountTier: "micro",
-      contractSize: 1,
+      contractSize: 10,
       minMovement: 0.01,
       marginAtMinimumLot: 10,
       marginPerLot: 1_000,
@@ -367,6 +416,9 @@ describe("buildAdaptivePositionPlan", () => {
     expect(microRule).toMatchObject({ minimumLot: 0.01, marginAtMinimumLot: 10 });
     expect(miniRule).toMatchObject({ minimumLot: 0.1, marginAtMinimumLot: 100 });
     expect(regularRule).toMatchObject({ minimumLot: 1, marginAtMinimumLot: 1_000 });
+    expect(microRule?.contractSize).toBe(10);
+    expect(miniRule?.contractSize).toBe(10);
+    expect(regularRule?.contractSize).toBe(10);
     expect(getAdaptiveMarginCapacity(20, microRule)).toBe(0.02);
     expect(getAdaptiveMarginCapacity(50, miniRule)).toBe(0);
     expect(getAdaptiveMarginCapacity(1_000, regularRule)).toBe(1);
