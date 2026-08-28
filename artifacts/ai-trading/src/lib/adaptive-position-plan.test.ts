@@ -160,11 +160,11 @@ describe("buildAdaptivePositionPlan", () => {
     );
   });
 
-  it("builds a safe Regular recommendation with USD 10,000 without scaling contract risk twice", () => {
+  it("builds a safe Regular recommendation with USD 20,000 using the scaled contract value once", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
-      availableMargin: 10_000,
+      availableMargin: 20_000,
       standardRule: GOLD_RULE,
       accountTier: "regular",
       preference: "safe",
@@ -173,19 +173,19 @@ describe("buildAdaptivePositionPlan", () => {
 
     expect(recommendation.result.valid).toBe(true);
     expect(recommendation.recommendation).toMatchObject({
-      initialLot: 2,
+      initialLot: 1,
       levels: 1,
-      marginBudget: 5_000,
-      maximumLoss: 1_000,
+      marginBudget: 10_000,
+      maximumLoss: 2_000,
     });
     expect(recommendation.result.rule).toMatchObject({
       accountTier: "regular",
-      contractSize: 10,
+      contractSize: 100,
       minimumLot: 1,
       marginAtMinimumLot: 1_000,
     });
-    expect(recommendation.result.buy?.estimatedCycleLoss).toBe(330);
-    expect(recommendation.result.sell?.estimatedCycleLoss).toBe(220);
+    expect(recommendation.result.buy?.estimatedCycleLoss).toBe(1_650);
+    expect(recommendation.result.sell?.estimatedCycleLoss).toBe(1_100);
   });
 
   it("still rejects a Regular recommendation when the minimum lot exceeds the loss limit", () => {
@@ -238,8 +238,8 @@ describe("buildAdaptivePositionPlan", () => {
   it("falls back to an entry-only plan when the requested layers exceed the loss budget", () => {
     const wideStopPlan: TradePlan = {
       ...TRADE_PLAN,
-      buy: { ...TRADE_PLAN.buy, stopLoss: "2,150.00" },
-      sell: { ...TRADE_PLAN.sell, stopLoss: "2,452.00" },
+      buy: { ...TRADE_PLAN.buy, stopLoss: "701.00" },
+      sell: { ...TRADE_PLAN.sell, stopLoss: "3,901.00" },
     };
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
@@ -414,7 +414,7 @@ describe("buildAdaptivePositionPlan", () => {
     expect(result.valid).toBe(true);
     expect(result.rule).toMatchObject({
       accountTier: "micro",
-      contractSize: 10,
+      contractSize: 1,
       minMovement: 0.01,
       marginAtMinimumLot: 10,
       marginPerLot: 1_000,
@@ -468,12 +468,34 @@ describe("buildAdaptivePositionPlan", () => {
     expect(microRule).toMatchObject({ minimumLot: 0.01, marginAtMinimumLot: 10 });
     expect(miniRule).toMatchObject({ minimumLot: 0.1, marginAtMinimumLot: 100 });
     expect(regularRule).toMatchObject({ minimumLot: 1, marginAtMinimumLot: 1_000 });
-    expect(microRule?.contractSize).toBe(10);
+    expect(microRule?.contractSize).toBe(1);
     expect(miniRule?.contractSize).toBe(10);
-    expect(regularRule?.contractSize).toBe(10);
+    expect(regularRule?.contractSize).toBe(100);
     expect(getAdaptiveMarginCapacity(20, microRule)).toBe(0.02);
     expect(getAdaptiveMarginCapacity(50, miniRule)).toBe(0);
     expect(getAdaptiveMarginCapacity(1_000, regularRule)).toBe(1);
+  });
+
+  it("keeps the agreed tier choices for USD 20,000, USD 5,000, USD 500, and USD 100", () => {
+    const recommendation = (availableMargin: number, accountTier: "micro" | "mini" | "regular") =>
+      buildAdaptivePlanRecommendation({
+        instrument: "XAU/USD",
+        tradePlan: TRADE_PLAN,
+        availableMargin,
+        standardRule: GOLD_RULE,
+        accountTier,
+        preference: "safe",
+        context: SUPPORTIVE_CONTEXT,
+      });
+
+    expect(recommendation(20_000, "regular").result.valid).toBe(true);
+    expect(recommendation(5_000, "regular").result.valid).toBe(false);
+    expect(recommendation(5_000, "mini").result.valid).toBe(true);
+    expect(recommendation(500, "regular").result.valid).toBe(false);
+    expect(recommendation(500, "mini").result.valid).toBe(true);
+    expect(recommendation(500, "micro").result.valid).toBe(true);
+    expect(recommendation(100, "mini").result.valid).toBe(false);
+    expect(recommendation(100, "micro").result.valid).toBe(true);
   });
 
   it("marks the plan invalid when required account inputs are missing", () => {

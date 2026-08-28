@@ -96,6 +96,7 @@ export interface AdaptivePositionPlanInput {
   maxCycleLossPercent: number;
   sideLevels?: { buy?: number; sell?: number };
   includedSides?: { buy: boolean; sell: boolean };
+  layerLotFactors?: number[];
 }
 
 export interface AdaptiveLadderLevel {
@@ -167,6 +168,7 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
   maximumLot: number | null;
   lotStep: number;
   marginMultiplierFromMini: number;
+  contractMultiplierFromMini: number;
   minimumOpeningFunds: number | null;
 }> = {
   micro: {
@@ -174,6 +176,7 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: 0.09,
     lotStep: 0.01,
     marginMultiplierFromMini: 0.1,
+    contractMultiplierFromMini: 0.1,
     minimumOpeningFunds: 50,
   },
   mini: {
@@ -181,6 +184,7 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: 0.9,
     lotStep: 0.1,
     marginMultiplierFromMini: 1,
+    contractMultiplierFromMini: 1,
     minimumOpeningFunds: null,
   },
   regular: {
@@ -188,6 +192,7 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: null,
     lotStep: 1,
     marginMultiplierFromMini: 10,
+    contractMultiplierFromMini: 10,
     minimumOpeningFunds: null,
   },
 };
@@ -196,10 +201,11 @@ const RECOMMENDATION_PROFILES: Record<AdaptiveRiskPreference, {
   levels: number;
   marginUsage: number;
   riskBudget: number;
+  layerLotFactors: number[];
 }> = {
-  safe: { levels: 1, marginUsage: 0.5, riskBudget: 0.1 },
-  balanced: { levels: 2, marginUsage: 0.65, riskBudget: 0.15 },
-  active: { levels: 3, marginUsage: 0.75, riskBudget: 0.2 },
+  safe: { levels: 1, marginUsage: 0.5, riskBudget: 0.2, layerLotFactors: [0.5] },
+  balanced: { levels: 2, marginUsage: 0.65, riskBudget: 0.25, layerLotFactors: [0.75, 0.5] },
+  active: { levels: 3, marginUsage: 0.75, riskBudget: 0.3, layerLotFactors: [1, 0.75, 0.5] },
 };
 
 function marketForInstrument(instrument: string): AdaptiveMarket | null {
@@ -275,10 +281,9 @@ function ruleFromStandardTradingRules(
   const tier = ACCOUNT_TIER_SPECS[accountTier];
   const marginAtMinimumLot = standardRule.initialMarginUsdPerLot * tier.marginMultiplierFromMini;
   const marginPerLot = marginAtMinimumLot / tier.minimumLot;
-  // The lot value already carries the account-tier scale (0.01 Micro,
-  // 0.10 Mini, 1.00 Regular). Scaling contractSize again would count the
-  // tier twice and exaggerate Regular risk while understating Micro risk.
-  const contractSize = standardRule.contractSize;
+  // The supplied trading-rule table is the Mini profile. Micro is one tenth
+  // of Mini and Regular is ten times Mini for both margin and contract value.
+  const contractSize = standardRule.contractSize * tier.contractMultiplierFromMini;
   if (
     !Number.isFinite(contractSize) ||
     contractSize <= 0 ||
@@ -325,6 +330,10 @@ function roundPrice(value: number, minMovement: number): number {
 
 function roundLot(value: number, step = 0.01): number {
   return Number((Math.round(value / step) * step).toFixed(2));
+}
+
+function floorLot(value: number, step = 0.01): number {
+  return Number((Math.floor((value + Number.EPSILON) / step) * step).toFixed(2));
 }
 
 function isLotAligned(value: number, step: number): boolean {
@@ -440,9 +449,12 @@ function sidePlan(
       side === "buy"
         ? entry - distance * adverseFraction
         : entry + distance * adverseFraction;
-    // Every add uses the same conservative lot as the initial entry. This
-    // keeps staging from becoming a mechanically escalating martingale.
-    const lot = initialLot;
+    // Each add is conditional and may be smaller than the initial entry.
+    // It never exceeds the initial lot, so a staged plan cannot turn into a
+    // mechanically escalating martingale.
+    const requestedFactor = input.layerLotFactors?.[level - 1] ?? 1;
+    const requestedLot = initialLot * Math.min(1, Math.max(0, requestedFactor));
+    const lot = Math.max(rule.minimumLot, floorLot(requestedLot, lotStep));
     cumulativeLots = roundLot(cumulativeLots + lot, lotStep);
     const riskToStop = (side === "buy" ? price - stopLoss : stopLoss - price) * rule.contractSize * lot;
     estimatedCycleLoss += riskToStop;
@@ -608,7 +620,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const assumptions = [
     `${input.accountTier} profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
     movementAssumption,
-    `Initial entry uses the Standard Plan; each manual add keeps the initial lot unchanged (${tierText}) to avoid a martingale multiplier. This trades lower escalation risk for less capacity as cumulative exposure grows.`,
+    `Initial entry uses the Standard Plan; each manual add stays at or below the initial lot (${tierText}) and may be reduced by the selected plan style. No add uses a martingale multiplier.`,
     `Maximum cycle loss is ${input.maxCycleLossPercent}% of equity and includes the initial entry plus every planned add.`,
     "Broker auto-liquidation, spread, rollover, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
   ];
@@ -799,15 +811,10 @@ export function buildAdaptivePlanRecommendation({
 
   if (levels > 0) reasonCodes.push("staged_add_condition");
 
-  const preferredMarginBudget = availableMargin * marginUsage;
-  // If the available margin exactly covers one minimum transaction, allow an
-  // entry-only candidate to be assessed instead of rejecting it solely because
-  // the selected style normally preserves a larger cash buffer. Risk and stop
-  // distance checks still apply independently.
-  const marginBudget = availableMargin >= rule.marginAtMinimumLot
-    ? Math.min(availableMargin, Math.max(preferredMarginBudget, rule.marginAtMinimumLot))
-    : preferredMarginBudget;
-  const maximumLoss = Math.max(availableMargin * riskBudget, 1);
+  const marginBudget = availableMargin * marginUsage;
+  // Thirty percent of the margin reserved for this plan is the hard ceiling,
+  // not a target. Lower-risk styles use less of that ceiling.
+  const maximumLoss = Math.max(marginBudget * Math.min(riskBudget, 0.3), 1);
   // The low-level calculator uses a percent-of-equity guardrail. Supplying a
   // normalized equity here gives it the same absolute loss ceiling without
   // requiring the user to enter a separate equity figure.
@@ -858,6 +865,7 @@ export function buildAdaptivePlanRecommendation({
             : preferredSide === "sell"
               ? { buy: buyPlanAvailable, sell: true }
               : { buy: buyPlanAvailable, sell: sellPlanAvailable },
+        layerLotFactors: profile.layerLotFactors.slice(0, candidateLevels),
         maxCycleLossPercent: 2,
       });
       fallback ??= result;

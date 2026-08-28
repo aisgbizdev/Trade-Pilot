@@ -45,8 +45,10 @@ const DEFAULT_FORM: FormState = {
   preference: "safe",
 };
 
+const ACCOUNT_TIERS = ["micro", "mini", "regular"] as const;
+
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v6:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v7:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -88,13 +90,6 @@ function formatNumber(value: number | null | undefined, lang: "en" | "id", maxim
 function formatMoney(value: number | null | undefined, lang: "en" | "id", maximumFractionDigits = 2): string {
   const formatted = formatNumber(value, lang, maximumFractionDigits);
   return formatted === "—" ? formatted : `$${formatted}`;
-}
-
-function suggestedAccountTier(availableMargin: number | null): AccountTier | null {
-  if (availableMargin == null || availableMargin <= 0) return null;
-  if (availableMargin < 100) return "micro";
-  if (availableMargin < 1_000) return "mini";
-  return "regular";
 }
 
 function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, copy: AdaptiveCopy): string {
@@ -207,7 +202,28 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
     ? getAdaptiveMarketRule(instrument, standardRule, form.accountTier)
     : null;
   const marginCapacity = getAdaptiveMarginCapacity(availableMargin, selectedRule);
-  const suggestedTier = suggestedAccountTier(availableMargin);
+  const tierAssessments = rulesAvailable && availableMargin != null && availableMargin > 0
+    ? Object.fromEntries(ACCOUNT_TIERS.map((accountTier) => {
+        const rule = getAdaptiveMarketRule(instrument, standardRule, accountTier);
+        const capacity = getAdaptiveMarginCapacity(availableMargin, rule);
+        const assessment = buildAdaptivePlanRecommendation({
+          instrument,
+          tradePlan,
+          availableMargin,
+          standardRule,
+          accountTier,
+          preference: form.preference,
+          context,
+        });
+        return [accountTier, {
+          capacity,
+          safe: assessment.result.valid && assessment.recommendation !== null,
+        }];
+      })) as Record<AccountTier, { capacity: number; safe: boolean }>
+    : null;
+  const suggestedTier = tierAssessments
+    ? (["regular", "mini", "micro"] as const).find((accountTier) => tierAssessments[accountTier].safe) ?? null
+    : null;
   const fingerprint = createAdaptivePlanFingerprint({
     instrument,
     tradePlan,
@@ -293,13 +309,21 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={copy.adaptive_account_title}>
-            {(["micro", "mini", "regular"] as const).map((accountTier) => {
+            {ACCOUNT_TIERS.map((accountTier) => {
               const labels = {
                 micro: [copy.adaptive_account_micro, copy.adaptive_account_micro_desc],
                 mini: [copy.adaptive_account_mini, copy.adaptive_account_mini_desc],
                 regular: [copy.adaptive_account_regular, copy.adaptive_account_regular_desc],
               } as const;
               const selectedAccount = form.accountTier === accountTier;
+              const assessment = tierAssessments?.[accountTier] ?? null;
+              const status = assessment == null
+                ? null
+                : assessment.safe
+                  ? copy.adaptive_tier_safe
+                  : assessment.capacity > 0
+                    ? copy.adaptive_tier_risk_blocked
+                    : copy.adaptive_tier_margin_blocked;
               return (
                 <button
                   key={accountTier}
@@ -312,6 +336,11 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
                 >
                   <span className="block text-xs font-bold text-foreground">{labels[accountTier][0]}</span>
                   <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">{labels[accountTier][1]}</span>
+                  {status && (
+                    <span className={`mt-2 block text-[10px] font-semibold ${assessment?.safe ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>
+                      {status}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -321,7 +350,9 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               <p>{copy.adaptive_account_rule
                 .replace("{tier}", copy[`adaptive_account_${form.accountTier}`])
                 .replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))
-                .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))}</p>
+                .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))
+                .replace("{size}", formatNumber(selectedRule.contractSize, lang, 2))
+                .replace("{unit}", standardRule?.contractUnit ?? "")}</p>
               {selectedRule.minimumOpeningFunds != null && (
                 <p className="mt-1">{copy.adaptive_account_opening_minimum.replace("{amount}", formatMoney(selectedRule.minimumOpeningFunds, lang))}</p>
               )}
