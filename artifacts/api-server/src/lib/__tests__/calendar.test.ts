@@ -41,6 +41,39 @@ afterEach(() => {
 });
 
 describe("getRelevantCalendar — lookbackHours datetime precision", () => {
+  it("normalizes live-feed currency aliases, dot-separated times, and placeholder values", async () => {
+    const NOW = new Date("2026-08-28T12:00:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+
+    globalThis.fetch = vi.fn(async () =>
+      calendarResponse([
+        {
+          date: "2026-08-29",
+          time: "20.30",
+          currency: "US",
+          event: "Core PCE Price Index",
+          impact: "★★★",
+          actual: "-",
+          forecast: "0.3%",
+          previous: "-",
+        },
+      ]),
+    ) as unknown as typeof fetch;
+
+    const events = await getRelevantCalendar("XAU/USD");
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      currency: "USD",
+      time: "20:30",
+      actual: null,
+      forecast: "0.3%",
+      previous: null,
+    });
+    expect(events[0]!.epochMs).toBe(Date.UTC(2026, 7, 29, 20, 30));
+  });
+
   it("excludes an event that printed 30 hours ago when lookbackHours=24", async () => {
     // Pin "now" to a fixed instant so the cutoff math is deterministic.
     const NOW = new Date("2026-04-30T12:00:00Z");

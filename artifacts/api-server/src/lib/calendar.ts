@@ -106,6 +106,11 @@ const IMPACT_RANK: Record<string, number> = {
   "★": 1,
 };
 
+const UPSTREAM_CURRENCY_ALIASES: Record<string, string> = {
+  US: "USD",
+  JPN: "JPY",
+};
+
 interface CalendarRaw {
   date: string;
   time?: string;
@@ -188,20 +193,30 @@ function eventEpochMs(date: string, time: string | null): number | null {
 }
 
 function normalize(raw: CalendarRaw): CalendarEvent {
-  // Upstream `time` is shaped like "2026-04-29 19:30" — pull just the
-  // wall-clock half so the UI doesn't show a duplicated date.
-  const time = raw.time ? raw.time.split(" ")[1] ?? null : null;
-  const normalizedTime = time && time.length > 0 ? time : null;
+  // The upstream currently mixes full timestamps ("2026-04-29 19:30")
+  // with time-only values using a dot separator ("19.30").
+  const rawTime = raw.time?.trim() ?? "";
+  const timePart = rawTime.includes(" ")
+    ? rawTime.split(/\s+/).at(-1) ?? ""
+    : rawTime;
+  const timeMatch = /^(\d{1,2})[:.](\d{2})$/.exec(timePart);
+  const normalizedTime = timeMatch
+    ? `${timeMatch[1]!.padStart(2, "0")}:${timeMatch[2]}`
+    : null;
+  const normalizeValue = (value: string | null | undefined) => {
+    const trimmed = value?.trim();
+    return !trimmed || trimmed === "-" ? null : trimmed;
+  };
   return {
     date: raw.date,
     time: normalizedTime,
     epochMs: eventEpochMs(raw.date, normalizedTime),
-    currency: raw.currency,
+    currency: UPSTREAM_CURRENCY_ALIASES[raw.currency] ?? raw.currency,
     event: raw.event,
     impact: raw.impact && raw.impact.length > 0 ? raw.impact : null,
-    actual: raw.actual ?? null,
-    forecast: raw.forecast ?? null,
-    previous: raw.previous ?? null,
+    actual: normalizeValue(raw.actual),
+    forecast: normalizeValue(raw.forecast),
+    previous: normalizeValue(raw.previous),
     region: raw.region ?? null,
   };
 }
