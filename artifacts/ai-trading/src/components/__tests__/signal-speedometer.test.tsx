@@ -166,7 +166,7 @@ describe("<SignalSpeedometer>", () => {
     // The wrapper is the sized container — it must be a fixed width and
     // explicitly non-shrinkable so a sibling label can't squeeze it.
     expect(root.className).toMatch(/\bshrink-0\b/);
-    expect(root.className).toMatch(/\bw-14\b/);
+    expect(root.className).toMatch(/\bw-20\b/);
     // The wrapper must NOT use plain `w-full` for the xs preset, otherwise it
     // gets dragged down to a sliver inside a tight flex-row.
     expect(root.className).not.toMatch(/\bw-full\b/);

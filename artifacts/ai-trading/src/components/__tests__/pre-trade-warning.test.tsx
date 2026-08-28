@@ -60,6 +60,7 @@ vi.mock("@workspace/api-client-react", () => ({
   getGetRecentInstrumentsQueryKey: () => ["recent"],
   useGetAnalysisQuota: () => ({ data: undefined }),
   getGetAnalysisQuotaQueryKey: () => ["quota"],
+  useGetStandardTradingRules: () => ({ data: undefined, isLoading: false, isError: false }),
   useListAnalyses: () => ({ data: undefined }),
   getListAnalysesQueryKey: () => ["analyses"],
   // LocalSentimentWidget on the Analyze page calls this; the widget
