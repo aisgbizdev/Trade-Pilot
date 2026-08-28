@@ -56,6 +56,8 @@ vi.mock("@/hooks/use-relevant-calendar", () => ({
 
 vi.mock("@workspace/api-client-react", () => ({
   useCreateAnalysis: () => ({ mutateAsync: vi.fn() }),
+  useUpdateProfile: () => ({ mutate: vi.fn() }),
+  getGetMeQueryKey: () => ["me"],
   useGetRecentInstruments: () => ({ data: undefined }),
   getGetRecentInstrumentsQueryKey: () => ["recent"],
   useGetAnalysisQuota: () => ({ data: undefined }),

@@ -174,6 +174,7 @@ export const id: Translations = {
   analyze: {
     title: "Analisis Baru",
     mode_label: "Mode",
+    mode_save_failed: "Mode gagal disimpan. Coba lagi.",
     select_instrument: "Pilih Instrumen",
     favorites_section_title: "Favorit",
     or_type: "Atau ketik instrumen lain...",

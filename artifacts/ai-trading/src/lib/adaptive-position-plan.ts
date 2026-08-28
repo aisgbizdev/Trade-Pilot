@@ -702,11 +702,12 @@ export function buildAdaptivePlanRecommendation({
 
   let fallback: AdaptivePositionPlanResult | null = null;
   const lotCandidates = [
+    1,
     ...Array.from({ length: 9 }, (_, index) => (9 - index) / 10),
     ...Array.from({ length: 9 }, (_, index) => (9 - index) / 100),
   ];
   for (const initialLot of lotCandidates) {
-    const accountTier: AccountTier = initialLot < 0.1 ? "micro" : "mini";
+    const accountTier: AccountTier = initialLot >= 1 ? "regular" : initialLot < 0.1 ? "micro" : "mini";
     const result = buildAdaptivePositionPlan({
       instrument,
       tradePlan,

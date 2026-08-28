@@ -64,6 +64,7 @@ export function installFetchMock(
   opts: InstallFetchMockOpts = {},
 ) {
   const strict = opts.strict !== false;
+  let currentUser = { ...TEST_USER };
   const calls: Array<{ url: string; method: string; body?: string }> = [];
   const unhandled: Array<{ url: string; method: string }> = [];
   const handlers: FetchHandler[] = [
@@ -71,7 +72,15 @@ export function installFetchMock(
     // Default auth: a logged-in beginner-mode user.
     (url) => {
       if (url.includes("/api/auth/me")) {
-        return jsonResponse(TEST_USER);
+        return jsonResponse(currentUser);
+      }
+      return null;
+    },
+    (url, init) => {
+      if (url.includes("/api/auth/profile") && (init?.method ?? "GET").toUpperCase() === "PATCH") {
+        const body = typeof init?.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : {};
+        currentUser = { ...currentUser, ...body };
+        return jsonResponse(currentUser);
       }
       return null;
     },

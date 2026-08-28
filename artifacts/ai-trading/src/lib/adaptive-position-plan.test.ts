@@ -91,6 +91,7 @@ describe("buildAdaptivePositionPlan", () => {
     });
     expect(recommendation.recommendation?.initialLot).toBeGreaterThan(0);
     const initialLot = recommendation.recommendation?.initialLot ?? 0;
+    expect(initialLot).toBeGreaterThanOrEqual(1);
     const lotScale = initialLot >= 0.1 ? 10 : 100;
     expect(initialLot * lotScale).toBeCloseTo(Math.round(initialLot * lotScale), 8);
     expect(recommendation.decision).toMatchObject({

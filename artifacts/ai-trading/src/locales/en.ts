@@ -172,6 +172,7 @@ export const en = {
   analyze: {
     title: "New Analysis",
     mode_label: "Mode",
+    mode_save_failed: "Could not save mode. Please try again.",
     select_instrument: "Select Instrument",
     favorites_section_title: "Favorites",
     or_type: "Or type another instrument...",

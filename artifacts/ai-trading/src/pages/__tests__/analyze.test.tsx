@@ -292,6 +292,52 @@ describe("AnalyzePage: user actions", () => {
     });
   });
 
+  it("switches the analysis mode and submits the selected Pro mode", async () => {
+    const { calls } = installFetchMock(pageHandlers({}), { strict: false });
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    const proButton = await screen.findByTestId("button-analyze-mode-pro");
+    expect(proButton).toHaveAttribute("aria-pressed", "false");
+
+    await act(async () => {
+      fireEvent.click(proButton);
+    });
+
+    await waitFor(() => {
+      expect(proButton).toHaveAttribute("aria-pressed", "true");
+      const patch = calls.find(
+        (c) => c.method === "PATCH" && c.url.includes("/api/auth/profile"),
+      );
+      expect(patch?.body ? JSON.parse(patch.body) : null).toEqual({ selectedMode: "pro" });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-instrument-XAU/USD"));
+      fireEvent.click(screen.getByTestId("button-timeframe-1h"));
+    });
+    await waitFor(() => {
+      expect(
+        (screen.getByTestId("button-submit-analysis") as HTMLButtonElement).disabled,
+      ).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-submit-analysis"));
+    });
+
+    await waitFor(() => {
+      const post = calls.find(
+        (c) => c.method === "POST" && /\/api\/analyses(\?|$)/.test(c.url),
+      );
+      expect(post?.body ? JSON.parse(post.body) : null).toMatchObject({ mode: "pro" });
+    });
+  });
+
   it("disables the submit button while a custom-instrument value is empty after clearing", async () => {
     installFetchMock(pageHandlers({}));
     const { Wrapper } = makeWrapper();

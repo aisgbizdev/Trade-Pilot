@@ -14,7 +14,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
-import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useListAnalyses, getListAnalysesQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe } from "@workspace/api-client-react";
+import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useListAnalyses, getListAnalysesQueryKey, useUpdateProfile, getGetMeQueryKey, type Analysis, type RecentInstruments, type CreateAnalysisBodyTimeframe, type User, type UserSelectedMode } from "@workspace/api-client-react";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { TradingViewMiniChart, type MiniChartDateRange } from "@/components/tradingview-mini-chart";
 import { instrumentToTradingViewSymbol, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
@@ -588,6 +588,7 @@ export default function AnalyzePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
+  const updateProfile = useUpdateProfile();
   const trackEvent = useTrackEvent();
   const queryClient = useQueryClient();
   const { data: quota } = useGetAnalysisQuota({
@@ -603,6 +604,7 @@ export default function AnalyzePage() {
   const [selectedInstrument, setSelectedInstrument] = useState("");
   const [customInstrument, setCustomInstrument] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1D");
+  const [selectedMode, setSelectedMode] = useState<UserSelectedMode>("beginner");
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
@@ -616,6 +618,11 @@ export default function AnalyzePage() {
   const [result, setResult] = useState<Analysis | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
   const { enabled: mentalChecklistEnabled } = useMentalChecklistPref();
+  const intendedModeRef = useRef<UserSelectedMode | null>(null);
+
+  useEffect(() => {
+    if (user?.selectedMode) setSelectedMode(user.selectedMode);
+  }, [user?.selectedMode]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -681,7 +688,7 @@ export default function AnalyzePage() {
         data: {
           instrument: finalInstrument,
           timeframe: selectedTimeframe as CreateAnalysisBodyTimeframe,
-          mode: user?.selectedMode ?? "beginner",
+          mode: selectedMode,
           userInputContext: notes || undefined,
         },
       });
@@ -718,6 +725,40 @@ export default function AnalyzePage() {
     }
   };
 
+  const handleModeChange = (mode: UserSelectedMode) => {
+    if (mode === selectedMode) return;
+
+    const queryKey = getGetMeQueryKey();
+    const previous = queryClient.getQueryData<User>(queryKey);
+    intendedModeRef.current = mode;
+    setSelectedMode(mode);
+    queryClient.setQueryData<User>(queryKey, (old) =>
+      old ? { ...old, selectedMode: mode } : old
+    );
+    updateProfile.mutate(
+      { data: { selectedMode: mode } },
+      {
+        onError: () => {
+          if (intendedModeRef.current !== mode) return;
+          setSelectedMode(previous?.selectedMode ?? "beginner");
+          queryClient.setQueryData(queryKey, previous);
+          toast({
+            title: t.analyze.mode_save_failed,
+            variant: "destructive",
+          });
+        },
+        onSuccess: (updated) => {
+          if (intendedModeRef.current === mode) {
+            setSelectedMode(updated.selectedMode);
+          }
+        },
+        onSettled: () => {
+          queryClient.invalidateQueries({ queryKey });
+        },
+      }
+    );
+  };
+
   const handleSubmit = async () => {
     if (!finalInstrument) {
       toast({ title: t.analyze.error_no_instrument, description: t.analyze.error_no_instrument_desc, variant: "destructive" });
@@ -745,9 +786,33 @@ export default function AnalyzePage() {
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1">
             <h1 className="text-lg font-bold text-foreground">{t.analyze.title}</h1>
-            <p className="text-xs text-muted-foreground">
-              {t.analyze.mode_label}: {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
-            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-muted-foreground">{t.analyze.mode_label}:</span>
+              <div
+                className="inline-flex gap-1 rounded-lg bg-muted p-1"
+                role="group"
+                aria-label={t.analyze.mode_label}
+                data-testid="analyze-mode-selector"
+              >
+                {(["beginner", "pro"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleModeChange(mode)}
+                    aria-pressed={selectedMode === mode}
+                    data-testid={`button-analyze-mode-${mode}`}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-xs font-semibold transition-all",
+                      selectedMode === mode
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {mode === "beginner" ? t.common.beginner : `⚡ ${t.common.pro}`}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           {canShowQuotaChip && hourlyQuota && dailyQuota && (
             <span
@@ -977,7 +1042,7 @@ export default function AnalyzePage() {
               <div className="flex items-center justify-between text-sm mt-1">
                 <span className="text-muted-foreground">{t.analyze.mode_label}:</span>
                 <span className="font-semibold text-foreground">
-                  {user?.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
+                  {selectedMode === "beginner" ? t.common.beginner : t.common.pro}
                 </span>
               </div>
             </Card>
