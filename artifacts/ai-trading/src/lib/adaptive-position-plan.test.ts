@@ -131,6 +131,28 @@ describe("buildAdaptivePositionPlan", () => {
     expect(shortTimeframe.decision.reasonCodes).toContain("short_timeframe");
   });
 
+  it("falls back to an entry-only plan when the requested layers exceed the loss budget", () => {
+    const wideStopPlan: TradePlan = {
+      ...TRADE_PLAN,
+      buy: { ...TRADE_PLAN.buy, stopLoss: "800.00" },
+      sell: { ...TRADE_PLAN.sell, stopLoss: "3,800.00" },
+    };
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: wideStopPlan,
+      availableMargin: 1_000,
+      standardRule: GOLD_RULE,
+      preference: "active",
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.recommendation?.levels).toBe(0);
+    expect(recommendation.decision.posture).toBe("entry_only");
+    expect(recommendation.result.buy?.ladder).toHaveLength(1);
+    expect(recommendation.result.sell?.ladder).toHaveLength(1);
+  });
+
   it("blocks staged plans when technical direction conflicts with market bias", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",

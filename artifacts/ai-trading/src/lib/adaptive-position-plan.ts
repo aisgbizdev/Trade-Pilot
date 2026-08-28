@@ -706,51 +706,74 @@ export function buildAdaptivePlanRecommendation({
     ...Array.from({ length: 9 }, (_, index) => (9 - index) / 10),
     ...Array.from({ length: 9 }, (_, index) => (9 - index) / 100),
   ];
-  for (const initialLot of lotCandidates) {
-    const accountTier: AccountTier = initialLot >= 1 ? "regular" : initialLot < 0.1 ? "micro" : "mini";
-    const result = buildAdaptivePositionPlan({
-      instrument,
-      tradePlan,
-      standardRule,
-      equity: normalizedEquity,
-      freeMargin: marginBudget,
-      existingExposure: 0,
-      initialLot,
-      accountTier,
-      levels,
-      sideLevels:
-        preferredSide === "buy"
-          ? { buy: levels, sell: 0 }
-          : preferredSide === "sell"
-            ? { buy: 0, sell: levels }
-            : { buy: levels, sell: levels },
-      maxCycleLossPercent: 2,
-    });
-    fallback ??= result;
-    if (result.valid) {
-      if (posture === "not_recommended") {
+  // A risk preference is an upper bound, not a requirement to use every
+  // requested layer. If the full ladder does not fit the stop distance and
+  // loss budget, keep reducing the number of adds until an entry-only plan
+  // fits. This preserves fail-closed behavior without making Pro unusable
+  // whenever a conservative margin can support the initial entry only.
+  const levelCandidates = Array.from(
+    { length: levels + 1 },
+    (_, index) => levels - index,
+  );
+  for (const candidateLevels of levelCandidates) {
+    for (const initialLot of lotCandidates) {
+      const accountTier: AccountTier = initialLot >= 1 ? "regular" : initialLot < 0.1 ? "micro" : "mini";
+      const result = buildAdaptivePositionPlan({
+        instrument,
+        tradePlan,
+        standardRule,
+        equity: normalizedEquity,
+        freeMargin: marginBudget,
+        existingExposure: 0,
+        initialLot,
+        accountTier,
+        levels: candidateLevels,
+        sideLevels:
+          preferredSide === "buy"
+            ? { buy: candidateLevels, sell: 0 }
+            : preferredSide === "sell"
+              ? { buy: 0, sell: candidateLevels }
+              : { buy: candidateLevels, sell: candidateLevels },
+        maxCycleLossPercent: 2,
+      });
+      fallback ??= result;
+      if (result.valid) {
+        if (posture === "not_recommended") {
+          return {
+            result: {
+              ...result,
+              valid: false,
+              errors: [...result.errors, "The technical snapshot conflicts with the market direction."],
+            },
+            recommendation: null,
+            context,
+            decision: { posture, preferredSide, reasonCodes },
+          };
+        }
+        const effectivePosture =
+          candidateLevels === 0 && posture === "scaling_allowed"
+            ? "entry_only"
+            : posture;
+        const effectiveReasonCodes =
+          candidateLevels === 0
+            ? reasonCodes.filter((code) => code !== "staged_add_condition")
+            : reasonCodes;
         return {
-          result: {
-            ...result,
-            valid: false,
-            errors: [...result.errors, "The technical snapshot conflicts with the market direction."],
+          result,
+          recommendation: {
+            initialLot,
+            levels: candidateLevels,
+            marginBudget,
+            maximumLoss,
           },
-          recommendation: null,
           context,
-          decision: { posture, preferredSide, reasonCodes },
+          decision: {
+            posture: effectivePosture,
+            preferredSide,
+            reasonCodes: effectiveReasonCodes,
+          },
         };
       }
-      return {
-        result,
-        recommendation: {
-          initialLot,
-          levels,
-          marginBudget,
-          maximumLoss,
-        },
-        context,
-        decision: { posture, preferredSide, reasonCodes },
-      };
     }
   }
 
