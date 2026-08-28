@@ -292,7 +292,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <ContinuousTicker />
 
-      <main className="flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+72px)] lg:pb-8 overflow-y-auto">
+      <main
+        className="flex-1 mobile-main-scroll lg:pb-8 overflow-y-auto"
+        data-testid="app-scroll-container"
+      >
         {children}
 
         <footer className="border-t border-border/50 px-4 py-4 mt-6 text-center space-y-2">
@@ -355,7 +358,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </footer>
       </main>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 lg:hidden">
+      <nav
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 lg:hidden"
+        data-testid="mobile-bottom-nav"
+        aria-label="Mobile navigation"
+      >
         <div className="mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] rounded-2xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-2xl shadow-black/20">
           <div className="flex items-center justify-around py-2 px-1">
             {navItems.map(({ href, icon: Icon, label }) => {

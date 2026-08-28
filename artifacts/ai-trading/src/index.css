@@ -271,6 +271,25 @@
     animation: ticker 55s linear infinite;
   }
 
+  /*
+   * The mobile nav is fixed and its content is taller than the old 72px
+   * clearance once the icon, label, margin, and safe-area are combined.
+   * Keep the extra clearance on the scroll container so the final card/footer
+   * can always be brought above the nav. scroll-padding also protects
+   * focus/scrollIntoView targets from landing underneath it.
+   */
+  .mobile-main-scroll {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7rem);
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7rem);
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-main-scroll {
+      padding-bottom: 2rem;
+      scroll-padding-bottom: 2rem;
+    }
+  }
+
   @keyframes ticker {
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }

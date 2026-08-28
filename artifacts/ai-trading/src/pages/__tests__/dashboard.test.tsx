@@ -179,6 +179,17 @@ describe("DashboardPage: happy-path render", () => {
 
     // The "view history" link is present in the recent-analyses header.
     expect(screen.getByTestId("link-view-history")).toBeInTheDocument();
+
+    // The fixed mobile nav must have enough scroll clearance for the final
+    // card/footer, while the desktop breakpoint remains handled by the
+    // existing lg:pb-8 rule.
+    expect(screen.getByTestId("mobile-bottom-nav")).toBeInTheDocument();
+    const scrollContainer = screen.getByTestId("app-scroll-container");
+    expect(scrollContainer.className).toContain("mobile-main-scroll");
+    expect(scrollContainer.className).toContain("lg:pb-8");
+    expect(screen.getByTestId("mobile-bottom-nav").className).toContain(
+      "lg:hidden",
+    );
   });
 });
 
