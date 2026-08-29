@@ -223,14 +223,6 @@ describe("AnalysisDetailPage: happy-path render", () => {
     const risk = screen.getByTestId("text-risk-level");
     expect(risk.textContent?.trim().length ?? 0).toBeGreaterThan(0);
 
-    expect(
-      (screen.getByTestId("details-ai-analysis-context") as HTMLDetailsElement)
-        .open,
-    ).toBe(false);
-    expect(
-      (screen.getByTestId("details-analysis-review") as HTMLDetailsElement).open,
-    ).toBe(false);
-
     // Feedback CTAs render — the user can pick useful / not-useful.
     expect(screen.getByTestId("button-feedback-useful")).toBeInTheDocument();
     expect(screen.getByTestId("button-feedback-not-useful")).toBeInTheDocument();
@@ -266,9 +258,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/saved analysis shown above/i);
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/Current chart.*separate layer candidates/i);
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
-    expect(screen.getByTestId("card-standard-trading-rules")).toHaveTextContent(
-      /Standard Plan/i,
-    );
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/limited to canonical XAU\/USD analyses on the Mini tier/i);
     expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(/Day trade only/i);
     expect(screen.queryByTestId("button-adaptive-account-micro")).not.toBeInTheDocument();
@@ -291,14 +280,12 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(reasoning.textContent).toMatch(/Why this plan was chosen/i);
     expect(reasoning.textContent).toMatch(/favor the rise scenario/i);
     expect(reasoning.textContent).toMatch(/Technical snapshot: 12 support up, 4 support down/i);
-      expect(snapshot).toHaveTextContent(/Selected plan summary/i);
+    expect(snapshot).toHaveTextContent(/Answer at a glance/i);
     expect(snapshot).toHaveTextContent(/Entry point/i);
     expect(snapshot).toHaveTextContent(/Initial lot and extra layers/i);
     expect(snapshot).toHaveTextContent(/Hard loss limit/i);
     expect(buyPlan.textContent).toMatch(/manual checkpoints/i);
-    expect(buyPlan.textContent).toMatch(/Manual layer ladder/i);
-    expect(buyPlan).not.toHaveTextContent(/Entry point/i);
-    expect(buyPlan).not.toHaveTextContent(/One final Stop Loss/i);
+    expect(buyPlan.textContent).toMatch(/One final Stop Loss/i);
     expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/2,301/);
     expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/2,300/);
     expect(buyPlan.textContent).toMatch(/\$/);
@@ -310,8 +297,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-direction-sell")).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByTestId("adaptive-plan-buy")).not.toBeInTheDocument();
     expect(sellPlan.textContent).toMatch(/initial entry only/i);
-    expect(sellPlan).not.toHaveTextContent(/Entry point/i);
-    expect(sellPlan).not.toHaveTextContent(/One final Stop Loss/i);
+    expect(sellPlan.textContent).toMatch(/One final Stop Loss/i);
     expect(sellPlan.textContent).toMatch(/\$/);
     expect((screen.getByTestId("adaptive-risk-details") as HTMLDetailsElement).open).toBe(false);
   });

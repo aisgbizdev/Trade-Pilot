@@ -221,15 +221,34 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
   return (
     <div className={`rounded-md border-l-4 p-3 space-y-3 bg-muted/20 ${isBuy ? "border-l-emerald-500" : "border-l-red-500"}`} data-testid={`adaptive-plan-${plan.side}`}>
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-bold flex items-center gap-1.5 text-foreground">
-          {isBuy ? <TrendingUp className="w-4 h-4 text-emerald-700 dark:text-emerald-400" /> : <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />}
-          {copy.adaptive_execution_details_title}
+        <h4 className={`text-sm font-bold flex items-center gap-1.5 ${isBuy ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+          {isBuy ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          {isBuy ? copy.adaptive_buy : copy.adaptive_sell}
         </h4>
-        <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className={isBuy ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
-            {isBuy ? copy.adaptive_buy : copy.adaptive_sell}
-          </Badge>
-          <Badge variant="outline" className="text-[10px]">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</Badge>
+        <Badge variant="outline" className="text-[10px]">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.adaptive_entry}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.entry, lang, 4)}</p>
+        </div>
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold text-red-600 tabular-nums dark:text-red-400">{formatNumber(plan.stopLoss, lang, 4)}</p>
+        </div>
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
+        </div>
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
+          <p className="truncate text-[10px] text-emerald-700 tabular-nums dark:text-emerald-400">{formatMoney(plan.profitToTakeProfit1, lang)}</p>
+        </div>
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
+          <p className="truncate text-[10px] text-emerald-700 tabular-nums dark:text-emerald-400">{formatMoney(plan.profitToTakeProfit2, lang)}</p>
         </div>
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
@@ -613,7 +632,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               {primaryPlan && <PlanSide plan={primaryPlan} lang={lang} copy={copy} decision={recommendation.decision} />}
            </div>
          )}
-         {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
+        {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
+          <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
+          <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatMoney(selected.maximumLoss, lang))}</p></div>
           {primaryPlan && <PlanSide plan={primaryPlan} lang={lang} copy={copy} decision={recommendation.decision} />}
           <details className="rounded-md border border-border p-3" data-testid="adaptive-risk-details">
             <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</summary>
