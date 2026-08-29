@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, CircleAlert, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "@/lib/i18n";
-import { getAdaptiveStandardRuleCode } from "@/lib/adaptive-position-plan";
+import { getStandardTradingRuleCode } from "@/lib/adaptive-position-plan";
 import { useGetStandardTradingRules } from "@workspace/api-client-react";
 
 export function StandardTradingRulesCard({ instrument }: { instrument: string }) {
@@ -11,7 +11,7 @@ export function StandardTradingRulesCard({ instrument }: { instrument: string })
   const { data, isLoading, isError } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
-  const code = getAdaptiveStandardRuleCode(instrument);
+  const code = getStandardTradingRuleCode(instrument);
   const rule = data?.instruments.find((item) => item.code === code);
   const locale = lang === "id" ? "id-ID" : "en-US";
   const money = (value: number) => `USD ${value.toLocaleString("en-US", { minimumFractionDigits: value % 1 ? 1 : 0 })}`;

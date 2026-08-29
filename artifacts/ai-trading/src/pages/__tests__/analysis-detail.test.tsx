@@ -230,7 +230,7 @@ describe("AnalysisDetailPage: happy-path render", () => {
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {
-  it("uses progressive disclosure for the 3x3 selector and separates Buy and Sell ladders", async () => {
+  it("uses fixed Mini rules, explicit risk inputs, and separate Buy and Sell ladders", async () => {
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -251,40 +251,24 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
+    const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
+    const existingExposure = screen.getByTestId("input-adaptive-existing-exposure");
     const methodDetails = screen.getByTestId("adaptive-plan-method") as HTMLDetailsElement;
     expect(methodDetails.open).toBe(false);
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/saved analysis shown above/i);
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/Current chart.*separate layer candidates/i);
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
+    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/limited to canonical XAU\/USD analyses on the Mini tier/i);
     expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(/Day trade only/i);
-    expect(screen.getByTestId("button-adaptive-account-micro")).toHaveTextContent("Micro");
-    expect(screen.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveTextContent("Regular");
+    expect(screen.queryByTestId("button-adaptive-account-micro")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-adaptive-account-regular")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-adaptive-preference-safe")).not.toBeInTheDocument();
     expect(screen.queryByText(/existing AI analysis provides the direction/i)).not.toBeInTheDocument();
-    expect(screen.getByTestId("button-adaptive-preference-safe")).toHaveTextContent("Low Risk");
-    expect(screen.getByTestId("button-adaptive-preference-balanced")).toHaveTextContent("Medium Risk");
-    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent("High Risk");
-    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent(/75% of available funds/i);
-    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent(/loss ceiling of 30%/i);
     fireEvent.change(margin, { target: { value: "100000" } });
+    fireEvent.change(maximumLoss, { target: { value: "500" } });
+    expect(existingExposure).toHaveValue(0);
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
-    const comparison = screen.getByTestId("adaptive-plan-comparison") as HTMLDetailsElement;
-    expect(comparison.open).toBe(false);
-    fireEvent.click(comparison.querySelector("summary")!);
-    expect(comparison.open).toBe(true);
-    expect(comparison).toHaveTextContent(/Compare the same available margin/i);
-    expect(screen.queryByTestId("adaptive-account-suggestion")).not.toBeInTheDocument();
-    const comparisonCards = comparison.querySelectorAll("button[data-testid^='adaptive-comparison-']");
-    expect(comparisonCards).toHaveLength(9);
-    expect(screen.getByTestId("adaptive-comparison-alternatives")).toHaveTextContent(/Safer option/i);
-    expect(screen.getByTestId("adaptive-comparison-alternatives")).toHaveTextContent(/Maximum capacity/i);
-    const regularHighRisk = screen.getByTestId("adaptive-comparison-regular-active");
-    expect(regularHighRisk.tagName).toBe("BUTTON");
-    fireEvent.click(regularHighRisk);
-    expect(regularHighRisk).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(screen.getByTestId("adaptive-comparison-mini-safe"));
+    expect(screen.queryByTestId("adaptive-plan-comparison")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     const snapshot = await screen.findByTestId("adaptive-plan-snapshot");
@@ -300,7 +284,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(snapshot).toHaveTextContent(/Entry point/i);
     expect(snapshot).toHaveTextContent(/Initial lot and extra layers/i);
     expect(snapshot).toHaveTextContent(/Hard loss limit/i);
-    expect(comparisonCards).toHaveLength(9);
     expect(buyPlan.textContent).toMatch(/manual checkpoints/i);
     expect(buyPlan.textContent).toMatch(/One final Stop Loss/i);
     expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/2,301/);
@@ -319,7 +302,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect((screen.getByTestId("adaptive-risk-details") as HTMLDetailsElement).open).toBe(false);
   });
 
-  it("keeps an explicit tier and risk choice when chart candidates finish loading", async () => {
+  it("keeps all explicit account inputs when chart candidates finish loading", async () => {
     const candleResolvers: Array<(response: Response) => void> = [];
     const delayedCandles: FetchHandler = (url, init) => {
       if ((init?.method ?? "GET").toUpperCase() !== "GET") return null;
@@ -347,13 +330,13 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
+    const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
+    const exposure = screen.getByTestId("input-adaptive-existing-exposure");
     await screen.findByTestId("adaptive-account-rule");
     fireEvent.change(margin, { target: { value: "5000" } });
+    fireEvent.change(maximumLoss, { target: { value: "250" } });
+    fireEvent.change(exposure, { target: { value: "0.2" } });
     await waitFor(() => expect(candleResolvers.length).toBeGreaterThan(0));
-
-    fireEvent.click(screen.getByTestId("adaptive-comparison-regular-active"));
-    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveAttribute("aria-checked", "true");
 
     await act(async () => {
       candleResolvers.forEach((resolve) => resolve(jsonResponse({ candles: [] })));
@@ -361,12 +344,12 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     });
 
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
-    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("adaptive-comparison-regular-active")).toHaveAttribute("aria-pressed", "true");
+    expect(margin).toHaveValue(5000);
+    expect(maximumLoss).toHaveValue(250);
+    expect(exposure).toHaveValue(0.2);
   });
 
-  it("renders a valid Regular recommendation for USD 20,000", async () => {
+  it("renders a valid fixed-Mini recommendation from explicit limits", async () => {
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -387,28 +370,26 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
+    const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
     await screen.findByTestId("adaptive-account-rule");
     fireEvent.change(margin, { target: { value: "20000" } });
-    fireEvent.click(screen.getByTestId("button-adaptive-account-regular"));
+    fireEvent.change(maximumLoss, { target: { value: "2000" } });
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
 
-    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Regular: a minimum 1 lot requires \$1,000 margin/i);
-    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/contract size is 100 troy ounce/i);
+    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
+    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/contract size is 10 troy ounce/i);
 
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-plan-invalid")).not.toBeInTheDocument();
-    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/1 lot/i);
+    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/0\.[1-9] lot/i);
     expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/Weighted average entry/i);
-    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/Candidate layers not included/i);
-    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/cumulative-loss ceiling/i);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v9:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v10:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -433,7 +414,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v9:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v10:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("restores the preferred Sell direction from a saved recommendation", async () => {
@@ -457,10 +438,11 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
     fireEvent.change(margin, { target: { value: "100000" } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "500" } });
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
-    const key = `trade-pilot:adaptive-plan:v9:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v10:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {
@@ -570,7 +552,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       </Wrapper>,
     );
 
-    expect(await screen.findByTestId("adaptive-plan-unsupported")).toBeInTheDocument();
+    expect(await screen.findByTestId("text-instrument")).toHaveTextContent("EUR/USD");
     expect(screen.getByTestId("text-instrument")).toHaveTextContent("EUR/USD");
     expect(screen.getByTestId("card-trade-plan")).toBeInTheDocument();
     expect(screen.queryByTestId("input-adaptive-available-margin")).not.toBeInTheDocument();
@@ -578,7 +560,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("adaptive-plan-valid")).not.toBeInTheDocument();
   });
 
-  it("enables the adaptive calculator for Hang Seng when its supplied rules are available", async () => {
+  it("keeps Hang Seng on Standard TP/SL without mounting Adaptive", async () => {
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -599,10 +581,12 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       </Wrapper>,
     );
 
-    expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
-    expect(screen.getByTestId("input-adaptive-available-margin")).toBeInTheDocument();
-    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled();
-    expect(screen.queryByTestId("adaptive-plan-unsupported")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("card-trade-plan")).toBeInTheDocument();
+    expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Stop Loss/i);
+    expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Take Profit 1/i);
+    expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Take Profit 2/i);
+    expect(screen.queryByTestId("input-adaptive-available-margin")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-calculate-adaptive-plan")).not.toBeInTheDocument();
   });
 });
 

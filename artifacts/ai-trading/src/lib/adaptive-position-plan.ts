@@ -7,7 +7,6 @@ import type {
 
 export type AdaptiveMarket = "gold" | "brent" | "hang_seng" | "nikkei";
 export type AccountTier = "micro" | "mini" | "regular";
-export type AdaptiveRiskPreference = "safe" | "balanced" | "active";
 export type AdaptivePlanPosture = "scaling_allowed" | "entry_only" | "not_recommended";
 export type AdaptiveLayerBasis = "analysis_entry" | "entry_zone_edge" | "current_chart_swing";
 export type AdaptiveLayerRejectReason = "day_margin" | "loss_ceiling" | "tier_limit" | "analysis_limit";
@@ -90,13 +89,12 @@ export interface AdaptivePositionPlanInput {
   instrument: string;
   tradePlan: TradePlan;
   standardRule: StandardTradingRuleInstrument | null;
-  equity: number | null;
-  freeMargin: number | null;
+  availableFunds: number | null;
+  maximumLoss: number | null;
   existingExposure: number | null;
   initialLot: number | null;
   accountTier: AccountTier;
   levels: number;
-  maxCycleLossPercent: number;
   sideLevels?: { buy?: number; sell?: number };
   includedSides?: { buy: boolean; sell: boolean };
   layerLotFactors?: number[];
@@ -225,18 +223,7 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
   },
 };
 
-const RECOMMENDATION_PROFILES: Record<AdaptiveRiskPreference, {
-  levels: number;
-  marginUsage: number;
-  riskBudget: number;
-  layerLotFactors: number[];
-}> = {
-  safe: { levels: 2, marginUsage: 0.5, riskBudget: 0.2, layerLotFactors: [0.6, 0.45] },
-  balanced: { levels: 4, marginUsage: 0.65, riskBudget: 0.25, layerLotFactors: [0.85, 0.7, 0.6, 0.5] },
-  active: { levels: 6, marginUsage: 0.75, riskBudget: 0.3, layerLotFactors: [1, 0.9, 0.8, 0.7, 0.6, 0.5] },
-};
-
-function marketForInstrument(instrument: string): AdaptiveMarket | null {
+function standardMarketForInstrument(instrument: string): AdaptiveMarket | null {
   const normalized = instrument.toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (normalized.includes("XUL10") || normalized.includes("XAU") || normalized.includes("GOLD")) {
     return "gold";
@@ -265,6 +252,19 @@ function marketForInstrument(instrument: string): AdaptiveMarket | null {
   return null;
 }
 
+/**
+ * Adaptive is intentionally narrower than the Standard Plan. The saved
+ * analysis identity must be the canonical XAU/USD symbol; aliases such as
+ * GOLD, XAUUSD, or the broker rule code must not silently enable it.
+ */
+export function isXauUsdMiniAdaptiveInstrument(instrument: string): boolean {
+  return instrument.trim().toUpperCase() === "XAU/USD";
+}
+
+function adaptiveMarketForInstrument(instrument: string): AdaptiveMarket | null {
+  return isXauUsdMiniAdaptiveInstrument(instrument) ? "gold" : null;
+}
+
 function standardCodeForMarket(market: AdaptiveMarket): StandardTradingRuleInstrument["code"] {
   switch (market) {
     case "gold": return "XUL10";
@@ -274,10 +274,17 @@ function standardCodeForMarket(market: AdaptiveMarket): StandardTradingRuleInstr
   }
 }
 
+export function getStandardTradingRuleCode(
+  instrument: string,
+): StandardTradingRuleInstrument["code"] | null {
+  const market = standardMarketForInstrument(instrument);
+  return market ? standardCodeForMarket(market) : null;
+}
+
 export function getAdaptiveStandardRuleCode(
   instrument: string,
 ): StandardTradingRuleInstrument["code"] | null {
-  const market = marketForInstrument(instrument);
+  const market = adaptiveMarketForInstrument(instrument);
   return market ? standardCodeForMarket(market) : null;
 }
 
@@ -302,7 +309,8 @@ function ruleFromStandardTradingRules(
   standardRule: StandardTradingRuleInstrument | null | undefined,
   accountTier: AccountTier,
 ): AdaptiveRule | null {
-  const market = marketForInstrument(instrument);
+  const market = adaptiveMarketForInstrument(instrument);
+  if (accountTier !== "mini") return null;
   if (!market || !standardRule || standardRule.code !== standardCodeForMarket(market)) return null;
 
   const minMovement = numericValues(standardRule.minimumPriceMovement)[0];
@@ -701,24 +709,37 @@ export function createAdaptivePlanFingerprint({
 }
 
 export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): AdaptivePositionPlanResult {
-  const market = marketForInstrument(input.instrument);
+  const market = adaptiveMarketForInstrument(input.instrument);
   const rule = ruleFromStandardTradingRules(input.instrument, input.standardRule, input.accountTier);
   const errors: string[] = [];
   const includeBuy = input.includedSides?.buy ?? true;
   const includeSell = input.includedSides?.sell ?? true;
 
-  if (!market) errors.push("Adaptive position planning requires a supported TP Standard Trading Rules instrument.");
+  if (!market) errors.push("Adaptive position planning is available only for the canonical XAU/USD instrument.");
+  if (input.accountTier !== "mini") errors.push("Adaptive position planning is temporarily available only for the Mini tier.");
   else if (!rule) errors.push("TP Standard Trading Rules are unavailable for this instrument.");
   if (!includeBuy && !includeSell) errors.push("At least one trade-plan side must be included.");
-  if (input.equity == null || input.equity <= 0) errors.push("Account equity is required.");
-  if (input.freeMargin == null || input.freeMargin <= 0) errors.push("Free margin is required.");
+  if (input.availableFunds == null || input.availableFunds <= 0) errors.push("Available trading funds are required.");
+  if (input.maximumLoss == null || input.maximumLoss <= 0) errors.push("Maximum acceptable loss is required.");
+  if (
+    input.availableFunds != null &&
+    input.maximumLoss != null &&
+    input.maximumLoss > input.availableFunds
+  ) {
+    errors.push("Maximum acceptable loss cannot exceed available trading funds.");
+  }
   if (input.existingExposure == null || input.existingExposure < 0) errors.push("Existing exposure is required.");
   if (input.initialLot == null || input.initialLot <= 0) errors.push("Initial lot is required.");
-  if (!Number.isInteger(input.levels) || input.levels < 0 || input.levels > 6) {
-    errors.push("Number of levels must be between 0 and 6.");
+  if (!Number.isInteger(input.levels) || input.levels < 0 || input.levels > 1) {
+    errors.push("Number of additional levels must be either 0 or 1.");
   }
-  if (input.maxCycleLossPercent <= 0 || input.maxCycleLossPercent > 10) {
-    errors.push("Maximum cycle loss must be between 0.1% and 10%.");
+  for (const [side, sideLevel] of Object.entries(input.sideLevels ?? {})) {
+    if (
+      sideLevel !== undefined &&
+      (!Number.isInteger(sideLevel) || sideLevel < 0 || sideLevel > 1 || sideLevel > input.levels)
+    ) {
+      errors.push(`${side === "buy" ? "Buy" : "Sell"} additional levels must be an integer between 0 and the requested level count.`);
+    }
   }
 
   const minimumLot = rule?.minimumLot ?? ACCOUNT_TIER_SPECS[input.accountTier].minimumLot;
@@ -735,7 +756,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     return { valid: false, market, rule: null, errors, assumptions: [], buy: null, sell: null };
   }
 
-  const maxCycleLoss = (input.equity ?? 0) * (input.maxCycleLossPercent / 100);
+  const maxCycleLoss = input.maximumLoss ?? 0;
   const buyGeometryError = includeBuy ? sideGeometryError("buy", input.tradePlan.buy) : null;
   const sellGeometryError = includeSell ? sideGeometryError("sell", input.tradePlan.sell) : null;
   if (buyGeometryError) errors.push(buyGeometryError);
@@ -749,11 +770,17 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     if (tierMax != null && plan.totalLots > tierMax) {
       errors.push(`The ${input.accountTier} tier caps total open exposure at ${tierMax.toFixed(2)} lot.`);
     }
-    if ((input.existingExposure ?? 0) + plan.totalLots > (input.freeMargin ?? 0) / rule.marginPerLot) {
-      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} exposure exceeds free-margin capacity.`);
+    if (tierMax != null && (input.existingExposure ?? 0) + plan.totalLots > tierMax) {
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} exposure plus current open lots exceeds the Mini tier limit.`);
+    }
+    if (plan.marginRequired > (input.availableFunds ?? 0)) {
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} margin exceeds available trading funds.`);
     }
     if (plan.estimatedCycleLoss > maxCycleLoss) {
-      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} cycle loss exceeds the configured maximum.`);
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} loss at the final Stop Loss exceeds the entered maximum loss.`);
+    }
+    if (plan.totalFundsAtStop > (input.availableFunds ?? 0)) {
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} day margin plus loss at the final Stop Loss exceeds available trading funds.`);
     }
     if (plan.ladder.some((level) => level.price === plan.stopLoss)) {
       errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} ladder overlaps the Standard Plan stop loss.`);
@@ -765,10 +792,12 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     ? `Minimum movement from ${rule.source}: ${rule.minMovement}; no percentage gap limit is assumed because the source rule does not provide one.`
     : `Minimum movement from ${rule.source}: ${rule.minMovement}; a gap above ${rule.maxGapPercent}% is treated as an external execution risk.`;
   const assumptions = [
-    `${input.accountTier} profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
+    `Mini profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
     movementAssumption,
-    `Initial entry uses the Standard Plan; each manual add stays at or below the initial lot (${tierText}) and may be reduced by the selected plan style. No add uses a martingale multiplier.`,
-    `Maximum cycle loss is ${input.maxCycleLossPercent}% of equity and includes the initial entry plus every planned add.`,
+    `Initial entry uses the Standard Plan; at most one manual add stays at or below the initial lot (${tierText}). No add uses a martingale multiplier.`,
+    `The entered USD ${maxCycleLoss} maximum loss is a hard amount and includes the initial entry plus the one possible manual add.`,
+    "Available trading funds are used directly; no hidden tier or risk-style percentage reduces them.",
+    `Current open XAU/USD Mini exposure is ${input.existingExposure ?? 0} lot and is included in the 0.90-lot tier limit.`,
     "This Adaptive Position Plan is for day trading only: it uses the day/initial margin and excludes overnight holding, rollover, and overnight fees from every calculation.",
     "Broker auto-liquidation, spread, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
   ];
@@ -824,41 +853,53 @@ function addRejectedCandidates(
 /**
  * Builds a practical position-size recommendation from the user's available
  * margin and the entry/stop levels already produced by the AI analysis.
- * The risk cap is expressed as a portion of the margin reserved for this plan,
- * so the UI does not need to ask beginners for equity, tiers, or lot math.
+ * The user enters a hard USD loss cap directly, so there is no synthetic
+ * equity or hidden risk-style allocation.
  */
 export function buildAdaptivePlanRecommendation({
   instrument,
   tradePlan,
   availableMargin,
+  maximumLoss,
+  existingExposure,
   standardRule,
-  accountTier = "mini",
-  preference,
   context: analysisContext,
   checkpointPrices,
 }: {
   instrument: string;
   tradePlan: TradePlan;
   availableMargin: number | null;
+  maximumLoss: number | null;
+  existingExposure: number | null;
   standardRule: StandardTradingRuleInstrument | null;
-  accountTier?: AccountTier;
-  preference: AdaptiveRiskPreference;
   context?: AdaptiveAnalysisContext;
   checkpointPrices?: { buy?: number[]; sell?: number[] };
 }): AdaptivePlanRecommendation {
-  const market = marketForInstrument(instrument);
+  const accountTier: AccountTier = "mini";
+  const market = adaptiveMarketForInstrument(instrument);
   const rule = ruleFromStandardTradingRules(instrument, standardRule, accountTier);
   const context = normalizeContext(analysisContext);
   const reasonCodes: AdaptivePlanReasonCode[] = [];
   let posture: AdaptivePlanPosture = "scaling_allowed";
   let preferredSide: AdaptivePlanDecision["preferredSide"] = "both";
-  if (availableMargin == null || availableMargin <= 0) {
+  if (
+    availableMargin == null ||
+    availableMargin <= 0 ||
+    maximumLoss == null ||
+    maximumLoss <= 0 ||
+    existingExposure == null ||
+    existingExposure < 0
+  ) {
+    const errors = [];
+    if (availableMargin == null || availableMargin <= 0) errors.push("Available trading funds are required.");
+    if (maximumLoss == null || maximumLoss <= 0) errors.push("Maximum acceptable loss is required.");
+    if (existingExposure == null || existingExposure < 0) errors.push("Existing exposure is required.");
     return {
       result: {
         valid: false,
         market,
         rule,
-        errors: ["Available margin is required."],
+        errors,
         assumptions: [],
         buy: null,
         sell: null,
@@ -884,13 +925,25 @@ export function buildAdaptivePlanRecommendation({
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
     };
   }
-  const marginPerLot = rule.marginPerLot;
+  if (maximumLoss > availableMargin) {
+    return {
+      result: {
+        valid: false,
+        market,
+        rule,
+        errors: ["Maximum acceptable loss cannot exceed available trading funds."],
+        assumptions: [],
+        buy: null,
+        sell: null,
+      },
+      recommendation: null,
+      context,
+      decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+    };
+  }
 
-  const profile = RECOMMENDATION_PROFILES[preference];
-  const requestedLevels = profile.levels;
+  const requestedLevels = 1;
   let levels = requestedLevels;
-  let marginUsage = profile.marginUsage;
-  let riskBudget = profile.riskBudget;
   let softWarningCount = 0;
 
   if (!hasCompleteContext(context)) {
@@ -985,29 +1038,22 @@ export function buildAdaptivePlanRecommendation({
       reasonCodes.push("fundamental_clear");
     }
     if (posture !== "not_recommended") {
-      // These conditions change the density and size of the plan instead of
-      // erasing every checkpoint. Two soft warnings remove one candidate,
-      // while the hard day-margin and final-stop loss ceilings remain intact.
-      levels = Math.max(0, levels - Math.floor((softWarningCount + 1) / 2));
+      // This focused Mini baseline allows only one addition. Any soft warning
+      // removes that addition while preserving an auditable entry-only result.
+      levels = softWarningCount > 0 ? 0 : levels;
     }
   }
 
   if (levels > 0) reasonCodes.push("staged_add_condition");
 
-  const marginBudget = availableMargin * marginUsage;
-  // Thirty percent of the margin reserved for this plan is the hard ceiling,
-  // not a target. Lower-risk styles use less of that ceiling.
-  const maximumLoss = Math.max(marginBudget * Math.min(riskBudget, 0.3), 1);
-  // The low-level calculator uses a percent-of-equity guardrail. Supplying a
-  // normalized equity here gives it the same absolute loss ceiling without
-  // requiring the user to enter a separate equity figure.
-  const normalizedEquity = maximumLoss * 50;
+  const marginBudget = availableMargin;
   const buyPlanAvailable = sideGeometryError("buy", tradePlan.buy) === null;
   const sellPlanAvailable = sideGeometryError("sell", tradePlan.sell) === null;
 
-  const capacity = getAdaptiveMarginCapacity(marginBudget, rule);
-  const warningLotScale = Math.max(0.5, 1 - softWarningCount * 0.08);
-  const layerLotFactors = profile.layerLotFactors.map((factor) => factor * warningLotScale);
+  const marginCapacity = getAdaptiveMarginCapacity(marginBudget, rule);
+  const tierCapacity = Math.max(0, floorLot((rule.maximumLot ?? marginCapacity) - existingExposure, rule.lotStep));
+  const capacity = Math.min(marginCapacity, tierCapacity);
+  const layerLotFactors = [1];
   const lotCandidates: number[] = [];
   for (
     let lot = capacity;
@@ -1016,11 +1062,8 @@ export function buildAdaptivePlanRecommendation({
   ) {
     lotCandidates.push(roundLot(lot, rule.lotStep));
   }
-  // A risk preference is an upper bound, not a requirement to use every
-  // requested layer. If the full ladder does not fit the stop distance and
-  // loss budget, keep reducing the number of adds until an entry-only plan
-  // fits. This preserves fail-closed behavior without making Pro unusable
-  // whenever a conservative margin can support the initial entry only.
+  // Try the one situation-aware layer first, then degrade to entry-only until
+  // the hard tier, available-funds, and final-stop loss limits all pass.
   const levelCandidates = Array.from(
     { length: levels + 1 },
     (_, index) => levels - index,
@@ -1031,9 +1074,9 @@ export function buildAdaptivePlanRecommendation({
         instrument,
         tradePlan,
         standardRule,
-        equity: normalizedEquity,
-        freeMargin: marginBudget,
-        existingExposure: 0,
+        availableFunds: marginBudget,
+        maximumLoss,
+        existingExposure,
         initialLot,
         accountTier,
         levels: candidateLevels,
@@ -1051,7 +1094,6 @@ export function buildAdaptivePlanRecommendation({
               : { buy: buyPlanAvailable, sell: sellPlanAvailable },
         layerLotFactors: layerLotFactors.slice(0, candidateLevels),
         checkpointPrices,
-        maxCycleLossPercent: 2,
       });
       if (result.valid) {
         if (posture === "not_recommended") {
@@ -1096,9 +1138,9 @@ export function buildAdaptivePlanRecommendation({
                 instrument,
                 tradePlan,
                 standardRule,
-                equity: normalizedEquity,
-                freeMargin: marginBudget,
-                existingExposure: 0,
+                availableFunds: marginBudget,
+                maximumLoss,
+                existingExposure,
                 initialLot,
                 accountTier,
                 levels: requestedLevels,
@@ -1116,7 +1158,6 @@ export function buildAdaptivePlanRecommendation({
                       : { buy: buyPlanAvailable, sell: sellPlanAvailable },
                 layerLotFactors,
                 checkpointPrices,
-                maxCycleLossPercent: 2,
               })
             : result;
         return {
@@ -1142,9 +1183,9 @@ export function buildAdaptivePlanRecommendation({
     instrument,
     tradePlan,
     standardRule,
-    equity: normalizedEquity,
-    freeMargin: marginBudget,
-    existingExposure: 0,
+    availableFunds: marginBudget,
+    maximumLoss,
+    existingExposure,
     initialLot: rule.minimumLot,
     accountTier,
     levels: 0,
@@ -1152,16 +1193,17 @@ export function buildAdaptivePlanRecommendation({
     includedSides: { buy: buyPlanAvailable, sell: sellPlanAvailable },
     layerLotFactors: [],
     checkpointPrices,
-    maxCycleLossPercent: 2,
   });
   return {
     result: diagnosticResult,
-    recommendation: {
-      initialLot: rule.minimumLot,
-      levels: 0,
-      marginBudget,
-      maximumLoss,
-    },
+    recommendation: diagnosticResult.valid
+      ? {
+          initialLot: rule.minimumLot,
+          levels: 0,
+          marginBudget,
+          maximumLoss,
+        }
+      : null,
     context,
     decision: { posture, preferredSide, reasonCodes },
   };
