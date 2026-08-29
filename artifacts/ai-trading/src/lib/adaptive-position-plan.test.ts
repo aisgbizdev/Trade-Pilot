@@ -1,13 +1,28 @@
 import { describe, expect, it } from "vitest";
 import type { StandardTradingRuleInstrument, TradePlan } from "@workspace/api-client-react";
 import {
-  buildAdaptivePlanRecommendation,
+  buildAdaptivePlanRecommendation as buildAdaptivePlanRecommendationCore,
   buildAdaptivePositionPlan,
   createAdaptivePlanFingerprint,
+  getAdaptiveChartCandidatePrices,
   getAdaptiveMarginCapacity,
   getAdaptiveMarketRule,
   getAdaptiveStandardRuleCode,
 } from "./adaptive-position-plan";
+
+const CHART_CANDIDATES = {
+  buy: [2299, 2297, 2295, 2293, 2291],
+  sell: [2303, 2305, 2307, 2309, 2311],
+};
+
+function buildAdaptivePlanRecommendation(
+  input: Parameters<typeof buildAdaptivePlanRecommendationCore>[0],
+) {
+  return buildAdaptivePlanRecommendationCore({
+    ...input,
+    checkpointPrices: input.checkpointPrices ?? CHART_CANDIDATES,
+  });
+}
 
 const TRADE_PLAN: TradePlan = {
   preferredSide: "buy",
@@ -112,6 +127,7 @@ const VALID_INPUT = {
   accountTier: "micro" as const,
   levels: 3,
   maxCycleLossPercent: 2,
+  checkpointPrices: CHART_CANDIDATES,
 };
 
 const SUPPORTIVE_CONTEXT = {
@@ -141,7 +157,7 @@ describe("buildAdaptivePositionPlan", () => {
 
     expect(recommendation.result.valid).toBe(true);
     expect(recommendation.recommendation).toMatchObject({
-      levels: 2,
+      levels: 4,
       marginBudget: 65_000,
     });
     expect(recommendation.recommendation?.initialLot).toBeGreaterThan(0);
@@ -153,8 +169,13 @@ describe("buildAdaptivePositionPlan", () => {
       posture: "scaling_allowed",
       preferredSide: "buy",
     });
-    expect(recommendation.result.buy?.ladder).toHaveLength(3);
+    expect(recommendation.result.buy?.ladder).toHaveLength(5);
     expect(recommendation.result.sell?.ladder).toHaveLength(1);
+    expect(recommendation.result.buy?.totalLots).toBeLessThanOrEqual(0.9);
+    expect(recommendation.result.buy?.ladder[1]).toMatchObject({
+      price: 2300,
+      basis: "entry_zone_edge",
+    });
     expect(recommendation.decision.reasonCodes).toEqual(
       expect.arrayContaining(["trend_favors_buy", "technical_supports_buy", "staged_add_condition"]),
     );
@@ -174,7 +195,7 @@ describe("buildAdaptivePositionPlan", () => {
     expect(recommendation.result.valid).toBe(true);
     expect(recommendation.recommendation).toMatchObject({
       initialLot: 1,
-      levels: 1,
+      levels: 0,
       marginBudget: 10_000,
       maximumLoss: 2_000,
     });
@@ -185,8 +206,9 @@ describe("buildAdaptivePositionPlan", () => {
       minimumLot: 1,
       marginAtMinimumLot: 1_000,
     });
-    expect(recommendation.result.buy?.estimatedCycleLoss).toBe(1_650);
+    expect(recommendation.result.buy?.estimatedCycleLoss).toBe(1_100);
     expect(recommendation.result.sell?.estimatedCycleLoss).toBe(1_100);
+    expect(recommendation.result.buy?.rejectedLadder[0]?.rejectReason).toBe("loss_ceiling");
   });
 
   it("still rejects a Regular recommendation when the minimum lot exceeds the loss limit", () => {
@@ -210,7 +232,7 @@ describe("buildAdaptivePositionPlan", () => {
     expect(recommendation.result.errors.join(" ")).toMatch(/cycle loss exceeds/i);
   });
 
-  it("changes from staged scaling to entry-only on a shorter timeframe", () => {
+  it("reduces but does not automatically erase staged scaling on a shorter timeframe", () => {
     const hourly = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
@@ -228,12 +250,13 @@ describe("buildAdaptivePositionPlan", () => {
       context: { ...SUPPORTIVE_CONTEXT, timeframe: "5m" },
     });
 
-    expect(hourly.recommendation?.levels).toBe(2);
-    expect(shortTimeframe.recommendation?.levels).toBe(0);
-    expect(shortTimeframe.decision.posture).toBe("entry_only");
-    expect(shortTimeframe.result.buy?.ladder).toHaveLength(1);
+    expect(hourly.recommendation?.levels).toBe(4);
+    expect(shortTimeframe.recommendation?.levels).toBe(3);
+    expect(shortTimeframe.decision.posture).toBe("scaling_allowed");
+    expect(shortTimeframe.result.buy?.ladder).toHaveLength(4);
     expect(shortTimeframe.result.sell?.ladder).toHaveLength(1);
     expect(shortTimeframe.decision.reasonCodes).toContain("short_timeframe");
+    expect(shortTimeframe.result.buy?.rejectedLadder[0]?.rejectReason).toBe("analysis_limit");
   });
 
   it("falls back to an entry-only plan when the requested layers exceed the loss budget", () => {
@@ -324,11 +347,12 @@ describe("buildAdaptivePositionPlan", () => {
     expect(recommendation.result.valid).toBe(true);
     expect(recommendation.recommendation).not.toBeNull();
     expect(recommendation.decision).toMatchObject({
-      posture: "entry_only",
+      posture: "scaling_allowed",
       preferredSide: "buy",
     });
     expect(recommendation.result.buy).not.toBeNull();
     expect(recommendation.result.sell).toBeNull();
+    expect(recommendation.recommendation?.levels).toBe(1);
   });
 
   it("blocks staged plans when technical direction conflicts with market bias", () => {
@@ -379,7 +403,7 @@ describe("buildAdaptivePositionPlan", () => {
     }
   });
 
-  it("uses high-impact calendar risk to reduce a complete plan to entry-only", () => {
+  it("uses high-impact calendar risk as a sizing warning instead of deleting every layer", () => {
     const recommendation = buildAdaptivePlanRecommendation({
       instrument: "XAU/USD",
       tradePlan: TRADE_PLAN,
@@ -405,8 +429,114 @@ describe("buildAdaptivePositionPlan", () => {
     });
 
     expect(recommendation.result.valid).toBe(true);
-    expect(recommendation.recommendation?.levels).toBe(0);
+    expect(recommendation.recommendation?.levels).toBe(5);
+    expect(recommendation.decision.posture).toBe("scaling_allowed");
     expect(recommendation.decision.reasonCodes).toContain("fundamental_high_impact");
+    expect(recommendation.result.buy?.rejectedLadder[0]?.rejectReason).toBe("analysis_limit");
+  });
+
+  it("allows an Active Gold plan to exceed four total positions when analysis and hard limits support it", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      standardRule: GOLD_RULE,
+      accountTier: "micro",
+      preference: "active",
+      context: SUPPORTIVE_CONTEXT,
+    });
+
+    expect(recommendation.result.valid).toBe(true);
+    expect(recommendation.recommendation?.levels).toBe(6);
+    expect(recommendation.result.buy?.ladder).toHaveLength(7);
+    expect(recommendation.result.buy?.totalLots).toBeLessThanOrEqual(0.09);
+    expect(recommendation.result.buy?.ladder.every((level) => level.lot <= (recommendation.recommendation?.initialLot ?? 0))).toBe(true);
+  });
+
+  it("uses real current-chart swing points inside the saved entry-to-stop path", () => {
+    const candidates = getAdaptiveChartCandidatePrices(
+      [
+        { high: 2306, low: 2302 },
+        { high: 2305, low: 2300 },
+        { high: 2303, low: 2296 },
+        { high: 2304, low: 2299 },
+        { high: 2308, low: 2301 },
+        { high: 2310, low: 2303 },
+        { high: 2307, low: 2300 },
+      ],
+      TRADE_PLAN,
+      0.1,
+    );
+
+    expect(candidates.buy).toContain(2296);
+    expect(candidates.sell).toContain(2310);
+    expect(candidates.buy.every((price) => price > 2290 && price < 2301)).toBe(true);
+    expect(candidates.sell.every((price) => price < 2312 && price > 2301)).toBe(true);
+  });
+
+  it("does not invent extra levels when neither the saved entry zone nor current chart supplies one", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: {
+        ...TRADE_PLAN,
+        buy: { ...TRADE_PLAN.buy, entryZone: "2301" },
+        preferredSide: "buy",
+      },
+      availableMargin: 100_000,
+      standardRule: GOLD_RULE,
+      accountTier: "micro",
+      preference: "active",
+      context: SUPPORTIVE_CONTEXT,
+      checkpointPrices: { buy: [], sell: [] },
+    });
+
+    expect(recommendation.recommendation?.levels).toBe(0);
+    expect(recommendation.result.buy?.ladder).toHaveLength(1);
+    expect(recommendation.decision.posture).toBe("entry_only");
+  });
+
+  it("treats medium confidence as a soft constraint on layer count", () => {
+    const recommendation = buildAdaptivePlanRecommendation({
+      instrument: "XAU/USD",
+      tradePlan: TRADE_PLAN,
+      availableMargin: 100_000,
+      standardRule: GOLD_RULE,
+      accountTier: "micro",
+      preference: "balanced",
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        confidenceMin: 62,
+        confidenceMax: 66,
+      },
+    });
+
+    expect(recommendation.decision.reasonCodes).toContain("low_confidence");
+    expect(recommendation.recommendation?.levels).toBeLessThan(4);
+    expect(recommendation.recommendation?.levels).toBeGreaterThan(0);
+  });
+
+  it("shows auditable per-stage and cumulative day-trade math from the saved plan", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "mini",
+      initialLot: 0.2,
+      levels: 2,
+      layerLotFactors: [0.5, 0.5],
+      checkpointPrices: CHART_CANDIDATES,
+    });
+
+    expect(result.valid).toBe(true);
+    const buy = result.buy!;
+    expect(buy.ladder).toHaveLength(3);
+    expect(buy.ladder[0].basis).toBe("analysis_entry");
+    expect(buy.ladder[1].basis).toBe("entry_zone_edge");
+    expect(buy.ladder.every((level) => level.dayMarginForLot > 0)).toBe(true);
+    expect(buy.ladder.at(-1)?.cumulativeDayMargin).toBe(buy.marginRequired);
+    expect(buy.totalFundsAtStop).toBeCloseTo(buy.marginRequired + buy.estimatedCycleLoss, 8);
+    expect(buy.weightedAverageEntry).toBeGreaterThan(buy.stopLoss);
+    expect(buy.profitToTakeProfit1).toBeGreaterThan(0);
+    expect(buy.riskRewardToTakeProfit2).toBeGreaterThan(0);
+    expect(result.assumptions.join(" ")).toMatch(/day trading only.*excludes overnight/i);
   });
 
   it("builds independent buy and sell ladders without changing Standard Plan levels", () => {
@@ -527,7 +657,7 @@ describe("buildAdaptivePositionPlan", () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(result.errors.join(" ")).toMatch(/caps each ladder entry|free-margin capacity|cycle loss/i);
+    expect(result.errors.join(" ")).toMatch(/caps total open exposure|free-margin capacity|cycle loss/i);
   });
 
   it("enforces the selected tier on the initial entry and does not invent a Gold-only cap for Regular accounts", () => {

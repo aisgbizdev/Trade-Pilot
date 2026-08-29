@@ -9,6 +9,8 @@ export type AdaptiveMarket = "gold" | "brent" | "hang_seng" | "nikkei";
 export type AccountTier = "micro" | "mini" | "regular";
 export type AdaptiveRiskPreference = "safe" | "balanced" | "active";
 export type AdaptivePlanPosture = "scaling_allowed" | "entry_only" | "not_recommended";
+export type AdaptiveLayerBasis = "analysis_entry" | "entry_zone_edge" | "current_chart_swing";
+export type AdaptiveLayerRejectReason = "day_margin" | "loss_ceiling" | "tier_limit" | "analysis_limit";
 export type AdaptivePlanReasonCode =
   | "context_unavailable"
   | "short_timeframe"
@@ -98,6 +100,12 @@ export interface AdaptivePositionPlanInput {
   sideLevels?: { buy?: number; sell?: number };
   includedSides?: { buy: boolean; sell: boolean };
   layerLotFactors?: number[];
+  checkpointPrices?: { buy?: number[]; sell?: number[] };
+}
+
+export interface AdaptiveChartCandle {
+  high: number;
+  low: number;
 }
 
 export interface AdaptiveLadderLevel {
@@ -108,7 +116,19 @@ export interface AdaptiveLadderLevel {
   estimatedRiskToStop: number;
   distanceFromEntry: number;
   riskToStopForLot: number;
+  dayMarginForLot: number;
+  cumulativeDayMargin: number;
+  profitToTakeProfit1: number | null;
+  profitToTakeProfit2: number | null;
+  cumulativeProfitToTakeProfit1: number | null;
+  cumulativeProfitToTakeProfit2: number | null;
+  basis: AdaptiveLayerBasis;
+  invalidationProgress: number;
   reason: string;
+}
+
+export interface AdaptiveRejectedLadderLevel extends AdaptiveLadderLevel {
+  rejectReason: AdaptiveLayerRejectReason;
 }
 
 export interface AdaptiveSidePositionPlan {
@@ -120,7 +140,14 @@ export interface AdaptiveSidePositionPlan {
   totalLots: number;
   marginRequired: number;
   estimatedCycleLoss: number;
+  weightedAverageEntry: number;
+  totalFundsAtStop: number;
+  profitToTakeProfit1: number | null;
+  profitToTakeProfit2: number | null;
+  riskRewardToTakeProfit1: number | null;
+  riskRewardToTakeProfit2: number | null;
   ladder: AdaptiveLadderLevel[];
+  rejectedLadder: AdaptiveRejectedLadderLevel[];
 }
 
 export interface AdaptivePositionPlanResult {
@@ -204,9 +231,9 @@ const RECOMMENDATION_PROFILES: Record<AdaptiveRiskPreference, {
   riskBudget: number;
   layerLotFactors: number[];
 }> = {
-  safe: { levels: 1, marginUsage: 0.5, riskBudget: 0.2, layerLotFactors: [0.5] },
-  balanced: { levels: 2, marginUsage: 0.65, riskBudget: 0.25, layerLotFactors: [0.75, 0.5] },
-  active: { levels: 3, marginUsage: 0.75, riskBudget: 0.3, layerLotFactors: [1, 0.75, 0.5] },
+  safe: { levels: 2, marginUsage: 0.5, riskBudget: 0.2, layerLotFactors: [0.6, 0.45] },
+  balanced: { levels: 4, marginUsage: 0.65, riskBudget: 0.25, layerLotFactors: [0.85, 0.7, 0.6, 0.5] },
+  active: { levels: 6, marginUsage: 0.75, riskBudget: 0.3, layerLotFactors: [1, 0.9, 0.8, 0.7, 0.6, 0.5] },
 };
 
 function marketForInstrument(instrument: string): AdaptiveMarket | null {
@@ -325,6 +352,14 @@ function priceFromTradeSide(side: TradeSide, field: "entryZone" | "stopLoss" | "
   return values[0];
 }
 
+function entryRangeFromTradeSide(side: TradeSide): { low: number; high: number; midpoint: number } | null {
+  const values = numericValues(side.entryZone);
+  if (values.length === 0) return null;
+  const low = Math.min(values[0], values[1] ?? values[0]);
+  const high = Math.max(values[0], values[1] ?? values[0]);
+  return { low, high, midpoint: (low + high) / 2 };
+}
+
 function roundPrice(value: number, minMovement: number): number {
   const decimals = Math.max(0, (String(minMovement).split(".")[1] ?? "").length);
   return Number((Math.round(value / minMovement) * minMovement).toFixed(decimals));
@@ -398,6 +433,55 @@ function timeframeIsShort(timeframe: string | null): boolean {
   return timeframe != null && ["1m", "5m", "15m"].includes(timeframe.toLowerCase());
 }
 
+export function getAdaptiveChartCandidatePrices(
+  candles: AdaptiveChartCandle[],
+  tradePlan: TradePlan,
+  minMovement: number,
+): { buy: number[]; sell: number[] } {
+  const recent = candles
+    .filter((candle) => Number.isFinite(candle.high) && Number.isFinite(candle.low) && candle.high >= candle.low)
+    .slice(-160);
+  const candidates: { buy: number[]; sell: number[] } = { buy: [], sell: [] };
+  if (recent.length < 5 || !Number.isFinite(minMovement) || minMovement <= 0) return candidates;
+
+  const collect = (side: "buy" | "sell"): number[] => {
+    const tradeSide = tradePlan[side];
+    const entry = priceFromTradeSide(tradeSide, "entryZone");
+    const stop = priceFromTradeSide(tradeSide, "stopLoss");
+    if (entry == null || stop == null) return [];
+    const distance = Math.abs(entry - stop);
+    const minimumSeparation = Math.max(minMovement * 2, distance * 0.025);
+    const raw: number[] = [];
+    for (let index = 2; index < recent.length - 2; index += 1) {
+      const candle = recent[index];
+      const neighbors = [
+        recent[index - 2],
+        recent[index - 1],
+        recent[index + 1],
+        recent[index + 2],
+      ];
+      const isSwing = side === "buy"
+        ? neighbors.every((neighbor) => candle.low <= neighbor.low)
+        : neighbors.every((neighbor) => candle.high >= neighbor.high);
+      const price = side === "buy" ? candle.low : candle.high;
+      const insideSavedRiskPath = side === "buy"
+        ? price > stop && price < entry
+        : price < stop && price > entry;
+      if (isSwing && insideSavedRiskPath) raw.push(roundPrice(price, minMovement));
+    }
+    const ordered = [...new Set(raw)].sort((a, b) =>
+      side === "buy" ? b - a : a - b,
+    );
+    return ordered.filter((price, index, accepted) =>
+      index === 0 || accepted.slice(0, index).every((other) => Math.abs(other - price) >= minimumSeparation),
+    ).slice(0, 6);
+  };
+
+  candidates.buy = collect("buy");
+  candidates.sell = collect("sell");
+  return candidates;
+}
+
 function sideGeometryError(side: "buy" | "sell", tradeSide: TradeSide): string | null {
   const entry = priceFromTradeSide(tradeSide, "entryZone");
   const stopLoss = priceFromTradeSide(tradeSide, "stopLoss");
@@ -420,74 +504,132 @@ function sidePlan(
   rule: AdaptiveRule,
   levels = input.levels,
 ): AdaptiveSidePositionPlan | null {
-  const rawEntry = priceFromTradeSide(tradeSide, "entryZone");
+  const entryRange = entryRangeFromTradeSide(tradeSide);
+  const rawEntry = entryRange?.midpoint ?? null;
   const rawStopLoss = priceFromTradeSide(tradeSide, "stopLoss");
   if (rawEntry == null || rawStopLoss == null || rawEntry === rawStopLoss || input.initialLot == null) return null;
   const entry = roundPrice(rawEntry, rule.minMovement);
   const stopLoss = roundPrice(rawStopLoss, rule.minMovement);
+  const takeProfit1Value = priceFromTradeSide(tradeSide, "takeProfit1");
+  const takeProfit2Value = priceFromTradeSide(tradeSide, "takeProfit2");
+  const takeProfit1 = takeProfit1Value == null ? null : roundPrice(takeProfit1Value, rule.minMovement);
+  const takeProfit2 = takeProfit2Value == null ? null : roundPrice(takeProfit2Value, rule.minMovement);
 
   const distance = side === "buy" ? entry - stopLoss : stopLoss - entry;
   const ladder: AdaptiveLadderLevel[] = [];
   const lotStep = rule.lotStep;
-  let cumulativeLots = input.initialLot;
   const initialLot = roundLot(input.initialLot, lotStep);
-  let estimatedCycleLoss = distance * rule.contractSize * initialLot;
+  const profitForLot = (price: number, target: number | null, lot: number): number | null => {
+    if (target == null) return null;
+    const move = side === "buy" ? target - price : price - target;
+    return move > 0 ? move * rule.contractSize * lot : null;
+  };
+  const checkpointProgress: Array<{ progress: number; basis: AdaptiveLayerBasis }> = [];
+  const adverseEdge = entryRange == null
+    ? entry
+    : roundPrice(side === "buy" ? entryRange.low : entryRange.high, rule.minMovement);
+  const edgeProgress = Math.abs(entry - adverseEdge) / distance;
+  if (adverseEdge !== entry && adverseEdge !== stopLoss && edgeProgress > 0 && edgeProgress < 1) {
+    checkpointProgress.push({ progress: edgeProgress, basis: "entry_zone_edge" });
+  }
+  for (const price of input.checkpointPrices?.[side] ?? []) {
+    const progress = Math.abs(entry - roundPrice(price, rule.minMovement)) / distance;
+    if (!Number.isFinite(progress) || progress <= 0 || progress >= 1) continue;
+    if (checkpointProgress.some((candidate) => Math.abs(candidate.progress - progress) < 1e-6)) continue;
+    checkpointProgress.push({ progress, basis: "current_chart_swing" });
+  }
+  checkpointProgress.sort((a, b) => a.progress - b.progress);
 
-  ladder.push({
-    level: 0,
-    price: roundPrice(entry, rule.minMovement),
-    lot: initialLot,
-    cumulativeLots: initialLot,
-    estimatedRiskToStop: estimatedCycleLoss,
-    distanceFromEntry: 0,
-    riskToStopForLot: estimatedCycleLoss,
-    reason: "Initial market entry from the Standard Plan.",
-  });
-  cumulativeLots = initialLot;
+  const plannedEntries = [
+    { price: entry, lot: initialLot, basis: "analysis_entry" as const, invalidationProgress: 0 },
+    ...checkpointProgress.slice(0, levels).map(({ progress, basis }, index) => {
+      const requestedFactor = input.layerLotFactors?.[index] ?? 1;
+      const requestedLot = initialLot * Math.min(1, Math.max(0, requestedFactor));
+      return {
+        price: roundPrice(
+          side === "buy" ? entry - distance * progress : entry + distance * progress,
+          rule.minMovement,
+        ),
+        lot: Math.max(rule.minimumLot, floorLot(requestedLot, lotStep)),
+        basis,
+        invalidationProgress: progress,
+      };
+    }),
+  ];
 
-  for (let level = 1; level <= levels; level += 1) {
-    const adverseFraction = level / (input.levels + 1);
-    const price =
-      side === "buy"
-        ? entry - distance * adverseFraction
-        : entry + distance * adverseFraction;
-    // Each add is conditional and may be smaller than the initial entry.
-    // It never exceeds the initial lot, so a staged plan cannot turn into a
-    // mechanically escalating martingale.
-    const requestedFactor = input.layerLotFactors?.[level - 1] ?? 1;
-    const requestedLot = initialLot * Math.min(1, Math.max(0, requestedFactor));
-    const lot = Math.max(rule.minimumLot, floorLot(requestedLot, lotStep));
-    cumulativeLots = roundLot(cumulativeLots + lot, lotStep);
-    const riskToStop = (side === "buy" ? price - stopLoss : stopLoss - price) * rule.contractSize * lot;
-    estimatedCycleLoss += riskToStop;
+  let cumulativeLots = 0;
+  let cumulativeRisk = 0;
+  let cumulativeDayMargin = 0;
+  let cumulativeProfitToTakeProfit1: number | null = takeProfit1 == null ? null : 0;
+  let cumulativeProfitToTakeProfit2: number | null = takeProfit2 == null ? null : 0;
+  let weightedEntryTotal = 0;
+  for (const [level, planned] of plannedEntries.entries()) {
+    cumulativeLots = roundLot(cumulativeLots + planned.lot, lotStep);
+    const riskToStopForLot =
+      (side === "buy" ? planned.price - stopLoss : stopLoss - planned.price) *
+      rule.contractSize *
+      planned.lot;
+    const dayMarginForLot = planned.lot * rule.marginPerLot;
+    const profitToTakeProfit1 = profitForLot(planned.price, takeProfit1, planned.lot);
+    const profitToTakeProfit2 = profitForLot(planned.price, takeProfit2, planned.lot);
+    cumulativeRisk += riskToStopForLot;
+    cumulativeDayMargin += dayMarginForLot;
+    weightedEntryTotal += planned.price * planned.lot;
+    cumulativeProfitToTakeProfit1 =
+      cumulativeProfitToTakeProfit1 == null || profitToTakeProfit1 == null
+        ? null
+        : cumulativeProfitToTakeProfit1 + profitToTakeProfit1;
+    cumulativeProfitToTakeProfit2 =
+      cumulativeProfitToTakeProfit2 == null || profitToTakeProfit2 == null
+        ? null
+        : cumulativeProfitToTakeProfit2 + profitToTakeProfit2;
     ladder.push({
       level,
-      price: roundPrice(price, rule.minMovement),
-      lot,
+      price: planned.price,
+      lot: planned.lot,
       cumulativeLots,
-      estimatedRiskToStop: estimatedCycleLoss,
-      distanceFromEntry: Math.abs(entry - price),
-      riskToStopForLot: riskToStop,
-      reason: `Manual checkpoint ${level}: level must be reachable, the analysis must remain aligned, invalidation must be clear, and no new fundamental risk may require review. The adverse price move alone is not a trigger; equal lot sizing trades lower escalation risk for a higher cumulative exposure if every checkpoint is used.`,
+      estimatedRiskToStop: cumulativeRisk,
+      distanceFromEntry: Math.abs(entry - planned.price),
+      riskToStopForLot,
+      dayMarginForLot,
+      cumulativeDayMargin,
+      profitToTakeProfit1,
+      profitToTakeProfit2,
+      cumulativeProfitToTakeProfit1,
+      cumulativeProfitToTakeProfit2,
+      basis: planned.basis,
+      invalidationProgress: planned.invalidationProgress,
+      reason: planned.basis === "analysis_entry"
+        ? "Initial entry from the saved Standard Plan."
+        : planned.basis === "entry_zone_edge"
+          ? "Conditional checkpoint at the adverse edge of the saved analysis entry zone."
+          : `Conditional current-chart swing inside the saved analysis entry-to-stop path (${Math.round(planned.invalidationProgress * 100)}% toward the final stop).`,
     });
   }
+
+  const weightedAverageEntry = weightedEntryTotal / cumulativeLots;
+  const profitToTakeProfit1 = ladder.at(-1)?.cumulativeProfitToTakeProfit1 ?? null;
+  const profitToTakeProfit2 = ladder.at(-1)?.cumulativeProfitToTakeProfit2 ?? null;
 
   return {
     side,
     entry,
     stopLoss,
-    takeProfit1: (() => {
-      const value = priceFromTradeSide(tradeSide, "takeProfit1");
-      return value == null ? null : roundPrice(value, rule.minMovement);
-    })(),
-    takeProfit2: (() => {
-      const value = priceFromTradeSide(tradeSide, "takeProfit2");
-      return value == null ? null : roundPrice(value, rule.minMovement);
-    })(),
+    takeProfit1,
+    takeProfit2,
     totalLots: cumulativeLots,
     marginRequired: cumulativeLots * rule.marginPerLot,
-    estimatedCycleLoss,
+    estimatedCycleLoss: cumulativeRisk,
+    weightedAverageEntry: roundPrice(weightedAverageEntry, rule.minMovement),
+    totalFundsAtStop: cumulativeDayMargin + cumulativeRisk,
+    profitToTakeProfit1,
+    profitToTakeProfit2,
+    riskRewardToTakeProfit1:
+      profitToTakeProfit1 == null || cumulativeRisk <= 0 ? null : profitToTakeProfit1 / cumulativeRisk,
+    riskRewardToTakeProfit2:
+      profitToTakeProfit2 == null || cumulativeRisk <= 0 ? null : profitToTakeProfit2 / cumulativeRisk,
     ladder,
+    rejectedLadder: [],
   };
 }
 
@@ -523,11 +665,13 @@ export function createAdaptivePlanFingerprint({
   tradePlan,
   context,
   standardRule,
+  checkpointPrices,
 }: {
   instrument: string;
   tradePlan: TradePlan;
   context: AdaptiveAnalysisContext;
   standardRule: StandardTradingRuleInstrument | null | undefined;
+  checkpointPrices?: { buy?: number[]; sell?: number[] };
 }): string {
   return JSON.stringify({
     instrument,
@@ -552,6 +696,7 @@ export function createAdaptivePlanFingerprint({
           minimumPriceMovement: standardRule.minimumPriceMovement,
         }
       : null,
+    checkpointPrices: checkpointPrices ?? null,
   });
 }
 
@@ -601,8 +746,8 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const tierMax = rule.maximumLot;
   const plans = [buy, sell].filter((plan): plan is AdaptiveSidePositionPlan => plan != null);
   for (const plan of plans) {
-    if (tierMax != null && plan.ladder.some((level) => level.lot > tierMax)) {
-      errors.push(`The ${input.accountTier} tier caps each ladder entry at ${tierMax.toFixed(2)} lot.`);
+    if (tierMax != null && plan.totalLots > tierMax) {
+      errors.push(`The ${input.accountTier} tier caps total open exposure at ${tierMax.toFixed(2)} lot.`);
     }
     if ((input.existingExposure ?? 0) + plan.totalLots > (input.freeMargin ?? 0) / rule.marginPerLot) {
       errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} exposure exceeds free-margin capacity.`);
@@ -639,6 +784,43 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   };
 }
 
+function addRejectedCandidates(
+  accepted: AdaptivePositionPlanResult,
+  candidate: AdaptivePositionPlanResult,
+  marginBudget: number,
+  maximumLoss: number,
+  analysisLevelLimit: number,
+): AdaptivePositionPlanResult {
+  const decorate = (
+    acceptedSide: AdaptiveSidePositionPlan | null,
+    candidateSide: AdaptiveSidePositionPlan | null,
+  ): AdaptiveSidePositionPlan | null => {
+    if (!acceptedSide || !candidateSide) return acceptedSide;
+    const rejectedLadder = candidateSide.ladder
+      .slice(acceptedSide.ladder.length)
+      .map((level): AdaptiveRejectedLadderLevel => ({
+        ...level,
+        rejectReason:
+          candidate.rule?.maximumLot != null && level.cumulativeLots > candidate.rule.maximumLot
+            ? "tier_limit"
+            : level.cumulativeDayMargin > marginBudget
+              ? "day_margin"
+              : level.estimatedRiskToStop > maximumLoss
+                ? "loss_ceiling"
+                : level.level > analysisLevelLimit
+                  ? "analysis_limit"
+                  : "analysis_limit",
+      }));
+    return { ...acceptedSide, rejectedLadder };
+  };
+
+  return {
+    ...accepted,
+    buy: decorate(accepted.buy, candidate.buy),
+    sell: decorate(accepted.sell, candidate.sell),
+  };
+}
+
 /**
  * Builds a practical position-size recommendation from the user's available
  * margin and the entry/stop levels already produced by the AI analysis.
@@ -653,6 +835,7 @@ export function buildAdaptivePlanRecommendation({
   accountTier = "mini",
   preference,
   context: analysisContext,
+  checkpointPrices,
 }: {
   instrument: string;
   tradePlan: TradePlan;
@@ -661,6 +844,7 @@ export function buildAdaptivePlanRecommendation({
   accountTier?: AccountTier;
   preference: AdaptiveRiskPreference;
   context?: AdaptiveAnalysisContext;
+  checkpointPrices?: { buy?: number[]; sell?: number[] };
 }): AdaptivePlanRecommendation {
   const market = marketForInstrument(instrument);
   const rule = ruleFromStandardTradingRules(instrument, standardRule, accountTier);
@@ -703,9 +887,11 @@ export function buildAdaptivePlanRecommendation({
   const marginPerLot = rule.marginPerLot;
 
   const profile = RECOMMENDATION_PROFILES[preference];
-  let levels = profile.levels;
+  const requestedLevels = profile.levels;
+  let levels = requestedLevels;
   let marginUsage = profile.marginUsage;
   let riskBudget = profile.riskBudget;
+  let softWarningCount = 0;
 
   if (!hasCompleteContext(context)) {
     posture = "entry_only";
@@ -716,29 +902,19 @@ export function buildAdaptivePlanRecommendation({
     if (!context.fundamental.available) reasonCodes.push("fundamental_unavailable");
   } else {
     if (timeframeIsShort(context.timeframe)) {
-      levels = 0;
-      marginUsage = Math.min(marginUsage, 0.5);
-      riskBudget = Math.min(riskBudget, 0.08);
-      posture = "entry_only";
+      softWarningCount += 1;
       reasonCodes.push("short_timeframe");
     }
     if (context.riskLevel === "high") {
-      levels = 0;
-      marginUsage = Math.min(marginUsage, 0.5);
-      riskBudget = Math.min(riskBudget, 0.08);
-      posture = "entry_only";
+      softWarningCount += 1;
       reasonCodes.push("high_risk");
     }
     if (context.marketCondition === "volatile") {
-      levels = 0;
-      marginUsage = Math.min(marginUsage, 0.5);
-      riskBudget = Math.min(riskBudget, 0.08);
-      posture = "entry_only";
+      softWarningCount += 1;
       reasonCodes.push("volatile_market");
     }
-    if (context.confidenceMax != null && context.confidenceMax < 60) {
-      levels = 0;
-      posture = "entry_only";
+    if (context.confidenceMax != null && context.confidenceMax < 70) {
+      softWarningCount += 1;
       reasonCodes.push("low_confidence");
     }
 
@@ -755,8 +931,10 @@ export function buildAdaptivePlanRecommendation({
     let hasDirectionalConflict = Boolean(marketDirection && biasDirection && marketDirection !== biasDirection);
 
     if (context.tradingBias === "neutral") {
-      levels = 0;
-      posture = "entry_only";
+      softWarningCount += 1;
+      preferredSide = tradePlan.preferredSide === "buy" || tradePlan.preferredSide === "sell"
+        ? tradePlan.preferredSide
+        : "none";
       reasonCodes.push("neutral_bias");
     } else if (biasDirection === "buy") {
       preferredSide = "buy";
@@ -773,8 +951,7 @@ export function buildAdaptivePlanRecommendation({
       const totalDirectional = buy + sell;
       const imbalance = totalDirectional > 0 ? Math.abs(buy - sell) / totalDirectional : 0;
       if (totalDirectional === 0 || imbalance < 0.2) {
-        levels = 0;
-        posture = "entry_only";
+        softWarningCount += 1;
         reasonCodes.push("technical_mixed");
       } else if (buy > sell) {
         reasonCodes.push("technical_supports_buy");
@@ -800,15 +977,18 @@ export function buildAdaptivePlanRecommendation({
     }
 
     if (context.fundamental.highImpactCount > 0) {
-      levels = 0;
-      marginUsage = Math.min(marginUsage, 0.5);
-      riskBudget = Math.min(riskBudget, 0.08);
-      if (posture !== "not_recommended") posture = "entry_only";
+      softWarningCount += 1;
       reasonCodes.push("fundamental_high_impact");
     } else if (context.fundamental.newsCount + context.fundamental.eventCount > 0) {
       reasonCodes.push("fundamental_present");
     } else {
       reasonCodes.push("fundamental_clear");
+    }
+    if (posture !== "not_recommended") {
+      // These conditions change the density and size of the plan instead of
+      // erasing every checkpoint. Two soft warnings remove one candidate,
+      // while the hard day-margin and final-stop loss ceilings remain intact.
+      levels = Math.max(0, levels - Math.floor((softWarningCount + 1) / 2));
     }
   }
 
@@ -827,6 +1007,8 @@ export function buildAdaptivePlanRecommendation({
 
   let fallback: AdaptivePositionPlanResult | null = null;
   const capacity = getAdaptiveMarginCapacity(marginBudget, rule);
+  const warningLotScale = Math.max(0.5, 1 - softWarningCount * 0.08);
+  const layerLotFactors = profile.layerLotFactors.map((factor) => factor * warningLotScale);
   const lotCandidates: number[] = [];
   for (
     let lot = capacity;
@@ -868,7 +1050,8 @@ export function buildAdaptivePlanRecommendation({
             : preferredSide === "sell"
               ? { buy: buyPlanAvailable, sell: true }
               : { buy: buyPlanAvailable, sell: sellPlanAvailable },
-        layerLotFactors: profile.layerLotFactors.slice(0, candidateLevels),
+        layerLotFactors: layerLotFactors.slice(0, candidateLevels),
+        checkpointPrices,
         maxCycleLossPercent: 2,
       });
       fallback ??= result;
@@ -885,19 +1068,58 @@ export function buildAdaptivePlanRecommendation({
             decision: { posture, preferredSide, reasonCodes },
           };
         }
+        const acceptedLevels = Math.max(
+          preferredSide === "buy" ? (result.buy?.ladder.length ?? 1) - 1 : 0,
+          preferredSide === "sell" ? (result.sell?.ladder.length ?? 1) - 1 : 0,
+          preferredSide === "both"
+            ? Math.max(
+                (result.buy?.ladder.length ?? 1) - 1,
+                (result.sell?.ladder.length ?? 1) - 1,
+              )
+            : 0,
+        );
         const effectivePosture =
-          candidateLevels === 0 && posture === "scaling_allowed"
+          acceptedLevels === 0 && posture === "scaling_allowed"
             ? "entry_only"
             : posture;
         const effectiveReasonCodes =
-          candidateLevels === 0
+          acceptedLevels === 0
             ? reasonCodes.filter((code) => code !== "staged_add_condition")
             : reasonCodes;
+        const fullCandidate =
+          candidateLevels < requestedLevels
+            ? buildAdaptivePositionPlan({
+                instrument,
+                tradePlan,
+                standardRule,
+                equity: normalizedEquity,
+                freeMargin: marginBudget,
+                existingExposure: 0,
+                initialLot,
+                accountTier,
+                levels: requestedLevels,
+                sideLevels:
+                  preferredSide === "buy"
+                    ? { buy: requestedLevels, sell: 0 }
+                    : preferredSide === "sell"
+                      ? { buy: 0, sell: requestedLevels }
+                      : { buy: requestedLevels, sell: requestedLevels },
+                includedSides:
+                  preferredSide === "buy"
+                    ? { buy: true, sell: sellPlanAvailable }
+                    : preferredSide === "sell"
+                      ? { buy: buyPlanAvailable, sell: true }
+                      : { buy: buyPlanAvailable, sell: sellPlanAvailable },
+                layerLotFactors,
+                checkpointPrices,
+                maxCycleLossPercent: 2,
+              })
+            : result;
         return {
-          result,
+          result: addRejectedCandidates(result, fullCandidate, marginBudget, maximumLoss, levels),
           recommendation: {
             initialLot,
-            levels: candidateLevels,
+            levels: acceptedLevels,
             marginBudget,
             maximumLoss,
           },

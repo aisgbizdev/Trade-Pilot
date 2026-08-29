@@ -123,11 +123,25 @@ const STANDARD_RULES_PAYLOAD = {
 
 function standardRulesHandler(status = 200): FetchHandler {
   return (url, init) => {
-    if ((init?.method ?? "GET").toUpperCase() === "GET" && url.includes("/api/trading-rules/standard")) {
+    if ((init?.method ?? "GET").toUpperCase() !== "GET") return null;
+    if (url.includes("/api/trading-rules/standard")) {
       return jsonResponse(
         status >= 400 ? { error: "Rules temporarily unavailable" } : STANDARD_RULES_PAYLOAD,
         status,
       );
+    }
+    if (url.includes("/api/historical/candles") && url.includes("purpose=adaptive-layering")) {
+      return jsonResponse({
+        candles: [
+          { date: "2026-08-29T01:00:00.000Z", open: 2304, high: 2305, low: 2300, close: 2302 },
+          { date: "2026-08-29T02:00:00.000Z", open: 2302, high: 2304, low: 2298, close: 2300 },
+          { date: "2026-08-29T03:00:00.000Z", open: 2300, high: 2302, low: 2295, close: 2297 },
+          { date: "2026-08-29T04:00:00.000Z", open: 2297, high: 2301, low: 2297, close: 2300 },
+          { date: "2026-08-29T05:00:00.000Z", open: 2300, high: 2307, low: 2299, close: 2305 },
+          { date: "2026-08-29T06:00:00.000Z", open: 2305, high: 2309, low: 2301, close: 2303 },
+          { date: "2026-08-29T07:00:00.000Z", open: 2303, high: 2306, low: 2299, close: 2301 },
+        ],
+      });
     }
     return null;
   };
@@ -237,6 +251,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
+    expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/saved analysis shown above/i);
+    expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/Current chart.*separate layer candidates/i);
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
     expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(/Day trade only/i);
     expect(screen.getByTestId("button-adaptive-account-micro")).toHaveTextContent("Micro");
@@ -247,6 +263,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("button-adaptive-preference-balanced")).toHaveTextContent("Medium Risk");
     expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent("High Risk");
     fireEvent.change(margin, { target: { value: "100000" } });
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     expect(screen.getByTestId("adaptive-account-suggestion")).toHaveTextContent(/Regular is the largest tier that still fits/i);
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
@@ -289,6 +306,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     fireEvent.change(margin, { target: { value: "20000" } });
     fireEvent.click(screen.getByTestId("button-adaptive-account-regular"));
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
 
     expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Regular: a minimum 1 lot requires \$1,000 margin/i);
@@ -298,12 +316,15 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-plan-invalid")).not.toBeInTheDocument();
-    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/2 lot/i);
+    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/1 lot/i);
+    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/Weighted average entry/i);
+    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/Candidate layers not included/i);
+    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/cumulative-loss ceiling/i);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v8:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v9:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -328,7 +349,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v8:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v9:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("fails closed when TP Standard Trading Rules cannot be loaded", async () => {

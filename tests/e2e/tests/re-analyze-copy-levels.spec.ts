@@ -491,7 +491,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v8:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v9:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -503,7 +503,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v8:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v9:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();

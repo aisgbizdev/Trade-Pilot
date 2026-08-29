@@ -9,16 +9,20 @@ import type { Translations } from "@/locales/en";
 import {
   buildAdaptivePlanRecommendation,
   createAdaptivePlanFingerprint,
+  getAdaptiveChartCandidatePrices,
   getAdaptiveMarginCapacity,
   getAdaptiveMarketRule,
   getAdaptiveStandardRuleCode,
   type AccountTier,
   type AdaptiveAnalysisContext,
+  type AdaptiveLadderLevel,
+  type AdaptiveLayerRejectReason,
   type AdaptivePlanContext,
   type AdaptivePlanDecision,
   type AdaptivePlanRecommendation,
   type AdaptivePlanReasonCode,
   type AdaptiveRiskPreference,
+  type AdaptiveChartCandle,
   type AdaptiveSidePositionPlan,
 } from "@/lib/adaptive-position-plan";
 
@@ -48,7 +52,7 @@ const DEFAULT_FORM: FormState = {
 const ACCOUNT_TIERS = ["micro", "mini", "regular"] as const;
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v8:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v9:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -122,17 +126,33 @@ function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, 
 }
 
 function stageReason(
-  level: AdaptiveSidePositionPlan["ladder"][number],
+  level: AdaptiveLadderLevel,
   lang: "en" | "id",
   copy: AdaptiveCopy,
 ): string {
   if (level.level === 0) return copy.adaptive_stage_initial_reason;
+  const basis = level.basis === "entry_zone_edge"
+    ? copy.adaptive_stage_basis_entry_edge
+    : copy.adaptive_stage_basis_risk_checkpoint.replace(
+        "{progress}",
+        formatNumber(level.invalidationProgress * 100, lang, 0),
+      );
   return copy.adaptive_stage_add_reason
     .replace("{level}", String(level.level))
     .replace("{price}", formatNumber(level.price, lang, 4))
     .replace("{distance}", formatNumber(level.distanceFromEntry, lang, 4))
     .replace("{lot}", formatNumber(level.lot, lang))
-    .replace("{risk}", formatMoney(level.riskToStopForLot, lang));
+    .replace("{risk}", formatMoney(level.riskToStopForLot, lang))
+    .replace("{basis}", basis);
+}
+
+function rejectedReason(reason: AdaptiveLayerRejectReason, copy: AdaptiveCopy): string {
+  switch (reason) {
+    case "analysis_limit": return copy.adaptive_rejected_analysis;
+    case "day_margin": return copy.adaptive_rejected_margin;
+    case "loss_ceiling": return copy.adaptive_rejected_loss;
+    case "tier_limit": return copy.adaptive_rejected_tier;
+  }
 }
 
 function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPlan; lang: "en" | "id"; copy: AdaptiveCopy; decision: AdaptivePlanDecision }) {
@@ -153,19 +173,27 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         <span className="text-muted-foreground">{copy.adaptive_entry}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.entry, lang, 4)}</span>
         <span className="text-muted-foreground">{copy.adaptive_stop}</span><span className="text-right font-semibold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</span>
+        <span className="text-muted-foreground">{copy.adaptive_weighted_entry}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.weightedAverageEntry, lang, 4)}</span>
         <span className="text-muted-foreground">{copy.adaptive_cycle_loss}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</span>
         <span className="text-muted-foreground">{copy.adaptive_margin_required}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.marginRequired, lang)}</span>
+        <span className="text-muted-foreground">{copy.adaptive_funds_at_stop}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.totalFundsAtStop, lang)}</span>
+        <span className="text-muted-foreground">{copy.adaptive_profit_tp1}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.profitToTakeProfit1, lang)}{plan.riskRewardToTakeProfit1 == null ? "" : ` · 1:${formatNumber(plan.riskRewardToTakeProfit1, lang, 2)}`}</span>
+        <span className="text-muted-foreground">{copy.adaptive_profit_tp2}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.profitToTakeProfit2, lang)}{plan.riskRewardToTakeProfit2 == null ? "" : ` · 1:${formatNumber(plan.riskRewardToTakeProfit2, lang, 2)}`}</span>
       </div>
         <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
       <div className="overflow-x-auto">
-          <table className="w-full min-w-[24rem] text-[11px]">
-            <thead className="text-muted-foreground border-b border-border/70"><tr><th className="text-left whitespace-nowrap py-1 pr-3 font-medium">{copy.adaptive_level}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_price}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_lot}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_cumulative}</th></tr></thead>
+          <table className="w-full min-w-[48rem] text-[11px]">
+            <thead className="text-muted-foreground border-b border-border/70"><tr><th className="text-left whitespace-nowrap py-1 pr-3 font-medium">{copy.adaptive_level}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_price}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_lot}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_cumulative}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_day_margin}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_stop_risk}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_profit_tp1}</th><th className="text-right whitespace-nowrap px-2 py-1 font-medium">{copy.adaptive_profit_tp2}</th></tr></thead>
           <tbody>{plan.ladder.map((level) => (
             <tr key={`${plan.side}-${level.level}`} className="border-b border-border/40 last:border-0 align-top">
                 <td className="py-1.5 pr-3 font-semibold whitespace-nowrap">{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatNumber(level.price, lang, 4)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatNumber(level.lot, lang)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatNumber(level.cumulativeLots, lang)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatMoney(level.cumulativeDayMargin, lang)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatMoney(level.estimatedRiskToStop, lang)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatMoney(level.cumulativeProfitToTakeProfit1, lang)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{formatMoney(level.cumulativeProfitToTakeProfit2, lang)}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -184,6 +212,21 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
               </div>
             ))}
           </div>
+          {plan.rejectedLadder.length > 0 && (
+            <div className="mt-3 space-y-2 border-t border-amber-300/60 pt-2" data-testid={`adaptive-rejected-${plan.side}`}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">{copy.adaptive_rejected_title}</p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_rejected_help}</p>
+              {plan.rejectedLadder.map((level) => (
+                <div key={`${plan.side}-rejected-${level.level}`} className="rounded-md border border-dashed border-amber-300 bg-amber-50/60 px-2.5 py-2 text-[11px] dark:border-amber-900 dark:bg-amber-950/20">
+                  <div className="flex flex-wrap justify-between gap-2 font-semibold">
+                    <span>L{level.level} · {formatNumber(level.price, lang, 4)} · {formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
+                    <span className="text-amber-700 dark:text-amber-400">{copy.adaptive_rejected_badge}</span>
+                  </div>
+                  <p className="mt-1 text-muted-foreground">{rejectedReason(level.rejectReason, copy)}</p>
+                </div>
+              ))}
+            </div>
+          )}
       </div>
     </div>
   );
@@ -192,6 +235,10 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
 export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, context, lang, copy }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
+  const [chartCandidateState, setChartCandidateState] = useState<{
+    status: "loading" | "ready" | "error";
+    prices: { buy: number[]; sell: number[] };
+  }>({ status: "loading", prices: { buy: [], sell: [] } });
   const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
@@ -203,6 +250,43 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   const selectedRule = rulesAvailable
     ? getAdaptiveMarketRule(instrument, standardRule, form.accountTier)
     : null;
+  useEffect(() => {
+    if (!rulesAvailable || !context.timeframe || !selectedRule) {
+      setChartCandidateState({ status: "error", prices: { buy: [], sell: [] } });
+      return;
+    }
+    let cancelled = false;
+    setChartCandidateState({ status: "loading", prices: { buy: [], sell: [] } });
+    fetch(
+      `/api/historical/candles?instrument=${encodeURIComponent(instrument)}&timeframe=${encodeURIComponent(context.timeframe)}&purpose=adaptive-layering`,
+      { credentials: "include" },
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json() as Promise<{ candles?: unknown[] }>;
+      })
+      .then((payload) => {
+        if (cancelled) return;
+        const candles = (Array.isArray(payload.candles) ? payload.candles : [])
+          .filter((value): value is AdaptiveChartCandle => {
+            if (!isRecord(value)) return false;
+            return typeof value.high === "number" &&
+              Number.isFinite(value.high) &&
+              typeof value.low === "number" &&
+              Number.isFinite(value.low);
+          });
+        setChartCandidateState({
+          status: "ready",
+          prices: getAdaptiveChartCandidatePrices(candles, tradePlan, selectedRule.minMovement),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setChartCandidateState({ status: "error", prices: { buy: [], sell: [] } });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [context.timeframe, instrument, rulesAvailable, selectedRule?.minMovement, tradePlan]);
   const marginCapacity = getAdaptiveMarginCapacity(availableMargin, selectedRule);
   const tierAssessments = rulesAvailable && availableMargin != null && availableMargin > 0
     ? Object.fromEntries(ACCOUNT_TIERS.map((accountTier) => {
@@ -216,6 +300,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           accountTier,
           preference: form.preference,
           context,
+          checkpointPrices: chartCandidateState.prices,
         });
         return [accountTier, {
           capacity,
@@ -231,6 +316,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
     tradePlan,
     context,
     standardRule: rulesAvailable ? standardRule : null,
+    checkpointPrices: chartCandidateState.prices,
   });
   const unsupportedInstrument = !isAdaptiveInstrument;
   const rulesUnavailable = isAdaptiveInstrument && !isRulesLoading && !rulesAvailable;
@@ -279,6 +365,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
       accountTier: form.accountTier,
       preference: form.preference,
       context,
+      checkpointPrices: chartCandidateState.prices,
     });
     setRecommendation(next);
     localStorage.setItem(storageKey(analysisId), JSON.stringify({ fingerprint, form, recommendation: next }));
@@ -308,6 +395,20 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         ) : (
         <>
         <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>
+        <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-analysis-basis">
+          <p className="font-semibold text-foreground">{copy.adaptive_analysis_basis_title}</p>
+          <p className="mt-1">{copy.adaptive_analysis_basis}</p>
+          <p className="mt-1">{copy.adaptive_chart_confirmation}</p>
+          <p className="mt-1 font-medium text-foreground" data-testid="adaptive-chart-candidate-status">
+            {chartCandidateState.status === "loading"
+              ? copy.adaptive_chart_candidates_loading
+              : chartCandidateState.status === "error"
+                ? copy.adaptive_chart_candidates_unavailable
+                : copy.adaptive_chart_candidates_ready
+                    .replace("{buy}", String(chartCandidateState.prices.buy.length))
+                    .replace("{sell}", String(chartCandidateState.prices.sell.length))}
+          </p>
+        </div>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={copy.adaptive_account_title}>
@@ -410,7 +511,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
+          <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || chartCandidateState.status === "loading"} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {recommendation && (
