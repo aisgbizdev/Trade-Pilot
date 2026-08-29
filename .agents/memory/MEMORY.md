@@ -12,3 +12,4 @@
 - [Account tier selection](account-tier-selection.md) — account type is explicit; funds determine capacity and suggestions only, while opening deposit stays separate from free trading margin.
 - [TradingView iframe e2e clicks](tradingview-iframe-e2e-clicks.md) — detail-test setup may need DOM click while widgets settle; keep a separate real-click smoke test for Analyze.
 - [Source-backed trading rules](source-backed-trading-rules.md) — absent fees or gap limits stay unknown, never zero; point-based instruments must round adaptive prices to their quoted movement step.
+- [Adaptive direction selector semantics](adaptive-direction-selector.md) — use native pressed buttons, not partial ARIA tabs, while only one scenario panel is mounted.

@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Calculator, ChevronDown, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-client-react";
 import type { Translations } from "@/locales/en";
 import {
@@ -79,6 +78,12 @@ function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommenda
     (value.decision.preferredSide === "buy" || value.decision.preferredSide === "sell" || value.decision.preferredSide === "both" || value.decision.preferredSide === "none") &&
     Array.isArray(value.decision.reasonCodes) &&
     value.decision.reasonCodes.every((code) => typeof code === "string");
+}
+
+function preferredAvailableSide(recommendation: AdaptivePlanRecommendation): "buy" | "sell" {
+  if (recommendation.decision.preferredSide === "sell" && recommendation.result.sell) return "sell";
+  if (recommendation.decision.preferredSide === "buy" && recommendation.result.buy) return "buy";
+  return recommendation.result.buy ? "buy" : "sell";
 }
 
 function numberValue(value: string): number | null {
@@ -156,6 +161,60 @@ function rejectedReason(reason: AdaptiveLayerRejectReason, copy: AdaptiveCopy): 
   }
 }
 
+function DirectionSwitch({
+  activeSide,
+  hasBuy,
+  hasSell,
+  copy,
+  onChange,
+}: {
+  activeSide: "buy" | "sell";
+  hasBuy: boolean;
+  hasSell: boolean;
+  copy: AdaptiveCopy;
+  onChange: (side: "buy" | "sell") => void;
+}) {
+  return (
+    <div className="space-y-1.5" data-testid="adaptive-direction-tabs">
+      <div>
+        <p className="text-xs font-bold text-foreground">{copy.adaptive_direction_title}</p>
+        <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_direction_help}</p>
+      </div>
+      <div className="inline-flex max-w-full rounded-md bg-muted p-1" role="group" aria-label={copy.adaptive_direction_title}>
+        {([
+          ["buy", hasBuy, copy.adaptive_buy, TrendingUp],
+          ["sell", hasSell, copy.adaptive_sell, TrendingDown],
+        ] as const).map(([side, available, label, Icon]) => (
+          <button
+            key={side}
+            type="button"
+            aria-pressed={activeSide === side}
+            disabled={!available}
+            onClick={() => onChange(side)}
+            className={`inline-flex min-w-0 items-center gap-1.5 rounded px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+              activeSide === side
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            } disabled:cursor-not-allowed disabled:opacity-40`}
+            data-testid={`adaptive-direction-${side}`}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{label}</span>
+          </button>
+        ))}
+      </div>
+      {(!hasBuy || !hasSell) && (
+        <p className="text-[10px] leading-relaxed text-amber-700 dark:text-amber-400" data-testid="adaptive-direction-unavailable">
+          {copy.adaptive_direction_unavailable.replace(
+            "{side}",
+            !hasBuy ? copy.adaptive_buy : copy.adaptive_sell,
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPlan; lang: "en" | "id"; copy: AdaptiveCopy; decision: AdaptivePlanDecision }) {
   const isBuy = plan.side === "buy";
   const scenarioIsPreferred = decision.preferredSide === "both" || decision.preferredSide === plan.side;
@@ -171,81 +230,84 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
         </h4>
         <Badge variant="outline" className="text-[10px]">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</Badge>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-md bg-background/70 p-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
           <p className="text-[10px] text-muted-foreground">{copy.adaptive_entry}</p>
-          <p className="mt-0.5 font-bold tabular-nums">{formatNumber(plan.entry, lang, 4)}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.entry, lang, 4)}</p>
         </div>
-        <div className="rounded-md bg-background/70 p-2">
-          <p className="text-[10px] text-muted-foreground">{copy.adaptive_stop}</p>
-          <p className="mt-0.5 font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</p>
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold text-red-600 tabular-nums dark:text-red-400">{formatNumber(plan.stopLoss, lang, 4)}</p>
         </div>
-        <div className="rounded-md bg-background/70 p-2">
-          <p className="text-[10px] text-muted-foreground">{copy.adaptive_profit_tp1}</p>
-          <p className="mt-0.5 font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatMoney(plan.profitToTakeProfit1, lang)}</p>
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
         </div>
-        <div className="rounded-md bg-background/70 p-2">
-          <p className="text-[10px] text-muted-foreground">{copy.adaptive_profit_tp2}</p>
-          <p className="mt-0.5 font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatMoney(plan.profitToTakeProfit2, lang)}</p>
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
+          <p className="truncate text-[10px] text-emerald-700 tabular-nums dark:text-emerald-400">{formatMoney(plan.profitToTakeProfit1, lang)}</p>
+        </div>
+        <div className="min-w-0 rounded-md bg-background/70 p-2">
+          <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
+          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
+          <p className="truncate text-[10px] text-emerald-700 tabular-nums dark:text-emerald-400">{formatMoney(plan.profitToTakeProfit2, lang)}</p>
         </div>
       </div>
-      <div className="rounded-md border border-border/70 bg-background/60 p-2.5" data-testid={`adaptive-plan-ladder-${plan.side}`}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.adaptive_plan_path_title}</p>
-          <span className="text-[10px] font-medium text-muted-foreground">{copy.adaptive_snapshot_manual}</span>
+      <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
+      <div className="space-y-2" data-testid={`adaptive-ladder-${plan.side}`}>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.adaptive_layer_plan_title}</p>
+          <span className="text-[10px] text-muted-foreground">{plan.ladder.length} {copy.adaptive_snapshot_layers}</span>
         </div>
-        <div className="mt-2 space-y-1.5">
+        <ol className="space-y-1.5">
           {plan.ladder.map((level) => (
-            <div key={`${plan.side}-${level.level}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md bg-muted/30 px-2.5 py-2">
-              <span className="text-[11px] font-semibold">{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</span>
-              <span className="text-right text-xs font-bold tabular-nums">{formatNumber(level.price, lang, 4)}</span>
-              <span className="text-right text-[11px] font-semibold tabular-nums">{formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-        <span className="text-muted-foreground">{copy.adaptive_cycle_loss}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</span>
-        <span className="text-muted-foreground">{copy.adaptive_margin_required}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.marginRequired, lang)}</span>
-        <span className="text-muted-foreground">{copy.adaptive_weighted_entry}</span><span className="text-right font-semibold tabular-nums">{formatNumber(plan.weightedAverageEntry, lang, 4)}</span>
-        <span className="text-muted-foreground">{copy.adaptive_funds_at_stop}</span><span className="text-right font-semibold tabular-nums">{formatMoney(plan.totalFundsAtStop, lang)}</span>
-      </div>
-      <p className="border-t border-border/60 pt-2 text-[11px] leading-relaxed text-muted-foreground">{stageGuidance}</p>
-      <details className="rounded-md border border-border/70 bg-background/50" data-testid={`adaptive-plan-details-${plan.side}`}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-[11px] font-semibold text-foreground [&::-webkit-details-marker]:hidden">
-          <span>{copy.adaptive_details_title}</span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform" aria-hidden="true" />
-        </summary>
-        <div className="space-y-2 border-t border-border/60 px-2.5 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.adaptive_stage_reason}</p>
-          {plan.ladder.map((level) => (
-            <div key={`${plan.side}-guidance-${level.level}`} className="rounded-md bg-muted/30 px-2.5 py-2">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold text-foreground">
-                <span>{level.level === 0 ? copy.adaptive_initial : `L${level.level}`}</span>
-                <span className="text-muted-foreground">·</span>
-                <span className="tabular-nums">{formatNumber(level.price, lang, 4)}</span>
-                <span className="text-muted-foreground">·</span>
-                <span className="tabular-nums">{formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
+            <li key={`${plan.side}-${level.level}`} className="rounded-md bg-background/70 px-2.5 py-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="text-[11px] font-semibold text-foreground">
+                  {level.level === 0 ? copy.adaptive_initial : `${copy.adaptive_level} ${level.level}`}
+                </span>
+                <span className="text-[11px] font-bold tabular-nums text-foreground">
+                  {formatNumber(level.price, lang, 4)} · {formatNumber(level.lot, lang)} {copy.adaptive_lot}
+                </span>
               </div>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{stageReason(level, lang, copy)}</p>
-            </div>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                {level.level === 0
+                  ? copy.adaptive_stage_initial_reason
+                  : `${copy.adaptive_layer_checkpoint} ${stageReason(level, lang, copy)}`}
+              </p>
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+                <span>{copy.adaptive_cumulative}: {formatNumber(level.cumulativeLots, lang)} {copy.adaptive_lot}</span>
+                <span>{copy.adaptive_stop_risk}: {formatMoney(level.estimatedRiskToStop, lang)}</span>
+              </div>
+            </li>
           ))}
-          {plan.rejectedLadder.length > 0 && (
-            <div className="space-y-2 border-t border-amber-300/60 pt-2" data-testid={`adaptive-rejected-${plan.side}`}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">{copy.adaptive_rejected_title}</p>
+        </ol>
+        {plan.rejectedLadder.length > 0 && (
+          <details className="border-t border-amber-300/60 pt-2 dark:border-amber-900" data-testid={`adaptive-rejected-${plan.side}`}>
+            <summary className="cursor-pointer text-[10px] font-semibold text-amber-700 dark:text-amber-400">{copy.adaptive_rejected_title}</summary>
+            <div className="mt-2 space-y-2">
               <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_rejected_help}</p>
               {plan.rejectedLadder.map((level) => (
                 <div key={`${plan.side}-rejected-${level.level}`} className="rounded-md border border-dashed border-amber-300 bg-amber-50/60 px-2.5 py-2 text-[11px] dark:border-amber-900 dark:bg-amber-950/20">
                   <div className="flex flex-wrap justify-between gap-2 font-semibold">
-                    <span>L{level.level} · {formatNumber(level.price, lang, 4)} · {formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
+                    <span>{copy.adaptive_level} {level.level} · {formatNumber(level.price, lang, 4)} · {formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
                     <span className="text-amber-700 dark:text-amber-400">{copy.adaptive_rejected_badge}</span>
                   </div>
                   <p className="mt-1 text-muted-foreground">{rejectedReason(level.rejectReason, copy)}</p>
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </details>
+        )}
+      </div>
+      <details className="border-t border-border/60 pt-2">
+        <summary className="cursor-pointer text-[10px] font-semibold text-muted-foreground">{copy.adaptive_more_calculation_details}</summary>
+        <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+          <dt className="text-muted-foreground">{copy.adaptive_weighted_entry}</dt><dd className="text-right font-semibold tabular-nums">{formatNumber(plan.weightedAverageEntry, lang, 4)}</dd>
+          <dt className="text-muted-foreground">{copy.adaptive_margin_required}</dt><dd className="text-right font-semibold tabular-nums">{formatMoney(plan.marginRequired, lang)}</dd>
+          <dt className="text-muted-foreground">{copy.adaptive_funds_at_stop}</dt><dd className="text-right font-semibold tabular-nums">{formatMoney(plan.totalFundsAtStop, lang)}</dd>
+        </dl>
       </details>
     </div>
   );
@@ -254,6 +316,7 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
 export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, context, lang, copy }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
+  const [activeSide, setActiveSide] = useState<"buy" | "sell">("buy");
   const restoredStateKeyRef = useRef<string | null>(null);
   const [chartCandidateState, setChartCandidateState] = useState<{
     status: "loading" | "ready" | "error";
@@ -357,7 +420,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   const rulesUnavailable = isAdaptiveInstrument && !isRulesLoading && !rulesAvailable;
 
   useEffect(() => {
-    if (isRulesLoading) return;
+    if (isRulesLoading || chartCandidateState.status === "loading") return;
     const restoreKey = `${analysisId}:${rulesAvailable ? "ready" : "unavailable"}`;
     const shouldRestore = restoredStateKeyRef.current !== restoreKey;
     if (shouldRestore) {
@@ -382,11 +445,12 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
       if (shouldRestore && isStoredForm(parsed.form)) setForm({ ...DEFAULT_FORM, ...parsed.form });
       if (shouldRestore && isStoredRecommendation(parsed.recommendation)) {
         setRecommendation(parsed.recommendation);
+        setActiveSide(preferredAvailableSide(parsed.recommendation));
       }
     } catch {
       // A malformed local draft should not block Standard Analysis.
     }
-  }, [analysisId, fingerprint, isRulesLoading, rulesAvailable]);
+  }, [analysisId, chartCandidateState.status, fingerprint, isRulesLoading, rulesAvailable]);
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((previous) => ({ ...previous, [field]: value }));
@@ -413,34 +477,22 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
       checkpointPrices: chartCandidateState.prices,
     });
     setRecommendation(next);
+    setActiveSide(preferredAvailableSide(next));
     localStorage.setItem(storageKey(analysisId), JSON.stringify({ fingerprint, form, recommendation: next }));
   };
   const reset = () => {
     setForm(DEFAULT_FORM);
     setRecommendation(null);
+    setActiveSide("buy");
     localStorage.removeItem(storageKey(analysisId));
   };
   const selected = recommendation?.recommendation;
-  const primaryPlan = recommendation?.decision.preferredSide === "sell"
-    ? recommendation.result.sell
-    : recommendation?.decision.preferredSide === "buy"
-      ? recommendation.result.buy
-      : recommendation?.result.buy ?? recommendation?.result.sell ?? null;
-  const [activeSide, setActiveSide] = useState<"buy" | "sell">(primaryPlan?.side ?? "buy");
-  useEffect(() => {
-    if (!recommendation) return;
-    const preferred = recommendation.decision.preferredSide;
-    if (preferred === "buy" && recommendation.result.buy) {
-      setActiveSide("buy");
-    } else if (preferred === "sell" && recommendation.result.sell) {
-      setActiveSide("sell");
-    } else if (recommendation.result.buy) {
-      setActiveSide("buy");
-    } else if (recommendation.result.sell) {
-      setActiveSide("sell");
-    }
-  }, [recommendation]);
-  const activePlan = recommendation?.result[activeSide] ?? primaryPlan;
+  const primaryPlan = recommendation
+    ? recommendation.result[activeSide] ??
+      recommendation.result.buy ??
+      recommendation.result.sell ??
+      null
+    : null;
 
   return (
     <Card className="overflow-hidden" data-testid="card-adaptive-position-plan">
@@ -460,28 +512,26 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         ) : (
         <>
         <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>
-         <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
-         <details className="group rounded-md border border-primary/20 bg-primary/[0.03] text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-analysis-basis">
-           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 font-semibold text-foreground [&::-webkit-details-marker]:hidden">
-             <span>{copy.adaptive_analysis_basis_title}</span>
-             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-           </summary>
-           <div className="space-y-1 border-t border-primary/10 px-3 pb-3 pt-2">
-             <p>{copy.adaptive_analysis_basis}</p>
-             <p>{copy.adaptive_chart_confirmation}</p>
-             <p className="font-medium text-foreground" data-testid="adaptive-chart-candidate-status">
-               {chartCandidateState.status === "loading"
-                 ? copy.adaptive_chart_candidates_loading
-                 : chartCandidateState.status === "error"
-                   ? copy.adaptive_chart_candidates_unavailable
-                   : chartCandidateState.status === "ready"
-                     ? copy.adaptive_chart_candidates_ready
-                         .replace("{buy}", String(chartCandidateState.prices.buy.length))
-                         .replace("{sell}", String(chartCandidateState.prices.sell.length))
-                     : copy.adaptive_chart_candidates_unavailable}
-             </p>
-           </div>
-         </details>
+        <details className="rounded-md border border-border/70 bg-muted/20 px-3 py-2" data-testid="adaptive-plan-method">
+          <summary className="cursor-pointer text-xs font-semibold text-foreground">{copy.adaptive_method_summary}</summary>
+          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_method_help}</p>
+          <div className="mt-2 space-y-1.5 rounded-md border border-primary/20 bg-primary/[0.03] p-2.5 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-analysis-basis">
+            <p className="font-semibold text-foreground">{copy.adaptive_analysis_basis_title}</p>
+            <p>{copy.adaptive_analysis_basis}</p>
+            <p>{copy.adaptive_chart_confirmation}</p>
+            <p className="font-medium text-foreground" data-testid="adaptive-chart-candidate-status">
+              {chartCandidateState.status === "loading"
+                ? copy.adaptive_chart_candidates_loading
+                : chartCandidateState.status === "error"
+                  ? copy.adaptive_chart_candidates_unavailable
+                  : copy.adaptive_chart_candidates_ready
+                      .replace("{buy}", String(chartCandidateState.prices.buy.length))
+                      .replace("{sell}", String(chartCandidateState.prices.sell.length))}
+            </p>
+          </div>
+          <p className="mt-2 rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-[10px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
+          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_day_trade_only}</p>
+        </details>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={copy.adaptive_account_title}>
@@ -556,21 +606,20 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               </p>
             </div>
           )}
-           {planMatrix.length > 0 && (
-             <details className="group space-y-2 rounded-md border border-border/80 bg-muted/[0.08] p-3" data-testid="adaptive-plan-comparison">
-               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-                 <span className="min-w-0">
-                   <span className="block text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_comparison_title}</span>
-                   <span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_help}</span>
-                 </span>
-                 <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-               </summary>
-               <div className="space-y-2 border-t border-border/60 pt-2">
-                 <p className="rounded-md border border-border/70 bg-muted/30 px-2.5 py-2 text-[10px] leading-relaxed text-muted-foreground" data-testid="adaptive-comparison-alternatives">
-                   <span className="font-semibold text-foreground">{copy.adaptive_comparison_safe_label}:</span> {copy.adaptive_comparison_safe_help}{" "}
-                   <span className="ml-1 font-semibold text-foreground">{copy.adaptive_comparison_capacity_label}:</span> {copy.adaptive_comparison_capacity_help}
-                 </p>
-                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {planMatrix.length > 0 && (
+            <details className="space-y-2 rounded-md border border-border/70 bg-muted/20 px-3 py-2" data-testid="adaptive-plan-comparison">
+              <summary className="cursor-pointer text-xs font-semibold text-foreground">{copy.adaptive_comparison_title}</summary>
+              <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_help}</p>
+              <p className="mt-2 rounded-md border border-border/70 bg-background/60 px-2.5 py-2 text-[10px] leading-relaxed text-muted-foreground" data-testid="adaptive-comparison-alternatives">
+                <span className="font-semibold text-foreground">{copy.adaptive_comparison_safe_label}:</span> {copy.adaptive_comparison_safe_help}{" "}
+                <span className="ml-1 font-semibold text-foreground">{copy.adaptive_comparison_capacity_label}:</span> {copy.adaptive_comparison_capacity_help}
+              </p>
+              <div className="mt-2 grid grid-cols-3 gap-1.5 px-1 text-[10px] font-semibold text-muted-foreground" aria-hidden="true">
+                {(["safe", "balanced", "active"] as const).map((preference) => (
+                  <span key={preference} className="truncate text-center">{copy[`adaptive_preference_${preference}`]}</span>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-1.5" aria-label={copy.adaptive_comparison_title}>
                 {planMatrix.map(({ accountTier, preference, assessment }) => {
                   const recommendation = assessment.recommendation;
                   const label = copy[`adaptive_account_${accountTier}`];
@@ -586,70 +635,35 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
                               ? copy.adaptive_sell
                               : copy.adaptive_both)
                       : copy.adaptive_comparison_wait;
-                  const isSelected = form.accountTier === accountTier && form.preference === preference;
-                  const posture = assessment.decision.preferredSide === "buy"
-                    ? copy.adaptive_buy
-                    : assessment.decision.preferredSide === "sell"
-                      ? copy.adaptive_sell
-                      : assessment.decision.preferredSide === "both"
-                        ? copy.adaptive_both
-                        : copy.adaptive_comparison_no_posture;
                   const postureState = assessment.decision.posture === "scaling_allowed"
                     ? copy.adaptive_comparison_scaling_allowed
                     : assessment.decision.posture === "entry_only"
                       ? copy.adaptive_comparison_entry_only
                       : copy.adaptive_comparison_not_recommended;
-                  const sidePlans = [
-                    { side: "buy" as const, plan: assessment.result.buy },
-                    { side: "sell" as const, plan: assessment.result.sell },
-                  ].filter((side): side is { side: "buy" | "sell"; plan: AdaptiveSidePositionPlan } => side.plan !== null);
+                  const compactStatus = recommendation == null
+                    ? "—"
+                    : assessment.decision.posture === "scaling_allowed"
+                      ? `+${recommendation.levels}`
+                      : postureState;
+                  const isSelected = form.accountTier === accountTier && form.preference === preference;
                   return (
                     <button
                       key={`${accountTier}-${preference}`}
                       type="button"
                       aria-pressed={isSelected}
+                      aria-label={`${label}, ${riskLabel}: ${status}`}
                       onClick={() => selectCombination(accountTier, preference)}
-                      className={`w-full rounded-md border p-2.5 text-left transition-colors ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-muted/20 hover:bg-muted/50"}`}
+                      className={`min-w-0 rounded-md border px-2 py-2 text-left transition-colors ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background/60 hover:bg-muted/50"}`}
                       data-testid={`adaptive-comparison-${accountTier}-${preference}`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-foreground">{label}</span>
-                        <span className="text-[10px] text-muted-foreground">{riskLabel}</span>
-                      </div>
-                      <p className={`mt-1 text-[10px] leading-relaxed ${assessment.result.valid ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>{status}</p>
-                       {recommendation && isSelected ? (
-                        <div className="mt-2 space-y-2 border-t border-border/60 pt-2 text-[10px] leading-relaxed" data-testid={`adaptive-comparison-details-${accountTier}-${preference}`}>
-                          <div className="flex flex-wrap justify-between gap-x-2">
-                            <span className="text-muted-foreground">{copy.adaptive_comparison_posture}</span>
-                            <span className="font-semibold text-foreground">{posture} · {postureState}</span>
-                          </div>
-                          {sidePlans.length > 0 ? sidePlans.map(({ side, plan }) => {
-                            const sideLabel = side === "buy" ? copy.adaptive_buy : copy.adaptive_sell;
-                            const extraLayers = Math.max(0, plan.ladder.length - 1);
-                            return (
-                              <div key={side} className="rounded-md bg-background/70 p-2" data-testid={`adaptive-comparison-${accountTier}-${preference}-${side}`}>
-                                <p className="font-semibold text-foreground">{sideLabel}</p>
-                                <dl className="mt-1 grid gap-0.5">
-                                  <div className="flex justify-between gap-2"><dt className="text-muted-foreground">{copy.adaptive_comparison_margin}</dt><dd className="text-right tabular-nums">{formatMoney(plan.marginRequired, lang)} / {formatMoney(recommendation.marginBudget, lang)}</dd></div>
-                                  <div className="flex justify-between gap-2"><dt className="text-muted-foreground">{copy.adaptive_comparison_capacity}</dt><dd className="text-right tabular-nums">{formatNumber(recommendation.initialLot, lang)} {copy.adaptive_lot} + {extraLayers} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</dd></div>
-                                  <div className="flex justify-between gap-2"><dt className="text-muted-foreground">{copy.adaptive_comparison_loss}</dt><dd className="text-right tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)} / {formatMoney(recommendation.maximumLoss, lang)}</dd></div>
-                                  <div className="flex justify-between gap-2"><dt className="text-muted-foreground">{copy.adaptive_comparison_profit}</dt><dd className="text-right tabular-nums">{copy.adaptive_profit_tp1} {formatMoney(plan.profitToTakeProfit1, lang)} · {copy.adaptive_profit_tp2} {formatMoney(plan.profitToTakeProfit2, lang)}</dd></div>
-                                </dl>
-                              </div>
-                            );
-                          }) : (
-                            <p className="text-muted-foreground">{copy.adaptive_comparison_no_plan}</p>
-                          )}
-                        </div>
-                       ) : (
-                         <p className="mt-2 border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_select_hint}</p>
-                      )}
+                      <span className="block truncate text-[10px] font-bold text-foreground">{label}</span>
+                      <span className={`mt-1 block truncate text-[10px] font-semibold ${assessment.result.valid ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>{compactStatus}</span>
                     </button>
                   );
                 })}
-                 </div>
-               </div>
-             </details>
+              </div>
+              <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_matrix_help}</p>
+            </details>
           )}
           {rulesUnavailable && <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300" data-testid="adaptive-plan-rules-unavailable">{copy.adaptive_rules_error}</div>}
         </div>
@@ -674,8 +688,17 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || chartCandidateState.status === "loading"} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
-          {recommendation && selected && activePlan && (
-            <div className="space-y-3 rounded-md border border-primary/30 bg-primary/[0.05] p-3" data-testid="adaptive-plan-snapshot">
+        {recommendation && primaryPlan && (
+          <DirectionSwitch
+            activeSide={primaryPlan.side}
+            hasBuy={recommendation.result.buy !== null}
+            hasSell={recommendation.result.sell !== null}
+            copy={copy}
+            onChange={setActiveSide}
+          />
+        )}
+         {recommendation && selected && primaryPlan && (
+           <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
              <div className="flex flex-wrap items-center justify-between gap-2">
                <div>
                  <p className="text-xs font-bold text-foreground">{copy.adaptive_snapshot_title}</p>
@@ -685,93 +708,93 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
                      : copy.adaptive_snapshot_wait}
                  </p>
                </div>
-                <Badge variant="outline">
-                  {copy[`adaptive_account_${form.accountTier}`]} · {copy[`adaptive_preference_${form.preference}`]}
+               <Badge variant="outline" className={primaryPlan.side === "buy" ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
+                 {primaryPlan.side === "buy" ? copy.adaptive_buy : copy.adaptive_sell}
                </Badge>
              </div>
-              <p className="rounded-md border border-primary/15 bg-background/60 px-2.5 py-2 text-[10px] font-medium text-muted-foreground">
-                {copy.adaptive_target_source}
-              </p>
-              {recommendation.result.buy && recommendation.result.sell ? (
-                <Tabs value={activeSide} onValueChange={(value) => setActiveSide(value as "buy" | "sell")}>
-                  <TabsList className="grid w-full grid-cols-2" aria-label={copy.adaptive_scenarios_review_title}>
-                    <TabsTrigger value="buy" className="text-xs" data-testid="adaptive-tab-buy">{copy.adaptive_buy_tab}</TabsTrigger>
-                    <TabsTrigger value="sell" className="text-xs" data-testid="adaptive-tab-sell">{copy.adaptive_sell_tab}</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="buy">
-                    <PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} decision={recommendation.decision} />
-                  </TabsContent>
-                  <TabsContent value="sell">
-                    <PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} decision={recommendation.decision} />
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <PlanSide plan={activePlan} lang={lang} copy={copy} decision={recommendation.decision} />
-              )}
-              {recommendation.result.valid && (
-                <div className="flex flex-wrap items-center gap-2" data-testid="adaptive-plan-valid">
-                  <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
-                  <span className="text-[11px] text-muted-foreground">
-                    {copy.adaptive_recommendation_summary
-                      .replace("{lot}", formatNumber(selected.initialLot, lang, 2))
-                      .replace("{levels}", String(selected.levels))
-                      .replace("{loss}", formatMoney(selected.maximumLoss, lang))}
-                  </span>
-                </div>
-              )}
+             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+               <div className="rounded-md bg-background/70 p-2">
+                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_entry}</p>
+                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(primaryPlan.entry, lang, 4)}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_lot_layers}</p>
+                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(selected.initialLot, lang)} {copy.adaptive_lot} · {selected.levels} {copy.adaptive_snapshot_layers}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                  <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
+                 <p className="mt-0.5 text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(primaryPlan.stopLoss, lang, 4)}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                  <p className="text-[10px] text-muted-foreground">{copy.adaptive_loss_limit}</p>
+                  <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(selected.maximumLoss, lang)}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                  <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
+                  <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(primaryPlan.takeProfit1, lang, 4)}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                  <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
+                  <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(primaryPlan.takeProfit2, lang, 4)}</p>
+               </div>
+             </div>
            </div>
          )}
         {recommendation && (
-           <details className="group rounded-md border border-primary/20 bg-primary/[0.03]" data-testid="adaptive-plan-reasoning">
-             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 [&::-webkit-details-marker]:hidden">
-               <span className="min-w-0">
-                 <span className="block text-xs font-bold text-foreground">{copy.adaptive_reasoning_title}</span>
-                 <span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
-                   {recommendation.decision.posture === "scaling_allowed"
-                     ? copy.adaptive_posture_scaling_allowed
-                     : recommendation.decision.posture === "entry_only"
-                       ? copy.adaptive_posture_entry_only
-                       : copy.adaptive_posture_not_recommended}
-                 </span>
-               </span>
-               <span className="flex shrink-0 items-center gap-1.5">
-                 <Badge variant="outline" className="text-[10px]">{recommendation.context.timeframe ?? copy.adaptive_context_missing}</Badge>
-                 <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-               </span>
-             </summary>
-             <div className="space-y-2.5 border-t border-primary/10 px-3 pb-3 pt-2.5">
-               <ul className="space-y-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                 {[...new Set(recommendation.decision.reasonCodes)].map((code) => (
-                   <li key={code} className="flex gap-1.5"><span aria-hidden="true">•</span><span>{reasonText(code, recommendation.context, copy)}</span></li>
-                 ))}
-               </ul>
-               <div className="grid gap-1 border-t border-border/60 pt-2 text-[10px] text-muted-foreground">
-                 <p>{copy.adaptive_context_technical.replace("{buy}", String(recommendation.context.technical?.buy ?? "—")).replace("{sell}", String(recommendation.context.technical?.sell ?? "—")).replace("{neutral}", String(recommendation.context.technical?.neutral ?? "—"))}</p>
-                 <p>{recommendation.context.fundamental.available
-                   ? copy.adaptive_context_fundamental.replace("{news}", String(recommendation.context.fundamental.newsCount)).replace("{events}", String(recommendation.context.fundamental.eventCount)).replace("{highImpact}", String(recommendation.context.fundamental.highImpactCount))
-                   : copy.adaptive_context_fundamental_unavailable}</p>
-               </div>
-             </div>
-           </details>
+          <details className="rounded-md border border-primary/20 bg-primary/[0.03] p-3" data-testid="adaptive-plan-reasoning">
+            <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_reasoning_title}</summary>
+            <div className="mt-2.5 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {recommendation.decision.posture === "scaling_allowed"
+                    ? copy.adaptive_posture_scaling_allowed
+                    : recommendation.decision.posture === "entry_only"
+                      ? copy.adaptive_posture_entry_only
+                      : copy.adaptive_posture_not_recommended}
+                </p>
+              </div>
+              <Badge variant="outline" className="shrink-0 text-[10px]">{recommendation.context.timeframe ?? copy.adaptive_context_missing}</Badge>
+            </div>
+            <ul className="mt-2.5 space-y-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {[...new Set(recommendation.decision.reasonCodes)].map((code) => (
+                <li key={code} className="flex gap-1.5"><span aria-hidden="true">•</span><span>{reasonText(code, recommendation.context, copy)}</span></li>
+              ))}
+            </ul>
+            <div className="mt-2.5 border-t border-border/60 pt-2 grid gap-1 text-[10px] text-muted-foreground">
+              <p>{copy.adaptive_context_technical.replace("{buy}", String(recommendation.context.technical?.buy ?? "—")).replace("{sell}", String(recommendation.context.technical?.sell ?? "—")).replace("{neutral}", String(recommendation.context.technical?.neutral ?? "—"))}</p>
+              <p>{recommendation.context.fundamental.available
+                ? copy.adaptive_context_fundamental.replace("{news}", String(recommendation.context.fundamental.newsCount)).replace("{events}", String(recommendation.context.fundamental.eventCount)).replace("{highImpact}", String(recommendation.context.fundamental.highImpactCount))
+                : copy.adaptive_context_fundamental_unavailable}</p>
+            </div>
+          </details>
         )}
         {recommendation && !recommendation.result.valid && <div className="border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 space-y-2" data-testid="adaptive-plan-invalid">
           <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{copy.adaptive_invalid_title}</p>
           <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{copy.adaptive_invalid_description}</p>
         </div>}
-         {recommendation && (
-           <details className="group rounded-md border border-border">
-             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 text-xs font-bold text-foreground [&::-webkit-details-marker]:hidden">
-               <span>{copy.adaptive_how_to_use}</span>
-               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-             </summary>
-             <ol className="list-decimal space-y-1 border-t border-border/60 px-3 pb-3 pt-2.5 pl-8 text-[11px] leading-relaxed text-muted-foreground">
-               <li>{copy.adaptive_step_choose}</li>
-               <li>{copy.adaptive_step_entry}</li>
-               <li>{copy.adaptive_step_add}</li>
-               <li>{copy.adaptive_step_stop}</li>
-             </ol>
-           </details>
+         {recommendation && !recommendation.result.valid && (recommendation.result.buy || recommendation.result.sell) && (
+           <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
+             <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
+             <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_scenarios_review_help}</p>
+              {primaryPlan && <PlanSide plan={primaryPlan} lang={lang} copy={copy} decision={recommendation.decision} />}
+           </div>
          )}
+        {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
+          <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
+          <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatMoney(selected.maximumLoss, lang))}</p></div>
+          {primaryPlan && <PlanSide plan={primaryPlan} lang={lang} copy={copy} decision={recommendation.decision} />}
+          <details className="rounded-md border border-border p-3" data-testid="adaptive-risk-details">
+            <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</summary>
+            <ol className="mt-2 list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol>
+            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_manual_only}</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_external_liquidation}</p>
+            {recommendation.result.assumptions.length > 0 && (
+              <ul className="mt-2 space-y-1 border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground">
+                {recommendation.result.assumptions.map((assumption) => <li key={assumption}>• {assumption}</li>)}
+              </ul>
+            )}
+          </details>
+        </div>}
         </>
         )}
       </div>
