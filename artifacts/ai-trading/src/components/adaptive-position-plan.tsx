@@ -394,6 +394,11 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
     localStorage.removeItem(storageKey(analysisId));
   };
   const selected = recommendation?.recommendation;
+  const primaryPlan = recommendation?.decision.preferredSide === "sell"
+    ? recommendation.result.sell
+    : recommendation?.decision.preferredSide === "buy"
+      ? recommendation.result.buy
+      : recommendation?.result.buy ?? recommendation?.result.sell ?? null;
 
   return (
     <Card className="overflow-hidden" data-testid="card-adaptive-position-plan">
@@ -573,6 +578,49 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || chartCandidateState.status === "loading"} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
+         {recommendation && selected && primaryPlan && (
+           <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
+             <div className="flex flex-wrap items-center justify-between gap-2">
+               <div>
+                 <p className="text-xs font-bold text-foreground">{copy.adaptive_snapshot_title}</p>
+                 <p className="mt-0.5 text-[11px] text-muted-foreground">
+                   {recommendation.result.valid
+                     ? copy.adaptive_snapshot_ready
+                     : copy.adaptive_snapshot_wait}
+                 </p>
+               </div>
+               <Badge variant="outline" className={primaryPlan.side === "buy" ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
+                 {primaryPlan.side === "buy" ? copy.adaptive_buy : copy.adaptive_sell}
+               </Badge>
+             </div>
+             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+               <div className="rounded-md bg-background/70 p-2">
+                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_entry}</p>
+                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(primaryPlan.entry, lang, 4)}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_lot_layers}</p>
+                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(selected.initialLot, lang)} {copy.adaptive_lot} · {selected.levels} {copy.adaptive_snapshot_layers}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_stop}</p>
+                 <p className="mt-0.5 text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(primaryPlan.stopLoss, lang, 4)}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
+                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(primaryPlan.estimatedCycleLoss, lang)}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_profit_tp1}</p>
+                 <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatMoney(primaryPlan.profitToTakeProfit1, lang)}</p>
+               </div>
+               <div className="rounded-md bg-background/70 p-2">
+                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_profit_tp2}</p>
+                 <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatMoney(primaryPlan.profitToTakeProfit2, lang)}</p>
+               </div>
+             </div>
+           </div>
+         )}
         {recommendation && (
           <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-2.5" data-testid="adaptive-plan-reasoning">
             <div className="flex items-start justify-between gap-3">

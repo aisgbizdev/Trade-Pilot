@@ -262,17 +262,25 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("button-adaptive-preference-safe")).toHaveTextContent("Low Risk");
     expect(screen.getByTestId("button-adaptive-preference-balanced")).toHaveTextContent("Medium Risk");
     expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent("High Risk");
+    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent(/75% of available funds/i);
+    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent(/loss ceiling of 30%/i);
     fireEvent.change(margin, { target: { value: "100000" } });
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     expect(screen.getByTestId("adaptive-account-suggestion")).toHaveTextContent(/Regular is the largest tier that still fits/i);
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
+    const snapshot = await screen.findByTestId("adaptive-plan-snapshot");
     const reasoning = await screen.findByTestId("adaptive-plan-reasoning");
     const buyPlan = screen.getByTestId("adaptive-plan-buy");
     const sellPlan = screen.getByTestId("adaptive-plan-sell");
     expect(reasoning.textContent).toMatch(/Why this plan was chosen/i);
     expect(reasoning.textContent).toMatch(/favor the rise scenario/i);
     expect(reasoning.textContent).toMatch(/Technical snapshot: 12 support up, 4 support down/i);
+    expect(snapshot).toHaveTextContent(/Answer at a glance/i);
+    expect(snapshot).toHaveTextContent(/Entry point/i);
+    expect(snapshot).toHaveTextContent(/Initial lot and extra layers/i);
+    expect(snapshot).toHaveTextContent(/Estimated maximum loss/i);
+    expect(screen.getByTestId("adaptive-plan-comparison").querySelectorAll("[data-testid^='adaptive-comparison-']")).toHaveLength(9);
     expect(screen.getAllByText("Layer")).toHaveLength(2);
     expect(buyPlan.textContent).toMatch(/manual checkpoints/i);
     expect(buyPlan.textContent).toMatch(/Cut Loss \/ SL/i);

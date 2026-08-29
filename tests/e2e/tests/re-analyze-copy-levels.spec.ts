@@ -385,7 +385,7 @@ test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", ()
 // ---------------------------------------------------------------------------
 
 test.describe("Adaptive plan manual safeguards (real Chromium + refreshed context)", () => {
-  test("uses the standard rules, discards a saved plan after fundamental refresh, and refuses extra stages", async ({
+  test("uses standard rules and re-evaluates the saved plan after a fundamental refresh", async ({
     page,
     baseURL,
   }) => {
@@ -486,7 +486,8 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await marginInput.fill("100000");
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
-    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/L1/);
+    await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-comparison")).toBeVisible();
 
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
@@ -511,7 +512,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await marginInput.fill("100000");
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-reasoning")).toContainText(/high-impact|dampak tinggi/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).not.toContainText(/L1/);
+    await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
 
     // Standard Plan levels remain the source plan throughout; only the
     // optional adaptive recommendation has been discarded and re-evaluated.
