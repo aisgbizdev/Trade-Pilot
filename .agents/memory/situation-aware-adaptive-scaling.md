@@ -10,3 +10,9 @@ Its sizing inputs must come from the matching TP Standard Trading Rules record. 
 **Why:** A partial or contradictory snapshot cannot justify increasing exposure. A cached rule after a refresh error is similarly not an auditable basis for sizing. Clear reasons help distinguish these safeguards from blind martingale behavior while leaving the Standard Plan unchanged.
 
 **How to apply:** When analysis fields, standard-rule fetching, or recommendation persistence evolve, preserve the fail-closed gate, explain the decision in the UI, and discard malformed or stale local drafts rather than trusting browser data.
+
+The saved AI analysis is the primary product output; the adaptive plan is a secondary explanation of what the user's selected account tier and available margin can support. Keep the default UI output-first: direction, entry and staged prices/lots, one final SL, saved TP targets, margin, and maximum loss. Put comparison, provenance, and detailed reasoning behind progressive disclosure.
+
+**Why:** Users need a quick, actionable reading without losing the technical/fundamental intelligence that distinguishes Trade Pilot from a standalone lot calculator. Novices should not face a wall of narrative, while professionals must still be able to inspect the full reasoning and all objective alternatives.
+
+**How to apply:** Never let a 3×3 tier/risk comparison dominate the analysis page. Show one active Buy/Sell scenario at a time, keep all explicit combinations accessible, and never let presentation changes alter the saved analysis thesis, TP/SL, or ladder safety rules.

@@ -487,7 +487,15 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
     await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-ladder-buy")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-ladder-buy")).toContainText("Start");
+    await expect(page.getByTestId("adaptive-plan-ladder-buy")).toContainText("lot");
+    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/TP from saved AI analysis/i);
+    await page.getByTestId("adaptive-tab-sell").click();
+    await expect(page.getByTestId("adaptive-plan-sell")).toBeVisible();
+    await page.getByTestId("adaptive-tab-buy").click();
     await expect(page.getByTestId("adaptive-plan-comparison")).toBeVisible();
+    await page.getByTestId("adaptive-plan-comparison").locator("summary").click();
     await expect(page.getByTestId("adaptive-account-suggestion")).toHaveCount(0);
     for (const tier of ["micro", "mini", "regular"]) {
       for (const preference of ["safe", "balanced", "active"]) {
@@ -496,7 +504,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     }
     await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/Safer option/i);
     await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/Maximum capacity/i);
-    await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/alternatives, not automatic selections/i);
+    await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/Both are alternatives/i);
     const selectedComparison = page.getByTestId("adaptive-comparison-details-mini-safe");
     await expect(selectedComparison).toContainText(/Buy\/Sell posture/i);
     await expect(selectedComparison).toContainText(/Margin fit/i);
