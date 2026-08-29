@@ -311,6 +311,24 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
   const suggestedTier = tierAssessments
     ? (["regular", "mini", "micro"] as const).find((accountTier) => tierAssessments[accountTier].safe) ?? null
     : null;
+  const planMatrix = rulesAvailable && availableMargin != null && availableMargin > 0
+    ? ACCOUNT_TIERS.flatMap((accountTier) =>
+        (["safe", "balanced", "active"] as const).map((preference) => ({
+          accountTier,
+          preference,
+          assessment: buildAdaptivePlanRecommendation({
+            instrument,
+            tradePlan,
+            availableMargin,
+            standardRule,
+            accountTier,
+            preference,
+            context,
+            checkpointPrices: chartCandidateState.prices,
+          }),
+        })),
+      )
+    : [];
   const fingerprint = createAdaptivePlanFingerprint({
     instrument,
     tradePlan,
@@ -395,6 +413,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         ) : (
         <>
         <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>
+         <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
         <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-analysis-basis">
           <p className="font-semibold text-foreground">{copy.adaptive_analysis_basis_title}</p>
           <p className="mt-1">{copy.adaptive_analysis_basis}</p>
@@ -491,6 +510,46 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               </Button>
             </div>
           )}
+          {planMatrix.length > 0 && (
+            <div className="space-y-2" data-testid="adaptive-plan-comparison">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_comparison_title}</h4>
+                <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_help}</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {planMatrix.map(({ accountTier, preference, assessment }) => {
+                  const recommendation = assessment.recommendation;
+                  const label = copy[`adaptive_account_${accountTier}`];
+                  const riskLabel = copy[`adaptive_preference_${preference}`];
+                  const status = recommendation == null
+                    ? copy.adaptive_comparison_unavailable
+                    : assessment.result.valid
+                      ? copy.adaptive_comparison_ready
+                          .replace("{levels}", String(recommendation.levels))
+                          .replace("{side}", assessment.decision.preferredSide === "buy"
+                            ? copy.adaptive_buy
+                            : assessment.decision.preferredSide === "sell"
+                              ? copy.adaptive_sell
+                              : copy.adaptive_both)
+                      : copy.adaptive_comparison_wait;
+                  const isSelected = form.accountTier === accountTier && form.preference === preference;
+                  return (
+                    <div
+                      key={`${accountTier}-${preference}`}
+                      className={`rounded-md border p-2.5 ${isSelected ? "border-primary bg-primary/5" : "border-border bg-muted/20"}`}
+                      data-testid={`adaptive-comparison-${accountTier}-${preference}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-foreground">{label}</span>
+                        <span className="text-[10px] text-muted-foreground">{riskLabel}</span>
+                      </div>
+                      <p className={`mt-1 text-[10px] leading-relaxed ${assessment.result.valid ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>{status}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {rulesUnavailable && <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300" data-testid="adaptive-plan-rules-unavailable">{copy.adaptive_rules_error}</div>}
         </div>
         <div className="space-y-2">
@@ -546,6 +605,16 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
           <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{copy.adaptive_invalid_title}</p>
           <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{copy.adaptive_invalid_description}</p>
         </div>}
+         {recommendation && !recommendation.result.valid && (recommendation.result.buy || recommendation.result.sell) && (
+           <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
+             <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
+             <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_scenarios_review_help}</p>
+             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+               {recommendation.result.buy && <PlanSide plan={recommendation.result.buy} lang={lang} copy={copy} decision={recommendation.decision} />}
+               {recommendation.result.sell && <PlanSide plan={recommendation.result.sell} lang={lang} copy={copy} decision={recommendation.decision} />}
+             </div>
+           </div>
+         )}
         {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
           <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
           <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatMoney(selected.maximumLoss, lang))}</p></div>

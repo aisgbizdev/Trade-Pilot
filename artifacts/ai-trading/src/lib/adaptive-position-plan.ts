@@ -1005,7 +1005,6 @@ export function buildAdaptivePlanRecommendation({
   const buyPlanAvailable = sideGeometryError("buy", tradePlan.buy) === null;
   const sellPlanAvailable = sideGeometryError("sell", tradePlan.sell) === null;
 
-  let fallback: AdaptivePositionPlanResult | null = null;
   const capacity = getAdaptiveMarginCapacity(marginBudget, rule);
   const warningLotScale = Math.max(0.5, 1 - softWarningCount * 0.08);
   const layerLotFactors = profile.layerLotFactors.map((factor) => factor * warningLotScale);
@@ -1054,16 +1053,21 @@ export function buildAdaptivePlanRecommendation({
         checkpointPrices,
         maxCycleLossPercent: 2,
       });
-      fallback ??= result;
       if (result.valid) {
         if (posture === "not_recommended") {
+          const diagnosticRecommendation = {
+            initialLot,
+            levels: 0,
+            marginBudget,
+            maximumLoss,
+          };
           return {
             result: {
               ...result,
               valid: false,
               errors: [...result.errors, "The technical snapshot conflicts with the market direction."],
             },
-            recommendation: null,
+            recommendation: diagnosticRecommendation,
             context,
             decision: { posture, preferredSide, reasonCodes },
           };
@@ -1134,17 +1138,30 @@ export function buildAdaptivePlanRecommendation({
     }
   }
 
+  const diagnosticResult = buildAdaptivePositionPlan({
+    instrument,
+    tradePlan,
+    standardRule,
+    equity: normalizedEquity,
+    freeMargin: marginBudget,
+    existingExposure: 0,
+    initialLot: rule.minimumLot,
+    accountTier,
+    levels: 0,
+    sideLevels: { buy: 0, sell: 0 },
+    includedSides: { buy: buyPlanAvailable, sell: sellPlanAvailable },
+    layerLotFactors: [],
+    checkpointPrices,
+    maxCycleLossPercent: 2,
+  });
   return {
-    result: fallback ?? {
-      valid: false,
-      market,
-      rule,
-      errors: ["No safe position size is available."],
-      assumptions: [],
-      buy: null,
-      sell: null,
+    result: diagnosticResult,
+    recommendation: {
+      initialLot: rule.minimumLot,
+      levels: 0,
+      marginBudget,
+      maximumLoss,
     },
-    recommendation: null,
     context,
     decision: { posture, preferredSide, reasonCodes },
   };

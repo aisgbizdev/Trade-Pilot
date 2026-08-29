@@ -228,7 +228,9 @@ describe("buildAdaptivePositionPlan", () => {
     });
 
     expect(recommendation.result.valid).toBe(false);
-    expect(recommendation.recommendation).toBeNull();
+    expect(recommendation.recommendation).toMatchObject({ initialLot: 1, levels: 0 });
+    expect(recommendation.result.buy).not.toBeNull();
+    expect(recommendation.result.sell).not.toBeNull();
     expect(recommendation.result.errors.join(" ")).toMatch(/cycle loss exceeds/i);
   });
 
@@ -371,7 +373,9 @@ describe("buildAdaptivePositionPlan", () => {
     });
 
     expect(recommendation.result.valid).toBe(false);
-    expect(recommendation.recommendation).toBeNull();
+    expect(recommendation.recommendation).toMatchObject({ levels: 0 });
+    expect(recommendation.result.buy).not.toBeNull();
+    expect(recommendation.result.sell).not.toBeNull();
     expect(recommendation.decision.posture).toBe("not_recommended");
     expect(recommendation.decision.reasonCodes).toContain("directional_conflict");
   });
@@ -463,6 +467,8 @@ describe("buildAdaptivePositionPlan", () => {
         { high: 2308, low: 2301 },
         { high: 2310, low: 2303 },
         { high: 2307, low: 2300 },
+        { high: 2306, low: 2301 },
+        { high: 2305, low: 2299 },
       ],
       TRADE_PLAN,
       0.1,
