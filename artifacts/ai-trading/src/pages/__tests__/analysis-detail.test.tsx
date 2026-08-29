@@ -266,7 +266,24 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("button-adaptive-preference-active")).toHaveTextContent(/loss ceiling of 30%/i);
     fireEvent.change(margin, { target: { value: "100000" } });
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
-    expect(screen.getByTestId("adaptive-account-suggestion")).toHaveTextContent(/Regular is the largest tier that still fits/i);
+    const comparison = screen.getByTestId("adaptive-plan-comparison");
+    expect(comparison).toHaveTextContent(/Compare the same available margin/i);
+    expect(screen.queryByTestId("adaptive-account-suggestion")).not.toBeInTheDocument();
+    const comparisonCards = comparison.querySelectorAll("[data-testid^='adaptive-comparison-']");
+    expect(comparisonCards).toHaveLength(9);
+    comparisonCards.forEach((card) => {
+      expect(card).toHaveTextContent(/Margin capacity:/i);
+      expect(card).toHaveTextContent(/Plan:.*initial lot/i);
+      expect(card).toHaveTextContent(/Maximum loss:/i);
+      expect(card).toHaveTextContent(/TP1 \/ TP2:/i);
+    });
+    const regularHighRisk = screen.getByTestId("adaptive-comparison-regular-active");
+    expect(regularHighRisk.tagName).toBe("BUTTON");
+    fireEvent.click(regularHighRisk);
+    expect(regularHighRisk).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByTestId("adaptive-comparison-mini-safe"));
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     const snapshot = await screen.findByTestId("adaptive-plan-snapshot");
@@ -280,7 +297,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(snapshot).toHaveTextContent(/Entry point/i);
     expect(snapshot).toHaveTextContent(/Initial lot and extra layers/i);
     expect(snapshot).toHaveTextContent(/Estimated maximum loss/i);
-    expect(screen.getByTestId("adaptive-plan-comparison").querySelectorAll("[data-testid^='adaptive-comparison-']")).toHaveLength(9);
+    expect(comparisonCards).toHaveLength(9);
     expect(screen.getAllByText("Layer")).toHaveLength(2);
     expect(buyPlan.textContent).toMatch(/manual checkpoints/i);
     expect(buyPlan.textContent).toMatch(/Cut Loss \/ SL/i);
@@ -288,6 +305,53 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(sellPlan.textContent).toMatch(/initial entry only/i);
     expect(sellPlan.textContent).toMatch(/Cut Loss \/ SL/i);
     expect(sellPlan.textContent).toMatch(/\$/);
+  });
+
+  it("keeps an explicit tier and risk choice when chart candidates finish loading", async () => {
+    const candleResolvers: Array<(response: Response) => void> = [];
+    const delayedCandles: FetchHandler = (url, init) => {
+      if ((init?.method ?? "GET").toUpperCase() !== "GET") return null;
+      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
+      return new Promise<Response>((resolve) => candleResolvers.push(resolve));
+    };
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      delayedCandles,
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    const margin = await screen.findByTestId("input-adaptive-available-margin");
+    await screen.findByTestId("adaptive-account-rule");
+    fireEvent.change(margin, { target: { value: "5000" } });
+    await waitFor(() => expect(candleResolvers.length).toBeGreaterThan(0));
+
+    fireEvent.click(screen.getByTestId("adaptive-comparison-regular-active"));
+    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveAttribute("aria-checked", "true");
+
+    await act(async () => {
+      candleResolvers.forEach((resolve) => resolve(jsonResponse({ candles: [] })));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("button-adaptive-preference-active")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("adaptive-comparison-regular-active")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("renders a valid Regular recommendation for USD 20,000", async () => {

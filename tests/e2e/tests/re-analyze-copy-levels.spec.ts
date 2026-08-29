@@ -500,7 +500,9 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await page.getByTestId("button-refresh-fundamentals").click();
     await expect(page.getByTestId("fundamental-calendar-list")).toContainText("Central-bank rate decision");
     await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
-    await expect(marginInput).toHaveValue("");
+    await expect(marginInput).toHaveValue("100000");
+    await expect(page.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("button-adaptive-preference-safe")).toHaveAttribute("aria-checked", "true");
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
@@ -509,7 +511,6 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     );
     expect(storedAfterRefresh).toBeNull();
 
-    await marginInput.fill("100000");
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-reasoning")).toContainText(/high-impact|dampak tinggi/i);
     await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();

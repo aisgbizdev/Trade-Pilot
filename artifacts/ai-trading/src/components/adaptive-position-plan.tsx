@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Calculator, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -235,6 +235,7 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
 export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, context, lang, copy }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
+  const restoredStateKeyRef = useRef<string | null>(null);
   const [chartCandidateState, setChartCandidateState] = useState<{
     status: "loading" | "ready" | "error";
     prices: { buy: number[]; sell: number[] };
@@ -308,9 +309,6 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
         }];
       })) as Record<AccountTier, { capacity: number; safe: boolean }>
     : null;
-  const suggestedTier = tierAssessments
-    ? (["regular", "mini", "micro"] as const).find((accountTier) => tierAssessments[accountTier].safe) ?? null
-    : null;
   const planMatrix = rulesAvailable && availableMargin != null && availableMargin > 0
     ? ACCOUNT_TIERS.flatMap((accountTier) =>
         (["safe", "balanced", "active"] as const).map((preference) => ({
@@ -341,8 +339,13 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
 
   useEffect(() => {
     if (isRulesLoading) return;
-    setForm(DEFAULT_FORM);
-    setRecommendation(null);
+    const restoreKey = `${analysisId}:${rulesAvailable ? "ready" : "unavailable"}`;
+    const shouldRestore = restoredStateKeyRef.current !== restoreKey;
+    if (shouldRestore) {
+      restoredStateKeyRef.current = restoreKey;
+      setForm(DEFAULT_FORM);
+      setRecommendation(null);
+    }
     if (!rulesAvailable) {
       localStorage.removeItem(storageKey(analysisId));
       return;
@@ -353,11 +356,12 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
       const parsed: unknown = JSON.parse(stored);
       if (!isRecord(parsed)) return;
       if (parsed.fingerprint !== fingerprint) {
+        setRecommendation(null);
         localStorage.removeItem(storageKey(analysisId));
         return;
       }
-      if (isStoredForm(parsed.form)) setForm({ ...DEFAULT_FORM, ...parsed.form });
-      if (isStoredRecommendation(parsed.recommendation)) {
+      if (shouldRestore && isStoredForm(parsed.form)) setForm({ ...DEFAULT_FORM, ...parsed.form });
+      if (shouldRestore && isStoredRecommendation(parsed.recommendation)) {
         setRecommendation(parsed.recommendation);
       }
     } catch {
@@ -367,6 +371,10 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((previous) => ({ ...previous, [field]: value }));
+    setRecommendation(null);
+  };
+  const selectCombination = (accountTier: AccountTier, preference: AdaptiveRiskPreference) => {
+    setForm((previous) => ({ ...previous, accountTier, preference }));
     setRecommendation(null);
   };
   const calculate = () => {
@@ -507,14 +515,6 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               </p>
             </div>
           )}
-          {suggestedTier && suggestedTier !== form.accountTier && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300" data-testid="adaptive-account-suggestion">
-              <p>{copy.adaptive_account_suggestion.replace("{tier}", copy[`adaptive_account_${suggestedTier}`])}</p>
-              <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => updateField("accountTier", suggestedTier)}>
-                {copy.adaptive_account_use_suggestion.replace("{tier}", copy[`adaptive_account_${suggestedTier}`])}
-              </Button>
-            </div>
-          )}
           {planMatrix.length > 0 && (
             <div className="space-y-2" data-testid="adaptive-plan-comparison">
               <div>
@@ -538,10 +538,18 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
                               : copy.adaptive_both)
                       : copy.adaptive_comparison_wait;
                   const isSelected = form.accountTier === accountTier && form.preference === preference;
+                  const scenarioPlan = assessment.decision.preferredSide === "sell"
+                    ? assessment.result.sell
+                    : assessment.decision.preferredSide === "buy"
+                      ? assessment.result.buy
+                      : assessment.result.buy ?? assessment.result.sell;
                   return (
-                    <div
+                    <button
                       key={`${accountTier}-${preference}`}
-                      className={`rounded-md border p-2.5 ${isSelected ? "border-primary bg-primary/5" : "border-border bg-muted/20"}`}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => selectCombination(accountTier, preference)}
+                      className={`w-full rounded-md border p-2.5 text-left transition-colors ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-muted/20 hover:bg-muted/50"}`}
                       data-testid={`adaptive-comparison-${accountTier}-${preference}`}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -549,7 +557,15 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
                         <span className="text-[10px] text-muted-foreground">{riskLabel}</span>
                       </div>
                       <p className={`mt-1 text-[10px] leading-relaxed ${assessment.result.valid ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>{status}</p>
-                    </div>
+                      <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_margin.replace("{lot}", formatNumber(getAdaptiveMarginCapacity(availableMargin ?? 0, assessment.result.rule), lang, 2))}</p>
+                      {assessment.recommendation && (
+                        <>
+                          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_lot_layers.replace("{lot}", formatNumber(assessment.recommendation.initialLot, lang)).replace("{levels}", String(assessment.recommendation.levels))}</p>
+                          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_loss.replace("{loss}", formatMoney(assessment.recommendation.maximumLoss, lang))}</p>
+                          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_profit.replace("{tp1}", formatMoney(scenarioPlan?.profitToTakeProfit1, lang)).replace("{tp2}", formatMoney(scenarioPlan?.profitToTakeProfit2, lang))}</p>
+                        </>
+                      )}
+                    </button>
                   );
                 })}
               </div>
