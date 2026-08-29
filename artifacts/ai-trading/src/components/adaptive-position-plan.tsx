@@ -521,6 +521,10 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
                 <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_comparison_title}</h4>
                 <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_help}</p>
               </div>
+              <p className="rounded-md border border-border/70 bg-muted/30 px-2.5 py-2 text-[10px] leading-relaxed text-muted-foreground" data-testid="adaptive-comparison-alternatives">
+                <span className="font-semibold text-foreground">{copy.adaptive_comparison_safe_label}:</span> {copy.adaptive_comparison_safe_help}{" "}
+                <span className="ml-1 font-semibold text-foreground">{copy.adaptive_comparison_capacity_label}:</span> {copy.adaptive_comparison_capacity_help}
+              </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {planMatrix.map(({ accountTier, preference, assessment }) => {
                   const recommendation = assessment.recommendation;
@@ -538,11 +542,22 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
                               : copy.adaptive_both)
                       : copy.adaptive_comparison_wait;
                   const isSelected = form.accountTier === accountTier && form.preference === preference;
-                  const scenarioPlan = assessment.decision.preferredSide === "sell"
-                    ? assessment.result.sell
-                    : assessment.decision.preferredSide === "buy"
-                      ? assessment.result.buy
-                      : assessment.result.buy ?? assessment.result.sell;
+                  const posture = assessment.decision.preferredSide === "buy"
+                    ? copy.adaptive_buy
+                    : assessment.decision.preferredSide === "sell"
+                      ? copy.adaptive_sell
+                      : assessment.decision.preferredSide === "both"
+                        ? copy.adaptive_both
+                        : copy.adaptive_comparison_no_posture;
+                  const postureState = assessment.decision.posture === "scaling_allowed"
+                    ? copy.adaptive_comparison_scaling_allowed
+                    : assessment.decision.posture === "entry_only"
+                      ? copy.adaptive_comparison_entry_only
+                      : copy.adaptive_comparison_not_recommended;
+                  const sidePlans = [
+                    { side: "buy" as const, plan: assessment.result.buy },
+                    { side: "sell" as const, plan: assessment.result.sell },
+                  ].filter((side): side is { side: "buy" | "sell"; plan: AdaptiveSidePositionPlan } => side.plan !== null);
                   return (
                     <button
                       key={`${accountTier}-${preference}`}
@@ -557,13 +572,32 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
                         <span className="text-[10px] text-muted-foreground">{riskLabel}</span>
                       </div>
                       <p className={`mt-1 text-[10px] leading-relaxed ${assessment.result.valid ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>{status}</p>
-                      <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_margin.replace("{lot}", formatNumber(getAdaptiveMarginCapacity(availableMargin ?? 0, assessment.result.rule), lang, 2))}</p>
-                      {assessment.recommendation && (
-                        <>
-                          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_lot_layers.replace("{lot}", formatNumber(assessment.recommendation.initialLot, lang)).replace("{levels}", String(assessment.recommendation.levels))}</p>
-                          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_loss.replace("{loss}", formatMoney(assessment.recommendation.maximumLoss, lang))}</p>
-                          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_profit.replace("{tp1}", formatMoney(scenarioPlan?.profitToTakeProfit1, lang)).replace("{tp2}", formatMoney(scenarioPlan?.profitToTakeProfit2, lang))}</p>
-                        </>
+                      {recommendation ? (
+                        <div className="mt-2 space-y-2 border-t border-border/60 pt-2 text-[10px] leading-relaxed" data-testid={`adaptive-comparison-details-${accountTier}-${preference}`}>
+                          <div className="flex flex-wrap justify-between gap-x-2">
+                            <span className="text-muted-foreground">{copy.adaptive_comparison_posture}</span>
+                            <span className="font-semibold text-foreground">{posture} · {postureState}</span>
+                          </div>
+                          {sidePlans.length > 0 ? sidePlans.map(({ side, plan }) => {
+                            const sideLabel = side === "buy" ? copy.adaptive_buy : copy.adaptive_sell;
+                            const extraLayers = Math.max(0, plan.ladder.length - 1);
+                            return (
+                              <div key={side} className="rounded-md bg-background/70 p-2" data-testid={`adaptive-comparison-${accountTier}-${preference}-${side}`}>
+                                <p className="font-semibold text-foreground">{sideLabel}</p>
+                                <dl className="mt-1 grid gap-0.5">
+                                  <div className="flex justify-between gap-2"><dt className="text-muted-foreground">{copy.adaptive_comparison_margin}</dt><dd className="text-right tabular-nums">{formatMoney(plan.marginRequired, lang)} / {formatMoney(recommendation.marginBudget, lang)}</dd></div>
+                                  <div className="flex justify-between gap-2"><dt className="text-muted-foreground">{copy.adaptive_comparison_capacity}</dt><dd className="text-right tabular-nums">{formatNumber(recommendation.initialLot, lang)} {copy.adaptive_lot} + {extraLayers} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</dd></div>
+                                  <div className="flex justify-between gap-2"><dt className="text-muted-foreground">{copy.adaptive_comparison_loss}</dt><dd className="text-right tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)} / {formatMoney(recommendation.maximumLoss, lang)}</dd></div>
+                                  <div className="flex justify-between gap-2"><dt className="text-muted-foreground">{copy.adaptive_comparison_profit}</dt><dd className="text-right tabular-nums">{copy.adaptive_profit_tp1} {formatMoney(plan.profitToTakeProfit1, lang)} · {copy.adaptive_profit_tp2} {formatMoney(plan.profitToTakeProfit2, lang)}</dd></div>
+                                </dl>
+                              </div>
+                            );
+                          }) : (
+                            <p className="text-muted-foreground">{copy.adaptive_comparison_no_plan}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="mt-2 border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_comparison_no_plan}</p>
                       )}
                     </button>
                   );

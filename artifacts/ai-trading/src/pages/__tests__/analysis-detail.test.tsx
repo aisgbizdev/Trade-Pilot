@@ -269,14 +269,15 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const comparison = screen.getByTestId("adaptive-plan-comparison");
     expect(comparison).toHaveTextContent(/Compare the same available margin/i);
     expect(screen.queryByTestId("adaptive-account-suggestion")).not.toBeInTheDocument();
-    const comparisonCards = comparison.querySelectorAll("[data-testid^='adaptive-comparison-']");
+    const comparisonCards = comparison.querySelectorAll(":scope > .grid > [data-testid^='adaptive-comparison-']");
     expect(comparisonCards).toHaveLength(9);
-    comparisonCards.forEach((card) => {
-      expect(card).toHaveTextContent(/Margin capacity:/i);
-      expect(card).toHaveTextContent(/Plan:.*initial lot/i);
-      expect(card).toHaveTextContent(/Maximum loss:/i);
-      expect(card).toHaveTextContent(/TP1 \/ TP2:/i);
-    });
+    expect(screen.getByTestId("adaptive-comparison-alternatives")).toHaveTextContent(/Safer option/i);
+    expect(screen.getByTestId("adaptive-comparison-alternatives")).toHaveTextContent(/Maximum capacity/i);
+    expect(screen.getByTestId("adaptive-comparison-details-regular-safe")).toHaveTextContent(/Margin fit/i);
+    expect(screen.getByTestId("adaptive-comparison-details-regular-safe")).toHaveTextContent(/Lot\/layer capacity/i);
+    expect(screen.getByTestId("adaptive-comparison-details-regular-safe")).toHaveTextContent(/Loss ceiling/i);
+    expect(screen.getByTestId("adaptive-comparison-details-regular-safe")).toHaveTextContent(/Profit opportunity/i);
+    expect(screen.getByTestId("adaptive-comparison-details-regular-safe")).toHaveTextContent(/Buy|Sell/);
     const regularHighRisk = screen.getByTestId("adaptive-comparison-regular-active");
     expect(regularHighRisk.tagName).toBe("BUTTON");
     fireEvent.click(regularHighRisk);

@@ -299,7 +299,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     baseURL,
   }) => {
     const stubAnalysis = buildStubAnalysis(STUB_ID_STANDARD_REGRESSION);
-    const user = await registerUser(baseURL!, "standard-regression");
+    const user = await registerUser(baseURL!, "adaptive-refresh");
     await signIn(page, user);
     await reachDetailPage(page, STUB_ID_STANDARD_REGRESSION, stubAnalysis);
 
@@ -348,7 +348,7 @@ test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", ()
       instrument: "EUR/USD",
     };
 
-    const user = await registerUser(baseURL!, "adaptive-product-boundary");
+    const user = await registerUser(baseURL!, "adaptive-refresh");
     await signIn(page, user);
 
     await page.route(`**/api/analyses/${STUB_ID_HSI_ADAPTIVE}`, async (route: Route) => {
@@ -488,6 +488,23 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
     await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
     await expect(page.getByTestId("adaptive-plan-comparison")).toBeVisible();
+    await expect(page.getByTestId("adaptive-account-suggestion")).toHaveCount(0);
+    for (const tier of ["micro", "mini", "regular"]) {
+      for (const preference of ["safe", "balanced", "active"]) {
+        await expect(page.getByTestId(`adaptive-comparison-${tier}-${preference}`)).toBeVisible();
+      }
+    }
+    await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/Safer option/i);
+    await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/Maximum capacity/i);
+    await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/alternatives, not automatic selections/i);
+    const selectedComparison = page.getByTestId("adaptive-comparison-details-mini-safe");
+    await expect(selectedComparison).toContainText(/Buy\/Sell posture/i);
+    await expect(selectedComparison).toContainText(/Margin fit/i);
+    await expect(selectedComparison).toContainText(/Lot\/layer capacity/i);
+    await expect(selectedComparison).toContainText(/Loss ceiling/i);
+    await expect(selectedComparison).toContainText(/Profit opportunity/i);
+    await expect(page.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("button-adaptive-preference-safe")).toHaveAttribute("aria-checked", "true");
 
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
