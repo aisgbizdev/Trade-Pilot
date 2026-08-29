@@ -223,6 +223,14 @@ describe("AnalysisDetailPage: happy-path render", () => {
     const risk = screen.getByTestId("text-risk-level");
     expect(risk.textContent?.trim().length ?? 0).toBeGreaterThan(0);
 
+    expect(
+      (screen.getByTestId("details-ai-analysis-context") as HTMLDetailsElement)
+        .open,
+    ).toBe(false);
+    expect(
+      (screen.getByTestId("details-analysis-review") as HTMLDetailsElement).open,
+    ).toBe(false);
+
     // Feedback CTAs render — the user can pick useful / not-useful.
     expect(screen.getByTestId("button-feedback-useful")).toBeInTheDocument();
     expect(screen.getByTestId("button-feedback-not-useful")).toBeInTheDocument();
@@ -258,6 +266,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/saved analysis shown above/i);
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/Current chart.*separate layer candidates/i);
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
+    expect(screen.getByTestId("card-standard-trading-rules")).toHaveTextContent(
+      /Standard Plan/i,
+    );
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/limited to canonical XAU\/USD analyses on the Mini tier/i);
     expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(/Day trade only/i);
     expect(screen.queryByTestId("button-adaptive-account-micro")).not.toBeInTheDocument();

@@ -89,6 +89,7 @@ import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isXauUsdMiniAdaptiveInstrument } from "@/lib/adaptive-position-plan";
+import { StandardTradingRulesCard } from "@/components/standard-trading-rules-card";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -1840,6 +1841,26 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </div>
         </Card>
 
+        <details
+          className="rounded-xl border border-border bg-card overflow-hidden"
+          data-testid="details-ai-analysis-context"
+        >
+          <summary className="cursor-pointer list-none p-4 hover:bg-muted/40 transition-colors">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-foreground">
+                  {t.analysis_detail.ai_context_title}
+                </h2>
+                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                  {bias
+                    ? `${biasLabel(bias, analysis.mode, t)} · ${t.analysis_detail.confidence} ${analysis.confidenceMin ?? "--"}%–${analysis.confidenceMax ?? "--"}%`
+                    : t.analysis_detail.ai_context_hint}
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
+            </div>
+          </summary>
+          <div className="space-y-4 border-t border-border p-4">
         <div
           className="grid items-start gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
           data-testid="primary-metrics-chart-grid"
@@ -1906,12 +1927,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                   {t.analysis_detail.confidence_reason_label}
                 </p>
                 <p className="text-xs text-foreground leading-relaxed">{confidenceReason}</p>
-                {/* Beginner mode: `confidenceReason` IS the whyReason text,
-                    so this is exactly where the AI would mention the news /
-                    event it leaned on. Inline-cite the matching cards here
-                    (task #89) so the user can see "Fed dovish → bullish
-                    bias" with the actual headline rendered as a clickable
-                    chip right next to the sentence. */}
                 {isBeginnerMode && (
                   <CitationChips
                     citations={analysis.fundamentalCitations}
@@ -1979,12 +1994,23 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             refreshState={fundamentalRefresh}
           />
         )}
+          </div>
+        </details>
 
         {/* AI-suggested concrete trade plan with both buy and sell levels.
             Anchored to the price at analysis time. Surfaces the structured
             entry / SL / TP / R:R the model produced — keeps the rest of the
             narrative consultative while giving the user actionable numbers. */}
         {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
+
+        {/* Product rules are separate from AI levels so the user can review
+            the broker/source constraints without confusing them with AI
+            suggestions. */}
+        {tradePlan && (
+          <div data-testid="section-standard-plan">
+            <StandardTradingRulesCard instrument={analysis.instrument} />
+          </div>
+        )}
 
         {/* Deterministic, situation-aware scaling plan. It reads the saved
             analysis context but never changes Standard Plan levels or executes orders. */}
@@ -2019,8 +2045,26 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           <AnalysisAlertsCard analysisId={analysis.id} t={t} />
         )}
 
-        {/* Market Context Summary — same card the user saw on the Analyze tab,
-            rendered from the indicator-tally snapshot stored at analysis time. */}
+        <details
+          className="rounded-xl border border-border bg-card overflow-hidden"
+          data-testid="details-analysis-review"
+        >
+          <summary className="cursor-pointer list-none p-4 hover:bg-muted/40 transition-colors">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-foreground">
+                  {t.analysis_detail.review_details_title}
+                </h2>
+                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                  {t.analysis_detail.review_details_hint}
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
+            </div>
+          </summary>
+          <div className="space-y-4 border-t border-border p-4">
+            {/* Market Context Summary — rendered from the indicator-tally
+                snapshot stored at analysis time. */}
         {analysis.techBuyCount != null &&
           analysis.techSellCount != null &&
           analysis.techNeutralCount != null && (
@@ -2236,6 +2280,8 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             </div>
           </div>
         </Card>
+          </div>
+        </details>
 
         <Card className="p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
           <div className="flex gap-2">
