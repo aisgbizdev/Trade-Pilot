@@ -89,7 +89,6 @@ import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isXauUsdMiniAdaptiveInstrument } from "@/lib/adaptive-position-plan";
-import { StandardTradingRulesCard } from "@/components/standard-trading-rules-card";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -1841,176 +1840,151 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </div>
         </Card>
 
-        <details
-          className="rounded-xl border border-border bg-card overflow-hidden"
-          data-testid="details-ai-analysis-context"
+        <div
+          className="grid items-start gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
+          data-testid="primary-metrics-chart-grid"
         >
-          <summary className="cursor-pointer list-none p-4 hover:bg-muted/40 transition-colors">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-sm font-bold text-foreground">
-                  {t.analysis_detail.ai_context_title}
-                </h2>
-                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                  {bias
-                    ? `${biasLabel(bias, analysis.mode, t)} · ${t.analysis_detail.confidence} ${analysis.confidenceMin ?? "--"}%–${analysis.confidenceMax ?? "--"}%`
-                    : t.analysis_detail.ai_context_hint}
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
+        {/* PRIMARY METRICS: Bias + Confidence + Risk */}
+        <Card className="p-4 space-y-4" data-testid="card-primary-metrics">
+          {bias && <BiasIndicator bias={bias} mode={analysis.mode} timeframe={analysis.timeframe} />}
+
+          {bias && <div className="border-t border-border" />}
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">{t.analysis_detail.confidence}</p>
+              <p className="text-base font-bold text-foreground" data-testid="text-confidence">
+                {analysis.confidenceMin ?? "--"}% – {analysis.confidenceMax ?? "--"}%
+              </p>
             </div>
-          </summary>
-          <div className="space-y-4 border-t border-border p-4">
-            <div
-              className="grid items-start gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
-              data-testid="primary-metrics-chart-grid"
-            >
-            {/* PRIMARY METRICS: Bias + Confidence + Risk */}
-            <Card className="p-4 space-y-4" data-testid="card-primary-metrics">
-              {bias && <BiasIndicator bias={bias} mode={analysis.mode} timeframe={analysis.timeframe} />}
-
-              {bias && <div className="border-t border-border" />}
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t.analysis_detail.confidence}</p>
-                  <p className="text-base font-bold text-foreground" data-testid="text-confidence">
-                    {analysis.confidenceMin ?? "--"}% – {analysis.confidenceMax ?? "--"}%
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">{t.analysis_detail.risk_title}</p>
-                  <p className={cn("text-sm font-bold", rl?.color)} data-testid="text-risk-level">
-                    {rl?.label}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex gap-1 mb-1">
-                  {[1, 2, 3].map((n) => (
-                    <div
-                      key={n}
-                      className={cn(
-                        "h-2 flex-1 rounded-full",
-                        n <= (rl?.bars ?? 0)
-                          ? analysis.riskLevel === "low"
-                            ? "bg-green-500"
-                            : analysis.riskLevel === "medium"
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
-                          : "bg-muted"
-                      )}
-                    />
-                  ))}
-                </div>
-                <div className="relative h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="absolute h-full bg-primary rounded-full"
-                    style={{
-                      left: `${analysis.confidenceMin ?? 0}%`,
-                      width: `${(analysis.confidenceMax ?? 0) - (analysis.confidenceMin ?? 0)}%`,
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-                  <span>0%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-
-              {confidenceReason && (
-                <div className="bg-muted/40 rounded-md p-2.5 flex gap-2" data-testid="card-confidence-reason">
-                  <HelpCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
-                      {t.analysis_detail.confidence_reason_label}
-                    </p>
-                    <p className="text-xs text-foreground leading-relaxed">{confidenceReason}</p>
-                    {isBeginnerMode && (
-                      <CitationChips
-                        citations={analysis.fundamentalCitations}
-                        context={analysis.fundamentalContext}
-                        t={t}
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="text-xs text-muted-foreground">
-                {t.analysis_detail.analyzed_prefix}{" "}
-                {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
-                  locale: lang === "id" ? idLocale : undefined,
-                })}{" "}
-                • {t.analysis_detail.mode_prefix}{" "}
-                {isBeginnerMode ? t.analysis_detail.beginner_mode : t.analysis_detail.pro_mode}
-              </div>
-
-              {isExpired && (
-                <Button
-                  className="w-full mt-2"
-                  onClick={openRefreshDialog}
-                  disabled={isRefreshing}
-                  data-testid="button-refresh-analysis"
-                >
-                  {isRefreshing ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">{t.analyze.loading[refreshMsgIndex]}</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4" />
-                      <span>{t.analysis_detail.refresh_btn}</span>
-                    </div>
-                  )}
-                </Button>
-              )}
-            </Card>
-
-            {/* TradingView chart — visual confirmation of the AI's read
-                against the live tape. Symbol Overview is the default; the
-                "Open full chart" button opens a full-screen Advanced Chart
-                modal for power users. */}
-            <AnalysisChartSection
-              instrument={analysis.instrument}
-              timeframe={analysis.timeframe}
-              tradePlan={tradePlan}
-              analysisCreatedAt={analysis.createdAt}
-            />
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">{t.analysis_detail.risk_title}</p>
+              <p className={cn("text-sm font-bold", rl?.color)} data-testid="text-risk-level">
+                {rl?.label}
+              </p>
             </div>
-
-            {/* Fundamental context — news + calendar the AI was given,
-                shown directly under the bias gauge so users can audit it. */}
-            {analysis.fundamentalContext && (
-              <FundamentalContextCard
-                ctx={analysis.fundamentalContext}
-                t={t}
-                instrument={analysis.instrument}
-                lang={lang}
-                onRefresh={handleRefreshFundamentals}
-                isRefreshing={refreshFundamentalsMutation.isPending}
-                refreshState={fundamentalRefresh}
-              />
-            )}
           </div>
-        </details>
+
+          <div>
+            <div className="flex gap-1 mb-1">
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className={cn(
+                    "h-2 flex-1 rounded-full",
+                    n <= (rl?.bars ?? 0)
+                      ? analysis.riskLevel === "low"
+                        ? "bg-green-500"
+                        : analysis.riskLevel === "medium"
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
+                      : "bg-muted"
+                  )}
+                />
+              ))}
+            </div>
+            <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="absolute h-full bg-primary rounded-full"
+                style={{
+                  left: `${analysis.confidenceMin ?? 0}%`,
+                  width: `${(analysis.confidenceMax ?? 0) - (analysis.confidenceMin ?? 0)}%`,
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+              <span>0%</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          {confidenceReason && (
+            <div className="bg-muted/40 rounded-md p-2.5 flex gap-2" data-testid="card-confidence-reason">
+              <HelpCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
+                  {t.analysis_detail.confidence_reason_label}
+                </p>
+                <p className="text-xs text-foreground leading-relaxed">{confidenceReason}</p>
+                {/* Beginner mode: `confidenceReason` IS the whyReason text,
+                    so this is exactly where the AI would mention the news /
+                    event it leaned on. Inline-cite the matching cards here
+                    (task #89) so the user can see "Fed dovish → bullish
+                    bias" with the actual headline rendered as a clickable
+                    chip right next to the sentence. */}
+                {isBeginnerMode && (
+                  <CitationChips
+                    citations={analysis.fundamentalCitations}
+                    context={analysis.fundamentalContext}
+                    t={t}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="text-xs text-muted-foreground">
+            {t.analysis_detail.analyzed_prefix}{" "}
+            {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
+              locale: lang === "id" ? idLocale : undefined,
+            })}{" "}
+            • {t.analysis_detail.mode_prefix}{" "}
+            {isBeginnerMode ? t.analysis_detail.beginner_mode : t.analysis_detail.pro_mode}
+          </div>
+
+          {isExpired && (
+            <Button
+              className="w-full mt-2"
+              onClick={openRefreshDialog}
+              disabled={isRefreshing}
+              data-testid="button-refresh-analysis"
+            >
+              {isRefreshing ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">{t.analyze.loading[refreshMsgIndex]}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  <span>{t.analysis_detail.refresh_btn}</span>
+                </div>
+              )}
+            </Button>
+          )}
+        </Card>
+
+        {/* TradingView chart — visual confirmation of the AI's read
+            against the live tape. Symbol Overview is the default; the
+            "Open full chart" button opens a full-screen Advanced Chart
+            modal for power users. */}
+        <AnalysisChartSection
+          instrument={analysis.instrument}
+          timeframe={analysis.timeframe}
+          tradePlan={tradePlan}
+          analysisCreatedAt={analysis.createdAt}
+        />
+        </div>
+
+        {/* Fundamental context — news + calendar the AI was given,
+            shown directly under the bias gauge so users can audit it. */}
+        {analysis.fundamentalContext && (
+          <FundamentalContextCard
+            ctx={analysis.fundamentalContext}
+            t={t}
+            instrument={analysis.instrument}
+            lang={lang}
+            onRefresh={handleRefreshFundamentals}
+            isRefreshing={refreshFundamentalsMutation.isPending}
+            refreshState={fundamentalRefresh}
+          />
+        )}
 
         {/* AI-suggested concrete trade plan with both buy and sell levels.
             Anchored to the price at analysis time. Surfaces the structured
             entry / SL / TP / R:R the model produced — keeps the rest of the
             narrative consultative while giving the user actionable numbers. */}
         {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
-
-        {/* Product rules are separate from AI levels so the user can review
-            the broker/source constraints without confusing them with AI
-            suggestions. */}
-        {tradePlan && (
-          <div data-testid="section-standard-plan">
-            <StandardTradingRulesCard instrument={analysis.instrument} />
-          </div>
-        )}
 
         {/* Deterministic, situation-aware scaling plan. It reads the saved
             analysis context but never changes Standard Plan levels or executes orders. */}
@@ -2045,36 +2019,18 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           <AnalysisAlertsCard analysisId={analysis.id} t={t} />
         )}
 
-        <details
-          className="rounded-xl border border-border bg-card overflow-hidden"
-          data-testid="details-analysis-review"
-        >
-          <summary className="cursor-pointer list-none p-4 hover:bg-muted/40 transition-colors">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-bold text-foreground">
-                  {t.analysis_detail.review_details_title}
-                </h2>
-                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                  {t.analysis_detail.review_details_hint}
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
-            </div>
-          </summary>
-          <div className="space-y-4 border-t border-border p-4">
-            {/* Market Context Summary — rendered from the indicator-tally
-                snapshot stored at analysis time. */}
-            {analysis.techBuyCount != null &&
-              analysis.techSellCount != null &&
-              analysis.techNeutralCount != null && (
-                <MarketContextSummary
-                  buy={analysis.techBuyCount}
-                  sell={analysis.techSellCount}
-                  neutral={analysis.techNeutralCount}
-                  mode={isBeginnerMode ? "beginner" : "pro"}
-                />
-              )}
+        {/* Market Context Summary — same card the user saw on the Analyze tab,
+            rendered from the indicator-tally snapshot stored at analysis time. */}
+        {analysis.techBuyCount != null &&
+          analysis.techSellCount != null &&
+          analysis.techNeutralCount != null && (
+            <MarketContextSummary
+              buy={analysis.techBuyCount}
+              sell={analysis.techSellCount}
+              neutral={analysis.techNeutralCount}
+              mode={isBeginnerMode ? "beginner" : "pro"}
+            />
+          )}
 
         {/* Live Technical Indicators panel — moved from the Analyze tab so
             users get the full indicator picture in ONE place (the saved
@@ -2240,7 +2196,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         )}
 
         {/* EXECUTION INSIGHT (Step 2) */}
-            <Card className="overflow-hidden" data-testid="card-execution-insight">
+        <Card className="overflow-hidden" data-testid="card-execution-insight">
           <div className="flex items-start gap-2 border-b border-border p-4">
             <div>
               <p className="text-sm font-semibold text-foreground">
@@ -2279,9 +2235,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               </div>
             </div>
           </div>
-            </Card>
-          </div>
-        </details>
+        </Card>
 
         <Card className="p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
           <div className="flex gap-2">
