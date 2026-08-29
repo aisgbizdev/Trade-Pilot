@@ -5,6 +5,7 @@ export type StandardTradingRuleInstrument = {
   contractUnit: "troy ounce" | "barrel" | "USD/point";
   tradingDays: string;
   tradingHours: { summer: string; winter: string };
+  /** Initial/day-trade margin per Mini lot. Adaptive Position Plan never uses rollover as margin. */
   initialMarginUsdPerLot: number;
   facilityFeeUsdPerLotPerSide: number | null;
   vatPercent: number;

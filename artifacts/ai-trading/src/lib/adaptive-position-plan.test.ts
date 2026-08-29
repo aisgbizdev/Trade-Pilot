@@ -180,6 +180,7 @@ describe("buildAdaptivePositionPlan", () => {
     });
     expect(recommendation.result.rule).toMatchObject({
       accountTier: "regular",
+      marginBasis: "day",
       contractSize: 100,
       minimumLot: 1,
       marginAtMinimumLot: 1_000,
@@ -623,6 +624,8 @@ describe("buildAdaptivePositionPlan", () => {
     expect(nikkei.buy?.ladder.every((level) => level.price % 5 === 0)).toBe(true);
     expect(nikkei.buy?.stopLoss % 5).toBe(0);
     expect(nikkei.assumptions.join(" ")).toMatch(/no percentage gap limit is assumed/i);
+    expect(nikkei.rule?.marginBasis).toBe("day");
+    expect(nikkei.assumptions.join(" ")).toMatch(/day trading only.*excludes overnight holding, rollover, and overnight fees/i);
   });
 
   it("rejects assets that do not have a transparent supported-product rule", () => {

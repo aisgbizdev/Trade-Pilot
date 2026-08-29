@@ -48,7 +48,7 @@ const DEFAULT_FORM: FormState = {
 const ACCOUNT_TIERS = ["micro", "mini", "regular"] as const;
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v7:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v8:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -65,9 +65,11 @@ function isStoredForm(value: unknown): value is Partial<FormState> {
 function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommendation {
   if (!isRecord(value) || !isRecord(value.result) || !isRecord(value.context) || !isRecord(value.decision)) return false;
   const fundamental = value.context.fundamental;
+  const rule = value.result.rule;
   return typeof value.result.valid === "boolean" &&
     isRecord(fundamental) &&
     typeof fundamental.available === "boolean" &&
+    (!value.result.valid || (isRecord(rule) && rule.marginBasis === "day")) &&
     (value.decision.posture === "scaling_allowed" || value.decision.posture === "entry_only" || value.decision.posture === "not_recommended") &&
     (value.decision.preferredSide === "buy" || value.decision.preferredSide === "sell" || value.decision.preferredSide === "both" || value.decision.preferredSide === "none") &&
     Array.isArray(value.decision.reasonCodes) &&
@@ -367,6 +369,7 @@ export function AdaptivePositionPlan({ analysisId, instrument, tradePlan, contex
               <Input type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-available-margin" />
             </span>
             <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_available_margin_help}</span>
+            <span className="block rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-[10px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-daytrade-only">{copy.adaptive_day_trade_only}</span>
           </label>
           {isRulesLoading && <p className="text-[11px] text-muted-foreground" data-testid="adaptive-plan-rules-loading">{copy.adaptive_rules_loading}</p>}
           {selectedRule && availableMargin != null && availableMargin > 0 && (

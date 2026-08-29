@@ -71,6 +71,7 @@ export interface AdaptiveRule {
   market: AdaptiveMarket;
   label: string;
   accountTier: AccountTier;
+  marginBasis: "day";
   contractSize: number;
   minMovement: number;
   marginPerLot: number;
@@ -301,6 +302,7 @@ function ruleFromStandardTradingRules(
     market,
     label: MARKET_GUARDRAILS[market].label,
     accountTier,
+    marginBasis: "day",
     contractSize,
     minMovement,
     marginPerLot,
@@ -622,7 +624,8 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     movementAssumption,
     `Initial entry uses the Standard Plan; each manual add stays at or below the initial lot (${tierText}) and may be reduced by the selected plan style. No add uses a martingale multiplier.`,
     `Maximum cycle loss is ${input.maxCycleLossPercent}% of equity and includes the initial entry plus every planned add.`,
-    "Broker auto-liquidation, spread, rollover, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
+    "This Adaptive Position Plan is for day trading only: it uses the day/initial margin and excludes overnight holding, rollover, and overnight fees from every calculation.",
+    "Broker auto-liquidation, spread, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
   ];
 
   return {

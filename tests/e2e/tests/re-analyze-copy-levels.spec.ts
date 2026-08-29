@@ -467,6 +467,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const marginInput = page.getByTestId("input-adaptive-available-margin");
     await expect(marginInput).toBeVisible();
     const accountRule = page.getByTestId("adaptive-account-rule");
+    await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/day trade only/i);
     await expect(accountRule).toContainText("Mini");
     await expect(accountRule).toContainText(/0[.,]1(?:0)? lot/);
     await expect(accountRule).toContainText(/100/);
@@ -490,7 +491,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v7:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v8:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -502,7 +503,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v7:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v8:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();
