@@ -301,6 +301,12 @@ describe("AnalyzePage: user actions", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-timeframe-1h"));
     });
+    expect(await screen.findByTestId("card-market-preview")).toHaveTextContent(
+      "Market preview",
+    );
+    expect(screen.getByTestId("market-preview-disclaimer")).toHaveTextContent(
+      "not an AI signal or a suggested entry",
+    );
     fireEvent.change(screen.getByTestId("textarea-notes"), {
       target: { value: "Waiting for a close above resistance" },
     });

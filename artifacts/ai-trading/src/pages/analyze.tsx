@@ -838,7 +838,6 @@ export default function AnalyzePage() {
                 </p>
               </div>
             </div>
-            {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
             <Textarea
               id="analysis-notes"
               placeholder={t.analyze.notes_placeholder}
@@ -857,10 +856,17 @@ export default function AnalyzePage() {
               <span className="text-primary mt-0.5" aria-hidden="true">ℹ</span>
               {t.analyze.broker_warning}
             </p>
+            {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
           </div>
 
           {finalInstrument && selectedTimeframe && (
-            <Card className="p-3 bg-muted/50 border-dashed">
+            <Card className="p-3 bg-muted/50 border-dashed" data-testid="card-market-preview">
+              <div className="mb-3">
+                <h2 className="text-sm font-bold text-foreground">{t.analyze.market_preview_title}</h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {t.analyze.market_preview_subtitle}
+                </p>
+              </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t.analyze.instrument_label}:</span>
                 <span className="font-semibold text-foreground">{finalInstrument}</span>
@@ -930,6 +936,12 @@ export default function AnalyzePage() {
                   {selectedMode === "beginner" ? t.common.beginner : t.common.pro}
                 </span>
               </div>
+              <p
+                className="text-[10px] text-muted-foreground italic leading-relaxed mt-3 pt-2 border-t border-border/40"
+                data-testid="market-preview-disclaimer"
+              >
+                {t.analyze.market_preview_note}
+              </p>
             </Card>
           )}
 
