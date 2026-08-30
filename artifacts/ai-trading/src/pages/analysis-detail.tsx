@@ -305,22 +305,58 @@ function ValidityBadge({ validUntil }: { validUntil: string }) {
   );
 }
 
-function Section({
+function narrativePreview(content: string): string {
+  const preview = content.replace(/\s+/g, " ").trim();
+  return preview.length > 120 ? `${preview.slice(0, 120).trimEnd()}…` : preview;
+}
+
+function NarrativeDisclosure({
   title,
   content,
   citations,
+  open,
+  onOpenChange,
+  testId,
+  t,
 }: {
   title: string;
   content?: string | null;
   citations?: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  testId: string;
+  t: T;
 }) {
   if (!content) return null;
   return (
-    <div>
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{title}</h3>
-      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{content}</p>
-      {citations}
-    </div>
+    <Collapsible open={open} onOpenChange={onOpenChange} data-testid={testId}>
+      <CollapsibleTrigger
+        className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        data-testid={`${testId}-trigger`}
+        aria-label={`${open ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${title}`}
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-foreground">{title}</span>
+          {!open && (
+            <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted-foreground">
+              {narrativePreview(content)}
+            </span>
+          )}
+        </span>
+        {open ? (
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        ) : (
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent
+        className="px-3 pb-3 pt-1"
+        data-testid={`${testId}-content`}
+      >
+        <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{content}</p>
+        {citations}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -1590,6 +1626,9 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   // bleed into analysis #42.
   useEffect(() => {
     setFundamentalRefresh(null);
+    setOpenScenario("a");
+    setOpenProFactor(null);
+    setExecutionInsightOpen(false);
   }, [id]);
 
   const [feedbackType, setFeedbackType] = useState<"useful" | "not_useful" | null>(null);
@@ -1603,6 +1642,11 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [quickTimeframeStatus, setQuickTimeframeStatus] = useState<
     "idle" | "scheduled" | "loading" | "error"
   >("idle");
+  const [openScenario, setOpenScenario] = useState<"a" | "b" | "c" | null>("a");
+  const [openProFactor, setOpenProFactor] = useState<
+    "technical" | "fundamental" | "market" | null
+  >(null);
+  const [executionInsightOpen, setExecutionInsightOpen] = useState(false);
   const quickTimeframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickTimeframeTargetRef = useRef<string | null>(null);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -2256,34 +2300,68 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         )}
 
         {/* SCENARIOS A / B / C */}
-        <Card className="p-4 space-y-4" data-testid="card-scenarios">
+        <Card className="p-3 sm:p-4 space-y-2" data-testid="card-scenarios">
+          <div className="px-3 pb-1">
+            <h2 className="text-base font-bold text-foreground">{t.analysis_detail.scenarios_section}</h2>
+          </div>
           {scenarioAContent && (
-            <Section title={t.analysis_detail.scenario_a} content={scenarioAContent} />
+            <NarrativeDisclosure
+              title={t.analysis_detail.scenario_a}
+              content={scenarioAContent}
+              open={openScenario === "a"}
+              onOpenChange={(open) => setOpenScenario(open ? "a" : null)}
+              testId="scenario-a-disclosure"
+              t={t}
+            />
           )}
           {scenarioBContent && (
-            <Section title={t.analysis_detail.scenario_b} content={scenarioBContent} />
+            <NarrativeDisclosure
+              title={t.analysis_detail.scenario_b}
+              content={scenarioBContent}
+              open={openScenario === "b"}
+              onOpenChange={(open) => setOpenScenario(open ? "b" : null)}
+              testId="scenario-b-disclosure"
+              t={t}
+            />
           )}
-          <div data-testid="section-scenario-c">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-              {t.analysis_detail.scenario_c}
-            </h3>
-            <p className="text-sm text-foreground leading-relaxed">
-              {scenarioCText(bias ?? "neutral", t)}
-            </p>
-          </div>
+          <NarrativeDisclosure
+            title={t.analysis_detail.scenario_c}
+            content={scenarioCText(bias ?? "neutral", t)}
+            open={openScenario === "c"}
+            onOpenChange={(open) => setOpenScenario(open ? "c" : null)}
+            testId="scenario-c-disclosure"
+            t={t}
+          />
         </Card>
 
         {/* PRO MODE: Technical + Fundamental + Market context */}
         {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
-          <Card className="p-4 space-y-4" data-testid="card-pro-details">
-            <Section title={t.analysis_detail.pro_factor_technical} content={analysis.keyDriversTechnical} />
+          <Card className="p-3 sm:p-4 space-y-2" data-testid="card-pro-details">
+            <div className="px-3 pb-1">
+              <h2 className="text-base font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h2>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                {t.analysis_detail.narrative_details_intro}
+              </p>
+            </div>
+            <NarrativeDisclosure
+              title={t.analysis_detail.pro_factor_technical}
+              content={analysis.keyDriversTechnical}
+              open={openProFactor === "technical"}
+              onOpenChange={(open) => setOpenProFactor(open ? "technical" : null)}
+              testId="pro-factor-technical"
+              t={t}
+            />
             {/* Inline source chips next to the AI's fundamental + market-
                 context narrative (task #89) — duplicate the chip block
                 under both because the AI tends to reference fundamental
                 catalysts in either / both depending on the prompt. */}
-            <Section
+            <NarrativeDisclosure
               title={t.analysis_detail.pro_factor_fundamental}
               content={analysis.keyDriversFundamental}
+              open={openProFactor === "fundamental"}
+              onOpenChange={(open) => setOpenProFactor(open ? "fundamental" : null)}
+              testId="pro-factor-fundamental"
+              t={t}
               citations={
                 <CitationChips
                   citations={analysis.fundamentalCitations}
@@ -2292,9 +2370,13 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                 />
               }
             />
-            <Section
+            <NarrativeDisclosure
               title={t.analysis_detail.pro_factor_market_context}
               content={analysis.marketContext}
+              open={openProFactor === "market"}
+              onOpenChange={(open) => setOpenProFactor(open ? "market" : null)}
+              testId="pro-factor-market-context"
+              t={t}
               citations={
                 <CitationChips
                   citations={analysis.fundamentalCitations}
@@ -2308,44 +2390,59 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
         {/* EXECUTION INSIGHT (Step 2) */}
         <Card className="overflow-hidden" data-testid="card-execution-insight">
-          <div className="flex items-start gap-2 border-b border-border p-4">
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                {t.analysis_detail.execution_insight_title}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {t.analysis_detail.execution_insight_intro}
-              </p>
-            </div>
-          </div>
-          <div className="p-4 space-y-3" data-testid="execution-insight-content">
-            <div className="space-y-3">
-              <div data-testid="exec-scenario-a">
-                <h4 className="text-xs font-semibold text-foreground mb-1">
-                  {t.analysis_detail.execution_scenario_a_label}
-                </h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {executionScenarioAText(bias ?? "neutral", t)}
-                </p>
+          <Collapsible open={executionInsightOpen} onOpenChange={setExecutionInsightOpen}>
+            <CollapsibleTrigger
+              className="w-full flex items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              data-testid="execution-insight-trigger"
+              aria-label={`${executionInsightOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.execution_insight_title}`}
+            >
+              <div className="flex min-w-0 items-start gap-2">
+                {executionInsightOpen ? (
+                  <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                ) : (
+                  <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-base font-bold text-foreground">
+                    {t.analysis_detail.execution_insight_title}
+                  </p>
+                  <p className="text-[11px] leading-snug text-muted-foreground">
+                    {t.analysis_detail.execution_insight_intro}
+                  </p>
+                </div>
               </div>
-              <div data-testid="exec-scenario-b">
-                <h4 className="text-xs font-semibold text-foreground mb-1">
-                  {t.analysis_detail.execution_scenario_b_label}
-                </h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {t.analysis_detail.execution_scenario_b_template}
-                </p>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="border-t border-border">
+              <div className="p-4 space-y-3" data-testid="execution-insight-content">
+                <div className="space-y-3">
+                  <div data-testid="exec-scenario-a">
+                    <h4 className="text-xs font-semibold text-foreground mb-1">
+                      {t.analysis_detail.execution_scenario_a_label}
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {executionScenarioAText(bias ?? "neutral", t)}
+                    </p>
+                  </div>
+                  <div data-testid="exec-scenario-b">
+                    <h4 className="text-xs font-semibold text-foreground mb-1">
+                      {t.analysis_detail.execution_scenario_b_label}
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {t.analysis_detail.execution_scenario_b_template}
+                    </p>
+                  </div>
+                  <div data-testid="exec-scenario-c">
+                    <h4 className="text-xs font-semibold text-foreground mb-1">
+                      {t.analysis_detail.execution_scenario_c_label}
+                    </h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {t.analysis_detail.execution_scenario_c_template}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div data-testid="exec-scenario-c">
-                <h4 className="text-xs font-semibold text-foreground mb-1">
-                  {t.analysis_detail.execution_scenario_c_label}
-                </h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {t.analysis_detail.execution_scenario_c_template}
-                </p>
-              </div>
-            </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         <Card className="p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">

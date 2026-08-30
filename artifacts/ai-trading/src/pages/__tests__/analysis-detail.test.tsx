@@ -245,6 +245,60 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(screen.getByTestId("button-feedback-useful")).toBeInTheDocument();
     expect(screen.getByTestId("button-feedback-not-useful")).toBeInTheDocument();
   });
+
+  it("uses progressive disclosure for scenarios, pro factors, and execution insight", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          mode: "pro",
+          baseCase: "The primary bullish path remains valid above support.",
+          bearishScenario: "A break below support would shift the path bearish.",
+          keyDriversTechnical: "Momentum and trend structure currently support the bullish case.",
+          keyDriversFundamental: "Upcoming macro releases may increase volatility.",
+          marketContext: "Price remains inside the broader weekly range.",
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("scenario-a-disclosure-content")).toHaveTextContent(
+      /primary bullish path/i,
+    );
+    expect(screen.getByTestId("scenario-b-disclosure-content")).not.toBeVisible();
+    expect(screen.getByTestId("scenario-c-disclosure-content")).not.toBeVisible();
+
+    fireEvent.click(screen.getByTestId("scenario-b-disclosure-trigger"));
+    expect(screen.getByTestId("scenario-a-disclosure-content")).not.toBeVisible();
+    expect(screen.getByTestId("scenario-b-disclosure-content")).toHaveTextContent(
+      /shift the path bearish/i,
+    );
+    expect(screen.getByTestId("scenario-b-disclosure-content")).toBeVisible();
+
+    expect(screen.getByTestId("pro-factor-technical-content")).not.toBeVisible();
+    expect(screen.getByTestId("pro-factor-fundamental-content")).not.toBeVisible();
+    fireEvent.click(screen.getByTestId("pro-factor-technical-trigger"));
+    expect(screen.getByTestId("pro-factor-technical-content")).toHaveTextContent(
+      /momentum and trend structure/i,
+    );
+    fireEvent.click(screen.getByTestId("pro-factor-fundamental-trigger"));
+    expect(screen.getByTestId("pro-factor-technical-content")).not.toBeVisible();
+    expect(screen.getByTestId("pro-factor-fundamental-content")).toHaveTextContent(
+      /macro releases/i,
+    );
+    expect(screen.getByTestId("pro-factor-fundamental-content")).toBeVisible();
+
+    expect(screen.queryByTestId("execution-insight-content")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("execution-insight-trigger"));
+    expect(screen.getByTestId("execution-insight-content")).toBeVisible();
+  });
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {
