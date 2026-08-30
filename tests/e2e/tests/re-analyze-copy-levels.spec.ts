@@ -76,6 +76,9 @@ const STUB_ID_ADAPTIVE_REFRESH = 9_999_940;
 const STUB_ID_HSI_ADAPTIVE = 9_999_930;
 const STUB_ID_UNSUPPORTED_ADAPTIVE = 9_999_920;
 
+const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
+const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
+
 function buildStubAnalysis(id: number) {
   const now = new Date();
   const validUntil = new Date(now.getTime() + 60 * 60_000);
@@ -240,6 +243,96 @@ test.describe("Re-Analyze button (real Chromium + stubbed analysis)", () => {
     // 5. The instrument button is visible in the grid (confirming the correct
     //    tab is shown and the instrument list is rendered).
     await expect(page.getByTestId("button-instrument-XAU/USD")).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+test.describe("Analyze instrument accordion (authenticated Chromium)", () => {
+  test("keeps the category selector correct at desktop and mobile widths", async ({
+    page,
+    baseURL,
+  }) => {
+    const browserErrors: string[] = [];
+    page.on("console", (message) => {
+      // The Playwright config blocks service workers so browser route stubs
+      // remain authoritative. The production PWA registration reports that
+      // expected harness condition through console.error; keep the check
+      // focused on unexpected errors from the authenticated Analyze flow.
+      const isBlockedServiceWorkerError = message
+        .text()
+        .includes("[pwa] service worker registration failed");
+      if (message.type() === "error" && !isBlockedServiceWorkerError) {
+        browserErrors.push(`console: ${message.text()}`);
+      }
+    });
+    page.on("pageerror", (error) => {
+      browserErrors.push(`pageerror: ${error.message}`);
+    });
+
+    const user = await registerUser(baseURL!, "accordion");
+    await signIn(page, user);
+    // Login intentionally makes an unauthenticated /api/auth/me request
+    // before the session exists. Only collect errors from /analyze below.
+    browserErrors.length = 0;
+    // Keep the embedded TradingView widget deterministic. Its calendar feed
+    // is unrelated to the accordion and can be unavailable in headless runs.
+    await page.route("https://chartevents-reuters.tradingview.com/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ result: [] }),
+      });
+    });
+
+    for (const viewport of [
+      { width: 1280, height: 720 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto("/analyze");
+
+      const futuresTab = page.getByTestId("tab-futures");
+      const forexTab = page.getByTestId("tab-forex");
+      const instrumentOptions = page.getByTestId("instrument-options");
+
+      // Futures is the initial category and its complete product list is
+      // rendered before the user makes a selection.
+      await expect(futuresTab).toHaveAttribute("aria-expanded", "true");
+      await expect(instrumentOptions).toBeVisible();
+      await expect(
+        instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
+      ).toHaveText(FUTURES_INSTRUMENTS);
+
+      // Opening Forex replaces the options rather than appending another
+      // category's products to the existing list.
+      await forexTab.click();
+      await expect(futuresTab).toHaveAttribute("aria-expanded", "false");
+      await expect(forexTab).toHaveAttribute("aria-expanded", "true");
+      await expect(instrumentOptions).toBeVisible();
+      await expect(
+        instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
+      ).toHaveText(FOREX_INSTRUMENTS);
+      await expect(page.getByTestId("button-instrument-XAU/USD")).toHaveCount(0);
+
+      // A selected Forex instrument survives closing and reopening its
+      // accordion panel.
+      const selectedForex = page.getByTestId("button-instrument-EUR/USD");
+      await selectedForex.click();
+      await forexTab.click();
+      await expect(forexTab).toHaveAttribute("aria-expanded", "false");
+      await expect(instrumentOptions).toHaveCount(0);
+
+      await forexTab.click();
+      await expect(forexTab).toHaveAttribute("aria-expanded", "true");
+      await expect(selectedForex).toBeVisible();
+      await expect(selectedForex).toHaveClass(/bg-primary\/10/);
+      await expect(
+        instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
+      ).toHaveText(FOREX_INSTRUMENTS);
+    }
+
+    expect(browserErrors, browserErrors.join("\n")).toEqual([]);
   });
 });
 
