@@ -52,17 +52,23 @@ interface AnalysisLevelsChartProps {
 // Parse a possibly-zone price string like "1.0850" or "1.0850-1.0857" or
 // descriptive copy from the AI ("menunggu konfirmasi..."). Returns a single
 // number — the zone midpoint when given a range — or null if no numeric
-// content is present.
+// content is present. Timeframe tokens are removed first so their digits
+// cannot be mistaken for the second bound of a price range.
 function parsePriceLevel(raw: string | null | undefined): number | null {
   if (!raw) return null;
+  const cleaned = raw
+    // Keep parsing consistent with the backend: commas are thousands
+    // separators and periods are decimal points.
+    .replace(/,/g, "")
+    // Handle both H1/M15/4H and 1m/30m/1D/1W forms.
+    .replace(/\b[HMDWhmdw]\d{1,3}\b/g, " ")
+    .replace(/\b\d{1,3}[mhdwMHDW]\b/g, " ");
   // Prices are always positive; intentionally NOT matching a leading `-`
   // so that zone strings like "2350-2356" parse as [2350, 2356] instead
   // of [2350, -2356] (which would yield a midpoint of -3).
-  const matches = raw.match(/\d+(?:[.,]\d+)?/g);
+  const matches = cleaned.match(/\d+(?:\.\d+)?/g);
   if (!matches || matches.length === 0) return null;
-  const nums = matches
-    .map((m) => Number(m.replace(/,/g, ".")))
-    .filter((n) => Number.isFinite(n));
+  const nums = matches.map(Number).filter((n) => Number.isFinite(n));
   if (nums.length === 0) return null;
   if (nums.length === 1) return nums[0];
   // Treat first two as zone bounds; take the midpoint so the line sits in

@@ -21,6 +21,8 @@
  *      numeric levels still render.
  *   3. "wait" preferredSide draws lines for BOTH sides so the user can
  *      see structure either way.
+ *   4. Directional entry text containing timeframe tokens keeps the actual
+ *      price instead of treating the timeframe digits as a range bound.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
@@ -202,6 +204,62 @@ describe("AnalysisLevelsChart", () => {
     await waitFor(() => expect(createdPriceLines).toHaveLength(3));
     expect(createdPriceLines.map((l) => l.title)).toEqual(["SL", "TP1", "TP2"]);
     expect(createdPriceLines.find((l) => l.title.includes("Entry"))).toBeUndefined();
+  });
+
+  it("ignores timeframe tokens in directional Buy and Sell entries", async () => {
+    const plan: TradePlan = {
+      preferredSide: "wait",
+      buy: makeSide({
+        entryZone: "di atas 4505 setelah breakout H1",
+        stopLoss: "4480",
+        takeProfit1: "4550",
+        takeProfit2: "4600",
+      }),
+      sell: makeSide({
+        entryZone: "di bawah 4410 setelah breakdown 1D",
+        stopLoss: "4435",
+        takeProfit1: "4370",
+        takeProfit2: "4328",
+      }),
+    };
+
+    renderChart({ tradePlan: plan, instrument: "XAU/USD", timeframe: "1D" });
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("analysis-levels-chart").getAttribute("data-state"),
+      ).toBe("ready"),
+    );
+    await waitFor(() => expect(createdPriceLines).toHaveLength(8));
+
+    expect(createdPriceLines.find((line) => line.title === "BUY Entry")?.price).toBe(4505);
+    expect(createdPriceLines.find((line) => line.title === "SELL Entry")?.price).toBe(4410);
+  });
+
+  it.each([
+    ["H1 suffix", "di atas 4505 setelah breakout H1"],
+    ["1D suffix", "di atas 4505 setelah breakout 1D"],
+    ["4H suffix", "di atas 4505 setelah breakout 4H"],
+    ["15m suffix", "di atas 4505 setelah breakout 15m"],
+    ["30m suffix", "di atas 4505 setelah breakout 30m"],
+    ["H1 prefix", "H1 breakout di atas 4505"],
+  ])("keeps 4505 for a %s entry", async (_label, entryZone) => {
+    const plan: TradePlan = {
+      preferredSide: "buy",
+      buy: makeSide({ entryZone }),
+      sell: makeSide({}),
+    };
+
+    renderChart({ tradePlan: plan, instrument: "XAU/USD", timeframe: "1D" });
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("analysis-levels-chart").getAttribute("data-state"),
+      ).toBe("ready"),
+    );
+    await waitFor(() => expect(createdPriceLines).toHaveLength(4));
+
+    expect(createdPriceLines.find((line) => line.title === "BUY Entry")?.price).toBe(4505);
   });
 
   it("draws lines for BOTH sides when the AI says 'wait'", async () => {
