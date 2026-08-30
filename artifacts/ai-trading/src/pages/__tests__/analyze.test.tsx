@@ -1,7 +1,7 @@
 /**
  * Component test for the Analyze form (`src/pages/analyze.tsx`).
  *
- * Covers happy-path render of the instrument tabs / timeframe grid, the
+ * Covers happy-path render of the instrument category selector / timeframe grid, the
  * loading-of-quota chip, the disabled-state of the submit button until
  * both an instrument and a timeframe are chosen, the empty "no recent
  * instruments" branch, the absence of the duplicated Recent Analyses
@@ -146,10 +146,12 @@ describe("AnalyzePage: happy-path render", () => {
         </Wrapper>,
       );
 
-      // Futures tab is the default and renders its instrument grid.
+       // Futures is open by default and renders its instrument grid.
       const futuresTab = await screen.findByTestId("tab-futures");
       expect(futuresTab).toBeInTheDocument();
       expect(screen.getByTestId("tab-forex")).toBeInTheDocument();
+       expect(futuresTab).toHaveAttribute("aria-expanded", "true");
+       expect(screen.getByTestId("instrument-options")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-XAU/USD")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-BRENT")).toBeInTheDocument();
 
@@ -253,7 +255,7 @@ describe("AnalyzePage: empty / loading branches", () => {
 });
 
 describe("AnalyzePage: user actions", () => {
-  it("switches between futures and forex tabs and updates the visible instrument grid", async () => {
+   it("opens one instrument category at a time and preserves the selected instrument", async () => {
     installFetchMock(pageHandlers({}));
     const { Wrapper } = makeWrapper();
 
@@ -263,18 +265,32 @@ describe("AnalyzePage: user actions", () => {
       </Wrapper>,
     );
 
-    await screen.findByTestId("tab-forex");
+     const futuresTab = await screen.findByTestId("tab-futures");
+     const forexTab = screen.getByTestId("tab-forex");
+     fireEvent.click(screen.getByTestId("button-instrument-XAU/USD"));
 
     await act(async () => {
-      fireEvent.click(screen.getByTestId("tab-forex"));
+       fireEvent.click(forexTab);
     });
 
     expect(screen.getByTestId("button-instrument-EUR/USD")).toBeInTheDocument();
     expect(screen.getByTestId("button-instrument-USD/JPY")).toBeInTheDocument();
-    // Futures-only instruments are gone after the tab switch.
-    expect(
-      screen.queryByTestId("button-instrument-BRENT"),
-    ).not.toBeInTheDocument();
+     expect(forexTab).toHaveAttribute("aria-expanded", "true");
+     expect(futuresTab).toHaveAttribute("aria-expanded", "false");
+     expect(screen.queryByTestId("button-instrument-BRENT")).not.toBeInTheDocument();
+
+     // Clicking the open category collapses its product list without
+     // changing the selected instrument.
+     fireEvent.click(forexTab);
+     expect(forexTab).toHaveAttribute("aria-expanded", "false");
+     expect(screen.queryByTestId("instrument-options")).not.toBeInTheDocument();
+
+     fireEvent.click(forexTab);
+     expect(screen.getByTestId("button-instrument-EUR/USD")).toBeInTheDocument();
+
+     // Reopening Futures still shows the previously selected XAU/USD.
+     fireEvent.click(futuresTab);
+     expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveClass("border-primary");
   });
 
   it("enables the submit button once both instrument and timeframe are chosen, and POSTs to /api/analyses on submit", async () => {

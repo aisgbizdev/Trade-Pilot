@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
 import { SetAlertModal } from "@/components/set-alert-modal";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +42,8 @@ function formatPrice(price: number, instrument: string): string {
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
 const CRYPTO_INSTRUMENTS_PICKER = ["BTC/USD", "ETH/USD", "SOL/USD", "BNB/USD", "XRP/USD"];
+type InstrumentCategory = "futures" | "forex" | "crypto";
+
 const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
   new Set(
     [...FUTURES_INSTRUMENTS, ...FOREX_INSTRUMENTS, ...CRYPTO_INSTRUMENTS_PICKER]
@@ -49,7 +51,7 @@ const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
   ),
 );
 
-function instrumentsForTab(tab: "futures" | "forex" | "crypto"): string[] {
+function instrumentsForTab(tab: InstrumentCategory): string[] {
   switch (tab) {
     case "futures":
       return FUTURES_INSTRUMENTS;
@@ -59,6 +61,13 @@ function instrumentsForTab(tab: "futures" | "forex" | "crypto"): string[] {
       return CRYPTO_INSTRUMENTS_PICKER;
   }
 }
+
+function categoryForInstrument(instrument: string): InstrumentCategory {
+  if (CRYPTO_INSTRUMENTS_PICKER.includes(instrument)) return "crypto";
+  if (FOREX_INSTRUMENTS.includes(instrument)) return "forex";
+  return "futures";
+}
+
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
 
 const IMPACT_STYLES: Record<string, string> = {
@@ -502,7 +511,7 @@ export default function AnalyzePage() {
     quota && !quota.unlimited && hourlyQuota && dailyQuota,
   );
 
-  const [activeTab, setActiveTab] = useState<"futures" | "forex" | "crypto">("futures");
+  const [openInstrumentCategory, setOpenInstrumentCategory] = useState<InstrumentCategory | null>("futures");
   const [selectedInstrument, setSelectedInstrument] = useState("");
   const [customInstrument, setCustomInstrument] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1D");
@@ -524,9 +533,7 @@ export default function AnalyzePage() {
     const tf = params.get("timeframe");
     if (inst) {
       setSelectedInstrument(inst);
-      if (CRYPTO_INSTRUMENTS_PICKER.includes(inst)) setActiveTab("crypto");
-      else if (FOREX_INSTRUMENTS.includes(inst)) setActiveTab("forex");
-      else setActiveTab("futures");
+      setOpenInstrumentCategory(categoryForInstrument(inst));
     }
     if (tf && (TIMEFRAMES as readonly string[]).includes(tf)) {
       setSelectedTimeframe(tf);
@@ -729,7 +736,11 @@ export default function AnalyzePage() {
                 {recentInstruments.map((r) => (
                   <button
                     key={r.instrument}
-                    onClick={() => { setSelectedInstrument(r.instrument); setCustomInstrument(""); }}
+                    onClick={() => {
+                      setSelectedInstrument(r.instrument);
+                      setCustomInstrument("");
+                      setOpenInstrumentCategory(categoryForInstrument(r.instrument));
+                    }}
                     data-testid={`button-recent-${r.instrument}`}
                     className={cn(
                       "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all flex items-center gap-1.5",
@@ -748,17 +759,22 @@ export default function AnalyzePage() {
 
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
-            <div className="flex gap-2 mb-3">
-              {(["futures", "forex", "crypto"] as const).map((tab) => (
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {(["futures", "forex", "crypto"] as const).map((tab) => {
+                const isOpen = openInstrumentCategory === tab;
+                return (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  type="button"
+                  onClick={() => setOpenInstrumentCategory((current) => current === tab ? null : tab)}
                   data-testid={`tab-${tab}`}
+                  aria-expanded={isOpen}
+                  aria-controls={isOpen ? "instrument-options" : undefined}
                   className={cn(
-                    "flex-1 py-2 text-sm font-medium rounded-lg border transition-all",
-                    activeTab === tab
+                    "flex items-center justify-center gap-1 py-2 text-sm font-medium rounded-lg border transition-all",
+                    isOpen
                       ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50"
                   )}
                 >
                   {tab === "futures"
@@ -766,27 +782,31 @@ export default function AnalyzePage() {
                     : tab === "forex"
                       ? t.analyze.tab_forex
                       : t.analyze.tab_crypto}
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
                 </button>
-              ))}
+                );
+              })}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {instrumentsForTab(activeTab).map((inst) => (
-                <button
-                  key={inst}
-                  type="button"
-                  onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
-                  data-testid={`button-instrument-${inst}`}
-                  className={cn(
-                    "w-full py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all",
-                    selectedInstrument === inst && !customInstrument
-                      ? "bg-primary/10 border-primary text-primary"
-                      : "bg-background border-border text-foreground hover:border-primary/50"
-                  )}
-                >
-                  {inst}
-                </button>
-              ))}
-            </div>
+            {openInstrumentCategory && (
+              <div id="instrument-options" className="grid grid-cols-2 gap-2" data-testid="instrument-options">
+                {instrumentsForTab(openInstrumentCategory).map((inst) => (
+                  <button
+                    key={inst}
+                    type="button"
+                    onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
+                    data-testid={`button-instrument-${inst}`}
+                    className={cn(
+                      "w-full py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all",
+                      selectedInstrument === inst && !customInstrument
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "bg-background border-border text-foreground hover:border-primary/50"
+                    )}
+                  >
+                    {inst}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="mt-3">
               <input
                 type="text"
