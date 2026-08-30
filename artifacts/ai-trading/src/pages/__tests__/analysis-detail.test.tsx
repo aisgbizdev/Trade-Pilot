@@ -185,6 +185,24 @@ function feedbackHandler(): FetchHandler {
   };
 }
 
+function createAnalysisHandler(
+  respond: (
+    body: Record<string, unknown>,
+  ) => Response | Promise<Response>,
+): FetchHandler {
+  return (url, init) => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (method !== "POST" || !/\/api\/analyses(?:\?|$)/.test(url)) {
+      return null;
+    }
+    const body =
+      typeof init?.body === "string"
+        ? JSON.parse(init.body) as Record<string, unknown>
+        : {};
+    return respond(body);
+  };
+}
+
 beforeEach(() => {
   localStorage.clear();
   window.history.replaceState({}, "", `/analyses/${ANALYSIS_ID}`);
@@ -1094,6 +1112,199 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     expect(
       screen.getByTestId("card-fundamental-context"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("AnalysisDetailPage: automatic timeframe analysis", () => {
+  it("waits for the debounce, sends the current context once, and hides the previous analysis while transitioning", async () => {
+    const requestBodies: Record<string, unknown>[] = [];
+    let resolveCreate: ((response: Response) => void) | undefined;
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          userInputContext: "Watch the H4 resistance.",
+        },
+      }),
+      feedbackHandler(),
+      createAnalysisHandler((body) => {
+        requestBodies.push(body);
+        return new Promise<Response>((resolve) => {
+          resolveCreate = resolve;
+        });
+      }),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("text-instrument");
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("button-quick-timeframe-4h"));
+
+    expect(screen.getByTestId("quick-timeframe-transition")).toHaveTextContent(/4h/i);
+    expect(screen.queryByTestId("primary-metrics-chart-grid")).not.toBeInTheDocument();
+    expect(requestBodies).toHaveLength(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(649);
+      await Promise.resolve();
+    });
+    expect(requestBodies).toHaveLength(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+    });
+    expect(requestBodies).toEqual([
+      {
+        instrument: "XAU/USD",
+        timeframe: "4h",
+        mode: "beginner",
+        userInputContext: "Watch the H4 resistance.",
+      },
+    ]);
+
+    await act(async () => {
+      resolveCreate?.(jsonResponse({ id: 777 }));
+      await Promise.resolve();
+    });
+  });
+
+  it("does not create a new analysis when the active timeframe is selected", async () => {
+    const requestBodies: Record<string, unknown>[] = [];
+    installFetchMock([
+      getAnalysisHandler({}),
+      feedbackHandler(),
+      createAnalysisHandler((body) => {
+        requestBodies.push(body);
+        return jsonResponse({ id: 777 });
+      }),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("text-instrument");
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("button-quick-timeframe-1h"));
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+      await Promise.resolve();
+    });
+
+    expect(requestBodies).toHaveLength(0);
+    expect(screen.queryByTestId("quick-timeframe-transition")).not.toBeInTheDocument();
+    expect(screen.getByTestId("primary-metrics-chart-grid")).toBeInTheDocument();
+  });
+
+  it("only analyzes the last timeframe selected during rapid changes", async () => {
+    const requestBodies: Record<string, unknown>[] = [];
+    let resolveCreate: ((response: Response) => void) | undefined;
+    installFetchMock([
+      getAnalysisHandler({}),
+      feedbackHandler(),
+      createAnalysisHandler((body) => {
+        requestBodies.push(body);
+        return new Promise<Response>((resolve) => {
+          resolveCreate = resolve;
+        });
+      }),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("text-instrument");
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("button-quick-timeframe-4h"));
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    fireEvent.click(screen.getByTestId("button-quick-timeframe-1D"));
+
+    await act(async () => {
+      vi.advanceTimersByTime(650);
+      await Promise.resolve();
+    });
+
+    expect(requestBodies).toHaveLength(1);
+    expect(requestBodies[0]).toMatchObject({ timeframe: "1D" });
+
+    await act(async () => {
+      resolveCreate?.(jsonResponse({ id: 778 }));
+      await Promise.resolve();
+    });
+  });
+
+  it("restores the previous analysis after failure and exposes a manual retry", async () => {
+    const requestBodies: Record<string, unknown>[] = [];
+    let attempt = 0;
+    let resolveRetry: ((response: Response) => void) | undefined;
+    installFetchMock([
+      getAnalysisHandler({}),
+      feedbackHandler(),
+      createAnalysisHandler((body) => {
+        requestBodies.push(body);
+        attempt += 1;
+        if (attempt === 1) {
+          return jsonResponse({ error: "Temporary analysis failure" }, 500);
+        }
+        return new Promise<Response>((resolve) => {
+          resolveRetry = resolve;
+        });
+      }),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("text-instrument");
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("button-quick-timeframe-4h"));
+    await act(async () => {
+      vi.advanceTimersByTime(650);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    vi.useRealTimers();
+
+    expect(await screen.findByTestId("quick-timeframe-error")).toBeInTheDocument();
+    expect(screen.getByTestId("primary-metrics-chart-grid")).toBeInTheDocument();
+    const retry = screen.getByTestId("button-quick-analyze");
+    expect(retry).toBeEnabled();
+    expect(retry).toHaveTextContent(/try again/i);
+
+    await act(async () => {
+      fireEvent.click(retry);
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(requestBodies).toHaveLength(2));
+    expect(requestBodies[1]).toMatchObject({ timeframe: "4h" });
+    expect(screen.getByTestId("quick-timeframe-transition")).toBeInTheDocument();
+    expect(screen.queryByTestId("primary-metrics-chart-grid")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveRetry?.(jsonResponse({ id: 779 }));
+      await Promise.resolve();
+    });
   });
 });
 

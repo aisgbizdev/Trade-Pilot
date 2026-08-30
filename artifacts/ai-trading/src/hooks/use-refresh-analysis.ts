@@ -32,7 +32,7 @@ export function useRefreshAnalysis() {
 
   const refresh = useCallback(
     async (analysis: RefreshableAnalysis) => {
-      if (inFlightRef.current.has(analysis.id)) return;
+      if (inFlightRef.current.has(analysis.id)) return false;
       inFlightRef.current.add(analysis.id);
       setRefreshingIds((prev) => {
         const next = new Set(prev);
@@ -56,6 +56,7 @@ export function useRefreshAnalysis() {
         const suffix =
           trimmedNotes && analysis.carriedOver ? "?carried_over=1" : "";
         setLocation(`/analyses/${result.id}${suffix}`);
+        return true;
       } catch (err: unknown) {
         const apiErr = err as {
           status?: number;
@@ -70,6 +71,7 @@ export function useRefreshAnalysis() {
             variant: "destructive",
           });
         }
+        return false;
       } finally {
         inFlightRef.current.delete(analysis.id);
         setRefreshingIds((prev) => {

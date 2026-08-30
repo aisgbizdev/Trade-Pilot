@@ -1600,6 +1600,11 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
   const [refreshNotes, setRefreshNotes] = useState("");
   const [quickTimeframe, setQuickTimeframe] = useState<string | null>(null);
+  const [quickTimeframeStatus, setQuickTimeframeStatus] = useState<
+    "idle" | "scheduled" | "loading" | "error"
+  >("idle");
+  const quickTimeframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const quickTimeframeTargetRef = useRef<string | null>(null);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const carriedOver = typeof window !== "undefined" &&
@@ -1634,19 +1639,84 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   // navigates to a different analysis (id change) or the row loads in.
   useEffect(() => {
     setQuickTimeframe(analysis?.timeframe ?? null);
+    quickTimeframeTargetRef.current = null;
+    if (quickTimeframeTimerRef.current) {
+      clearTimeout(quickTimeframeTimerRef.current);
+      quickTimeframeTimerRef.current = null;
+    }
+    setQuickTimeframeStatus("idle");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, analysis?.timeframe]);
 
-  const handleQuickReanalyze = () => {
-    if (!analysis || !quickTimeframe) return;
-    refresh({
+  useEffect(() => {
+    return () => {
+      if (quickTimeframeTimerRef.current) {
+        clearTimeout(quickTimeframeTimerRef.current);
+      }
+    };
+  }, [id]);
+
+  const runQuickReanalysis = (timeframe: string) => {
+    if (!analysis) return;
+    setQuickTimeframeStatus("loading");
+    void refresh({
       id: analysis.id,
       instrument: analysis.instrument,
-      timeframe: quickTimeframe,
+      timeframe,
       mode: analysis.mode,
       userInputContext: analysis.userInputContext,
+    }).then((succeeded) => {
+      if (!succeeded && quickTimeframeTargetRef.current === timeframe) {
+        setQuickTimeframeStatus("error");
+      }
     });
   };
+
+  const handleQuickTimeframeSelect = (timeframe: string) => {
+    if (!analysis || isRefreshing) return;
+
+    if (quickTimeframeTimerRef.current) {
+      clearTimeout(quickTimeframeTimerRef.current);
+      quickTimeframeTimerRef.current = null;
+    }
+
+    setQuickTimeframe(timeframe);
+    quickTimeframeTargetRef.current = timeframe;
+
+    if (timeframe === analysis.timeframe) {
+      quickTimeframeTargetRef.current = null;
+      setQuickTimeframeStatus("idle");
+      return;
+    }
+
+    setQuickTimeframeStatus("scheduled");
+    quickTimeframeTimerRef.current = setTimeout(() => {
+      quickTimeframeTimerRef.current = null;
+      if (quickTimeframeTargetRef.current === timeframe) {
+        runQuickReanalysis(timeframe);
+      }
+    }, 650);
+  };
+
+  const handleQuickReanalyze = () => {
+    if (
+      !analysis ||
+      !quickTimeframe ||
+      quickTimeframe === analysis.timeframe ||
+      isRefreshing
+    ) {
+      return;
+    }
+    if (quickTimeframeTimerRef.current) {
+      clearTimeout(quickTimeframeTimerRef.current);
+      quickTimeframeTimerRef.current = null;
+    }
+    quickTimeframeTargetRef.current = quickTimeframe;
+    runQuickReanalysis(quickTimeframe);
+  };
+
+  const quickTimeframeTransitioning =
+    quickTimeframeStatus === "scheduled" || quickTimeframeStatus === "loading";
 
   const openRefreshDialog = () => {
     if (!analysis) return;
@@ -1789,11 +1859,10 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        {/* Quick timeframe switch — same instrument, pick a different
-            timeframe and fire a fresh analysis without leaving this page
-            or re-selecting the instrument. Defaults to the current
-            analysis's timeframe; result navigation is handled by
-            `useRefreshAnalysis`, same as the "Refresh Analysis" flow. */}
+        {/* Quick timeframe switch — selecting a different timeframe
+            automatically starts a fresh analysis without leaving this page
+            or re-selecting the instrument. The manual button remains as a
+            retry fallback when the automatic request fails. */}
         <Card className="p-3 space-y-2.5" data-testid="card-quick-timeframe">
           <div>
             <p className="text-xs font-semibold text-foreground">
@@ -1808,7 +1877,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               <button
                 key={tf}
                 type="button"
-                onClick={() => setQuickTimeframe(tf)}
+                onClick={() => handleQuickTimeframeSelect(tf)}
                 disabled={isRefreshing}
                 className={cn(
                   "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors disabled:opacity-50",
@@ -1825,7 +1894,13 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
               size="sm"
               className="h-8 shrink-0 px-2.5 text-xs"
               onClick={handleQuickReanalyze}
-              disabled={isRefreshing || !quickTimeframe}
+              disabled={
+                isRefreshing ||
+                !quickTimeframe ||
+                quickTimeframe === analysis.timeframe ||
+                quickTimeframeStatus === "scheduled" ||
+                quickTimeframeStatus === "loading"
+              }
               data-testid="button-quick-analyze"
             >
               {isRefreshing ? (
@@ -1834,12 +1909,48 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                   <span>{t.analyze.loading[refreshMsgIndex]}</span>
                 </span>
               ) : (
-                t.analysis_detail.quick_timeframe_btn
+                quickTimeframeStatus === "error"
+                  ? t.analysis_detail.quick_timeframe_retry
+                  : t.analysis_detail.quick_timeframe_btn
               )}
             </Button>
           </div>
+          {quickTimeframeStatus === "error" && (
+            <div
+              className="rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[11px] text-destructive"
+              role="alert"
+              data-testid="quick-timeframe-error"
+            >
+              <p className="font-medium">{t.analysis_detail.quick_timeframe_failed}</p>
+              <p className="mt-0.5 text-muted-foreground">
+                {t.analysis_detail.quick_timeframe_showing_previous}
+              </p>
+            </div>
+          )}
         </Card>
 
+        {quickTimeframeTransitioning ? (
+          <Card
+            className="flex min-h-48 flex-col items-center justify-center gap-3 p-6 text-center"
+            data-testid="quick-timeframe-transition"
+          >
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {quickTimeframeStatus === "scheduled"
+                  ? t.analysis_detail.quick_timeframe_scheduled
+                  : t.analysis_detail.quick_timeframe_loading}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t.analysis_detail.quick_timeframe_transition_hint.replace(
+                  "{timeframe}",
+                  quickTimeframe ?? "",
+                )}
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <>
         <div
           className="grid items-start gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
           data-testid="primary-metrics-chart-grid"
@@ -2341,6 +2452,8 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             </div>
           )}
         </Card>
+          </>
+        )}
       </div>
 
       <Dialog open={refreshDialogOpen} onOpenChange={setRefreshDialogOpen}>
