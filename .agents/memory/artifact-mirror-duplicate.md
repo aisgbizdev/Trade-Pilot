@@ -5,6 +5,6 @@ description: The workspace contains a tracked trade-pilot mirror alongside the c
 
 The root `artifacts/` tree is the canonical source for the web, API, and mobile artifacts; `trade-pilot/` is a mirrored copy that also produces duplicate workflow entries.
 
-**Why:** Running or interpreting the mirrored workflows can show stale failures even when the canonical root services and tests are healthy. Because both web artifacts claim the same preview port, the mirror can also block the canonical workflow; an installed PWA service worker may keep serving the mirror after the workflow is switched.
+**Why:** Running or interpreting the mirrored workflows can show stale failures even when the canonical root services and tests are healthy. Because both artifact sets claim the same ports, the mirror can block canonical startup; a blocked API process may still report running without listening, and an installed PWA service worker may keep serving the mirror after switching.
 
-**How to apply:** Validate and publish the root artifacts. Treat `trade-pilot/` workflow status as duplicate/stale unless the user explicitly asks to work on that mirror. For browser verification, stop the mirrored web workflow before starting the canonical one and use a fresh browser context or clear site data/service workers.
+**How to apply:** Validate and publish the root artifacts. Treat `trade-pilot/` workflow status as duplicate/stale unless explicitly requested. Stop all mirrored services first, then restart every canonical service that previously competed for a port—workflow “running” alone is insufficient; verify listeners or health endpoints. Use a fresh browser context or clear site data/service workers.
