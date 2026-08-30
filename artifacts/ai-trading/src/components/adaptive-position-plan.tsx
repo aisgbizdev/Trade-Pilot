@@ -39,13 +39,11 @@ interface Props {
 interface FormState {
   availableMargin: string;
   maximumLoss: string;
-  existingExposure: string;
 }
 
 const DEFAULT_FORM: FormState = {
   availableMargin: "",
   maximumLoss: "",
-  existingExposure: "0",
 };
 
 function storageKey(analysisId: number): string {
@@ -59,8 +57,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isStoredForm(value: unknown): value is Partial<FormState> {
   if (!isRecord(value)) return false;
   return (value.availableMargin === undefined || typeof value.availableMargin === "string") &&
-    (value.maximumLoss === undefined || typeof value.maximumLoss === "string") &&
-    (value.existingExposure === undefined || typeof value.existingExposure === "string");
+    (value.maximumLoss === undefined || typeof value.maximumLoss === "string");
 }
 
 function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommendation {
@@ -332,7 +329,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const rulesAvailable = !isRulesLoading && !isRulesError && standardRule !== null;
   const availableMargin = numberValue(form.availableMargin);
   const maximumLoss = numberValue(form.maximumLoss);
-  const existingExposure = numberValue(form.existingExposure);
   const selectedRule = rulesAvailable
     ? getAdaptiveMarketRule(instrument, standardRule, "mini")
     : null;
@@ -431,7 +427,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       tradePlan,
       availableMargin,
       maximumLoss,
-      existingExposure,
+      existingExposure: 0,
       standardRule,
       context,
       checkpointPrices: chartCandidateState.prices,
@@ -499,7 +495,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </div>
           )}
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1">
             <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_available_margin}</span>
             <span className="relative block">
@@ -515,11 +511,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               <Input type="number" min="0" step="any" value={form.maximumLoss} placeholder="0" onChange={(event) => updateField("maximumLoss", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-maximum-loss" />
             </span>
             <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_maximum_loss_help}</span>
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_existing_exposure}</span>
-            <Input type="number" min="0" max="0.9" step="0.1" value={form.existingExposure} onChange={(event) => updateField("existingExposure", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-existing-exposure" />
-            <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_existing_exposure_help}</span>
           </label>
         </div>
         <div className="space-y-2">

@@ -44,7 +44,6 @@ import {
 import { Layout } from "@/components/layout";
 import { LogTradeDialog } from "@/components/log-trade-dialog";
 import { BookOpen } from "lucide-react";
-import { MarketContextSummary } from "@/components/market-context-summary";
 import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { SignalSpeedometer } from "@/components/signal-speedometer";
@@ -55,11 +54,6 @@ import {
   getGetAnalysisQueryKey,
   useSubmitFeedback,
   useRefreshFundamentals,
-  useGetAnalysisAlerts,
-  useArmAnalysisAlerts,
-  useCancelAnalysisAlerts,
-  getGetAnalysisAlertsQueryKey,
-  useGetPushSubscriptionStatus,
   useSetAnalysisNote,
   useGetJournalEntryForAnalysis,
   getGetJournalEntryForAnalysisQueryKey,
@@ -72,11 +66,7 @@ import {
   type FundamentalNewsItem,
   type FundamentalCalendarEvent,
   type FundamentalDrift,
-  type AlertStatus,
-  type AlertLevelRow,
 } from "@workspace/api-client-react";
-import { Switch } from "@/components/ui/switch";
-import { Bell, BellOff } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -1018,173 +1008,6 @@ function AnalysisNotesCard({
   );
 }
 
-// Price-alerts card — opt-in push notifications that fire the first time
-// live price touches one of the AI's entry / SL / TP levels. Reads alert
-// status from the server (which is the source of truth — alerts are
-// per-analysis-per-level rows, auto-armed on create when push is enabled).
-// The Switch is the primary control; the level rows below give the user
-// transparency about *which* levels are armed and which have already fired.
-function AnalysisAlertsCard({
-  analysisId,
-  t,
-}: {
-  analysisId: number;
-  t: T;
-}) {
-  const { toast } = useToast();
-  const trackEvent = useTrackEvent();
-  const queryClient = useQueryClient();
-  const statusQuery = useGetAnalysisAlerts(analysisId);
-  const pushStatusQuery = useGetPushSubscriptionStatus();
-  const armMutation = useArmAnalysisAlerts();
-  const cancelMutation = useCancelAnalysisAlerts();
-
-  const status: AlertStatus | undefined = statusQuery.data;
-  const hasPush = pushStatusQuery.data?.subscribed === true;
-  const busy = armMutation.isPending || cancelMutation.isPending;
-
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: getGetAnalysisAlertsQueryKey(analysisId),
-    });
-
-  const handleToggle = (checked: boolean) => {
-    if (busy) return;
-    if (checked) {
-      if (!hasPush) {
-        toast({ title: t.analysis_detail.alerts_no_push, variant: "destructive" });
-        return;
-      }
-      armMutation.mutate(
-        { id: analysisId },
-        {
-          onSuccess: () => {
-            trackEvent("alert_armed", { analysisId });
-            invalidate();
-          },
-          onError: () =>
-            toast({
-              title: t.analysis_detail.alerts_arm_error,
-              variant: "destructive",
-            }),
-        },
-      );
-    } else {
-      cancelMutation.mutate(
-        { id: analysisId },
-        {
-          onSuccess: invalidate,
-          onError: () =>
-            toast({
-              title: t.analysis_detail.alerts_cancel_error,
-              variant: "destructive",
-            }),
-        },
-      );
-    }
-  };
-
-  const enabled = status?.enabled ?? false;
-  const armedCount = status?.armedCount ?? 0;
-  const levels: AlertLevelRow[] = status?.levels ?? [];
-
-  const levelLabel = (lv: AlertLevelRow["level"]): string => {
-    switch (lv) {
-      case "entry":
-        return t.analysis_detail.alerts_level_entry;
-      case "sl":
-        return t.analysis_detail.alerts_level_sl;
-      case "tp1":
-        return t.analysis_detail.alerts_level_tp1;
-      case "tp2":
-        return t.analysis_detail.alerts_level_tp2;
-    }
-  };
-
-  const rowStatusBadge = (row: AlertLevelRow) => {
-    if (row.triggeredAt) {
-      return (
-        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-          {t.analysis_detail.alerts_status_fired}
-        </span>
-      );
-    }
-    if (row.cancelledAt) {
-      return (
-        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-          {t.analysis_detail.alerts_status_cancelled}
-        </span>
-      );
-    }
-    return (
-      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-        {t.analysis_detail.alerts_status_armed}
-      </span>
-    );
-  };
-
-  return (
-    <Card className="p-4 space-y-3" data-testid="card-price-alerts">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-            {enabled ? (
-              <Bell className="w-4 h-4 text-primary" />
-            ) : (
-              <BellOff className="w-4 h-4 text-muted-foreground" />
-            )}
-            {t.analysis_detail.alerts_title}
-          </h3>
-          <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-            {t.analysis_detail.alerts_subtitle}
-          </p>
-        </div>
-        <Switch
-          checked={enabled}
-          onCheckedChange={handleToggle}
-          disabled={busy || statusQuery.isLoading}
-          data-testid="switch-price-alerts"
-          aria-label={enabled ? t.analysis_detail.alerts_on : t.analysis_detail.alerts_off}
-        />
-      </div>
-      <div className="flex items-center gap-2 flex-wrap" data-testid="price-alerts-summary">
-        <span
-          className={cn(
-            "text-[10px] font-semibold px-2 py-1 rounded-full border",
-            enabled
-              ? "bg-primary/10 text-primary border-primary/30"
-              : "bg-muted text-muted-foreground border-border",
-          )}
-        >
-          {enabled ? t.analysis_detail.alerts_on : t.analysis_detail.alerts_off}
-        </span>
-        {enabled && (
-          <span className="text-[11px] text-muted-foreground">
-            {t.analysis_detail.alerts_armed_count.replace("{n}", String(armedCount))}
-          </span>
-        )}
-      </div>
-      {levels.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1" data-testid="price-alerts-levels">
-          {levels.map((row) => (
-            <div
-              key={`${row.level}-${row.side}`}
-              className="flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded border bg-card/50"
-              data-testid={`alert-row-${row.level}`}
-            >
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-semibold text-foreground">{levelLabel(row.level)}</span>
-                <span className="font-mono text-[11px] text-muted-foreground">@ {row.price}</span>
-              </div>
-              {rowStatusBadge(row)}
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
-  );
-}
-
 // Auditable view of the fundamental snapshot the AI was given.
 // Captured server-side at analysis time so the user sees the same
 // inputs the model used. Empty arrays render the empty-state.
@@ -2009,28 +1832,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             copy={t.analysis_detail}
           />
         )}
-
-        {/* Price alerts — opt-in push notifications that fire the first
-            time live price touches one of the AI's entry / SL / TP levels.
-            Hidden unless the analysis has a trade plan AND the user has
-            already enabled push notifications (otherwise the toggle would
-            be a dead end). */}
-        {tradePlan && (
-          <AnalysisAlertsCard analysisId={analysis.id} t={t} />
-        )}
-
-        {/* Market Context Summary — same card the user saw on the Analyze tab,
-            rendered from the indicator-tally snapshot stored at analysis time. */}
-        {analysis.techBuyCount != null &&
-          analysis.techSellCount != null &&
-          analysis.techNeutralCount != null && (
-            <MarketContextSummary
-              buy={analysis.techBuyCount}
-              sell={analysis.techSellCount}
-              neutral={analysis.techNeutralCount}
-              mode={isBeginnerMode ? "beginner" : "pro"}
-            />
-          )}
 
         {/* Live Technical Indicators panel — moved from the Analyze tab so
             users get the full indicator picture in ONE place (the saved

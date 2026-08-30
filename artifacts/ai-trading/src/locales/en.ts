@@ -954,7 +954,7 @@ export const en = {
     adaptive_preference_active_desc: "May reserve up to 75% of available funds, with up to six additions and a hard loss ceiling of 30% of that reserved plan margin.",
     adaptive_calculate: "Create recommendation",
     adaptive_reset: "Start over",
-    adaptive_ready: "Enter free trading funds, your hard maximum loss, and current XAU/USD Mini exposure. The calculation uses these values directly.",
+    adaptive_ready: "Enter free trading funds and your hard maximum loss. This plan is for a new position and assumes no existing XAU/USD Mini exposure.",
     adaptive_disclaimer: "Trade Pilot provides an objective, non-executing suggestion—not a profit guarantee or automatic order. Profit figures are scenarios based on the saved AI analysis; you decide whether and when to trade.",
     adaptive_comparison_title: "All tier and risk choices",
     adaptive_comparison_help: "Compare the same available margin across every account tier and planning style. Trade Pilot never switches your selected tier automatically.",

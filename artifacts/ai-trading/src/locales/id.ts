@@ -956,7 +956,7 @@ export const id: Translations = {
     adaptive_preference_active_desc: "Dapat mengalokasikan hingga 75% dana tersedia, dengan maksimal enam layer dan batas rugi keras 30% dari margin rencana tersebut.",
     adaptive_calculate: "Buat rekomendasi",
     adaptive_reset: "Mulai ulang",
-    adaptive_ready: "Masukkan dana bebas trading, batas rugi keras, dan eksposur XAU/USD Mini yang sedang terbuka. Perhitungan memakai nilai tersebut secara langsung.",
+    adaptive_ready: "Masukkan dana bebas trading dan batas rugi keras. Rencana ini untuk posisi baru dan mengasumsikan belum ada eksposur XAU/USD Mini yang terbuka.",
     adaptive_disclaimer: "Trade Pilot memberi saran objektif tanpa mengeksekusi transaksi—bukan jaminan profit atau order otomatis. Angka profit adalah skenario berdasarkan analisis AI tersimpan; keputusan dan waktu transaksi tetap di tangan kamu.",
     adaptive_comparison_title: "Semua pilihan tier dan risiko",
     adaptive_comparison_help: "Bandingkan margin yang sama pada setiap tier akun dan gaya rencana. Trade Pilot tidak pernah mengganti tier pilihan kamu secara otomatis.",
