@@ -230,7 +230,7 @@ describe("AnalysisDetailPage: happy-path render", () => {
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {
-  it("uses fixed Mini rules, explicit risk inputs, and separate Buy and Sell ladders", async () => {
+  it("uses fixed Mini rules, visible risk inputs, and separate Buy and Sell ladders", async () => {
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -252,7 +252,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
     const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
-    const existingExposure = screen.getByTestId("input-adaptive-existing-exposure");
     const methodDetails = screen.getByTestId("adaptive-plan-method") as HTMLDetailsElement;
     expect(methodDetails.open).toBe(false);
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/saved analysis shown above/i);
@@ -263,10 +262,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("button-adaptive-account-micro")).not.toBeInTheDocument();
     expect(screen.queryByTestId("button-adaptive-account-regular")).not.toBeInTheDocument();
     expect(screen.queryByTestId("button-adaptive-preference-safe")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("input-adaptive-existing-exposure")).not.toBeInTheDocument();
     expect(screen.queryByText(/existing AI analysis provides the direction/i)).not.toBeInTheDocument();
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.change(maximumLoss, { target: { value: "500" } });
-    expect(existingExposure).toHaveValue(0);
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     expect(screen.queryByTestId("adaptive-plan-comparison")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
@@ -302,7 +301,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect((screen.getByTestId("adaptive-risk-details") as HTMLDetailsElement).open).toBe(false);
   });
 
-  it("keeps all explicit account inputs when chart candidates finish loading", async () => {
+  it("keeps visible account inputs when chart candidates finish loading", async () => {
     const candleResolvers: Array<(response: Response) => void> = [];
     const delayedCandles: FetchHandler = (url, init) => {
       if ((init?.method ?? "GET").toUpperCase() !== "GET") return null;
@@ -331,11 +330,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
     const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
-    const exposure = screen.getByTestId("input-adaptive-existing-exposure");
     await screen.findByTestId("adaptive-account-rule");
     fireEvent.change(margin, { target: { value: "5000" } });
     fireEvent.change(maximumLoss, { target: { value: "250" } });
-    fireEvent.change(exposure, { target: { value: "0.2" } });
+    expect(screen.queryByTestId("input-adaptive-existing-exposure")).not.toBeInTheDocument();
     await waitFor(() => expect(candleResolvers.length).toBeGreaterThan(0));
 
     await act(async () => {
@@ -346,7 +344,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     expect(margin).toHaveValue(5000);
     expect(maximumLoss).toHaveValue(250);
-    expect(exposure).toHaveValue(0.2);
   });
 
   it("renders a valid fixed-Mini recommendation from explicit limits", async () => {

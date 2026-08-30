@@ -499,7 +499,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </div>
           )}
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1">
             <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_available_margin}</span>
             <span className="relative block">
@@ -515,11 +515,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               <Input type="number" min="0" step="any" value={form.maximumLoss} placeholder="0" onChange={(event) => updateField("maximumLoss", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-maximum-loss" />
             </span>
             <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_maximum_loss_help}</span>
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_existing_exposure}</span>
-            <Input type="number" min="0" max="0.9" step="0.1" value={form.existingExposure} onChange={(event) => updateField("existingExposure", event.target.value)} className="h-9 text-sm" data-testid="input-adaptive-existing-exposure" />
-            <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_existing_exposure_help}</span>
           </label>
         </div>
         <div className="space-y-2">
