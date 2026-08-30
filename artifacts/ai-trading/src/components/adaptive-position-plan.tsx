@@ -26,6 +26,7 @@ import {
 } from "@/lib/adaptive-position-plan";
 
 type AdaptiveCopy = Translations["analysis_detail"];
+type AdaptiveRecommendationSummary = NonNullable<AdaptivePlanRecommendation["recommendation"]>;
 
 interface Props {
   analysisId: number;
@@ -212,7 +213,19 @@ function DirectionSwitch({
   );
 }
 
-function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPlan; lang: "en" | "id"; copy: AdaptiveCopy; decision: AdaptivePlanDecision }) {
+function PlanSide({
+  plan,
+  lang,
+  copy,
+  decision,
+  summary,
+}: {
+  plan: AdaptiveSidePositionPlan;
+  lang: "en" | "id";
+  copy: AdaptiveCopy;
+  decision: AdaptivePlanDecision;
+  summary?: AdaptiveRecommendationSummary | null;
+}) {
   const isBuy = plan.side === "buy";
   const scenarioIsPreferred = decision.preferredSide === "both" || decision.preferredSide === plan.side;
   const stageGuidance = plan.ladder.length > 1 && scenarioIsPreferred
@@ -227,30 +240,46 @@ function PlanSide({ plan, lang, copy, decision }: { plan: AdaptiveSidePositionPl
         </h4>
         <Badge variant="outline" className="text-[10px]">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</Badge>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <div className="min-w-0 rounded-md bg-background/70 p-2">
-          <p className="text-[10px] text-muted-foreground">{copy.adaptive_entry}</p>
-          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.entry, lang, 4)}</p>
+      {summary && (
+        <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
+          <div>
+            <p className="text-xs font-bold text-foreground">{copy.adaptive_snapshot_title}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {copy.adaptive_snapshot_ready}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="rounded-md bg-background/70 p-2">
+              <p className="text-[10px] text-muted-foreground">{copy.adaptive_entry}</p>
+              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(plan.entry, lang, 4)}</p>
+            </div>
+            <div className="rounded-md bg-background/70 p-2">
+              <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_lot_layers}</p>
+              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(summary.initialLot, lang)} {copy.adaptive_lot} · {summary.levels} {copy.adaptive_snapshot_layers}</p>
+            </div>
+            <div className="rounded-md bg-background/70 p-2">
+              <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
+              <p className="mt-0.5 text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</p>
+            </div>
+            <div className="rounded-md bg-background/70 p-2">
+              <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
+              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
+            </div>
+            <div className="rounded-md bg-background/70 p-2">
+              <p className="text-[10px] text-muted-foreground">{copy.adaptive_loss_limit}</p>
+              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.maximumLoss, lang)}</p>
+            </div>
+            <div className="rounded-md bg-background/70 p-2">
+              <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
+              <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
+            </div>
+            <div className="rounded-md bg-background/70 p-2">
+              <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
+              <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
+            </div>
+          </div>
         </div>
-        <div className="min-w-0 rounded-md bg-background/70 p-2">
-          <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
-          <p className="mt-0.5 truncate text-xs font-semibold text-red-600 tabular-nums dark:text-red-400">{formatNumber(plan.stopLoss, lang, 4)}</p>
-        </div>
-        <div className="min-w-0 rounded-md bg-background/70 p-2">
-          <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
-          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
-        </div>
-        <div className="min-w-0 rounded-md bg-background/70 p-2">
-          <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
-          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
-          <p className="truncate text-[10px] text-emerald-700 tabular-nums dark:text-emerald-400">{formatMoney(plan.profitToTakeProfit1, lang)}</p>
-        </div>
-        <div className="min-w-0 rounded-md bg-background/70 p-2">
-          <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
-          <p className="mt-0.5 truncate text-xs font-semibold tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
-          <p className="truncate text-[10px] text-emerald-700 tabular-nums dark:text-emerald-400">{formatMoney(plan.profitToTakeProfit2, lang)}</p>
-        </div>
-      </div>
+      )}
       <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
       <div className="space-y-2" data-testid={`adaptive-ladder-${plan.side}`}>
         <div className="flex items-center justify-between gap-2">
@@ -545,49 +574,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             onChange={setActiveSide}
           />
         )}
-         {recommendation && selected && primaryPlan && (
-           <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
-             <div className="flex flex-wrap items-center justify-between gap-2">
-               <div>
-                 <p className="text-xs font-bold text-foreground">{copy.adaptive_snapshot_title}</p>
-                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                   {recommendation.result.valid
-                     ? copy.adaptive_snapshot_ready
-                     : copy.adaptive_snapshot_wait}
-                 </p>
-               </div>
-               <Badge variant="outline" className={primaryPlan.side === "buy" ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
-                 {primaryPlan.side === "buy" ? copy.adaptive_buy : copy.adaptive_sell}
-               </Badge>
-             </div>
-             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-               <div className="rounded-md bg-background/70 p-2">
-                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_entry}</p>
-                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(primaryPlan.entry, lang, 4)}</p>
-               </div>
-               <div className="rounded-md bg-background/70 p-2">
-                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_lot_layers}</p>
-                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(selected.initialLot, lang)} {copy.adaptive_lot} · {selected.levels} {copy.adaptive_snapshot_layers}</p>
-               </div>
-               <div className="rounded-md bg-background/70 p-2">
-                  <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
-                 <p className="mt-0.5 text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(primaryPlan.stopLoss, lang, 4)}</p>
-               </div>
-               <div className="rounded-md bg-background/70 p-2">
-                  <p className="text-[10px] text-muted-foreground">{copy.adaptive_loss_limit}</p>
-                  <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(selected.maximumLoss, lang)}</p>
-               </div>
-               <div className="rounded-md bg-background/70 p-2">
-                  <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
-                  <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(primaryPlan.takeProfit1, lang, 4)}</p>
-               </div>
-               <div className="rounded-md bg-background/70 p-2">
-                  <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
-                  <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(primaryPlan.takeProfit2, lang, 4)}</p>
-               </div>
-             </div>
-           </div>
-         )}
         {recommendation && (
           <details className="rounded-md border border-primary/20 bg-primary/[0.03] p-3" data-testid="adaptive-plan-reasoning">
             <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_reasoning_title}</summary>
@@ -629,8 +615,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
          )}
         {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
           <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
-          <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 space-y-1"><p className="text-xs font-bold text-foreground">{copy.adaptive_recommendation_title}</p><p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_recommendation_summary.replace("{lot}", formatNumber(selected.initialLot, lang, 2)).replace("{levels}", String(selected.levels)).replace("{loss}", formatMoney(selected.maximumLoss, lang))}</p></div>
-          {primaryPlan && <PlanSide plan={primaryPlan} lang={lang} copy={copy} decision={recommendation.decision} />}
+           {primaryPlan && <PlanSide plan={primaryPlan} lang={lang} copy={copy} decision={recommendation.decision} summary={selected} />}
           <details className="rounded-md border border-border p-3" data-testid="adaptive-risk-details">
             <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</summary>
             <ol className="mt-2 list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol>
