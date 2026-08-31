@@ -163,6 +163,7 @@ export interface AdaptivePlanRecommendation {
   recommendation: {
     initialLot: number;
     levels: number;
+    positions: number;
     marginBudget: number;
     maximumLoss: number;
   } | null;
@@ -730,13 +731,13 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   }
   if (input.existingExposure == null || input.existingExposure < 0) errors.push("Existing exposure is required.");
   if (input.initialLot == null || input.initialLot <= 0) errors.push("Initial lot is required.");
-  if (!Number.isInteger(input.levels) || input.levels < 0 || input.levels > 1) {
-    errors.push("Number of additional levels must be either 0 or 1.");
+  if (!Number.isInteger(input.levels) || input.levels < 0 || input.levels > 2) {
+    errors.push("Number of additional levels must be between 0 and 2.");
   }
   for (const [side, sideLevel] of Object.entries(input.sideLevels ?? {})) {
     if (
       sideLevel !== undefined &&
-      (!Number.isInteger(sideLevel) || sideLevel < 0 || sideLevel > 1 || sideLevel > input.levels)
+      (!Number.isInteger(sideLevel) || sideLevel < 0 || sideLevel > 2 || sideLevel > input.levels)
     ) {
       errors.push(`${side === "buy" ? "Buy" : "Sell"} additional levels must be an integer between 0 and the requested level count.`);
     }
@@ -794,8 +795,8 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const assumptions = [
     `Mini profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
     movementAssumption,
-    `Initial entry uses the Standard Plan; at most one manual add stays at or below the initial lot (${tierText}). No add uses a martingale multiplier.`,
-    `The entered USD ${maxCycleLoss} maximum loss is a hard amount and includes the initial entry plus the one possible manual add.`,
+    `Initial entry uses the Standard Plan; up to two smaller manual additions can create at most three total positions (${tierText}). No add uses a martingale multiplier.`,
+    `The entered USD ${maxCycleLoss} maximum loss is a hard amount for every position in the complete plan.`,
     "Available trading funds are used directly; no hidden tier or risk-style percentage reduces them.",
     `Current open XAU/USD Mini exposure is ${input.existingExposure ?? 0} lot and is included in the 0.90-lot tier limit.`,
     "This Adaptive Position Plan is for day trading only: it uses the day/initial margin and excludes overnight holding, rollover, and overnight fees from every calculation.",
@@ -942,7 +943,7 @@ export function buildAdaptivePlanRecommendation({
     };
   }
 
-  const requestedLevels = 1;
+  const requestedLevels = 2;
   let levels = requestedLevels;
   let softWarningCount = 0;
 
@@ -1038,8 +1039,8 @@ export function buildAdaptivePlanRecommendation({
       reasonCodes.push("fundamental_clear");
     }
     if (posture !== "not_recommended") {
-      // This focused Mini baseline allows only one addition. Any soft warning
-      // removes that addition while preserving an auditable entry-only result.
+      // Any soft warning removes all optional additions while preserving an
+      // auditable entry-only result.
       levels = softWarningCount > 0 ? 0 : levels;
     }
   }
@@ -1053,7 +1054,9 @@ export function buildAdaptivePlanRecommendation({
   const marginCapacity = getAdaptiveMarginCapacity(marginBudget, rule);
   const tierCapacity = Math.max(0, floorLot((rule.maximumLot ?? marginCapacity) - existingExposure, rule.lotStep));
   const capacity = Math.min(marginCapacity, tierCapacity);
-  const layerLotFactors = [1];
+  // Additional positions taper below the initial lot. The solver still checks
+  // the exact price-to-stop risk, day margin, and tier exposure for every row.
+  const layerLotFactors = [0.75, 0.5];
   const lotCandidates: number[] = [];
   for (
     let lot = capacity;
@@ -1062,8 +1065,8 @@ export function buildAdaptivePlanRecommendation({
   ) {
     lotCandidates.push(roundLot(lot, rule.lotStep));
   }
-  // Try the one situation-aware layer first, then degrade to entry-only until
-  // the hard tier, available-funds, and final-stop loss limits all pass.
+  // Try the analysis-supported three-position plan first, then degrade to two
+  // or one total position until every hard limit passes.
   const levelCandidates = Array.from(
     { length: levels + 1 },
     (_, index) => levels - index,
@@ -1100,6 +1103,7 @@ export function buildAdaptivePlanRecommendation({
           const diagnosticRecommendation = {
             initialLot,
             levels: 0,
+            positions: 1,
             marginBudget,
             maximumLoss,
           };
@@ -1165,6 +1169,7 @@ export function buildAdaptivePlanRecommendation({
           recommendation: {
             initialLot,
             levels: acceptedLevels,
+            positions: acceptedLevels + 1,
             marginBudget,
             maximumLoss,
           },
@@ -1200,6 +1205,7 @@ export function buildAdaptivePlanRecommendation({
       ? {
           initialLot: rule.minimumLot,
           levels: 0,
+            positions: 1,
           marginBudget,
           maximumLoss,
         }

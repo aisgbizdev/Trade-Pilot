@@ -353,10 +353,15 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(reasoning.textContent).toMatch(/Technical snapshot: 12 support up, 4 support down/i);
     expect(snapshot).toHaveTextContent(/Answer at a glance/i);
     expect(snapshot).toHaveTextContent(/Entry point/i);
-    expect(snapshot).toHaveTextContent(/Initial lot and extra layers/i);
+    expect(snapshot).toHaveTextContent(/Total planned positions/i);
+    expect(snapshot).toHaveTextContent(/3 positions/i);
+    expect(snapshot).toHaveTextContent(/Total planned lots/i);
     expect(snapshot).toHaveTextContent(/Hard loss limit/i);
     expect(buyPlan.textContent).toMatch(/manual checkpoints/i);
     expect(buyPlan.textContent).toMatch(/One final Stop Loss/i);
+    expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/Position 1 · Initial entry/i);
+    expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/Position 2/i);
+    expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/Position 3/i);
     expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/2,301/);
     expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/2,300/);
     expect(buyPlan.textContent).toMatch(/\$/);
@@ -458,7 +463,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v10:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v11:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -483,7 +488,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v10:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v11:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("restores the preferred Sell direction from a saved recommendation", async () => {
@@ -511,7 +516,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
-    const key = `trade-pilot:adaptive-plan:v10:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v11:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {

@@ -50,7 +50,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v10:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v11:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -71,6 +71,11 @@ function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommenda
   return typeof value.result.valid === "boolean" &&
     isRecord(fundamental) &&
     typeof fundamental.available === "boolean" &&
+    (value.recommendation === null ||
+      (isRecord(value.recommendation) &&
+        typeof value.recommendation.positions === "number" &&
+        value.recommendation.positions >= 1 &&
+        value.recommendation.positions <= 3)) &&
     (!value.result.valid || (isRecord(rule) && rule.marginBasis === "day")) &&
     (value.decision.posture === "scaling_allowed" || value.decision.posture === "entry_only" || value.decision.posture === "not_recommended") &&
     (value.decision.preferredSide === "buy" || value.decision.preferredSide === "sell" || value.decision.preferredSide === "both" || value.decision.preferredSide === "none") &&
@@ -142,7 +147,7 @@ function stageReason(
         formatNumber(level.invalidationProgress * 100, lang, 0),
       );
   return copy.adaptive_stage_add_reason
-    .replace("{level}", String(level.level))
+    .replace("{level}", String(level.level + 1))
     .replace("{price}", formatNumber(level.price, lang, 4))
     .replace("{distance}", formatNumber(level.distanceFromEntry, lang, 4))
     .replace("{lot}", formatNumber(level.lot, lang))
@@ -238,7 +243,9 @@ function PlanSide({
           {isBuy ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           {isBuy ? copy.adaptive_buy : copy.adaptive_sell}
         </h4>
-        <Badge variant="outline" className="text-[10px]">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</Badge>
+        <Badge variant="outline" className="text-[10px]">
+          {plan.ladder.length} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
+        </Badge>
       </div>
       {summary && (
         <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
@@ -254,8 +261,12 @@ function PlanSide({
               <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(plan.entry, lang, 4)}</p>
             </div>
             <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_lot_layers}</p>
-              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(summary.initialLot, lang)} {copy.adaptive_lot} · {summary.levels} {copy.adaptive_snapshot_layers}</p>
+              <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_total_positions}</p>
+              <p className="mt-0.5 text-sm font-bold tabular-nums">{summary.positions} {copy.adaptive_snapshot_layers}</p>
+            </div>
+            <div className="rounded-md bg-background/70 p-2">
+              <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_total_lots}</p>
+              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</p>
             </div>
             <div className="rounded-md bg-background/70 p-2">
               <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
@@ -284,14 +295,17 @@ function PlanSide({
       <div className="space-y-2" data-testid={`adaptive-ladder-${plan.side}`}>
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.adaptive_layer_plan_title}</p>
-          <span className="text-[10px] text-muted-foreground">{plan.ladder.length} {copy.adaptive_snapshot_layers}</span>
+          <span className="text-[10px] font-semibold text-foreground">
+            {plan.ladder.length} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
+          </span>
         </div>
         <ol className="space-y-1.5">
           {plan.ladder.map((level) => (
             <li key={`${plan.side}-${level.level}`} className="rounded-md bg-background/70 px-2.5 py-2">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span className="text-[11px] font-semibold text-foreground">
-                  {level.level === 0 ? copy.adaptive_initial : `${copy.adaptive_level} ${level.level}`}
+                  {copy.adaptive_position} {level.level + 1}
+                  {level.level === 0 ? ` · ${copy.adaptive_initial}` : ""}
                 </span>
                 <span className="text-[11px] font-bold tabular-nums text-foreground">
                   {formatNumber(level.price, lang, 4)} · {formatNumber(level.lot, lang)} {copy.adaptive_lot}

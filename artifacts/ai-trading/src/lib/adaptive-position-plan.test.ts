@@ -138,12 +138,13 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(getAdaptiveMarginCapacity(500, mini)).toBe(0.5);
   });
 
-  it("builds a Buy recommendation with one possible manual layer", () => {
+  it("builds a Buy recommendation with three total positions when analysis and limits support them", () => {
     const assessment = buildRecommendation();
 
     expect(assessment.result.valid).toBe(true);
     expect(assessment.recommendation).toMatchObject({
-      levels: 1,
+      levels: 2,
+      positions: 3,
       marginBudget: 5_000,
       maximumLoss: 500,
     });
@@ -151,16 +152,17 @@ describe("XAU/USD Mini Adaptive Plan", () => {
       posture: "scaling_allowed",
       preferredSide: "buy",
     });
-    expect(assessment.result.buy?.ladder).toHaveLength(2);
+    expect(assessment.result.buy?.ladder).toHaveLength(3);
     expect(assessment.result.sell?.ladder).toHaveLength(1);
     expect(assessment.result.buy?.totalLots).toBeLessThanOrEqual(0.9);
     expect(assessment.result.buy?.ladder[1]).toMatchObject({
       price: 2300,
       basis: "entry_zone_edge",
     });
+    expect(assessment.result.buy?.ladder.map((level) => level.lot)).toEqual([0.4, 0.3, 0.2]);
   });
 
-  it("builds the same single-layer baseline for a supported Sell analysis", () => {
+  it("builds the same three-position plan for a supported Sell analysis", () => {
     const assessment = buildRecommendation({
       tradePlan: { ...TRADE_PLAN, preferredSide: "sell" },
       context: {
@@ -174,8 +176,24 @@ describe("XAU/USD Mini Adaptive Plan", () => {
 
     expect(assessment.result.valid).toBe(true);
     expect(assessment.decision.preferredSide).toBe("sell");
-    expect(assessment.result.sell?.ladder).toHaveLength(2);
+    expect(assessment.result.sell?.ladder).toHaveLength(3);
     expect(assessment.result.buy?.ladder).toHaveLength(1);
+  });
+
+  it("degrades from three to two total positions when the available funds cannot support all rows", () => {
+    const assessment = buildRecommendation({
+      availableMargin: 250,
+      maximumLoss: 100,
+    });
+
+    expect(assessment.result.valid).toBe(true);
+    expect(assessment.recommendation).toMatchObject({
+      levels: 1,
+      positions: 2,
+    });
+    expect(assessment.result.buy?.ladder).toHaveLength(2);
+    expect(assessment.result.buy?.totalLots).toBe(0.2);
+    expect(assessment.result.buy?.rejectedLadder.length).toBeGreaterThan(0);
   });
 
   it("uses all entered funds as the visible budget without a hidden allocation", () => {
@@ -191,6 +209,7 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(entryOnly.result.valid).toBe(true);
     expect(entryOnly.recommendation).toMatchObject({
       levels: 0,
+      positions: 1,
       maximumLoss: 15,
     });
     expect(entryOnly.decision.posture).toBe("entry_only");
@@ -249,12 +268,12 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(buy.profitToTakeProfit2).toBeGreaterThan(buy.profitToTakeProfit1);
   });
 
-  it("rejects more than one layer and every non-Mini tier", () => {
-    const tooManyLayers = buildAdaptivePositionPlan({ ...VALID_INPUT, levels: 2 });
+  it("rejects more than two additions and every non-Mini tier", () => {
+    const tooManyLayers = buildAdaptivePositionPlan({ ...VALID_INPUT, levels: 3 });
     const buySideBypass = buildAdaptivePositionPlan({
       ...VALID_INPUT,
-      levels: 1,
-      sideLevels: { buy: 2, sell: 0 },
+      levels: 2,
+      sideLevels: { buy: 3, sell: 0 },
     });
     const sellSideBypass = buildAdaptivePositionPlan({
       ...VALID_INPUT,
@@ -268,7 +287,7 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     });
 
     expect(tooManyLayers.valid).toBe(false);
-    expect(tooManyLayers.errors.join(" ")).toMatch(/either 0 or 1/i);
+    expect(tooManyLayers.errors.join(" ")).toMatch(/between 0 and 2/i);
     expect(buySideBypass.valid).toBe(false);
     expect(buySideBypass.errors.join(" ")).toMatch(/Buy additional levels/i);
     expect(sellSideBypass.valid).toBe(false);
