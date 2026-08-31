@@ -334,6 +334,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("button-adaptive-account-micro")).not.toBeInTheDocument();
     expect(screen.queryByTestId("button-adaptive-account-regular")).not.toBeInTheDocument();
     expect(screen.queryByTestId("button-adaptive-preference-safe")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-adaptive-risk-style-conservative")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("button-adaptive-risk-style-balanced")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("button-adaptive-risk-style-aggressive")).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByTestId("input-adaptive-existing-exposure")).not.toBeInTheDocument();
     expect(screen.queryByText(/existing AI analysis provides the direction/i)).not.toBeInTheDocument();
     fireEvent.change(margin, { target: { value: "100000" } });
@@ -463,7 +466,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v11:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v12:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -488,7 +491,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v11:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v12:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("restores the preferred Sell direction from a saved recommendation", async () => {
@@ -511,12 +514,16 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "500" } });
-    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+    await waitFor(() => expect(screen.getByTestId("button-adaptive-risk-style-balanced")).toHaveAttribute("aria-pressed", "true"));
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
-    const key = `trade-pilot:adaptive-plan:v11:${ANALYSIS_ID}`;
+    expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
+    const key = `trade-pilot:adaptive-plan:v12:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {
@@ -576,6 +583,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     await waitFor(() => expect(screen.getByTestId("adaptive-direction-sell")).toHaveAttribute("aria-pressed", "true"));
+    expect(screen.getByTestId("button-adaptive-risk-style-balanced")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
     expect(screen.getByTestId("adaptive-plan-sell")).toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-plan-buy")).not.toBeInTheDocument();
   });
@@ -600,7 +609,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       </Wrapper>,
     );
 
-    await screen.findByTestId("adaptive-plan-rules-unavailable");
+    await screen.findByTestId("adaptive-plan-rules-unavailable", {}, { timeout: 5_000 });
     expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
   });

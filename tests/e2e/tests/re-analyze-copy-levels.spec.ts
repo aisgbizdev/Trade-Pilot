@@ -418,7 +418,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("card-log-trade")).toHaveCount(0);
     await expect(page.getByTestId("card-user-journal-note")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
-      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v6:${analysisId}`),
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v12:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
@@ -428,7 +428,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
 // ---------------------------------------------------------------------------
 
 test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", () => {
-  test("enables Hang Seng rules while keeping unsupported products analysis-only", async ({
+  test("keeps non-XAU products analysis-only", async ({
     page,
     baseURL,
   }) => {
@@ -462,14 +462,14 @@ test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", ()
     await page.goto(`/analyses/${STUB_ID_HSI_ADAPTIVE}`);
     await expect(page.getByTestId("text-instrument")).toHaveText("HSI");
     await expect(page.getByTestId("card-trade-plan")).toBeVisible();
-    await expect(page.getByTestId("input-adaptive-available-margin")).toBeVisible();
-    await expect(page.getByTestId("button-calculate-adaptive-plan")).toBeEnabled();
-    await expect(page.getByTestId("adaptive-plan-unsupported")).toHaveCount(0);
+    await expect(page.getByTestId("card-adaptive-position-plan")).toHaveCount(0);
+    await expect(page.getByTestId("input-adaptive-available-margin")).toHaveCount(0);
+    await expect(page.getByTestId("button-calculate-adaptive-plan")).toHaveCount(0);
 
     await page.goto(`/analyses/${STUB_ID_UNSUPPORTED_ADAPTIVE}`);
     await expect(page.getByTestId("text-instrument")).toHaveText("EUR/USD");
     await expect(page.getByTestId("card-trade-plan")).toBeVisible();
-    await expect(page.getByTestId("adaptive-plan-unsupported")).toBeVisible();
+    await expect(page.getByTestId("card-adaptive-position-plan")).toHaveCount(0);
     await expect(page.getByTestId("input-adaptive-available-margin")).toHaveCount(0);
     await expect(page.getByTestId("button-calculate-adaptive-plan")).toHaveCount(0);
   });
@@ -558,6 +558,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     });
 
     const marginInput = page.getByTestId("input-adaptive-available-margin");
+    const maximumLossInput = page.getByTestId("input-adaptive-maximum-loss");
     await expect(marginInput).toBeVisible();
     const accountRule = page.getByTestId("adaptive-account-rule");
     await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/day trade only/i);
@@ -565,41 +566,22 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(accountRule).toContainText(/0[.,]1(?:0)? lot/);
     await expect(accountRule).toContainText(/100/);
 
-    await marginInput.fill("20000");
-    await page.getByTestId("button-adaptive-account-regular").click();
-    await expect(accountRule).toContainText("Regular");
-    await expect(accountRule).toContainText(/1(?:[.,]0+)? lot/);
-    await expect(accountRule).toContainText(/1[.,]000/);
-    await expect(accountRule).toContainText(/100 troy ounce/i);
-    await page.getByTestId("button-calculate-adaptive-plan").click();
-    await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
-    await expect(page.getByTestId("adaptive-plan-invalid")).toHaveCount(0);
-
-    await page.getByTestId("button-adaptive-account-mini").click();
     await marginInput.fill("100000");
+    await maximumLossInput.fill("500");
+    await expect(page.getByTestId("button-adaptive-risk-style-conservative")).toHaveAttribute("aria-pressed", "true");
+    await page.getByTestId("button-adaptive-risk-style-aggressive").click();
+    await expect(page.getByTestId("button-adaptive-risk-style-aggressive")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("button-calculate-adaptive-plan")).toBeEnabled();
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
     await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
-    const comparison = page.getByTestId("adaptive-plan-comparison");
-    await expect(comparison).toBeVisible();
-    await expect(page.getByTestId("adaptive-account-suggestion")).toHaveCount(0);
-    await comparison.locator("summary").click();
-    for (const tier of ["micro", "mini", "regular"]) {
-      for (const preference of ["safe", "balanced", "active"]) {
-        await expect(page.getByTestId(`adaptive-comparison-${tier}-${preference}`)).toBeVisible();
-      }
-    }
-    await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/Safer option/i);
-    await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/Maximum capacity/i);
-    await expect(page.getByTestId("adaptive-comparison-alternatives")).toContainText(/alternatives, not automatic selections/i);
-    await expect(page.getByTestId("adaptive-comparison-mini-safe")).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-checked", "true");
-    await expect(page.getByTestId("button-adaptive-preference-safe")).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("adaptive-risk-style-active")).toContainText(/Aggressive|Agresif/i);
+    await expect(page.getByTestId("adaptive-plan-comparison")).toHaveCount(0);
 
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v9:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v12:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -608,12 +590,12 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("fundamental-calendar-list")).toContainText("Central-bank rate decision");
     await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
     await expect(marginInput).toHaveValue("100000");
-    await expect(page.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-checked", "true");
-    await expect(page.getByTestId("button-adaptive-preference-safe")).toHaveAttribute("aria-checked", "true");
+    await expect(maximumLossInput).toHaveValue("500");
+    await expect(page.getByTestId("button-adaptive-risk-style-aggressive")).toHaveAttribute("aria-pressed", "true");
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v9:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v12:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();

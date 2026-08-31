@@ -180,6 +180,48 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(assessment.result.buy?.ladder).toHaveLength(1);
   });
 
+  it("applies each deterministic risk style without letting additions exceed the initial lot", () => {
+    const conservative = buildRecommendation({ riskStyle: "conservative" });
+    const balanced = buildRecommendation({ riskStyle: "balanced" });
+    const aggressive = buildRecommendation({ riskStyle: "aggressive" });
+
+    expect(conservative.recommendation?.riskStyle).toBe("conservative");
+    expect(conservative.result.buy?.ladder.map((level) => level.lot)).toEqual([0.4, 0.3, 0.2]);
+    expect(balanced.recommendation?.riskStyle).toBe("balanced");
+    expect(balanced.result.buy?.ladder.map((level) => level.lot)).toEqual([0.3, 0.3, 0.2]);
+    expect(aggressive.recommendation?.riskStyle).toBe("aggressive");
+    expect(aggressive.result.buy?.ladder.map((level) => level.lot)).toEqual([0.3, 0.3, 0.3]);
+
+    for (const assessment of [conservative, balanced, aggressive]) {
+      const ladder = assessment.result.buy?.ladder ?? [];
+      expect(ladder.slice(1).every((level) => level.lot <= ladder[0]!.lot)).toBe(true);
+      expect(assessment.result.buy?.totalLots).toBeLessThanOrEqual(0.9);
+    }
+  });
+
+  it("uses the selected style for Sell while hard limits can still force entry-only", () => {
+    const sell = buildRecommendation({
+      riskStyle: "aggressive",
+      tradePlan: { ...TRADE_PLAN, preferredSide: "sell" },
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        marketCondition: "trending_down",
+        tradingBias: "bearish_strong",
+        techBuyCount: 4,
+        techSellCount: 14,
+      },
+    });
+    const constrained = buildRecommendation({ riskStyle: "aggressive", maximumLoss: 15 });
+
+    expect(sell.result.sell?.ladder.map((level) => level.lot)).toEqual([0.3, 0.3, 0.3]);
+    expect(constrained.recommendation).toMatchObject({
+      riskStyle: "aggressive",
+      levels: 0,
+      positions: 1,
+    });
+    expect(constrained.decision.posture).toBe("entry_only");
+  });
+
   it("degrades from three to two total positions when the available funds cannot support all rows", () => {
     const assessment = buildRecommendation({
       availableMargin: 250,
@@ -416,6 +458,14 @@ describe("XAU/USD Mini Adaptive Plan", () => {
         ...TRADE_PLAN,
         buy: { ...TRADE_PLAN.buy, stopLoss: "2,288.00" },
       },
+    })).not.toBe(original);
+    expect(createAdaptivePlanFingerprint({
+      ...base,
+      riskStyle: "balanced",
+    })).not.toBe(original);
+    expect(createAdaptivePlanFingerprint({
+      ...base,
+      riskStyle: "aggressive",
     })).not.toBe(original);
   });
 });

@@ -7,6 +7,7 @@ import type {
 
 export type AdaptiveMarket = "gold" | "brent" | "hang_seng" | "nikkei";
 export type AccountTier = "micro" | "mini" | "regular";
+export type AdaptiveRiskStyle = "conservative" | "balanced" | "aggressive";
 export type AdaptivePlanPosture = "scaling_allowed" | "entry_only" | "not_recommended";
 export type AdaptiveLayerBasis = "analysis_entry" | "entry_zone_edge" | "current_chart_swing";
 export type AdaptiveLayerRejectReason = "day_margin" | "loss_ceiling" | "tier_limit" | "analysis_limit";
@@ -97,7 +98,7 @@ export interface AdaptivePositionPlanInput {
   levels: number;
   sideLevels?: { buy?: number; sell?: number };
   includedSides?: { buy: boolean; sell: boolean };
-  layerLotFactors?: number[];
+  layerLotFactors?: readonly number[];
   checkpointPrices?: { buy?: number[]; sell?: number[] };
 }
 
@@ -166,9 +167,26 @@ export interface AdaptivePlanRecommendation {
     positions: number;
     marginBudget: number;
     maximumLoss: number;
+    riskStyle: AdaptiveRiskStyle;
   } | null;
   context: AdaptivePlanContext;
   decision: AdaptivePlanDecision;
+}
+
+const ADAPTIVE_RISK_STYLE_FACTORS: Record<AdaptiveRiskStyle, readonly number[]> = {
+  conservative: [0.75, 0.5],
+  balanced: [1, 0.75],
+  aggressive: [1, 1],
+};
+
+export function isAdaptiveRiskStyle(value: unknown): value is AdaptiveRiskStyle {
+  return value === "conservative" || value === "balanced" || value === "aggressive";
+}
+
+export function getAdaptiveLayerLotFactors(
+  riskStyle: AdaptiveRiskStyle = "conservative",
+): readonly number[] {
+  return ADAPTIVE_RISK_STYLE_FACTORS[riskStyle];
 }
 
 const MARKET_GUARDRAILS: Record<AdaptiveMarket, Pick<AdaptiveRule, "label" | "maxGapPercent">> = {
@@ -675,12 +693,14 @@ export function createAdaptivePlanFingerprint({
   context,
   standardRule,
   checkpointPrices,
+  riskStyle = "conservative",
 }: {
   instrument: string;
   tradePlan: TradePlan;
   context: AdaptiveAnalysisContext;
   standardRule: StandardTradingRuleInstrument | null | undefined;
   checkpointPrices?: { buy?: number[]; sell?: number[] };
+  riskStyle?: AdaptiveRiskStyle;
 }): string {
   return JSON.stringify({
     instrument,
@@ -706,6 +726,7 @@ export function createAdaptivePlanFingerprint({
         }
       : null,
     checkpointPrices: checkpointPrices ?? null,
+    riskStyle,
   });
 }
 
@@ -866,6 +887,7 @@ export function buildAdaptivePlanRecommendation({
   standardRule,
   context: analysisContext,
   checkpointPrices,
+  riskStyle = "conservative",
 }: {
   instrument: string;
   tradePlan: TradePlan;
@@ -875,6 +897,7 @@ export function buildAdaptivePlanRecommendation({
   standardRule: StandardTradingRuleInstrument | null;
   context?: AdaptiveAnalysisContext;
   checkpointPrices?: { buy?: number[]; sell?: number[] };
+  riskStyle?: AdaptiveRiskStyle;
 }): AdaptivePlanRecommendation {
   const accountTier: AccountTier = "mini";
   const market = adaptiveMarketForInstrument(instrument);
@@ -944,6 +967,7 @@ export function buildAdaptivePlanRecommendation({
   }
 
   const requestedLevels = 2;
+  const layerLotFactors = getAdaptiveLayerLotFactors(riskStyle);
   let levels = requestedLevels;
   let softWarningCount = 0;
 
@@ -1054,9 +1078,8 @@ export function buildAdaptivePlanRecommendation({
   const marginCapacity = getAdaptiveMarginCapacity(marginBudget, rule);
   const tierCapacity = Math.max(0, floorLot((rule.maximumLot ?? marginCapacity) - existingExposure, rule.lotStep));
   const capacity = Math.min(marginCapacity, tierCapacity);
-  // Additional positions taper below the initial lot. The solver still checks
-  // the exact price-to-stop risk, day margin, and tier exposure for every row.
-  const layerLotFactors = [0.75, 0.5];
+  // The style only changes the requested taper. The solver still checks the
+  // exact price-to-stop risk, day margin, and tier exposure for every row.
   const lotCandidates: number[] = [];
   for (
     let lot = capacity;
@@ -1106,6 +1129,7 @@ export function buildAdaptivePlanRecommendation({
             positions: 1,
             marginBudget,
             maximumLoss,
+            riskStyle,
           };
           return {
             result: {
@@ -1172,6 +1196,7 @@ export function buildAdaptivePlanRecommendation({
             positions: acceptedLevels + 1,
             marginBudget,
             maximumLoss,
+            riskStyle,
           },
           context,
           decision: {
@@ -1205,9 +1230,10 @@ export function buildAdaptivePlanRecommendation({
       ? {
           initialLot: rule.minimumLot,
           levels: 0,
-            positions: 1,
+          positions: 1,
           marginBudget,
           maximumLoss,
+          riskStyle,
         }
       : null,
     context,

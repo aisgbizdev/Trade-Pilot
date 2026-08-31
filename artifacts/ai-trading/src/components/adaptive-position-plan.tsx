@@ -14,6 +14,7 @@ import {
   getAdaptiveMarketRule,
   getAdaptiveStandardRuleCode,
   isXauUsdMiniAdaptiveInstrument,
+  isAdaptiveRiskStyle,
   type AdaptiveAnalysisContext,
   type AdaptiveLadderLevel,
   type AdaptiveLayerRejectReason,
@@ -23,6 +24,7 @@ import {
   type AdaptivePlanReasonCode,
   type AdaptiveChartCandle,
   type AdaptiveSidePositionPlan,
+  type AdaptiveRiskStyle,
 } from "@/lib/adaptive-position-plan";
 
 type AdaptiveCopy = Translations["analysis_detail"];
@@ -41,16 +43,18 @@ interface FormState {
   availableMargin: string;
   maximumLoss: string;
   existingExposure: string;
+  riskStyle: AdaptiveRiskStyle;
 }
 
 const DEFAULT_FORM: FormState = {
   availableMargin: "",
   maximumLoss: "",
   existingExposure: "0",
+  riskStyle: "conservative",
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v11:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v12:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -61,7 +65,8 @@ function isStoredForm(value: unknown): value is Partial<FormState> {
   if (!isRecord(value)) return false;
   return (value.availableMargin === undefined || typeof value.availableMargin === "string") &&
     (value.maximumLoss === undefined || typeof value.maximumLoss === "string") &&
-    (value.existingExposure === undefined || typeof value.existingExposure === "string");
+    (value.existingExposure === undefined || typeof value.existingExposure === "string") &&
+    (value.riskStyle === undefined || isAdaptiveRiskStyle(value.riskStyle));
 }
 
 function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommendation {
@@ -75,12 +80,32 @@ function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommenda
       (isRecord(value.recommendation) &&
         typeof value.recommendation.positions === "number" &&
         value.recommendation.positions >= 1 &&
-        value.recommendation.positions <= 3)) &&
+        value.recommendation.positions <= 3 &&
+        (value.recommendation.riskStyle === undefined || isAdaptiveRiskStyle(value.recommendation.riskStyle)))) &&
     (!value.result.valid || (isRecord(rule) && rule.marginBasis === "day")) &&
     (value.decision.posture === "scaling_allowed" || value.decision.posture === "entry_only" || value.decision.posture === "not_recommended") &&
     (value.decision.preferredSide === "buy" || value.decision.preferredSide === "sell" || value.decision.preferredSide === "both" || value.decision.preferredSide === "none") &&
     Array.isArray(value.decision.reasonCodes) &&
     value.decision.reasonCodes.every((code) => typeof code === "string");
+}
+
+function riskStyleLabel(style: AdaptiveRiskStyle, copy: AdaptiveCopy): string {
+  return style === "conservative"
+    ? copy.adaptive_risk_style_conservative
+    : style === "balanced"
+      ? copy.adaptive_risk_style_balanced
+      : copy.adaptive_risk_style_aggressive;
+}
+
+function normalizeStoredRecommendation(
+  recommendation: AdaptivePlanRecommendation,
+  riskStyle: AdaptiveRiskStyle,
+): AdaptivePlanRecommendation {
+  if (!recommendation.recommendation || recommendation.recommendation.riskStyle) return recommendation;
+  return {
+    ...recommendation,
+    recommendation: { ...recommendation.recommendation, riskStyle },
+  };
 }
 
 function preferredAvailableSide(recommendation: AdaptivePlanRecommendation): "buy" | "sell" {
@@ -254,6 +279,9 @@ function PlanSide({
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               {copy.adaptive_snapshot_ready}
             </p>
+            <Badge variant="outline" className="mt-2 text-[10px]" data-testid="adaptive-risk-style-active">
+              {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
+            </Badge>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <div className="rounded-md bg-background/70 p-2">
@@ -423,6 +451,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     context,
     standardRule: rulesAvailable ? standardRule : null,
     checkpointPrices: chartCandidateState.prices,
+    riskStyle: form.riskStyle,
   });
   const rulesUnavailable = !isRulesLoading && !rulesAvailable;
 
@@ -444,15 +473,27 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       if (!stored) return;
       const parsed: unknown = JSON.parse(stored);
       if (!isRecord(parsed)) return;
-      if (parsed.fingerprint !== fingerprint) {
+      const parsedForm = isStoredForm(parsed.form) ? parsed.form : null;
+      const storedFingerprint = parsedForm
+        ? createAdaptivePlanFingerprint({
+            instrument,
+            tradePlan,
+            context,
+            standardRule: rulesAvailable ? standardRule : null,
+            checkpointPrices: chartCandidateState.prices,
+            riskStyle: parsedForm.riskStyle ?? "conservative",
+          })
+        : fingerprint;
+      if (parsed.fingerprint !== storedFingerprint) {
         setRecommendation(null);
         localStorage.removeItem(storageKey(analysisId));
         return;
       }
-      if (shouldRestore && isStoredForm(parsed.form)) setForm({ ...DEFAULT_FORM, ...parsed.form });
+      if (shouldRestore && parsedForm) setForm({ ...DEFAULT_FORM, ...parsedForm });
       if (shouldRestore && isStoredRecommendation(parsed.recommendation)) {
-        setRecommendation(parsed.recommendation);
-        setActiveSide(preferredAvailableSide(parsed.recommendation));
+        const restored = normalizeStoredRecommendation(parsed.recommendation, parsedForm?.riskStyle ?? "conservative");
+        setRecommendation(restored);
+        setActiveSide(preferredAvailableSide(restored));
       }
     } catch {
       // A malformed local draft should not block Standard Analysis.
@@ -478,6 +519,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       standardRule,
       context,
       checkpointPrices: chartCandidateState.prices,
+      riskStyle: form.riskStyle,
     });
     setRecommendation(next);
     setActiveSide(preferredAvailableSide(next));
@@ -559,6 +601,35 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </span>
             <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_maximum_loss_help}</span>
           </label>
+        </div>
+        <div className="space-y-2" data-testid="adaptive-risk-style-selector">
+          <div>
+            <p className="text-xs font-medium text-foreground">{copy.adaptive_risk_style_title}</p>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_risk_style_help}</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label={copy.adaptive_risk_style_title}>
+            {([
+              ["conservative", copy.adaptive_risk_style_conservative, copy.adaptive_risk_style_conservative_desc],
+              ["balanced", copy.adaptive_risk_style_balanced, copy.adaptive_risk_style_balanced_desc],
+              ["aggressive", copy.adaptive_risk_style_aggressive, copy.adaptive_risk_style_aggressive_desc],
+            ] as const).map(([style, label, description]) => (
+              <button
+                key={style}
+                type="button"
+                aria-pressed={form.riskStyle === style}
+                onClick={() => updateField("riskStyle", style)}
+                className={`rounded-md border px-2.5 py-2 text-left transition-colors ${
+                  form.riskStyle === style
+                    ? "border-primary bg-primary/[0.08] text-foreground shadow-sm"
+                    : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                }`}
+                data-testid={`button-adaptive-risk-style-${style}`}
+              >
+                <span className="block text-[11px] font-semibold">{label}</span>
+                <span className="mt-0.5 block text-[10px] leading-relaxed">{description}</span>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-2">
           <span className="block rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-[10px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-daytrade-only">{copy.adaptive_day_trade_only}</span>
