@@ -203,6 +203,17 @@ export const performanceLimiter = buildLimiter({
     "Terlalu banyak permintaan. Coba lagi sebentar lagi. / Too many requests. Try again in a moment.",
 });
 
+// Public landing traffic can be bursty. This limiter protects the snapshot
+// endpoint while its process-wide cache and in-flight dedupe protect the AI
+// generation itself.
+export const landingPreviewLimiter = buildLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak permintaan preview. Coba lagi sebentar lagi. / Too many preview requests. Try again shortly.",
+});
+
 // Per-IP limiter for POST /events/track (page-view + key-action analytics
 // pings, task: admin analytics dashboard). Endpoint is unauthenticated-
 // tolerant like outbound-click telemetry, so it's reachable by anyone —
@@ -229,6 +240,7 @@ setInterval(() => {
     journalWriteLimiter,
     journalReadLimiter,
     performanceLimiter,
+    landingPreviewLimiter,
     trackEventLimiter,
   ]) {
     for (const [k, b] of limiter.store) {

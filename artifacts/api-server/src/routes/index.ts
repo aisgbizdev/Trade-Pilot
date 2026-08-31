@@ -21,6 +21,7 @@ import traderMirrorRouter from "./trader-mirror";
 import performanceRouter from "./performance";
 import storageRouter from "./storage";
 import tradingRulesRouter from "./trading-rules";
+import landingPreviewRouter from "./landing-preview";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(traderMirrorRouter);
 router.use(performanceRouter);
 router.use(storageRouter);
 router.use(tradingRulesRouter);
+router.use(landingPreviewRouter);
 
 export default router;
