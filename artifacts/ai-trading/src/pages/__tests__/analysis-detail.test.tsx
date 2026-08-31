@@ -1019,6 +1019,66 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     expect(eventChip?.textContent).toMatch(/FOMC rate decision/);
   });
 
+  it("opens the closed news panel and highlights a cited news row when the news chip has no URL", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: {
+            newsItems: [
+              {
+                id: "n-no-url",
+                title: "Gold rallies as Fed signals pause",
+                summary: "Statement softer than expected.",
+                source: "Newsmaker.id",
+                url: null,
+                publishedAt: new Date(NOW - 30 * 60_000).toISOString(),
+              },
+            ],
+            calendarEvents: [],
+          },
+          fundamentalCitations: {
+            newsTitles: ["Gold rallies as Fed signals pause"],
+            calendarEvents: [],
+          },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    const chips = await screen.findByTestId("citation-chips");
+    const newsChip = chips.querySelector(
+      "[data-testid='citation-chip-news']",
+    ) as HTMLButtonElement | null;
+    expect(newsChip).not.toBeNull();
+    expect(newsChip).not.toHaveAttribute("href");
+
+    const newsToggle = screen.getByTestId("fundamental-news-toggle");
+    const newsList = screen.getByTestId("fundamental-news-list");
+    expect(newsToggle).toHaveAttribute("aria-expanded", "false");
+    expect(newsList).toHaveAttribute("data-state", "closed");
+
+    const newsRow = document.getElementById(
+      "cite-news-gold-rallies-as-fed-signals-pause",
+    );
+    expect(newsRow).not.toBeNull();
+
+    fireEvent.click(newsChip as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(newsToggle).toHaveAttribute("aria-expanded", "true");
+      expect(newsList).toHaveAttribute("data-state", "open");
+      expect(newsRow).toHaveClass("ring-2", "ring-primary/60", "rounded-md");
+    });
+  });
+
   it("uses the ORIGINAL calendar index (not the matched-list index) for the chip slug, so click-to-scroll lines up when only a subset is cited", async () => {
     // Three events in the snapshot, AI cites only the THIRD one.
     // The chip slug must end with `-2` (index in full list), not `-0`
@@ -1084,6 +1144,11 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     ) as HTMLElement | null;
     expect(eventChip).not.toBeNull();
 
+    const calendarToggle = screen.getByTestId("fundamental-calendar-toggle");
+    const calendarList = screen.getByTestId("fundamental-calendar-list");
+    expect(calendarToggle).toHaveAttribute("aria-expanded", "false");
+    expect(calendarList).toHaveAttribute("data-state", "closed");
+
     // Build the slug the same way the component does, using the
     // ORIGINAL index (2) for the third event in the snapshot.
     const expectedSlug =
@@ -1099,6 +1164,14 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     // would actually find a target.
     const target = document.getElementById(expectedSlug);
     expect(target).not.toBeNull();
+
+    fireEvent.click(eventChip as HTMLElement);
+
+    await waitFor(() => {
+      expect(calendarToggle).toHaveAttribute("aria-expanded", "true");
+      expect(calendarList).toHaveAttribute("data-state", "open");
+      expect(target).toHaveClass("ring-2", "ring-primary/60", "rounded-md");
+    });
   });
 
   it("drops AI-cited items that don't match any row in fundamentalContext (no dangling chips)", async () => {
