@@ -21,8 +21,39 @@ chrome. Content lives in `src/lib/legal-content.ts`. Cross-links to all
 four (+Support) were added to the footer of `layout.tsx` (in-app shell)
 and `landing.tsx` (marketing page).
 
-**Known limitation**: this is a client-side-rendered SPA (Vite, no
-SSR/prerendering). Pages are not readable without JavaScript, and
+**Fixed after initial writing of this checklist — direct-URL 404s**:
+production serves `artifacts/ai-trading/dist/public` as plain static files
+(`.replit-artifact/artifact.toml`, `serve = "static"`), which has no
+server-side SPA fallback. A direct request to any client-side-only route
+(e.g. a reviewer opening `https://tradepilot.id/privacy` directly, or any
+logged-in user hard-refreshing on `/analyze`) 404'd, even though the same
+link worked fine when clicked *inside* the already-loaded app (client-side
+routing never hits the server). **Root cause confirmed and fixed**: `pnpm
+--filter @workspace/ai-trading run build` now runs
+`scripts/prerender-spa-routes.mjs` after `vite build`, which copies the
+built `index.html` (the SPA shell) into `<route>/index.html` for every
+static route in the router, so the static host finds a real file at each
+path and serves it with a normal 200. **This only covers the finite,
+static route list in that script — it does not fix dynamic routes** like
+`/analyses/:id` (unbounded id space); a shared analysis link or a
+push-notification deep link opened fresh still needs a real server-side
+catch-all (a Replit static-hosting SPA/rewrite setting, or routing all
+traffic through `api-server`'s Express app, which already has correct
+fallback logic in `src/app.ts` but isn't what serves `/` in production
+today — see that file's SPA-fallback block). Tracked as a follow-up, not
+fixed in this pass.
+
+*(Caveat on the smoke test in §8 below: it ran against `vite preview`,
+which has its own built-in SPA fallback and therefore did **not** catch
+this bug — all 5 routes showed 200 there even before the fix. The
+`http.server`-based test that actually caught this (a "dumb" static
+server with zero SPA awareness, matching what Replit's static host
+actually does) is what should be trusted for this class of bug going
+forward, not `vite preview`.)*
+
+**Known limitation (separate issue, not fixed)**: this is a
+client-side-rendered SPA (Vite, no SSR/prerendering). Pages are not
+readable without JavaScript, and
 per-page `<meta>` tags beyond `document.title` aren't set. `document.title`
 is now set per legal page; adding real SSR/prerendering is out of scope
 for this pass.
