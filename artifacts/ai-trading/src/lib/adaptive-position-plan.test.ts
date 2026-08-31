@@ -154,12 +154,13 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     });
     expect(assessment.result.buy?.ladder).toHaveLength(3);
     expect(assessment.result.sell?.ladder).toHaveLength(1);
-    expect(assessment.result.buy?.totalLots).toBeLessThanOrEqual(0.9);
+    expect(assessment.result.buy?.totalLots).toBe(1.9);
+    expect(assessment.result.buy?.ladder.every((level) => level.lot <= 0.9)).toBe(true);
     expect(assessment.result.buy?.ladder[1]).toMatchObject({
       price: 2300,
       basis: "entry_zone_edge",
     });
-    expect(assessment.result.buy?.ladder.map((level) => level.lot)).toEqual([0.4, 0.3, 0.2]);
+    expect(assessment.result.buy?.ladder.map((level) => level.lot)).toEqual([0.9, 0.6, 0.4]);
   });
 
   it("builds the same three-position plan for a supported Sell analysis", () => {
@@ -180,23 +181,53 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(assessment.result.buy?.ladder).toHaveLength(1);
   });
 
-  it("applies each deterministic risk style without letting additions exceed the initial lot", () => {
+  it("applies deterministic decreasing, mixed, and increasing lot profiles", () => {
     const conservative = buildRecommendation({ riskStyle: "conservative" });
     const balanced = buildRecommendation({ riskStyle: "balanced" });
     const aggressive = buildRecommendation({ riskStyle: "aggressive" });
 
     expect(conservative.recommendation?.riskStyle).toBe("conservative");
-    expect(conservative.result.buy?.ladder.map((level) => level.lot)).toEqual([0.4, 0.3, 0.2]);
+    expect(conservative.recommendation?.lotProfile).toBe("decreasing");
+    expect(conservative.result.buy?.ladder.map((level) => level.lot)).toEqual([0.9, 0.6, 0.4]);
     expect(balanced.recommendation?.riskStyle).toBe("balanced");
-    expect(balanced.result.buy?.ladder.map((level) => level.lot)).toEqual([0.3, 0.3, 0.2]);
+    expect(balanced.recommendation?.lotProfile).toBe("mixed");
+    expect(balanced.result.buy?.ladder.map((level) => level.lot)).toEqual([0.9, 0.9, 0.6]);
     expect(aggressive.recommendation?.riskStyle).toBe("aggressive");
-    expect(aggressive.result.buy?.ladder.map((level) => level.lot)).toEqual([0.3, 0.3, 0.3]);
+    expect(aggressive.recommendation?.lotProfile).toBe("increasing");
+    expect(aggressive.result.buy?.ladder.map((level) => level.lot)).toEqual([0.9, 0.9, 0.9]);
 
     for (const assessment of [conservative, balanced, aggressive]) {
       const ladder = assessment.result.buy?.ladder ?? [];
-      expect(ladder.slice(1).every((level) => level.lot <= ladder[0]!.lot)).toBe(true);
-      expect(assessment.result.buy?.totalLots).toBeLessThanOrEqual(0.9);
+      expect(ladder.every((level) => level.lot <= 0.9)).toBe(true);
+      expect(assessment.result.buy?.totalLots).toBeGreaterThan(0.9);
     }
+  });
+
+  it("can produce 0.4, 0.5, 0.6 while keeping the 0.9 limit on each position", () => {
+    const assessment = buildRecommendation({
+      riskStyle: "aggressive",
+      maximumLoss: 150,
+    });
+
+    expect(assessment.recommendation).toMatchObject({
+      riskStyle: "aggressive",
+      lotProfile: "increasing",
+      positions: 3,
+    });
+    expect(assessment.result.buy?.ladder.map((level) => level.lot)).toEqual([0.4, 0.5, 0.6]);
+    expect(assessment.result.buy?.totalLots).toBe(1.5);
+    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(150);
+  });
+
+  it("changes an aggressive lot profile when the saved analysis is ranging", () => {
+    const assessment = buildRecommendation({
+      riskStyle: "aggressive",
+      maximumLoss: 150,
+      context: { ...SUPPORTIVE_CONTEXT, marketCondition: "ranging" },
+    });
+
+    expect(assessment.recommendation?.lotProfile).toBe("mixed");
+    expect(assessment.result.buy?.ladder.map((level) => level.lot)).toEqual([0.5, 0.6, 0.3]);
   });
 
   it("uses the selected style for Sell while hard limits can still force entry-only", () => {
@@ -213,9 +244,10 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     });
     const constrained = buildRecommendation({ riskStyle: "aggressive", maximumLoss: 15 });
 
-    expect(sell.result.sell?.ladder.map((level) => level.lot)).toEqual([0.3, 0.3, 0.3]);
+    expect(sell.result.sell?.ladder.map((level) => level.lot)).toEqual([0.9, 0.9, 0.9]);
     expect(constrained.recommendation).toMatchObject({
       riskStyle: "aggressive",
+      lotProfile: "increasing",
       levels: 0,
       positions: 1,
     });
@@ -259,12 +291,30 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(entryOnly.result.buy?.rejectedLadder[0]?.rejectReason).toBe("loss_ceiling");
   });
 
-  it("counts existing exposure against the Mini tier instead of assuming zero", () => {
+  it("does not subtract existing exposure from the per-position Mini cap", () => {
     const assessment = buildRecommendation({ existingExposure: 0.9 });
 
-    expect(assessment.recommendation).toBeNull();
-    expect(assessment.result.valid).toBe(false);
-    expect(assessment.result.errors.join(" ")).toMatch(/current open lots.*Mini tier limit/i);
+    expect(assessment.result.valid).toBe(true);
+    expect(assessment.result.buy?.ladder.every((level) => level.lot <= 0.9)).toBe(true);
+    expect(assessment.result.buy?.totalLots).toBeGreaterThan(0.9);
+    expect(assessment.result.assumptions.join(" ")).toMatch(/not subtracted.*per-position cap/i);
+  });
+
+  it("caps every requested layer independently instead of capping cumulative lots", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      availableFunds: 10_000,
+      maximumLoss: 1_000,
+      initialLot: 0.9,
+      levels: 2,
+      sideLevels: { buy: 2, sell: 0 },
+      includedSides: { buy: true, sell: false },
+      layerLotFactors: [2, 3],
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.buy?.ladder.map((level) => level.lot)).toEqual([0.9, 0.9, 0.9]);
+    expect(result.buy?.totalLots).toBe(2.7);
   });
 
   it("fails explicitly when any account input is missing", () => {

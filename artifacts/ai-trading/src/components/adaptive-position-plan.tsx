@@ -14,9 +14,11 @@ import {
   getAdaptiveMarketRule,
   getAdaptiveStandardRuleCode,
   isXauUsdMiniAdaptiveInstrument,
+  isAdaptiveLotProfile,
   isAdaptiveRiskStyle,
   type AdaptiveAnalysisContext,
   type AdaptiveLadderLevel,
+  type AdaptiveLotProfile,
   type AdaptiveLayerRejectReason,
   type AdaptivePlanContext,
   type AdaptivePlanDecision,
@@ -54,7 +56,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v12:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v13:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -81,7 +83,8 @@ function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommenda
         typeof value.recommendation.positions === "number" &&
         value.recommendation.positions >= 1 &&
         value.recommendation.positions <= 3 &&
-        (value.recommendation.riskStyle === undefined || isAdaptiveRiskStyle(value.recommendation.riskStyle)))) &&
+        isAdaptiveRiskStyle(value.recommendation.riskStyle) &&
+        isAdaptiveLotProfile(value.recommendation.lotProfile))) &&
     (!value.result.valid || (isRecord(rule) && rule.marginBasis === "day")) &&
     (value.decision.posture === "scaling_allowed" || value.decision.posture === "entry_only" || value.decision.posture === "not_recommended") &&
     (value.decision.preferredSide === "buy" || value.decision.preferredSide === "sell" || value.decision.preferredSide === "both" || value.decision.preferredSide === "none") &&
@@ -97,15 +100,18 @@ function riskStyleLabel(style: AdaptiveRiskStyle, copy: AdaptiveCopy): string {
       : copy.adaptive_risk_style_aggressive;
 }
 
+function lotProfileLabel(profile: AdaptiveLotProfile, copy: AdaptiveCopy): string {
+  return profile === "decreasing"
+    ? copy.adaptive_lot_profile_decreasing
+    : profile === "mixed"
+      ? copy.adaptive_lot_profile_mixed
+      : copy.adaptive_lot_profile_increasing;
+}
+
 function normalizeStoredRecommendation(
   recommendation: AdaptivePlanRecommendation,
-  riskStyle: AdaptiveRiskStyle,
 ): AdaptivePlanRecommendation {
-  if (!recommendation.recommendation || recommendation.recommendation.riskStyle) return recommendation;
-  return {
-    ...recommendation,
-    recommendation: { ...recommendation.recommendation, riskStyle },
-  };
+  return recommendation;
 }
 
 function preferredAvailableSide(recommendation: AdaptivePlanRecommendation): "buy" | "sell" {
@@ -282,6 +288,9 @@ function PlanSide({
             <Badge variant="outline" className="mt-2 text-[10px]" data-testid="adaptive-risk-style-active">
               {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
             </Badge>
+            <Badge variant="outline" className="ml-1 mt-2 text-[10px]" data-testid="adaptive-lot-profile-active">
+              {copy.adaptive_lot_profile_active.replace("{profile}", lotProfileLabel(summary.lotProfile, copy))}
+            </Badge>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <div className="rounded-md bg-background/70 p-2">
@@ -391,6 +400,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
   const [activeSide, setActiveSide] = useState<"buy" | "sell">("buy");
   const restoredStateKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    restoredStateKeyRef.current = null;
+    setForm(DEFAULT_FORM);
+    setRecommendation(null);
+    setActiveSide("buy");
+  }, [analysisId]);
   const [chartCandidateState, setChartCandidateState] = useState<{
     status: "loading" | "ready" | "error";
     prices: { buy: number[]; sell: number[] };
@@ -408,6 +423,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     ? getAdaptiveMarketRule(instrument, standardRule, "mini")
     : null;
   useEffect(() => {
+    if (isRulesLoading) return;
     if (!rulesAvailable || !context.timeframe || !selectedRule) {
       setChartCandidateState({ status: "error", prices: { buy: [], sell: [] } });
       return;
@@ -443,7 +459,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     return () => {
       cancelled = true;
     };
-  }, [context.timeframe, instrument, rulesAvailable, selectedRule?.minMovement, tradePlan]);
+  }, [context.timeframe, instrument, isRulesLoading, rulesAvailable, selectedRule?.minMovement, tradePlan]);
   const marginCapacity = getAdaptiveMarginCapacity(availableMargin, selectedRule);
   const fingerprint = createAdaptivePlanFingerprint({
     instrument,
@@ -461,8 +477,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     const shouldRestore = restoredStateKeyRef.current !== restoreKey;
     if (shouldRestore) {
       restoredStateKeyRef.current = restoreKey;
-      setForm(DEFAULT_FORM);
-      setRecommendation(null);
     }
     if (!rulesAvailable) {
       localStorage.removeItem(storageKey(analysisId));
@@ -491,7 +505,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       }
       if (shouldRestore && parsedForm) setForm({ ...DEFAULT_FORM, ...parsedForm });
       if (shouldRestore && isStoredRecommendation(parsed.recommendation)) {
-        const restored = normalizeStoredRecommendation(parsed.recommendation, parsedForm?.riskStyle ?? "conservative");
+        const restored = normalizeStoredRecommendation(parsed.recommendation);
         setRecommendation(restored);
         setActiveSide(preferredAvailableSide(restored));
       }
@@ -578,6 +592,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               <p>{copy.adaptive_account_rule
                 .replace("{tier}", copy.adaptive_account_mini)
                 .replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))
+                .replace("{maximum}", formatNumber(selectedRule.maximumLot, lang, 2))
                 .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))
                 .replace("{size}", formatNumber(selectedRule.contractSize, lang, 2))
                 .replace("{unit}", standardRule?.contractUnit ?? "")}</p>

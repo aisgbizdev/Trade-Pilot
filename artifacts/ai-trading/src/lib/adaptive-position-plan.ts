@@ -8,6 +8,7 @@ import type {
 export type AdaptiveMarket = "gold" | "brent" | "hang_seng" | "nikkei";
 export type AccountTier = "micro" | "mini" | "regular";
 export type AdaptiveRiskStyle = "conservative" | "balanced" | "aggressive";
+export type AdaptiveLotProfile = "decreasing" | "mixed" | "increasing";
 export type AdaptivePlanPosture = "scaling_allowed" | "entry_only" | "not_recommended";
 export type AdaptiveLayerBasis = "analysis_entry" | "entry_zone_edge" | "current_chart_swing";
 export type AdaptiveLayerRejectReason = "day_margin" | "loss_ceiling" | "tier_limit" | "analysis_limit";
@@ -168,25 +169,65 @@ export interface AdaptivePlanRecommendation {
     marginBudget: number;
     maximumLoss: number;
     riskStyle: AdaptiveRiskStyle;
+    lotProfile: AdaptiveLotProfile;
   } | null;
   context: AdaptivePlanContext;
   decision: AdaptivePlanDecision;
 }
 
-const ADAPTIVE_RISK_STYLE_FACTORS: Record<AdaptiveRiskStyle, readonly number[]> = {
-  conservative: [0.75, 0.5],
-  balanced: [1, 0.75],
-  aggressive: [1, 1],
+const ADAPTIVE_LOT_PROFILE_FACTORS: Record<AdaptiveLotProfile, readonly number[]> = {
+  decreasing: [0.75, 0.5],
+  mixed: [1.25, 0.75],
+  increasing: [1.25, 1.5],
 };
 
 export function isAdaptiveRiskStyle(value: unknown): value is AdaptiveRiskStyle {
   return value === "conservative" || value === "balanced" || value === "aggressive";
 }
 
+export function isAdaptiveLotProfile(value: unknown): value is AdaptiveLotProfile {
+  return value === "decreasing" || value === "mixed" || value === "increasing";
+}
+
 export function getAdaptiveLayerLotFactors(
   riskStyle: AdaptiveRiskStyle = "conservative",
 ): readonly number[] {
-  return ADAPTIVE_RISK_STYLE_FACTORS[riskStyle];
+  return ADAPTIVE_LOT_PROFILE_FACTORS[getAdaptiveLotProfile(riskStyle)];
+}
+
+export function getAdaptiveLotProfile(
+  riskStyle: AdaptiveRiskStyle = "conservative",
+): AdaptiveLotProfile {
+  return riskStyle === "conservative"
+    ? "decreasing"
+    : riskStyle === "balanced"
+      ? "mixed"
+      : "increasing";
+}
+
+function resolveAdaptiveLotProfile(
+  riskStyle: AdaptiveRiskStyle,
+  context: AdaptivePlanContext,
+  preferredSide: AdaptivePlanDecision["preferredSide"],
+): AdaptiveLotProfile {
+  if (riskStyle === "conservative") return "decreasing";
+  if (context.marketCondition === "ranging") return "mixed";
+
+  const trendAligned =
+    (preferredSide === "buy" &&
+      context.marketCondition === "trending_up" &&
+      (context.technical?.buy ?? 0) > (context.technical?.sell ?? 0)) ||
+    (preferredSide === "sell" &&
+      context.marketCondition === "trending_down" &&
+      (context.technical?.sell ?? 0) > (context.technical?.buy ?? 0));
+  const strongContext =
+    trendAligned &&
+    context.riskLevel === "low" &&
+    (context.confidenceMin ?? 0) >= 65 &&
+    context.fundamental.highImpactCount === 0;
+
+  if (!strongContext) return "decreasing";
+  return riskStyle === "aggressive" ? "increasing" : "mixed";
 }
 
 const MARKET_GUARDRAILS: Record<AdaptiveMarket, Pick<AdaptiveRule, "label" | "maxGapPercent">> = {
@@ -571,13 +612,16 @@ function sidePlan(
     { price: entry, lot: initialLot, basis: "analysis_entry" as const, invalidationProgress: 0 },
     ...checkpointProgress.slice(0, levels).map(({ progress, basis }, index) => {
       const requestedFactor = input.layerLotFactors?.[index] ?? 1;
-      const requestedLot = initialLot * Math.min(1, Math.max(0, requestedFactor));
+      const requestedLot = initialLot * Math.max(0, requestedFactor);
+      const cappedLot = rule.maximumLot == null
+        ? requestedLot
+        : Math.min(requestedLot, rule.maximumLot);
       return {
         price: roundPrice(
           side === "buy" ? entry - distance * progress : entry + distance * progress,
           rule.minMovement,
         ),
-        lot: Math.max(rule.minimumLot, floorLot(requestedLot, lotStep)),
+        lot: Math.max(rule.minimumLot, floorLot(cappedLot, lotStep)),
         basis,
         invalidationProgress: progress,
       };
@@ -789,11 +833,8 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const tierMax = rule.maximumLot;
   const plans = [buy, sell].filter((plan): plan is AdaptiveSidePositionPlan => plan != null);
   for (const plan of plans) {
-    if (tierMax != null && plan.totalLots > tierMax) {
-      errors.push(`The ${input.accountTier} tier caps total open exposure at ${tierMax.toFixed(2)} lot.`);
-    }
-    if (tierMax != null && (input.existingExposure ?? 0) + plan.totalLots > tierMax) {
-      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} exposure plus current open lots exceeds the Mini tier limit.`);
+    if (tierMax != null && plan.ladder.some((level) => level.lot > tierMax)) {
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} has a position above the Mini per-position limit.`);
     }
     if (plan.marginRequired > (input.availableFunds ?? 0)) {
       errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} margin exceeds available trading funds.`);
@@ -816,10 +857,10 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const assumptions = [
     `Mini profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
     movementAssumption,
-    `Initial entry uses the Standard Plan; up to two smaller manual additions can create at most three total positions (${tierText}). No add uses a martingale multiplier.`,
+    `Initial entry uses the Standard Plan; up to two manual additions can create at most three total positions. The ${tierText} range applies separately to each position, not to cumulative planned lots.`,
     `The entered USD ${maxCycleLoss} maximum loss is a hard amount for every position in the complete plan.`,
     "Available trading funds are used directly; no hidden tier or risk-style percentage reduces them.",
-    `Current open XAU/USD Mini exposure is ${input.existingExposure ?? 0} lot and is included in the 0.90-lot tier limit.`,
+    `Current open XAU/USD Mini exposure is ${input.existingExposure ?? 0} lot. It is not subtracted from the 0.90-lot per-position cap; entered free funds must already exclude margin committed elsewhere.`,
     "This Adaptive Position Plan is for day trading only: it uses the day/initial margin and excludes overnight holding, rollover, and overnight fees from every calculation.",
     "Broker auto-liquidation, spread, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
   ];
@@ -852,7 +893,7 @@ function addRejectedCandidates(
       .map((level): AdaptiveRejectedLadderLevel => ({
         ...level,
         rejectReason:
-          candidate.rule?.maximumLot != null && level.cumulativeLots > candidate.rule.maximumLot
+          candidate.rule?.maximumLot != null && level.lot > candidate.rule.maximumLot
             ? "tier_limit"
             : level.cumulativeDayMargin > marginBudget
               ? "day_margin"
@@ -967,7 +1008,6 @@ export function buildAdaptivePlanRecommendation({
   }
 
   const requestedLevels = 2;
-  const layerLotFactors = getAdaptiveLayerLotFactors(riskStyle);
   let levels = requestedLevels;
   let softWarningCount = 0;
 
@@ -1070,16 +1110,19 @@ export function buildAdaptivePlanRecommendation({
   }
 
   if (levels > 0) reasonCodes.push("staged_add_condition");
+  const lotProfile = resolveAdaptiveLotProfile(riskStyle, context, preferredSide);
+  const layerLotFactors = ADAPTIVE_LOT_PROFILE_FACTORS[lotProfile];
 
   const marginBudget = availableMargin;
   const buyPlanAvailable = sideGeometryError("buy", tradePlan.buy) === null;
   const sellPlanAvailable = sideGeometryError("sell", tradePlan.sell) === null;
 
   const marginCapacity = getAdaptiveMarginCapacity(marginBudget, rule);
-  const tierCapacity = Math.max(0, floorLot((rule.maximumLot ?? marginCapacity) - existingExposure, rule.lotStep));
-  const capacity = Math.min(marginCapacity, tierCapacity);
-  // The style only changes the requested taper. The solver still checks the
-  // exact price-to-stop risk, day margin, and tier exposure for every row.
+  const perPositionCapacity = rule.maximumLot ?? marginCapacity;
+  const capacity = Math.min(marginCapacity, perPositionCapacity);
+  // The style can request a decreasing, mixed, or increasing sequence. Each
+  // row is capped independently, while exact price-to-stop risk and total day
+  // margin still constrain the complete plan.
   const lotCandidates: number[] = [];
   for (
     let lot = capacity;
@@ -1130,6 +1173,7 @@ export function buildAdaptivePlanRecommendation({
             marginBudget,
             maximumLoss,
             riskStyle,
+            lotProfile,
           };
           return {
             result: {
@@ -1197,6 +1241,7 @@ export function buildAdaptivePlanRecommendation({
             marginBudget,
             maximumLoss,
             riskStyle,
+            lotProfile,
           },
           context,
           decision: {
@@ -1234,6 +1279,7 @@ export function buildAdaptivePlanRecommendation({
           marginBudget,
           maximumLoss,
           riskStyle,
+          lotProfile,
         }
       : null,
     context,

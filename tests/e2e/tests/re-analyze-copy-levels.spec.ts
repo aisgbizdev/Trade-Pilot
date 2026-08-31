@@ -418,7 +418,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("card-log-trade")).toHaveCount(0);
     await expect(page.getByTestId("card-user-journal-note")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
-      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v12:${analysisId}`),
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v13:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
@@ -488,7 +488,18 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     let currentAnalysis: AdaptiveRefreshAnalysis = {
       ...buildStubAnalysis(STUB_ID_ADAPTIVE_REFRESH),
       riskLevel: "low" as const,
+      confidenceMin: 65,
       fundamentalContext: { newsItems: [], calendarEvents: [] },
+      tradePlan: {
+        ...buildStubAnalysis(STUB_ID_ADAPTIVE_REFRESH).tradePlan!,
+        buy: {
+          ...buildStubAnalysis(STUB_ID_ADAPTIVE_REFRESH).tradePlan!.buy!,
+          entryZone: "2301.0",
+          stopLoss: "2290.0",
+          takeProfit1: "2315.0",
+          takeProfit2: "2325.0",
+        },
+      },
     };
     const refreshedAt = new Date().toISOString();
 
@@ -546,6 +557,25 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
       }
       await route.fallback();
     });
+    await page.route("**/api/historical/candles?*purpose=adaptive-layering*", async (route: Route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          candles: [
+            { high: 2305, low: 2302 },
+            { high: 2304, low: 2301 },
+            { high: 2303, low: 2300 },
+            { high: 2304, low: 2301 },
+            { high: 2303, low: 2301 },
+            { high: 2299, low: 2295 },
+            { high: 2300, low: 2297 },
+            { high: 2300, low: 2296 },
+            { high: 2301, low: 2297 },
+          ],
+        }),
+      });
+    });
 
     await page.goto("/analyze");
     await page.getByTestId("button-instrument-XAU/USD").click();
@@ -565,9 +595,11 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(accountRule).toContainText("Mini");
     await expect(accountRule).toContainText(/0[.,]1(?:0)? lot/);
     await expect(accountRule).toContainText(/100/);
+    await expect(accountRule).toContainText(/0[.,]9(?:0)? lot/);
+    await expect(accountRule).toContainText(/each position|setiap posisi/i);
 
-    await marginInput.fill("100000");
-    await maximumLossInput.fill("500");
+    await marginInput.fill("5000");
+    await maximumLossInput.fill("125");
     await expect(page.getByTestId("button-adaptive-risk-style-conservative")).toHaveAttribute("aria-pressed", "true");
     await page.getByTestId("button-adaptive-risk-style-aggressive").click();
     await expect(page.getByTestId("button-adaptive-risk-style-aggressive")).toHaveAttribute("aria-pressed", "true");
@@ -576,12 +608,18 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-plan-valid")).toBeVisible();
     await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
     await expect(page.getByTestId("adaptive-risk-style-active")).toContainText(/Aggressive|Agresif/i);
+    await expect(page.getByTestId("adaptive-lot-profile-active")).toContainText(/increasing|meningkat/i);
+    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/3 positions|3 posisi/i);
+    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/1[.,]5 lot/i);
+    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]4 lot/i);
+    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]5 lot/i);
+    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]6 lot/i);
     await expect(page.getByTestId("adaptive-plan-comparison")).toHaveCount(0);
 
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v12:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v13:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -589,13 +627,13 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await page.getByTestId("button-refresh-fundamentals").click();
     await expect(page.getByTestId("fundamental-calendar-list")).toContainText("Central-bank rate decision");
     await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
-    await expect(marginInput).toHaveValue("100000");
-    await expect(maximumLossInput).toHaveValue("500");
+    await expect(marginInput).toHaveValue("5000");
+    await expect(maximumLossInput).toHaveValue("125");
     await expect(page.getByTestId("button-adaptive-risk-style-aggressive")).toHaveAttribute("aria-pressed", "true");
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v12:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v13:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();
@@ -606,7 +644,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
 
     // Standard Plan levels remain the source plan throughout; only the
     // optional adaptive recommendation has been discarded and re-evaluated.
-    await expect(page.getByTestId("trade-plan-buy-entry")).toHaveText("2350.0");
-    await expect(page.getByTestId("trade-plan-buy-sl")).toHaveText("2345.0");
+    await expect(page.getByTestId("trade-plan-buy-entry")).toHaveText("2301.0");
+    await expect(page.getByTestId("trade-plan-buy-sl")).toHaveText("2290.0");
   });
 });
