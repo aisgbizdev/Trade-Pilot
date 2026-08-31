@@ -1062,6 +1062,8 @@ export const en = {
     fundamental_context_subtitle: "News and economic events the AI saw when building this analysis — so you can audit the sources, not just the AI's narrative.",
     fundamental_news_title: "Recent News",
     fundamental_calendar_title: "Economic Calendar",
+    fundamental_expand: "Expand section",
+    fundamental_collapse: "Collapse section",
     fundamental_empty: "No significant fundamental catalyst detected for {instrument} in the relevant analysis window (last 24h news + this week's calendar). Treat the analysis as primarily technical.",
     fundamental_calendar_actual: "Actual",
     fundamental_calendar_forecast: "Forecast",

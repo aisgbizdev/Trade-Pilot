@@ -774,6 +774,23 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     );
 
     const card = await screen.findByTestId("card-fundamental-context");
+    expect(screen.getByTestId("fundamental-news-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.getByTestId("fundamental-calendar-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    fireEvent.click(screen.getByTestId("fundamental-news-toggle"));
+    await waitFor(() =>
+      expect(screen.getByTestId("fundamental-news-toggle")).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      ),
+    );
+
     // News link rows are tagged `fundamental-news-link` (the anchor).
     const links = card.querySelectorAll("[data-testid='fundamental-news-link']");
     expect(links.length).toBe(3);

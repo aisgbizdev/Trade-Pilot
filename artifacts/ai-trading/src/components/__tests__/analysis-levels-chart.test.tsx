@@ -26,6 +26,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import type { AutoscaleInfoProvider } from "lightweight-charts";
 
 // --- lightweight-charts mock --------------------------------------------
 // Capture every createPriceLine invocation so the test can assert the
@@ -36,6 +37,7 @@ const createdPriceLines: Array<{
   color: string;
   lineStyle: number;
 }> = [];
+const createdAutoscaleProviders: AutoscaleInfoProvider[] = [];
 
 vi.mock("lightweight-charts", () => {
   const CandlestickSeries = Symbol("CandlestickSeries");
@@ -61,7 +63,15 @@ vi.mock("lightweight-charts", () => {
         removePriceLine: vi.fn(),
       };
       return {
-        addSeries: vi.fn(() => series),
+        addSeries: vi.fn((
+          _seriesType: unknown,
+          options?: { autoscaleInfoProvider?: AutoscaleInfoProvider },
+        ) => {
+          if (options?.autoscaleInfoProvider) {
+            createdAutoscaleProviders.push(options.autoscaleInfoProvider);
+          }
+          return series;
+        }),
         timeScale: () => ({ fitContent: vi.fn() }),
         remove: vi.fn(),
       };
@@ -74,6 +84,7 @@ vi.mock("lightweight-charts", () => {
 // Theme provider depends on matchMedia (stubbed by setup.ts) and is
 // lightweight; importing the real one keeps the test honest.
 import { ThemeProvider } from "../theme-provider";
+import { createLevelAwareAutoscaleInfoProvider } from "@/lib/chart-autoscale";
 import { AnalysisLevelsChart } from "../analysis-levels-chart";
 import type { TradePlan } from "@workspace/api-client-react";
 
@@ -132,6 +143,7 @@ function stubCandlesFetch() {
 
 beforeEach(() => {
   createdPriceLines.length = 0;
+  createdAutoscaleProviders.length = 0;
   vi.stubGlobal("fetch", stubCandlesFetch());
 });
 
@@ -295,5 +307,94 @@ describe("AnalysisLevelsChart", () => {
     expect(titles.filter((t) => t === "SL")).toHaveLength(2);
     expect(titles.filter((t) => t === "TP1")).toHaveLength(2);
     expect(titles.filter((t) => t === "TP2")).toHaveLength(2);
+  });
+});
+
+describe("level-aware chart framing", () => {
+  it("centers all recommendation levels with safe label margins", () => {
+    const provider = createLevelAwareAutoscaleInfoProvider(
+      [4445, 4421.5, 4400, 4380],
+      4418.27,
+    );
+    const result = provider(() => ({
+      priceRange: { minValue: 4500, maxValue: 4750 },
+      margins: { above: 4, below: 6 },
+    }));
+
+    expect(result?.priceRange?.minValue).toBeLessThan(4380);
+    expect(result?.priceRange?.maxValue).toBeGreaterThan(4445);
+    expect(result?.priceRange?.minValue).toBeGreaterThan(4300);
+    expect(result?.priceRange?.maxValue).toBeLessThan(4525);
+    expect(result?.margins).toEqual({ above: 28, below: 28 });
+  });
+
+  it.each(["1m", "1h", "1D", "1W"])(
+    "installs level-aware autoscaling on the %s chart",
+    async (timeframe) => {
+      const plan: TradePlan = {
+        preferredSide: "sell",
+        buy: makeSide({}),
+        sell: makeSide({
+          entryZone: "4421.50",
+          stopLoss: "4445.00",
+          takeProfit1: "4400.00",
+          takeProfit2: "4380.00",
+        }),
+      };
+
+      renderChart({ tradePlan: plan, instrument: "XAU/USD", timeframe });
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("analysis-levels-chart").getAttribute("data-state"),
+        ).toBe("ready"),
+      );
+
+      const provider = createdAutoscaleProviders.at(-1);
+      expect(provider).toBeTypeOf("function");
+      const result = provider?.(() => ({
+        priceRange: { minValue: 4550, maxValue: 4700 },
+      }));
+      expect(result?.priceRange?.minValue).toBeLessThan(4380);
+      expect(result?.priceRange?.maxValue).toBeGreaterThan(4445);
+    },
+  );
+
+  it("keeps very close levels visible by enforcing a minimum vertical span", () => {
+    const provider = createLevelAwareAutoscaleInfoProvider(
+      [1.085, 1.08501, 1.08502],
+      1.085015,
+    );
+    const result = provider(() => ({
+      priceRange: { minValue: 1.0849, maxValue: 1.0851 },
+    }));
+
+    const range = result?.priceRange;
+    expect(range).not.toBeNull();
+    expect((range?.maxValue ?? 0) - (range?.minValue ?? 0)).toBeGreaterThan(
+      0.003,
+    );
+  });
+
+  it("falls back to candle autoscaling when no numeric level is displayed", () => {
+    const base = {
+      priceRange: { minValue: 100, maxValue: 120 },
+      margins: { above: 7, below: 9 },
+    };
+    const provider = createLevelAwareAutoscaleInfoProvider([], 110);
+
+    expect(provider(() => base)).toBe(base);
+  });
+
+  it("ignores incomplete invalid level values without losing valid levels", () => {
+    const provider = createLevelAwareAutoscaleInfoProvider(
+      [4500, Number.NaN, Number.POSITIVE_INFINITY, -1],
+      null,
+    );
+    const result = provider(() => ({
+      priceRange: { minValue: 4000, maxValue: 5000 },
+    }));
+
+    expect(result?.priceRange?.minValue).toBeLessThan(4500);
+    expect(result?.priceRange?.maxValue).toBeGreaterThan(4500);
   });
 });

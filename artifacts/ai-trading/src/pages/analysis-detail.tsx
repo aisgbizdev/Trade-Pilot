@@ -424,13 +424,21 @@ function scrollToCitation(id: string): void {
   if (typeof document === "undefined") return;
   const el = document.getElementById(id);
   if (!el) return;
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
-  // Add a one-shot highlight ring so the eye lands on the row even if
-  // the card was already on screen and didn't need to scroll.
-  el.classList.add("ring-2", "ring-primary/60", "rounded-md");
-  window.setTimeout(() => {
-    el.classList.remove("ring-2", "ring-primary/60", "rounded-md");
-  }, 1500);
+  const collapsedContent = el.closest<HTMLElement>('[data-state="closed"]');
+  const trigger = collapsedContent?.previousElementSibling;
+  if (trigger instanceof HTMLElement && trigger.getAttribute("aria-expanded") === "false") {
+    trigger.click();
+  }
+
+  window.requestAnimationFrame(() => {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Add a one-shot highlight ring so the eye lands on the row even if
+    // the card was already on screen and didn't need to scroll.
+    el.classList.add("ring-2", "ring-primary/60", "rounded-md");
+    window.setTimeout(() => {
+      el.classList.remove("ring-2", "ring-primary/60", "rounded-md");
+    }, 1500);
+  });
 }
 
 // Renders the inline source chips for ONE narrative block. Matches each
@@ -1248,6 +1256,8 @@ function FundamentalContextCard({
 }) {
   const news = (ctx.newsItems ?? []).slice(0, 3);
   const events = (ctx.calendarEvents ?? []).slice(0, 5);
+  const [newsOpen, setNewsOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const refreshButton = (
     <Button
@@ -1316,42 +1326,100 @@ function FundamentalContextCard({
       {driftBanner}
 
       {news.length > 0 && (
-        <div className="space-y-2" data-testid="fundamental-news-list">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80 uppercase tracking-wide">
-            <Newspaper className="w-3.5 h-3.5" />
-            <span>{t.analysis_detail.fundamental_news_title}</span>
-          </div>
-          <ul className="space-y-2">
-            {news.map((n) => (
-              <FundamentalNewsRow
-                key={n.id}
-                item={n}
-                t={t}
-                lang={lang}
-                anchorId={citationSlug("news", n.title)}
-              />
-            ))}
-          </ul>
-        </div>
+        <Collapsible open={newsOpen} onOpenChange={setNewsOpen} data-testid="fundamental-news">
+          <CollapsibleTrigger
+            className="w-full flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-testid="fundamental-news-toggle"
+            aria-label={`${newsOpen ? t.analysis_detail.fundamental_collapse : t.analysis_detail.fundamental_expand}: ${t.analysis_detail.fundamental_news_title}`}
+          >
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5">
+                <Newspaper className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                  {t.analysis_detail.fundamental_news_title}
+                </span>
+                <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+                  ({news.length})
+                </span>
+              </span>
+              {!newsOpen && news[0]?.title && (
+                <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted-foreground">
+                  {narrativePreview(news[0].title)}
+                </span>
+              )}
+            </span>
+            {newsOpen ? (
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent
+            forceMount
+            className="px-2 pb-1 pt-1 data-[state=closed]:hidden"
+            data-testid="fundamental-news-list"
+          >
+            <ul className="space-y-2">
+              {news.map((n) => (
+                <FundamentalNewsRow
+                  key={n.id}
+                  item={n}
+                  t={t}
+                  lang={lang}
+                  anchorId={citationSlug("news", n.title)}
+                />
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
       )}
 
       {events.length > 0 && (
-        <div className="space-y-2" data-testid="fundamental-calendar-list">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80 uppercase tracking-wide">
-            <CalendarClock className="w-3.5 h-3.5" />
-            <span>{t.analysis_detail.fundamental_calendar_title}</span>
-          </div>
-          <ul className="space-y-2">
-            {events.map((e, i) => (
-              <FundamentalCalendarRow
-                key={`${e.date}-${e.event}-${i}`}
-                ev={e}
-                t={t}
-                anchorId={citationSlug("event", `${e.date}-${e.event}-${i}`)}
-              />
-            ))}
-          </ul>
-        </div>
+        <Collapsible open={calendarOpen} onOpenChange={setCalendarOpen} data-testid="fundamental-calendar">
+          <CollapsibleTrigger
+            className="w-full flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-testid="fundamental-calendar-toggle"
+            aria-label={`${calendarOpen ? t.analysis_detail.fundamental_collapse : t.analysis_detail.fundamental_expand}: ${t.analysis_detail.fundamental_calendar_title}`}
+          >
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5">
+                <CalendarClock className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                  {t.analysis_detail.fundamental_calendar_title}
+                </span>
+                <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+                  ({events.length})
+                </span>
+              </span>
+              {!calendarOpen && events[0]?.event && (
+                <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted-foreground">
+                  {narrativePreview(events[0].event)}
+                </span>
+              )}
+            </span>
+            {calendarOpen ? (
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent
+            forceMount
+            className="px-2 pb-1 pt-1 data-[state=closed]:hidden"
+            data-testid="fundamental-calendar-list"
+          >
+            <ul className="space-y-2">
+              {events.map((e, i) => (
+                <FundamentalCalendarRow
+                  key={`${e.date}-${e.event}-${i}`}
+                  ev={e}
+                  t={t}
+                  anchorId={citationSlug("event", `${e.date}-${e.event}-${i}`)}
+                />
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </Card>
   );

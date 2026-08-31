@@ -10,6 +10,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useTheme } from "@/components/theme-provider";
+import { createLevelAwareAutoscaleInfoProvider } from "@/lib/chart-autoscale";
 import type { TradePlan, TradePlanPreferredSide } from "@workspace/api-client-react";
 
 interface Candle {
@@ -141,6 +142,15 @@ function buildLevels(
   return levels;
 }
 
+function buildDisplayedLevels(plan: TradePlan | null): LevelDef[] {
+  if (!plan) return [];
+  const sides: TradePlanPreferredSide[] =
+    plan.preferredSide === "wait"
+      ? ["buy", "sell"]
+      : [plan.preferredSide];
+  return sides.flatMap((side) => buildLevels(plan, side));
+}
+
 function toCssSize(value: number | string): string {
   if (typeof value === "number") return value > 0 ? `${value}px` : "100%";
   return value || "100%";
@@ -209,6 +219,19 @@ export function AnalysisLevelsChart({
     if (!Number.isFinite(ms)) return null;
     return Math.floor(ms / 1000);
   }, [analysisCreatedAt]);
+
+  const displayedLevels = useMemo(
+    () => buildDisplayedLevels(tradePlan),
+    [tradePlan],
+  );
+  const latestClose = candles?.at(-1)?.close ?? null;
+  const autoscaleInfoProvider = useMemo(
+    () => createLevelAwareAutoscaleInfoProvider(
+      displayedLevels.map((level) => level.price),
+      latestClose,
+    ),
+    [displayedLevels, latestClose],
+  );
 
   // Fetch candles when instrument / timeframe changes.
   useEffect(() => {
@@ -290,6 +313,7 @@ export function AnalysisLevelsChart({
       borderDownColor: "#ef4444",
       wickUpColor: "#10b981",
       wickDownColor: "#ef4444",
+      autoscaleInfoProvider,
     });
     seriesRef.current = series;
     series.setData(buildCandleData(candles, cutoffSec, isDark));
@@ -301,7 +325,7 @@ export function AnalysisLevelsChart({
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, [candles, state, theme, cutoffSec]);
+  }, [candles, state, theme, cutoffSec, autoscaleInfoProvider]);
 
   // Draw / refresh price lines for the trade plan whenever plan changes.
   useEffect(() => {
@@ -312,28 +336,18 @@ export function AnalysisLevelsChart({
       try { series.removePriceLine(pl); } catch { /* line already gone */ }
     }
     priceLinesRef.current = [];
-    if (!tradePlan) return;
-    // When AI says "wait", show levels for BOTH sides faintly so the user
-    // can see the structure either way. Otherwise lean into the chosen side.
-    const sides: TradePlanPreferredSide[] =
-      tradePlan.preferredSide === "wait"
-        ? ["buy", "sell"]
-        : [tradePlan.preferredSide];
-    for (const side of sides) {
-      const levels = buildLevels(tradePlan, side);
-      for (const lvl of levels) {
-        const line = series.createPriceLine({
-          price: lvl.price,
-          color: lvl.color,
-          lineWidth: 2,
-          lineStyle: lvl.key.includes("entry") ? LineStyle.Dashed : LineStyle.Solid,
-          axisLabelVisible: true,
-          title: lvl.label,
-        });
-        priceLinesRef.current.push(line);
-      }
+    for (const lvl of displayedLevels) {
+      const line = series.createPriceLine({
+        price: lvl.price,
+        color: lvl.color,
+        lineWidth: 2,
+        lineStyle: lvl.key.includes("entry") ? LineStyle.Dashed : LineStyle.Solid,
+        axisLabelVisible: true,
+        title: lvl.label,
+      });
+      priceLinesRef.current.push(line);
     }
-  }, [tradePlan, candles, state]);
+  }, [displayedLevels, candles, state]);
 
   // Track the x-coordinate of the analysis-created cutoff so we can draw a
   // vertical marker line + badge as an HTML overlay. lightweight-charts has
