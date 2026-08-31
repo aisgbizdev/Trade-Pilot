@@ -198,25 +198,11 @@ describe("AnalyzePage: happy-path render", () => {
       ) as HTMLButtonElement;
       expect(submit.disabled).toBe(true);
 
-      const notes = screen.getByTestId("textarea-notes");
-      expect(notes).toHaveAttribute("placeholder", "e.g. breakout above resistance");
-      expect(notes).toHaveClass("placeholder:italic");
-      expect(notes).toHaveAttribute(
-        "aria-describedby",
-        "analysis-notes-helper analysis-notes-broker-warning",
-      );
-      expect(screen.getByTestId("notes-helper-text")).toHaveTextContent(
-        "Have a chart or news observation?",
-      );
-      expect(screen.getByTestId("notes-broker-hint")).toHaveTextContent(
-        "questions about brokers or trading companies",
-      );
-      expect(screen.getByText(
-        "Have a chart or news observation? Add it here — AI will use it as extra context. You can leave this blank.",
-      )).toBeInTheDocument();
-      expect(screen.getByText(
-        "Please don't use this field for questions about brokers or trading companies.",
-      )).toBeInTheDocument();
+      // Optional context is intentionally hidden in Beginner mode so the
+      // first analysis flow stays focused on the required choices.
+      expect(screen.queryByTestId("textarea-notes")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("notes-helper-text")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("notes-broker-hint")).not.toBeInTheDocument();
     },
   );
 });
@@ -317,10 +303,6 @@ describe("AnalyzePage: user actions", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-timeframe-1h"));
     });
-    fireEvent.change(screen.getByTestId("textarea-notes"), {
-      target: { value: "Waiting for a close above resistance" },
-    });
-
     await waitFor(() => {
       expect(
         (screen.getByTestId("button-submit-analysis") as HTMLButtonElement)
@@ -343,9 +325,7 @@ describe("AnalyzePage: user actions", () => {
       expect(payload?.instrument).toBe("XAU/USD");
       expect(payload?.timeframe).toBe("1h");
       expect(payload?.mode).toBe("beginner");
-      expect(payload?.userInputContext).toBe(
-        "Waiting for a close above resistance",
-      );
+      expect(payload?.userInputContext).toBeUndefined();
       expect(window.location.pathname).toBe("/analyses/4242");
     });
     expect(screen.queryByTestId("analyze-result-section")).not.toBeInTheDocument();
@@ -410,9 +390,9 @@ describe("AnalyzePage: user actions", () => {
     expect(screen.queryByTestId("button-view-full-analysis")).not.toBeInTheDocument();
   });
 
-  it("renders the analysis context copy in Indonesian while keeping the field optional", async () => {
+  it("hides optional analysis context for Indonesian beginners but keeps it available in Pro mode", async () => {
     localStorage.setItem("app_lang", "id");
-    installFetchMock(pageHandlers({}));
+    installFetchMock(pageHandlers({}), { strict: false });
     const { Wrapper } = makeWrapper();
 
     render(
@@ -421,6 +401,12 @@ describe("AnalyzePage: user actions", () => {
       </Wrapper>,
     );
 
+    await screen.findByTestId("tab-futures");
+    expect(screen.queryByTestId("textarea-notes")).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-analyze-mode-pro"));
+    });
     await screen.findByTestId("textarea-notes");
 
     expect(screen.getByTestId("textarea-notes")).toHaveAttribute(
