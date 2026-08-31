@@ -203,6 +203,10 @@ describe("AnalyzePage: happy-path render", () => {
       expect(screen.queryByTestId("textarea-notes")).not.toBeInTheDocument();
       expect(screen.queryByTestId("notes-helper-text")).not.toBeInTheDocument();
       expect(screen.queryByTestId("notes-broker-hint")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("This analysis is for decision support only, not a trading signal."),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("text-risk-disclaimer-short")).toBeInTheDocument();
     },
   );
 });

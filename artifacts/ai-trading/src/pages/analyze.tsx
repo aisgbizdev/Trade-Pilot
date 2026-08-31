@@ -999,9 +999,6 @@ export default function AnalyzePage() {
 
           <EconomicCalendarSection />
 
-          <p className="text-xs text-muted-foreground text-center leading-relaxed">
-            {t.analyze.disclaimer}
-          </p>
           <p
             className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 text-center leading-relaxed"
             data-testid="text-risk-disclaimer-short"
