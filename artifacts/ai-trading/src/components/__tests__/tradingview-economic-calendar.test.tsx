@@ -46,7 +46,7 @@ describe("TradingViewEconomicCalendar date window", () => {
     expect(eventIsWithinCalendarWindow({ date: "2026-09-09" }, window)).toBe(false);
   });
 
-  it("renders only in-range, high-impact events matching the selected currency", () => {
+  it("renders all in-range impact levels matching the selected currency by default", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-01T12:00:00Z"));
     mockUseCalendar.mockReturnValue({
@@ -58,6 +58,7 @@ describe("TradingViewEconomicCalendar date window", () => {
           { date: "2026-09-08", time: "11:00", currency: "USD", impact: "★★★", event: "End boundary" },
           { date: "2026-09-09", time: "12:00", currency: "USD", impact: "★★★", event: "Too new" },
           { date: "2026-09-03", time: "13:00", currency: "USD", impact: "★★", event: "Medium impact" },
+          { date: "2026-09-04", time: "14:00", currency: "USD", impact: "★", event: "Low impact" },
         ],
       },
       isLoading: false,
@@ -78,8 +79,43 @@ describe("TradingViewEconomicCalendar date window", () => {
     expect(screen.queryByText("Too old")).toBeNull();
     expect(screen.queryByText("Wrong currency")).toBeNull();
     expect(screen.queryByText("Too new")).toBeNull();
-    expect(screen.queryByText("Medium impact")).toBeNull();
+    expect(screen.getByText("Medium impact")).toBeTruthy();
+    expect(screen.getByText("Low impact")).toBeTruthy();
     expect(container.querySelector("a[href='https://www.tradingview.com/economic-calendar/']")).not.toBeNull();
+  });
+
+  it("filters medium and high impact events separately", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-01T12:00:00Z"));
+    mockUseCalendar.mockReturnValue({
+      data: {
+        events: [
+          { date: "2026-09-02", time: "09:00", currency: "USD", impact: "★★★", event: "High event" },
+          { date: "2026-09-03", time: "10:00", currency: "USD", impact: "★★", event: "Medium event" },
+          { date: "2026-09-04", time: "11:00", currency: "USD", impact: "★", event: "Low event" },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    const { rerender } = render(
+      <Wrapper>
+        <TradingViewEconomicCalendar height={300} importanceFilter="0" />
+      </Wrapper>,
+    );
+    expect(screen.getByText("High event")).toBeTruthy();
+    expect(screen.getByText("Medium event")).toBeTruthy();
+    expect(screen.queryByText("Low event")).toBeNull();
+
+    rerender(
+      <Wrapper>
+        <TradingViewEconomicCalendar height={300} importanceFilter="1" />
+      </Wrapper>,
+    );
+    expect(screen.getByText("High event")).toBeTruthy();
+    expect(screen.queryByText("Medium event")).toBeNull();
+    expect(screen.queryByText("Low event")).toBeNull();
   });
 
   it("keeps the loading and error states inside the fixed-height panel", () => {

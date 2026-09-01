@@ -102,6 +102,26 @@ describe("Economic Calendar section on Analyze page", () => {
     );
     expect(screen.getByTestId("card-economic-calendar")).toBeTruthy();
     expect(screen.getByTestId("tradingview-economic-calendar-mock")).toBeTruthy();
+    expect(screen.getByTestId("tradingview-economic-calendar-mock")).toHaveAttribute("data-importance", "-1");
+    expect(screen.getByTestId("chip-economic-calendar-impact--1")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("chip-economic-calendar-impact-0")).toBeTruthy();
+    expect(screen.getByTestId("chip-economic-calendar-impact-1")).toBeTruthy();
     expect(screen.queryByTestId("button-toggle-economic-calendar")).toBeNull();
+  });
+
+  it("passes the selected impact filter to the calendar", () => {
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("chip-economic-calendar-impact-0"));
+    expect(screen.getByTestId("tradingview-economic-calendar-mock")).toHaveAttribute("data-importance", "0");
+    expect(screen.getByTestId("chip-economic-calendar-impact-0")).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByTestId("chip-economic-calendar-impact-1"));
+    expect(screen.getByTestId("tradingview-economic-calendar-mock")).toHaveAttribute("data-importance", "1");
+    expect(screen.getByTestId("chip-economic-calendar-impact-1")).toHaveAttribute("aria-pressed", "true");
   });
 });

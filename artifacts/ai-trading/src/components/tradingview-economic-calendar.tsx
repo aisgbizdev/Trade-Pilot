@@ -112,7 +112,7 @@ function CalendarEventRow({ event, locale }: { event: CalendarEvent; locale: str
 
 export function TradingViewEconomicCalendar({
   height = 400,
-  importanceFilter = "1",
+  importanceFilter = "-1",
   countryFilter,
   currencyFilter,
 }: TradingViewEconomicCalendarProps) {

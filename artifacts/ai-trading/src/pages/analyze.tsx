@@ -343,6 +343,7 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
 
 const ECON_CAL_CURRENCIES_KEY_BASE = "analyze.economicCalendar.currencies";
 const SHOW_SECONDARY_ANALYSIS_CARDS = false;
+type CalendarImpactFilter = "-1" | "0" | "1";
 
 function readStoredCurrencies(storageKey: string): string[] | null {
   try {
@@ -366,6 +367,7 @@ function EconomicCalendarSection() {
   const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>(
     () => readStoredCurrencies(storageKey) ?? [],
   );
+  const [impactFilter, setImpactFilter] = useState<CalendarImpactFilter>("-1");
 
   useEffect(() => {
     const stored = readStoredCurrencies(storageKey);
@@ -408,6 +410,40 @@ function EconomicCalendarSection() {
         <p className="text-[10px] text-muted-foreground leading-snug">
           {t.analyze.economic_calendar_section_hint}
         </p>
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label={t.analyze.economic_calendar_impact_filter_label}
+          data-testid="economic-calendar-impact-chips"
+        >
+          <span className="text-[10px] text-muted-foreground">
+            {t.analyze.economic_calendar_impact_filter_label}:
+          </span>
+          {([
+            ["-1", t.analyze.economic_calendar_impact_filter_all],
+            ["0", t.analyze.economic_calendar_impact_filter_medium],
+            ["1", t.analyze.economic_calendar_impact_filter_high],
+          ] as const).map(([value, label]) => {
+            const active = impactFilter === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setImpactFilter(value)}
+                aria-pressed={active}
+                data-testid={`chip-economic-calendar-impact-${value}`}
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 text-foreground border-border hover:bg-muted",
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
         <div
           className="flex flex-wrap items-center gap-1.5"
           role="group"
@@ -464,9 +500,9 @@ function EconomicCalendarSection() {
         </p>
         <TradingViewEconomicCalendar
           height={420}
-          importanceFilter="1"
+          importanceFilter={impactFilter}
           countryFilter={countryFilter}
-           currencyFilter={effectiveCurrencies}
+          currencyFilter={effectiveCurrencies}
         />
       </div>
     </Card>
