@@ -14,3 +14,4 @@
 - [Source-backed trading rules](source-backed-trading-rules.md) — absent fees or gap limits stay unknown, never zero; point-based instruments must round adaptive prices to their quoted movement step.
 - [Adaptive direction selector semantics](adaptive-direction-selector.md) — use native pressed buttons, not partial ARIA tabs, while only one scenario panel is mounted.
 - [Bounded economic calendar](bounded-economic-calendar.md) — TradingView embeds lack exact date-window control; use app-rendered feed when the visible range must be enforceable.
+- [Development build-output contention](development-build-output-contention.md) — concurrent E2E builds can remove API dist output while the dev server starts; stop the competing workflow before cleaning/restarting.
