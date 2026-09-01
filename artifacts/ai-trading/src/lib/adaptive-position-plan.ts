@@ -131,6 +131,10 @@ export interface AdaptiveLadderLevel {
 
 export interface AdaptiveRejectedLadderLevel extends AdaptiveLadderLevel {
   rejectReason: AdaptiveLayerRejectReason;
+  financialAlternative: {
+    additionalFundsRequired: number;
+    additionalLossBudgetRequired: number;
+  } | null;
 }
 
 export interface AdaptiveSidePositionPlan {
@@ -902,19 +906,29 @@ function addRejectedCandidates(
     if (!acceptedSide || !candidateSide) return acceptedSide;
     const rejectedLadder = candidateSide.ladder
       .slice(acceptedSide.ladder.length)
-      .map((level): AdaptiveRejectedLadderLevel => ({
-        ...level,
-        rejectReason:
-          candidate.rule?.maximumLot != null && level.lot > candidate.rule.maximumLot
-            ? "tier_limit"
-            : level.cumulativeDayMargin > marginBudget
-              ? "day_margin"
-              : level.estimatedRiskToStop > maximumLoss
-                ? "loss_ceiling"
-                : level.level > analysisLevelLimit
-                  ? "analysis_limit"
-                  : "analysis_limit",
-      }));
+      .map((level): AdaptiveRejectedLadderLevel => {
+        const rejectReason =
+          level.level > analysisLevelLimit
+            ? "analysis_limit"
+            : candidate.rule?.maximumLot != null && level.lot > candidate.rule.maximumLot
+              ? "tier_limit"
+              : level.cumulativeDayMargin > marginBudget
+                ? "day_margin"
+                : level.estimatedRiskToStop > maximumLoss
+                  ? "loss_ceiling"
+                  : "analysis_limit";
+        return {
+          ...level,
+          rejectReason,
+          financialAlternative:
+            rejectReason === "day_margin" || rejectReason === "loss_ceiling"
+              ? {
+                  additionalFundsRequired: Math.max(0, level.cumulativeFundsAtStop - marginBudget),
+                  additionalLossBudgetRequired: Math.max(0, level.estimatedRiskToStop - maximumLoss),
+                }
+              : null,
+        };
+      });
     return { ...acceptedSide, rejectedLadder };
   };
 

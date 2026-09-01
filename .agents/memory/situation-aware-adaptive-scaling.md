@@ -17,6 +17,12 @@ For a valid multi-position scenario, let the selected risk style and saved analy
 
 **How to apply:** Keep the active profile, total position count, each position's price/lot/risk, cumulative risk, and total lots explicit. Buy and Sell remain separate scenarios, and missing price candidates must reduce the count rather than create synthetic levels.
 
+Rejected layers may expose a conditional financial alternative only when every analysis and execution guardrail permits the layer and the sole blockers are entered free funds or the cumulative-loss ceiling. Show the exact extra funds and extra loss budget needed, but keep the layer outside recommended exposure until the user changes those inputs and recalculates.
+
+**Why:** The user confirmed that a realistic trading plan should explain how funding or risk capacity could support a later manual layer without turning adverse price movement into an entry trigger. If an analysis blocker and a financial blocker coexist, the analysis blocker must take precedence so money never appears to buy around a safety gate.
+
+**How to apply:** Calculate both financial shortfalls from the candidate's cumulative margin and one-final-SL risk. Never expose the financial alternative for analysis, direction, confidence, volatility, event, checkpoint, or per-position tier blockers; require chart and saved-analysis confirmation before every manual layer.
+
 The saved AI analysis is the primary product output; the adaptive plan is a secondary explanation of what the user's selected account tier and available margin can support. Keep the default UI output-first: direction, entry and staged prices/lots, one final SL, saved TP targets, margin, and maximum loss. Put comparison, provenance, and detailed reasoning behind progressive disclosure.
 
 **Why:** Users need a quick, actionable reading without losing the technical/fundamental intelligence that distinguishes Trade Pilot from a standalone lot calculator. Novices should not face a wall of narrative, while professionals must still be able to inspect the full reasoning and all objective alternatives.

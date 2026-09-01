@@ -393,7 +393,35 @@ describe("XAU/USD Mini Adaptive Plan", () => {
       cumulativeFundsAtStop: 330,
       remainingFundsAtStop: -80,
       rejectReason: "day_margin",
+      financialAlternative: {
+        additionalFundsRequired: 80,
+        additionalLossBudgetRequired: 0,
+      },
     });
+  });
+
+  it("does not offer a financial alternative for analysis-only rejection", () => {
+    const assessment = buildRecommendation({
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        fundamentalContext: {
+          newsItems: [],
+          calendarEvents: [{
+            date: "2026-08-27",
+            time: "14:30",
+            currency: "USD",
+            event: "Central-bank rate decision",
+            impact: "★★★",
+            actual: null,
+            forecast: null,
+            previous: null,
+          }],
+        },
+      },
+    });
+
+    expect(assessment.result.buy?.rejectedLadder[0]?.rejectReason).toBe("analysis_limit");
+    expect(assessment.result.buy?.rejectedLadder[0]?.financialAlternative).toBeNull();
   });
 
   it("rejects more than two additions and every non-Mini tier", () => {

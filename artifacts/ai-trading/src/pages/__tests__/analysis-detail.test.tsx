@@ -473,6 +473,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-rejected-buy")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-rejected-layer-financial-buy-1")).toHaveTextContent(/Margin this position/i);
     expect(screen.getByTestId("adaptive-rejected-layer-financial-buy-1")).toHaveTextContent(/Funds remaining/i);
+    expect(screen.getByTestId("adaptive-conditional-buy-1")).toHaveTextContent(/Conditional financial plan/i);
+    expect(screen.getByTestId("adaptive-conditional-buy-1")).toHaveTextContent(/Additional loss budget needed/i);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {

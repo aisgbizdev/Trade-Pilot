@@ -609,6 +609,13 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
     await expect(page.getByTestId("adaptive-risk-style-active")).toContainText(/Aggressive|Agresif/i);
     await expect(page.getByTestId("adaptive-lot-profile-active")).toContainText(/increasing|meningkat/i);
+    await maximumLossInput.fill("15");
+    await page.getByTestId("button-calculate-adaptive-plan").click();
+    await page.getByTestId("adaptive-rejected-buy").locator("summary").click();
+    await expect(page.getByTestId("adaptive-conditional-buy-1")).toContainText(/Conditional financial plan|Rencana finansial bersyarat/i);
+    await expect(page.getByTestId("adaptive-conditional-buy-1")).toContainText(/Additional loss budget needed|Tambahan batas rugi yang dibutuhkan/i);
+    await maximumLossInput.fill("125");
+    await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/3 positions|3 posisi/i);
     await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/1[.,]5 lot/i);
     await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]4 lot/i);

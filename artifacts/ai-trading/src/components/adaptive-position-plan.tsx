@@ -425,6 +425,26 @@ function PlanSide({
                     <span className="text-amber-700 dark:text-amber-400">{copy.adaptive_rejected_badge}</span>
                   </div>
                   <p className="mt-1 text-muted-foreground">{rejectedReason(level.rejectReason, copy)}</p>
+                  {level.financialAlternative && (
+                    <div
+                      className="mt-2 rounded border border-primary/25 bg-primary/[0.04] p-2"
+                      data-testid={`adaptive-conditional-${plan.side}-${level.level}`}
+                    >
+                      <p className="text-[10px] font-semibold text-foreground">{copy.adaptive_conditional_title}</p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_conditional_help}</p>
+                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                        <dt className="text-muted-foreground">{copy.adaptive_conditional_additional_funds}</dt>
+                        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.financialAlternative.additionalFundsRequired, lang)}</dd>
+                        <dt className="text-muted-foreground">{copy.adaptive_conditional_additional_loss}</dt>
+                        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.financialAlternative.additionalLossBudgetRequired, lang)}</dd>
+                        <dt className="text-muted-foreground">{copy.adaptive_conditional_total_risk}</dt>
+                        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.estimatedRiskToStop, lang)}</dd>
+                        <dt className="text-muted-foreground">{copy.adaptive_conditional_total_funds}</dt>
+                        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.cumulativeFundsAtStop, lang)}</dd>
+                      </dl>
+                      <p className="mt-1 text-[10px] font-medium text-primary">{copy.adaptive_conditional_manual}</p>
+                    </div>
+                  )}
                     <LayerFinancialBreakdown level={level} side={plan.side} lang={lang} copy={copy} rejected />
                 </div>
               ))}
