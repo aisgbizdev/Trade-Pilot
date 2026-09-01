@@ -56,7 +56,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v13:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v14:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -193,6 +193,57 @@ function rejectedReason(reason: AdaptiveLayerRejectReason, copy: AdaptiveCopy): 
     case "loss_ceiling": return copy.adaptive_rejected_loss;
     case "tier_limit": return copy.adaptive_rejected_tier;
   }
+}
+
+function LayerFinancialBreakdown({
+  level,
+  side,
+  lang,
+  copy,
+  rejected = false,
+}: {
+  level: AdaptiveLadderLevel;
+  side: "buy" | "sell";
+  lang: "en" | "id";
+  copy: AdaptiveCopy;
+  rejected?: boolean;
+}) {
+  const exceedsFunds = level.remainingFundsAtStop != null && level.remainingFundsAtStop < 0;
+  const remainingFunds = level.remainingFundsAtStop == null
+    ? null
+    : Math.max(0, level.remainingFundsAtStop);
+  const breakdownClass = rejected
+    ? "border-amber-200/80 bg-amber-100/40 dark:border-amber-900 dark:bg-amber-950/20"
+    : "border-border/60 bg-muted/30";
+
+  return (
+    <div
+      className={`mt-2 rounded border p-2 ${breakdownClass}`}
+      data-testid={`${rejected ? "adaptive-rejected" : "adaptive"}-layer-financial-${side}-${level.level}`}
+    >
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+        <dt className="text-muted-foreground">{copy.adaptive_layer_margin}</dt>
+        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.dayMarginForLot, lang)}</dd>
+        <dt className="text-muted-foreground">{copy.adaptive_layer_cumulative_margin}</dt>
+        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.cumulativeDayMargin, lang)}</dd>
+        <dt className="text-muted-foreground">{copy.adaptive_layer_risk}</dt>
+        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.riskToStopForLot, lang)}</dd>
+        <dt className="text-muted-foreground">{copy.adaptive_layer_cumulative_risk}</dt>
+        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.estimatedRiskToStop, lang)}</dd>
+        <dt className="text-muted-foreground">{copy.adaptive_layer_funds_at_stop}</dt>
+        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.cumulativeFundsAtStop, lang)}</dd>
+        <dt className="text-muted-foreground">{copy.adaptive_layer_remaining_funds}</dt>
+        <dd className={`text-right font-semibold tabular-nums ${exceedsFunds ? "text-amber-700 dark:text-amber-400" : ""}`}>
+          {exceedsFunds ? copy.adaptive_layer_exceeds_funds : formatMoney(remainingFunds, lang)}
+        </dd>
+      </dl>
+      {exceedsFunds && (
+        <p className="mt-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+          {copy.adaptive_layer_shortfall.replace("{amount}", formatMoney(Math.abs(level.remainingFundsAtStop!), lang))}
+        </p>
+      )}
+    </div>
+  );
 }
 
 function DirectionSwitch({
@@ -336,6 +387,7 @@ function PlanSide({
             {plan.ladder.length} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
           </span>
         </div>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_layer_financial_help}</p>
         <ol className="space-y-1.5">
           {plan.ladder.map((level) => (
             <li key={`${plan.side}-${level.level}`} className="rounded-md bg-background/70 px-2.5 py-2">
@@ -357,6 +409,7 @@ function PlanSide({
                 <span>{copy.adaptive_cumulative}: {formatNumber(level.cumulativeLots, lang)} {copy.adaptive_lot}</span>
                 <span>{copy.adaptive_stop_risk}: {formatMoney(level.estimatedRiskToStop, lang)}</span>
               </div>
+                <LayerFinancialBreakdown level={level} side={plan.side} lang={lang} copy={copy} />
             </li>
           ))}
         </ol>
@@ -372,6 +425,7 @@ function PlanSide({
                     <span className="text-amber-700 dark:text-amber-400">{copy.adaptive_rejected_badge}</span>
                   </div>
                   <p className="mt-1 text-muted-foreground">{rejectedReason(level.rejectReason, copy)}</p>
+                    <LayerFinancialBreakdown level={level} side={plan.side} lang={lang} copy={copy} rejected />
                 </div>
               ))}
             </div>

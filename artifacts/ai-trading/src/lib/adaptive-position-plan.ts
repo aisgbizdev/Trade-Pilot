@@ -118,6 +118,8 @@ export interface AdaptiveLadderLevel {
   riskToStopForLot: number;
   dayMarginForLot: number;
   cumulativeDayMargin: number;
+  cumulativeFundsAtStop: number;
+  remainingFundsAtStop: number | null;
   profitToTakeProfit1: number | null;
   profitToTakeProfit2: number | null;
   cumulativeProfitToTakeProfit1: number | null;
@@ -142,6 +144,7 @@ export interface AdaptiveSidePositionPlan {
   estimatedCycleLoss: number;
   weightedAverageEntry: number;
   totalFundsAtStop: number;
+  remainingFundsAtStop: number | null;
   profitToTakeProfit1: number | null;
   profitToTakeProfit2: number | null;
   riskRewardToTakeProfit1: number | null;
@@ -645,6 +648,9 @@ function sidePlan(
     const profitToTakeProfit2 = profitForLot(planned.price, takeProfit2, planned.lot);
     cumulativeRisk += riskToStopForLot;
     cumulativeDayMargin += dayMarginForLot;
+    const cumulativeFundsAtStop = cumulativeDayMargin + cumulativeRisk;
+    const remainingFundsAtStop =
+      input.availableFunds == null ? null : input.availableFunds - cumulativeFundsAtStop;
     weightedEntryTotal += planned.price * planned.lot;
     cumulativeProfitToTakeProfit1 =
       cumulativeProfitToTakeProfit1 == null || profitToTakeProfit1 == null
@@ -664,6 +670,8 @@ function sidePlan(
       riskToStopForLot,
       dayMarginForLot,
       cumulativeDayMargin,
+      cumulativeFundsAtStop,
+      remainingFundsAtStop,
       profitToTakeProfit1,
       profitToTakeProfit2,
       cumulativeProfitToTakeProfit1,
@@ -693,6 +701,10 @@ function sidePlan(
     estimatedCycleLoss: cumulativeRisk,
     weightedAverageEntry: roundPrice(weightedAverageEntry, rule.minMovement),
     totalFundsAtStop: cumulativeDayMargin + cumulativeRisk,
+    remainingFundsAtStop:
+      input.availableFunds == null
+        ? null
+        : input.availableFunds - (cumulativeDayMargin + cumulativeRisk),
     profitToTakeProfit1,
     profitToTakeProfit2,
     riskRewardToTakeProfit1:

@@ -356,8 +356,44 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(buy.marginRequired).toBe(200);
     expect(buy.estimatedCycleLoss).toBe(21);
     expect(buy.totalFundsAtStop).toBe(221);
+    expect(buy.remainingFundsAtStop).toBe(4_779);
+    expect(buy.ladder[0]).toMatchObject({
+      dayMarginForLot: 100,
+      cumulativeDayMargin: 100,
+      riskToStopForLot: 11,
+      estimatedRiskToStop: 11,
+      cumulativeFundsAtStop: 111,
+      remainingFundsAtStop: 4_889,
+    });
+    expect(buy.ladder[1]).toMatchObject({
+      dayMarginForLot: 100,
+      cumulativeDayMargin: 200,
+      riskToStopForLot: 10,
+      estimatedRiskToStop: 21,
+      cumulativeFundsAtStop: 221,
+      remainingFundsAtStop: 4_779,
+    });
     expect(buy.profitToTakeProfit1).toBeGreaterThan(0);
     expect(buy.profitToTakeProfit2).toBeGreaterThan(buy.profitToTakeProfit1);
+  });
+
+  it("exposes the same financial breakdown for a rejected candidate layer", () => {
+    const assessment = buildRecommendation({
+      availableMargin: 250,
+      maximumLoss: 100,
+    });
+    const rejected = assessment.result.buy?.rejectedLadder[0];
+
+    expect(rejected).toBeDefined();
+    expect(rejected).toMatchObject({
+      dayMarginForLot: 100,
+      cumulativeDayMargin: 300,
+      riskToStopForLot: 9,
+      estimatedRiskToStop: 30,
+      cumulativeFundsAtStop: 330,
+      remainingFundsAtStop: -80,
+      rejectReason: "day_margin",
+    });
   });
 
   it("rejects more than two additions and every non-Mini tier", () => {

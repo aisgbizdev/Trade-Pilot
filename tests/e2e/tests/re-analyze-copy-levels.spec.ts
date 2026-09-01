@@ -418,7 +418,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("card-log-trade")).toHaveCount(0);
     await expect(page.getByTestId("card-user-journal-note")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
-      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v13:${analysisId}`),
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v14:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
@@ -614,12 +614,14 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]4 lot/i);
     await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]5 lot/i);
     await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]6 lot/i);
+    await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toContainText(/Margin this position|Margin posisi ini/i);
+    await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toContainText(/Funds remaining|Sisa dana/i);
     await expect(page.getByTestId("adaptive-plan-comparison")).toHaveCount(0);
 
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v13:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v14:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -633,7 +635,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v13:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v14:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();
@@ -641,6 +643,9 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-reasoning")).toContainText(/high-impact|dampak tinggi/i);
     await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
+    await page.getByTestId("adaptive-rejected-buy").locator("summary").click();
+    await expect(page.getByTestId("adaptive-rejected-layer-financial-buy-1")).toContainText(/Risk at final SL so far|Risiko di SL final sampai sini/i);
+    await expect(page.getByTestId("adaptive-rejected-layer-financial-buy-1")).toContainText(/Funds remaining|Sisa dana/i);
 
     // Standard Plan levels remain the source plan throughout; only the
     // optional adaptive recommendation has been discarded and re-evaluated.

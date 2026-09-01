@@ -464,11 +464,20 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("adaptive-plan-invalid")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/0\.[1-9] lot/i);
     expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/Weighted average entry/i);
+    expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Margin this position/i);
+    expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Risk this position at final SL/i);
+    expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Funds remaining/i);
+
+    fireEvent.change(maximumLoss, { target: { value: "15" } });
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(await screen.findByTestId("adaptive-rejected-buy")).toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-rejected-layer-financial-buy-1")).toHaveTextContent(/Margin this position/i);
+    expect(screen.getByTestId("adaptive-rejected-layer-financial-buy-1")).toHaveTextContent(/Funds remaining/i);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v13:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v14:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -493,7 +502,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v13:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v14:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("does not restore an adaptive plan saved under the cumulative-cap v12 namespace", async () => {
@@ -556,7 +565,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
     expect(screen.getByTestId("adaptive-lot-profile-active")).toHaveTextContent(/Lot profile: decreasing/i);
-    const key = `trade-pilot:adaptive-plan:v13:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v14:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {
@@ -578,6 +587,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       estimatedCycleLoss: 11,
       weightedAverageEntry: 2301,
       totalFundsAtStop: 111,
+       remainingFundsAtStop: 99889,
       profitToTakeProfit1: 14,
       profitToTakeProfit2: 24,
       riskRewardToTakeProfit1: 1.2,
@@ -592,6 +602,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
         riskToStopForLot: 11,
         dayMarginForLot: 100,
         cumulativeDayMargin: 100,
+         cumulativeFundsAtStop: 111,
+         remainingFundsAtStop: 99889,
         profitToTakeProfit1: 14,
         profitToTakeProfit2: 24,
         cumulativeProfitToTakeProfit1: 14,
