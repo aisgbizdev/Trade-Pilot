@@ -2064,11 +2064,11 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         ) : (
           <>
         <div
-          className="grid items-start gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
+          className="grid items-stretch gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
           data-testid="primary-metrics-chart-grid"
         >
         {/* PRIMARY METRICS: Bias + Confidence + Risk */}
-        <Card className="p-4 space-y-4" data-testid="card-primary-metrics">
+        <Card className="h-full p-4 space-y-4" data-testid="card-primary-metrics">
           {bias && <BiasIndicator bias={bias} mode={analysis.mode} timeframe={analysis.timeframe} />}
 
           {bias && <div className="border-t border-border" />}
@@ -2181,7 +2181,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             against the live tape. Symbol Overview is the default; the
             "Open full chart" button opens a full-screen Advanced Chart
             modal for power users. */}
-         <div className="space-y-3">
+         <div className="h-full space-y-3">
            <AnalysisChartSection
              instrument={analysis.instrument}
              timeframe={analysis.timeframe}
