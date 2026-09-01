@@ -331,6 +331,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Maximum 0.9 lot applies to each position/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/limited to canonical XAU\/USD analyses/i);
+    expect(screen.getByTestId("card-trade-setup-summary")).toBeInTheDocument();
+    expect(screen.getByTestId("trade-setup-summary-buy")).toHaveTextContent(/Entry/i);
+    expect(screen.getByTestId("trade-setup-summary-buy")).toHaveTextContent(/Stop Loss/i);
+    expect(screen.getByTestId("trade-setup-summary-sell")).toHaveTextContent(/Take Profit 2/i);
     expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(/Day trade only/i);
     expect(screen.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("button-adaptive-account-micro")).toHaveAttribute("aria-pressed", "false");

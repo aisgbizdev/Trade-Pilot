@@ -708,6 +708,85 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
   );
 }
 
+function TradeSetupSummary({ plan, t }: { plan: TradePlan; t: T }) {
+  const preferredLabel =
+    plan.preferredSide === "buy"
+      ? t.analysis_detail.trade_plan_preferred_buy
+      : plan.preferredSide === "sell"
+        ? t.analysis_detail.trade_plan_preferred_sell
+        : t.analysis_detail.trade_plan_preferred_wait;
+  const preferredColor =
+    plan.preferredSide === "buy"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/40"
+      : plan.preferredSide === "sell"
+        ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/40"
+        : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40";
+
+  const renderScenario = (side: TradeSide, kind: "buy" | "sell") => {
+    const isBuy = kind === "buy";
+    return (
+      <div
+        className={cn(
+          "rounded-md border-l-2 bg-muted/25 px-2.5 py-2",
+          isBuy
+            ? "border-l-emerald-500 dark:border-l-emerald-400"
+            : "border-l-red-500 dark:border-l-red-400",
+        )}
+        data-testid={`trade-setup-summary-${kind}`}
+      >
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <div className={cn(
+            "flex items-center gap-1 text-[11px] font-bold",
+            isBuy ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400",
+          )}>
+            {isBuy ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+            {isBuy ? t.analysis_detail.trade_plan_side_buy : t.analysis_detail.trade_plan_side_sell}
+          </div>
+          <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
+            {t.analysis_detail.trade_plan_rr}: {side.riskRewardRatio}
+          </span>
+        </div>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[10px]">
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_entry}</dt>
+          <dd className="text-right font-semibold tabular-nums text-foreground">{side.entryZone}</dd>
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_sl}</dt>
+          <dd className="text-right font-semibold tabular-nums text-red-600 dark:text-red-400">{side.stopLoss}</dd>
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_tp1}</dt>
+          <dd className="text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{side.takeProfit1}</dd>
+          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_tp2}</dt>
+          <dd className="text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{side.takeProfit2}</dd>
+        </dl>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="space-y-2.5 p-3" data-testid="card-trade-setup-summary">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <Target className="h-4 w-4 text-primary" />
+            {t.analysis_detail.setup_summary_title}
+          </h3>
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+            {t.analysis_detail.setup_summary_subtitle}
+          </p>
+        </div>
+        <span className={cn("shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold", preferredColor)}>
+          {preferredLabel}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+        {renderScenario(plan.buy, "buy")}
+        {renderScenario(plan.sell, "sell")}
+      </div>
+      <p className="border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground">
+        {t.analysis_detail.setup_summary_wait_note}
+      </p>
+    </Card>
+  );
+}
+
 // Compact "Log this trade" CTA card (task #161). Opens the LogTradeDialog
 // pre-filled with the analysis's instrument + AI-preferred side so the
 // common case ("I took the recommended trade") is one tap + outcome.
@@ -2181,12 +2260,15 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             against the live tape. Symbol Overview is the default; the
             "Open full chart" button opens a full-screen Advanced Chart
             modal for power users. */}
-        <AnalysisChartSection
-          instrument={analysis.instrument}
-          timeframe={analysis.timeframe}
-          tradePlan={tradePlan}
-          analysisCreatedAt={analysis.createdAt}
-        />
+         <div className="space-y-3">
+           <AnalysisChartSection
+             instrument={analysis.instrument}
+             timeframe={analysis.timeframe}
+             tradePlan={tradePlan}
+             analysisCreatedAt={analysis.createdAt}
+           />
+           {tradePlan && <TradeSetupSummary plan={tradePlan} t={t} />}
+         </div>
         </div>
 
         {/* Fundamental context — news + calendar the AI was given,
