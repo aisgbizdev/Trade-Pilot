@@ -466,6 +466,7 @@ function EconomicCalendarSection() {
           height={420}
           importanceFilter="1"
           countryFilter={countryFilter}
+           currencyFilter={effectiveCurrencies}
         />
       </div>
     </Card>

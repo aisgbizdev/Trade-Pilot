@@ -1,40 +1,50 @@
-import { useEffect, useRef, useState, useDeferredValue } from "react";
-import { WifiOff } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, Loader2, WifiOff } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { useCalendar, type CalendarEvent } from "@/hooks/use-calendar";
+import { cn } from "@/lib/utils";
+import {
+  calendarDateWindow,
+  eventIsWithinCalendarWindow,
+} from "@/lib/calendar-window";
 
 interface TradingViewEconomicCalendarProps {
   height?: number;
   importanceFilter?: "-1" | "0" | "1";
   loadTimeoutMs?: number;
   countryFilter?: string;
+  currencyFilter?: string[];
 }
 
-const SCRIPT_SRC =
-  "https://s3.tradingview.com/external-embedding/embed-widget-events.js";
+const CURRENCY_FLAGS: Record<string, string> = {
+  USD: "🇺🇸",
+  EUR: "🇪🇺",
+  GBP: "🇬🇧",
+  JPY: "🇯🇵",
+  AUD: "🇦🇺",
+  CAD: "🇨🇦",
+  CHF: "🇨🇭",
+  CNY: "🇨🇳",
+  CHN: "🇨🇳",
+  NZD: "🇳🇿",
+  IDR: "🇮🇩",
+  HKD: "🇭🇰",
+  GOLD: "🥇",
+  OIL: "🛢️",
+  OPEC: "🛢️",
+};
 
-function resolveColorTheme(theme: string): "light" | "dark" {
-  if (theme === "dark") return "dark";
-  if (theme === "light") return "light";
-  if (typeof window !== "undefined" && window.matchMedia) {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-  return "light";
-}
-
-function resolveLoadTimeout(propValue: number): number {
-  if (typeof window === "undefined") return propValue;
-  const override = window.__TV_LOAD_TIMEOUT_MS_OVERRIDE__;
-  if (typeof override === "number" && override > 0) return override;
-  return propValue;
-}
+const IMPACT_RANK: Record<string, number> = {
+  "★★★": 3,
+  "★★": 2,
+  "★": 1,
+};
 
 function useOnlineStatus(): boolean {
   const [online, setOnline] = useState<boolean>(() =>
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
+
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
@@ -45,201 +55,144 @@ function useOnlineStatus(): boolean {
       window.removeEventListener("offline", off);
     };
   }, []);
+
   return online;
+}
+
+function matchesImportance(event: CalendarEvent, importanceFilter: "-1" | "0" | "1"): boolean {
+  if (importanceFilter === "-1") return true;
+  if (importanceFilter === "0") return event.impact === "★★" || event.impact === "★★★";
+  return event.impact === "★★★";
+}
+
+function formatEventTime(event: CalendarEvent): string {
+  if (!event.time) return "";
+  const timePart = event.time.split(/\s+/).at(-1) ?? event.time;
+  return timePart;
+}
+
+function CalendarEventRow({ event, locale }: { event: CalendarEvent; locale: string }) {
+  return (
+    <li className="grid grid-cols-[3.5rem_1.25rem_minmax(0,1fr)_auto] items-start gap-2 border-b border-border/50 py-2.5 last:border-0">
+      <span className="pt-0.5 text-[10px] font-mono text-muted-foreground">
+        {formatEventTime(event)}
+      </span>
+      <span className="pt-0.5 text-sm leading-none" aria-hidden="true">
+        {CURRENCY_FLAGS[event.currency] ?? "🌐"}
+      </span>
+      <span className="min-w-0">
+        <span className="flex items-center gap-1.5">
+          <span className={cn(
+            "rounded px-1.5 py-0.5 text-[9px] font-bold",
+            event.impact === "★★★"
+              ? "bg-red-500/15 text-red-500"
+              : event.impact === "★★"
+                ? "bg-amber-500/15 text-amber-500"
+                : "bg-muted text-muted-foreground",
+          )}>
+            {event.impact ?? "—"}
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground">{event.currency}</span>
+        </span>
+        <span className="mt-1 block truncate text-xs font-medium text-foreground" title={event.event}>
+          {event.event}
+        </span>
+      </span>
+      <span className="whitespace-nowrap pt-0.5 text-right text-[10px] text-muted-foreground">
+        {new Date(`${event.date}T00:00:00Z`).toLocaleDateString(locale, {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          timeZone: "UTC",
+        })}
+      </span>
+    </li>
+  );
 }
 
 export function TradingViewEconomicCalendar({
   height = 400,
   importanceFilter = "1",
-  loadTimeoutMs = 8000,
   countryFilter,
+  currencyFilter,
 }: TradingViewEconomicCalendarProps) {
-  const { theme } = useTheme();
-  const deferredTheme = useDeferredValue(theme);
   const { lang, t } = useTranslation();
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const [loadState, setLoadState] = useState<"pending" | "loaded" | "failed">(
-    "pending",
-  );
+  const { data, isLoading, isError } = useCalendar();
   const online = useOnlineStatus();
-  const effectiveLoadTimeoutMs = resolveLoadTimeout(loadTimeoutMs);
+  const locale = lang === "id" ? "id-ID" : "en-US";
+  const window = calendarDateWindow();
 
-  useEffect(() => {
-    if (!online) return;
-    const hostEl = hostRef.current;
-    if (!hostEl) return;
-
-    setLoadState("pending");
-
-    const colorTheme = resolveColorTheme(deferredTheme);
-    const widgetLocale = lang === "id" ? "id" : "en";
-
-    const config: Record<string, unknown> = {
-      colorTheme,
-      isTransparent: true,
-      locale: widgetLocale,
-      width: "100%",
-      height,
-      importanceFilter,
-    };
-    if (countryFilter && countryFilter.length > 0) {
-      config["countryFilter"] = countryFilter;
-    }
-
-    hostEl.innerHTML = "";
-    hostEl.dataset["loadState"] = "pending";
-
-    const widgetContainer = document.createElement("div");
-    widgetContainer.className = "tradingview-widget-container";
-    widgetContainer.style.width = "100%";
-
-    const widgetInner = document.createElement("div");
-    widgetInner.className = "tradingview-widget-container__widget";
-    widgetInner.style.width = "100%";
-    widgetInner.style.height = `${height}px`;
-    widgetContainer.appendChild(widgetInner);
-
-    const copyright = document.createElement("div");
-    copyright.className =
-      "tradingview-widget-copyright text-[10px] text-muted-foreground text-center mt-1";
-    const link = document.createElement("a");
-    link.href = "https://www.tradingview.com/";
-    link.rel = "noopener nofollow";
-    link.target = "_blank";
-    const linkSpan = document.createElement("span");
-    linkSpan.className = "text-primary hover:underline";
-    linkSpan.textContent = "Economic calendar by TradingView";
-    link.appendChild(linkSpan);
-    copyright.appendChild(link);
-    widgetContainer.appendChild(copyright);
-
-    hostEl.appendChild(widgetContainer);
-
-    const script = document.createElement("script");
-    script.src = SCRIPT_SRC;
-    script.type = "text/javascript";
-    script.async = true;
-    script.appendChild(document.createTextNode(JSON.stringify(config)));
-    widgetContainer.appendChild(script);
-
-    let cancelled = false;
-    let failed = false;
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-    let failTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    const cleanup = () => {
-      if (pollInterval) clearInterval(pollInterval);
-      if (failTimeout) clearTimeout(failTimeout);
-      pollInterval = null;
-      failTimeout = null;
-    };
-
-    const triggerFailure = (reason: string) => {
-      if (cancelled || failed) return;
-      failed = true;
-      cleanup();
-      hostEl.dataset["loadState"] = "failed";
-      hostEl.dataset["loadError"] = reason;
-      setLoadState("failed");
-    };
-
-    const markLoaded = () => {
-      if (cancelled || failed) return;
-      cleanup();
-      hostEl.dataset["loadState"] = "loaded";
-      setLoadState("loaded");
-    };
-
-    const isPopulated = () =>
-      widgetInner.childElementCount > 0 ||
-      hostEl.querySelector("iframe") !== null;
-
-    script.onerror = (event) => {
-      const detail =
-        typeof event === "string" ? event : (event as Event)?.type ?? "unknown";
-      triggerFailure(`script-error:${detail}`);
-    };
-
-    pollInterval = setInterval(() => {
-      if (cancelled || failed) return;
-      if (isPopulated()) markLoaded();
-    }, 500);
-
-    failTimeout = setTimeout(() => {
-      if (cancelled || failed) return;
-      if (!isPopulated()) {
-        triggerFailure("timeout");
-      } else {
-        markLoaded();
-      }
-    }, effectiveLoadTimeoutMs);
-
-    return () => {
-      cancelled = true;
-      cleanup();
-      hostEl.innerHTML = "";
-    };
-  }, [
-    height,
-    importanceFilter,
-    countryFilter,
-    effectiveLoadTimeoutMs,
-    deferredTheme,
-    lang,
-    online,
-  ]);
+  const events = useMemo(() => {
+    const selectedCurrencies = new Set(currencyFilter ?? []);
+    return (data?.events ?? [])
+      .filter((event) => eventIsWithinCalendarWindow(event, window))
+      .filter((event) => selectedCurrencies.size === 0 || selectedCurrencies.has(event.currency))
+      .filter((event) => matchesImportance(event, importanceFilter))
+      .sort((a, b) =>
+        a.date.localeCompare(b.date) ||
+        (a.time ?? "").localeCompare(b.time ?? "") ||
+        (IMPACT_RANK[b.impact ?? ""] ?? 0) - (IMPACT_RANK[a.impact ?? ""] ?? 0),
+      );
+  }, [data?.events, currencyFilter, importanceFilter, window.startDate, window.endDate]);
 
   if (!online) {
     return (
       <div
-        className="w-full rounded-lg border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center gap-1.5 text-center px-4"
+        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/30 px-4 text-center"
         style={{ height: `${height}px` }}
         data-testid="tradingview-economic-calendar-offline"
       >
-        <WifiOff className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-        <p className="text-xs text-muted-foreground leading-snug">
-          {t.widgets.economic_calendar_offline}
-        </p>
-      </div>
-    );
-  }
-
-  if (loadState === "failed") {
-    return (
-      <div
-        className="w-full rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center text-center px-4"
-        style={{ height: `${height}px` }}
-        data-testid="tradingview-economic-calendar-failed"
-      >
-        <p className="text-xs text-muted-foreground leading-snug">
-          {t.widgets.economic_calendar_error}
-        </p>
+        <WifiOff className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+        <p className="text-xs leading-snug text-muted-foreground">{t.widgets.economic_calendar_offline}</p>
       </div>
     );
   }
 
   return (
     <div
-      className="w-full relative"
-      style={{ minHeight: `${height}px` }}
+      className="relative w-full"
       data-testid="tradingview-economic-calendar-wrapper"
+      data-window-start={window.startDate}
+      data-window-end={window.endDate}
+      data-country-filter={countryFilter ?? ""}
     >
-      {loadState === "pending" && (
+      {isLoading ? (
+        <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground" style={{ height: `${height}px` }}>
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          <span className="text-xs">{t.widgets.loading_calendar}</span>
+        </div>
+      ) : isError ? (
+        <div className="flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 px-4 text-center" style={{ height: `${height}px` }}>
+          <p className="text-xs leading-snug text-muted-foreground">{t.widgets.economic_calendar_error}</p>
+        </div>
+      ) : events.length === 0 ? (
+        <div className="flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 px-4 text-center" style={{ height: `${height}px` }}>
+          <p className="text-xs leading-snug text-muted-foreground">{t.widgets.calendar_empty}</p>
+        </div>
+      ) : (
         <div
-          className="absolute inset-0 rounded-lg bg-muted/40 animate-pulse"
-          style={{ height: `${height}px` }}
-          aria-hidden="true"
-          data-testid="tradingview-economic-calendar-skeleton"
-        />
+          className="overflow-y-auto rounded-lg border border-border bg-card px-3"
+          style={{ maxHeight: `${height}px` }}
+          data-testid="tradingview-economic-calendar-events"
+        >
+          <ul>
+            {events.map((event, index) => (
+              <CalendarEventRow key={`${event.date}-${event.currency}-${event.event}-${index}`} event={event} locale={locale} />
+            ))}
+          </ul>
+        </div>
       )}
-      <div
-        ref={hostRef}
-        style={{ width: "100%" }}
-        data-testid="tradingview-economic-calendar"
-        data-importance={importanceFilter}
-        data-country-filter={countryFilter ?? ""}
-        data-load-state={loadState}
-      />
+      <div className="mt-1 flex items-center justify-center gap-1 text-center text-[10px] text-muted-foreground">
+        <Calendar className="h-3 w-3" aria-hidden="true" />
+        <a
+          href="https://www.tradingview.com/economic-calendar/"
+          target="_blank"
+          rel="noopener nofollow"
+          className="text-primary hover:underline"
+        >
+          Economic calendar by TradingView
+        </a>
+      </div>
     </div>
   );
 }
