@@ -632,19 +632,19 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
     return (
       <div
         className={cn(
-          "border-l-4 rounded-md bg-muted/30 p-3 space-y-2",
+          "flex h-full flex-col rounded-md border-l-2 bg-muted/30 p-2.5",
           accent,
           isPreferred && "ring-1 ring-primary/40",
         )}
         data-testid={`trade-plan-${kind}`}
       >
         <div className="flex items-center gap-1.5">
-          <Icon className={cn("w-4 h-4", headerColor)} />
-          <h4 className={cn("text-sm font-bold", headerColor)}>
+          <Icon className={cn("w-3.5 h-3.5", headerColor)} />
+          <h4 className={cn("text-xs font-bold", headerColor)}>
             {kind === "buy" ? t.analysis_detail.trade_plan_side_buy : t.analysis_detail.trade_plan_side_sell}
           </h4>
         </div>
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+        <dl className="mt-1.5 grid grid-cols-2 gap-x-2.5 gap-y-1 text-[11px]">
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_entry}</dt>
           <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-entry`}>{side.entryZone}</dd>
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_sl}</dt>
@@ -656,8 +656,8 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_rr}</dt>
           <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-rr`}>{side.riskRewardRatio}</dd>
         </dl>
-        <div className="pt-1 border-t border-border/60">
-          <p className="text-[11px] text-muted-foreground leading-snug">
+        <div className="mt-auto min-h-[2.75rem] border-t border-border/60 pt-1">
+          <p className="text-[10px] text-muted-foreground leading-snug">
             <span className="font-semibold text-foreground/80">{t.analysis_detail.trade_plan_rationale}:</span>{" "}
             {side.rationale}
           </p>
@@ -665,7 +665,7 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
         <button
           type="button"
           onClick={() => copyLevels(side, kind)}
-          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           data-testid={`button-copy-levels-${kind}`}
         >
           {copied === kind ? (
@@ -679,20 +679,20 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
   };
 
   return (
-    <Card className="p-4 space-y-3" data-testid="card-trade-plan">
-      <div className="flex items-start justify-between gap-2 flex-wrap">
-        <div className="flex-1 min-w-[180px]">
+    <Card className="p-3 space-y-2.5" data-testid="card-trade-plan">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-            <Target className="w-4 h-4 text-primary" />
+            <Target className="w-3.5 h-3.5 text-primary" />
             {t.analysis_detail.trade_plan_title}
           </h3>
-          <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+          <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
             {t.analysis_detail.trade_plan_subtitle}
           </p>
         </div>
         <span
           className={cn(
-            "text-[10px] font-semibold px-2 py-1 rounded-full border whitespace-nowrap",
+            "text-[9px] font-semibold px-1.5 py-0.5 rounded-full border whitespace-nowrap",
             preferredColor,
           )}
           data-testid="trade-plan-preferred-side"
@@ -700,89 +700,10 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
           {preferredLabel}
         </span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         {renderSide(plan.buy, "buy")}
         {renderSide(plan.sell, "sell")}
       </div>
-    </Card>
-  );
-}
-
-function TradeSetupSummary({ plan, t }: { plan: TradePlan; t: T }) {
-  const preferredLabel =
-    plan.preferredSide === "buy"
-      ? t.analysis_detail.trade_plan_preferred_buy
-      : plan.preferredSide === "sell"
-        ? t.analysis_detail.trade_plan_preferred_sell
-        : t.analysis_detail.trade_plan_preferred_wait;
-  const preferredColor =
-    plan.preferredSide === "buy"
-      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/40"
-      : plan.preferredSide === "sell"
-        ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/40"
-        : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40";
-
-  const renderScenario = (side: TradeSide, kind: "buy" | "sell") => {
-    const isBuy = kind === "buy";
-    return (
-      <div
-        className={cn(
-          "rounded-md border-l-2 bg-muted/25 px-2.5 py-2",
-          isBuy
-            ? "border-l-emerald-500 dark:border-l-emerald-400"
-            : "border-l-red-500 dark:border-l-red-400",
-        )}
-        data-testid={`trade-setup-summary-${kind}`}
-      >
-        <div className="mb-1.5 flex items-center justify-between gap-2">
-          <div className={cn(
-            "flex items-center gap-1 text-[11px] font-bold",
-            isBuy ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400",
-          )}>
-            {isBuy ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-            {isBuy ? t.analysis_detail.trade_plan_side_buy : t.analysis_detail.trade_plan_side_sell}
-          </div>
-          <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
-            {t.analysis_detail.trade_plan_rr}: {side.riskRewardRatio}
-          </span>
-        </div>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[10px]">
-          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_entry}</dt>
-          <dd className="text-right font-semibold tabular-nums text-foreground">{side.entryZone}</dd>
-          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_sl}</dt>
-          <dd className="text-right font-semibold tabular-nums text-red-600 dark:text-red-400">{side.stopLoss}</dd>
-          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_tp1}</dt>
-          <dd className="text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{side.takeProfit1}</dd>
-          <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_tp2}</dt>
-          <dd className="text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{side.takeProfit2}</dd>
-        </dl>
-      </div>
-    );
-  };
-
-  return (
-    <Card className="space-y-2.5 p-3" data-testid="card-trade-setup-summary">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            <Target className="h-4 w-4 text-primary" />
-            {t.analysis_detail.setup_summary_title}
-          </h3>
-          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-            {t.analysis_detail.setup_summary_subtitle}
-          </p>
-        </div>
-        <span className={cn("shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold", preferredColor)}>
-          {preferredLabel}
-        </span>
-      </div>
-      <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-        {renderScenario(plan.buy, "buy")}
-        {renderScenario(plan.sell, "sell")}
-      </div>
-      <p className="border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground">
-        {t.analysis_detail.setup_summary_wait_note}
-      </p>
     </Card>
   );
 }
@@ -2267,7 +2188,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
              tradePlan={tradePlan}
              analysisCreatedAt={analysis.createdAt}
            />
-           {tradePlan && <TradeSetupSummary plan={tradePlan} t={t} />}
+           {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
          </div>
         </div>
 
@@ -2284,12 +2205,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
             refreshState={fundamentalRefresh}
           />
         )}
-
-        {/* AI-suggested concrete trade plan with both buy and sell levels.
-            Anchored to the price at analysis time. Surfaces the structured
-            entry / SL / TP / R:R the model produced — keeps the rest of the
-            narrative consultative while giving the user actionable numbers. */}
-        {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
 
         {/* Deterministic, situation-aware scaling plan. It reads the saved
             analysis context but never changes Standard Plan levels or executes orders. */}
