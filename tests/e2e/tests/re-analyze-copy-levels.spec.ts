@@ -79,6 +79,14 @@ const STUB_ID_UNSUPPORTED_ADAPTIVE = 9_999_920;
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
 
+function isIgnorableTradingViewConsoleError(message: string): boolean {
+  // TradingView's embed loader reports an unavailable optional widget-sheriff
+  // rules feed through console.error. This external diagnostic must not make
+  // unrelated application-flow tests fail, while errors from every other
+  // source remain actionable.
+  return message.includes("https://widget-sheriff.tradingview-widget.com/");
+}
+
 function buildStubAnalysis(id: number) {
   const now = new Date();
   const validUntil = new Date(now.getTime() + 60 * 60_000);
@@ -262,7 +270,14 @@ test.describe("Analyze instrument accordion (authenticated Chromium)", () => {
       const isBlockedServiceWorkerError = message
         .text()
         .includes("[pwa] service worker registration failed");
-      if (message.type() === "error" && !isBlockedServiceWorkerError) {
+      const isTradingViewWidgetError = isIgnorableTradingViewConsoleError(
+        message.text(),
+      );
+      if (
+        message.type() === "error" &&
+        !isBlockedServiceWorkerError &&
+        !isTradingViewWidgetError
+      ) {
         browserErrors.push(`console: ${message.text()}`);
       }
     });
