@@ -5,12 +5,23 @@ import type { ReactNode } from "react";
 import { LanguageProvider } from "@/lib/i18n";
 
 vi.mock("@/components/tradingview-economic-calendar", () => ({
-  TradingViewEconomicCalendar: (props: { height?: number; importanceFilter?: string }) => (
-    <div
-      data-testid="tradingview-economic-calendar-mock"
-      data-height={props.height}
-      data-importance={props.importanceFilter}
-    />
+  TradingViewEconomicCalendar: (props: {
+    height?: number;
+    importanceFilter?: string;
+    currencyFilter?: string[];
+    onClearFilters?: () => void;
+  }) => (
+    <>
+      <div
+        data-testid="tradingview-economic-calendar-mock"
+        data-height={props.height}
+        data-importance={props.importanceFilter}
+        data-currencies={props.currencyFilter?.join(",") ?? ""}
+      />
+      <button type="button" onClick={props.onClearFilters} data-testid="calendar-mock-clear-filters">
+        Clear calendar filters
+      </button>
+    </>
   ),
 }));
 
@@ -89,9 +100,11 @@ function Wrapper({ children }: { children: ReactNode }) {
 describe("Economic Calendar section on Analyze page", () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
   });
   afterEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
   });
 
   it("renders open by default and mounts the widget immediately", () => {
@@ -123,5 +136,24 @@ describe("Economic Calendar section on Analyze page", () => {
     fireEvent.click(screen.getByTestId("chip-economic-calendar-impact-1"));
     expect(screen.getByTestId("tradingview-economic-calendar-mock")).toHaveAttribute("data-importance", "1");
     expect(screen.getByTestId("chip-economic-calendar-impact-1")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("lets the calendar empty state reset currency and impact filters together", () => {
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("chip-economic-calendar-currency-USD"));
+    fireEvent.click(screen.getByTestId("chip-economic-calendar-impact-1"));
+    expect(screen.getByTestId("tradingview-economic-calendar-mock")).toHaveAttribute("data-currencies", "USD");
+    expect(screen.getByTestId("tradingview-economic-calendar-mock")).toHaveAttribute("data-importance", "1");
+
+    fireEvent.click(screen.getByTestId("calendar-mock-clear-filters"));
+    expect(screen.getByTestId("tradingview-economic-calendar-mock")).toHaveAttribute("data-currencies", "");
+    expect(screen.getByTestId("tradingview-economic-calendar-mock")).toHaveAttribute("data-importance", "-1");
+    expect(screen.getByTestId("chip-economic-calendar-currency-all")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("chip-economic-calendar-impact--1")).toHaveAttribute("aria-pressed", "true");
   });
 });

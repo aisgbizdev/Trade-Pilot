@@ -389,6 +389,10 @@ function EconomicCalendarSection() {
   };
 
   const clearCurrencies = () => setSelectedCurrencies([]);
+  const clearCalendarFilters = () => {
+    setSelectedCurrencies([]);
+    setImpactFilter("-1");
+  };
 
   const effectiveCurrencies = selectedCurrencies.filter((c) =>
     availableCurrencies.includes(c),
@@ -503,6 +507,7 @@ function EconomicCalendarSection() {
           importanceFilter={impactFilter}
           countryFilter={countryFilter}
           currencyFilter={effectiveCurrencies}
+          onClearFilters={clearCalendarFilters}
         />
       </div>
     </Card>

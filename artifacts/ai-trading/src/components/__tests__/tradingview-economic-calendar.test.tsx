@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 import { TradingViewEconomicCalendar } from "../tradingview-economic-calendar";
@@ -118,7 +118,76 @@ describe("TradingViewEconomicCalendar date window", () => {
     expect(screen.queryByText("Low event")).toBeNull();
   });
 
-  it("keeps the loading and error states inside the fixed-height panel", () => {
+  it("explains when the feed returned no events without leaving a large blank panel", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-01T12:00:00Z"));
+    mockUseCalendar.mockReturnValue({
+      data: { events: [] },
+      isLoading: false,
+      isError: false,
+    });
+
+    const { container } = render(
+      <Wrapper>
+        <TradingViewEconomicCalendar height={300} />
+      </Wrapper>,
+    );
+
+    const empty = screen.getByTestId("calendar-empty-state");
+    expect(empty).toHaveAttribute("data-empty-reason", "source-empty");
+    expect(empty).toHaveTextContent("No calendar events were returned");
+    expect(empty).toHaveTextContent("Aug 25, 2026");
+    expect(empty).toHaveTextContent("Sep 8, 2026");
+    expect(container.querySelector("[style='height: 300px;']")).toBeNull();
+  });
+
+  it("explains when active currency filters remove all events and offers to clear them", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-01T12:00:00Z"));
+    const onClearFilters = vi.fn();
+    mockUseCalendar.mockReturnValue({
+      data: {
+        events: [
+          { date: "2026-09-02", time: "09:00", currency: "EUR", impact: "★★★", event: "Euro event" },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    render(
+      <Wrapper>
+        <TradingViewEconomicCalendar
+          height={300}
+          currencyFilter={["USD"]}
+          onClearFilters={onClearFilters}
+        />
+      </Wrapper>,
+    );
+
+    const empty = screen.getByTestId("calendar-empty-state");
+    expect(empty).toHaveAttribute("data-empty-reason", "currency-empty");
+    expect(empty).toHaveTextContent("No events for USD");
+    fireEvent.click(screen.getByTestId("button-calendar-clear-filters"));
+    expect(onClearFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers retry when the calendar request fails", () => {
+    const refetch = vi.fn();
+    mockUseCalendar.mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch });
+
+    render(
+      <Wrapper>
+        <TradingViewEconomicCalendar height={300} />
+      </Wrapper>,
+    );
+
+    expect(screen.getByTestId("calendar-error-state")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-calendar-retry"));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the loading state compact", () => {
     mockUseCalendar.mockReturnValue({ data: undefined, isLoading: true, isError: false });
     const { container } = render(
       <Wrapper>
@@ -126,14 +195,6 @@ describe("TradingViewEconomicCalendar date window", () => {
       </Wrapper>,
     );
     expect(screen.getByText("Loading calendar...")).toBeTruthy();
-    expect(container.querySelector("[style='height: 300px;']")).not.toBeNull();
-
-    mockUseCalendar.mockReturnValue({ data: undefined, isLoading: false, isError: true });
-    render(
-      <Wrapper>
-        <TradingViewEconomicCalendar height={300} />
-      </Wrapper>,
-    );
-    expect(screen.getByText(/Unable to load the economic calendar widget/)).toBeTruthy();
+    expect(container.querySelector("[style='height: 300px;']")).toBeNull();
   });
 });

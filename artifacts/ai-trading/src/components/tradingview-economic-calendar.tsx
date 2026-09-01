@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, Loader2, WifiOff } from "lucide-react";
+import { Calendar, Loader2, RefreshCw, WifiOff } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useCalendar, type CalendarEvent } from "@/hooks/use-calendar";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ interface TradingViewEconomicCalendarProps {
   loadTimeoutMs?: number;
   countryFilter?: string;
   currencyFilter?: string[];
+  onClearFilters?: () => void;
 }
 
 const CURRENCY_FLAGS: Record<string, string> = {
@@ -71,6 +72,15 @@ function formatEventTime(event: CalendarEvent): string {
   return timePart;
 }
 
+function formatCalendarDate(date: string, locale: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 function CalendarEventRow({ event, locale }: { event: CalendarEvent; locale: string }) {
   return (
     <li className="grid grid-cols-[3.5rem_1.25rem_minmax(0,1fr)_auto] items-start gap-2 border-b border-border/50 py-2.5 last:border-0">
@@ -115,31 +125,64 @@ export function TradingViewEconomicCalendar({
   importanceFilter = "-1",
   countryFilter,
   currencyFilter,
+  onClearFilters,
 }: TradingViewEconomicCalendarProps) {
   const { lang, t } = useTranslation();
-  const { data, isLoading, isError } = useCalendar();
+  const { data, isLoading, isError, refetch } = useCalendar();
   const online = useOnlineStatus();
   const locale = lang === "id" ? "id-ID" : "en-US";
   const window = calendarDateWindow();
 
-  const events = useMemo(() => {
+  const { allEvents, inWindowEvents, currencyEvents, events } = useMemo(() => {
     const selectedCurrencies = new Set(currencyFilter ?? []);
-    return (data?.events ?? [])
-      .filter((event) => eventIsWithinCalendarWindow(event, window))
-      .filter((event) => selectedCurrencies.size === 0 || selectedCurrencies.has(event.currency))
+    const all = data?.events ?? [];
+    const inWindow = all.filter((event) => eventIsWithinCalendarWindow(event, window));
+    const byCurrency = inWindow.filter(
+      (event) => selectedCurrencies.size === 0 || selectedCurrencies.has(event.currency),
+    );
+    const filtered = byCurrency
       .filter((event) => matchesImportance(event, importanceFilter))
       .sort((a, b) =>
         a.date.localeCompare(b.date) ||
         (a.time ?? "").localeCompare(b.time ?? "") ||
         (IMPACT_RANK[b.impact ?? ""] ?? 0) - (IMPACT_RANK[a.impact ?? ""] ?? 0),
       );
+    return {
+      allEvents: all,
+      inWindowEvents: inWindow,
+      currencyEvents: byCurrency,
+      events: filtered,
+    };
   }, [data?.events, currencyFilter, importanceFilter, window.startDate, window.endDate]);
+
+  const dateRange = `${formatCalendarDate(window.startDate, locale)} – ${formatCalendarDate(window.endDate, locale)}`;
+  const currencyLabel = (currencyFilter ?? []).join(", ");
+  const emptyReason =
+    allEvents.length === 0
+      ? "source-empty"
+      : inWindowEvents.length === 0
+        ? "date-empty"
+        : currencyEvents.length === 0
+          ? "currency-empty"
+          : events.length === 0
+            ? "impact-empty"
+            : null;
+  const emptyMessage =
+    emptyReason === "source-empty"
+      ? t.widgets.calendar_empty_source.replace("{range}", dateRange)
+      : emptyReason === "date-empty"
+        ? t.widgets.calendar_empty_date_range.replace("{range}", dateRange)
+        : emptyReason === "currency-empty"
+          ? t.widgets.calendar_empty_currency
+              .replace("{currencies}", currencyLabel)
+              .replace("{range}", dateRange)
+          : t.widgets.calendar_empty_impact.replace("{range}", dateRange);
+  const hasActiveFilters = (currencyFilter ?? []).length > 0 || importanceFilter !== "-1";
 
   if (!online) {
     return (
       <div
-        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/30 px-4 text-center"
-        style={{ height: `${height}px` }}
+        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-center"
         data-testid="tradingview-economic-calendar-offline"
       >
         <WifiOff className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
@@ -157,17 +200,43 @@ export function TradingViewEconomicCalendar({
       data-country-filter={countryFilter ?? ""}
     >
       {isLoading ? (
-        <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground" style={{ height: `${height}px` }}>
+        <div className="flex min-h-24 items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 py-6 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           <span className="text-xs">{t.widgets.loading_calendar}</span>
         </div>
       ) : isError ? (
-        <div className="flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 px-4 text-center" style={{ height: `${height}px` }}>
+        <div
+          className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-5 text-center"
+          data-testid="calendar-error-state"
+        >
           <p className="text-xs leading-snug text-muted-foreground">{t.widgets.economic_calendar_error}</p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted"
+            data-testid="button-calendar-retry"
+          >
+            <RefreshCw className="h-3 w-3" aria-hidden="true" />
+            {t.widgets.calendar_retry}
+          </button>
         </div>
       ) : events.length === 0 ? (
-        <div className="flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 px-4 text-center" style={{ height: `${height}px` }}>
-          <p className="text-xs leading-snug text-muted-foreground">{t.widgets.calendar_empty}</p>
+        <div
+          className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-5 text-center"
+          data-testid="calendar-empty-state"
+          data-empty-reason={emptyReason ?? "unknown"}
+        >
+          <p className="text-xs leading-snug text-muted-foreground">{emptyMessage}</p>
+          {hasActiveFilters && onClearFilters && (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="rounded-md border border-border px-2.5 py-1 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted"
+              data-testid="button-calendar-clear-filters"
+            >
+              {t.widgets.calendar_clear_filters}
+            </button>
+          )}
         </div>
       ) : (
         <div
