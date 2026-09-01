@@ -13,6 +13,7 @@ import {
   formatNewsForPrompt,
   getRelevantNews,
   getTickerNews,
+  selectNewsmakerFirst,
   type NewsItem,
 } from "../news";
 
@@ -143,6 +144,71 @@ describe("getTickerNews — global multi-source feed", () => {
     expect(items.every((item) => item.publishedAt !== new Date(0).toISOString())).toBe(true);
   });
 
+  it("keeps Newsmaker primary and includes at most one Yahoo headline", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse([
+        {
+          id: 31,
+          title: "Newsmaker market headline one",
+          url: "https://newsmaker.id/one",
+          date: recentISO(4),
+        },
+        {
+          id: 32,
+          title: "Newsmaker market headline two",
+          url: "https://newsmaker.id/two",
+          date: recentISO(5),
+        },
+        {
+          id: 33,
+          title: "Newsmaker market headline three",
+          url: "https://newsmaker.id/three",
+          date: recentISO(6),
+        },
+      ]),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue(
+      Array.from({ length: 4 }, (_, i) => ({
+        title: `Yahoo Finance headline ${i}`,
+        summary: "Yahoo Finance summary",
+        url: `https://finance.yahoo.com/article-${i}`,
+        publishedAt: recentISO(i + 1),
+      })),
+    );
+
+    const items = await getTickerNews(3);
+
+    expect(items).toHaveLength(3);
+    expect(items.filter((item) => item.source === "Newsmaker.id")).toHaveLength(2);
+    expect(items.filter((item) => item.source === "Yahoo Finance")).toHaveLength(1);
+  });
+
+  it("uses one Yahoo headline only when Newsmaker has fewer available items", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse([
+        {
+          id: 41,
+          title: "Only Newsmaker headline",
+          url: "https://newsmaker.id/only",
+          date: recentISO(2),
+        },
+      ]),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue(
+      Array.from({ length: 3 }, (_, i) => ({
+        title: `Yahoo fallback headline ${i}`,
+        summary: "Yahoo Finance summary",
+        url: `https://finance.yahoo.com/fallback-${i}`,
+        publishedAt: recentISO(i + 1),
+      })),
+    );
+
+    const items = await getTickerNews(3);
+
+    expect(items).toHaveLength(2);
+    expect(items.filter((item) => item.source === "Yahoo Finance")).toHaveLength(1);
+  });
+
   it("keeps Yahoo headlines when Newsmaker is unavailable", async () => {
     globalThis.fetch = vi.fn(async () => {
       throw new Error("Newsmaker unavailable");
@@ -172,6 +238,34 @@ describe("getTickerNews — global multi-source feed", () => {
     mockedYahoo.mockRejectedValue(new Error("Yahoo unavailable"));
 
     await expect(getTickerNews(3)).resolves.toEqual([]);
+  });
+});
+
+describe("selectNewsmakerFirst", () => {
+  function item(source: string, id: string): NewsItem {
+    return {
+      id,
+      title: id,
+      summary: "",
+      source,
+      url: `https://example.com/${id}`,
+      publishedAt: new Date().toISOString(),
+    };
+  }
+
+  it("preserves ranked order while reserving one Yahoo slot", () => {
+    const items = [
+      item("Yahoo Finance", "yahoo-newest"),
+      item("Newsmaker.id", "newsmaker-newest"),
+      item("Yahoo Finance", "yahoo-second"),
+      item("Newsmaker.id", "newsmaker-second"),
+    ];
+
+    expect(selectNewsmakerFirst(items, 3).map((news) => news.id)).toEqual([
+      "yahoo-newest",
+      "newsmaker-newest",
+      "newsmaker-second",
+    ]);
   });
 });
 

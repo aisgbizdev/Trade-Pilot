@@ -89,6 +89,7 @@ import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isXauUsdMiniAdaptiveInstrument } from "@/lib/adaptive-position-plan";
+import { prioritizeNewsSources } from "@/lib/news-source-priority";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -1275,7 +1276,7 @@ function FundamentalContextCard({
   isRefreshing: boolean;
   refreshState: { refreshedAt: string; drift: FundamentalDrift } | null;
 }) {
-  const news = (ctx.newsItems ?? []).slice(0, 3);
+  const news = prioritizeNewsSources(ctx.newsItems ?? [], 3);
   const events = (ctx.calendarEvents ?? []).slice(0, 5);
   const [newsOpen, setNewsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);

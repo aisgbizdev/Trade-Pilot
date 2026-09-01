@@ -195,6 +195,30 @@ function rankTickerNews(items: NewsItem[], maxItems: number): NewsItem[] {
   return selected;
 }
 
+/**
+ * Keep Newsmaker as the primary user-facing source while allowing one Yahoo
+ * headline as context. The input is already ranked, so this preserves the
+ * existing freshness order after reserving slots by source.
+ *
+ * For multi-item lists, one slot is reserved for Yahoo when available and
+ * every other slot is filled from Newsmaker. A one-item list still chooses
+ * Newsmaker first. Yahoo-only is therefore an honest one-item fallback when
+ * Newsmaker has no usable items.
+ */
+export function selectNewsmakerFirst(items: NewsItem[], maxItems: number): NewsItem[] {
+  const limit = Math.max(1, Math.min(12, Math.floor(maxItems) || 1));
+  const primary = items.filter((item) => item.source === NEWSMAKER_SOURCE);
+  const secondary = items.filter((item) => item.source === YAHOO_SOURCE);
+  const yahoo = secondary[0];
+  if (limit === 1) {
+    return primary.length > 0 ? primary.slice(0, 1) : secondary.slice(0, 1);
+  }
+  const primaryLimit = yahoo ? Math.max(0, limit - 1) : limit;
+  const selected = new Set([...primary.slice(0, primaryLimit), ...(yahoo ? [yahoo] : [])]);
+
+  return items.filter((item) => selected.has(item)).slice(0, limit);
+}
+
 function withTickerTimeout<T>(promise: Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timeout = setTimeout(
@@ -309,7 +333,7 @@ export async function getRelevantNews(
 export async function getTickerNews(maxItems = 6): Promise<NewsItem[]> {
   const limit = Math.max(1, Math.min(12, Math.floor(maxItems) || 6));
   if (tickerCache && Date.now() - tickerCache.fetchedAt < TICKER_CACHE_TTL) {
-    return tickerCache.data.slice(0, limit);
+    return selectNewsmakerFirst(tickerCache.data, limit);
   }
 
   const upstreamResults = await Promise.allSettled([
@@ -334,7 +358,7 @@ export async function getTickerNews(maxItems = 6): Promise<NewsItem[]> {
 
   const ranked = rankTickerNews(collected, 12);
   tickerCache = { data: ranked, fetchedAt: Date.now() };
-  return ranked.slice(0, limit);
+  return selectNewsmakerFirst(ranked, limit);
 }
 
 // Strip prompt-injection patterns from external feed text before

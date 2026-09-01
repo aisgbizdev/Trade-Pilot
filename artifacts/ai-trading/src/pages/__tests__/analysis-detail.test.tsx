@@ -958,6 +958,49 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(eventRows.length).toBe(5);
   });
 
+  it("prioritizes Newsmaker and keeps only one Yahoo headline in the visible fundamental list", async () => {
+    const newsItems = [
+      "Yahoo Finance",
+      "Newsmaker.id",
+      "Yahoo Finance",
+      "Newsmaker.id",
+      "Newsmaker.id",
+    ].map((source, i) => ({
+      id: `mixed-news-${i}`,
+      title: `${source} headline ${i}`,
+      summary: `Summary ${i}`,
+      source,
+      url: `https://example.com/article-${i}`,
+      publishedAt: new Date(NOW - (i + 1) * 60_000).toISOString(),
+    }));
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          fundamentalContext: { newsItems, calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    const card = await screen.findByTestId("card-fundamental-context");
+    fireEvent.click(screen.getByTestId("fundamental-news-toggle"));
+
+    expect(card).toHaveTextContent("Yahoo Finance headline 0");
+    expect(card).toHaveTextContent("Newsmaker.id headline 1");
+    expect(card).toHaveTextContent("Newsmaker.id headline 3");
+    expect(card).not.toHaveTextContent("Yahoo Finance headline 2");
+    expect(card).not.toHaveTextContent("Newsmaker.id headline 4");
+    expect(screen.getAllByTestId("fundamental-news-link")).toHaveLength(3);
+  });
+
   it("renders the empty-state message when fundamentalContext is present with empty arrays", async () => {
     installFetchMock([
       getAnalysisHandler({
