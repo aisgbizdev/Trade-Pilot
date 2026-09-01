@@ -324,12 +324,15 @@ function standardMarketForInstrument(instrument: string): AdaptiveMarket | null 
  * analysis identity must be the canonical XAU/USD symbol; aliases such as
  * GOLD, XAUUSD, or the broker rule code must not silently enable it.
  */
-export function isXauUsdMiniAdaptiveInstrument(instrument: string): boolean {
+export function isXauUsdAdaptiveInstrument(instrument: string): boolean {
   return instrument.trim().toUpperCase() === "XAU/USD";
 }
 
+// Keep the original export for callers that still use the old Mini-only name.
+export const isXauUsdMiniAdaptiveInstrument = isXauUsdAdaptiveInstrument;
+
 function adaptiveMarketForInstrument(instrument: string): AdaptiveMarket | null {
-  return isXauUsdMiniAdaptiveInstrument(instrument) ? "gold" : null;
+  return isXauUsdAdaptiveInstrument(instrument) ? "gold" : null;
 }
 
 function standardCodeForMarket(market: AdaptiveMarket): StandardTradingRuleInstrument["code"] {
@@ -377,7 +380,7 @@ function ruleFromStandardTradingRules(
   accountTier: AccountTier,
 ): AdaptiveRule | null {
   const market = adaptiveMarketForInstrument(instrument);
-  if (accountTier !== "mini") return null;
+  if (accountTier === "regular") return null;
   if (!market || !standardRule || standardRule.code !== standardCodeForMarket(market)) return null;
 
   const minMovement = numericValues(standardRule.minimumPriceMovement)[0];
@@ -753,6 +756,7 @@ export function createAdaptivePlanFingerprint({
   context,
   standardRule,
   checkpointPrices,
+  accountTier = "mini",
   riskStyle = "conservative",
 }: {
   instrument: string;
@@ -760,6 +764,7 @@ export function createAdaptivePlanFingerprint({
   context: AdaptiveAnalysisContext;
   standardRule: StandardTradingRuleInstrument | null | undefined;
   checkpointPrices?: { buy?: number[]; sell?: number[] };
+  accountTier?: AccountTier;
   riskStyle?: AdaptiveRiskStyle;
 }): string {
   return JSON.stringify({
@@ -786,6 +791,7 @@ export function createAdaptivePlanFingerprint({
         }
       : null,
     checkpointPrices: checkpointPrices ?? null,
+    accountTier,
     riskStyle,
   });
 }
@@ -798,7 +804,9 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const includeSell = input.includedSides?.sell ?? true;
 
   if (!market) errors.push("Adaptive position planning is available only for the canonical XAU/USD instrument.");
-  if (input.accountTier !== "mini") errors.push("Adaptive position planning is temporarily available only for the Mini tier.");
+  if (input.accountTier !== "micro" && input.accountTier !== "mini") {
+    errors.push("Adaptive position planning is currently available only for the Micro or Mini tier.");
+  }
   else if (!rule) errors.push("TP Standard Trading Rules are unavailable for this instrument.");
   if (!includeBuy && !includeSell) errors.push("At least one trade-plan side must be included.");
   if (input.availableFunds == null || input.availableFunds <= 0) errors.push("Available trading funds are required.");
@@ -850,7 +858,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const plans = [buy, sell].filter((plan): plan is AdaptiveSidePositionPlan => plan != null);
   for (const plan of plans) {
     if (tierMax != null && plan.ladder.some((level) => level.lot > tierMax)) {
-      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} has a position above the Mini per-position limit.`);
+      errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} has a position above the ${input.accountTier} per-position limit.`);
     }
     if (plan.marginRequired > (input.availableFunds ?? 0)) {
       errors.push(`${plan.side === "buy" ? "Buy" : "Sell"} margin exceeds available trading funds.`);
@@ -871,12 +879,12 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     ? `Minimum movement from ${rule.source}: ${rule.minMovement}; no percentage gap limit is assumed because the source rule does not provide one.`
     : `Minimum movement from ${rule.source}: ${rule.minMovement}; a gap above ${rule.maxGapPercent}% is treated as an external execution risk.`;
   const assumptions = [
-    `Mini profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
+    `${input.accountTier[0].toUpperCase()}${input.accountTier.slice(1)} profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
     movementAssumption,
     `Initial entry uses the Standard Plan; up to two manual additions can create at most three total positions. The ${tierText} range applies separately to each position, not to cumulative planned lots.`,
     `The entered USD ${maxCycleLoss} maximum loss is a hard amount for every position in the complete plan.`,
     "Available trading funds are used directly; no hidden tier or risk-style percentage reduces them.",
-    `Current open XAU/USD Mini exposure is ${input.existingExposure ?? 0} lot. It is not subtracted from the 0.90-lot per-position cap; entered free funds must already exclude margin committed elsewhere.`,
+    `Current open XAU/USD ${input.accountTier} exposure is ${input.existingExposure ?? 0} lot. It is not subtracted from the ${tierMax ?? "unlimited"}-lot per-position cap; entered free funds must already exclude margin committed elsewhere.`,
     "This Adaptive Position Plan is for day trading only: it uses the day/initial margin and excludes overnight holding, rollover, and overnight fees from every calculation.",
     "Broker auto-liquidation, spread, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
   ];
@@ -954,6 +962,7 @@ export function buildAdaptivePlanRecommendation({
   standardRule,
   context: analysisContext,
   checkpointPrices,
+  accountTier = "mini",
   riskStyle = "conservative",
 }: {
   instrument: string;
@@ -964,9 +973,9 @@ export function buildAdaptivePlanRecommendation({
   standardRule: StandardTradingRuleInstrument | null;
   context?: AdaptiveAnalysisContext;
   checkpointPrices?: { buy?: number[]; sell?: number[] };
+  accountTier?: AccountTier;
   riskStyle?: AdaptiveRiskStyle;
 }): AdaptivePlanRecommendation {
-  const accountTier: AccountTier = "mini";
   const market = adaptiveMarketForInstrument(instrument);
   const rule = ruleFromStandardTradingRules(instrument, standardRule, accountTier);
   const context = normalizeContext(analysisContext);

@@ -100,7 +100,7 @@ function buildRecommendation(
   });
 }
 
-describe("XAU/USD Mini Adaptive Plan", () => {
+describe("XAU/USD Micro and Mini Adaptive Plan", () => {
   it("uses only the exact canonical XAU/USD identity for Adaptive", () => {
     expect(isXauUsdMiniAdaptiveInstrument("XAU/USD")).toBe(true);
     expect(isXauUsdMiniAdaptiveInstrument(" xau/usd ")).toBe(true);
@@ -121,9 +121,20 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(getStandardTradingRuleCode("EUR/USD")).toBeNull();
   });
 
-  it("exposes only the Mini rule to Adaptive while retaining its exact sizing", () => {
+  it("exposes exact Micro and Mini sizing while keeping Regular unavailable", () => {
+    const micro = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "micro");
     const mini = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "mini");
 
+    expect(micro).toMatchObject({
+      accountTier: "micro",
+      minimumLot: 0.01,
+      maximumLot: 0.09,
+      lotStep: 0.01,
+      contractSize: 1,
+      marginAtMinimumLot: 10,
+      marginPerLot: 1_000,
+      minimumOpeningFunds: 50,
+    });
     expect(mini).toMatchObject({
       accountTier: "mini",
       minimumLot: 0.1,
@@ -133,9 +144,30 @@ describe("XAU/USD Mini Adaptive Plan", () => {
       marginAtMinimumLot: 100,
       marginPerLot: 1_000,
     });
-    expect(getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "micro")).toBeNull();
     expect(getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "regular")).toBeNull();
+    expect(getAdaptiveMarginCapacity(500, micro)).toBe(0.09);
     expect(getAdaptiveMarginCapacity(500, mini)).toBe(0.5);
+  });
+
+  it("scales Micro lot, margin, contract value, and risk from the Mini rule", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "micro",
+      initialLot: 0.01,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.rule).toMatchObject({
+      accountTier: "micro",
+      minimumLot: 0.01,
+      maximumLot: 0.09,
+      contractSize: 1,
+      marginAtMinimumLot: 10,
+    });
+    expect(result.buy?.ladder.map((level) => level.lot)).toEqual([0.01, 0.01]);
+    expect(result.buy?.marginRequired).toBe(20);
+    expect(result.buy?.estimatedCycleLoss).toBeCloseTo(0.21);
+    expect(result.buy?.totalFundsAtStop).toBeCloseTo(20.21);
   });
 
   it("builds a Buy recommendation with three total positions when analysis and limits support them", () => {
@@ -424,7 +456,7 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(assessment.result.buy?.rejectedLadder[0]?.financialAlternative).toBeNull();
   });
 
-  it("rejects more than two additions and every non-Mini tier", () => {
+  it("rejects more than two additions and the unsupported Regular tier", () => {
     const tooManyLayers = buildAdaptivePositionPlan({ ...VALID_INPUT, levels: 3 });
     const buySideBypass = buildAdaptivePositionPlan({
       ...VALID_INPUT,
@@ -436,10 +468,10 @@ describe("XAU/USD Mini Adaptive Plan", () => {
       levels: 0,
       sideLevels: { buy: 0, sell: 1 },
     });
-    const micro = buildAdaptivePositionPlan({
+    const regular = buildAdaptivePositionPlan({
       ...VALID_INPUT,
-      accountTier: "micro",
-      initialLot: 0.01,
+      accountTier: "regular",
+      initialLot: 1,
     });
 
     expect(tooManyLayers.valid).toBe(false);
@@ -448,8 +480,8 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(buySideBypass.errors.join(" ")).toMatch(/Buy additional levels/i);
     expect(sellSideBypass.valid).toBe(false);
     expect(sellSideBypass.errors.join(" ")).toMatch(/Sell additional levels/i);
-    expect(micro.valid).toBe(false);
-    expect(micro.errors.join(" ")).toMatch(/only for the Mini tier/i);
+    expect(regular.valid).toBe(false);
+    expect(regular.errors.join(" ")).toMatch(/only for the Micro or Mini tier/i);
   });
 
   it("rejects every non-XAU product from the Adaptive calculator", () => {
@@ -580,6 +612,10 @@ describe("XAU/USD Mini Adaptive Plan", () => {
     expect(createAdaptivePlanFingerprint({
       ...base,
       riskStyle: "aggressive",
+    })).not.toBe(original);
+    expect(createAdaptivePlanFingerprint({
+      ...base,
+      accountTier: "micro",
     })).not.toBe(original);
   });
 });

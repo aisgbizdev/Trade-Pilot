@@ -27,6 +27,7 @@ import {
   type AdaptiveChartCandle,
   type AdaptiveSidePositionPlan,
   type AdaptiveRiskStyle,
+  type AccountTier,
 } from "@/lib/adaptive-position-plan";
 
 type AdaptiveCopy = Translations["analysis_detail"];
@@ -45,6 +46,7 @@ interface FormState {
   availableMargin: string;
   maximumLoss: string;
   existingExposure: string;
+  accountTier: "micro" | "mini";
   riskStyle: AdaptiveRiskStyle;
 }
 
@@ -52,11 +54,12 @@ const DEFAULT_FORM: FormState = {
   availableMargin: "",
   maximumLoss: "",
   existingExposure: "0",
+  accountTier: "mini",
   riskStyle: "conservative",
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v14:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v15:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -68,7 +71,12 @@ function isStoredForm(value: unknown): value is Partial<FormState> {
   return (value.availableMargin === undefined || typeof value.availableMargin === "string") &&
     (value.maximumLoss === undefined || typeof value.maximumLoss === "string") &&
     (value.existingExposure === undefined || typeof value.existingExposure === "string") &&
+    (value.accountTier === undefined || value.accountTier === "micro" || value.accountTier === "mini") &&
     (value.riskStyle === undefined || isAdaptiveRiskStyle(value.riskStyle));
+}
+
+function accountTierLabel(tier: AccountTier, copy: AdaptiveCopy): string {
+  return tier === "micro" ? copy.adaptive_account_micro : copy.adaptive_account_mini;
 }
 
 function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommendation {
@@ -494,7 +502,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const maximumLoss = numberValue(form.maximumLoss);
   const existingExposure = numberValue(form.existingExposure);
   const selectedRule = rulesAvailable
-    ? getAdaptiveMarketRule(instrument, standardRule, "mini")
+    ? getAdaptiveMarketRule(instrument, standardRule, form.accountTier)
     : null;
   useEffect(() => {
     if (isRulesLoading) return;
@@ -541,6 +549,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     context,
     standardRule: rulesAvailable ? standardRule : null,
     checkpointPrices: chartCandidateState.prices,
+    accountTier: form.accountTier,
     riskStyle: form.riskStyle,
   });
   const rulesUnavailable = !isRulesLoading && !rulesAvailable;
@@ -569,6 +578,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             context,
             standardRule: rulesAvailable ? standardRule : null,
             checkpointPrices: chartCandidateState.prices,
+             accountTier: parsedForm.accountTier ?? "mini",
             riskStyle: parsedForm.riskStyle ?? "conservative",
           })
         : fingerprint;
@@ -591,6 +601,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((previous) => ({ ...previous, [field]: value }));
     setRecommendation(null);
+    if (field === "accountTier") localStorage.removeItem(storageKey(analysisId));
   };
   const calculate = () => {
     if (!rulesAvailable) {
@@ -607,6 +618,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       standardRule,
       context,
       checkpointPrices: chartCandidateState.prices,
+      accountTier: form.accountTier,
       riskStyle: form.riskStyle,
     });
     setRecommendation(next);
@@ -660,16 +672,41 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         </details>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
+          <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
+            {([
+              ["micro", copy.adaptive_account_micro, copy.adaptive_account_micro_desc],
+              ["mini", copy.adaptive_account_mini, copy.adaptive_account_mini_desc],
+            ] as const).map(([tier, label, description]) => (
+              <button
+                key={tier}
+                type="button"
+                aria-pressed={form.accountTier === tier}
+                onClick={() => updateField("accountTier", tier)}
+                className={`rounded-md border px-2.5 py-2 text-left transition-colors ${
+                  form.accountTier === tier
+                    ? "border-primary bg-primary/[0.08] text-foreground shadow-sm"
+                    : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                }`}
+                data-testid={`button-adaptive-account-${tier}`}
+              >
+                <span className="block text-[11px] font-semibold">{label}</span>
+                <span className="mt-0.5 block text-[10px] leading-relaxed">{description}</span>
+              </button>
+            ))}
+          </div>
           {selectedRule && (
             <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-account-rule">
               <p className="mb-1 font-bold text-foreground">{copy.adaptive_fixed_scope}</p>
               <p>{copy.adaptive_account_rule
-                .replace("{tier}", copy.adaptive_account_mini)
+                .replace("{tier}", accountTierLabel(form.accountTier, copy))
                 .replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))
                 .replace("{maximum}", formatNumber(selectedRule.maximumLot, lang, 2))
                 .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))
                 .replace("{size}", formatNumber(selectedRule.contractSize, lang, 2))
                 .replace("{unit}", standardRule?.contractUnit ?? "")}</p>
+              {selectedRule.minimumOpeningFunds != null && (
+                <p className="mt-1">{copy.adaptive_account_opening_minimum.replace("{amount}", formatMoney(selectedRule.minimumOpeningFunds, lang))}</p>
+              )}
             </div>
           )}
         </div>
@@ -715,7 +752,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 data-testid={`button-adaptive-risk-style-${style}`}
               >
                 <span className="block text-[11px] font-semibold">{label}</span>
-                <span className="mt-0.5 block text-[10px] leading-relaxed">{description}</span>
+                <span className="mt-0.5 block text-[10px] leading-relaxed">
+                  {description.replace("{maximum}", formatNumber(selectedRule?.maximumLot, lang, 2))}
+                </span>
               </button>
             ))}
           </div>
@@ -729,7 +768,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               <p className="mt-0.5 text-muted-foreground">
                 {marginCapacity > 0
                   ? copy.adaptive_capacity_value.replace("{lot}", formatNumber(marginCapacity, lang, 2))
-                   : copy.adaptive_capacity_none.replace("{tier}", copy.adaptive_account_mini)}
+                   : copy.adaptive_capacity_none.replace("{tier}", accountTierLabel(form.accountTier, copy))}
               </p>
             </div>
           )}
