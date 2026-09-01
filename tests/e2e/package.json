@@ -7,8 +7,8 @@
     "build-deps": "pnpm --filter @workspace/api-server run build && PORT=20853 BASE_PATH=/ pnpm --filter @workspace/ai-trading run build",
     "install-browsers": "../../scripts/install-e2e-browsers.sh",
     "start-test-server": "node ./server/test-server.mjs",
-    "test": "pnpm run install-browsers && pnpm run build-deps && playwright test",
-    "test:no-build": "playwright test",
+    "test": "pnpm run install-browsers && pnpm run build-deps && pnpm run test:no-build",
+    "test:no-build": "node ./scripts/run-playwright.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

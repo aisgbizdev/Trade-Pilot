@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 4380;
+const PORT = Number(process.env.E2E_TEST_PORT) || 4380;
+const API_PORT = PORT + 1;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const RUN_ID = String(process.env.E2E_TEST_PORT || "default");
 
 // CI-style settings: serial workers, no .only, retries on first failure.
 // Keeping a single worker also avoids two e2e specs racing on the same
@@ -12,7 +14,19 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  outputDir: `./test-results/${RUN_ID}`,
+  reporter: process.env.CI
+    ? [
+        ["list"],
+        [
+          "html",
+          {
+            open: "never",
+            outputFolder: `playwright-report/${RUN_ID}`,
+          },
+        ],
+      ]
+    : "list",
   timeout: 60_000,
   expect: {
     timeout: 15_000,
@@ -50,10 +64,14 @@ export default defineConfig({
     command: "pnpm run start-test-server",
     url: `${BASE_URL}/api/healthz`,
     timeout: 60_000,
-    reuseExistingServer: !process.env.CI,
+    // A completion-validation run may begin while a previous manual run's
+    // server is still tearing down. Reusing that listener lets the first test
+    // pass and then drops every later request with ECONNREFUSED. Each suite run
+    // must own the server lifecycle to keep login fixtures repeatable.
+    reuseExistingServer: false,
     env: {
       PORT: String(PORT),
-      E2E_API_PORT: "4381",
+      E2E_API_PORT: String(API_PORT),
     },
     stdout: "pipe",
     stderr: "pipe",

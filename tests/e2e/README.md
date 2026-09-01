@@ -20,10 +20,15 @@ tests/e2e/
 └── tests/dashboard-prices.spec.ts
 ```
 
-The harness server keeps everything on one origin (`http://127.0.0.1:4380`)
-so that `sameSite=lax` session cookies behave the same as in production.
-Internally it spawns the bundled api-server on `:4381` and reverse-proxies
-`/api/*` to it.
+The harness server keeps everything on one origin so that `sameSite=lax`
+session cookies behave the same as in production. Each Playwright process
+inherits one frontend/API port pair selected by
+`scripts/run-playwright.mjs` (or accepts `E2E_TEST_PORT` as an override),
+starts the bundled api-server on the adjacent port, and reverse-proxies
+`/api/*` to it. Every run owns this server; concurrent manual and validation
+runs therefore cannot attach to or replace each other's listener. Browser
+traces, screenshots, videos, and HTML reports are also written under a
+run-specific subdirectory so one run cannot delete another run's artifacts.
 
 ## Running locally
 
@@ -65,3 +70,18 @@ merge.
    widget drops to the fallback ticker; we assert
    `data-testid="live-prices-fallback"` is mounted and at least one
    `live-quote-*` card is shown.
+
+### Repeatable analysis-detail fixture
+
+`tests/e2e/tests/analysis-detail-responsive.spec.ts` covers the logged-in analysis
+detail screen at desktop and mobile widths. It creates a uniquely named
+`@trade-pilot.test` account for the real registration/login flow, then
+intercepts `GET /api/analyses/9999981` in the browser with a deterministic
+saved-analysis payload. The test navigates directly to that synthetic ID:
+it does not depend on whatever happens to be in History, does not insert an
+analysis row, and does not call the OpenAI-backed create endpoint.
+
+The unique account is scoped to the test run and the browser fixture is
+isolated from development analysis data. The existing E2E harness still uses
+the configured test database for authentication; database-level isolation is
+intentionally a separate concern from this visual regression fixture.

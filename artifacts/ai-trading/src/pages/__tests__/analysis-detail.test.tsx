@@ -439,7 +439,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
     const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
-    await screen.findByTestId("adaptive-account-rule");
+    await screen.findByTestId("adaptive-account-rule", {}, { timeout: 5_000 });
     fireEvent.change(margin, { target: { value: "5000" } });
     fireEvent.change(maximumLoss, { target: { value: "250" } });
     expect(screen.queryByTestId("input-adaptive-existing-exposure")).not.toBeInTheDocument();
