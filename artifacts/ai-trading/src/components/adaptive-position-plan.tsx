@@ -46,7 +46,7 @@ interface FormState {
   availableMargin: string;
   maximumLoss: string;
   existingExposure: string;
-  accountTier: "micro" | "mini";
+  accountTier: AccountTier;
   riskStyle: AdaptiveRiskStyle;
 }
 
@@ -59,7 +59,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v15:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v16:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -71,12 +71,16 @@ function isStoredForm(value: unknown): value is Partial<FormState> {
   return (value.availableMargin === undefined || typeof value.availableMargin === "string") &&
     (value.maximumLoss === undefined || typeof value.maximumLoss === "string") &&
     (value.existingExposure === undefined || typeof value.existingExposure === "string") &&
-    (value.accountTier === undefined || value.accountTier === "micro" || value.accountTier === "mini") &&
+    (value.accountTier === undefined || value.accountTier === "micro" || value.accountTier === "mini" || value.accountTier === "regular") &&
     (value.riskStyle === undefined || isAdaptiveRiskStyle(value.riskStyle));
 }
 
 function accountTierLabel(tier: AccountTier, copy: AdaptiveCopy): string {
-  return tier === "micro" ? copy.adaptive_account_micro : copy.adaptive_account_mini;
+  return tier === "micro"
+    ? copy.adaptive_account_micro
+    : tier === "mini"
+      ? copy.adaptive_account_mini
+      : copy.adaptive_account_regular;
 }
 
 function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommendation {
@@ -672,10 +676,11 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         </details>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
-          <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
+          <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
             {([
               ["micro", copy.adaptive_account_micro, copy.adaptive_account_micro_desc],
               ["mini", copy.adaptive_account_mini, copy.adaptive_account_mini_desc],
+              ["regular", copy.adaptive_account_regular, copy.adaptive_account_regular_desc],
             ] as const).map(([tier, label, description]) => (
               <button
                 key={tier}

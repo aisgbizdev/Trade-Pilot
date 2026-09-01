@@ -972,7 +972,7 @@ export const en = {
     adaptive_account_mini: "Mini",
     adaptive_account_mini_desc: "Minimum 0.10 lot · $100 margin",
     adaptive_account_regular: "Regular",
-    adaptive_account_regular_desc: "Minimum 1.00 lot · $1,000 margin",
+    adaptive_account_regular_desc: "Minimum 1.00 lot · $1,000 margin · max 50 lots",
     adaptive_account_rule: "{tier}: a minimum {lot} lot requires {amount} margin. Maximum {maximum} lot applies to each position, while the complete plan may total more when margin and Stop Loss risk allow it. Contract size is {size} {unit} per lot.",
     adaptive_fixed_scope: "Adaptive Plan is currently limited to canonical XAU/USD analyses. Choose the account tier that matches your active account.",
     adaptive_account_opening_minimum: "The minimum to open a Micro account is {amount}. A lower amount may still be free margin in an account that is already active.",

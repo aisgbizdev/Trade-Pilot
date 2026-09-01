@@ -100,7 +100,7 @@ function buildRecommendation(
   });
 }
 
-describe("XAU/USD Micro and Mini Adaptive Plan", () => {
+describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
   it("uses only the exact canonical XAU/USD identity for Adaptive", () => {
     expect(isXauUsdMiniAdaptiveInstrument("XAU/USD")).toBe(true);
     expect(isXauUsdMiniAdaptiveInstrument(" xau/usd ")).toBe(true);
@@ -121,9 +121,10 @@ describe("XAU/USD Micro and Mini Adaptive Plan", () => {
     expect(getStandardTradingRuleCode("EUR/USD")).toBeNull();
   });
 
-  it("exposes exact Micro and Mini sizing while keeping Regular unavailable", () => {
+  it("exposes exact tier sizing and caps Regular at 50 lots", () => {
     const micro = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "micro");
     const mini = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "mini");
+    const regular = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "regular");
 
     expect(micro).toMatchObject({
       accountTier: "micro",
@@ -144,9 +145,18 @@ describe("XAU/USD Micro and Mini Adaptive Plan", () => {
       marginAtMinimumLot: 100,
       marginPerLot: 1_000,
     });
-    expect(getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "regular")).toBeNull();
+    expect(regular).toMatchObject({
+      accountTier: "regular",
+      minimumLot: 1,
+      maximumLot: 50,
+      lotStep: 1,
+      contractSize: 100,
+      marginAtMinimumLot: 1_000,
+      marginPerLot: 1_000,
+    });
     expect(getAdaptiveMarginCapacity(500, micro)).toBe(0.09);
     expect(getAdaptiveMarginCapacity(500, mini)).toBe(0.5);
+    expect(getAdaptiveMarginCapacity(100_000, regular)).toBe(50);
   });
 
   it("scales Micro lot, margin, contract value, and risk from the Mini rule", () => {
@@ -456,7 +466,7 @@ describe("XAU/USD Micro and Mini Adaptive Plan", () => {
     expect(assessment.result.buy?.rejectedLadder[0]?.financialAlternative).toBeNull();
   });
 
-  it("rejects more than two additions and the unsupported Regular tier", () => {
+  it("rejects more than two additions and accepts a valid Regular tier plan", () => {
     const tooManyLayers = buildAdaptivePositionPlan({ ...VALID_INPUT, levels: 3 });
     const buySideBypass = buildAdaptivePositionPlan({
       ...VALID_INPUT,
@@ -472,6 +482,8 @@ describe("XAU/USD Micro and Mini Adaptive Plan", () => {
       ...VALID_INPUT,
       accountTier: "regular",
       initialLot: 1,
+      levels: 0,
+      maximumLoss: 5_000,
     });
 
     expect(tooManyLayers.valid).toBe(false);
@@ -480,8 +492,75 @@ describe("XAU/USD Micro and Mini Adaptive Plan", () => {
     expect(buySideBypass.errors.join(" ")).toMatch(/Buy additional levels/i);
     expect(sellSideBypass.valid).toBe(false);
     expect(sellSideBypass.errors.join(" ")).toMatch(/Sell additional levels/i);
-    expect(regular.valid).toBe(false);
-    expect(regular.errors.join(" ")).toMatch(/only for the Micro or Mini tier/i);
+    expect(regular.valid).toBe(true);
+    expect(regular.rule).toMatchObject({ maximumLot: 50, contractSize: 100, marginAtMinimumLot: 1_000 });
+  });
+
+  it("scales Regular margin, profit, and loss tenfold from the Mini rule", () => {
+    const miniMinimum = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "mini",
+      initialLot: 0.1,
+      levels: 0,
+      maximumLoss: 5_000,
+    });
+    const regularMinimum = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "regular",
+      initialLot: 1,
+      levels: 0,
+      maximumLoss: 5_000,
+    });
+    // P/L is a per-lot value, so compare both tiers at the same lot size.
+    // Mini correctly rejects one lot as above its 0.9 per-position cap, but
+    // still exposes the calculated candidate for this direct scaling check.
+    const miniPerLot = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "mini",
+      initialLot: 1,
+      levels: 0,
+      maximumLoss: 5_000,
+    });
+    const regularPerLot = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "regular",
+      initialLot: 1,
+      levels: 0,
+      maximumLoss: 5_000,
+    });
+
+    expect(miniMinimum.valid).toBe(true);
+    expect(regularMinimum.valid).toBe(true);
+    expect(regularMinimum.buy?.marginRequired).toBeCloseTo((miniMinimum.buy?.marginRequired ?? 0) * 10);
+    expect(miniPerLot.valid).toBe(false);
+    expect(regularPerLot.valid).toBe(true);
+    expect(regularPerLot.buy?.estimatedCycleLoss).toBeCloseTo((miniPerLot.buy?.estimatedCycleLoss ?? 0) * 10);
+    expect(regularPerLot.buy?.profitToTakeProfit1).toBeCloseTo((miniPerLot.buy?.profitToTakeProfit1 ?? 0) * 10);
+    expect(regularPerLot.buy?.profitToTakeProfit2).toBeCloseTo((miniPerLot.buy?.profitToTakeProfit2 ?? 0) * 10);
+  });
+
+  it("preserves Regular insufficient-funds and maximum-loss blockers", () => {
+    const insufficientFunds = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "regular",
+      initialLot: 1,
+      levels: 0,
+      availableFunds: 999,
+      maximumLoss: 999,
+    });
+    const insufficientLossBudget = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "regular",
+      initialLot: 1,
+      levels: 0,
+      availableFunds: 5_000,
+      maximumLoss: 1_099,
+    });
+
+    expect(insufficientFunds.valid).toBe(false);
+    expect(insufficientFunds.errors.join(" ")).toMatch(/margin exceeds available trading funds/i);
+    expect(insufficientLossBudget.valid).toBe(false);
+    expect(insufficientLossBudget.errors.join(" ")).toMatch(/loss at the final Stop Loss exceeds/i);
   });
 
   it("rejects every non-XAU product from the Adaptive calculator", () => {

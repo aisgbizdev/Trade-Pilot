@@ -282,7 +282,7 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
   },
   regular: {
     minimumLot: 1,
-    maximumLot: null,
+    maximumLot: 50,
     lotStep: 1,
     marginMultiplierFromMini: 10,
     contractMultiplierFromMini: 10,
@@ -380,7 +380,6 @@ function ruleFromStandardTradingRules(
   accountTier: AccountTier,
 ): AdaptiveRule | null {
   const market = adaptiveMarketForInstrument(instrument);
-  if (accountTier === "regular") return null;
   if (!market || !standardRule || standardRule.code !== standardCodeForMarket(market)) return null;
 
   const minMovement = numericValues(standardRule.minimumPriceMovement)[0];
@@ -804,10 +803,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const includeSell = input.includedSides?.sell ?? true;
 
   if (!market) errors.push("Adaptive position planning is available only for the canonical XAU/USD instrument.");
-  if (input.accountTier !== "micro" && input.accountTier !== "mini") {
-    errors.push("Adaptive position planning is currently available only for the Micro or Mini tier.");
-  }
-  else if (!rule) errors.push("TP Standard Trading Rules are unavailable for this instrument.");
+  if (!rule) errors.push("TP Standard Trading Rules are unavailable for this instrument.");
   if (!includeBuy && !includeSell) errors.push("At least one trade-plan side must be included.");
   if (input.availableFunds == null || input.availableFunds <= 0) errors.push("Available trading funds are required.");
   if (input.maximumLoss == null || input.maximumLoss <= 0) errors.push("Maximum acceptable loss is required.");

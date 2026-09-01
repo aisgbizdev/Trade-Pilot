@@ -974,7 +974,7 @@ export const id: Translations = {
     adaptive_account_mini: "Mini",
     adaptive_account_mini_desc: "Minimum 0,10 lot · margin $100",
     adaptive_account_regular: "Regular",
-    adaptive_account_regular_desc: "Minimum 1,00 lot · margin $1.000",
+    adaptive_account_regular_desc: "Minimum 1,00 lot · margin $1.000 · maks. 50 lot",
     adaptive_account_rule: "{tier}: minimum {lot} lot membutuhkan margin {amount}. Maksimum {maximum} lot berlaku untuk setiap posisi, sedangkan total seluruh rencana boleh lebih besar jika margin dan risiko Stop Loss mengizinkan. Contract size {size} {unit} per lot.",
     adaptive_fixed_scope: "Adaptive Plan saat ini hanya untuk analisis canonical XAU/USD. Pilih tier yang sesuai dengan akun aktif kamu.",
     adaptive_account_opening_minimum: "Minimum untuk membuka akun Micro adalah {amount}. Dana yang lebih kecil tetap dapat menjadi free margin jika akun sudah aktif.",
