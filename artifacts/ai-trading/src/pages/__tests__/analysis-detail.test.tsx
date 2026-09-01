@@ -441,6 +441,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(snapshot).toHaveTextContent(/Total planned lots/i);
     expect(snapshot).toHaveTextContent(/0.19 lot/i);
     expect(snapshot).toHaveTextContent(/Hard loss limit/i);
+    expect(screen.getByTestId("adaptive-tp-profit-buy-1")).toHaveTextContent(/Estimated profit.*\+\$/i);
+    expect(screen.getByTestId("adaptive-tp-profit-buy-2")).toHaveTextContent(/Estimated profit.*\+\$/i);
+    expect(buyPlan).toHaveTextContent(/Cumulative profit to TP1/i);
+    expect(buyPlan).toHaveTextContent(/Cumulative profit to TP2/i);
     expect(buyPlan.textContent).toMatch(/manual checkpoints/i);
     expect(buyPlan.textContent).toMatch(/One final Stop Loss/i);
     expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/Position 1 · Initial entry/i);
@@ -459,6 +463,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(sellPlan.textContent).toMatch(/initial entry only/i);
     expect(sellPlan.textContent).toMatch(/One final Stop Loss/i);
     expect(sellPlan.textContent).toMatch(/\$/);
+    expect(screen.getByTestId("adaptive-tp-profit-sell-1")).toHaveTextContent(/Estimated profit.*\+\$/i);
+    expect(screen.getByTestId("adaptive-tp-profit-sell-2")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect((screen.getByTestId("adaptive-risk-details") as HTMLDetailsElement).open).toBe(false);
 
     const storedKey = `trade-pilot:adaptive-plan:v16:${ANALYSIS_ID}`;

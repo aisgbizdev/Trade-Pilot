@@ -419,6 +419,24 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(buy.profitToTakeProfit2).toBeGreaterThan(buy.profitToTakeProfit1);
   });
 
+  it("keeps unavailable take-profit profit values null", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      tradePlan: {
+        ...TRADE_PLAN,
+        buy: { ...TRADE_PLAN.buy, takeProfit2: "n/a" },
+      },
+    });
+    const buy = result.buy!;
+
+    expect(result.valid).toBe(true);
+    expect(buy.takeProfit1).toBe(2315);
+    expect(buy.takeProfit2).toBeNull();
+    expect(buy.profitToTakeProfit1).toBeGreaterThan(0);
+    expect(buy.profitToTakeProfit2).toBeNull();
+    expect(buy.ladder.every((level) => level.cumulativeProfitToTakeProfit2 === null)).toBe(true);
+  });
+
   it("exposes the same financial breakdown for a rejected candidate layer", () => {
     const assessment = buildRecommendation({
       availableMargin: 250,

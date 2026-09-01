@@ -150,6 +150,11 @@ function formatMoney(value: number | null | undefined, lang: "en" | "id", maximu
   return formatted === "—" ? formatted : `$${formatted}`;
 }
 
+function formatProfit(value: number | null | undefined, lang: "en" | "id"): string {
+  const formatted = formatMoney(value, lang);
+  return formatted === "—" ? formatted : `+${formatted}`;
+}
+
 function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, copy: AdaptiveCopy): string {
   const technical = context.technical;
   switch (code) {
@@ -248,6 +253,22 @@ function LayerFinancialBreakdown({
         <dd className={`text-right font-semibold tabular-nums ${exceedsFunds ? "text-amber-700 dark:text-amber-400" : ""}`}>
           {exceedsFunds ? copy.adaptive_layer_exceeds_funds : formatMoney(remainingFunds, lang)}
         </dd>
+        {level.cumulativeProfitToTakeProfit1 != null && (
+          <>
+            <dt className="text-muted-foreground">{copy.adaptive_layer_cumulative_profit_tp1}</dt>
+            <dd className="text-right font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
+              {formatProfit(level.cumulativeProfitToTakeProfit1, lang)}
+            </dd>
+          </>
+        )}
+        {level.cumulativeProfitToTakeProfit2 != null && (
+          <>
+            <dt className="text-muted-foreground">{copy.adaptive_layer_cumulative_profit_tp2}</dt>
+            <dd className="text-right font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
+              {formatProfit(level.cumulativeProfitToTakeProfit2, lang)}
+            </dd>
+          </>
+        )}
       </dl>
       {exceedsFunds && (
         <p className="mt-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
@@ -380,14 +401,24 @@ function PlanSide({
               <p className="text-[10px] text-muted-foreground">{copy.adaptive_loss_limit}</p>
               <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.maximumLoss, lang)}</p>
             </div>
-            <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
-              <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
-            </div>
-            <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
-              <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
-            </div>
+            {plan.takeProfit1 != null && (
+              <div className="rounded-md bg-background/70 p-2" data-testid={`adaptive-take-profit-${plan.side}-1`}>
+                <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
+                <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
+                <p className="mt-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-1`}>
+                  {copy.adaptive_tp_profit}: {formatProfit(plan.profitToTakeProfit1, lang)}
+                </p>
+              </div>
+            )}
+            {plan.takeProfit2 != null && (
+              <div className="rounded-md bg-background/70 p-2" data-testid={`adaptive-take-profit-${plan.side}-2`}>
+                <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
+                <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
+                <p className="mt-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-2`}>
+                  {copy.adaptive_tp_profit}: {formatProfit(plan.profitToTakeProfit2, lang)}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
