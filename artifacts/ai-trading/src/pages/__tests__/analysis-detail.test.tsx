@@ -299,6 +299,60 @@ describe("AnalysisDetailPage: happy-path render", () => {
     fireEvent.click(screen.getByTestId("execution-insight-trigger"));
     expect(screen.getByTestId("execution-insight-content")).toBeVisible();
   });
+
+  it("turns legacy 1m wait-plan n/a values into actionable observation guidance", async () => {
+    const waitPlan = {
+      preferredSide: "wait",
+      buy: {
+        entryZone: "tunggu pullback terkonfirmasi",
+        stopLoss: "n/a",
+        takeProfit1: "n/a",
+        takeProfit2: "n/a",
+        riskRewardRatio: "n/a",
+        rationale: "Timeframe sangat cepat, noise tinggi.",
+      },
+      sell: {
+        entryZone: "tunggu rejection terkonfirmasi",
+        stopLoss: "n/a",
+        takeProfit1: "n/a",
+        takeProfit2: "n/a",
+        riskRewardRatio: "n/a",
+        rationale: "Timeframe sangat cepat, noise tinggi.",
+      },
+    };
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          timeframe: "1m",
+          tradingBias: "neutral",
+          riskLevel: "high",
+          confidenceMin: 25,
+          confidenceMax: 40,
+          tradePlan: waitPlan,
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("fast-plan-wait-guidance")).toHaveTextContent(
+      /No entry yet/i,
+    );
+    expect(screen.getByTestId("trade-plan-buy-sl")).toHaveTextContent(
+      /confirmation swing/i,
+    );
+    expect(screen.getByTestId("trade-plan-sell-rr")).toHaveTextContent(
+      /after entry and stop form/i,
+    );
+    expect(screen.getByTestId("card-trade-plan")).not.toHaveTextContent(/\bn\/a\b/i);
+  });
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {

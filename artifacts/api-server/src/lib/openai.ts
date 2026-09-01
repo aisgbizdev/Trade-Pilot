@@ -431,24 +431,25 @@ async function callOpenAI(
   return { data: JSON.parse(content), usage };
 }
 
-function buildFastIntradayFallback(mode: "beginner" | "pro", timeframe: string): AIOutput {
+export function buildFastIntradayFallback(mode: "beginner" | "pro", timeframe: string): AIOutput {
+  const confirmationWindow = timeframe === "1m" ? "2–3 candle 1m" : "1–2 candle 5m";
   const baseTradePlan: TradePlan = {
     preferredSide: "wait",
     buy: {
-      entryZone: "tunggu pullback terkonfirmasi",
-      stopLoss: "n/a",
-      takeProfit1: "n/a",
-      takeProfit2: "n/a",
-      riskRewardRatio: "n/a",
-      rationale: "Timeframe sangat cepat, noise tinggi.",
+      entryZone: `Belum ada entry — tunggu candle ${timeframe} close di atas resistance mikro`,
+      stopLoss: "Tentukan di bawah swing-low setelah candle konfirmasi",
+      takeProfit1: "Targetkan resistance berikutnya setelah breakout terkonfirmasi",
+      takeProfit2: "Evaluasi setelah TP1 jika momentum tetap bertahan",
+      riskRewardRatio: "Hitung setelah entry dan Stop Loss terbentuk",
+      rationale: `Amati ${confirmationWindow}; analisis ulang setelah breakout terkonfirmasi karena noise sangat tinggi.`,
     },
     sell: {
-      entryZone: "tunggu rejection terkonfirmasi",
-      stopLoss: "n/a",
-      takeProfit1: "n/a",
-      takeProfit2: "n/a",
-      riskRewardRatio: "n/a",
-      rationale: "Timeframe sangat cepat, noise tinggi.",
+      entryZone: `Belum ada entry — tunggu candle ${timeframe} close di bawah support mikro`,
+      stopLoss: "Tentukan di atas swing-high setelah candle konfirmasi",
+      takeProfit1: "Targetkan support berikutnya setelah breakdown terkonfirmasi",
+      takeProfit2: "Evaluasi setelah TP1 jika momentum tetap bertahan",
+      riskRewardRatio: "Hitung setelah entry dan Stop Loss terbentuk",
+      rationale: `Amati ${confirmationWindow}; analisis ulang setelah breakdown terkonfirmasi karena noise sangat tinggi.`,
     },
   };
 
@@ -743,12 +744,16 @@ export async function generateAnalysis(
 
   const systemPrompt =
     mode === "beginner" ? BEGINNER_SYSTEM_PROMPT : PRO_SYSTEM_PROMPT;
-  const fastIntradayPrompt =
-    mode === "beginner"
-      ? `Kamu analis intraday super ringkas untuk timeframe sangat pendek (1m/5m). Keluarkan HANYA JSON valid sesuai schema. Fokus murni pada struktur harga jangka sangat pendek + risiko tinggi noise. Jangan narasi panjang. Setiap field string cukup 1 kalimat pendek. Tetap konsultatif, bukan instruksi order.`
-      : `Kamu analis intraday pro super ringkas untuk timeframe sangat pendek (1m/5m). Keluarkan HANYA JSON valid sesuai schema. Fokus murni pada momentum/struktur mikro + invalidasi cepat. Jangan narasi panjang. Setiap field string cukup 1 kalimat pendek. Tetap konsultatif, bukan instruksi order.`;
-  const effectiveSystemPrompt = isFastIntraday ? fastIntradayPrompt : systemPrompt;
-  const maxTokens = isFastIntraday ? 700 : undefined;
+  const fastIntradayPrompt = `\n\nATURAN TAMBAHAN MODE CEPAT 1m/5m:
+- Tetap ikuti SELURUH schema, aturan tradePlan, anchor harga, dan validasi Buy/Sell di atas.
+- Ringkas setiap field narasi menjadi satu kalimat pendek dan fokus pada struktur mikro.
+- preferredSide boleh "wait" ketika bias netral atau noise tinggi, tetapi jika anchor harga tersedia tradePlan tetap harus memuat level kondisional konkret untuk skenario Buy DAN Sell.
+- Jika anchor harga benar-benar tidak tersedia, jangan mengarang angka: isi tiap field level dengan panduan observasi yang menjelaskan candle konfirmasi, swing invalidasi, target struktur berikutnya, dan kapan analisis perlu diulang. Jangan hanya menulis "n/a".
+- Tetap konsultatif; ini peta skenario, bukan instruksi order.`;
+  const effectiveSystemPrompt = isFastIntraday
+    ? `${systemPrompt}${fastIntradayPrompt}`
+    : systemPrompt;
+  const maxTokens = isFastIntraday ? 1400 : undefined;
   const schema = mode === "beginner" ? BeginnerAIOutputSchema : ProAIOutputSchema;
   const snapshot = fundamentalSnapshot ?? null;
 

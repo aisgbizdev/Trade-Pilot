@@ -586,8 +586,19 @@ function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
     : null;
 }
 
-function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
+function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: string; t: T }) {
   const [copied, setCopied] = useState<"buy" | "sell" | null>(null);
+  const isFastIntraday = timeframe === "1m" || timeframe === "5m";
+  const unavailableLevel = (raw: string, replacement: string): string =>
+    isFastIntraday && /^(?:n\/a|na|—|-)$/i.test(raw.trim()) ? replacement : raw;
+  const displaySide = (side: TradeSide): TradeSide => ({
+    ...side,
+    entryZone: unavailableLevel(side.entryZone, t.analysis_detail.fast_plan_entry_pending),
+    stopLoss: unavailableLevel(side.stopLoss, t.analysis_detail.fast_plan_sl_pending),
+    takeProfit1: unavailableLevel(side.takeProfit1, t.analysis_detail.fast_plan_tp1_pending),
+    takeProfit2: unavailableLevel(side.takeProfit2, t.analysis_detail.fast_plan_tp2_pending),
+    riskRewardRatio: unavailableLevel(side.riskRewardRatio, t.analysis_detail.fast_plan_rr_pending),
+  });
 
   const copyLevels = (side: TradeSide, kind: "buy" | "sell") => {
     const text = [
@@ -617,6 +628,7 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
       : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40";
 
   const renderSide = (side: TradeSide, kind: "buy" | "sell") => {
+    const visibleSide = displaySide(side);
     const accent =
       kind === "buy"
         ? "border-l-emerald-500 dark:border-l-emerald-400"
@@ -646,15 +658,15 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
         </div>
         <dl className="mt-1.5 grid grid-cols-2 gap-x-2.5 gap-y-1 text-[11px]">
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_entry}</dt>
-          <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-entry`}>{side.entryZone}</dd>
+          <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-entry`}>{visibleSide.entryZone}</dd>
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_sl}</dt>
-          <dd className="font-semibold text-red-600 dark:text-red-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-sl`}>{side.stopLoss}</dd>
+          <dd className="font-semibold text-red-600 dark:text-red-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-sl`}>{visibleSide.stopLoss}</dd>
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_tp1}</dt>
-          <dd className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-tp1`}>{side.takeProfit1}</dd>
+          <dd className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-tp1`}>{visibleSide.takeProfit1}</dd>
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_tp2}</dt>
-          <dd className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-tp2`}>{side.takeProfit2}</dd>
+          <dd className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums text-right" data-testid={`trade-plan-${kind}-tp2`}>{visibleSide.takeProfit2}</dd>
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_rr}</dt>
-          <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-rr`}>{side.riskRewardRatio}</dd>
+          <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-rr`}>{visibleSide.riskRewardRatio}</dd>
         </dl>
         <div className="mt-auto min-h-[2.75rem] border-t border-border/60 pt-1">
           <p className="text-[10px] text-muted-foreground leading-snug">
@@ -700,6 +712,15 @@ function TradePlanCard({ plan, t }: { plan: TradePlan; t: T }) {
           {preferredLabel}
         </span>
       </div>
+      {isFastIntraday && plan.preferredSide === "wait" && (
+        <div
+          className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] leading-snug text-amber-800 dark:text-amber-300"
+          data-testid="fast-plan-wait-guidance"
+        >
+          <span className="font-semibold">{t.analysis_detail.fast_plan_wait_title}</span>{" "}
+          {t.analysis_detail.fast_plan_wait_body.replace("{timeframe}", timeframe)}
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         {renderSide(plan.buy, "buy")}
         {renderSide(plan.sell, "sell")}
@@ -2188,7 +2209,7 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
              tradePlan={tradePlan}
              analysisCreatedAt={analysis.createdAt}
            />
-           {tradePlan && <TradePlanCard plan={tradePlan} t={t} />}
+           {tradePlan && <TradePlanCard plan={tradePlan} timeframe={analysis.timeframe} t={t} />}
          </div>
         </div>
 

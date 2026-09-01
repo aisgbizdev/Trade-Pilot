@@ -9,6 +9,7 @@ import {
   computeRiskReward,
   reconcileTradePlanRiskReward,
   sanitizeTradePlanLevels,
+  buildFastIntradayFallback,
   type TradePlan,
 } from "../openai";
 
@@ -277,5 +278,29 @@ describe("sanitizeTradePlanLevels", () => {
     };
     const sanitized = sanitizeTradePlanLevels(plan);
     expect(sanitized).toEqual(plan);
+  });
+});
+
+describe("buildFastIntradayFallback", () => {
+  it.each(["1m", "5m"])(
+    "keeps %s conservative but replaces bare n/a values with an observation plan",
+    (timeframe) => {
+      const fallback = buildFastIntradayFallback("beginner", timeframe);
+
+      expect(fallback.tradingBias).toBe("neutral");
+      expect(fallback.riskLevel).toBe("high");
+      expect(fallback.tradePlan.preferredSide).toBe("wait");
+      for (const side of [fallback.tradePlan.buy, fallback.tradePlan.sell]) {
+        expect(Object.values(side).join(" ").toLowerCase()).not.toContain("n/a");
+        expect(side.entryZone).toContain(`candle ${timeframe}`);
+        expect(side.rationale.toLowerCase()).toContain("analisis ulang");
+      }
+    },
+  );
+
+  it("does not alter the normal-timeframe fallback contract because it is only used for 1m/5m", () => {
+    const fallback = buildFastIntradayFallback("pro", "5m");
+    expect(fallback.tradePlan.buy.entryZone).toMatch(/resistance mikro/i);
+    expect(fallback.tradePlan.sell.entryZone).toMatch(/support mikro/i);
   });
 });
