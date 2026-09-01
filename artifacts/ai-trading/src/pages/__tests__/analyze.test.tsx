@@ -3,9 +3,8 @@
  *
  * Covers happy-path render of the instrument category selector / timeframe grid, the
  * loading-of-quota chip, the disabled-state of the submit button until
- * both an instrument and a timeframe are chosen, the empty "no recent
- * instruments" branch, the absence of the duplicated Recent Analyses
- * section, and a real form submission that hits the
+ * both an instrument and a timeframe are chosen, the absence of the
+ * duplicated Recent Analyses section, and a real form submission that hits the
  * `POST /api/analyses` endpoint and direct navigation to the new detail page.
  *
  * Mocks `globalThis.fetch` for every API route consumed by the page and
@@ -29,13 +28,6 @@ const QUOTA_PAYLOAD = {
   unlimited: false,
   hourly: { remaining: 4, limit: 5 },
   daily: { remaining: 9, limit: 10 },
-};
-
-const RECENT_PAYLOAD = {
-  instruments: [
-    { instrument: "XAU/USD", mode: "beginner" },
-    { instrument: "EUR/USD", mode: "pro" },
-  ],
 };
 
 const LIVE_QUOTES_PAYLOAD = {
@@ -62,18 +54,11 @@ const LIVE_QUOTES_PAYLOAD = {
 };
 
 function pageHandlers(opts: {
-  recent?: typeof RECENT_PAYLOAD;
   quota?: typeof QUOTA_PAYLOAD | { unlimited: true };
   createResult?: { id: number };
   createStatus?: number;
 }): FetchHandler[] {
   return [
-    (url) => {
-      if (url.includes("/api/analyses/recent-instruments")) {
-        return jsonResponse(opts.recent ?? RECENT_PAYLOAD);
-      }
-      return null;
-    },
     (url) => {
       if (url.includes("/api/analyses/quota")) {
         return jsonResponse(opts.quota ?? QUOTA_PAYLOAD);
@@ -135,7 +120,7 @@ afterEach(() => {
 
 describe("AnalyzePage: happy-path render", () => {
   it(
-    "renders the futures tab, timeframe grid, quota chip, recent instruments, and a disabled submit button",
+    "renders the futures tab, timeframe grid, quota chip, and a disabled submit button",
     async () => {
       const { calls } = installFetchMock(pageHandlers({}));
       const { Wrapper } = makeWrapper();
@@ -183,14 +168,6 @@ describe("AnalyzePage: happy-path render", () => {
         ),
       ).toHaveLength(0);
 
-      // Recent instruments come from the API payload.
-      expect(
-        screen.getByTestId("button-recent-XAU/USD"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByTestId("button-recent-EUR/USD"),
-      ).toBeInTheDocument();
-
       // Submit is disabled until both instrument and timeframe are chosen.
       // The default state has no instrument selected yet.
       const submit = screen.getByTestId(
@@ -212,10 +189,9 @@ describe("AnalyzePage: happy-path render", () => {
 });
 
 describe("AnalyzePage: empty / loading branches", () => {
-  it("hides the recent-instruments section when none are returned and skips the quota chip when unlimited", async () => {
+  it("skips the quota chip when unlimited", async () => {
     installFetchMock(
       pageHandlers({
-        recent: { instruments: [] },
         quota: { unlimited: true },
       }),
     );
@@ -228,14 +204,6 @@ describe("AnalyzePage: empty / loading branches", () => {
     );
 
     await screen.findByTestId("tab-futures");
-
-    // No recent instruments -> no recent buttons render.
-    expect(
-      screen.queryByTestId("button-recent-XAU/USD"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId("button-recent-EUR/USD"),
-    ).not.toBeInTheDocument();
 
     // Unlimited quota -> chip is hidden.
     await waitFor(() => {

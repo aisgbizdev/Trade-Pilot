@@ -11,7 +11,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
-import { useCreateAnalysis, useGetRecentInstruments, getGetRecentInstrumentsQueryKey, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useUpdateProfile, getGetMeQueryKey, type RecentInstruments, type CreateAnalysisBodyTimeframe, type User, type UserSelectedMode } from "@workspace/api-client-react";
+import { useCreateAnalysis, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useUpdateProfile, getGetMeQueryKey, type CreateAnalysisBodyTimeframe, type User, type UserSelectedMode } from "@workspace/api-client-react";
 import {
   TradingViewMiniChart,
   type MiniChartDateRange,
@@ -589,11 +589,6 @@ export default function AnalyzePage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isLoading, t]);
 
-  const { data: recentData } = useGetRecentInstruments({
-    query: { queryKey: getGetRecentInstrumentsQueryKey(), staleTime: 60_000 },
-  });
-  const recentInstruments = (recentData as RecentInstruments | undefined)?.instruments?.slice(0, 3) ?? [];
-
   const finalInstrument = customInstrument.trim() || selectedInstrument;
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
   const [alertModalOpen, setAlertModalOpen] = useState(false);
@@ -766,34 +761,6 @@ export default function AnalyzePage() {
         </div>
 
         <div className="space-y-5">
-          {recentInstruments.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-2">{t.dashboard.last_analyzed}</h2>
-              <div className="flex gap-2 flex-wrap">
-                {recentInstruments.map((r) => (
-                  <button
-                    key={r.instrument}
-                    onClick={() => {
-                      setSelectedInstrument(r.instrument);
-                      setCustomInstrument("");
-                      setOpenInstrumentCategory(categoryForInstrument(r.instrument));
-                    }}
-                    data-testid={`button-recent-${r.instrument}`}
-                    className={cn(
-                      "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all flex items-center gap-1.5",
-                      selectedInstrument === r.instrument && !customInstrument
-                        ? "bg-primary/10 border-primary text-primary"
-                        : "bg-background border-border text-foreground hover:border-primary/50"
-                    )}
-                  >
-                    <span>{r.instrument}</span>
-                    <span className="text-muted-foreground text-[10px]">{r.mode === "beginner" ? t.common.beginner : t.common.pro}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
             <div className="grid grid-cols-3 gap-2 mb-3">
