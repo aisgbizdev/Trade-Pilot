@@ -69,7 +69,7 @@ not assumed from a doc.
 | Landing | `/` | Public marketing page; redirects to `/analyze` or `/login` automatically in embed mode |
 | Login / Register / Forgot Password | `/login`, `/register`, `/forgot-password` | Email+password auth; forgot-password is a 3-step security-question flow (email → question → new password), rate-limited |
 | **Analyze** | `/analyze` | The core workspace: instrument picker (Futures/Forex/Crypto tabs + custom text), timeframe picker, live price + spread + market-session badge, mini TradingView chart (1D/1W/1M/3M/1Y range), filtered economic calendar, local community sentiment widget, optional notes, Mental Checklist (4-point pre-trade psychology check, non-blocking), Anti-Pattern Guardrails (revenge-trading/overtrading/high-risk-window/unusual-hour detection with a cooling-off breathing-exercise flow), Set Alert shortcut, quota chip, Submit → AI analysis |
-| **Analysis Detail** | `/analyses/:id` | Signal speedometer (bearish-strong…bullish-strong gauge), market context summary, interactive TradingView chart, technical indicators panel (RSI/MACD/Bollinger/EMA/Stochastic, independently re-timeframeable), two-sided Trade Plan card (buy + sell scenarios: entry/SL/TP1/TP2/R:R/rationale, "wait" fallback when no reliable anchor), Fundamental Context (cited news + calendar items) with Fundamental Drift staleness detection + "Refresh Fundamentals," per-analysis price-alert arm/disarm toggle, private note field, thumbs-up/down feedback + Win/Loss/Breakeven/Skipped outcome tagging, quick timeframe re-analyze switcher, "Log this trade" shortcut into the Journal |
+| **Analysis Detail** | `/analyses/:id` | Signal speedometer (bearish-strong…bullish-strong gauge), market context summary, interactive TradingView chart, technical indicators panel (RSI/MACD/Bollinger/EMA/Stochastic, independently re-timeframeable), two-sided Trade Plan card (buy + sell scenarios: entry/SL/TP1/TP2/R:R/rationale, "wait" fallback when no reliable anchor), **Adaptive Position Plan for canonical XAU/USD with Micro/Mini/Regular sizing, manual layers, and dollar profit estimates per TP**, Fundamental Context (cited news + calendar items) with Fundamental Drift staleness detection + "Refresh Fundamentals," per-analysis price-alert arm/disarm toggle, private note field, thumbs-up/down feedback + Win/Loss/Breakeven/Skipped outcome tagging, quick timeframe re-analyze switcher, "Log this trade" shortcut into the Journal |
 | **History** | `/history` | All past analyses, search, multi-field filter panel (instrument/timeframe/date/mode/outcome) with removable chips, **saved filter presets** (save/rename/delete a named filter combo), per-item refresh (re-pull indicator/fundamental data without a new analysis), delete |
 | **Journal** | `/journal` | Manually logged **executed trades** (separate from AI analyses): instrument, direction, outcome (incl. an "Open"/still-running state), entry/exit price, qty, **mood** tag (Confident/Calm/Uncertain/FOMO/Revenge/Disciplined), notes, timestamp; can be pre-filled from an analysis via "Log this trade"; stats (total trades, win rate, avg PnL%) |
 | **Analytics** | `/analytics` | Personal performance: time-range toggle (7d/30d/All), self-accuracy gauge (based only on analyses with an outcome set), top instruments, dominant mode, weekly bar chart |
@@ -97,6 +97,13 @@ not assumed from a doc.
   Dashboard page itself is currently unrouted — see §9).
 - **Quota**: default 5 analyses/hour, 20/day per user (admin/super_admin
   exempt), configurable via env vars, shown as a color-coded chip.
+
+### Adaptive Position Plan reference
+
+The complete engineering documentation for the Adaptive Position Plan—including
+guardrails, account tiers, multi-layer sizing, USD profit formulas, null/fallback
+behavior, and tests—is in
+[`docs/ADAPTIVE_POSITION_PLAN.md`](./ADAPTIVE_POSITION_PLAN.md).
 
 ---
 

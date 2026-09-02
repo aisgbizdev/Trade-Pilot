@@ -125,7 +125,55 @@ Sama seperti Buy Side, tapi dibalik:
 - Stop Loss selalu **di atas** entry untuk Sell
 - Take Profit 1/2/3 di bawah entry
 
-### 4.7.4 Cara Membaca Risk:Reward
+### 4.7.4 Estimasi Profit Dollar per TP
+
+Pada bagian **Adaptive Position Plan**, kartu TP sekarang menampilkan dua hal:
+
+- harga target TP1 atau TP2; dan
+- **Estimasi profit** dalam USD untuk seluruh posisi yang direkomendasikan
+  jika target tersebut tercapai.
+
+Contoh satu posisi Buy:
+
+```text
+Entry  = 2.301
+TP1    = 2.315
+Lot    = 0,10
+Contract size = 10
+
+Estimasi profit TP1
+= (2.315 - 2.301) × 10 × 0,10
+= $14
+```
+
+Untuk posisi **Sell**, perhitungannya dibalik:
+
+```text
+Estimasi profit
+= (Entry - TP) × contract size × lot
+```
+
+Jika ada beberapa layer, sistem menghitung profit dari setiap harga entry lalu
+menjumlahkannya. Jadi angka pada kartu adalah **profit kumulatif seluruh
+rencana**, bukan profit dari satu layer atau jaminan hasil transaksi.
+
+Di rincian setiap layer, label **Profit kumulatif ke TP1/TP2** menunjukkan jumlah
+profit dari seluruh layer sampai tahap tersebut. Nilai ini mengikuti:
+
+- arah Buy/Sell;
+- lot yang benar-benar direkomendasikan;
+- contract size tier akun Micro/Mini/Regular; dan
+- jarak setiap entry ke target TP.
+
+Jika TP tidak tersedia atau tidak bisa dihitung, sistem tidak membuat angka
+perkiraan. Target yang tersedia saja yang ditampilkan.
+
+> ⚠️ Estimasi profit adalah skenario matematika berdasarkan level analisis yang
+> tersimpan. Spread, slippage, biaya broker, overnight fee, dan order yang
+> ditolak dapat membuat hasil aktual berbeda. Adaptive Plan tidak mengeksekusi
+> transaksi otomatis.
+
+### 4.7.5 Cara Membaca Risk:Reward
 
 ```
 R:R = 1:2.0
@@ -142,7 +190,7 @@ R:R = 1:2.0
 
 > ⚠️ R:R dihitung otomatis oleh sistem dari entry/SL/TP1. Kalau muncul **"n/a"** artinya level yang diberikan AI tidak parseable (biasanya karena preferred side = Wait dan tidak ada angka konkret).
 
-### 4.7.5 Reasoning (Penjelasan AI)
+### 4.7.6 Reasoning (Penjelasan AI)
 
 Klik/tap bagian Reasoning untuk membaca penjelasan lengkap AI tentang:
 - Mengapa memilih level entry di area tersebut
