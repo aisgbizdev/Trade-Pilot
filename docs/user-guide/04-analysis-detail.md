@@ -125,44 +125,7 @@ Sama seperti Buy Side, tapi dibalik:
 - Stop Loss selalu **di atas** entry untuk Sell
 - Take Profit 1/2/3 di bawah entry
 
-### 4.7.4 Cara Kerja Rekomendasi Ukuran Posisi
-
-Di bawah Trade Plan, bagian **Rekomendasi Ukuran Posisi** membantu menghitung
-ukuran posisi manual. Bagian ini tidak mengirim order ke broker.
-
-Urutan penggunaannya:
-
-1. Pilih profil akun **Micro**, **Mini**, atau **Regular** sesuai akun aktif.
-   Pilihan ini menentukan minimum lot, contract size, margin, lot step, dan
-   batas maksimum lot per posisi. Sistem tidak mengganti pilihan ini otomatis.
-2. Masukkan **Dana bebas yang tersedia untuk trading** dalam USD. Masukkan dana
-   yang benar-benar masih dapat dipakai untuk menutup margin dan risiko rencana.
-3. Masukkan **Batas rugi maksimum** dalam USD untuk seluruh rencana, bukan per
-   layer. Nilainya harus lebih dari nol dan tidak boleh melebihi dana bebas.
-4. Pilih **Gaya risiko**:
-   - **Konservatif**: ukuran posisi tambahan cenderung mengecil.
-   - **Seimbang**: pola ukuran campuran.
-   - **Agresif**: ukuran posisi tambahan dapat membesar, tetapi tetap dibatasi
-     margin, Stop Loss, dan cap tier.
-5. Baca **Kapasitas margin teoritis** sebagai preview saja. Angka ini belum
-   memperhitungkan jarak Entry–Stop Loss dan batas rugi seluruh rencana.
-6. Tekan **Buat rekomendasi**.
-
-Sistem lalu menggunakan Entry, Stop Loss, dan TP dari analisis tersimpan,
-Standard Trading Rules, konteks analisis, serta kandidat swing chart terbaru.
-Jika konteks mendukung, sistem dapat membuat entry awal dan maksimal dua
-checkpoint tambahan. Jika timeframe pendek, risiko tinggi, confidence rendah,
-pasar volatil, ada event berdampak tinggi, atau arah sinyal bertentangan, sistem
-mengurangi layer atau hanya menampilkan entry-only.
-
-Jika dana atau batas rugi belum diisi, hasil tidak dapat dihitung. Sistem tidak
-membuat lot atau profit palsu. Tombol **Mulai ulang** menghapus hasil dan
-mengembalikan pilihan ke Mini serta Konservatif.
-
-> Catatan: rencana ini khusus day trade. Overnight, biaya menginap, spread,
-> slippage, dan order yang ditolak tidak termasuk dalam perhitungan.
-
-### 4.7.5 Estimasi Profit Dollar per TP
+### 4.7.4 Estimasi Profit Dollar per TP
 
 Pada bagian **Adaptive Position Plan**, kartu TP sekarang menampilkan dua hal:
 
@@ -210,7 +173,7 @@ perkiraan. Target yang tersedia saja yang ditampilkan.
 > ditolak dapat membuat hasil aktual berbeda. Adaptive Plan tidak mengeksekusi
 > transaksi otomatis.
 
-### 4.7.6 Cara Membaca Risk:Reward
+### 4.7.5 Cara Membaca Risk:Reward
 
 ```
 R:R = 1:2.0
@@ -227,7 +190,7 @@ R:R = 1:2.0
 
 > ⚠️ R:R dihitung otomatis oleh sistem dari entry/SL/TP1. Kalau muncul **"n/a"** artinya level yang diberikan AI tidak parseable (biasanya karena preferred side = Wait dan tidak ada angka konkret).
 
-### 4.7.7 Reasoning (Penjelasan AI)
+### 4.7.6 Reasoning (Penjelasan AI)
 
 Klik/tap bagian Reasoning untuk membaca penjelasan lengkap AI tentang:
 - Mengapa memilih level entry di area tersebut

@@ -430,130 +430,7 @@ checkpoint dan validasi chart sebelum menambah posisi.
 
 ## 6. Perilaku UI
 
-### 6.1 Cara kerja form “Rekomendasi Ukuran Posisi”
-
-Form pada screenshot adalah **form input dan review**, bukan panel eksekusi
-order. Form mengumpulkan parameter yang dibutuhkan engine untuk menyusun
-ukuran posisi manual.
-
-#### A. Header dan detail metode
-
-Judul card menjelaskan bahwa hasilnya adalah rekomendasi ukuran posisi. Subtitle
-menegaskan bahwa rencana tetap manual dan berbasis analisis yang sudah ada serta
-TP Standard Trading Rules.
-
-Bagian **Detail, sumber, dan batas risiko** adalah panel penjelasan yang dapat
-dibuka, bukan input tambahan. Panel ini menerangkan bahwa:
-
-- Entry, Stop Loss, dan TP berasal dari Standard Plan tersimpan;
-- contract size, margin, dan minimum price movement berasal dari TP Standard
-  Trading Rules;
-- candle chart terbaru hanya dipakai untuk mencari kandidat checkpoint;
-- Adaptive tidak mengubah Standard Plan dan tidak mengirim order;
-- perhitungan hanya day trade, tanpa overnight dan biaya menginap;
-- jumlah kandidat Buy/Sell dan status pemuatan chart dapat diperiksa di sana.
-
-#### B. Profil aturan akun tetap
-
-Tiga tombol tier adalah pilihan manual:
-
-| Tier | Default | Minimum lot | Margin minimum XAU/USD | Maksimum per posisi |
-|---|---|---:|---:|---:|
-| Micro | Tidak | 0,01 | $10 | 0,09 lot |
-| Mini | Ya | 0,10 | $100 | 0,90 lot |
-| Regular | Tidak | 1,00 | $1.000 | 50 lot |
-
-Tier awal adalah **Mini**. Ketika tier diganti, rule sizing, contract size,
-minimum lot, lot step, margin, dan preview kapasitas dihitung ulang. Hasil
-rekomendasi lama dihapus karena tidak lagi memakai rule yang sama. Keterangan
-minimum `$50` untuk Micro hanya informasi syarat pembukaan akun; angka itu tidak
-mengubah free margin yang dimasukkan pengguna.
-
-#### C. Dana bebas dan batas rugi
-
-**Dana bebas yang tersedia untuk trading** adalah nominal USD yang benar-benar
-tersedia untuk rencana. Nilai ini harus lebih besar dari nol dan dipakai langsung
-untuk:
-
-- kapasitas lot teoritis;
-- margin day seluruh rencana;
-- margin day ditambah rugi ke Stop Loss final;
-- perhitungan dana tambahan jika layer ditolak.
-
-**Batas rugi maksimum** adalah batas rugi keras dalam USD untuk seluruh rencana,
-bukan batas per layer. Syarat dasarnya:
-
-```text
-availableMargin > 0
-maximumLoss > 0
-maximumLoss <= availableMargin
-```
-
-Engine menghitung rugi tiap layer dari Entry ke satu Stop Loss final lalu
-menjumlahkannya. Ia tidak menaikkan batas rugi secara otomatis. Free margin
-seharusnya sudah mengecualikan margin yang terkunci pada posisi lain.
-
-`existingExposure` tetap diteruskan ke engine dan default-nya `0`, tetapi saat
-ini tidak ditampilkan sebagai field terpisah pada card screenshot. Exposure tidak
-dikurangkan dari cap per-posisi; margin yang sudah terkomitmen harus sudah
-tercermin dalam dana bebas.
-
-#### D. Gaya risiko
-
-Gaya risiko menentukan pola faktor lot tambahan, bukan persentase risiko akun:
-
-| Gaya | Faktor layer tambahan yang diminta |
-|---|---|
-| Konservatif | sekitar 75%, lalu 50% dari lot awal |
-| Seimbang | sekitar 125%, lalu 75% dari lot awal |
-| Agresif | sekitar 125%, lalu 150% dari lot awal |
-
-Lot aktual tetap dibulatkan ke lot step tier, dibatasi cap per posisi, serta
-harus lulus margin dan `maximumLoss`. Profil juga dapat diturunkan oleh konteks:
-market ranging menjadi campuran, sedangkan pola meningkat hanya dipertahankan
-jika trend dan teknikal selaras, risk level rendah, confidence minimum setidaknya
-65, dan tidak ada event fundamental berdampak tinggi.
-
-#### E. Kapasitas margin teoritis
-
-Preview kapasitas muncul setelah Standard Trading Rules tersedia dan dana bebas
-lebih dari nol:
-
-```text
-affordableLots = availableMargin / marginPerLot
-capacity = floor_to_lot_step(
-  min(affordableLots, tierMaximumLot)
-)
-```
-
-Preview ini **belum** memperhitungkan jarak Entry–Stop Loss, batas rugi,
-jumlah layer, atau konteks analisis. Karena itu kapasitas dapat lebih besar
-daripada ukuran posisi final yang direkomendasikan.
-
-#### F. Tombol aksi dan alur internal
-
-Tombol **Buat rekomendasi** aktif setelah Standard Trading Rules dan kandidat
-chart selesai dimuat. Saat ditekan, frontend meneruskan input form, Trade Plan
-Buy/Sell, konteks analisis, Standard Rule, dan checkpoint chart ke
-`buildAdaptivePlanRecommendation()`. Engine kemudian:
-
-1. memvalidasi instrumen, rule, dana, batas rugi, exposure, dan Entry/SL;
-2. menentukan posture dan preferred side dari konteks analisis;
-3. meminta maksimal dua layer tambahan jika konteks mengizinkan;
-4. mencoba lot awal terbesar yang masih muat;
-5. mengurangi layer lalu lot jika margin atau risiko tidak lolos;
-6. menghitung rencana Buy/Sell serta menandai layer yang ditolak;
-7. menyimpan hasil valid untuk analisis tersebut di browser.
-
-Jika input dana atau batas rugi masih kosong seperti pada screenshot, hasil
-menjadi invalid. Sistem tidak membuat lot, profit, Entry, SL, atau TP sintetis.
-
-Tombol **Mulai ulang** mengosongkan dana dan batas rugi, mengembalikan tier ke
-Mini, mengembalikan gaya ke Konservatif, menghapus hasil, dan menghapus
-rekomendasi tersimpan dari browser. Perubahan input juga menghapus hasil yang
-sedang ditampilkan agar pengguna harus menghitung ulang.
-
-### 6.2 Urutan interaksi
+### 6.1 Urutan interaksi
 
 1. Halaman Analysis Detail merender Adaptive hanya untuk XAU/USD canonical.
 2. Frontend mengambil Standard Trading Rules.
@@ -571,7 +448,7 @@ form yang sudah berubah. Rekomendasi yang disimpan di browser memakai fingerprin
 yang mencakup trade plan, konteks fundamental, Standard Trading Rule, kandidat
 chart, tier, dan gaya risiko. Jika salah satu berubah, hasil lama tidak dipakai.
 
-### 6.3 Kartu ringkasan TP
+### 6.2 Kartu ringkasan TP
 
 Untuk setiap sisi yang aktif:
 
@@ -591,7 +468,7 @@ untuk menandai skenario profit positif.
 Kartu hanya dibuat jika target TP tersedia. Jika `profitToTakeProfit` tidak
 tersedia, renderer menggunakan `—`, bukan angka buatan.
 
-### 6.4 Breakdown finansial layer
+### 6.3 Breakdown finansial layer
 
 Setiap layer yang diterima atau ditolak dapat menampilkan:
 
@@ -608,13 +485,13 @@ Label profit memakai kata **kumulatif** agar jelas bahwa nilainya mencakup
 semua layer sampai posisi tersebut. Layer yang ditolak tetap dapat ditampilkan
 sebagai diagnostik, tetapi tidak menjadi rekomendasi yang diterima.
 
-### 6.5 Buy dan Sell
+### 6.4 Buy dan Sell
 
 Buy dan Sell memakai level dari sisi masing-masing pada Standard Plan. Tidak ada
 proses yang membalik level Buy menjadi Sell secara otomatis. Direction selector
 menampilkan satu panel pada satu waktu dan tidak menjalankan order.
 
-### 6.6 Fallback aman
+### 6.5 Fallback aman
 
 Pada konteks tidak lengkap, timeframe terlalu pendek, risiko tinggi, confidence
 rendah, volatilitas, fundamental berdampak tinggi, atau konflik arah, sistem
