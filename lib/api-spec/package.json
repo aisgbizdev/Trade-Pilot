@@ -8,6 +8,6 @@
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.40.1",
-    "orval": "^8.5.2"
+    "orval": "^8.21.0"
   }
 }

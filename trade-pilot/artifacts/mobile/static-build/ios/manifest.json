@@ -1,0 +1,94 @@
+{
+  "id": "5bfc699b-ab5b-45f7-baed-edd9c54f4b7c",
+  "createdAt": "2026-08-27T07:06:32.114Z",
+  "runtimeVersion": "exposdk:54.0.0",
+  "launchAsset": {
+    "key": "bundle-1787814392114-19887",
+    "contentType": "application/javascript",
+    "url": "https://e847f4b6-d1ad-4cbd-8a86-4af306e74a50-00-10lyse6h2gb60.pike.replit.dev/1787814392114-19887/_expo/static/js/ios/bundle.js"
+  },
+  "assets": [],
+  "metadata": {},
+  "extra": {
+    "eas": {},
+    "expoClient": {
+      "name": "Trade Pilot Mobile",
+      "slug": "mobile",
+      "version": "1.0.0",
+      "orientation": "portrait",
+      "icon": "./assets/images/icon.png",
+      "scheme": "mobile",
+      "userInterfaceStyle": "automatic",
+      "newArchEnabled": true,
+      "splash": {
+        "image": "./assets/images/icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0d0c0a",
+        "imageUrl": "http://127.0.0.1:8082/assets/./assets/images/icon.png"
+      },
+      "ios": {
+        "supportsTablet": false
+      },
+      "android": {},
+      "web": {
+        "favicon": "./assets/images/icon.png"
+      },
+      "plugins": [
+        [
+          "expo-router",
+          {
+            "origin": "https://replit.com/"
+          }
+        ],
+        "expo-font",
+        "expo-web-browser"
+      ],
+      "experiments": {
+        "typedRoutes": true,
+        "reactCompiler": true
+      },
+      "_internal": {
+        "isDebug": false,
+        "projectRoot": "/home/runner/workspace/trade-pilot/artifacts/mobile",
+        "dynamicConfigPath": {},
+        "staticConfigPath": "/home/runner/workspace/trade-pilot/artifacts/mobile/app.json",
+        "packageJsonPath": "/home/runner/workspace/trade-pilot/artifacts/mobile/package.json",
+        "pluginHistory": {
+          "expo-font": {
+            "name": "expo-font",
+            "version": "14.0.12"
+          },
+          "expo-web-browser": {
+            "name": "expo-web-browser",
+            "version": "15.0.11"
+          }
+        }
+      },
+      "sdkVersion": "54.0.0",
+      "platforms": [
+        "ios",
+        "android",
+        "web"
+      ],
+      "extra": {
+        "router": {
+          "origin": "https://replit.com/"
+        }
+      },
+      "iconUrl": "http://127.0.0.1:8082/assets/./assets/images/icon.png",
+      "hostUri": "e847f4b6-d1ad-4cbd-8a86-4af306e74a50-00-10lyse6h2gb60.pike.replit.dev/ios"
+    },
+    "expoGo": {
+      "debuggerHost": "e847f4b6-d1ad-4cbd-8a86-4af306e74a50-00-10lyse6h2gb60.pike.replit.dev/ios",
+      "developer": {
+        "tool": "expo-cli",
+        "projectRoot": "/home/runner/workspace/trade-pilot/artifacts/mobile"
+      },
+      "packagerOpts": {
+        "dev": false
+      },
+      "mainModuleName": "node_modules/.pnpm/expo-router@6.0.24_@types+react-dom@19.1.11_@types+react@19.1.17__@types+react@19.1.17__4094ee48018c5b5c8f1246009fce9036/node_modules/expo-router/entry"
+    },
+    "scopeKey": "@anonymous/mobile-b87eda96-b1f4-4da8-a7fb-f387632a5e6e"
+  }
+}
