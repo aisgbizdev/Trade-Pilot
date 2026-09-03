@@ -310,7 +310,7 @@ describe("POST /superadmin/users validation", () => {
     expect(res.status).toBe(201);
     expect(res.body.email).toBe(payload.email.toLowerCase());
     expect(res.body.role).toBe("user");
-    expect(res.body.selectedMode).toBe("beginner");
+    expect(res.body.selectedMode).toBe("pro");
 
     const [row] = await db
       .select({ id: users.id, role: users.role, selectedMode: users.selectedMode })
@@ -319,7 +319,7 @@ describe("POST /superadmin/users validation", () => {
       .limit(1);
     expect(row).toBeDefined();
     expect(row.role).toBe("user");
-    expect(row.selectedMode).toBe("beginner");
+    expect(row.selectedMode).toBe("pro");
   });
 });
 

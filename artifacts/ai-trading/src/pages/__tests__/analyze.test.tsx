@@ -131,10 +131,14 @@ describe("AnalyzePage: happy-path render", () => {
         </Wrapper>,
       );
 
-       // Futures is open by default and renders its instrument grid.
+       // Futures is open by default and renders its instrument grid. Forex
+       // and Crypto tabs are hidden — the instrument picker is currently
+       // scoped to a small futures allowlist (VISIBLE_INSTRUMENTS in
+       // analyze.tsx), so Futures is the only category with any visible
+       // instruments.
       const futuresTab = await screen.findByTestId("tab-futures");
       expect(futuresTab).toBeInTheDocument();
-      expect(screen.getByTestId("tab-forex")).toBeInTheDocument();
+      expect(screen.queryByTestId("tab-forex")).not.toBeInTheDocument();
        expect(futuresTab).toHaveAttribute("aria-expanded", "true");
        expect(screen.getByTestId("instrument-options")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-XAU/USD")).toBeInTheDocument();
@@ -213,7 +217,12 @@ describe("AnalyzePage: empty / loading branches", () => {
 });
 
 describe("AnalyzePage: user actions", () => {
-   it("opens one instrument category at a time and preserves the selected instrument", async () => {
+   // Skipped: the instrument picker is currently scoped to a futures-only
+   // allowlist (VISIBLE_INSTRUMENTS in analyze.tsx), so the Forex tab this
+   // test switches to no longer renders. Kept rather than deleted/rewritten
+   // so widening the allowlist back to multiple categories restores this
+   // coverage immediately.
+   it.skip("opens one instrument category at a time and preserves the selected instrument", async () => {
     installFetchMock(pageHandlers({}));
     const { Wrapper } = makeWrapper();
 
@@ -296,7 +305,7 @@ describe("AnalyzePage: user actions", () => {
       const payload = post.body ? JSON.parse(post.body) : null;
       expect(payload?.instrument).toBe("XAU/USD");
       expect(payload?.timeframe).toBe("1h");
-      expect(payload?.mode).toBe("beginner");
+      expect(payload?.mode).toBe("pro");
       expect(payload?.userInputContext).toBeUndefined();
       expect(window.location.pathname).toBe("/analyses/4242");
     });
@@ -304,7 +313,12 @@ describe("AnalyzePage: user actions", () => {
     expect(screen.queryByTestId("button-view-full-analysis")).not.toBeInTheDocument();
   });
 
-  it("switches the analysis mode and submits the selected Pro mode", async () => {
+  // Skipped: the mode toggle was removed from the Analyze page (every
+  // analysis now runs in "pro" mode, hardcoded — see analyze.tsx) and the
+  // Notes field it used to reveal is separately hidden behind
+  // SHOW_NOTES_INPUT. Kept rather than deleted so restoring either toggle
+  // brings this coverage back immediately.
+  it.skip("switches the analysis mode and submits the selected Pro mode", async () => {
     const { calls } = installFetchMock(pageHandlers({}), { strict: false });
     const { Wrapper } = makeWrapper();
 
@@ -362,7 +376,11 @@ describe("AnalyzePage: user actions", () => {
     expect(screen.queryByTestId("button-view-full-analysis")).not.toBeInTheDocument();
   });
 
-  it("hides optional analysis context for Indonesian beginners but keeps it available in Pro mode", async () => {
+  // Skipped: the Notes field is now hidden unconditionally
+  // (SHOW_NOTES_INPUT = false in analyze.tsx), not gated by mode/language
+  // anymore. Kept rather than deleted so re-enabling the field restores
+  // this coverage immediately.
+  it.skip("hides optional analysis context for Indonesian beginners but keeps it available in Pro mode", async () => {
     localStorage.setItem("app_lang", "id");
     installFetchMock(pageHandlers({}), { strict: false });
     const { Wrapper } = makeWrapper();

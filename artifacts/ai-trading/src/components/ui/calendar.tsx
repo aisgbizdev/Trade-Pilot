@@ -129,7 +129,10 @@ function Calendar({
           return (
             <div
               data-slot="calendar"
-              ref={rootRef}
+              // react-day-picker resolves its own nested @types/react copy in
+              // this workspace, so `rootRef`'s Ref<HTMLDivElement> is
+              // structurally identical but nominally distinct from ours.
+              ref={rootRef as React.Ref<HTMLDivElement>}
               className={cn(className)}
               {...props}
             />

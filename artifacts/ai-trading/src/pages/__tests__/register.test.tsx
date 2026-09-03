@@ -105,7 +105,7 @@ afterEach(() => {
 });
 
 describe("RegisterPage: happy-path render", () => {
-  it("renders the display-name, email, password, mode toggle and security-question controls", async () => {
+  it("renders the display-name, email, password and security-question controls", async () => {
     installFetchMock([registerHandler({})]);
     const { Wrapper } = makeWrapper();
 
@@ -119,8 +119,6 @@ describe("RegisterPage: happy-path render", () => {
     expect(screen.getByTestId("input-display-name")).toBeInTheDocument();
     expect(screen.getByTestId("input-email")).toBeInTheDocument();
     expect(screen.getByTestId("input-password")).toBeInTheDocument();
-    expect(screen.getByTestId("button-mode-beginner")).toBeInTheDocument();
-    expect(screen.getByTestId("button-mode-pro")).toBeInTheDocument();
     expect(screen.getByTestId("select-security-question")).toBeInTheDocument();
     expect(screen.getByTestId("input-security-answer")).toBeInTheDocument();
     expect(screen.getByTestId("button-submit-register")).toBeInTheDocument();
@@ -220,6 +218,9 @@ describe("RegisterPage: success submit", () => {
       expect(payload?.email).toBe("jane@example.com");
       expect(payload?.displayName).toBe("Jane Trader");
       expect(payload?.password).toBe("supersecret123");
+      // The mode toggle was removed from this form — every signup is
+      // now hardcoded to "pro".
+      expect(payload?.selectedMode).toBe("pro");
     });
 
     // wouter writes navigations into the HTML5 history API; after a
@@ -231,7 +232,11 @@ describe("RegisterPage: success submit", () => {
 });
 
 describe("RegisterPage: user actions", () => {
-  it("flips the mode toggle from beginner → pro and reflects the active class", async () => {
+  // Skipped: the mode toggle was removed from the register form (every
+  // signup is now hardcoded to "pro" — see the payload assertion in
+  // "POSTs valid registration data..." above). Kept rather than deleted
+  // so restoring the toggle brings this coverage back immediately.
+  it.skip("flips the mode toggle from beginner → pro and reflects the active class", async () => {
     installFetchMock([registerHandler({})]);
     const { Wrapper } = makeWrapper();
 

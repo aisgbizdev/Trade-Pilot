@@ -44,7 +44,10 @@ function ButtonGroupText({
 }: React.ComponentProps<"div"> & {
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot : "div"
+  // Cast away the union so spreading `props` (typed for a plain div) into
+  // `Comp` doesn't hit Slot's narrower `onChange` typing — Slot and "div"
+  // both accept these props at runtime, this is a type-level-only clash.
+  const Comp = (asChild ? Slot : "div") as React.ElementType
 
   return (
     <Comp

@@ -1,12 +1,11 @@
 /**
  * Component test for the Dashboard (`src/pages/dashboard.tsx`).
  *
- * Covers the happy-path render of the welcome strip, the mode toggle,
- * the analyses-summary stat tiles, the recent-analyses list and the
- * "view history" link; the empty branch where the API returns zero
- * analyses (which swaps the list for the "Start first analysis" CTA);
- * and a user action that toggles the user from beginner → pro mode and
- * fires `PATCH /api/auth/profile` with the new selected mode.
+ * Covers the happy-path render of the welcome strip, the analyses-summary
+ * stat tiles, the recent-analyses list and the "view history" link; and the
+ * empty branch where the API returns zero analyses (which swaps the list
+ * for the "Start first analysis" CTA). The mode-toggle user-action test is
+ * skipped — see the `it.skip` comment below.
  *
  * The Dashboard renders inside `<Layout>`, which mounts widgets with
  * their own data dependencies (`/api/calendar`, `/api/news`,
@@ -148,7 +147,7 @@ afterEach(() => {
 });
 
 describe("DashboardPage: happy-path render", () => {
-  it("renders the welcome strip, mode toggle, summary stats and the recent-analysis card", async () => {
+  it("renders the welcome strip, summary stats and the recent-analysis card", async () => {
     installFetchMock(dashboardHandlers({}));
     const { Wrapper } = makeWrapper();
 
@@ -169,10 +168,6 @@ describe("DashboardPage: happy-path render", () => {
 
     // The "new analysis" CTA renders unconditionally.
     expect(screen.getByTestId("button-new-analysis")).toBeInTheDocument();
-
-    // Mode toggle exposes both tabs.
-    expect(screen.getByTestId("button-mode-beginner")).toBeInTheDocument();
-    expect(screen.getByTestId("button-mode-pro")).toBeInTheDocument();
 
     // The recent analysis card from ANALYSES_PAYLOAD eventually appears.
     expect(await screen.findByTestId("card-analysis-201")).toBeInTheDocument();
@@ -221,7 +216,11 @@ describe("DashboardPage: empty branch", () => {
 });
 
 describe("DashboardPage: user actions", () => {
-  it("PATCHes /api/auth/profile with the new selectedMode when the mode toggle is clicked", async () => {
+  // Skipped: the mode toggle was removed from the Dashboard page (every
+  // analysis now runs in "pro" mode, hardcoded — see dashboard.tsx). Kept
+  // rather than deleted so restoring the toggle brings this coverage back
+  // immediately.
+  it.skip("PATCHes /api/auth/profile with the new selectedMode when the mode toggle is clicked", async () => {
     const { calls } = installFetchMock(
       dashboardHandlers({
         updatedUser: { ...TEST_USER, selectedMode: "pro" },

@@ -97,7 +97,13 @@ function Wrapper({ children }: { children: ReactNode }) {
   return <LanguageProvider>{children}</LanguageProvider>;
 }
 
-describe("Economic Calendar section on Analyze page", () => {
+// The Economic Calendar section is currently hidden on the Analyze page
+// (SHOW_ECONOMIC_CALENDAR_SECTION = false in analyze.tsx) — the component
+// still exists but is no longer reachable through AnalyzePage's render
+// tree, so these tests can't run against it right now. Skipped rather than
+// deleted/rewritten so flipping the flag back on restores full coverage
+// immediately.
+describe.skip("Economic Calendar section on Analyze page", () => {
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.clear();
