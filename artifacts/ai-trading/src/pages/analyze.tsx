@@ -47,7 +47,7 @@ type InstrumentCategory = "futures" | "forex" | "crypto";
 // Temporarily narrows the instrument picker to this allowlist without
 // deleting the underlying instrument data above, so the rest can be
 // re-enabled later just by clearing this list.
-const VISIBLE_INSTRUMENTS = new Set(["XAU/USD", "BRENT", "XAG/USD", "NIKKEI", "HSI"]);
+const VISIBLE_INSTRUMENTS = new Set(["XAU/USD", "BRENT", "NIKKEI", "HSI"]);
 
 const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
   new Set(
@@ -714,42 +714,65 @@ export default function AnalyzePage() {
         <div className="space-y-5">
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
-            <div
-              className={cn(
-                "grid gap-2 mb-3",
-                VISIBLE_INSTRUMENT_CATEGORIES.length === 1 ? "grid-cols-1" : "grid-cols-3",
-              )}
-            >
-              {VISIBLE_INSTRUMENT_CATEGORIES.map((tab) => {
-                const isOpen = openInstrumentCategory === tab;
-                return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setOpenInstrumentCategory((current) => current === tab ? null : tab)}
-                  data-testid={`tab-${tab}`}
-                  aria-expanded={isOpen}
-                  aria-controls={isOpen ? "instrument-options" : undefined}
-                  className={cn(
-                    "flex items-center justify-center gap-1 py-2 text-sm font-medium rounded-lg border transition-all",
-                    isOpen
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border hover:border-primary/50"
-                  )}
-                >
-                  {tab === "futures"
-                    ? t.analyze.tab_futures
-                    : tab === "forex"
-                      ? t.analyze.tab_forex
-                      : t.analyze.tab_crypto}
-                  <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
-                </button>
-                );
-              })}
-            </div>
-            {openInstrumentCategory && (
-              <div id="instrument-options" className="grid grid-cols-2 gap-2" data-testid="instrument-options">
-                {instrumentsForTab(openInstrumentCategory).map((inst) => (
+            {VISIBLE_INSTRUMENT_CATEGORIES.length > 1 ? (
+              <>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {VISIBLE_INSTRUMENT_CATEGORIES.map((tab) => {
+                    const isOpen = openInstrumentCategory === tab;
+                    return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setOpenInstrumentCategory((current) => current === tab ? null : tab)}
+                      data-testid={`tab-${tab}`}
+                      aria-expanded={isOpen}
+                      aria-controls={isOpen ? "instrument-options" : undefined}
+                      className={cn(
+                        "flex items-center justify-center gap-1 py-2 text-sm font-medium rounded-lg border transition-all",
+                        isOpen
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                      )}
+                    >
+                      {tab === "futures"
+                        ? t.analyze.tab_futures
+                        : tab === "forex"
+                          ? t.analyze.tab_forex
+                          : t.analyze.tab_crypto}
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
+                    </button>
+                    );
+                  })}
+                </div>
+                {openInstrumentCategory && (
+                  <div id="instrument-options" className="grid grid-cols-2 gap-2" data-testid="instrument-options">
+                    {instrumentsForTab(openInstrumentCategory).map((inst) => (
+                      <button
+                        key={inst}
+                        type="button"
+                        onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
+                        data-testid={`button-instrument-${inst}`}
+                        className={cn(
+                          "w-full py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all",
+                          selectedInstrument === inst && !customInstrument
+                            ? "bg-primary/10 border-primary text-primary"
+                            : "bg-background border-border text-foreground hover:border-primary/50"
+                        )}
+                      >
+                        {inst}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              // Only one category has any visible instruments right now
+              // (VISIBLE_INSTRUMENTS in this file), so the tab toggle would
+              // just be a single button that always opens the same list —
+              // skip it and show the instruments directly. Restores itself
+              // automatically once a second category has visible items.
+              <div className="grid grid-cols-2 gap-2 mb-3" data-testid="instrument-options">
+                {instrumentsForTab(VISIBLE_INSTRUMENT_CATEGORIES[0]).map((inst) => (
                   <button
                     key={inst}
                     type="button"

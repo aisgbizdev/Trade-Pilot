@@ -120,7 +120,7 @@ afterEach(() => {
 
 describe("AnalyzePage: happy-path render", () => {
   it(
-    "renders the futures tab, timeframe grid, quota chip, and a disabled submit button",
+    "renders the instrument grid, timeframe grid, quota chip, and a disabled submit button",
     async () => {
       const { calls } = installFetchMock(pageHandlers({}));
       const { Wrapper } = makeWrapper();
@@ -131,16 +131,14 @@ describe("AnalyzePage: happy-path render", () => {
         </Wrapper>,
       );
 
-       // Futures is open by default and renders its instrument grid. Forex
-       // and Crypto tabs are hidden — the instrument picker is currently
-       // scoped to a small futures allowlist (VISIBLE_INSTRUMENTS in
-       // analyze.tsx), so Futures is the only category with any visible
-       // instruments.
-      const futuresTab = await screen.findByTestId("tab-futures");
-      expect(futuresTab).toBeInTheDocument();
+       // The instrument picker is currently scoped to a small futures
+       // allowlist (VISIBLE_INSTRUMENTS in analyze.tsx). With only one
+       // category having any visible instruments, the Futures/Forex/Crypto
+       // tab toggle is skipped entirely and the instruments render
+       // directly.
+      expect(screen.queryByTestId("tab-futures")).not.toBeInTheDocument();
       expect(screen.queryByTestId("tab-forex")).not.toBeInTheDocument();
-       expect(futuresTab).toHaveAttribute("aria-expanded", "true");
-       expect(screen.getByTestId("instrument-options")).toBeInTheDocument();
+       expect(await screen.findByTestId("instrument-options")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-XAU/USD")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-BRENT")).toBeInTheDocument();
 
@@ -207,7 +205,7 @@ describe("AnalyzePage: empty / loading branches", () => {
       </Wrapper>,
     );
 
-    await screen.findByTestId("tab-futures");
+    await screen.findByTestId("instrument-options");
 
     // Unlimited quota -> chip is hidden.
     await waitFor(() => {
@@ -391,7 +389,7 @@ describe("AnalyzePage: user actions", () => {
       </Wrapper>,
     );
 
-    await screen.findByTestId("tab-futures");
+    await screen.findByTestId("instrument-options");
     expect(screen.queryByTestId("textarea-notes")).not.toBeInTheDocument();
 
     await act(async () => {
