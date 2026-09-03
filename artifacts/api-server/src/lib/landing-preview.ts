@@ -5,7 +5,7 @@ import {
 import type { TechnicalIndicators } from "./indicators";
 import {
   generateAnalysis,
-  type BeginnerAIOutput,
+  type ProAIOutput,
   type FundamentalSnapshot,
 } from "./openai";
 import {
@@ -33,10 +33,10 @@ export interface LandingPreviewSnapshot {
   generatedAt: string;
   isStale: boolean;
   price: number | null;
-  tradingBias: BeginnerAIOutput["tradingBias"];
+  tradingBias: ProAIOutput["tradingBias"];
   confidenceMin: number;
   confidenceMax: number;
-  preferredSide: BeginnerAIOutput["tradePlan"]["preferredSide"];
+  preferredSide: ProAIOutput["tradePlan"]["preferredSide"];
   levels: {
     entryZone: string;
     stopLoss: string;
@@ -93,7 +93,7 @@ async function createSnapshot(): Promise<LandingPreviewSnapshot> {
   const { output } = await generateAnalysis(
     PREVIEW_INSTRUMENT,
     PREVIEW_TIMEFRAME,
-    "beginner",
+    "pro",
     undefined,
     contextParts.length > 0 ? contextParts.join("\n") : undefined,
     fundamentalSnapshot,
@@ -116,10 +116,10 @@ async function createSnapshot(): Promise<LandingPreviewSnapshot> {
       : preferredSide === "sell"
         ? output.tradePlan.sell
         : null;
-  const confidenceMin = Math.max(1, Math.min(65, output.confidenceMin));
+  const confidenceMin = Math.max(1, Math.min(70, output.confidenceMin));
   const confidenceMax = Math.max(
     confidenceMin + 10,
-    Math.min(75, output.confidenceMax),
+    Math.min(80, output.confidenceMax),
   );
 
   return {

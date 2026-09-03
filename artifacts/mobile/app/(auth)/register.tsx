@@ -18,8 +18,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type Mode = "beginner" | "pro";
-
 const SECURITY_QUESTION = "Nama hewan peliharaan pertama kamu?";
 
 export default function RegisterScreen() {
@@ -32,7 +30,6 @@ export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<Mode>("beginner");
   const [securityAnswer, setSecurityAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +60,7 @@ export default function RegisterScreen() {
         displayName: displayName.trim(),
         email: email.trim().toLowerCase(),
         password,
-        selectedMode: mode,
+        selectedMode: "pro",
         securityQuestion: SECURITY_QUESTION,
         securityAnswer: securityAnswer.trim(),
       },
@@ -234,21 +231,6 @@ export default function RegisterScreen() {
             autoComplete="new-password"
             returnKeyType="next"
           />
-
-          <Text style={s.label}>{t.auth.mode_label}</Text>
-          <View style={s.modeRow}>
-            {(["beginner", "pro"] as Mode[]).map((m) => (
-              <Pressable
-                key={m}
-                style={[s.modeBtn, mode === m && s.modeBtnActive]}
-                onPress={() => setMode(m)}
-              >
-                <Text style={[s.modeBtnText, mode === m && s.modeBtnTextActive]}>
-                  {m === "beginner" ? t.common.beginner : t.common.pro}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
 
           <Text style={s.label}>{t.auth.security_question}</Text>
           <Text style={s.hint}>{SECURITY_QUESTION}</Text>

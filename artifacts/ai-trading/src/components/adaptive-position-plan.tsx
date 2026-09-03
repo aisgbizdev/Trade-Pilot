@@ -397,10 +397,6 @@ function PlanSide({
               <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
               <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
             </div>
-            <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.adaptive_loss_limit}</p>
-              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.maximumLoss, lang)}</p>
-            </div>
             {plan.takeProfit1 != null && (
               <div className="rounded-md bg-background/70 p-2" data-testid={`adaptive-take-profit-${plan.side}-1`}>
                 <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>

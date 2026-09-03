@@ -23,7 +23,7 @@ const schema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   displayName: z.string().min(2),
-  selectedMode: z.enum(["beginner", "pro"]).default("beginner"),
+  selectedMode: z.enum(["beginner", "pro"]).default("pro"),
   securityQuestion: z.string().min(1),
   securityAnswer: z.string().min(2),
 });
@@ -43,7 +43,7 @@ export default function RegisterPage() {
     resolver: zodResolver(schema as any),
     defaultValues: {
       email: "", password: "", displayName: "",
-      selectedMode: "beginner", securityQuestion: "", securityAnswer: "",
+      selectedMode: "pro", securityQuestion: "", securityAnswer: "",
     },
   });
 
@@ -133,34 +133,6 @@ export default function RegisterPage() {
                         </button>
                       </div>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="selectedMode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.analyze.mode_label}</FormLabel>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(["beginner", "pro"] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => field.onChange(mode)}
-                          data-testid={`button-mode-${mode}`}
-                          className={`p-3 rounded-lg border text-sm font-medium transition-all ${
-                            field.value === mode
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border bg-background text-muted-foreground hover:border-primary/50"
-                          }`}
-                        >
-                          {mode === "beginner" ? t.common.beginner : t.common.pro}
-                        </button>
-                      ))}
-                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

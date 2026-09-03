@@ -144,7 +144,7 @@ export const users = pgTable("users", {
   displayName: text("display_name").notNull(),
   avatarUrl: text("avatar_url"),
   role: roleEnum("role").notNull().default("user"),
-  selectedMode: modeEnum("selected_mode").notNull().default("beginner"),
+  selectedMode: modeEnum("selected_mode").notNull().default("pro"),
   themePreference: text("theme_preference").notNull().default("light"),
   onboardingCompleted: boolean("onboarding_completed")
     .notNull()

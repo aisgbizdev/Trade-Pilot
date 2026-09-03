@@ -62,7 +62,7 @@ export default function AnalyzeScreen() {
       data: {
         instrument,
         timeframe,
-        mode: user?.selectedMode ?? "beginner",
+        mode: "pro",
       },
     });
   };

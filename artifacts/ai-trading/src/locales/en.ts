@@ -25,6 +25,7 @@ export const en = {
   landing: {
     login: "Sign In",
     register: "Sign Up",
+    hero_kicker: "The Universe Comes To Us",
     tagline_part1: "See the Market Clearly.",
     tagline_part2: "Decide with Confidence.",
     subtitle_full: "Stop guessing. Start understanding the market with AI.",

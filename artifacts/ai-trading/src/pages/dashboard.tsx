@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { TrendingUp, Plus, Clock, Loader2, Brain, Sparkles, Radio, ArrowUpRight, X } from "lucide-react";
 import { Layout } from "@/components/layout";
@@ -14,13 +14,10 @@ import {
   useGetAnalysisOutcomesSummary, getGetAnalysisOutcomesSummaryQueryKey,
   useGetRecentInstruments, getGetRecentInstrumentsQueryKey,
   useListAnalyses, getListAnalysesQueryKey,
-  useUpdateProfile, getGetMeQueryKey,
   type AnalysesSummary, type AnalysesList, type RecentInstruments,
   type AnalysisOutcomesSummary,
-  type User, type UserSelectedMode,
 } from "@workspace/api-client-react";
 import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
-import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -36,8 +33,6 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { t, lang } = useTranslation();
   const trackOutbound = useTrackOutbound();
-  const queryClient = useQueryClient();
-  const updateProfile = useUpdateProfile();
   const [, setLocation] = useLocation();
   const dateLocale = lang === "id" ? idLocale : enUS;
   const [onboardingDone, setOnboardingDone] = useState(() => isOnboardingDone(user?.id));
@@ -83,32 +78,6 @@ export default function DashboardPage() {
     { page: 1, limit: 5 },
     { query: { queryKey: getListAnalysesQueryKey({ page: 1, limit: 5 }) } }
   );
-
-  const intendedModeRef = useRef<UserSelectedMode | null>(null);
-
-  const handleModeToggle = (mode: UserSelectedMode) => {
-    if (user?.selectedMode === mode) return;
-    intendedModeRef.current = mode;
-    const queryKey = getGetMeQueryKey();
-    queryClient.cancelQueries({ queryKey }).then(() => {
-      const previous = queryClient.getQueryData<User>(queryKey);
-      queryClient.setQueryData<User>(queryKey, (old) =>
-        old ? { ...old, selectedMode: mode } : old
-      );
-      updateProfile.mutate(
-        { data: { selectedMode: mode } },
-        {
-          onError: () => {
-            if (intendedModeRef.current !== mode) return;
-            queryClient.setQueryData(queryKey, previous);
-          },
-          onSettled: () => {
-            queryClient.invalidateQueries({ queryKey });
-          },
-        }
-      );
-    });
-  };
 
   const summaryData = summary as AnalysesSummary | undefined;
   const instrumentsData = recentInstruments as RecentInstruments | undefined;
@@ -197,24 +166,6 @@ export default function DashboardPage() {
             <Plus className="w-4 h-4" />
             {t.dashboard.new_analysis}
           </button>
-        </div>
-
-        <div className="flex gap-2 p-1 bg-muted rounded-xl">
-          {(["beginner", "pro"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => handleModeToggle(mode)}
-              data-testid={`button-mode-${mode}`}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
-                user?.selectedMode === mode
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {mode === "beginner" ? t.common.beginner : `⚡ ${t.common.pro}`}
-            </button>
-          ))}
         </div>
 
         <div className="space-y-5 md:space-y-0 md:columns-2 md:gap-x-5">

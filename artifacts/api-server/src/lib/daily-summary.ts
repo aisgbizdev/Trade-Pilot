@@ -9,7 +9,7 @@ import {
 } from "@workspace/db/schema";
 import { db } from "./db";
 import { logger } from "./logger";
-import { generateAnalysis, getValidUntil } from "./openai";
+import { generateAnalysis, getValidUntil, type ProAIOutput } from "./openai";
 import { estimateCostUsd } from "./model-pricing";
 import { createNotification } from "./create-notification";
 
@@ -23,10 +23,10 @@ const DEFAULT_INSTRUMENTS = ["XAU/USD", "EUR/USD", "BTC/USD"] as const;
 // Timeframe + mode the scheduler uses when it has to GENERATE a fresh
 // analysis (vs. reusing a recent one). `1h` is the sweet spot for a
 // once-a-day morning read — long enough to outlive the morning session,
-// short enough to surface intraday setups — and beginner mode keeps the
-// push body easy to scan.
+// short enough to surface intraday setups. Mode selection was retired
+// app-wide in favor of pro-only.
 const DIGEST_TIMEFRAME = "1h";
-const DIGEST_MODE: "beginner" | "pro" = "beginner";
+const DIGEST_MODE: "beginner" | "pro" = "pro";
 
 // Re-use any same-instrument analysis the user already has within the
 // last N hours instead of burning quota on a fresh one. Chosen to be
@@ -176,14 +176,16 @@ async function resolveAnalysisForInstrument(
         opportunity: aiResult.opportunity,
         risk: aiResult.risk,
         tradePlan: aiResult.tradePlan ?? null,
-        // Beginner-mode narrative fields. Pro-mode fields stay null —
-        // matches what POST /analyses does for the same shape.
-        mainScenario: (aiResult as { mainScenario?: string }).mainScenario ?? null,
-        alternativeScenario:
-          (aiResult as { alternativeScenario?: string }).alternativeScenario ?? null,
-        whyReason: (aiResult as { whyReason?: string }).whyReason ?? null,
-        failureConditions:
-          (aiResult as { failureConditions?: string }).failureConditions ?? null,
+        // Pro-mode narrative fields — matches what POST /analyses does
+        // for the same shape.
+        baseCase: (aiResult as ProAIOutput).baseCase,
+        bullishScenario: (aiResult as ProAIOutput).bullishScenario,
+        bearishScenario: (aiResult as ProAIOutput).bearishScenario,
+        keyDriversTechnical: (aiResult as ProAIOutput).keyDriversTechnical,
+        keyDriversFundamental: (aiResult as ProAIOutput).keyDriversFundamental,
+        marketContext: (aiResult as ProAIOutput).marketContext,
+        invalidationConditions: (aiResult as ProAIOutput).invalidationConditions,
+        uncertaintyNotes: (aiResult as ProAIOutput).uncertaintyNotes,
       })
       .returning();
     await db.insert(aiTokenUsage).values({

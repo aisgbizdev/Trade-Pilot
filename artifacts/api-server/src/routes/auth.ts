@@ -111,7 +111,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
       email: email.toLowerCase(),
       passwordHash,
       displayName,
-      selectedMode: selectedMode ?? "beginner",
+      selectedMode: selectedMode ?? "pro",
       securityQuestion,
       securityAnswerHash,
     })

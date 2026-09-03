@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { leanFromCounts, type MarketContextLean } from "./market-context-summary";
@@ -12,22 +11,13 @@ const GRADIENT_STOPS: ReadonlyArray<{ offset: string; color: string }> = [
   { offset: "75%",  color: "#86efac" },
   { offset: "100%", color: "#6ee7b7" },
 ];
+const GRADIENT_CSS = `linear-gradient(to right, ${GRADIENT_STOPS.map((s) => `${s.color} ${s.offset}`).join(", ")})`;
 
+// Same 5-equal-zone boundaries the old needle gauge marked at
+// -54°/-18°/18°/54° (each zone spans 36° of the -90..90 sweep), just
+// expressed as bar positions instead of angles.
 const ZONE_BOUNDARIES_DEG: ReadonlyArray<number> = [-54, -18, 18, 54];
-
-function polar(cx: number, cy: number, r: number, deg: number): { x: number; y: number } {
-  const rad = (deg * Math.PI) / 180;
-  return { x: cx + r * Math.sin(rad), y: cy - r * Math.cos(rad) };
-}
-
-const fmt = (n: number) => n.toFixed(2);
-
-function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
-  const start = polar(cx, cy, r, startDeg);
-  const end = polar(cx, cy, r, endDeg);
-  const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
-  return `M ${fmt(start.x)} ${fmt(start.y)} A ${r} ${r} 0 ${largeArc} 1 ${fmt(end.x)} ${fmt(end.y)}`;
-}
+const ZONE_BOUNDARIES_PCT = ZONE_BOUNDARIES_DEG.map((deg) => ((deg + 90) / 180) * 100);
 
 /** Map (buy − sell) / total into a needle angle in [-90°, +90°]. */
 export function angleFromCounts(buy: number, sell: number, neutral: number): number {
@@ -38,7 +28,7 @@ export function angleFromCounts(buy: number, sell: number, neutral: number): num
   return clamped * 90;
 }
 
-/** Half-circle gauge with a pastel gradient arc and a needle pointer. */
+/** Horizontal gauge bar with a pastel gradient track and a position marker. */
 export function SignalSpeedometer({
   buy,
   sell,
@@ -67,10 +57,6 @@ export function SignalSpeedometer({
   const { t } = useTranslation();
   const lean: MarketContextLean = leanFromCounts(buy, sell);
 
-  const reactId = useId();
-  const gradientId = `signal-speedo-grad-${reactId.replace(/:/g, "")}`;
-  const trackId = `signal-speedo-track-${reactId.replace(/:/g, "")}`;
-
   const autoLabel =
     lean === "bullish" ? t.analyze.leaning_bullish :
     lean === "bearish" ? t.analyze.leaning_bearish :
@@ -82,40 +68,42 @@ export function SignalSpeedometer({
     "text-amber-600 dark:text-amber-300";
 
   const angle = angleFromCounts(buy, sell, neutral);
-  const needleEnd = polar(50, 50, 36, angle);
+  const positionPct = ((angle + 90) / 180) * 100;
 
   // The wrapper width itself is sized per-preset (rather than `w-full` with a
-  // `max-w` only on the SVG). Critically the `xs` preset uses an explicit
-  // pixel width + `shrink-0` so the row gauge keeps a clear 80×~48px footprint
+  // `max-w` only on the bar). Critically the `xs` preset uses an explicit
+  // pixel width + `shrink-0` so the row gauge keeps a clear 80px footprint
   // even when it lives inside a tight flex-row alongside a fixed-width label
-  // (see `SignalCell` in `technical-indicators-panel.tsx`). Without
+  // (see `SignalCell` in `technical-indicators-panel.tsx`) — without
   // `shrink-0`, a sibling with `min-w-[2.75rem]` would steal space and the
-  // wrapper would collapse, making the half-circle render as an almost-flat
-  // sliver. `sm`/`md` inline their `max-w-` so the larger summary gauges
-  // still stretch to fill their column.
+  // wrapper would collapse. `sm`/`md` inline their `max-w-` so the larger
+  // summary gauges still stretch to fill their column.
   const sizing =
     size === "xs"
       ? {
           wrapperW: "w-20 shrink-0",
-          strokeWidth: 7,
+          barHeight: 8,
+          thumbSize: 14,
           labelText: "text-xs",
           countText: "text-[8px]",
-          labelMt: "mt-0",
+          labelMt: "mt-2",
         }
       : size === "sm"
       ? {
-          wrapperW: "w-full max-w-[120px]",
-          strokeWidth: 8,
-          labelText: "text-xs",
+          wrapperW: "w-full max-w-[150px]",
+          barHeight: 11,
+          thumbSize: 18,
+          labelText: "text-sm",
           countText: "text-[9px]",
-          labelMt: "mt-0.5",
+          labelMt: "mt-2.5",
         }
       : {
-          wrapperW: "w-full max-w-[180px]",
-          strokeWidth: 10,
-          labelText: "text-2xl",
+          wrapperW: "w-full max-w-[220px]",
+          barHeight: 14,
+          thumbSize: 24,
+          labelText: "text-3xl",
           countText: "text-[10px]",
-          labelMt: "mt-1",
+          labelMt: "mt-3",
         };
 
   return (
@@ -124,72 +112,38 @@ export function SignalSpeedometer({
       data-testid={testId ?? "signal-speedometer"}
       data-lean={lean}
     >
-      <svg
-        viewBox="0 0 100 60"
-        preserveAspectRatio="xMidYMid meet"
-        className="block w-full h-auto"
+      <div
+        className="relative w-full"
+        style={{ height: sizing.thumbSize }}
         role="img"
         aria-label={centerLabel}
       >
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-            {GRADIENT_STOPS.map((s) => (
-              <stop key={s.offset} offset={s.offset} stopColor={s.color} />
-            ))}
-          </linearGradient>
-          <linearGradient id={trackId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="currentColor" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0.08" />
-          </linearGradient>
-        </defs>
-
-        <path
-          d={arcPath(50, 50, 40, -90, 90)}
-          fill="none"
-          strokeWidth={sizing.strokeWidth + 1}
-          strokeLinecap="round"
-          stroke={`url(#${trackId})`}
-          className="text-foreground"
-        />
-        <path
-          d={arcPath(50, 50, 40, -88, 88)}
-          fill="none"
-          strokeWidth={sizing.strokeWidth}
-          strokeLinecap="round"
-          stroke={`url(#${gradientId})`}
-        />
-
-        {ZONE_BOUNDARIES_DEG.map((deg) => {
-          const inner = polar(50, 50, 40 - sizing.strokeWidth / 2 - 0.5, deg);
-          const outer = polar(50, 50, 40 + sizing.strokeWidth / 2 + 0.5, deg);
-          return (
-            <line
-              key={`tick-${deg}`}
-              x1={fmt(inner.x)}
-              y1={fmt(inner.y)}
-              x2={fmt(outer.x)}
-              y2={fmt(outer.y)}
-              strokeWidth={0.6}
-              strokeLinecap="round"
-              className="stroke-foreground/25"
+        <div
+          className="absolute top-1/2 left-0 right-0 -translate-y-1/2 rounded-full overflow-hidden"
+          style={{ height: sizing.barHeight, background: GRADIENT_CSS }}
+        >
+          {ZONE_BOUNDARIES_PCT.map((pct) => (
+            <div
+              key={pct}
+              className="absolute top-0 bottom-0 w-px bg-foreground/25"
+              style={{ left: `${pct}%` }}
             />
-          );
-        })}
+          ))}
+        </div>
 
-        <line
-          x1={50}
-          y1={50}
-          x2={fmt(needleEnd.x)}
-          y2={fmt(needleEnd.y)}
-          strokeWidth={1.8}
-          strokeLinecap="round"
-          className="stroke-foreground/80"
+        <div
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/10 flex items-center justify-center"
+          style={{ left: `${positionPct}%`, width: sizing.thumbSize, height: sizing.thumbSize }}
           data-testid="speedometer-needle"
           data-angle={angle.toFixed(1)}
-        />
-        <circle cx={50} cy={50} r={4.5} className="fill-foreground/10" />
-        <circle cx={50} cy={50} r={2.2} className="fill-foreground/70" />
-      </svg>
+          data-position={positionPct.toFixed(1)}
+        >
+          <div
+            className="rounded-full bg-foreground/80"
+            style={{ width: sizing.thumbSize * 0.45, height: sizing.thumbSize * 0.45 }}
+          />
+        </div>
+      </div>
 
       {showCenterLabel && (
         <div

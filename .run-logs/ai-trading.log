@@ -1,0 +1,34 @@
+
+> @workspace/ai-trading@0.0.0 dev C:\laragon\www\Trade-Pilot\artifacts\ai-trading
+> vite --config vite.config.ts --host 0.0.0.0
+
+
+  [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m322[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.121:[1m5173[22m/[39m
+[2m10.28.29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33m@radix-ui/react-alert-dialog[32m[39m
+[2m10.28.29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m11.53.02[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[2m11.53.06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[2m12.03.41[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/register.tsx, /src/index.css[22m
+[2m12.03.44[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/register.tsx, /src/index.css[22m
+[2m12.03.51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/register.tsx, /src/index.css[22m
+[2m12.04.35[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[RUNTIME_ERROR]{"type":"runtime-error","timestamp":1788411876352,"name":"Error","message":"useUpdateProfile is not defined","stack":"    at AnalyzePage C:/laragon/www/Trade-Pilot/artifacts/ai-trading/src/pages/analyze.tsx:553:25\n\n\n\n\n\n\n\n\n","loc":{"line":553,"column":25,"file":"C:/laragon/www/Trade-Pilot/artifacts/ai-trading/src/pages/analyze.tsx"},"frame":"551|    const { toast } = useToast();\n552|    const createAnalysis = useCreateAnalysis();\n553|    const updateProfile = useUpdateProfile();\n   |                          ^\n554|    const trackEvent = useTrackEvent();\n555|    const queryClient = useQueryClient();"}
+[2m12.40.38[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[RUNTIME_ERROR]{"type":"runtime-error","timestamp":1788414039399,"name":"Error","message":"user is not defined","stack":"    at AnalyzePage C:/laragon/www/Trade-Pilot/artifacts/ai-trading/src/pages/analyze.tsx:577:7\n\n\n\n\n\n\n\n\n","loc":{"line":577,"column":7,"file":"C:/laragon/www/Trade-Pilot/artifacts/ai-trading/src/pages/analyze.tsx"},"frame":"575|    useEffect(() => {\n576|      if (user?.selectedMode) setSelectedMode(user.selectedMode);\n577|    }, [user?.selectedMode]);\n   |        ^\n578|  \n579|    useEffect(() => {"}
+[2m12.40.45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[2m12.40.51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[2m12.40.57[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[2m12.42.14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/admin-users.tsx, /src/index.css[22m
+[2m12.42.18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/admin-users.tsx, /src/index.css[22m
+[2m12.56.50[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[2m12.58.03[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/notifications/stream[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m12.58.07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/quotes/live[39m
+Error: connect ECONNREFUSED 127.0.0.1:5000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[2m13.03.14[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m
+[2m13.03.19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/analyze.tsx, /src/index.css[22m

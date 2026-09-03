@@ -11,7 +11,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
-import { useCreateAnalysis, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, useUpdateProfile, getGetMeQueryKey, type CreateAnalysisBodyTimeframe, type User, type UserSelectedMode } from "@workspace/api-client-react";
+import { useCreateAnalysis, useGetAnalysisQuota, getGetAnalysisQuotaQueryKey, type CreateAnalysisBodyTimeframe, type UserSelectedMode } from "@workspace/api-client-react";
 import {
   TradingViewMiniChart,
   type MiniChartDateRange,
@@ -44,6 +44,11 @@ const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY"
 const CRYPTO_INSTRUMENTS_PICKER = ["BTC/USD", "ETH/USD", "SOL/USD", "BNB/USD", "XRP/USD"];
 type InstrumentCategory = "futures" | "forex" | "crypto";
 
+// Temporarily narrows the instrument picker to this allowlist without
+// deleting the underlying instrument data above, so the rest can be
+// re-enabled later just by clearing this list.
+const VISIBLE_INSTRUMENTS = new Set(["XAU/USD", "BRENT", "XAG/USD", "NIKKEI", "HSI"]);
+
 const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
   new Set(
     [...FUTURES_INSTRUMENTS, ...FOREX_INSTRUMENTS, ...CRYPTO_INSTRUMENTS_PICKER]
@@ -54,13 +59,17 @@ const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
 function instrumentsForTab(tab: InstrumentCategory): string[] {
   switch (tab) {
     case "futures":
-      return FUTURES_INSTRUMENTS;
+      return FUTURES_INSTRUMENTS.filter((inst) => VISIBLE_INSTRUMENTS.has(inst));
     case "forex":
-      return FOREX_INSTRUMENTS;
+      return FOREX_INSTRUMENTS.filter((inst) => VISIBLE_INSTRUMENTS.has(inst));
     case "crypto":
-      return CRYPTO_INSTRUMENTS_PICKER;
+      return CRYPTO_INSTRUMENTS_PICKER.filter((inst) => VISIBLE_INSTRUMENTS.has(inst));
   }
 }
+
+const VISIBLE_INSTRUMENT_CATEGORIES = (["futures", "forex", "crypto"] as const).filter(
+  (tab) => instrumentsForTab(tab).length > 0,
+);
 
 function categoryForInstrument(instrument: string): InstrumentCategory {
   if (CRYPTO_INSTRUMENTS_PICKER.includes(instrument)) return "crypto";
@@ -343,6 +352,8 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
 
 const ECON_CAL_CURRENCIES_KEY_BASE = "analyze.economicCalendar.currencies";
 const SHOW_SECONDARY_ANALYSIS_CARDS = false;
+const SHOW_NOTES_INPUT = false;
+const SHOW_ECONOMIC_CALENDAR_SECTION = false;
 type CalendarImpactFilter = "-1" | "0" | "1";
 
 function readStoredCurrencies(storageKey: string): string[] | null {
@@ -536,12 +547,10 @@ function LivePriceChip({ instrument }: { instrument: string }) {
 }
 
 export default function AnalyzePage() {
-  const { user } = useAuth();
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
-  const updateProfile = useUpdateProfile();
   const trackEvent = useTrackEvent();
   const queryClient = useQueryClient();
   const { data: quota } = useGetAnalysisQuota({
@@ -557,17 +566,15 @@ export default function AnalyzePage() {
   const [selectedInstrument, setSelectedInstrument] = useState("");
   const [customInstrument, setCustomInstrument] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1D");
-  const [selectedMode, setSelectedMode] = useState<UserSelectedMode>("beginner");
+  // Mode selection is retired — every analysis now runs in "pro" mode.
+  // Kept as a variable (rather than a literal) since createAnalysis,
+  // the notes gate, and the review card below all still read it.
+  const selectedMode: UserSelectedMode = "pro";
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { enabled: mentalChecklistEnabled } = useMentalChecklistPref();
-  const intendedModeRef = useRef<UserSelectedMode | null>(null);
-
-  useEffect(() => {
-    if (user?.selectedMode) setSelectedMode(user.selectedMode);
-  }, [user?.selectedMode]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -654,40 +661,6 @@ export default function AnalyzePage() {
     }
   };
 
-  const handleModeChange = (mode: UserSelectedMode) => {
-    if (mode === selectedMode) return;
-
-    const queryKey = getGetMeQueryKey();
-    const previous = queryClient.getQueryData<User>(queryKey);
-    intendedModeRef.current = mode;
-    setSelectedMode(mode);
-    queryClient.setQueryData<User>(queryKey, (old) =>
-      old ? { ...old, selectedMode: mode } : old
-    );
-    updateProfile.mutate(
-      { data: { selectedMode: mode } },
-      {
-        onError: () => {
-          if (intendedModeRef.current !== mode) return;
-          setSelectedMode(previous?.selectedMode ?? "beginner");
-          queryClient.setQueryData(queryKey, previous);
-          toast({
-            title: t.analyze.mode_save_failed,
-            variant: "destructive",
-          });
-        },
-        onSuccess: (updated) => {
-          if (intendedModeRef.current === mode) {
-            setSelectedMode(updated.selectedMode);
-          }
-        },
-        onSettled: () => {
-          queryClient.invalidateQueries({ queryKey });
-        },
-      }
-    );
-  };
-
   const handleSubmit = async () => {
     if (!finalInstrument) {
       toast({ title: t.analyze.error_no_instrument, description: t.analyze.error_no_instrument_desc, variant: "destructive" });
@@ -715,33 +688,6 @@ export default function AnalyzePage() {
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1">
             <h1 className="text-lg font-bold text-foreground">{t.analyze.title}</h1>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-xs text-muted-foreground">{t.analyze.mode_label}:</span>
-              <div
-                className="inline-flex gap-1 rounded-lg bg-muted p-1"
-                role="group"
-                aria-label={t.analyze.mode_label}
-                data-testid="analyze-mode-selector"
-              >
-                {(["beginner", "pro"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => handleModeChange(mode)}
-                    aria-pressed={selectedMode === mode}
-                    data-testid={`button-analyze-mode-${mode}`}
-                    className={cn(
-                      "px-3 py-1 rounded-md text-xs font-semibold transition-all",
-                      selectedMode === mode
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {mode === "beginner" ? t.common.beginner : `⚡ ${t.common.pro}`}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
           {canShowQuotaChip && hourlyQuota && dailyQuota && (
             <span
@@ -768,8 +714,13 @@ export default function AnalyzePage() {
         <div className="space-y-5">
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {(["futures", "forex", "crypto"] as const).map((tab) => {
+            <div
+              className={cn(
+                "grid gap-2 mb-3",
+                VISIBLE_INSTRUMENT_CATEGORIES.length === 1 ? "grid-cols-1" : "grid-cols-3",
+              )}
+            >
+              {VISIBLE_INSTRUMENT_CATEGORIES.map((tab) => {
                 const isOpen = openInstrumentCategory === tab;
                 return (
                 <button
@@ -854,7 +805,7 @@ export default function AnalyzePage() {
 
           <div className="space-y-3">
             {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
-            {selectedMode === "pro" && (
+            {SHOW_NOTES_INPUT && selectedMode === "pro" && (
               <>
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -960,7 +911,7 @@ export default function AnalyzePage() {
               <div className="flex items-center justify-between text-sm mt-1">
                 <span className="text-muted-foreground">{t.analyze.mode_label}:</span>
                 <span className="font-semibold text-foreground">
-                  {selectedMode === "beginner" ? t.common.beginner : t.common.pro}
+                  {t.common.pro}
                 </span>
               </div>
             </Card>
@@ -1006,7 +957,7 @@ export default function AnalyzePage() {
             ) : t.analyze.submit_btn}
           </Button>
 
-          <EconomicCalendarSection />
+          {SHOW_ECONOMIC_CALENDAR_SECTION && <EconomicCalendarSection />}
 
           <p
             className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 text-center leading-relaxed"

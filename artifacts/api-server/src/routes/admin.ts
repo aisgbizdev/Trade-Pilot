@@ -934,7 +934,7 @@ router.post("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res
       passwordHash,
       displayName,
       role: role ?? "user",
-      selectedMode: selectedMode ?? "beginner",
+      selectedMode: selectedMode ?? "pro",
       securityQuestion,
       securityAnswerHash,
     })

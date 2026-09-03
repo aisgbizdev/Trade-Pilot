@@ -11,11 +11,9 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 function readAngle(testId = "signal-speedometer"): number {
   const root = screen.getByTestId(testId);
-  const needle = root.querySelector<SVGElement>(
-    "[data-testid='speedometer-needle']",
-  );
-  expect(needle).not.toBeNull();
-  const raw = needle?.getAttribute("data-angle") ?? "0";
+  const marker = root.querySelector<HTMLElement>("[data-testid='speedometer-needle']");
+  expect(marker).not.toBeNull();
+  const raw = marker?.getAttribute("data-angle") ?? "0";
   return Number.parseFloat(raw);
 }
 
@@ -45,7 +43,7 @@ describe("angleFromCounts (pure helper)", () => {
 });
 
 describe("<SignalSpeedometer>", () => {
-  it("renders a needle in the bullish half (angle > 0) when buys dominate", () => {
+  it("renders a marker past the midpoint (angle > 0) when buys dominate", () => {
     render(
       <Wrapper>
         <SignalSpeedometer buy={6} sell={1} neutral={2} />
@@ -58,7 +56,7 @@ describe("<SignalSpeedometer>", () => {
       .toBe("bullish");
   });
 
-  it("renders a needle in the bearish half (angle < 0) when sells dominate", () => {
+  it("renders a marker before the midpoint (angle < 0) when sells dominate", () => {
     render(
       <Wrapper>
         <SignalSpeedometer buy={1} sell={6} neutral={2} />
@@ -71,7 +69,7 @@ describe("<SignalSpeedometer>", () => {
       .toBe("bearish");
   });
 
-  it("renders a centered needle when buys and sells are balanced", () => {
+  it("renders a centered marker when buys and sells are balanced", () => {
     render(
       <Wrapper>
         <SignalSpeedometer buy={3} sell={3} neutral={4} />
@@ -111,19 +109,17 @@ describe("<SignalSpeedometer>", () => {
     );
 
     // Center label and counts row are both suppressed for the bias use-case;
-    // the only text content beyond the SVG should be empty.
+    // the only text content beyond the bar itself should be empty.
     const root = screen.getByTestId("bias-gauge");
     // Counts use the localized "Bullish" / "Bearish" labels, so verifying
     // their absence is the cleanest signal that `showCounts` was honoured.
     expect(root.textContent ?? "").toBe("");
-    // The SVG itself still rendered.
-    expect(root.querySelector("svg")).not.toBeNull();
-    // Needle is still present so the bias use-case still has a pointer.
+    // The position marker is still present so the bias use-case still has a pointer.
     expect(root.querySelector("[data-testid='speedometer-needle']"))
       .not.toBeNull();
   });
 
-  it("uses the provided test id and exposes the needle angle for assertions", () => {
+  it("uses the provided test id and exposes the marker angle/position for assertions", () => {
     render(
       <Wrapper>
         <SignalSpeedometer
@@ -137,14 +133,18 @@ describe("<SignalSpeedometer>", () => {
 
     const angle = readAngle("speedometer-overall");
     expect(angle).toBe(90);
+    const marker = screen
+      .getByTestId("speedometer-overall")
+      .querySelector<HTMLElement>("[data-testid='speedometer-needle']");
+    // angle 90 → all the way to the right end of the bar (100%).
+    expect(Number.parseFloat(marker?.getAttribute("data-position") ?? "0")).toBeCloseTo(100, 5);
   });
 
   it("xs preset uses a fixed, non-shrinkable wrapper so it can't collapse flat in tight flex-rows", () => {
     // Reproduces the regression from Task #86: the per-row `SignalCell` on the
     // Analyze indicators panel renders the gauge inside a flex-row with a
     // sibling `min-w-[2.75rem]` label. If the gauge wrapper is allowed to
-    // flex-shrink, the SVG arc renders as an almost-flat sliver. Lock both
-    // the wrapper width and the SVG aspect-ratio.
+    // flex-shrink, the bar would collapse to nothing. Lock the wrapper width.
     render(
       <Wrapper>
         <div style={{ display: "flex", alignItems: "center", gap: 6, width: 90 }}>
@@ -171,33 +171,13 @@ describe("<SignalSpeedometer>", () => {
     // gets dragged down to a sliver inside a tight flex-row.
     expect(root.className).not.toMatch(/\bw-full\b/);
 
-    const svg = root.querySelector("svg");
-    expect(svg).not.toBeNull();
-    // The half-circle viewBox aspect (100:60) must be preserved so the gauge
-    // never visually flattens — even when the rendered width changes.
-    const viewBox = svg?.getAttribute("viewBox") ?? "";
-    expect(viewBox).toBe("0 0 100 60");
-    // Compute the aspect implied by viewBox + preserveAspectRatio="meet" +
-    // h-auto. Anything below ~0.4 means the gauge would visually flatten,
-    // which is exactly the regression Task #86 fixes.
-    const [, , vbW, vbH] = viewBox.split(/\s+/).map(Number);
-    const aspect = vbH / vbW;
-    expect(aspect).toBeGreaterThan(0.4);
-    // `preserveAspectRatio` must keep the arc's aspect locked rather than
-    // letting it stretch flat.
-    const par = svg?.getAttribute("preserveAspectRatio");
-    expect(par === null || par === "" || /meet/.test(par)).toBe(true);
-    // Class must let height auto-scale with width, so the SVG can't be
-    // forced into a zero-height box by a parent that only sets width.
-    expect(svg?.getAttribute("class") ?? "").toMatch(/\bh-auto\b/);
-
-    // Sanity: the actual needle was rendered (i.e. drawing happened, not
-    // an empty SVG shell), so the gauge isn't silently empty either.
+    // Sanity: the marker actually rendered (i.e. drawing happened, not an
+    // empty shell).
     expect(root.querySelector("[data-testid='speedometer-needle']"))
       .not.toBeNull();
   });
 
-  it("sm and md presets keep `w-full` and the half-circle viewBox so the larger summary gauges still stretch to fill their column without flattening", () => {
+  it("sm and md presets keep `w-full` so the larger summary gauges still stretch to fill their column", () => {
     render(
       <Wrapper>
         <div>
@@ -226,13 +206,11 @@ describe("<SignalSpeedometer>", () => {
       // sm/md must still expand with their column (w-full present, surrounded
       // by other utility classes) so the larger gauges don't visually shrink.
       expect(root.className).toMatch(/(?:^|\s)w-full(?:\s|$)/);
-      const svg = root.querySelector("svg");
-      expect(svg, `${id} should still render its SVG`).not.toBeNull();
-      expect(svg?.getAttribute("viewBox")).toBe("0 0 100 60");
+      expect(root.querySelector("[data-testid='speedometer-needle']")).not.toBeNull();
     }
   });
 
-  it("renders unique gradient ids when multiple speedometers share a page", () => {
+  it("renders independent markers when multiple speedometers share a page", () => {
     render(
       <Wrapper>
         <div>
@@ -242,17 +220,9 @@ describe("<SignalSpeedometer>", () => {
       </Wrapper>,
     );
 
-    const a = screen.getByTestId("gauge-a");
-    const b = screen.getByTestId("gauge-b");
-
-    const gradIdsA = Array.from(a.querySelectorAll("linearGradient")).map((g) => g.id);
-    const gradIdsB = Array.from(b.querySelectorAll("linearGradient")).map((g) => g.id);
-
-    expect(gradIdsA.length).toBeGreaterThan(0);
-    expect(gradIdsB.length).toBeGreaterThan(0);
-    // No overlap between the two instances' gradient id pools.
-    for (const id of gradIdsA) {
-      expect(gradIdsB).not.toContain(id);
-    }
+    const angleA = readAngle("gauge-a");
+    const angleB = readAngle("gauge-b");
+    expect(angleA).toBeGreaterThan(0);
+    expect(angleB).toBeLessThan(0);
   });
 });

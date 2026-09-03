@@ -1737,6 +1737,11 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
     "technical" | "fundamental" | "market" | null
   >(null);
   const [executionInsightOpen, setExecutionInsightOpen] = useState(false);
+  const [invalidationOpen, setInvalidationOpen] = useState(false);
+  const [opportunityOpen, setOpportunityOpen] = useState(false);
+  const [riskOpen, setRiskOpen] = useState(false);
+  const [scenariosOpen, setScenariosOpen] = useState(false);
+  const [proDetailsOpen, setProDetailsOpen] = useState(false);
   const quickTimeframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickTimeframeTargetRef = useRef<string | null>(null);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -2325,21 +2330,34 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
         {/* HIGH PRIORITY: Invalidation conditions */}
         {invalidationItems.length > 0 && (
           <Card
-            className="p-4 border-l-4 border-l-red-500 dark:border-l-red-400 bg-red-50/40 dark:bg-red-950/20"
+            className="overflow-hidden border-l-4 border-l-red-500 dark:border-l-red-400 bg-red-50/40 dark:bg-red-950/20"
             data-testid="card-invalidation"
           >
-            <div className="flex gap-2.5">
-              <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div>
-                  <h3 className="text-sm font-bold text-red-700 dark:text-red-400">
-                    {t.analysis_detail.invalidation_title}
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {t.analysis_detail.invalidation_subtitle}
-                  </p>
+            <Collapsible open={invalidationOpen} onOpenChange={setInvalidationOpen}>
+              <CollapsibleTrigger
+                className="w-full flex items-start gap-2.5 p-4 text-left transition-colors hover:bg-red-100/40 dark:hover:bg-red-950/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                data-testid="invalidation-trigger"
+                aria-label={`${invalidationOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.invalidation_title}`}
+              >
+                <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-red-700 dark:text-red-400">
+                      {t.analysis_detail.invalidation_title}
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {t.analysis_detail.invalidation_subtitle}
+                    </p>
+                  </div>
+                  {invalidationOpen ? (
+                    <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  ) : (
+                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  )}
                 </div>
-                <ul className="space-y-1.5" data-testid="list-invalidation">
+              </CollapsibleTrigger>
+              <CollapsibleContent className="border-t border-red-200/60 dark:border-red-900/40">
+                <ul className="space-y-1.5 p-4 pt-3" data-testid="list-invalidation">
                   {invalidationItems.map((item, i) => (
                     <li key={i} className="flex gap-2 text-sm text-foreground">
                       <span className="text-red-500 mt-0.5">•</span>
@@ -2347,8 +2365,8 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
                     </li>
                   ))}
                 </ul>
-              </div>
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
         )}
 
@@ -2357,121 +2375,183 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="grid-opp-risk">
             {analysis.opportunity && (
               <Card
-                className="p-4 border-l-4 border-l-emerald-500 dark:border-l-emerald-400"
+                className="overflow-hidden border-l-4 border-l-emerald-500 dark:border-l-emerald-400"
                 data-testid="card-opportunity"
               >
-                <div className="flex gap-2 mb-2">
-                  <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                    {t.analysis_detail.opportunity_title}
-                  </h3>
-                </div>
-                <p className="text-sm text-foreground leading-relaxed">{analysis.opportunity}</p>
+                <Collapsible open={opportunityOpen} onOpenChange={setOpportunityOpen}>
+                  <CollapsibleTrigger
+                    className="w-full flex items-center justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    data-testid="opportunity-trigger"
+                    aria-label={`${opportunityOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.opportunity_title}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                        {t.analysis_detail.opportunity_title}
+                      </h3>
+                    </div>
+                    {opportunityOpen ? (
+                      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="border-t border-border">
+                    <p className="text-sm text-foreground leading-relaxed p-4">{analysis.opportunity}</p>
+                  </CollapsibleContent>
+                </Collapsible>
               </Card>
             )}
             {analysis.risk && (
               <Card
-                className="p-4 border-l-4 border-l-amber-500 dark:border-l-amber-400"
+                className="overflow-hidden border-l-4 border-l-amber-500 dark:border-l-amber-400"
                 data-testid="card-risk"
               >
-                <div className="flex gap-2 mb-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400">
-                    {t.analysis_detail.risk_title}
-                  </h3>
-                </div>
-                <p className="text-sm text-foreground leading-relaxed">{analysis.risk}</p>
+                <Collapsible open={riskOpen} onOpenChange={setRiskOpen}>
+                  <CollapsibleTrigger
+                    className="w-full flex items-center justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    data-testid="risk-trigger"
+                    aria-label={`${riskOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.risk_title}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                        {t.analysis_detail.risk_title}
+                      </h3>
+                    </div>
+                    {riskOpen ? (
+                      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="border-t border-border">
+                    <p className="text-sm text-foreground leading-relaxed p-4">{analysis.risk}</p>
+                  </CollapsibleContent>
+                </Collapsible>
               </Card>
             )}
           </div>
         )}
 
         {/* SCENARIOS A / B / C */}
-        <Card className="p-3 sm:p-4 space-y-2" data-testid="card-scenarios">
-          <div className="px-3 pb-1">
-            <h2 className="text-base font-bold text-foreground">{t.analysis_detail.scenarios_section}</h2>
-          </div>
-          {scenarioAContent && (
-            <NarrativeDisclosure
-              title={t.analysis_detail.scenario_a}
-              content={scenarioAContent}
-              open={openScenario === "a"}
-              onOpenChange={(open) => setOpenScenario(open ? "a" : null)}
-              testId="scenario-a-disclosure"
-              t={t}
-            />
-          )}
-          {scenarioBContent && (
-            <NarrativeDisclosure
-              title={t.analysis_detail.scenario_b}
-              content={scenarioBContent}
-              open={openScenario === "b"}
-              onOpenChange={(open) => setOpenScenario(open ? "b" : null)}
-              testId="scenario-b-disclosure"
-              t={t}
-            />
-          )}
-          <NarrativeDisclosure
-            title={t.analysis_detail.scenario_c}
-            content={scenarioCText(bias ?? "neutral", t)}
-            open={openScenario === "c"}
-            onOpenChange={(open) => setOpenScenario(open ? "c" : null)}
-            testId="scenario-c-disclosure"
-            t={t}
-          />
+        <Card className="overflow-hidden" data-testid="card-scenarios">
+          <Collapsible open={scenariosOpen} onOpenChange={setScenariosOpen}>
+            <CollapsibleTrigger
+              className="w-full flex items-center justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              data-testid="scenarios-trigger"
+              aria-label={`${scenariosOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.scenarios_section}`}
+            >
+              <h2 className="text-base font-bold text-foreground">{t.analysis_detail.scenarios_section}</h2>
+              {scenariosOpen ? (
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              ) : (
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              )}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="border-t border-border">
+              <div className="p-3 sm:p-4 space-y-2">
+                {scenarioAContent && (
+                  <NarrativeDisclosure
+                    title={t.analysis_detail.scenario_a}
+                    content={scenarioAContent}
+                    open={openScenario === "a"}
+                    onOpenChange={(open) => setOpenScenario(open ? "a" : null)}
+                    testId="scenario-a-disclosure"
+                    t={t}
+                  />
+                )}
+                {scenarioBContent && (
+                  <NarrativeDisclosure
+                    title={t.analysis_detail.scenario_b}
+                    content={scenarioBContent}
+                    open={openScenario === "b"}
+                    onOpenChange={(open) => setOpenScenario(open ? "b" : null)}
+                    testId="scenario-b-disclosure"
+                    t={t}
+                  />
+                )}
+                <NarrativeDisclosure
+                  title={t.analysis_detail.scenario_c}
+                  content={scenarioCText(bias ?? "neutral", t)}
+                  open={openScenario === "c"}
+                  onOpenChange={(open) => setOpenScenario(open ? "c" : null)}
+                  testId="scenario-c-disclosure"
+                  t={t}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         {/* PRO MODE: Technical + Fundamental + Market context */}
         {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
-          <Card className="p-3 sm:p-4 space-y-2" data-testid="card-pro-details">
-            <div className="px-3 pb-1">
-              <h2 className="text-base font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h2>
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                {t.analysis_detail.narrative_details_intro}
-              </p>
-            </div>
-            <NarrativeDisclosure
-              title={t.analysis_detail.pro_factor_technical}
-              content={analysis.keyDriversTechnical}
-              open={openProFactor === "technical"}
-              onOpenChange={(open) => setOpenProFactor(open ? "technical" : null)}
-              testId="pro-factor-technical"
-              t={t}
-            />
-            {/* Inline source chips next to the AI's fundamental + market-
-                context narrative (task #89) — duplicate the chip block
-                under both because the AI tends to reference fundamental
-                catalysts in either / both depending on the prompt. */}
-            <NarrativeDisclosure
-              title={t.analysis_detail.pro_factor_fundamental}
-              content={analysis.keyDriversFundamental}
-              open={openProFactor === "fundamental"}
-              onOpenChange={(open) => setOpenProFactor(open ? "fundamental" : null)}
-              testId="pro-factor-fundamental"
-              t={t}
-              citations={
-                <CitationChips
-                  citations={analysis.fundamentalCitations}
-                  context={analysis.fundamentalContext}
-                  t={t}
-                />
-              }
-            />
-            <NarrativeDisclosure
-              title={t.analysis_detail.pro_factor_market_context}
-              content={analysis.marketContext}
-              open={openProFactor === "market"}
-              onOpenChange={(open) => setOpenProFactor(open ? "market" : null)}
-              testId="pro-factor-market-context"
-              t={t}
-              citations={
-                <CitationChips
-                  citations={analysis.fundamentalCitations}
-                  context={analysis.fundamentalContext}
-                  t={t}
-                />
-              }
-            />
+          <Card className="overflow-hidden" data-testid="card-pro-details">
+            <Collapsible open={proDetailsOpen} onOpenChange={setProDetailsOpen}>
+              <CollapsibleTrigger
+                className="w-full flex items-start justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                data-testid="pro-details-trigger"
+                aria-label={`${proDetailsOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.narrative_details_title}`}
+              >
+                <div>
+                  <h2 className="text-base font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h2>
+                  <p className="text-[11px] leading-snug text-muted-foreground">
+                    {t.analysis_detail.narrative_details_intro}
+                  </p>
+                </div>
+                {proDetailsOpen ? (
+                  <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                ) : (
+                  <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="border-t border-border">
+                <div className="p-3 sm:p-4 space-y-2">
+                  <NarrativeDisclosure
+                    title={t.analysis_detail.pro_factor_technical}
+                    content={analysis.keyDriversTechnical}
+                    open={openProFactor === "technical"}
+                    onOpenChange={(open) => setOpenProFactor(open ? "technical" : null)}
+                    testId="pro-factor-technical"
+                    t={t}
+                  />
+                  {/* Inline source chips next to the AI's fundamental + market-
+                      context narrative (task #89) — duplicate the chip block
+                      under both because the AI tends to reference fundamental
+                      catalysts in either / both depending on the prompt. */}
+                  <NarrativeDisclosure
+                    title={t.analysis_detail.pro_factor_fundamental}
+                    content={analysis.keyDriversFundamental}
+                    open={openProFactor === "fundamental"}
+                    onOpenChange={(open) => setOpenProFactor(open ? "fundamental" : null)}
+                    testId="pro-factor-fundamental"
+                    t={t}
+                    citations={
+                      <CitationChips
+                        citations={analysis.fundamentalCitations}
+                        context={analysis.fundamentalContext}
+                        t={t}
+                      />
+                    }
+                  />
+                  <NarrativeDisclosure
+                    title={t.analysis_detail.pro_factor_market_context}
+                    content={analysis.marketContext}
+                    open={openProFactor === "market"}
+                    onOpenChange={(open) => setOpenProFactor(open ? "market" : null)}
+                    testId="pro-factor-market-context"
+                    t={t}
+                    citations={
+                      <CitationChips
+                        citations={analysis.fundamentalCitations}
+                        context={analysis.fundamentalContext}
+                        t={t}
+                      />
+                    }
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
         )}
 

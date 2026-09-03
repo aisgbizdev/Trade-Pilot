@@ -9,6 +9,7 @@ import {
   Target,
   ArrowUpRight,
   Lightbulb,
+  Sparkles,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
@@ -116,6 +117,14 @@ export default function LandingPage() {
           </div>
 
           <div className="relative z-10 lg:max-w-xl lg:mx-auto">
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-400/30 bg-amber-400/10 text-[10px] font-semibold uppercase tracking-widest text-amber-200 mb-4"
+              data-testid="text-hero-kicker"
+            >
+              <Sparkles className="w-3 h-3 text-amber-400" aria-hidden="true" />
+              {t.landing.hero_kicker}
+            </span>
+
             <h1 className="text-[2rem] lg:text-[2.75rem] font-extrabold leading-[1.15] mb-4 text-white" data-testid="text-hero-headline">
               <span className="gradient-text">{t.landing.tagline_part1}</span>
               <br />

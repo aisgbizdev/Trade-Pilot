@@ -269,6 +269,9 @@ describe("AnalysisDetailPage: happy-path render", () => {
       </Wrapper>,
     );
 
+    // The Scenarios card itself is a collapsed section now — open it first.
+    fireEvent.click(await screen.findByTestId("scenarios-trigger"));
+
     expect(await screen.findByTestId("scenario-a-disclosure-content")).toHaveTextContent(
       /primary bullish path/i,
     );
@@ -281,6 +284,9 @@ describe("AnalysisDetailPage: happy-path render", () => {
       /shift the path bearish/i,
     );
     expect(screen.getByTestId("scenario-b-disclosure-content")).toBeVisible();
+
+    // "Why this analysis" is likewise a collapsed section — open it first.
+    fireEvent.click(screen.getByTestId("pro-details-trigger"));
 
     expect(screen.getByTestId("pro-factor-technical-content")).not.toBeVisible();
     expect(screen.getByTestId("pro-factor-fundamental-content")).not.toBeVisible();
@@ -440,7 +446,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(snapshot).toHaveTextContent(/3 positions/i);
     expect(snapshot).toHaveTextContent(/Total planned lots/i);
     expect(snapshot).toHaveTextContent(/0.19 lot/i);
-    expect(snapshot).toHaveTextContent(/Hard loss limit/i);
     expect(screen.getByTestId("adaptive-tp-profit-buy-1")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect(screen.getByTestId("adaptive-tp-profit-buy-2")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect(buyPlan).toHaveTextContent(/Cumulative profit to TP1/i);

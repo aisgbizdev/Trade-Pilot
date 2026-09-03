@@ -84,7 +84,7 @@ function AdminUsersContent() {
     password: "",
     displayName: "",
     role: "user",
-    selectedMode: "beginner",
+    selectedMode: "pro",
     securityQuestion: defaultSecurityQuestion,
     securityAnswer: "",
   });
@@ -117,7 +117,7 @@ function AdminUsersContent() {
       queryClient.invalidateQueries({ queryKey: getGetAllUsersQueryKey() });
       setCreateOpen(false);
       toast({ title: t.admin.user_create_success });
-      setCreateForm({ email: "", password: "", displayName: "", role: "user", selectedMode: "beginner", securityQuestion: defaultSecurityQuestion, securityAnswer: "" });
+      setCreateForm({ email: "", password: "", displayName: "", role: "user", selectedMode: "pro", securityQuestion: defaultSecurityQuestion, securityAnswer: "" });
     } catch (err: unknown) {
       toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.user_create_failed, variant: "destructive" });
     }

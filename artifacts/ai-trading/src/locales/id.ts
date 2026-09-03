@@ -27,6 +27,7 @@ export const id: Translations = {
   landing: {
     login: "Masuk",
     register: "Daftar",
+    hero_kicker: "The Universe Comes To Us",
     tagline_part1: "Lihat Pasar Lebih Jernih.",
     tagline_part2: "Putuskan Lebih Yakin.",
     subtitle_full: "Berhenti menebak. Mulai memahami pasar dengan AI.",
