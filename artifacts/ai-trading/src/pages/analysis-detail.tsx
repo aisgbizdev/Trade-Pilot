@@ -1975,13 +1975,15 @@ export default function AnalysisDetailPage({
     <Wrap>
       <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setLocation("/history")}
-            className="p-2 rounded-lg hover:bg-muted"
-            data-testid="button-back"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+          {!embedded && (
+            <button
+              onClick={() => setLocation("/history")}
+              className="p-2 rounded-lg hover:bg-muted"
+              data-testid="button-back"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg font-bold text-foreground" data-testid="text-instrument">
