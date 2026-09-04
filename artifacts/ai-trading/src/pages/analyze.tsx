@@ -862,7 +862,8 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          <div className="space-y-3">
+          {(SHOW_RELEVANT_CALENDAR_PREVIEW || (SHOW_NOTES_INPUT && selectedMode === "pro")) && (
+          <div className="space-y-3 min-[520px]:col-span-2">
             {SHOW_RELEVANT_CALENDAR_PREVIEW && finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
             {SHOW_NOTES_INPUT && selectedMode === "pro" && (
               <>
@@ -901,6 +902,7 @@ export default function AnalyzePage() {
               </>
             )}
           </div>
+          )}
 
           {finalInstrument && selectedTimeframe && (
             <Card className="min-w-0 p-3 bg-muted/50 border-dashed">
