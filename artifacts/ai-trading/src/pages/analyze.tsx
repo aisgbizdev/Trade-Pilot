@@ -356,6 +356,10 @@ const SHOW_NOTES_INPUT = false;
 const SHOW_ECONOMIC_CALENDAR_SECTION = false;
 const SHOW_RELEVANT_CALENDAR_PREVIEW = false;
 const SHOW_TIMEFRAME_PICKER = false;
+
+// Narrows the mini-chart range picker to this allowlist without deleting
+// the other options above, so they're a one-line revert away.
+const VISIBLE_MINI_CHART_RANGES = new Set<MiniChartDateRange>(["1M", "3M"]);
 type CalendarImpactFilter = "-1" | "0" | "1";
 
 function readStoredCurrencies(storageKey: string): string[] | null {
@@ -912,7 +916,9 @@ export default function AnalyzePage() {
                     {t.widgets.mini_chart_range_title}
                   </h3>
                   <div className="flex gap-1" role="group" aria-label={t.widgets.mini_chart_range_title}>
-                    {(["1D", "1W", "1M", "3M", "1Y"] as const).map((r) => {
+                    {(["1D", "1W", "1M", "3M", "1Y"] as const)
+                      .filter((r) => VISIBLE_MINI_CHART_RANGES.has(r))
+                      .map((r) => {
                       const labelKey = `mini_chart_range_${r.toLowerCase()}` as
                         | "mini_chart_range_1d"
                         | "mini_chart_range_1w"
