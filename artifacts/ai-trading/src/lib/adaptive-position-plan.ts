@@ -100,6 +100,7 @@ export interface AdaptivePositionPlanInput {
   sideLevels?: { buy?: number; sell?: number };
   includedSides?: { buy: boolean; sell: boolean };
   layerLotFactors?: readonly number[];
+  layerRiskWeights?: readonly number[];
   checkpointPrices?: { buy?: number[]; sell?: number[] };
 }
 
@@ -175,6 +176,10 @@ export interface AdaptivePlanRecommendation {
     positions: number;
     marginBudget: number;
     maximumLoss: number;
+    usableRiskBudget: number;
+    riskUtilizationRate: number;
+    contextRiskMultiplier: number;
+    unusedRiskBuffer: number;
     riskStyle: AdaptiveRiskStyle;
     lotProfile: AdaptiveLotProfile;
   } | null;
@@ -186,6 +191,15 @@ const ADAPTIVE_LOT_PROFILE_FACTORS: Record<AdaptiveLotProfile, readonly number[]
   decreasing: [0.75, 0.5],
   mixed: [1.25, 0.75],
   increasing: [1.25, 1.5],
+};
+
+const ADAPTIVE_RISK_POLICIES: Record<
+  AdaptiveRiskStyle,
+  { utilizationRate: number; layerRiskWeights: readonly number[] }
+> = {
+  conservative: { utilizationRate: 0.5, layerRiskWeights: [0.4, 0.35, 0.25] },
+  balanced: { utilizationRate: 0.75, layerRiskWeights: [0.5, 0.3, 0.2] },
+  aggressive: { utilizationRate: 1, layerRiskWeights: [0.6, 0.25, 0.15] },
 };
 
 export function isAdaptiveRiskStyle(value: unknown): value is AdaptiveRiskStyle {
@@ -637,6 +651,24 @@ function sidePlan(
     }),
   ];
 
+  if (input.layerRiskWeights?.length && input.maximumLoss != null) {
+    const weights = input.layerRiskWeights.slice(0, plannedEntries.length);
+    const totalWeight = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
+    if (totalWeight > 0) {
+      for (const [index, planned] of plannedEntries.entries()) {
+        const riskPerLot =
+          (side === "buy" ? planned.price - stopLoss : stopLoss - planned.price) *
+          rule.contractSize;
+        const allocatedRisk = input.maximumLoss * (Math.max(0, weights[index] ?? 0) / totalWeight);
+        const requestedLot = riskPerLot > 0 ? allocatedRisk / riskPerLot : 0;
+        const cappedLot = rule.maximumLot == null
+          ? requestedLot
+          : Math.min(requestedLot, rule.maximumLot);
+        planned.lot = Math.max(rule.minimumLot, floorLot(cappedLot, lotStep));
+      }
+    }
+  }
+
   let cumulativeLots = 0;
   let cumulativeRisk = 0;
   let cumulativeDayMargin = 0;
@@ -879,7 +911,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     movementAssumption,
     `Initial entry uses the Standard Plan; up to two manual additions can create at most three total positions. The ${tierText} range applies separately to each position, not to cumulative planned lots.`,
     `The entered USD ${maxCycleLoss} maximum loss is a hard amount for every position in the complete plan.`,
-    "Available trading funds are used directly; no hidden tier or risk-style percentage reduces them.",
+    "Available trading funds are used directly; the recommendation may reserve part of the entered loss ceiling according to risk style and market context.",
     `Current open XAU/USD ${input.accountTier} exposure is ${input.existingExposure ?? 0} lot. It is not subtracted from the ${tierMax ?? "unlimited"}-lot per-position cap; entered free funds must already exclude margin committed elsewhere.`,
     "This Adaptive Position Plan is for day trading only: it uses the day/initial margin and excludes overnight holding, rollover, and overnight fees from every calculation.",
     "Broker auto-liquidation, spread, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
@@ -946,8 +978,9 @@ function addRejectedCandidates(
 /**
  * Builds a practical position-size recommendation from the user's available
  * margin and the entry/stop levels already produced by the AI analysis.
- * The user enters a hard USD loss cap directly, so there is no synthetic
- * equity or hidden risk-style allocation.
+ * The user enters a hard USD loss ceiling. Risk style determines how much of
+ * that ceiling may be used and how the usable risk is allocated across the
+ * complete layer plan.
  */
 export function buildAdaptivePlanRecommendation({
   instrument,
@@ -1143,41 +1176,41 @@ export function buildAdaptivePlanRecommendation({
   if (levels > 0) reasonCodes.push("staged_add_condition");
   const lotProfile = resolveAdaptiveLotProfile(riskStyle, context, preferredSide);
   const layerLotFactors = ADAPTIVE_LOT_PROFILE_FACTORS[lotProfile];
+  const riskPolicy = ADAPTIVE_RISK_POLICIES[riskStyle];
+  const contextRiskMultiplier =
+    reasonCodes.includes("high_risk") || reasonCodes.includes("fundamental_high_impact")
+      ? 0.5
+      : reasonCodes.some((code) =>
+          ["short_timeframe", "volatile_market", "low_confidence", "technical_mixed"].includes(code),
+        )
+        ? 0.75
+        : 1;
+  const riskUtilizationRate = riskPolicy.utilizationRate * contextRiskMultiplier;
+  const usableRiskBudget = maximumLoss * riskUtilizationRate;
 
   const marginBudget = availableMargin;
   const buyPlanAvailable = sideGeometryError("buy", tradePlan.buy) === null;
   const sellPlanAvailable = sideGeometryError("sell", tradePlan.sell) === null;
 
-  const marginCapacity = getAdaptiveMarginCapacity(marginBudget, rule);
-  const perPositionCapacity = rule.maximumLot ?? marginCapacity;
-  const capacity = Math.min(marginCapacity, perPositionCapacity);
-  // The style can request a decreasing, mixed, or increasing sequence. Each
-  // row is capped independently, while exact price-to-stop risk and total day
-  // margin still constrain the complete plan.
-  const lotCandidates: number[] = [];
-  for (
-    let lot = capacity;
-    lot >= rule.minimumLot - Number.EPSILON;
-    lot = roundLot(lot - rule.lotStep, rule.lotStep)
-  ) {
-    lotCandidates.push(roundLot(lot, rule.lotStep));
-  }
-  // Try the analysis-supported three-position plan first, then degrade to two
-  // or one total position until every hard limit passes.
+  // Allocate the usable loss budget across the complete plan first. Lot sizes
+  // are then derived from each layer's exact distance to the final Stop Loss.
+  // If margin is tighter than risk, scale the allocation down before removing
+  // an analysis-supported layer.
   const levelCandidates = Array.from(
     { length: levels + 1 },
     (_, index) => levels - index,
   );
   for (const candidateLevels of levelCandidates) {
-    for (const initialLot of lotCandidates) {
+    for (let scalePercent = 100; scalePercent >= 1; scalePercent -= 1) {
+      const candidateRiskBudget = usableRiskBudget * (scalePercent / 100);
       const result = buildAdaptivePositionPlan({
         instrument,
         tradePlan,
         standardRule,
         availableFunds: marginBudget,
-        maximumLoss,
+        maximumLoss: candidateRiskBudget,
         existingExposure,
-        initialLot,
+        initialLot: rule.minimumLot,
         accountTier,
         levels: candidateLevels,
         sideLevels:
@@ -1193,16 +1226,21 @@ export function buildAdaptivePlanRecommendation({
               ? { buy: buyPlanAvailable, sell: true }
               : { buy: buyPlanAvailable, sell: sellPlanAvailable },
         layerLotFactors: layerLotFactors.slice(0, candidateLevels),
+        layerRiskWeights: riskPolicy.layerRiskWeights.slice(0, candidateLevels + 1),
         checkpointPrices,
       });
       if (result.valid) {
         if (posture === "not_recommended") {
           const diagnosticRecommendation = {
-            initialLot,
+            initialLot: result.buy?.ladder[0]?.lot ?? result.sell?.ladder[0]?.lot ?? rule.minimumLot,
             levels: 0,
             positions: 1,
             marginBudget,
             maximumLoss,
+            usableRiskBudget,
+            riskUtilizationRate,
+            contextRiskMultiplier,
+            unusedRiskBuffer: maximumLoss - usableRiskBudget,
             riskStyle,
             lotProfile,
           };
@@ -1242,9 +1280,9 @@ export function buildAdaptivePlanRecommendation({
                 tradePlan,
                 standardRule,
                 availableFunds: marginBudget,
-                maximumLoss,
+                 maximumLoss: usableRiskBudget,
                 existingExposure,
-                initialLot,
+                 initialLot: rule.minimumLot,
                 accountTier,
                 levels: requestedLevels,
                 sideLevels:
@@ -1260,17 +1298,22 @@ export function buildAdaptivePlanRecommendation({
                       ? { buy: buyPlanAvailable, sell: true }
                       : { buy: buyPlanAvailable, sell: sellPlanAvailable },
                 layerLotFactors,
+                 layerRiskWeights: riskPolicy.layerRiskWeights,
                 checkpointPrices,
               })
             : result;
         return {
-          result: addRejectedCandidates(result, fullCandidate, marginBudget, maximumLoss, levels),
+          result: addRejectedCandidates(result, fullCandidate, marginBudget, usableRiskBudget, levels),
           recommendation: {
-            initialLot,
+            initialLot: result.buy?.ladder[0]?.lot ?? result.sell?.ladder[0]?.lot ?? rule.minimumLot,
             levels: acceptedLevels,
             positions: acceptedLevels + 1,
             marginBudget,
             maximumLoss,
+            usableRiskBudget,
+            riskUtilizationRate,
+            contextRiskMultiplier,
+            unusedRiskBuffer: maximumLoss - usableRiskBudget,
             riskStyle,
             lotProfile,
           },
@@ -1290,7 +1333,7 @@ export function buildAdaptivePlanRecommendation({
     tradePlan,
     standardRule,
     availableFunds: marginBudget,
-    maximumLoss,
+    maximumLoss: usableRiskBudget,
     existingExposure,
     initialLot: rule.minimumLot,
     accountTier,
@@ -1298,6 +1341,7 @@ export function buildAdaptivePlanRecommendation({
     sideLevels: { buy: 0, sell: 0 },
     includedSides: { buy: buyPlanAvailable, sell: sellPlanAvailable },
     layerLotFactors: [],
+    layerRiskWeights: [1],
     checkpointPrices,
   });
   return {
@@ -1309,6 +1353,10 @@ export function buildAdaptivePlanRecommendation({
           positions: 1,
           marginBudget,
           maximumLoss,
+          usableRiskBudget,
+          riskUtilizationRate,
+          contextRiskMultiplier,
+          unusedRiskBuffer: maximumLoss - usableRiskBudget,
           riskStyle,
           lotProfile,
         }

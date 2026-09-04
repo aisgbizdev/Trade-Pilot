@@ -59,7 +59,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v16:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v17:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -95,6 +95,8 @@ function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommenda
         typeof value.recommendation.positions === "number" &&
         value.recommendation.positions >= 1 &&
         value.recommendation.positions <= 3 &&
+        typeof value.recommendation.usableRiskBudget === "number" &&
+        typeof value.recommendation.riskUtilizationRate === "number" &&
         isAdaptiveRiskStyle(value.recommendation.riskStyle) &&
         isAdaptiveLotProfile(value.recommendation.lotProfile))) &&
     (!value.result.valid || (isRecord(rule) && rule.marginBasis === "day")) &&
@@ -110,14 +112,6 @@ function riskStyleLabel(style: AdaptiveRiskStyle, copy: AdaptiveCopy): string {
     : style === "balanced"
       ? copy.adaptive_risk_style_balanced
       : copy.adaptive_risk_style_aggressive;
-}
-
-function lotProfileLabel(profile: AdaptiveLotProfile, copy: AdaptiveCopy): string {
-  return profile === "decreasing"
-    ? copy.adaptive_lot_profile_decreasing
-    : profile === "mixed"
-      ? copy.adaptive_lot_profile_mixed
-      : copy.adaptive_lot_profile_increasing;
 }
 
 function normalizeStoredRecommendation(
@@ -372,9 +366,6 @@ function PlanSide({
             <Badge variant="outline" className="mt-2 text-[10px]" data-testid="adaptive-risk-style-active">
               {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
             </Badge>
-            <Badge variant="outline" className="ml-1 mt-2 text-[10px]" data-testid="adaptive-lot-profile-active">
-              {copy.adaptive_lot_profile_active.replace("{profile}", lotProfileLabel(summary.lotProfile, copy))}
-            </Badge>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <div className="rounded-md bg-background/70 p-2">
@@ -397,6 +388,17 @@ function PlanSide({
               <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
               <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
             </div>
+              <div className="rounded-md bg-background/70 p-2" data-testid="adaptive-usable-risk-budget">
+                <p className="text-[10px] text-muted-foreground">{copy.adaptive_usable_risk_budget}</p>
+                <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.usableRiskBudget, lang)}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {copy.adaptive_risk_budget_rate.replace("{rate}", formatNumber(summary.riskUtilizationRate * 100, lang, 0))}
+                </p>
+              </div>
+              <div className="rounded-md bg-background/70 p-2" data-testid="adaptive-unused-risk-buffer">
+                <p className="text-[10px] text-muted-foreground">{copy.adaptive_unused_risk_buffer}</p>
+                <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.unusedRiskBuffer, lang)}</p>
+              </div>
             {plan.takeProfit1 != null && (
               <div className="rounded-md bg-background/70 p-2" data-testid={`adaptive-take-profit-${plan.side}-1`}>
                 <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>

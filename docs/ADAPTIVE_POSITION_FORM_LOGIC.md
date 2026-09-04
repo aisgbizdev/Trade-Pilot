@@ -185,7 +185,8 @@ Nilai ini dipakai langsung untuk:
 - dana yang diperlukan saat Stop Loss final;
 - evaluasi apakah layer tambahan masih terjangkau.
 
-Tidak ada pengurangan persentase tersembunyi berdasarkan gaya risiko.
+Dana bebas tidak dipotong oleh gaya risiko. Gaya hanya mengatur penggunaan
+`maximumLoss`; margin seluruh posisi tetap divalidasi terhadap dana bebas penuh.
 
 ### 5.2 Batas rugi maksimum
 
@@ -232,15 +233,17 @@ Konsekuensinya:
 
 ## 6. Logic gaya risiko
 
-Pilihan gaya risiko menentukan faktor lot tambahan yang diminta engine:
+Pilihan gaya risiko menentukan penggunaan maksimum batas rugi dan bobot risk
+untuk seluruh rencana:
 
-| Gaya UI | Profil lot | Faktor layer 2 | Faktor layer 3 |
-|---|---|---:|---:|
-| Konservatif | Decreasing | 75% lot awal | 50% lot awal |
-| Seimbang | Mixed | 125% lot awal | 75% lot awal |
-| Agresif | Increasing | 125% lot awal | 150% lot awal |
+| Gaya UI | Penggunaan max loss | Bobot risk Layer 1/2/3 |
+|---|---:|---|
+| Konservatif | 50% | 40% / 35% / 25% |
+| Seimbang | 75% | 50% / 30% / 20% |
+| Agresif | 100% | 60% / 25% / 15% |
 
-Faktor bukan jaminan ukuran final. Setiap hasil tetap:
+Bobot membagi nominal risk USD, bukan lot. Lot setiap layer dihitung berdasarkan
+jarak entry layer tersebut ke Stop Loss final. Setiap hasil tetap:
 
 1. dibulatkan ke lot step tier;
 2. dibatasi maksimum lot per posisi;
@@ -248,22 +251,18 @@ Faktor bukan jaminan ukuran final. Setiap hasil tetap:
 4. diuji terhadap loss cap;
 5. diuji terhadap dana saat Stop Loss.
 
-### 6.1 Penurunan profil oleh konteks analisis
+### 6.1 Penurunan budget oleh konteks analisis
 
 Engine dapat menurunkan profil yang diminta:
 
-- Konservatif selalu memakai pola decreasing.
-- Market ranging memakai pola mixed.
-- Pola increasing hanya dipertahankan jika:
-  - trend dan technical snapshot searah;
-  - risk level rendah;
-  - confidence minimum setidaknya 65%;
-  - tidak ada event fundamental berdampak tinggi.
-- Jika syarat konteks kuat tidak terpenuhi, engine kembali ke profil yang lebih
-  konservatif.
+- Risk tinggi atau event high impact menurunkan usable risk dengan multiplier 50%.
+- Timeframe pendek, market volatil, confidence rendah, atau technical mixed
+  menurunkan usable risk dengan multiplier 75%.
+- Soft warning tetap menghapus layer tambahan sehingga hasil menjadi entry-only.
+- Konflik arah tetap menghasilkan `not_recommended`.
 
-Jadi memilih **Agresif** hanya meminta pola lot meningkat. Pilihan itu tidak
-memberi izin untuk melewati guardrail analisis atau batas finansial.
+Memilih **Agresif** tidak memberi izin melewati guardrail analisis, margin, cap
+tier, atau batas rugi pengguna.
 
 ---
 
@@ -372,12 +371,12 @@ snapshot, dan preferred side Standard Plan.
 Jika scaling diizinkan, engine:
 
 1. meminta maksimal dua tambahan sehingga total maksimal tiga posisi;
-2. membuat daftar initial lot dari kapasitas terbesar ke minimum tier;
-3. mencoba jumlah layer terbanyak lebih dulu;
-4. memakai faktor lot sesuai profil risiko;
+2. menghitung usable risk dari max loss, gaya, dan guardrail;
+3. membagi usable risk ke seluruh layer yang didukung;
+4. menghitung lot dari risk USD dan jarak masing-masing entry ke Stop Loss;
 5. memvalidasi setiap kandidat terhadap margin dan loss cap;
-6. jika gagal, mengurangi layer;
-7. jika masih gagal, mengurangi initial lot;
+6. jika perlu, menurunkan allocation seluruh rencana;
+7. baru mengurangi layer jika lot minimum tetap tidak layak;
 8. menerima kandidat pertama yang lulus semua hard limit.
 
 Urutan ini memastikan engine tidak langsung memilih lot minimum jika rencana
@@ -523,9 +522,10 @@ engine baru boleh mencoba:
 
 1. initial lot yang muat pada margin Mini;
 2. jumlah layer yang diizinkan konteks;
-3. faktor lot menurun 75% lalu 50%;
-4. validasi rugi kumulatif tidak lebih dari `$100`;
-5. validasi total margin dan dana saat Stop Loss.
+3. usable risk Konservatif maksimal `$50`;
+4. pembagian risk Layer 1/2/3 sebesar 40%/35%/25%;
+5. konversi tiap nominal risk menjadi lot berdasarkan jarak entry-ke-SL;
+6. validasi total margin dan dana saat Stop Loss.
 
 Hasil final tetap dapat lebih kecil atau entry-only jika jarak Entry–SL,
 konteks, atau checkpoint tidak mendukung.

@@ -260,32 +260,38 @@ awal. Rencana final masih harus lulus:
 - dana total yang dibutuhkan saat Stop Loss;
 - cap tier di setiap posisi.
 
-### 4.2 Profil ukuran layer
+### 4.2 Model C: penggunaan batas risiko dan alokasi layer
 
-Gaya risiko dipetakan deterministik ke faktor lot tambahan:
+`maximumLoss` tetap menjadi batas USD keras, bukan target yang harus dihabiskan.
+Gaya risiko menentukan bagian maksimum dari batas tersebut yang boleh dipakai:
 
-| Gaya | Profil | Faktor posisi tambahan |
-|---|---|---|
-| Conservative | decreasing | 75%, lalu 50% dari initial lot |
-| Balanced | mixed | 125%, lalu 75% dari initial lot |
-| Aggressive | increasing | 125%, lalu 150% dari initial lot |
+| Gaya | Maksimum penggunaan `maximumLoss` | Bobot risk Layer 1/2/3 |
+|---|---:|---|
+| Conservative | 50% | 40% / 35% / 25% |
+| Balanced | 75% | 50% / 30% / 20% |
+| Aggressive | 100% | 60% / 25% / 15% |
 
-Faktor diterapkan per posisi, lalu dibatasi maksimum tier dan dibulatkan ke lot
-step menggunakan pembulatan ke bawah. Posisi pertama selalu menggunakan
-initial lot.
+Bobot adalah pembagian **risk dalam USD**, bukan persentase lot. Untuk setiap
+layer, lot dihitung dari risk allocation dibagi kerugian per lot menuju Stop
+Loss final. Karena jarak entry setiap layer berbeda, persentase lot dapat berbeda
+dari bobot risk. Lot tetap dibulatkan ke bawah sesuai lot step dan dibatasi cap
+per posisi.
 
-Gaya risiko tidak mengganti dana bebas atau membuat persentase risiko tersembunyi.
-Batas `maximumLoss` yang dimasukkan pengguna tetap menjadi batas USD keras.
+Guardrail konteks dapat menurunkan usable risk lagi: high risk atau event high
+impact memakai multiplier 50%; warning timeframe pendek, volatilitas, confidence
+rendah, atau technical mixed memakai multiplier 75%. Guardrail tidak pernah
+menaikkan budget di atas pilihan pengguna.
 
 ### 4.3 Mencari rencana yang layak
 
 Engine mencoba kandidat secara berurutan:
 
-1. jumlah layer tertinggi yang diizinkan konteks;
-2. initial lot terbesar yang muat dalam kapasitas;
-3. jika gagal, kurangi layer;
-4. jika masih gagal, kurangi initial lot dengan lot step;
-5. berhenti pada kandidat pertama yang lulus semua batas keras.
+1. menghitung usable risk dari gaya dan guardrail konteks;
+2. membagi risk tersebut ke seluruh layer yang diizinkan analisis;
+3. menghitung lot setiap layer dari jaraknya ke Stop Loss;
+4. menurunkan allocation bersama-sama jika margin lebih ketat daripada risk;
+5. baru mengurangi layer jika lot minimum seluruh rencana tetap tidak layak;
+6. berhenti pada kandidat pertama yang lulus semua batas keras.
 
 Jika kandidat yang diterima memiliki lebih sedikit layer daripada jumlah yang
 semula diminta, kandidat lengkap tetap dihitung untuk menjelaskan layer yang
