@@ -3,6 +3,7 @@ import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, Cal
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
 import { SetAlertModal } from "@/components/set-alert-modal";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -999,19 +1000,38 @@ export default function AnalyzePage() {
 
           {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist />}
 
-          <Button
-            className="w-full h-12 text-base"
-            onClick={() => handleSubmit()}
-            disabled={isLoading || !finalInstrument || !selectedTimeframe}
-            data-testid="button-submit-analysis"
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
+          {resultAnalysisId == null && (
+            <Button
+              className="w-full h-12 text-base"
+              onClick={() => handleSubmit()}
+              disabled={isLoading || !finalInstrument || !selectedTimeframe}
+              data-testid="button-submit-analysis"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
+                </div>
+              ) : t.analyze.submit_btn}
+            </Button>
+          )}
+
+          {/* Once a result already exists, picking a different instrument
+              re-analyzes without the submit button (it's hidden above) —
+              show the AI-processing wait state as a popup instead. */}
+          <Dialog open={isLoading && resultAnalysisId != null}>
+            <DialogContent
+              className="sm:max-w-sm text-center [&>button]:hidden"
+              data-testid="dialog-reanalyzing"
+            >
+              <div className="flex flex-col items-center gap-3 py-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm font-semibold text-foreground">
+                  {t.analyze.loading[loadingMsgIndex]}
+                </p>
               </div>
-            ) : t.analyze.submit_btn}
-          </Button>
+            </DialogContent>
+          </Dialog>
 
           {resultAnalysisId != null && (
             <div

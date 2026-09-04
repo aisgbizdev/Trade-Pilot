@@ -438,6 +438,10 @@ describe("AnalyzePage: user actions", () => {
       ).toHaveLength(1);
     });
 
+    // The Analisis button is no longer needed (and no longer shown) once
+    // a result exists — switching instruments re-analyzes on its own.
+    expect(screen.queryByTestId("button-submit-analysis")).not.toBeInTheDocument();
+
     // Now that a result exists, picking BRENT re-analyzes immediately —
     // no second tap on the Analisis button.
     await act(async () => {
