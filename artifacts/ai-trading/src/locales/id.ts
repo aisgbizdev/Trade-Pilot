@@ -1363,12 +1363,6 @@ export const id: Translations = {
     disclaimer: "Konten edukasi, bukan saran finansial. Kebiasaan lebih penting daripada satu trade apa pun.",
   },
   profile_extra: {
-    learning_section_title: "Belajar",
-    guide_link_title: "Pusat Panduan",
-    guide_link_subtitle: "Pelajari fitur, baca analisis, dan kuasai mindset.",
-    preferences_section_title: "Preferensi",
-    mental_checklist_toggle_title: "Tampilkan cek mental pra-trade",
-    mental_checklist_toggle_subtitle: "Tambah self-check 4 item di halaman Analisis sebelum kamu submit analisis baru.",
     notifications_link_title: "Pengaturan Notifikasi",
     notifications_link_subtitle: "Push, jenis alert, sesi pasar, ringkasan harian, guardrail.",
   },

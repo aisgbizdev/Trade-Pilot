@@ -1,11 +1,10 @@
 import { useRef, useState } from "react";
-import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, BookOpen, Brain, Trash2 } from "lucide-react";
+import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, Trash2 } from "lucide-react";
 import { avatarSrc, uploadAvatar, validateAvatarFile } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +17,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Layout } from "@/components/layout";
-import { useMentalChecklistPref } from "@/hooks/use-mental-checklist";
 import { useAuth } from "@/components/auth-provider";
 import { useTheme } from "@/components/theme-provider";
 import { useToast } from "@/hooks/use-toast";
@@ -55,7 +53,6 @@ export default function ProfilePage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { enabled: mentalChecklistEnabled, setEnabled: setMentalChecklistEnabled } = useMentalChecklistPref();
 
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.displayName ?? "");
@@ -530,48 +527,6 @@ export default function ProfilePage() {
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
           </button>
-        </Card>
-
-        <Card className="p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">{t.profile_extra.learning_section_title}</h3>
-          <button
-            type="button"
-            className="w-full flex items-center gap-3 text-left p-2 -mx-2 rounded-lg hover:bg-muted/60 transition-colors"
-            onClick={() => setLocation("/guide")}
-            data-testid="button-go-guide"
-          >
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <BookOpen className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">{t.profile_extra.guide_link_title}</p>
-              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                {t.profile_extra.guide_link_subtitle}
-              </p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-          </button>
-        </Card>
-
-        <Card className="p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">{t.profile_extra.preferences_section_title}</h3>
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-              <Brain className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">{t.profile_extra.mental_checklist_toggle_title}</p>
-              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                {t.profile_extra.mental_checklist_toggle_subtitle}
-              </p>
-            </div>
-            <Switch
-              checked={mentalChecklistEnabled}
-              onCheckedChange={setMentalChecklistEnabled}
-              data-testid="switch-mental-checklist"
-              aria-label={t.profile_extra.mental_checklist_toggle_title}
-            />
-          </div>
         </Card>
 
         {(user?.role === "admin" || user?.role === "super_admin") && (

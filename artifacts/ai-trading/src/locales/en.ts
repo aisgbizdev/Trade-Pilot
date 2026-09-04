@@ -1361,12 +1361,6 @@ export const en = {
     disclaimer: "Educational content, not financial advice. Habits matter more than any single trade.",
   },
   profile_extra: {
-    learning_section_title: "Learning",
-    guide_link_title: "Guide Center",
-    guide_link_subtitle: "Learn features, read analyses, and master mindset.",
-    preferences_section_title: "Preferences",
-    mental_checklist_toggle_title: "Show pre-trade mental check",
-    mental_checklist_toggle_subtitle: "Adds a 4-item self-check on the Analyze page before you submit a new analysis.",
     notifications_link_title: "Notification Settings",
     notifications_link_subtitle: "Push, alert types, market sessions, daily summary, guardrails.",
   },
