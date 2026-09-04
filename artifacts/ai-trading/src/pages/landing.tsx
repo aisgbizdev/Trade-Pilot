@@ -89,7 +89,7 @@ export default function LandingPage() {
                 </button>
               </Link>
               <Link href="/register">
-                <button className="text-xs font-bold px-4 py-2 rounded-lg bg-white text-black hover:bg-white/90 transition-colors hidden sm:block" data-testid="link-register">
+                <button className="hidden rounded-lg px-4 py-2 text-xs font-bold btn-premium transition-transform hover:scale-[1.02] active:scale-[0.98] sm:block" data-testid="link-register">
                   {t.landing.register}
                 </button>
               </Link>
