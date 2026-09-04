@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { CalendarEvent } from "./calendar";
 import type { NewsItem } from "./news";
 import { isCryptoInstrument } from "./crypto-instruments";
+import { logger } from "./logger";
 
 export const openai = new OpenAI({
   apiKey: process.env["OPENAI_API_KEY"],
@@ -669,7 +670,12 @@ export async function generateAnalysis(
         "gpt-4o-mini"
       : process.env["OPENAI_MODEL"] ?? "gpt-4o";
   const cleanNotes = notes ? sanitizeNotes(notes) : undefined;
-  const fastIntradayTimeoutMs = isFastIntraday ? 2800 : undefined;
+  // Measured against the real 1m/5m prompt size (full Indonesian style
+  // guide + schema): gpt-4o-mini typically takes ~5-8s to complete, so a
+  // shorter window (previously 2800ms) made the fallback fire on nearly
+  // every request. 9s keeps 1m/5m meaningfully faster than the unbounded
+  // default timeframes while giving the real call a fair chance to land.
+  const fastIntradayTimeoutMs = isFastIntraday ? 9000 : undefined;
   const now = new Date();
   const nowIsoUtc = now.toISOString().replace(/\.\d{3}Z$/, "Z");
   const nowJakarta = now.toLocaleString("id-ID", {
@@ -810,7 +816,13 @@ export async function generateAnalysis(
       fastIntradayTimeoutMs,
     );
   } catch (e) {
-    if (isFastIntraday) return wrap(buildFastIntradayFallback(mode, timeframe));
+    if (isFastIntraday) {
+      logger.warn(
+        { err: e, instrument, timeframe, timeoutMs: fastIntradayTimeoutMs },
+        "Fast-intraday OpenAI call failed/timed out — serving generic fallback",
+      );
+      return wrap(buildFastIntradayFallback(mode, timeframe));
+    }
     throw e;
   }
   let parsed: AIOutput;
@@ -818,6 +830,10 @@ export async function generateAnalysis(
     parsed = parseAttempt(raw);
   } catch (e) {
     if (isFastIntraday) {
+      logger.warn(
+        { err: e, instrument, timeframe },
+        "Fast-intraday OpenAI output failed schema validation — serving generic fallback",
+      );
       return wrap(buildFastIntradayFallback(mode, timeframe));
     }
     // Validation failed on first try — rerun with a corrective hint
@@ -845,6 +861,10 @@ export async function generateAnalysis(
 
   if (!citationCheck.ok) {
     if (isFastIntraday) {
+      logger.warn(
+        { instrument, timeframe, reason: citationCheck.reason },
+        "Fast-intraday OpenAI output failed citation grounding — serving generic fallback",
+      );
       return wrap(buildFastIntradayFallback(mode, timeframe));
     }
     const correction = `\n\n[KOREKSI WAJIB — GROUNDING] ${citationCheck.reason} Output ulang analisis menggunakan HANYA judul berita / nama event yang BENAR-BENAR ada di blok BERITA TERKINI RELEVAN dan KALENDER EKONOMI RELEVAN di atas. Jika tidak ada item yang relevan, kosongkan fundamentalCitations.newsTitles / fundamentalCitations.calendarEvents dan tulis "Tidak ada katalis fundamental signifikan terdeteksi pada window ini" pada blok fundamental yang sesuai.`;
