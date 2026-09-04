@@ -853,11 +853,13 @@ describe("AnalysisDetailPage: not-found branch", () => {
 });
 
 describe("AnalysisDetailPage: fundamental context card", () => {
-  it("renders the fundamental card with the headline + calendar event when fundamentalContext has items", async () => {
+  it("renders natural trader terminology for Indonesian calendar and trade-plan copy", async () => {
+    localStorage.setItem("app_lang", "id");
     installFetchMock([
       getAnalysisHandler({
         body: {
           ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
           fundamentalContext: {
             newsItems: [
               {
@@ -898,6 +900,13 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(card).toBeInTheDocument();
     expect(card.textContent).toMatch(/Gold rallies as Fed signals pause/);
     expect(card.textContent).toMatch(/FOMC rate decision/);
+    expect(card).toHaveTextContent(/Forecast/);
+    expect(card).toHaveTextContent(/Actual/);
+    expect(card).not.toHaveTextContent(/Prakiraan|Aktual/);
+
+    const tradePlan = screen.getByTestId("card-trade-plan");
+    expect(tradePlan).toHaveTextContent(/Level Entry, Stop Loss, dan Take Profit/);
+    expect(tradePlan).not.toHaveTextContent(/titik masuk|batas berhenti/i);
   });
 
   it("caps news at 3 items and calendar at 5 items, and opens news links in a new tab with safe rel attrs", async () => {
