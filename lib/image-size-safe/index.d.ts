@@ -4,6 +4,6 @@ export interface ImageSizeResult {
   type: string;
 }
 
-export declare function imageSize(input: Uint8Array | ArrayBuffer): ImageSizeResult;
+export declare function imageSize(input: string | Uint8Array | ArrayBuffer): ImageSizeResult;
 export declare function disableTypes(types: string[]): void;
 export default imageSize;

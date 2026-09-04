@@ -18,3 +18,4 @@
 - [Parallel validation resource contention](parallel-validation-resource-contention.md) — completion validation can starve Vitest workers when API, frontend, E2E, and typecheck run together; verify affected suites in isolation.
 - [Indonesian trader copy](indonesian-trader-copy.md) — Indonesian UI copy should sound like an experienced local trader, retaining familiar English trading terms instead of translating literally.
 - [Deterministic API codegen](openapi-zod-version-drift.md) — pin the emitter to runtime-compatible output; require zero baseline drift and clean-build Dart generated parts.
+- [Metro image-size contract](metro-image-size-contract.md) — Metro passes asset file paths to image-size; hardened replacements must support both paths and byte buffers.
