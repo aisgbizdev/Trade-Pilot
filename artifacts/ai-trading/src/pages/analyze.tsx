@@ -742,7 +742,11 @@ export default function AnalyzePage() {
         </div>
 
         <div className="space-y-5">
-          <div>
+          <div
+            className="grid gap-4 min-[520px]:grid-cols-[132px_minmax(0,1fr)] min-[520px]:items-start"
+            data-testid="instrument-chart-layout"
+          >
+          <div className="min-w-0">
             <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_instrument}</h2>
             {VISIBLE_INSTRUMENT_CATEGORIES.length > 1 ? (
               <>
@@ -775,7 +779,7 @@ export default function AnalyzePage() {
                   })}
                 </div>
                 {openInstrumentCategory && (
-                  <div id="instrument-options" className="grid grid-cols-2 gap-2" data-testid="instrument-options">
+                  <div id="instrument-options" className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-1" data-testid="instrument-options">
                     {instrumentsForTab(openInstrumentCategory).map((inst) => (
                       <button
                         key={inst}
@@ -801,7 +805,7 @@ export default function AnalyzePage() {
               // just be a single button that always opens the same list —
               // skip it and show the instruments directly. Restores itself
               // automatically once a second category has visible items.
-              <div className="grid grid-cols-2 gap-2 mb-3" data-testid="instrument-options">
+              <div className="grid grid-cols-2 gap-2 mb-3 min-[520px]:grid-cols-1" data-testid="instrument-options">
                 {instrumentsForTab(VISIBLE_INSTRUMENT_CATEGORIES[0]).map((inst) => (
                   <button
                     key={inst}
@@ -809,7 +813,7 @@ export default function AnalyzePage() {
                     onClick={() => handleInstrumentClick(inst)}
                     data-testid={`button-instrument-${inst}`}
                     className={cn(
-                      "w-full py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all",
+                      "w-full py-2 px-3 rounded-lg border text-sm font-medium text-left transition-all",
                       selectedInstrument === inst && !customInstrument
                         ? "bg-primary/10 border-primary text-primary"
                         : "bg-background border-border text-foreground hover:border-primary/50"
@@ -829,7 +833,7 @@ export default function AnalyzePage() {
                   setCustomInstrument(e.target.value);
                   if (e.target.value) setSelectedInstrument("");
                 }}
-                className="w-full px-3 py-2.5 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 data-testid="input-custom-instrument"
               />
             </div>
@@ -899,7 +903,7 @@ export default function AnalyzePage() {
           </div>
 
           {finalInstrument && selectedTimeframe && (
-            <Card className="p-3 bg-muted/50 border-dashed">
+            <Card className="min-w-0 p-3 bg-muted/50 border-dashed">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t.analyze.instrument_label}:</span>
                 <span className="font-semibold text-foreground">{finalInstrument}</span>
@@ -925,6 +929,7 @@ export default function AnalyzePage() {
                 <TradingViewMiniChart
                   symbol={instrumentToTradingViewSymbol(finalInstrument)}
                   dateRange={miniChartRange}
+                  height={190}
                 />
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
@@ -973,6 +978,7 @@ export default function AnalyzePage() {
               </div>
             </Card>
           )}
+          </div>
 
           {SHOW_SECONDARY_ANALYSIS_CARDS && finalInstrument && (
             <LocalSentimentWidget instrument={finalInstrument} />
