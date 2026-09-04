@@ -14,6 +14,9 @@ doc/AnalysesApi.md
 doc/AnalysesList.md
 doc/AnalysesSummary.md
 doc/Analysis.md
+doc/AnalysisHistoryOutcomeStats.md
+doc/AnalysisHistorySummary.md
+doc/AnalysisHistoryTimeframeStats.md
 doc/AnalysisNoteResponse.md
 doc/AnalysisOutcomesSummary.md
 doc/AnalysisQuota.md
@@ -191,6 +194,9 @@ lib/src/model/alert_status.dart
 lib/src/model/analyses_list.dart
 lib/src/model/analyses_summary.dart
 lib/src/model/analysis.dart
+lib/src/model/analysis_history_outcome_stats.dart
+lib/src/model/analysis_history_summary.dart
+lib/src/model/analysis_history_timeframe_stats.dart
 lib/src/model/analysis_note_response.dart
 lib/src/model/analysis_outcomes_summary.dart
 lib/src/model/analysis_quota.dart

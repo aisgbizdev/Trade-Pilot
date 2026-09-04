@@ -14,6 +14,7 @@ import 'package:trade_pilot_api_client/src/model/alert_status.dart';
 import 'package:trade_pilot_api_client/src/model/analyses_list.dart';
 import 'package:trade_pilot_api_client/src/model/analyses_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis.dart';
+import 'package:trade_pilot_api_client/src/model/analysis_history_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_note_response.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_outcomes_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_quota.dart';
@@ -503,6 +504,92 @@ class AnalysesApi {
     );
   }
 
+  /// Get the current user&#39;s analysis-outcome summary by timeframe
+  /// 
+  ///
+  /// Parameters:
+  /// * [range] 
+  /// * [instruments] 
+  /// * [timeframes] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AnalysisHistorySummary] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AnalysisHistorySummary>> getAnalysisHistorySummary({ 
+    String? range = '30',
+    BuiltList<String>? instruments,
+    BuiltList<String>? timeframes,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/analyses/history-summary';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (range != null) r'range': encodeQueryParameter(_serializers, range, const FullType(String)),
+      if (instruments != null) r'instruments': encodeCollectionQueryParameter<String>(_serializers, instruments, const FullType(BuiltList, [FullType(String)]), format: ListFormat.multi,),
+      if (timeframes != null) r'timeframes': encodeCollectionQueryParameter<String>(_serializers, timeframes, const FullType(BuiltList, [FullType(String)]), format: ListFormat.multi,),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AnalysisHistorySummary? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AnalysisHistorySummary),
+      ) as AnalysisHistorySummary;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AnalysisHistorySummary>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// AI trade-plan outcome roll-up over the last 30 days
   /// Aggregates the after-the-fact outcomes the background resolver has written to each analysis (TP1/TP2 hit, SL hit, expired, invalidated, or still pending) for the current user over the past 30 days. Drives the \&quot;AI accuracy\&quot; card on the dashboard. 
   ///
@@ -810,6 +897,7 @@ class AnalysesApi {
   /// * [instrument] 
   /// * [instruments] - Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.
   /// * [timeframes] - Multi-select timeframe filter (repeatable).
+  /// * [outcomes] - Multi-select resolved outcome filter (repeatable).
   /// * [page] 
   /// * [limit] 
   /// * [q] - Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).
@@ -829,6 +917,7 @@ class AnalysesApi {
     String? instrument,
     BuiltList<String>? instruments,
     BuiltList<String>? timeframes,
+    BuiltList<String>? outcomes,
     int? page = 1,
     int? limit = 20,
     String? q,
@@ -859,6 +948,7 @@ class AnalysesApi {
       if (instrument != null) r'instrument': encodeQueryParameter(_serializers, instrument, const FullType(String)),
       if (instruments != null) r'instruments': encodeCollectionQueryParameter<String>(_serializers, instruments, const FullType(BuiltList, [FullType(String)]), format: ListFormat.multi,),
       if (timeframes != null) r'timeframes': encodeCollectionQueryParameter<String>(_serializers, timeframes, const FullType(BuiltList, [FullType(String)]), format: ListFormat.multi,),
+      if (outcomes != null) r'outcomes': encodeCollectionQueryParameter<String>(_serializers, outcomes, const FullType(BuiltList, [FullType(String)]), format: ListFormat.multi,),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
       if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
       if (q != null) r'q': encodeQueryParameter(_serializers, q, const FullType(String)),

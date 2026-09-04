@@ -12,6 +12,12 @@ const StandardTradingRuleInstrumentCodeEnum
 const StandardTradingRuleInstrumentCodeEnum
     _$standardTradingRuleInstrumentCodeEnum_BCO10_BBJ =
     const StandardTradingRuleInstrumentCodeEnum._('BCO10_BBJ');
+const StandardTradingRuleInstrumentCodeEnum
+    _$standardTradingRuleInstrumentCodeEnum_HKK50_BBJ =
+    const StandardTradingRuleInstrumentCodeEnum._('HKK50_BBJ');
+const StandardTradingRuleInstrumentCodeEnum
+    _$standardTradingRuleInstrumentCodeEnum_JPK50_BBJ =
+    const StandardTradingRuleInstrumentCodeEnum._('JPK50_BBJ');
 
 StandardTradingRuleInstrumentCodeEnum
     _$standardTradingRuleInstrumentCodeEnumValueOf(String name) {
@@ -20,6 +26,10 @@ StandardTradingRuleInstrumentCodeEnum
       return _$standardTradingRuleInstrumentCodeEnum_XUL10;
     case 'BCO10_BBJ':
       return _$standardTradingRuleInstrumentCodeEnum_BCO10_BBJ;
+    case 'HKK50_BBJ':
+      return _$standardTradingRuleInstrumentCodeEnum_HKK50_BBJ;
+    case 'JPK50_BBJ':
+      return _$standardTradingRuleInstrumentCodeEnum_JPK50_BBJ;
     default:
       throw ArgumentError(name);
   }
@@ -30,6 +40,8 @@ final BuiltSet<StandardTradingRuleInstrumentCodeEnum>
         StandardTradingRuleInstrumentCodeEnum>(const <StandardTradingRuleInstrumentCodeEnum>[
   _$standardTradingRuleInstrumentCodeEnum_XUL10,
   _$standardTradingRuleInstrumentCodeEnum_BCO10_BBJ,
+  _$standardTradingRuleInstrumentCodeEnum_HKK50_BBJ,
+  _$standardTradingRuleInstrumentCodeEnum_JPK50_BBJ,
 ]);
 
 const StandardTradingRuleInstrumentContractUnitEnum
@@ -38,6 +50,9 @@ const StandardTradingRuleInstrumentContractUnitEnum
 const StandardTradingRuleInstrumentContractUnitEnum
     _$standardTradingRuleInstrumentContractUnitEnum_barrel =
     const StandardTradingRuleInstrumentContractUnitEnum._('barrel');
+const StandardTradingRuleInstrumentContractUnitEnum
+    _$standardTradingRuleInstrumentContractUnitEnum_uSDSlashPoint =
+    const StandardTradingRuleInstrumentContractUnitEnum._('uSDSlashPoint');
 
 StandardTradingRuleInstrumentContractUnitEnum
     _$standardTradingRuleInstrumentContractUnitEnumValueOf(String name) {
@@ -46,6 +61,8 @@ StandardTradingRuleInstrumentContractUnitEnum
       return _$standardTradingRuleInstrumentContractUnitEnum_troyOunce;
     case 'barrel':
       return _$standardTradingRuleInstrumentContractUnitEnum_barrel;
+    case 'uSDSlashPoint':
+      return _$standardTradingRuleInstrumentContractUnitEnum_uSDSlashPoint;
     default:
       throw ArgumentError(name);
   }
@@ -56,6 +73,7 @@ final BuiltSet<StandardTradingRuleInstrumentContractUnitEnum>
         StandardTradingRuleInstrumentContractUnitEnum>(const <StandardTradingRuleInstrumentContractUnitEnum>[
   _$standardTradingRuleInstrumentContractUnitEnum_troyOunce,
   _$standardTradingRuleInstrumentContractUnitEnum_barrel,
+  _$standardTradingRuleInstrumentContractUnitEnum_uSDSlashPoint,
 ]);
 
 Serializer<StandardTradingRuleInstrumentCodeEnum>
@@ -70,10 +88,14 @@ class _$StandardTradingRuleInstrumentCodeEnumSerializer
   static const Map<String, Object> _toWire = const <String, Object>{
     'XUL10': 'XUL10',
     'BCO10_BBJ': 'BCO10_BBJ',
+    'HKK50_BBJ': 'HKK50_BBJ',
+    'JPK50_BBJ': 'JPK50_BBJ',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'XUL10': 'XUL10',
     'BCO10_BBJ': 'BCO10_BBJ',
+    'HKK50_BBJ': 'HKK50_BBJ',
+    'JPK50_BBJ': 'JPK50_BBJ',
   };
 
   @override
@@ -103,10 +125,12 @@ class _$StandardTradingRuleInstrumentContractUnitEnumSerializer
   static const Map<String, Object> _toWire = const <String, Object>{
     'troyOunce': 'troy ounce',
     'barrel': 'barrel',
+    'uSDSlashPoint': 'USD/point',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'troy ounce': 'troyOunce',
     'barrel': 'barrel',
+    'USD/point': 'uSDSlashPoint',
   };
 
   @override
@@ -146,7 +170,7 @@ class _$StandardTradingRuleInstrument extends StandardTradingRuleInstrument {
   @override
   final num initialMarginUsdPerLot;
   @override
-  final num facilityFeeUsdPerLotPerSide;
+  final num? facilityFeeUsdPerLotPerSide;
   @override
   final num vatPercent;
   @override
@@ -180,7 +204,7 @@ class _$StandardTradingRuleInstrument extends StandardTradingRuleInstrument {
       required this.tradingDays,
       required this.tradingHours,
       required this.initialMarginUsdPerLot,
-      required this.facilityFeeUsdPerLotPerSide,
+      this.facilityFeeUsdPerLotPerSide,
       required this.vatPercent,
       required this.rolloverUsdPerLotPerNight,
       required this.priceSource,
@@ -431,10 +455,7 @@ class StandardTradingRuleInstrumentBuilder
                 initialMarginUsdPerLot,
                 r'StandardTradingRuleInstrument',
                 'initialMarginUsdPerLot'),
-            facilityFeeUsdPerLotPerSide: BuiltValueNullFieldError.checkNotNull(
-                facilityFeeUsdPerLotPerSide,
-                r'StandardTradingRuleInstrument',
-                'facilityFeeUsdPerLotPerSide'),
+            facilityFeeUsdPerLotPerSide: facilityFeeUsdPerLotPerSide,
             vatPercent: BuiltValueNullFieldError.checkNotNull(
                 vatPercent, r'StandardTradingRuleInstrument', 'vatPercent'),
             rolloverUsdPerLotPerNight: BuiltValueNullFieldError.checkNotNull(

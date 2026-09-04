@@ -1030,11 +1030,15 @@ paths:
             default: "30"
         - name: instruments
           in: query
+          style: form
+          explode: true
           schema:
             type: array
             items: { type: string }
         - name: timeframes
           in: query
+          style: form
+          explode: true
           schema:
             type: array
             items: { type: string }

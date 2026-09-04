@@ -15,6 +15,7 @@ Method | HTTP request | Description
 [**getAnalysesSummary**](AnalysesApi.md#getanalysessummary) | **GET** /analyses/summary | Get dashboard summary stats
 [**getAnalysis**](AnalysesApi.md#getanalysis) | **GET** /analyses/{id} | Get single analysis
 [**getAnalysisAlerts**](AnalysesApi.md#getanalysisalerts) | **GET** /analyses/{id}/alerts | Get price-alert status for an analysis
+[**getAnalysisHistorySummary**](AnalysesApi.md#getanalysishistorysummary) | **GET** /analyses/history-summary | Get the current user&#39;s analysis-outcome summary by timeframe
 [**getAnalysisOutcomesSummary**](AnalysesApi.md#getanalysisoutcomessummary) | **GET** /analyses/outcomes-summary | AI trade-plan outcome roll-up over the last 30 days
 [**getAnalysisQuota**](AnalysesApi.md#getanalysisquota) | **GET** /analyses/quota | Get current user&#39;s analysis quota usage
 [**getPersonalAnalytics**](AnalysesApi.md#getpersonalanalytics) | **GET** /analyses/personal-analytics | Get personal analytics data
@@ -271,6 +272,51 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getAnalysisHistorySummary**
+> AnalysisHistorySummary getAnalysisHistorySummary(range, instruments, timeframes)
+
+Get the current user's analysis-outcome summary by timeframe
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAnalysesApi();
+final String range = range_example; // String | 
+final BuiltList<String> instruments = ; // BuiltList<String> | 
+final BuiltList<String> timeframes = ; // BuiltList<String> | 
+
+try {
+    final response = api.getAnalysisHistorySummary(range, instruments, timeframes);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AnalysesApi->getAnalysisHistorySummary: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **range** | **String**|  | [optional] [default to '30']
+ **instruments** | [**BuiltList&lt;String&gt;**](String.md)|  | [optional] 
+ **timeframes** | [**BuiltList&lt;String&gt;**](String.md)|  | [optional] 
+
+### Return type
+
+[**AnalysisHistorySummary**](AnalysisHistorySummary.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getAnalysisOutcomesSummary**
 > AnalysisOutcomesSummary getAnalysisOutcomesSummary()
 
@@ -426,7 +472,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAnalyses**
-> AnalysesList listAnalyses(mode, instrument, instruments, timeframes, page, limit, q, from, to)
+> AnalysesList listAnalyses(mode, instrument, instruments, timeframes, outcomes, page, limit, q, from, to)
 
 List user's analyses with filters
 
@@ -439,6 +485,7 @@ final String mode = mode_example; // String |
 final String instrument = instrument_example; // String | 
 final BuiltList<String> instruments = ; // BuiltList<String> | Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.
 final BuiltList<String> timeframes = ; // BuiltList<String> | Multi-select timeframe filter (repeatable).
+final BuiltList<String> outcomes = ; // BuiltList<String> | Multi-select resolved outcome filter (repeatable).
 final int page = 56; // int | 
 final int limit = 56; // int | 
 final String q = q_example; // String | Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).
@@ -446,7 +493,7 @@ final Date from = 2013-10-20; // Date | Filter analyses created on or after this
 final Date to = 2013-10-20; // Date | Filter analyses created on or before this date (ISO 8601)
 
 try {
-    final response = api.listAnalyses(mode, instrument, instruments, timeframes, page, limit, q, from, to);
+    final response = api.listAnalyses(mode, instrument, instruments, timeframes, outcomes, page, limit, q, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AnalysesApi->listAnalyses: $e\n');
@@ -461,6 +508,7 @@ Name | Type | Description  | Notes
  **instrument** | **String**|  | [optional] 
  **instruments** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select instrument filter (repeatable). Wins over `instrument` when both provided. | [optional] 
  **timeframes** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select timeframe filter (repeatable). | [optional] 
+ **outcomes** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select resolved outcome filter (repeatable). | [optional] 
  **page** | **int**|  | [optional] [default to 1]
  **limit** | **int**|  | [optional] [default to 20]
  **q** | **String**| Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive). | [optional] 

@@ -109,6 +109,24 @@ class _$PushPrefsUpdate extends PushPrefsUpdate {
   final bool? guardrailHighRisk;
   @override
   final bool? coolingOffEnabled;
+  @override
+  final bool? pushAnalysisCompleted;
+  @override
+  final bool? pushTpSlHit;
+  @override
+  final bool? pushLoginAlert;
+  @override
+  final bool? nativePushEnabled;
+  @override
+  final bool? webPushEnabled;
+  @override
+  final bool? quietHoursEnabled;
+  @override
+  final String? quietHoursStart;
+  @override
+  final String? quietHoursEnd;
+  @override
+  final String? notificationTimezone;
 
   factory _$PushPrefsUpdate([void Function(PushPrefsUpdateBuilder)? updates]) =>
       (PushPrefsUpdateBuilder()..update(updates))._build();
@@ -129,7 +147,16 @@ class _$PushPrefsUpdate extends PushPrefsUpdate {
       this.guardrailRevenge,
       this.guardrailOvertrading,
       this.guardrailHighRisk,
-      this.coolingOffEnabled})
+      this.coolingOffEnabled,
+      this.pushAnalysisCompleted,
+      this.pushTpSlHit,
+      this.pushLoginAlert,
+      this.nativePushEnabled,
+      this.webPushEnabled,
+      this.quietHoursEnabled,
+      this.quietHoursStart,
+      this.quietHoursEnd,
+      this.notificationTimezone})
       : super._();
   @override
   PushPrefsUpdate rebuild(void Function(PushPrefsUpdateBuilder) updates) =>
@@ -157,7 +184,16 @@ class _$PushPrefsUpdate extends PushPrefsUpdate {
         guardrailRevenge == other.guardrailRevenge &&
         guardrailOvertrading == other.guardrailOvertrading &&
         guardrailHighRisk == other.guardrailHighRisk &&
-        coolingOffEnabled == other.coolingOffEnabled;
+        coolingOffEnabled == other.coolingOffEnabled &&
+        pushAnalysisCompleted == other.pushAnalysisCompleted &&
+        pushTpSlHit == other.pushTpSlHit &&
+        pushLoginAlert == other.pushLoginAlert &&
+        nativePushEnabled == other.nativePushEnabled &&
+        webPushEnabled == other.webPushEnabled &&
+        quietHoursEnabled == other.quietHoursEnabled &&
+        quietHoursStart == other.quietHoursStart &&
+        quietHoursEnd == other.quietHoursEnd &&
+        notificationTimezone == other.notificationTimezone;
   }
 
   @override
@@ -179,6 +215,15 @@ class _$PushPrefsUpdate extends PushPrefsUpdate {
     _$hash = $jc(_$hash, guardrailOvertrading.hashCode);
     _$hash = $jc(_$hash, guardrailHighRisk.hashCode);
     _$hash = $jc(_$hash, coolingOffEnabled.hashCode);
+    _$hash = $jc(_$hash, pushAnalysisCompleted.hashCode);
+    _$hash = $jc(_$hash, pushTpSlHit.hashCode);
+    _$hash = $jc(_$hash, pushLoginAlert.hashCode);
+    _$hash = $jc(_$hash, nativePushEnabled.hashCode);
+    _$hash = $jc(_$hash, webPushEnabled.hashCode);
+    _$hash = $jc(_$hash, quietHoursEnabled.hashCode);
+    _$hash = $jc(_$hash, quietHoursStart.hashCode);
+    _$hash = $jc(_$hash, quietHoursEnd.hashCode);
+    _$hash = $jc(_$hash, notificationTimezone.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -201,7 +246,16 @@ class _$PushPrefsUpdate extends PushPrefsUpdate {
           ..add('guardrailRevenge', guardrailRevenge)
           ..add('guardrailOvertrading', guardrailOvertrading)
           ..add('guardrailHighRisk', guardrailHighRisk)
-          ..add('coolingOffEnabled', coolingOffEnabled))
+          ..add('coolingOffEnabled', coolingOffEnabled)
+          ..add('pushAnalysisCompleted', pushAnalysisCompleted)
+          ..add('pushTpSlHit', pushTpSlHit)
+          ..add('pushLoginAlert', pushLoginAlert)
+          ..add('nativePushEnabled', nativePushEnabled)
+          ..add('webPushEnabled', webPushEnabled)
+          ..add('quietHoursEnabled', quietHoursEnabled)
+          ..add('quietHoursStart', quietHoursStart)
+          ..add('quietHoursEnd', quietHoursEnd)
+          ..add('notificationTimezone', notificationTimezone))
         .toString();
   }
 }
@@ -293,6 +347,50 @@ class PushPrefsUpdateBuilder
   set coolingOffEnabled(bool? coolingOffEnabled) =>
       _$this._coolingOffEnabled = coolingOffEnabled;
 
+  bool? _pushAnalysisCompleted;
+  bool? get pushAnalysisCompleted => _$this._pushAnalysisCompleted;
+  set pushAnalysisCompleted(bool? pushAnalysisCompleted) =>
+      _$this._pushAnalysisCompleted = pushAnalysisCompleted;
+
+  bool? _pushTpSlHit;
+  bool? get pushTpSlHit => _$this._pushTpSlHit;
+  set pushTpSlHit(bool? pushTpSlHit) => _$this._pushTpSlHit = pushTpSlHit;
+
+  bool? _pushLoginAlert;
+  bool? get pushLoginAlert => _$this._pushLoginAlert;
+  set pushLoginAlert(bool? pushLoginAlert) =>
+      _$this._pushLoginAlert = pushLoginAlert;
+
+  bool? _nativePushEnabled;
+  bool? get nativePushEnabled => _$this._nativePushEnabled;
+  set nativePushEnabled(bool? nativePushEnabled) =>
+      _$this._nativePushEnabled = nativePushEnabled;
+
+  bool? _webPushEnabled;
+  bool? get webPushEnabled => _$this._webPushEnabled;
+  set webPushEnabled(bool? webPushEnabled) =>
+      _$this._webPushEnabled = webPushEnabled;
+
+  bool? _quietHoursEnabled;
+  bool? get quietHoursEnabled => _$this._quietHoursEnabled;
+  set quietHoursEnabled(bool? quietHoursEnabled) =>
+      _$this._quietHoursEnabled = quietHoursEnabled;
+
+  String? _quietHoursStart;
+  String? get quietHoursStart => _$this._quietHoursStart;
+  set quietHoursStart(String? quietHoursStart) =>
+      _$this._quietHoursStart = quietHoursStart;
+
+  String? _quietHoursEnd;
+  String? get quietHoursEnd => _$this._quietHoursEnd;
+  set quietHoursEnd(String? quietHoursEnd) =>
+      _$this._quietHoursEnd = quietHoursEnd;
+
+  String? _notificationTimezone;
+  String? get notificationTimezone => _$this._notificationTimezone;
+  set notificationTimezone(String? notificationTimezone) =>
+      _$this._notificationTimezone = notificationTimezone;
+
   PushPrefsUpdateBuilder() {
     PushPrefsUpdate._defaults(this);
   }
@@ -316,6 +414,15 @@ class PushPrefsUpdateBuilder
       _guardrailOvertrading = $v.guardrailOvertrading;
       _guardrailHighRisk = $v.guardrailHighRisk;
       _coolingOffEnabled = $v.coolingOffEnabled;
+      _pushAnalysisCompleted = $v.pushAnalysisCompleted;
+      _pushTpSlHit = $v.pushTpSlHit;
+      _pushLoginAlert = $v.pushLoginAlert;
+      _nativePushEnabled = $v.nativePushEnabled;
+      _webPushEnabled = $v.webPushEnabled;
+      _quietHoursEnabled = $v.quietHoursEnabled;
+      _quietHoursStart = $v.quietHoursStart;
+      _quietHoursEnd = $v.quietHoursEnd;
+      _notificationTimezone = $v.notificationTimezone;
       _$v = null;
     }
     return this;
@@ -355,6 +462,15 @@ class PushPrefsUpdateBuilder
             guardrailOvertrading: guardrailOvertrading,
             guardrailHighRisk: guardrailHighRisk,
             coolingOffEnabled: coolingOffEnabled,
+            pushAnalysisCompleted: pushAnalysisCompleted,
+            pushTpSlHit: pushTpSlHit,
+            pushLoginAlert: pushLoginAlert,
+            nativePushEnabled: nativePushEnabled,
+            webPushEnabled: webPushEnabled,
+            quietHoursEnabled: quietHoursEnabled,
+            quietHoursStart: quietHoursStart,
+            quietHoursEnd: quietHoursEnd,
+            notificationTimezone: notificationTimezone,
           );
     } catch (_) {
       late String _$failedField;

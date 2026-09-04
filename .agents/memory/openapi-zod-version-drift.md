@@ -1,10 +1,16 @@
 ---
-name: OpenAPI Zod version drift
-description: Codegen can emit Zod v4 syntax while this workspace still runs Zod v3.
+name: Deterministic API codegen
+description: Keep generated validators runtime-compatible and prevent emitter or build-cache drift.
 ---
 
-Do not assume a successful Orval generation means its Zod output is compatible with the installed runtime. The current generator can emit top-level helpers such as `zod.int()` and `zod.email()`, while the workspace runtime still provides Zod v3.
+Pin the API generator to an emitter that matches the validator runtime and committed output. Before accepting a generator change, regenerate an unchanged contract and require zero generated diff.
 
-**Why:** A routine contract regeneration replaced the working generated validators with Zod v4-style output, causing every API route test importing the validator barrel to fail at startup.
+**Why:** Compatible dependency ranges can silently select an emitter with newer validator syntax or broad formatting changes, breaking every route that imports the generated barrel.
 
-**How to apply:** After codegen, immediately run the API route tests or import the generated validator barrel. If v4 helpers appear before the runtime upgrade is intentional, restore generated outputs and avoid committing the incompatible regeneration; align generator and Zod versions in a dedicated dependency change.
+**How to apply:** Keep generator and runtime upgrades intentional and paired. Validate the generated barrel and route imports after regeneration.
+
+Clean the Dart generated-part cache before rebuilding models.
+
+**Why:** Incremental build state can preserve stale builder fields and enum serializers after OpenAPI Generator rewrites model sources.
+
+**How to apply:** Clean, rebuild, and analyze Dart generated parts; warnings from generator templates may be non-fatal, but analyzer errors must fail codegen.

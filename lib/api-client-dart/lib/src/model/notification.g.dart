@@ -33,8 +33,32 @@ final BuiltSet<NotificationTypeEnum> _$notificationTypeEnumValues =
   _$notificationTypeEnum_error,
 ]);
 
+const NotificationActionTypeEnum _$notificationActionTypeEnum_openNotification =
+    const NotificationActionTypeEnum._('openNotification');
+const NotificationActionTypeEnum _$notificationActionTypeEnum_openAnalysis =
+    const NotificationActionTypeEnum._('openAnalysis');
+
+NotificationActionTypeEnum _$notificationActionTypeEnumValueOf(String name) {
+  switch (name) {
+    case 'openNotification':
+      return _$notificationActionTypeEnum_openNotification;
+    case 'openAnalysis':
+      return _$notificationActionTypeEnum_openAnalysis;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<NotificationActionTypeEnum> _$notificationActionTypeEnumValues =
+    BuiltSet<NotificationActionTypeEnum>(const <NotificationActionTypeEnum>[
+  _$notificationActionTypeEnum_openNotification,
+  _$notificationActionTypeEnum_openAnalysis,
+]);
+
 Serializer<NotificationTypeEnum> _$notificationTypeEnumSerializer =
     _$NotificationTypeEnumSerializer();
+Serializer<NotificationActionTypeEnum> _$notificationActionTypeEnumSerializer =
+    _$NotificationActionTypeEnumSerializer();
 
 class _$NotificationTypeEnumSerializer
     implements PrimitiveSerializer<NotificationTypeEnum> {
@@ -66,6 +90,35 @@ class _$NotificationTypeEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$NotificationActionTypeEnumSerializer
+    implements PrimitiveSerializer<NotificationActionTypeEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'openNotification': 'open_notification',
+    'openAnalysis': 'open_analysis',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'open_notification': 'openNotification',
+    'open_analysis': 'openAnalysis',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[NotificationActionTypeEnum];
+  @override
+  final String wireName = 'NotificationActionTypeEnum';
+
+  @override
+  Object serialize(Serializers serializers, NotificationActionTypeEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  NotificationActionTypeEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      NotificationActionTypeEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$Notification extends Notification {
   @override
   final int id;
@@ -82,6 +135,12 @@ class _$Notification extends Notification {
   @override
   final DateTime? readAt;
   @override
+  final String? category;
+  @override
+  final NotificationActionTypeEnum? actionType;
+  @override
+  final String? actionId;
+  @override
   final DateTime createdAt;
 
   factory _$Notification([void Function(NotificationBuilder)? updates]) =>
@@ -95,6 +154,9 @@ class _$Notification extends Notification {
       required this.message,
       required this.type,
       this.readAt,
+      this.category,
+      this.actionType,
+      this.actionId,
       required this.createdAt})
       : super._();
   @override
@@ -115,6 +177,9 @@ class _$Notification extends Notification {
         message == other.message &&
         type == other.type &&
         readAt == other.readAt &&
+        category == other.category &&
+        actionType == other.actionType &&
+        actionId == other.actionId &&
         createdAt == other.createdAt;
   }
 
@@ -128,6 +193,9 @@ class _$Notification extends Notification {
     _$hash = $jc(_$hash, message.hashCode);
     _$hash = $jc(_$hash, type.hashCode);
     _$hash = $jc(_$hash, readAt.hashCode);
+    _$hash = $jc(_$hash, category.hashCode);
+    _$hash = $jc(_$hash, actionType.hashCode);
+    _$hash = $jc(_$hash, actionId.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -143,6 +211,9 @@ class _$Notification extends Notification {
           ..add('message', message)
           ..add('type', type)
           ..add('readAt', readAt)
+          ..add('category', category)
+          ..add('actionType', actionType)
+          ..add('actionId', actionId)
           ..add('createdAt', createdAt))
         .toString();
   }
@@ -180,6 +251,19 @@ class NotificationBuilder
   DateTime? get readAt => _$this._readAt;
   set readAt(DateTime? readAt) => _$this._readAt = readAt;
 
+  String? _category;
+  String? get category => _$this._category;
+  set category(String? category) => _$this._category = category;
+
+  NotificationActionTypeEnum? _actionType;
+  NotificationActionTypeEnum? get actionType => _$this._actionType;
+  set actionType(NotificationActionTypeEnum? actionType) =>
+      _$this._actionType = actionType;
+
+  String? _actionId;
+  String? get actionId => _$this._actionId;
+  set actionId(String? actionId) => _$this._actionId = actionId;
+
   DateTime? _createdAt;
   DateTime? get createdAt => _$this._createdAt;
   set createdAt(DateTime? createdAt) => _$this._createdAt = createdAt;
@@ -198,6 +282,9 @@ class NotificationBuilder
       _message = $v.message;
       _type = $v.type;
       _readAt = $v.readAt;
+      _category = $v.category;
+      _actionType = $v.actionType;
+      _actionId = $v.actionId;
       _createdAt = $v.createdAt;
       _$v = null;
     }
@@ -230,6 +317,9 @@ class NotificationBuilder
           type: BuiltValueNullFieldError.checkNotNull(
               type, r'Notification', 'type'),
           readAt: readAt,
+          category: category,
+          actionType: actionType,
+          actionId: actionId,
           createdAt: BuiltValueNullFieldError.checkNotNull(
               createdAt, r'Notification', 'createdAt'),
         );

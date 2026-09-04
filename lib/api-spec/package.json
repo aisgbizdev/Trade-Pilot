@@ -3,11 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "orval --config ./orval.config.ts && pnpm run codegen:dart && pnpm -w run typecheck:libs",
-    "codegen:dart": "openapi-generator-cli generate -i ./openapi.yaml -g dart-dio -o ../api-client-dart -p pubName=trade_pilot_api_client -p pubVersion=0.1.0"
+    "codegen": "pnpm run codegen:orval && pnpm run codegen:dart && pnpm -w run typecheck:libs",
+    "codegen:orval": "orval --config ./orval.config.ts && pnpm exec prettier --write ../api-client-react/src/generated ../api-zod/src/generated",
+    "codegen:dart": "openapi-generator-cli generate -i ./openapi.yaml -g dart-dio -o ../api-client-dart -p pubName=trade_pilot_api_client -p pubVersion=0.1.0 && cd ../api-client-dart && dart pub get && dart run build_runner clean && dart run build_runner build && dart analyze --no-fatal-warnings"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.40.1",
-    "orval": "^8.21.0"
+    "orval": "8.5.3"
   }
 }

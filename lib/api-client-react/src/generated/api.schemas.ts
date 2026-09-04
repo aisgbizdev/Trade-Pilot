@@ -812,6 +812,42 @@ export interface AnalysisOutcomesSummary {
   slHitRate?: number | null;
 }
 
+export interface AnalysisHistoryOutcomeStats {
+  total: number;
+  pending: number;
+  activeValid: number;
+  tp1Hit: number;
+  tp2Hit: number;
+  slHit: number;
+  expired: number;
+  invalidated: number;
+  /** @nullable */
+  winRate: number | null;
+  /** @nullable */
+  completionRate: number | null;
+}
+
+export type AnalysisHistoryTimeframeStats = AnalysisHistoryOutcomeStats & {
+  timeframe: string;
+};
+
+export type AnalysisHistorySummaryRange =
+  (typeof AnalysisHistorySummaryRange)[keyof typeof AnalysisHistorySummaryRange];
+
+export const AnalysisHistorySummaryRange = {
+  NUMBER_7: "7",
+  NUMBER_30: "30",
+  NUMBER_90: "90",
+  all: "all",
+} as const;
+
+export interface AnalysisHistorySummary {
+  range: AnalysisHistorySummaryRange;
+  minSamples: number;
+  overall: AnalysisHistoryOutcomeStats;
+  byTimeframe: AnalysisHistoryTimeframeStats[];
+}
+
 export type RecentInstrumentsInstrumentsItem = {
   instrument: string;
   lastAnalyzedAt: string;
@@ -1905,6 +1941,10 @@ export type ListAnalysesParams = {
    * Multi-select timeframe filter (repeatable).
    */
   timeframes?: string[];
+  /**
+   * Multi-select resolved outcome filter (repeatable).
+   */
+  outcomes?: ListAnalysesOutcomesItem[];
   page?: number;
   limit?: number;
   /**
@@ -1928,6 +1968,34 @@ export type ListAnalysesMode =
 export const ListAnalysesMode = {
   beginner: "beginner",
   pro: "pro",
+} as const;
+
+export type ListAnalysesOutcomesItem =
+  (typeof ListAnalysesOutcomesItem)[keyof typeof ListAnalysesOutcomesItem];
+
+export const ListAnalysesOutcomesItem = {
+  pending: "pending",
+  tp1_hit: "tp1_hit",
+  tp2_hit: "tp2_hit",
+  sl_hit: "sl_hit",
+  expired: "expired",
+  invalidated: "invalidated",
+} as const;
+
+export type GetAnalysisHistorySummaryParams = {
+  range?: GetAnalysisHistorySummaryRange;
+  instruments?: string[];
+  timeframes?: string[];
+};
+
+export type GetAnalysisHistorySummaryRange =
+  (typeof GetAnalysisHistorySummaryRange)[keyof typeof GetAnalysisHistorySummaryRange];
+
+export const GetAnalysisHistorySummaryRange = {
+  NUMBER_7: "7",
+  NUMBER_30: "30",
+  NUMBER_90: "90",
+  all: "all",
 } as const;
 
 export type GetPersonalAnalyticsParams = {

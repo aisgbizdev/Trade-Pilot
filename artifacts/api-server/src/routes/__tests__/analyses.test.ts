@@ -129,6 +129,25 @@ describe("GET /analyses auth gate", () => {
   });
 });
 
+describe("GET /analyses/history-summary filters", () => {
+  it("combines repeated instrument filters without leaking another user's rows", async () => {
+    const query =
+      `range=all` +
+      `&instruments=${encodeURIComponent(`${INSTRUMENT_PREFIX}-A`)}` +
+      `&instruments=${encodeURIComponent(`${INSTRUMENT_PREFIX}-B`)}` +
+      `&timeframes=1h`;
+    const res = await request(app)
+      .get(`/api/analyses/history-summary?${query}`)
+      .set(...authHeader(alice));
+
+    expect(res.status).toBe(200);
+    expect(res.body.overall.total).toBe(8);
+    expect(res.body.byTimeframe).toEqual([
+      expect.objectContaining({ timeframe: "1h", total: 8 }),
+    ]);
+  });
+});
+
 describe("GET /analyses ownership", () => {
   it("only returns analyses owned by the requesting user", async () => {
     const res = await request(app)

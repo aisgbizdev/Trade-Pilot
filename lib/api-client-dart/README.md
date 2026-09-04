@@ -79,6 +79,7 @@ Class | Method | HTTP request | Description
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysesSummary**](doc/AnalysesApi.md#getanalysessummary) | **GET** /analyses/summary | Get dashboard summary stats
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysis**](doc/AnalysesApi.md#getanalysis) | **GET** /analyses/{id} | Get single analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisAlerts**](doc/AnalysesApi.md#getanalysisalerts) | **GET** /analyses/{id}/alerts | Get price-alert status for an analysis
+[*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisHistorySummary**](doc/AnalysesApi.md#getanalysishistorysummary) | **GET** /analyses/history-summary | Get the current user&#39;s analysis-outcome summary by timeframe
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisOutcomesSummary**](doc/AnalysesApi.md#getanalysisoutcomessummary) | **GET** /analyses/outcomes-summary | AI trade-plan outcome roll-up over the last 30 days
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisQuota**](doc/AnalysesApi.md#getanalysisquota) | **GET** /analyses/quota | Get current user&#39;s analysis quota usage
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getPersonalAnalytics**](doc/AnalysesApi.md#getpersonalanalytics) | **GET** /analyses/personal-analytics | Get personal analytics data
@@ -162,6 +163,9 @@ Class | Method | HTTP request | Description
  - [AnalysesList](doc/AnalysesList.md)
  - [AnalysesSummary](doc/AnalysesSummary.md)
  - [Analysis](doc/Analysis.md)
+ - [AnalysisHistoryOutcomeStats](doc/AnalysisHistoryOutcomeStats.md)
+ - [AnalysisHistorySummary](doc/AnalysisHistorySummary.md)
+ - [AnalysisHistoryTimeframeStats](doc/AnalysisHistoryTimeframeStats.md)
  - [AnalysisNoteResponse](doc/AnalysisNoteResponse.md)
  - [AnalysisOutcomesSummary](doc/AnalysisOutcomesSummary.md)
  - [AnalysisQuota](doc/AnalysisQuota.md)

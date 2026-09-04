@@ -25,6 +25,7 @@ import type {
   AnalysesList,
   AnalysesSummary,
   Analysis,
+  AnalysisHistorySummary,
   AnalysisNoteResponse,
   AnalysisOutcomesSummary,
   AnalysisQuota,
@@ -57,6 +58,7 @@ import type {
   GetAdminFeedbackParams,
   GetAllAnalysesParams,
   GetAllUsersParams,
+  GetAnalysisHistorySummaryParams,
   GetBroadcastsParams,
   GetJournalSentimentParams,
   GetJournalStatsParams,
@@ -2790,7 +2792,7 @@ export const getListAnalysesUrl = (params?: ListAnalysesParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["instruments", "timeframes"];
+    const explodeParameters = ["instruments", "timeframes", "outcomes"];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {
@@ -3034,6 +3036,124 @@ export function useGetAnalysisOutcomesSummary<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetAnalysisOutcomesSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get the current user's analysis-outcome summary by timeframe
+ */
+export const getGetAnalysisHistorySummaryUrl = (
+  params?: GetAnalysisHistorySummaryParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["instruments", "timeframes"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : v.toString());
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analyses/history-summary?${stringifiedParams}`
+    : `/api/analyses/history-summary`;
+};
+
+export const getAnalysisHistorySummary = async (
+  params?: GetAnalysisHistorySummaryParams,
+  options?: RequestInit,
+): Promise<AnalysisHistorySummary> => {
+  return customFetch<AnalysisHistorySummary>(
+    getGetAnalysisHistorySummaryUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAnalysisHistorySummaryQueryKey = (
+  params?: GetAnalysisHistorySummaryParams,
+) => {
+  return [
+    `/api/analyses/history-summary`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetAnalysisHistorySummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalysisHistorySummary>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetAnalysisHistorySummaryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAnalysisHistorySummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAnalysisHistorySummaryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAnalysisHistorySummary>>
+  > = ({ signal }) =>
+    getAnalysisHistorySummary(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysisHistorySummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAnalysisHistorySummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalysisHistorySummary>>
+>;
+export type GetAnalysisHistorySummaryQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get the current user's analysis-outcome summary by timeframe
+ */
+
+export function useGetAnalysisHistorySummary<
+  TData = Awaited<ReturnType<typeof getAnalysisHistorySummary>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetAnalysisHistorySummaryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAnalysisHistorySummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAnalysisHistorySummaryQueryOptions(
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

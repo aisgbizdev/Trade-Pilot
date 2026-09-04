@@ -25,6 +25,9 @@ import 'package:trade_pilot_api_client/src/model/alert_status.dart';
 import 'package:trade_pilot_api_client/src/model/analyses_list.dart';
 import 'package:trade_pilot_api_client/src/model/analyses_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis.dart';
+import 'package:trade_pilot_api_client/src/model/analysis_history_outcome_stats.dart';
+import 'package:trade_pilot_api_client/src/model/analysis_history_summary.dart';
+import 'package:trade_pilot_api_client/src/model/analysis_history_timeframe_stats.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_note_response.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_outcomes_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_quota.dart';
@@ -164,6 +167,9 @@ part 'serializers.g.dart';
   AnalysesList,
   AnalysesSummary,
   Analysis,
+  AnalysisHistoryOutcomeStats,$AnalysisHistoryOutcomeStats,
+  AnalysisHistorySummary,
+  AnalysisHistoryTimeframeStats,
   AnalysisNoteResponse,
   AnalysisOutcomesSummary,
   AnalysisQuota,
@@ -343,6 +349,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AnalyticsTokenStatsByModelInner>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalysisHistoryTimeframeStats)]),
+        () => ListBuilder<AnalysisHistoryTimeframeStats>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsUsageStatsCountryBreakdownInner)]),
         () => ListBuilder<AnalyticsUsageStatsCountryBreakdownInner>(),
       )
@@ -426,6 +436,7 @@ Serializers serializers = (_$serializers.toBuilder()
         const FullType(BuiltList, [FullType(AnalyticsTokenStatsTopUsersInner)]),
         () => ListBuilder<AnalyticsTokenStatsTopUsersInner>(),
       )
+      ..add(AnalysisHistoryOutcomeStats.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
       ..add(const DateSerializer())

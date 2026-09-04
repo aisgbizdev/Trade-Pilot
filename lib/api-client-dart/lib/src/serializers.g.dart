@@ -7,6 +7,7 @@ part of 'serializers.dart';
 // **************************************************************************
 
 Serializers _$serializers = (Serializers().toBuilder()
+      ..add($AnalysisHistoryOutcomeStats.serializer)
       ..add(AddUserTagBody.serializer)
       ..add(AddWatchlistBody.serializer)
       ..add(AdminFeedbackList.serializer)
@@ -23,6 +24,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AnalysesList.serializer)
       ..add(AnalysesSummary.serializer)
       ..add(Analysis.serializer)
+      ..add(AnalysisHistorySummary.serializer)
+      ..add(AnalysisHistorySummaryRangeEnum.serializer)
+      ..add(AnalysisHistoryTimeframeStats.serializer)
       ..add(AnalysisModeEnum.serializer)
       ..add(AnalysisNoteResponse.serializer)
       ..add(AnalysisOutcomeStatusEnum.serializer)
@@ -212,6 +216,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(Analysis)]),
           () => ListBuilder<Analysis>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(AnalysisHistoryTimeframeStats)]),
+          () => ListBuilder<AnalysisHistoryTimeframeStats>())
       ..addBuilderFactory(
           const FullType(BuiltList,
               const [const FullType(AnalyticsTokenStatsDailyTokensInner)]),

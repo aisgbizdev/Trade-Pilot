@@ -1053,6 +1053,19 @@ export const ListAnalysesQueryParams = zod.object({
     .array(zod.coerce.string())
     .optional()
     .describe("Multi-select timeframe filter (repeatable)."),
+  outcomes: zod
+    .array(
+      zod.enum([
+        "pending",
+        "tp1_hit",
+        "tp2_hit",
+        "sl_hit",
+        "expired",
+        "invalidated",
+      ]),
+    )
+    .optional()
+    .describe("Multi-select resolved outcome filter (repeatable)."),
   page: zod.coerce.number().default(listAnalysesQueryPageDefault),
   limit: zod.coerce.number().default(listAnalysesQueryLimitDefault),
   q: zod.coerce
@@ -1549,6 +1562,56 @@ export const GetAnalysisOutcomesSummaryResponse = zod
   .describe(
     "Outcome roll-up powering the dashboard's AI accuracy card. Counts every analysis created in the last `rangeDays` days; `scored` is the resolved + non-invalidated subset that the hit-rate percentages are computed against.",
   );
+
+/**
+ * @summary Get the current user's analysis-outcome summary by timeframe
+ */
+export const getAnalysisHistorySummaryQueryRangeDefault = `30`;
+
+export const GetAnalysisHistorySummaryQueryParams = zod.object({
+  range: zod
+    .enum(["7", "30", "90", "all"])
+    .default(getAnalysisHistorySummaryQueryRangeDefault),
+  instruments: zod.array(zod.coerce.string()).optional(),
+  timeframes: zod.array(zod.coerce.string()).optional(),
+});
+
+export const GetAnalysisHistorySummaryResponse = zod.object({
+  range: zod.enum(["7", "30", "90", "all"]),
+  minSamples: zod.number(),
+  overall: zod.object({
+    total: zod.number(),
+    pending: zod.number(),
+    activeValid: zod.number(),
+    tp1Hit: zod.number(),
+    tp2Hit: zod.number(),
+    slHit: zod.number(),
+    expired: zod.number(),
+    invalidated: zod.number(),
+    winRate: zod.number().nullable(),
+    completionRate: zod.number().nullable(),
+  }),
+  byTimeframe: zod.array(
+    zod
+      .object({
+        total: zod.number(),
+        pending: zod.number(),
+        activeValid: zod.number(),
+        tp1Hit: zod.number(),
+        tp2Hit: zod.number(),
+        slHit: zod.number(),
+        expired: zod.number(),
+        invalidated: zod.number(),
+        winRate: zod.number().nullable(),
+        completionRate: zod.number().nullable(),
+      })
+      .and(
+        zod.object({
+          timeframe: zod.string(),
+        }),
+      ),
+  ),
+});
 
 /**
  * @summary Get 3 most recently analyzed instruments
