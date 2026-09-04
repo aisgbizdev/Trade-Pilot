@@ -68,7 +68,9 @@ function listHandler(payload: {
 
 beforeEach(() => {
   localStorage.clear();
-  window.history.replaceState({}, "", "/history");
+  // Legacy list assertions intentionally open the Riwayat tab. The unified
+  // page now defaults to the Ringkasan tab at bare /history.
+  window.history.replaceState({}, "", "/history?view=history");
 });
 
 afterEach(() => {

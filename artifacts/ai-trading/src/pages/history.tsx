@@ -25,6 +25,7 @@ import { id as idLocale, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
+import { HistoryPerformanceSummary } from "@/components/history-performance-summary";
 
 const ALL_INSTRUMENTS = [
   "XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY",
@@ -46,6 +47,7 @@ type FilterState = {
   from: string;
   to: string;
   q: string;
+  outcomes: OutcomeStatus[];
 };
 
 const EMPTY_FILTERS: FilterState = {
@@ -55,6 +57,7 @@ const EMPTY_FILTERS: FilterState = {
   from: "",
   to: "",
   q: "",
+  outcomes: [],
 };
 
 const MAX_SEARCH_LEN = 100;
@@ -92,6 +95,7 @@ function parseFiltersFromSearch(search: string): { filters: FilterState; page: n
       from: sp.get("from") ?? "",
       to: sp.get("to") ?? "",
       q: (sp.get("q") ?? "").slice(0, MAX_SEARCH_LEN),
+      outcomes: normalizeList(sp.getAll("outcomes")) as OutcomeStatus[],
     },
   };
 }
@@ -104,6 +108,10 @@ function buildSearch(filters: FilterState, page: number): string {
   if (filters.from) sp.set("from", filters.from);
   if (filters.to) sp.set("to", filters.to);
   if (filters.q) sp.set("q", filters.q);
+  for (const outcome of filters.outcomes) sp.append("outcomes", outcome);
+  const current = new URLSearchParams(window.location.search);
+  if (current.get("view")) sp.set("view", current.get("view")!);
+  if (current.get("range")) sp.set("range", current.get("range")!);
   if (page > 1) sp.set("page", String(page));
   const s = sp.toString();
   return s ? `?${s}` : "";
@@ -164,6 +172,7 @@ function normalisePresetFilters(raw: FilterPreset["filters"]): FilterState {
     from: typeof raw?.from === "string" ? raw.from : "",
     to: typeof raw?.to === "string" ? raw.to : "",
     q: typeof raw?.q === "string" ? raw.q.slice(0, MAX_SEARCH_LEN) : "",
+    outcomes: [],
   };
 }
 
@@ -186,10 +195,16 @@ export default function HistoryPage() {
     () => parseFiltersFromSearch(search),
     [search],
   );
+  const view = new URLSearchParams(search).get("view") === "history" ? "history" : "summary";
 
   const apply = (nextFilters: FilterState, nextPage: number) => {
     const qs = buildSearch(nextFilters, nextPage);
     setLocation(`/history${qs}`, { replace: true });
+  };
+  const setView = (nextView: "summary" | "history") => {
+    const sp = new URLSearchParams(search);
+    sp.set("view", nextView);
+    setLocation(`/history?${sp.toString()}`);
   };
 
   const hasActiveFilters =
@@ -198,7 +213,8 @@ export default function HistoryPage() {
     filters.timeframes.length > 0 ||
     filters.from !== "" ||
     filters.to !== "" ||
-    filters.q !== "";
+    filters.q !== "" ||
+    filters.outcomes.length > 0;
 
   // Debounce the search input: while the user is still typing, the URL
   // (and thus the request) is unchanged. The committed value flows into
@@ -306,6 +322,7 @@ export default function HistoryPage() {
     ...(filters.from ? { from: filters.from } : {}),
     ...(filters.to ? { to: filters.to } : {}),
     ...(filters.q ? { q: filters.q } : {}),
+    ...(filters.outcomes.length ? { outcomes: filters.outcomes } : {}),
   };
 
   const { data, isLoading } = useListAnalyses(
@@ -379,6 +396,13 @@ export default function HistoryPage() {
         }),
     });
   }
+  for (const outcome of filters.outcomes) {
+    activeChips.push({
+      key: `outcome-${outcome}`,
+      label: t.outcomes[outcome],
+      remove: () => updateFilters({ ...filters, outcomes: filters.outcomes.filter((item) => item !== outcome) }),
+    });
+  }
   if (filters.from) {
     activeChips.push({
       key: "from",
@@ -435,7 +459,13 @@ export default function HistoryPage() {
               )}
             </button>
           </div>
+          <div className="mt-3 inline-flex rounded-xl border border-border bg-muted/40 p-1">
+            <button type="button" onClick={() => setView("summary")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium", view === "summary" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.summary_tab}</button>
+            <button type="button" onClick={() => setView("history")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium", view === "history" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.history_tab}</button>
+          </div>
+          {view === "summary" && <div className="mt-4"><HistoryPerformanceSummary /></div>}
 
+          {view === "history" && <>
           <div className="mt-3 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
             <input
@@ -590,6 +620,25 @@ export default function HistoryPage() {
                 </div>
               </div>
               <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Outcome</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(["pending", "tp1_hit", "tp2_hit", "sl_hit", "expired", "invalidated"] as OutcomeStatus[]).map((outcome) => {
+                    const active = filters.outcomes.includes(outcome);
+                    return (
+                      <button key={outcome} onClick={() => updateFilters({
+                        ...filters,
+                        outcomes: active ? filters.outcomes.filter((item) => item !== outcome) : [...filters.outcomes, outcome],
+                      })} aria-pressed={active} className={cn(
+                        "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all",
+                        active ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border text-muted-foreground",
+                      )}>
+                        {t.outcomes[outcome]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{t.analyze.select_instrument}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {ALL_INSTRUMENTS.map((inst) => {
@@ -683,8 +732,10 @@ export default function HistoryPage() {
               )}
             </div>
           )}
+          </>}
         </div>
 
+        {view === "history" && <>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -837,6 +888,7 @@ export default function HistoryPage() {
             </div>
           </div>
         )}
+        </>}
       </div>
     </Layout>
   );

@@ -17,7 +17,6 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import AnalyzePage from "@/pages/analyze";
 import AnalysisDetailPage from "@/pages/analysis-detail";
 import HistoryPage from "@/pages/history";
-import AnalyticsPage from "@/pages/analytics";
 import ProfilePage from "@/pages/profile";
 import NotificationsPage from "@/pages/notifications";
 import DailySummaryPage from "@/pages/daily-summary";
@@ -119,9 +118,7 @@ function Router() {
           </ProtectedRoute>
         </Route>
         <Route path="/analytics">
-          <ProtectedRoute>
-            <AnalyticsPage />
-          </ProtectedRoute>
+          <Redirect to="/history?view=summary" />
         </Route>
         <Route path="/profile">
           <ProtectedRoute>

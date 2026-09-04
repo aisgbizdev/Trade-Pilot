@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { TrendingUp, Clock, BarChart3, User, Bell, Moon, Sun, ChevronLeft, ExternalLink } from "lucide-react";
+import { TrendingUp, Clock, User, Bell, Moon, Sun, ChevronLeft, ExternalLink } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
@@ -25,7 +25,7 @@ import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "./language-toggle";
 import { ContinuousTicker } from "./continuous-ticker";
 
-const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/analytics", "/profile"];
+const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/profile"];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -107,7 +107,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const FULL_NAV = [
     { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
     { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
-    { href: "/analytics", icon: BarChart3, label: t.nav.analytics, minCount: 5 },
   ];
 
   const navItems = isEmbed

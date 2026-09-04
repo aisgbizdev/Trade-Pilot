@@ -152,6 +152,81 @@ router.get("/analyses/outcomes-summary", requireAuth, async (req: AuthRequest, r
   });
 });
 
+router.get("/analyses/history-summary", requireAuth, async (req: AuthRequest, res) => {
+  const rangeRaw = String(req.query["range"] ?? "30");
+  const rangeDays = rangeRaw === "all" ? null : ([7, 30, 90].includes(Number(rangeRaw)) ? Number(rangeRaw) : 30);
+  const toValues = (value: unknown): string[] =>
+    (Array.isArray(value) ? value : value == null ? [] : [value])
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 50);
+  const instruments = [...new Set(toValues(req.query["instruments"]))];
+  const timeframes = [...new Set(toValues(req.query["timeframes"]))];
+  const conditions = [eq(analyses.userId, req.userId!)];
+  if (rangeDays != null) {
+    conditions.push(sql`${analyses.createdAt} >= now() - (${rangeDays} * interval '1 day')`);
+  }
+  if (instruments.length) conditions.push(inArray(analyses.instrument, instruments));
+  if (timeframes.length) conditions.push(inArray(analyses.timeframe, timeframes));
+
+  const rows = await db
+    .select({
+      timeframe: analyses.timeframe,
+      outcomeStatus: analyses.outcomeStatus,
+      validUntil: analyses.validUntil,
+    })
+    .from(analyses)
+    .where(and(...conditions));
+
+  type Tally = {
+    total: number; pending: number; activeValid: number; tp1Hit: number;
+    tp2Hit: number; slHit: number; expired: number; invalidated: number;
+  };
+  const empty = (): Tally => ({
+    total: 0, pending: 0, activeValid: 0, tp1Hit: 0,
+    tp2Hit: 0, slHit: 0, expired: 0, invalidated: 0,
+  });
+  const now = Date.now();
+  const add = (tally: Tally, row: typeof rows[number]) => {
+    tally.total++;
+    if (row.outcomeStatus === "pending") {
+      tally.pending++;
+      if (new Date(row.validUntil).getTime() > now) tally.activeValid++;
+    } else if (row.outcomeStatus === "tp1_hit") tally.tp1Hit++;
+    else if (row.outcomeStatus === "tp2_hit") tally.tp2Hit++;
+    else if (row.outcomeStatus === "sl_hit") tally.slHit++;
+    else if (row.outcomeStatus === "expired") tally.expired++;
+    else if (row.outcomeStatus === "invalidated") tally.invalidated++;
+  };
+  const overall = empty();
+  const buckets = new Map<string, Tally>();
+  for (const row of rows) {
+    add(overall, row);
+    const bucket = buckets.get(row.timeframe) ?? empty();
+    add(bucket, row);
+    buckets.set(row.timeframe, bucket);
+  }
+  const rates = (tally: Tally) => {
+    const wins = tally.tp1Hit + tally.tp2Hit;
+    const triggered = wins + tally.slHit;
+    const scorable = triggered + tally.expired;
+    return {
+      ...tally,
+      winRate: triggered ? wins / triggered : null,
+      completionRate: scorable ? wins / scorable : null,
+    };
+  };
+  res.json({
+    range: rangeDays == null ? "all" : String(rangeDays),
+    minSamples: 10,
+    overall: rates(overall),
+    byTimeframe: [...buckets.entries()]
+      .map(([timeframe, tally]) => ({ timeframe, ...rates(tally) }))
+      .sort((a, b) => b.total - a.total),
+  });
+});
+
 router.get("/analyses/recent-instruments", requireAuth, async (req: AuthRequest, res) => {
   const rows = await db
     .selectDistinct({
@@ -774,16 +849,24 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
     const seen = new Set<string>();
     for (const item of raw) {
       if (typeof item !== "string") continue;
-      const trimmed = item.trim();
-      if (!trimmed || seen.has(trimmed)) continue;
-      seen.add(trimmed);
-      out.push(trimmed);
+      // Older generated clients serialize unknown array params as a
+      // comma-separated value. Accept both that form and repeated params.
+      for (const value of item.split(",")) {
+        const trimmed = value.trim();
+        if (!trimmed || seen.has(trimmed)) continue;
+        seen.add(trimmed);
+        out.push(trimmed);
+        if (out.length >= MAX_MULTI_FILTER) break;
+      }
       if (out.length >= MAX_MULTI_FILTER) break;
     }
     return out;
   };
   const filterInstruments = toArray(req.query["instruments"]);
   const filterTimeframes = toArray(req.query["timeframes"]);
+  const filterOutcomes = toArray(req.query["outcomes"]).filter((value) =>
+    ["pending", "tp1_hit", "tp2_hit", "sl_hit", "expired", "invalidated"].includes(value),
+  );
 
   // Free-text search. Runs a parameterised ILIKE across the columns the
   // user is likely to recall by — the instrument label, their own
@@ -813,6 +896,9 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
   }
   if (filterTimeframes.length > 0) {
     conditions.push(inArray(analyses.timeframe, filterTimeframes));
+  }
+  if (filterOutcomes.length > 0) {
+    conditions.push(inArray(analyses.outcomeStatus, filterOutcomes as Array<typeof analyses.outcomeStatus.enumValues[number]>));
   }
   if (filterFrom) {
     conditions.push(gte(analyses.createdAt, new Date(filterFrom)));

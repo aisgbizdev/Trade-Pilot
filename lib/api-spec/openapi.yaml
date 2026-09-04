@@ -921,6 +921,16 @@ paths:
             type: array
             items:
               type: string
+        - name: outcomes
+          in: query
+          description: Multi-select resolved outcome filter (repeatable).
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [pending, tp1_hit, tp2_hit, sl_hit, expired, invalidated]
         - name: page
           in: query
           schema:
@@ -999,6 +1009,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AnalysisOutcomesSummary"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analyses/history-summary:
+    get:
+      operationId: getAnalysisHistorySummary
+      tags: [analyses]
+      summary: Get the current user's analysis-outcome summary by timeframe
+      parameters:
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: ["7", "30", "90", all]
+            default: "30"
+        - name: instruments
+          in: query
+          schema:
+            type: array
+            items: { type: string }
+        - name: timeframes
+          in: query
+          schema:
+            type: array
+            items: { type: string }
+      responses:
+        "200":
+          description: User-scoped outcome summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisHistorySummary"
         "401":
           description: Not authenticated
           content:
@@ -3627,6 +3673,44 @@ components:
         - expired
         - invalidated
         - scored
+
+    AnalysisHistoryOutcomeStats:
+      type: object
+      required: [total, pending, activeValid, tp1Hit, tp2Hit, slHit, expired, invalidated, winRate, completionRate]
+      properties:
+        total: { type: integer }
+        pending: { type: integer }
+        activeValid: { type: integer }
+        tp1Hit: { type: integer }
+        tp2Hit: { type: integer }
+        slHit: { type: integer }
+        expired: { type: integer }
+        invalidated: { type: integer }
+        winRate: { type: ["number", "null"] }
+        completionRate: { type: ["number", "null"] }
+
+    AnalysisHistoryTimeframeStats:
+      allOf:
+        - $ref: "#/components/schemas/AnalysisHistoryOutcomeStats"
+        - type: object
+          required: [timeframe]
+          properties:
+            timeframe: { type: string }
+
+    AnalysisHistorySummary:
+      type: object
+      required: [range, minSamples, overall, byTimeframe]
+      properties:
+        range:
+          type: string
+          enum: ["7", "30", "90", all]
+        minSamples: { type: integer }
+        overall:
+          $ref: "#/components/schemas/AnalysisHistoryOutcomeStats"
+        byTimeframe:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisHistoryTimeframeStats"
 
     RecentInstruments:
       type: object
