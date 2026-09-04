@@ -4,7 +4,7 @@ import {
   type TradePlanShape,
   type TradeSideShape,
 } from "@workspace/db/schema";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
 import { logger } from "./logger";
 import {
   getCandles,
@@ -186,6 +186,13 @@ export async function resolvePendingOutcomes(): Promise<void> {
         sql`${analyses.tradePlan}->>'preferredSide' IN ('buy', 'sell')`,
       ),
     )
+    // Without an explicit order, Postgres's row order for this query is
+    // unspecified — in production it settled into repeatedly re-selecting
+    // the same small pool of (mostly recent) rows every tick, starving the
+    // rest of the backlog completely (7555 of 7690 pending rows had never
+    // been checked even once). Oldest-first guarantees every row eventually
+    // gets a turn and prioritizes the most-overdue analyses first.
+    .orderBy(asc(analyses.createdAt))
     .limit(BATCH_LIMIT);
 
   if (rows.length === 0) return;
@@ -195,16 +202,27 @@ export async function resolvePendingOutcomes(): Promise<void> {
   // many rows on the same pair only hits Yahoo once.
   const candleCache = new Map<string, BarLike[] | null>();
 
+  // Structurally malformed/unresolvable rows (bad JSON, unsupported legacy
+  // timeframe, missing side plan) can never become resolvable no matter how
+  // many times they're re-checked. Marking them `invalidated` immediately —
+  // instead of a bare `continue` that writes nothing — is what makes that
+  // permanent, so they stop occupying a batch slot on every future tick.
+  const markInvalidated = (id: number) =>
+    db
+      .update(analyses)
+      .set({ outcomeStatus: "invalidated", outcomeResolvedAt: new Date(nowTs), outcomeCheckedAt: new Date(nowTs) })
+      .where(eq(analyses.id, id));
+
   for (const row of rows) {
     try {
       const plan = row.tradePlan as TradePlanShape | null;
-      if (!plan) continue;
+      if (!plan) { await markInvalidated(row.id); continue; }
       const side = plan.preferredSide;
-      if (side !== "buy" && side !== "sell") continue;
+      if (side !== "buy" && side !== "sell") { await markInvalidated(row.id); continue; }
       const tf = row.timeframe;
-      if (!isSupportedIndicatorTimeframe(tf)) continue;
+      if (!isSupportedIndicatorTimeframe(tf)) { await markInvalidated(row.id); continue; }
       const sidePlan = plan[side];
-      if (!sidePlan) continue;
+      if (!sidePlan) { await markInvalidated(row.id); continue; }
 
       const key = `${row.instrument}|${tf}`;
       if (!candleCache.has(key)) {
