@@ -1673,6 +1673,7 @@ function executionScenarioAText(bias: BiasKey, t: T): string {
 export default function AnalysisDetailPage({
   params,
   embedded = false,
+  onAnalysisRefreshed,
 }: {
   params: { id: string };
   /** Renders without the outer <Layout> (header/nav) — used when this
@@ -1680,6 +1681,11 @@ export default function AnalysisDetailPage({
    * Analyze form after a fresh analysis) instead of at its own route,
    * so the host page's own <Layout> isn't doubled up. */
   embedded?: boolean;
+  /** "Analisis Ulang" and the "Ganti Timeframe" quick-switch both refresh
+   * by creating a new analysis. Routed usage navigates to its own URL by
+   * default; pass this (from an embedded host) to update in place instead
+   * — e.g. the Analyze page swaps which id it's showing, no navigation. */
+  onAnalysisRefreshed?: (id: number) => void;
 }) {
   const id = Number(params.id);
   const [, setLocation] = useLocation();
@@ -1688,7 +1694,9 @@ export default function AnalysisDetailPage({
   const { t, lang } = useTranslation();
   const submitFeedback = useSubmitFeedback();
   const trackEvent = useTrackEvent();
-  const { refresh, isRefreshing: isRowRefreshing } = useRefreshAnalysis();
+  const { refresh, isRefreshing: isRowRefreshing } = useRefreshAnalysis({
+    onRefreshed: onAnalysisRefreshed,
+  });
   const isRefreshing = isRowRefreshing(id);
 
   // Local UI state for the "refresh fundamentals" mutation. The server

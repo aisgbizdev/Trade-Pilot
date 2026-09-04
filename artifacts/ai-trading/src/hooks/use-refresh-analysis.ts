@@ -19,7 +19,14 @@ export interface RefreshableAnalysis {
   carriedOver?: boolean;
 }
 
-export function useRefreshAnalysis() {
+export function useRefreshAnalysis(options?: {
+  /**
+   * Called with the newly-created analysis id instead of navigating to
+   * /analyses/:id — for callers that render this analysis inline (e.g.
+   * embedded on the Analyze page) and want to stay on the same URL.
+   */
+  onRefreshed?: (id: number) => void;
+}) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -53,9 +60,13 @@ export function useRefreshAnalysis() {
           instrument: analysis.instrument,
           timeframe: analysis.timeframe,
         });
-        const suffix =
-          trimmedNotes && analysis.carriedOver ? "?carried_over=1" : "";
-        setLocation(`/analyses/${result.id}${suffix}`);
+        if (options?.onRefreshed) {
+          options.onRefreshed(result.id);
+        } else {
+          const suffix =
+            trimmedNotes && analysis.carriedOver ? "?carried_over=1" : "";
+          setLocation(`/analyses/${result.id}${suffix}`);
+        }
         return true;
       } catch (err: unknown) {
         const apiErr = err as {
@@ -82,7 +93,7 @@ export function useRefreshAnalysis() {
         });
       }
     },
-    [createAnalysis, setLocation, toast, t, trackEvent]
+    [createAnalysis, setLocation, toast, t, trackEvent, options?.onRefreshed]
   );
 
   const isRefreshing = useCallback(

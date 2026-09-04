@@ -1039,7 +1039,11 @@ export default function AnalyzePage() {
               className="pt-4 border-t border-border"
               data-testid="embedded-analysis-result"
             >
-              <AnalysisDetailPage params={{ id: String(resultAnalysisId) }} embedded />
+              <AnalysisDetailPage
+                params={{ id: String(resultAnalysisId) }}
+                embedded
+                onAnalysisRefreshed={setResultAnalysisId}
+              />
             </div>
           )}
 

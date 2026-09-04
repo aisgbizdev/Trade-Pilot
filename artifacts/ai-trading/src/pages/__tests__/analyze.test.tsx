@@ -458,6 +458,102 @@ describe("AnalyzePage: user actions", () => {
     });
   });
 
+  it("stays on /analyze (no navigation) when using 'Ganti Timeframe' inside the embedded result", async () => {
+    let nextId = 5001;
+    const created: Array<{ id: number; instrument: string; timeframe: string }> = [];
+    const analysisFixture = (row: { id: number; instrument: string; timeframe: string }) => ({
+      id: row.id,
+      instrument: row.instrument,
+      timeframe: row.timeframe,
+      mode: "pro",
+      marketCondition: "trending_up",
+      riskLevel: "medium",
+      tradingBias: "bullish",
+      confidenceMin: 60,
+      confidenceMax: 75,
+      validUntil: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+      createdAt: new Date().toISOString(),
+      baseCase: "Price likely continues higher into resistance.",
+      bullishScenario: "A clean break above resistance extends the move.",
+      bearishScenario: "Losing the swing low flips the bias bearish.",
+      techBuyCount: 12,
+      techSellCount: 4,
+      techNeutralCount: 6,
+      feedback: null,
+    });
+
+    installFetchMock(
+      [
+        (url) => {
+          if (url.includes("/api/analyses/quota")) return jsonResponse(QUOTA_PAYLOAD);
+          return null;
+        },
+        (url) => {
+          if (url.includes("/api/quotes/live")) return jsonResponse(LIVE_QUOTES_PAYLOAD);
+          return null;
+        },
+        (url) => {
+          if (url.includes("/api/calendar/relevant")) {
+            return jsonResponse({ status: "success", instrument: "", events: [] });
+          }
+          return null;
+        },
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method !== "POST" || !/\/api\/analyses(\?|$)/.test(url)) return null;
+          const body = init?.body ? JSON.parse(init.body as string) : {};
+          const row = { id: nextId++, instrument: body.instrument, timeframe: body.timeframe };
+          created.push(row);
+          return jsonResponse(analysisFixture(row));
+        },
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method !== "GET") return null;
+          const match = /\/api\/analyses\/(\d+)(?:\?|$)/.exec(url);
+          if (!match) return null;
+          const row = created.find((r) => r.id === Number(match[1]));
+          return row ? jsonResponse(analysisFixture(row)) : null;
+        },
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-instrument-XAU/USD"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-submit-analysis"));
+    });
+    await screen.findByTestId("embedded-analysis-result");
+    expect(created).toHaveLength(1);
+
+    // "Ganti Timeframe" debounces 650ms before firing the re-analysis.
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("button-quick-timeframe-4h"));
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+    vi.useRealTimers();
+
+    await waitFor(() => {
+      expect(created).toHaveLength(2);
+      expect(created[1]).toMatchObject({ instrument: "XAU/USD", timeframe: "4h" });
+    });
+
+    // The refresh must update the embedded result in place, not navigate
+    // away to /analyses/:id.
+    expect(window.location.pathname).toBe("/analyze");
+    expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
+  });
+
   it.skip("switches the analysis mode and submits the selected Pro mode", async () => {
     const { calls } = installFetchMock(pageHandlers({}), { strict: false });
     const { Wrapper } = makeWrapper();
