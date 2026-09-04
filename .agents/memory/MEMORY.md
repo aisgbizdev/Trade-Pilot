@@ -16,3 +16,4 @@
 - [Bounded economic calendar](bounded-economic-calendar.md) — TradingView embeds lack exact date-window control; use app-rendered feed when the visible range must be enforceable.
 - [Development build-output contention](development-build-output-contention.md) — concurrent E2E builds can remove API dist output while the dev server starts; stop the competing workflow before cleaning/restarting.
 - [Parallel validation resource contention](parallel-validation-resource-contention.md) — completion validation can starve Vitest workers when API, frontend, E2E, and typecheck run together; verify affected suites in isolation.
+- [Indonesian trader copy](indonesian-trader-copy.md) — Indonesian UI copy should sound like an experienced local trader, retaining familiar English trading terms instead of translating literally.
