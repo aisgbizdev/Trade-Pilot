@@ -634,20 +634,21 @@ export default function AnalyzePage() {
   const coolingOffLoss =
     guardrailData?.signals.find((s) => s.kind === "cooling_off")?.lossPnlPercent ?? null;
 
-  const runAnalysis = async () => {
+  const runAnalysis = async (instrumentOverride?: string) => {
+    const instrumentToUse = instrumentOverride ?? finalInstrument;
     guardrailProceedRef.current?.();
     setIsLoading(true);
     try {
       const created = await createAnalysis.mutateAsync({
         data: {
-          instrument: finalInstrument,
+          instrument: instrumentToUse,
           timeframe: selectedTimeframe as CreateAnalysisBodyTimeframe,
           mode: selectedMode,
           userInputContext: selectedMode === "pro" ? notes || undefined : undefined,
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQuotaQueryKey() });
-      trackEvent("analysis_created", { instrument: finalInstrument, timeframe: selectedTimeframe });
+      trackEvent("analysis_created", { instrument: instrumentToUse, timeframe: selectedTimeframe });
       // Render the result inline right below the form instead of
       // navigating to /analyses/:id — same page, no extra hop. The
       // embedded detail view loads this same ID; it does not create
@@ -676,8 +677,9 @@ export default function AnalyzePage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!finalInstrument) {
+  const handleSubmit = async (instrumentOverride?: string) => {
+    const instrumentToUse = instrumentOverride ?? finalInstrument;
+    if (!instrumentToUse) {
       toast({ title: t.analyze.error_no_instrument, description: t.analyze.error_no_instrument_desc, variant: "destructive" });
       return;
     }
@@ -694,7 +696,19 @@ export default function AnalyzePage() {
       setBreathingOpen(true);
       return;
     }
-    await runAnalysis();
+    await runAnalysis(instrumentToUse);
+  };
+
+  // Once a result already exists on the page, picking a different preset
+  // instrument re-analyzes immediately instead of requiring another tap on
+  // the Analisis button — matches the "Ganti Timeframe" quick-switch below
+  // the result. The very first analysis still requires the explicit button.
+  const handleInstrumentClick = (inst: string) => {
+    setSelectedInstrument(inst);
+    setCustomInstrument("");
+    if (resultAnalysisId != null && inst !== finalInstrument && !isLoading) {
+      void handleSubmit(inst);
+    }
   };
 
   return (
@@ -765,7 +779,7 @@ export default function AnalyzePage() {
                       <button
                         key={inst}
                         type="button"
-                        onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
+                        onClick={() => handleInstrumentClick(inst)}
                         data-testid={`button-instrument-${inst}`}
                         className={cn(
                           "w-full py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all",
@@ -791,7 +805,7 @@ export default function AnalyzePage() {
                   <button
                     key={inst}
                     type="button"
-                    onClick={() => { setSelectedInstrument(inst); setCustomInstrument(""); }}
+                    onClick={() => handleInstrumentClick(inst)}
                     data-testid={`button-instrument-${inst}`}
                     className={cn(
                       "w-full py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all",
@@ -987,7 +1001,7 @@ export default function AnalyzePage() {
 
           <Button
             className="w-full h-12 text-base"
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
             disabled={isLoading || !finalInstrument || !selectedTimeframe}
             data-testid="button-submit-analysis"
           >

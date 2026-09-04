@@ -352,6 +352,108 @@ describe("AnalyzePage: user actions", () => {
   // Notes field it used to reveal is separately hidden behind
   // SHOW_NOTES_INPUT. Kept rather than deleted so restoring either toggle
   // brings this coverage back immediately.
+  it("re-analyzes automatically when picking a different instrument after a result already exists (no button tap needed)", async () => {
+    const idByInstrument: Record<string, number> = { "XAU/USD": 4242, "BRENT": 4243 };
+
+    const analysisFixture = (id: number, instrument: string) => ({
+      id,
+      instrument,
+      timeframe: "1h",
+      mode: "pro",
+      marketCondition: "trending_up",
+      riskLevel: "medium",
+      tradingBias: "bullish",
+      confidenceMin: 60,
+      confidenceMax: 75,
+      validUntil: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+      createdAt: new Date().toISOString(),
+      baseCase: "Price likely continues higher into resistance.",
+      bullishScenario: "A clean break above resistance extends the move.",
+      bearishScenario: "Losing the swing low flips the bias bearish.",
+      techBuyCount: 12,
+      techSellCount: 4,
+      techNeutralCount: 6,
+      feedback: null,
+    });
+
+    const { calls } = installFetchMock(
+      [
+        (url) => {
+          if (url.includes("/api/analyses/quota")) return jsonResponse(QUOTA_PAYLOAD);
+          return null;
+        },
+        (url) => {
+          if (url.includes("/api/quotes/live")) return jsonResponse(LIVE_QUOTES_PAYLOAD);
+          return null;
+        },
+        (url) => {
+          if (url.includes("/api/calendar/relevant")) {
+            return jsonResponse({ status: "success", instrument: "", events: [] });
+          }
+          return null;
+        },
+        // POST /api/analyses — the id it returns depends on the requested
+        // instrument, so re-analyzing on a different instrument is
+        // observably a *new* analysis rather than a reused one.
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method !== "POST" || !/\/api\/analyses(\?|$)/.test(url)) return null;
+          const body = init?.body ? JSON.parse(init.body as string) : {};
+          const id = idByInstrument[body.instrument as string];
+          return jsonResponse(analysisFixture(id, body.instrument));
+        },
+        // GET /api/analyses/:id — the embedded result view re-fetches by id.
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method !== "GET") return null;
+          for (const [instrument, id] of Object.entries(idByInstrument)) {
+            if (new RegExp(`/api/analyses/${id}(?:\\?|$)`).test(url)) {
+              return jsonResponse(analysisFixture(id, instrument));
+            }
+          }
+          return null;
+        },
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    // First analysis still requires the explicit button tap.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-instrument-XAU/USD"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-submit-analysis"));
+    });
+    await screen.findByTestId("embedded-analysis-result");
+    await waitFor(() => {
+      expect(
+        calls.filter((c) => c.method === "POST" && /\/api\/analyses(\?|$)/.test(c.url)),
+      ).toHaveLength(1);
+    });
+
+    // Now that a result exists, picking BRENT re-analyzes immediately —
+    // no second tap on the Analisis button.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-instrument-BRENT"));
+    });
+
+    await waitFor(() => {
+      const posts = calls.filter(
+        (c) => c.method === "POST" && /\/api\/analyses(\?|$)/.test(c.url),
+      );
+      expect(posts).toHaveLength(2);
+      const payload = posts[1].body ? JSON.parse(posts[1].body) : null;
+      expect(payload?.instrument).toBe("BRENT");
+    });
+  });
+
   it.skip("switches the analysis mode and submits the selected Pro mode", async () => {
     const { calls } = installFetchMock(pageHandlers({}), { strict: false });
     const { Wrapper } = makeWrapper();
