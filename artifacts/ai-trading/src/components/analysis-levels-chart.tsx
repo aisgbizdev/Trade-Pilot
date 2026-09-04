@@ -12,6 +12,7 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { createLevelAwareAutoscaleInfoProvider } from "@/lib/chart-autoscale";
 import type { TradePlan, TradePlanPreferredSide } from "@workspace/api-client-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface Candle {
   date: string;
@@ -204,6 +205,7 @@ export function AnalysisLevelsChart({
   onLoadFailed,
 }: AnalysisLevelsChartProps) {
   const { theme } = useTheme();
+  const { lang } = useTranslation();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -410,7 +412,7 @@ export function AnalysisLevelsChart({
             data-testid="analysis-cutoff-badge"
           >
             <span className="inline-block rounded bg-foreground/80 text-background text-[10px] leading-none px-1.5 py-1 whitespace-nowrap">
-              AI saw up to here
+              {lang === "id" ? "Data AI sampai sini" : "AI saw up to here"}
             </span>
           </div>
         </>
@@ -420,7 +422,7 @@ export function AnalysisLevelsChart({
           className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground"
           data-testid="analysis-levels-chart-loading"
         >
-          <span>Loading chart…</span>
+          <span>{lang === "id" ? "Memuat chart…" : "Loading chart…"}</span>
         </div>
       )}
       {state === "error" && (
@@ -429,7 +431,7 @@ export function AnalysisLevelsChart({
           data-testid="analysis-levels-chart-error"
           data-error={errorMsg ?? ""}
         >
-          <span>Chart data unavailable.</span>
+          <span>{lang === "id" ? "Data chart tidak tersedia." : "Chart data unavailable."}</span>
         </div>
       )}
     </div>

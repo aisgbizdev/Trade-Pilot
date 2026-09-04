@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-client-react";
 import type { Translations } from "@/locales/en";
+import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import {
   buildAdaptivePlanRecommendation,
   createAdaptivePlanFingerprint,
@@ -676,10 +677,11 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     <Card className="overflow-hidden" data-testid="card-adaptive-position-plan">
       <div className="flex items-start gap-2 border-b border-border p-4">
         <Calculator className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-foreground">{copy.adaptive_title}</p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">{copy.adaptive_subtitle}</p>
         </div>
+        <AnalysisGuideLink article="adaptive-position-plan" compact />
       </div>
       <div className="p-4 space-y-4" data-testid="adaptive-plan-content">
         <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>

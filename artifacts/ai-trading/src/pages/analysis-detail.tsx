@@ -90,6 +90,7 @@ import { safeHttpUrl } from "@/lib/safe-url";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
 import { prioritizeNewsSources } from "@/lib/news-source-priority";
+import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -703,15 +704,18 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
             {t.analysis_detail.trade_plan_subtitle}
           </p>
         </div>
-        <span
-          className={cn(
-            "text-[9px] font-semibold px-1.5 py-0.5 rounded-full border whitespace-nowrap",
-            preferredColor,
-          )}
-          data-testid="trade-plan-preferred-side"
-        >
-          {preferredLabel}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span
+            className={cn(
+              "text-[9px] font-semibold px-1.5 py-0.5 rounded-full border whitespace-nowrap",
+              preferredColor,
+            )}
+            data-testid="trade-plan-preferred-side"
+          >
+            {preferredLabel}
+          </span>
+          <AnalysisGuideLink article="standard-plan" compact />
+        </div>
       </div>
       {isFastIntraday && plan.preferredSide === "wait" && (
         <div
@@ -2088,6 +2092,7 @@ export default function AnalysisDetailPage({
               </p>
             </div>
           </div>
+          <AnalysisGuideLink article="bias-confidence-validity" compact className="-ml-1.5" />
 
           <div>
             <div className="flex gap-1 mb-1">
@@ -2194,15 +2199,18 @@ export default function AnalysisDetailPage({
         {/* Fundamental context — news + calendar the AI was given,
             shown directly under the bias gauge so users can audit it. */}
         {analysis.fundamentalContext && (
-          <FundamentalContextCard
-            ctx={analysis.fundamentalContext}
-            t={t}
-            instrument={analysis.instrument}
-            lang={lang}
-            onRefresh={handleRefreshFundamentals}
-            isRefreshing={refreshFundamentalsMutation.isPending}
-            refreshState={fundamentalRefresh}
-          />
+          <div className="space-y-1">
+            <FundamentalContextCard
+              ctx={analysis.fundamentalContext}
+              t={t}
+              instrument={analysis.instrument}
+              lang={lang}
+              onRefresh={handleRefreshFundamentals}
+              isRefreshing={refreshFundamentalsMutation.isPending}
+              refreshState={fundamentalRefresh}
+            />
+            <AnalysisGuideLink article="technical-fundamental" compact />
+          </div>
         )}
 
         {/* Deterministic, situation-aware scaling plan. It reads the saved

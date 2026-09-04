@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, Search, BookOpen, ChevronRight, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
@@ -48,7 +48,11 @@ function renderBlock(block: GuideBlock, idx: number) {
 export default function GuidePage() {
   const { t, lang } = useTranslation();
   const [, setLocation] = useLocation();
-  const [activeArticleId, setActiveArticleId] = useState<string | null>(null);
+  const requestedArticle = new URLSearchParams(window.location.search).get("article");
+  const initialArticle = GUIDE_CATEGORIES.some((category) =>
+    category.articles.some((article) => article.id === requestedArticle),
+  ) ? requestedArticle : null;
+  const [activeArticleId, setActiveArticleId] = useState<string | null>(initialArticle);
   const [searchQuery, setSearchQuery] = useState("");
   const requestedCategory = new URLSearchParams(window.location.search).get("category");
   const initialCategory = GUIDE_CATEGORIES.some((category) => category.id === requestedCategory)
@@ -70,7 +74,7 @@ export default function GuidePage() {
       ? GUIDE_CATEGORIES.filter((category) => category.id === selectedCategory)
       : GUIDE_CATEGORIES;
     if (!searchQuery.trim()) return categories;
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.toLocaleLowerCase().trim();
     
     return categories.map(cat => {
       const catTitle = lang === "id" ? cat.title_id : cat.title_en;
@@ -79,6 +83,7 @@ export default function GuidePage() {
       const filteredArticles = cat.articles.filter(art => {
         const title = lang === "id" ? art.title_id : art.title_en;
         if (title.toLowerCase().includes(q)) return true;
+        if (art.keywords.some((keyword) => keyword.toLocaleLowerCase().includes(q))) return true;
         
         const content = lang === "id" ? art.content_id : art.content_en;
         return content.some(block => {
@@ -98,6 +103,20 @@ export default function GuidePage() {
       return null;
     }).filter(Boolean) as typeof GUIDE_CATEGORIES;
   }, [searchQuery, lang, selectedCategory]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (activeArticleId) {
+      params.set("article", activeArticleId);
+      const category = GUIDE_CATEGORIES.find((cat) =>
+        cat.articles.some((article) => article.id === activeArticleId),
+      );
+      if (category) params.set("category", category.id);
+    } else {
+      params.delete("article");
+    }
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }, [activeArticleId]);
 
   const openArticle = (articleId: string) => {
     setActiveArticleId(articleId);
@@ -232,6 +251,16 @@ export default function GuidePage() {
             </header>
             <div className="space-y-3 pb-8">
               {(lang === "id" ? activeArticle.article.content_id : activeArticle.article.content_en).map((b, i) => renderBlock(b, i))}
+              {activeArticle.article.relatedArticleId && (
+                <button
+                  type="button"
+                  onClick={() => openArticle(activeArticle.article.relatedArticleId!)}
+                  className="mt-5 inline-flex items-center gap-1.5 rounded-md border border-primary/30 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+                >
+                  {lang === "id" ? "Baca pembahasan lengkap" : "Read the full topic"}
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
             </div>
           </div>
         )}

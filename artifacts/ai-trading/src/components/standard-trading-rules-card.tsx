@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useTranslation } from "@/lib/i18n";
 import { getStandardTradingRuleCode } from "@/lib/adaptive-position-plan";
 import { useGetStandardTradingRules } from "@workspace/api-client-react";
+import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 
 export function StandardTradingRulesCard({ instrument }: { instrument: string }) {
   const { t, lang } = useTranslation();
@@ -59,6 +60,7 @@ export function StandardTradingRulesCard({ instrument }: { instrument: string })
           <p className="text-[10px] leading-relaxed text-muted-foreground">{t.analyze.standard_rules_formula}: {data.transactionFormula}</p>
           <p className="border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground">{data.disclaimer[lang]}</p>
           <p className="text-[10px] leading-relaxed text-muted-foreground">{data.relationshipDisclosure[lang]}</p>
+          <AnalysisGuideLink article="account-rules" compact className="-ml-1.5" />
         </div>
       )}
     </Card>
