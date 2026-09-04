@@ -258,9 +258,44 @@ describe("AnalyzePage: user actions", () => {
      expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveClass("border-primary");
   });
 
-  it("enables the submit button once both instrument and timeframe are chosen, and POSTs to /api/analyses on submit", async () => {
+  it("enables the submit button once both instrument and timeframe are chosen, renders the result inline (no navigation) on submit", async () => {
+    const createdId = 4242;
     const { calls } = installFetchMock(
-      pageHandlers({ createResult: { id: 4242 } }),
+      [
+        ...pageHandlers({ createResult: { id: createdId } }),
+        // The embedded result view re-fetches the analysis by id — a
+        // realistic-enough payload lets it render without crashing.
+        // strict:false below covers everything else it touches
+        // (alerts, push status, journal, chart candles, etc.) with a
+        // benign 404, since exercising that internals is already
+        // covered by analysis-detail.test.tsx.
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method !== "GET") return null;
+          if (!new RegExp(`/api/analyses/${createdId}(?:\\?|$)`).test(url)) return null;
+          return jsonResponse({
+            id: createdId,
+            instrument: "XAU/USD",
+            timeframe: "1h",
+            mode: "pro",
+            marketCondition: "trending_up",
+            riskLevel: "medium",
+            tradingBias: "bullish",
+            confidenceMin: 60,
+            confidenceMax: 75,
+            validUntil: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+            createdAt: new Date().toISOString(),
+            baseCase: "Price likely continues higher into resistance.",
+            bullishScenario: "A clean break above resistance extends the move.",
+            bearishScenario: "Losing the swing low flips the bias bearish.",
+            techBuyCount: 12,
+            techSellCount: 4,
+            techNeutralCount: 6,
+            feedback: null,
+          });
+        },
+      ],
+      { strict: false },
     );
     const { Wrapper } = makeWrapper();
 
@@ -305,10 +340,12 @@ describe("AnalyzePage: user actions", () => {
       expect(payload?.timeframe).toBe("1h");
       expect(payload?.mode).toBe("pro");
       expect(payload?.userInputContext).toBeUndefined();
-      expect(window.location.pathname).toBe("/analyses/4242");
     });
-    expect(screen.queryByTestId("analyze-result-section")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("button-view-full-analysis")).not.toBeInTheDocument();
+
+    // The result renders inline right on the Analyze page — no navigation
+    // to a separate /analyses/:id route.
+    expect(await screen.findByTestId("embedded-analysis-result")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/analyze");
   });
 
   // Skipped: the mode toggle was removed from the Analyze page (every

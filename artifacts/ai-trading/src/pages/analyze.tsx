@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "wouter";
 import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
 import { SetAlertModal } from "@/components/set-alert-modal";
@@ -31,6 +30,7 @@ import { useMentalChecklistPref } from "@/hooks/use-mental-checklist";
 import { AntiPatternGuardrails } from "@/components/anti-pattern-guardrails";
 import { CoolingOffBreathingDialog } from "@/components/cooling-off-breathing-dialog";
 import { useAntiPatternSignals } from "@/hooks/use-anti-pattern-signals";
+import AnalysisDetailPage from "./analysis-detail";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -548,7 +548,6 @@ function LivePriceChip({ instrument }: { instrument: string }) {
 
 export default function AnalyzePage() {
   const { t } = useTranslation();
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
   const trackEvent = useTrackEvent();
@@ -573,8 +572,18 @@ export default function AnalyzePage() {
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
+  // Holds the just-created analysis id so its full result renders inline
+  // below the form instead of navigating to /analyses/:id.
+  const [resultAnalysisId, setResultAnalysisId] = useState<number | null>(null);
+  const resultSectionRef = useRef<HTMLDivElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { enabled: mentalChecklistEnabled } = useMentalChecklistPref();
+
+  useEffect(() => {
+    if (resultAnalysisId != null) {
+      resultSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [resultAnalysisId]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -633,11 +642,11 @@ export default function AnalyzePage() {
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQuotaQueryKey() });
       trackEvent("analysis_created", { instrument: finalInstrument, timeframe: selectedTimeframe });
-      // The create response already identifies the persisted analysis. Go
-      // straight to its detail page so one AI request does not feel like two
-      // separate analysis steps. The detail page loads this same ID; it does
-      // not create another analysis.
-      setLocation(`/analyses/${created.id}`);
+      // Render the result inline right below the form instead of
+      // navigating to /analyses/:id — same page, no extra hop. The
+      // embedded detail view loads this same ID; it does not create
+      // another analysis.
+      setResultAnalysisId(created.id);
     } catch (err: unknown) {
       const apiErr = err as {
         status?: number;
@@ -979,6 +988,16 @@ export default function AnalyzePage() {
               </div>
             ) : t.analyze.submit_btn}
           </Button>
+
+          {resultAnalysisId != null && (
+            <div
+              ref={resultSectionRef}
+              className="pt-4 border-t border-border"
+              data-testid="embedded-analysis-result"
+            >
+              <AnalysisDetailPage params={{ id: String(resultAnalysisId) }} embedded />
+            </div>
+          )}
 
           {SHOW_ECONOMIC_CALENDAR_SECTION && <EconomicCalendarSection />}
 

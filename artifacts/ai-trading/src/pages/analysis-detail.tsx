@@ -81,7 +81,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
@@ -1670,7 +1670,17 @@ function executionScenarioAText(bias: BiasKey, t: T): string {
   return t.analysis_detail.execution_scenario_a_template_neutral;
 }
 
-export default function AnalysisDetailPage({ params }: { params: { id: string } }) {
+export default function AnalysisDetailPage({
+  params,
+  embedded = false,
+}: {
+  params: { id: string };
+  /** Renders without the outer <Layout> (header/nav) — used when this
+   * component is shown inline on another page (e.g. right below the
+   * Analyze form after a fresh analysis) instead of at its own route,
+   * so the host page's own <Layout> isn't doubled up. */
+  embedded?: boolean;
+}) {
   const id = Number(params.id);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -1902,26 +1912,24 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
   };
 
   if (isLoading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </Layout>
+    const loadingBody = (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
     );
+    return embedded ? loadingBody : <Layout>{loadingBody}</Layout>;
   }
 
   if (!analysis) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center h-64 px-4">
-          <p className="text-muted-foreground mb-4">{t.analysis_detail.not_found}</p>
-          <Button variant="outline" onClick={() => setLocation("/history")}>
-            {t.analysis_detail.back_to_history}
-          </Button>
-        </div>
-      </Layout>
+    const notFoundBody = (
+      <div className="flex flex-col items-center justify-center h-64 px-4">
+        <p className="text-muted-foreground mb-4">{t.analysis_detail.not_found}</p>
+        <Button variant="outline" onClick={() => setLocation("/history")}>
+          {t.analysis_detail.back_to_history}
+        </Button>
+      </div>
     );
+    return embedded ? notFoundBody : <Layout>{notFoundBody}</Layout>;
   }
 
   const mc = getMarketConditionMeta(analysis.marketCondition, t);
@@ -1951,9 +1959,12 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
 
   const tradePlan = analysis.tradePlan ?? null;
   const indicatorTimeframe = asIndicatorTimeframe(analysis.timeframe);
+  // No-op wrapper when embedded elsewhere, so the host page's own <Layout>
+  // (header/nav) isn't doubled up.
+  const Wrap = embedded ? Fragment : Layout;
 
   return (
-    <Layout>
+    <Wrap>
       <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
         <div className="flex items-center gap-3">
           <button
@@ -2773,6 +2784,6 @@ export default function AnalysisDetailPage({ params }: { params: { id: string } 
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </Wrap>
   );
 }
