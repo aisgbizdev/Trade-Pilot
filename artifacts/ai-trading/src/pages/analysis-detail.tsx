@@ -1278,9 +1278,6 @@ function FundamentalContextCard({
 }) {
   const news = prioritizeNewsSources(ctx.newsItems ?? [], 3);
   const events = (ctx.calendarEvents ?? []).slice(0, 5);
-  const [newsOpen, setNewsOpen] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
-
   const refreshButton = (
     <Button
       type="button"
@@ -1348,39 +1345,17 @@ function FundamentalContextCard({
       {driftBanner}
 
       {news.length > 0 && (
-        <Collapsible open={newsOpen} onOpenChange={setNewsOpen} data-testid="fundamental-news">
-          <CollapsibleTrigger
-            className="w-full flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            data-testid="fundamental-news-toggle"
-            aria-label={`${newsOpen ? t.analysis_detail.fundamental_collapse : t.analysis_detail.fundamental_expand}: ${t.analysis_detail.fundamental_news_title}`}
-          >
-            <span className="min-w-0">
-              <span className="flex items-center gap-1.5">
-                <Newspaper className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
-                  {t.analysis_detail.fundamental_news_title}
-                </span>
-                <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-                  ({news.length})
-                </span>
-              </span>
-              {!newsOpen && news[0]?.title && (
-                <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted-foreground">
-                  {narrativePreview(news[0].title)}
-                </span>
-              )}
+        <section className="px-2" data-testid="fundamental-news">
+          <div className="flex items-center gap-1.5 py-2">
+            <Newspaper className="w-3.5 h-3.5 shrink-0" />
+            <h4 className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
+              {t.analysis_detail.fundamental_news_title}
+            </h4>
+            <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+              ({news.length})
             </span>
-            {newsOpen ? (
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            ) : (
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            )}
-          </CollapsibleTrigger>
-          <CollapsibleContent
-            forceMount
-            className="px-2 pb-1 pt-1 data-[state=closed]:hidden"
-            data-testid="fundamental-news-list"
-          >
+          </div>
+          <div className="pb-1 pt-1" data-testid="fundamental-news-list">
             <ul className="space-y-2">
               {news.map((n) => (
                 <FundamentalNewsRow
@@ -1392,44 +1367,22 @@ function FundamentalContextCard({
                 />
               ))}
             </ul>
-          </CollapsibleContent>
-        </Collapsible>
+          </div>
+        </section>
       )}
 
       {events.length > 0 && (
-        <Collapsible open={calendarOpen} onOpenChange={setCalendarOpen} data-testid="fundamental-calendar">
-          <CollapsibleTrigger
-            className="w-full flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            data-testid="fundamental-calendar-toggle"
-            aria-label={`${calendarOpen ? t.analysis_detail.fundamental_collapse : t.analysis_detail.fundamental_expand}: ${t.analysis_detail.fundamental_calendar_title}`}
-          >
-            <span className="min-w-0">
-              <span className="flex items-center gap-1.5">
-                <CalendarClock className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
-                  {t.analysis_detail.fundamental_calendar_title}
-                </span>
-                <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-                  ({events.length})
-                </span>
-              </span>
-              {!calendarOpen && events[0]?.event && (
-                <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted-foreground">
-                  {narrativePreview(events[0].event)}
-                </span>
-              )}
+        <section className="px-2" data-testid="fundamental-calendar">
+          <div className="flex items-center gap-1.5 py-2">
+            <CalendarClock className="w-3.5 h-3.5 shrink-0" />
+            <h4 className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
+              {t.analysis_detail.fundamental_calendar_title}
+            </h4>
+            <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+              ({events.length})
             </span>
-            {calendarOpen ? (
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            ) : (
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            )}
-          </CollapsibleTrigger>
-          <CollapsibleContent
-            forceMount
-            className="px-2 pb-1 pt-1 data-[state=closed]:hidden"
-            data-testid="fundamental-calendar-list"
-          >
+          </div>
+          <div className="pb-1 pt-1" data-testid="fundamental-calendar-list">
             <ul className="space-y-2">
               {events.map((e, i) => (
                 <FundamentalCalendarRow
@@ -1440,8 +1393,8 @@ function FundamentalContextCard({
                 />
               ))}
             </ul>
-          </CollapsibleContent>
-        </Collapsible>
+          </div>
+        </section>
       )}
     </Card>
   );

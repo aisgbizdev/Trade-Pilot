@@ -938,22 +938,10 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     );
 
     const card = await screen.findByTestId("card-fundamental-context");
-    expect(screen.getByTestId("fundamental-news-toggle")).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-    expect(screen.getByTestId("fundamental-calendar-toggle")).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-
-    fireEvent.click(screen.getByTestId("fundamental-news-toggle"));
-    await waitFor(() =>
-      expect(screen.getByTestId("fundamental-news-toggle")).toHaveAttribute(
-        "aria-expanded",
-        "true",
-      ),
-    );
+    expect(screen.queryByTestId("fundamental-news-toggle")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("fundamental-calendar-toggle")).not.toBeInTheDocument();
+    expect(screen.getByTestId("fundamental-news-list")).toBeVisible();
+    expect(screen.getByTestId("fundamental-calendar-list")).toBeVisible();
 
     // News link rows are tagged `fundamental-news-link` (the anchor).
     const links = card.querySelectorAll("[data-testid='fundamental-news-link']");
@@ -1011,8 +999,6 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     );
 
     const card = await screen.findByTestId("card-fundamental-context");
-    fireEvent.click(screen.getByTestId("fundamental-news-toggle"));
-
     expect(card).toHaveTextContent("Yahoo Finance headline 0");
     expect(card).toHaveTextContent("Newsmaker.id headline 1");
     expect(card).toHaveTextContent("Newsmaker.id headline 3");
@@ -1267,10 +1253,9 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     expect(newsChip).not.toBeNull();
     expect(newsChip).not.toHaveAttribute("href");
 
-    const newsToggle = screen.getByTestId("fundamental-news-toggle");
     const newsList = screen.getByTestId("fundamental-news-list");
-    expect(newsToggle).toHaveAttribute("aria-expanded", "false");
-    expect(newsList).toHaveAttribute("data-state", "closed");
+    expect(screen.queryByTestId("fundamental-news-toggle")).not.toBeInTheDocument();
+    expect(newsList).toBeVisible();
 
     const newsRow = document.getElementById(
       "cite-news-gold-rallies-as-fed-signals-pause",
@@ -1280,8 +1265,6 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     fireEvent.click(newsChip as HTMLButtonElement);
 
     await waitFor(() => {
-      expect(newsToggle).toHaveAttribute("aria-expanded", "true");
-      expect(newsList).toHaveAttribute("data-state", "open");
       expect(newsRow).toHaveClass("ring-2", "ring-primary/60", "rounded-md");
     });
   });
@@ -1351,10 +1334,9 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     ) as HTMLElement | null;
     expect(eventChip).not.toBeNull();
 
-    const calendarToggle = screen.getByTestId("fundamental-calendar-toggle");
     const calendarList = screen.getByTestId("fundamental-calendar-list");
-    expect(calendarToggle).toHaveAttribute("aria-expanded", "false");
-    expect(calendarList).toHaveAttribute("data-state", "closed");
+    expect(screen.queryByTestId("fundamental-calendar-toggle")).not.toBeInTheDocument();
+    expect(calendarList).toBeVisible();
 
     // Build the slug the same way the component does, using the
     // ORIGINAL index (2) for the third event in the snapshot.
@@ -1375,8 +1357,6 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     fireEvent.click(eventChip as HTMLElement);
 
     await waitFor(() => {
-      expect(calendarToggle).toHaveAttribute("aria-expanded", "true");
-      expect(calendarList).toHaveAttribute("data-state", "open");
       expect(target).toHaveClass("ring-2", "ring-primary/60", "rounded-md");
     });
   });
