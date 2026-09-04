@@ -3701,9 +3701,21 @@ components:
           properties:
             timeframe: { type: string }
 
+    AnalysisHistoryInstrumentStats:
+      allOf:
+        - $ref: "#/components/schemas/AnalysisHistoryOutcomeStats"
+        - type: object
+          required: [instrument, byTimeframe]
+          properties:
+            instrument: { type: string }
+            byTimeframe:
+              type: array
+              items:
+                $ref: "#/components/schemas/AnalysisHistoryTimeframeStats"
+
     AnalysisHistorySummary:
       type: object
-      required: [range, minSamples, overall, byTimeframe]
+      required: [range, minSamples, overall, byInstrument, byTimeframe]
       properties:
         range:
           type: string
@@ -3711,6 +3723,10 @@ components:
         minSamples: { type: integer }
         overall:
           $ref: "#/components/schemas/AnalysisHistoryOutcomeStats"
+        byInstrument:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisHistoryInstrumentStats"
         byTimeframe:
           type: array
           items:

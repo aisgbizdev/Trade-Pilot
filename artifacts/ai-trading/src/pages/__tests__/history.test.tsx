@@ -66,6 +66,36 @@ function listHandler(payload: {
   };
 }
 
+function summaryHandler(): FetchHandler {
+  return async (url, init) => {
+    if ((init?.method ?? "GET").toUpperCase() !== "GET") return null;
+    if (!url.includes("/api/analyses/history-summary")) return null;
+    const stats = {
+      pending: 0, activeValid: 0, tp1Hit: 6, tp2Hit: 2,
+      slHit: 2, expired: 0, invalidated: 0, winRate: 0.8, completionRate: 0.8,
+    };
+    return jsonResponse({
+      range: "30",
+      minSamples: 10,
+      overall: { total: 15, ...stats },
+      byInstrument: [
+        {
+          instrument: "XAU/USD", total: 10, ...stats,
+          byTimeframe: [{ timeframe: "1h", total: 10, ...stats }],
+        },
+        {
+          instrument: "BRENT", total: 5, ...stats,
+          byTimeframe: [{ timeframe: "4h", total: 5, ...stats }],
+        },
+      ],
+      byTimeframe: [
+        { timeframe: "1h", total: 10, ...stats },
+        { timeframe: "4h", total: 5, ...stats },
+      ],
+    });
+  };
+}
+
 beforeEach(() => {
   localStorage.clear();
   // Legacy list assertions intentionally open the Riwayat tab. The unified
@@ -75,6 +105,24 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("HistoryPage: instrument performance", () => {
+  it("defaults to the summary and focuses timeframe performance by selected instrument", async () => {
+    window.history.replaceState({}, "", "/history");
+    installFetchMock([summaryHandler()]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <HistoryPage />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByText("Performance by instrument")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /BRENT.*5 sample/i }));
+    expect(await screen.findByText("Performance by timeframe · BRENT")).toBeInTheDocument();
+  });
 });
 
 describe("HistoryPage: happy-path render", () => {

@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:trade_pilot_api_client/src/model/analysis_history_instrument_stats.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_history_timeframe_stats.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_history_outcome_stats.dart';
@@ -17,6 +18,7 @@ part 'analysis_history_summary.g.dart';
 /// * [range] 
 /// * [minSamples] 
 /// * [overall] 
+/// * [byInstrument]
 /// * [byTimeframe] 
 @BuiltValue()
 abstract class AnalysisHistorySummary implements Built<AnalysisHistorySummary, AnalysisHistorySummaryBuilder> {
@@ -29,6 +31,9 @@ abstract class AnalysisHistorySummary implements Built<AnalysisHistorySummary, A
 
   @BuiltValueField(wireName: r'overall')
   AnalysisHistoryOutcomeStats get overall;
+
+  @BuiltValueField(wireName: r'byInstrument')
+  BuiltList<AnalysisHistoryInstrumentStats> get byInstrument;
 
   @BuiltValueField(wireName: r'byTimeframe')
   BuiltList<AnalysisHistoryTimeframeStats> get byTimeframe;
@@ -70,6 +75,11 @@ class _$AnalysisHistorySummarySerializer implements PrimitiveSerializer<Analysis
     yield serializers.serialize(
       object.overall,
       specifiedType: const FullType(AnalysisHistoryOutcomeStats),
+    );
+    yield r'byInstrument';
+    yield serializers.serialize(
+      object.byInstrument,
+      specifiedType: const FullType(BuiltList, [FullType(AnalysisHistoryInstrumentStats)]),
     );
     yield r'byTimeframe';
     yield serializers.serialize(
@@ -119,6 +129,13 @@ class _$AnalysisHistorySummarySerializer implements PrimitiveSerializer<Analysis
             specifiedType: const FullType(AnalysisHistoryOutcomeStats),
           ) as AnalysisHistoryOutcomeStats;
           result.overall = valueDes;
+          break;
+        case r'byInstrument':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(AnalysisHistoryInstrumentStats)]),
+          ) as BuiltList<AnalysisHistoryInstrumentStats>;
+          result.byInstrument.replace(valueDes);
           break;
         case r'byTimeframe':
           final valueDes = serializers.deserialize(

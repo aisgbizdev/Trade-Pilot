@@ -163,6 +163,7 @@ Class | Method | HTTP request | Description
  - [AnalysesList](doc/AnalysesList.md)
  - [AnalysesSummary](doc/AnalysesSummary.md)
  - [Analysis](doc/Analysis.md)
+ - [AnalysisHistoryInstrumentStats](doc/AnalysisHistoryInstrumentStats.md)
  - [AnalysisHistoryOutcomeStats](doc/AnalysisHistoryOutcomeStats.md)
  - [AnalysisHistorySummary](doc/AnalysisHistorySummary.md)
  - [AnalysisHistoryTimeframeStats](doc/AnalysisHistoryTimeframeStats.md)

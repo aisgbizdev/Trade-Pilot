@@ -172,6 +172,7 @@ router.get("/analyses/history-summary", requireAuth, async (req: AuthRequest, re
 
   const rows = await db
     .select({
+      instrument: analyses.instrument,
       timeframe: analyses.timeframe,
       outcomeStatus: analyses.outcomeStatus,
       validUntil: analyses.validUntil,
@@ -200,12 +201,23 @@ router.get("/analyses/history-summary", requireAuth, async (req: AuthRequest, re
     else if (row.outcomeStatus === "invalidated") tally.invalidated++;
   };
   const overall = empty();
-  const buckets = new Map<string, Tally>();
+  const timeframeBuckets = new Map<string, Tally>();
+  const instrumentBuckets = new Map<string, { tally: Tally; timeframes: Map<string, Tally> }>();
   for (const row of rows) {
     add(overall, row);
-    const bucket = buckets.get(row.timeframe) ?? empty();
-    add(bucket, row);
-    buckets.set(row.timeframe, bucket);
+    const timeframeBucket = timeframeBuckets.get(row.timeframe) ?? empty();
+    add(timeframeBucket, row);
+    timeframeBuckets.set(row.timeframe, timeframeBucket);
+
+    const instrumentBucket = instrumentBuckets.get(row.instrument) ?? {
+      tally: empty(),
+      timeframes: new Map<string, Tally>(),
+    };
+    add(instrumentBucket.tally, row);
+    const instrumentTimeframe = instrumentBucket.timeframes.get(row.timeframe) ?? empty();
+    add(instrumentTimeframe, row);
+    instrumentBucket.timeframes.set(row.timeframe, instrumentTimeframe);
+    instrumentBuckets.set(row.instrument, instrumentBucket);
   }
   const rates = (tally: Tally) => {
     const wins = tally.tp1Hit + tally.tp2Hit;
@@ -221,7 +233,16 @@ router.get("/analyses/history-summary", requireAuth, async (req: AuthRequest, re
     range: rangeDays == null ? "all" : String(rangeDays),
     minSamples: 10,
     overall: rates(overall),
-    byTimeframe: [...buckets.entries()]
+    byInstrument: [...instrumentBuckets.entries()]
+      .map(([instrument, bucket]) => ({
+        instrument,
+        ...rates(bucket.tally),
+        byTimeframe: [...bucket.timeframes.entries()]
+          .map(([timeframe, tally]) => ({ timeframe, ...rates(tally) }))
+          .sort((a, b) => b.total - a.total),
+      }))
+      .sort((a, b) => b.total - a.total),
+    byTimeframe: [...timeframeBuckets.entries()]
       .map(([timeframe, tally]) => ({ timeframe, ...rates(tally) }))
       .sort((a, b) => b.total - a.total),
   });

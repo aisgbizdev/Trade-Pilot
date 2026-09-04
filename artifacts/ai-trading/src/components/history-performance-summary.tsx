@@ -14,6 +14,10 @@ type AnalysisHistorySummary = {
   range: SummaryRange;
   minSamples: number;
   overall: OutcomeStats;
+  byInstrument: Array<OutcomeStats & {
+    instrument: string;
+    byTimeframe: Array<OutcomeStats & { timeframe: string }>;
+  }>;
   byTimeframe: Array<OutcomeStats & { timeframe: string }>;
 };
 
@@ -29,6 +33,7 @@ export function HistoryPerformanceSummary() {
     rawRange === "7" || rawRange === "90" || rawRange === "all" ? rawRange : "30";
   const instruments = sp.getAll("instruments");
   const timeframes = sp.getAll("timeframes");
+  const focusedInstrument = sp.get("focusInstrument");
   const queryString = new URLSearchParams({ range });
   instruments.forEach((item) => queryString.append("instruments", item));
   timeframes.forEach((item) => queryString.append("timeframes", item));
@@ -49,13 +54,21 @@ export function HistoryPerformanceSummary() {
     Object.entries(changes).forEach(([key, value]) => value == null ? next.delete(key) : next.set(key, value));
     setLocation(`/history?${next.toString()}`, { replace: true });
   };
-  const drill = (outcome?: string, timeframe?: string) => {
+  const drill = (outcome?: string, timeframe?: string, instrument?: string) => {
     const next = new URLSearchParams(search);
     next.set("view", "history");
     next.delete("outcomes");
     next.delete("timeframes");
+    next.delete("focusInstrument");
     if (outcome) next.append("outcomes", outcome);
     if (timeframe) next.append("timeframes", timeframe);
+    if (instrument) {
+      next.delete("instruments");
+      next.append("instruments", instrument);
+    } else if (focusedInstrument) {
+      next.delete("instruments");
+      next.append("instruments", focusedInstrument);
+    }
     if (range !== "all") {
       const from = new Date();
       from.setDate(from.getDate() - Number(range));
@@ -73,6 +86,7 @@ export function HistoryPerformanceSummary() {
   if (isError || !summary) return <Card className="p-4 text-sm text-destructive">{t.common.error}</Card>;
 
   const o = summary.overall;
+  const instrumentRows = summary.byInstrument ?? [];
   const stats = [
     { label: t.history.summary_total, value: o.total, icon: Target, outcome: undefined },
     { label: t.history.summary_valid, value: o.activeValid, icon: Clock3, outcome: "pending" },
@@ -82,7 +96,9 @@ export function HistoryPerformanceSummary() {
     { label: "TP2", value: o.tp2Hit, icon: CheckCircle2, outcome: "tp2_hit" },
     { label: t.history.summary_invalid, value: o.invalidated, icon: AlertTriangle, outcome: "invalidated" },
   ];
-  const qualified = summary.byTimeframe.filter((row) => row.total >= summary.minSamples);
+  const selectedInstrument = instrumentRows.find((row) => row.instrument === focusedInstrument);
+  const timeframeRows = selectedInstrument?.byTimeframe ?? summary.byTimeframe;
+  const qualified = timeframeRows.filter((row) => row.total >= summary.minSamples);
   const best = [...qualified].filter((r) => r.winRate != null).sort((a, b) => (b.winRate ?? 0) - (a.winRate ?? 0))[0];
   const mostExpired = [...qualified].sort((a, b) => b.expired / Math.max(1, b.total) - a.expired / Math.max(1, a.total))[0];
   const mostSl = [...qualified].sort((a, b) => b.slHit - a.slHit)[0];
@@ -120,15 +136,77 @@ export function HistoryPerformanceSummary() {
 
       <Card className="overflow-hidden">
         <div className="p-4 border-b border-border">
-          <h2 className="text-sm font-semibold">{t.history.timeframe_performance}</h2>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">{t.history.instrument_performance}</h2>
+              <p className="text-[11px] text-muted-foreground mt-1">{t.history.instrument_performance_hint}</p>
+            </div>
+            {focusedInstrument && (
+              <button
+                className="text-xs text-primary hover:underline shrink-0"
+                onClick={() => update({ focusInstrument: null })}
+              >
+                {t.history.show_all_instruments}
+              </button>
+            )}
+          </div>
+        </div>
+        {instrumentRows.length === 0 ? (
+          <p className="p-6 text-center text-xs text-muted-foreground">{t.history.no_data_yet}</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3">
+            {instrumentRows.map((row) => {
+              const selected = focusedInstrument === row.instrument;
+              return (
+                <div
+                  key={row.instrument}
+                  className={cn(
+                    "p-4 border-b sm:border-r border-border",
+                    selected && "bg-primary/10 ring-1 ring-inset ring-primary/50",
+                  )}
+                >
+                  <button
+                    onClick={() => update({ focusInstrument: selected ? null : row.instrument })}
+                    className="w-full text-left"
+                    aria-pressed={selected}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="text-sm">{row.instrument}</strong>
+                      <span className="text-xs text-muted-foreground">{row.total} sample</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-3 text-[11px]">
+                      <span>Win <strong>{row.total >= summary.minSamples && row.winRate != null ? `${Math.round(row.winRate * 100)}%` : "—"}</strong></span>
+                      <span>TP <strong>{row.tp1Hit + row.tp2Hit}</strong></span>
+                      <span>SL <strong>{row.slHit}</strong></span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => drill(undefined, undefined, row.instrument)}
+                    className="mt-3 text-[11px] font-medium text-primary hover:underline"
+                  >
+                    {t.history.view_instrument_history}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-sm font-semibold">
+            {t.history.timeframe_performance}
+            {selectedInstrument ? ` · ${selectedInstrument.instrument}` : ""}
+          </h2>
           <p className="text-[11px] text-muted-foreground mt-1">{t.history.rate_explainer}</p>
         </div>
         <div className="hidden md:grid grid-cols-[1fr_repeat(8,minmax(54px,1fr))] gap-2 px-4 py-2 text-[10px] text-muted-foreground border-b border-border">
           <span>Timeframe</span><span>Sample</span><span>{t.history.summary_valid}</span><span>Expired</span><span>SL</span><span>TP1</span><span>TP2</span><span>Win rate</span><span>Completion</span>
         </div>
-        {summary.byTimeframe.length === 0 ? (
+        {timeframeRows.length === 0 ? (
           <p className="p-6 text-center text-xs text-muted-foreground">{t.history.no_data_yet}</p>
-        ) : summary.byTimeframe.map((row) => (
+        ) : timeframeRows.map((row) => (
           <button key={row.timeframe} onClick={() => drill(undefined, row.timeframe)} className="w-full text-left p-4 border-b last:border-0 border-border hover:bg-muted/40">
             <div className="md:grid md:grid-cols-[1fr_repeat(8,minmax(54px,1fr))] md:gap-2 md:items-center">
               <div className="flex justify-between md:block"><strong>{row.timeframe}</strong><span className="md:hidden text-xs">{row.total} sample</span></div>

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "codegen": "pnpm run codegen:orval && pnpm run codegen:dart && pnpm -w run typecheck:libs",
-    "codegen:orval": "orval --config ./orval.config.ts && pnpm exec prettier --write ../api-client-react/src/generated ../api-zod/src/generated",
+    "codegen:orval": "orval --config ./orval.config.ts && node ./scripts/zod-v3-compat.mjs && pnpm exec prettier --write ../api-client-react/src/generated ../api-zod/src/generated",
     "codegen:dart": "openapi-generator-cli generate -i ./openapi.yaml -g dart-dio -o ../api-client-dart -p pubName=trade_pilot_api_client -p pubVersion=0.1.0 && cd ../api-client-dart && dart pub get && dart run build_runner clean && dart run build_runner build && dart analyze --no-fatal-warnings"
   },
   "devDependencies": {

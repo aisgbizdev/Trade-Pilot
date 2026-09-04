@@ -25,6 +25,7 @@ import 'package:trade_pilot_api_client/src/model/alert_status.dart';
 import 'package:trade_pilot_api_client/src/model/analyses_list.dart';
 import 'package:trade_pilot_api_client/src/model/analyses_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis.dart';
+import 'package:trade_pilot_api_client/src/model/analysis_history_instrument_stats.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_history_outcome_stats.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_history_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_history_timeframe_stats.dart';
@@ -167,6 +168,7 @@ part 'serializers.g.dart';
   AnalysesList,
   AnalysesSummary,
   Analysis,
+  AnalysisHistoryInstrumentStats,
   AnalysisHistoryOutcomeStats,$AnalysisHistoryOutcomeStats,
   AnalysisHistorySummary,
   AnalysisHistoryTimeframeStats,
@@ -415,6 +417,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FundamentalNewsItem)]),
         () => ListBuilder<FundamentalNewsItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalysisHistoryInstrumentStats)]),
+        () => ListBuilder<AnalysisHistoryInstrumentStats>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),

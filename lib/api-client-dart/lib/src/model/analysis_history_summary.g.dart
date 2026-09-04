@@ -86,6 +86,8 @@ class _$AnalysisHistorySummary extends AnalysisHistorySummary {
   @override
   final AnalysisHistoryOutcomeStats overall;
   @override
+  final BuiltList<AnalysisHistoryInstrumentStats> byInstrument;
+  @override
   final BuiltList<AnalysisHistoryTimeframeStats> byTimeframe;
 
   factory _$AnalysisHistorySummary(
@@ -96,6 +98,7 @@ class _$AnalysisHistorySummary extends AnalysisHistorySummary {
       {required this.range,
       required this.minSamples,
       required this.overall,
+      required this.byInstrument,
       required this.byTimeframe})
       : super._();
   @override
@@ -114,6 +117,7 @@ class _$AnalysisHistorySummary extends AnalysisHistorySummary {
         range == other.range &&
         minSamples == other.minSamples &&
         overall == other.overall &&
+        byInstrument == other.byInstrument &&
         byTimeframe == other.byTimeframe;
   }
 
@@ -123,6 +127,7 @@ class _$AnalysisHistorySummary extends AnalysisHistorySummary {
     _$hash = $jc(_$hash, range.hashCode);
     _$hash = $jc(_$hash, minSamples.hashCode);
     _$hash = $jc(_$hash, overall.hashCode);
+    _$hash = $jc(_$hash, byInstrument.hashCode);
     _$hash = $jc(_$hash, byTimeframe.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -134,6 +139,7 @@ class _$AnalysisHistorySummary extends AnalysisHistorySummary {
           ..add('range', range)
           ..add('minSamples', minSamples)
           ..add('overall', overall)
+          ..add('byInstrument', byInstrument)
           ..add('byTimeframe', byTimeframe))
         .toString();
   }
@@ -156,6 +162,12 @@ class AnalysisHistorySummaryBuilder
   set overall(AnalysisHistoryOutcomeStats? overall) =>
       _$this._overall = overall;
 
+  ListBuilder<AnalysisHistoryInstrumentStats>? _byInstrument;
+  ListBuilder<AnalysisHistoryInstrumentStats> get byInstrument =>
+      _$this._byInstrument ??= ListBuilder<AnalysisHistoryInstrumentStats>();
+  set byInstrument(ListBuilder<AnalysisHistoryInstrumentStats>? byInstrument) =>
+      _$this._byInstrument = byInstrument;
+
   ListBuilder<AnalysisHistoryTimeframeStats>? _byTimeframe;
   ListBuilder<AnalysisHistoryTimeframeStats> get byTimeframe =>
       _$this._byTimeframe ??= ListBuilder<AnalysisHistoryTimeframeStats>();
@@ -172,6 +184,7 @@ class AnalysisHistorySummaryBuilder
       _range = $v.range;
       _minSamples = $v.minSamples;
       _overall = $v.overall;
+      _byInstrument = $v.byInstrument.toBuilder();
       _byTimeframe = $v.byTimeframe.toBuilder();
       _$v = null;
     }
@@ -202,11 +215,14 @@ class AnalysisHistorySummaryBuilder
                 minSamples, r'AnalysisHistorySummary', 'minSamples'),
             overall: BuiltValueNullFieldError.checkNotNull(
                 overall, r'AnalysisHistorySummary', 'overall'),
+            byInstrument: byInstrument.build(),
             byTimeframe: byTimeframe.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'byInstrument';
+        byInstrument.build();
         _$failedField = 'byTimeframe';
         byTimeframe.build();
       } catch (e) {

@@ -24,6 +24,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AnalysesList.serializer)
       ..add(AnalysesSummary.serializer)
       ..add(Analysis.serializer)
+      ..add(AnalysisHistoryInstrumentStats.serializer)
       ..add(AnalysisHistorySummary.serializer)
       ..add(AnalysisHistorySummaryRangeEnum.serializer)
       ..add(AnalysisHistoryTimeframeStats.serializer)
@@ -216,6 +217,14 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(Analysis)]),
           () => ListBuilder<Analysis>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(AnalysisHistoryInstrumentStats)]),
+          () => ListBuilder<AnalysisHistoryInstrumentStats>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(AnalysisHistoryTimeframeStats)]),
+          () => ListBuilder<AnalysisHistoryTimeframeStats>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(AnalysisHistoryTimeframeStats)]),

@@ -40,6 +40,7 @@ export 'package:trade_pilot_api_client/src/model/alert_status.dart';
 export 'package:trade_pilot_api_client/src/model/analyses_list.dart';
 export 'package:trade_pilot_api_client/src/model/analyses_summary.dart';
 export 'package:trade_pilot_api_client/src/model/analysis.dart';
+export 'package:trade_pilot_api_client/src/model/analysis_history_instrument_stats.dart';
 export 'package:trade_pilot_api_client/src/model/analysis_history_outcome_stats.dart';
 export 'package:trade_pilot_api_client/src/model/analysis_history_summary.dart';
 export 'package:trade_pilot_api_client/src/model/analysis_history_timeframe_stats.dart';

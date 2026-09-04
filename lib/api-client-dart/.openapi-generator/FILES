@@ -14,6 +14,7 @@ doc/AnalysesApi.md
 doc/AnalysesList.md
 doc/AnalysesSummary.md
 doc/Analysis.md
+doc/AnalysisHistoryInstrumentStats.md
 doc/AnalysisHistoryOutcomeStats.md
 doc/AnalysisHistorySummary.md
 doc/AnalysisHistoryTimeframeStats.md
@@ -194,6 +195,7 @@ lib/src/model/alert_status.dart
 lib/src/model/analyses_list.dart
 lib/src/model/analyses_summary.dart
 lib/src/model/analysis.dart
+lib/src/model/analysis_history_instrument_stats.dart
 lib/src/model/analysis_history_outcome_stats.dart
 lib/src/model/analysis_history_summary.dart
 lib/src/model/analysis_history_timeframe_stats.dart
@@ -325,3 +327,4 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
+test/analysis_history_instrument_stats_test.dart

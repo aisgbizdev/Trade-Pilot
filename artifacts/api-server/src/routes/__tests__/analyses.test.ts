@@ -145,6 +145,18 @@ describe("GET /analyses/history-summary filters", () => {
     expect(res.body.byTimeframe).toEqual([
       expect.objectContaining({ timeframe: "1h", total: 8 }),
     ]);
+    expect(res.body.byInstrument).toEqual([
+      expect.objectContaining({
+        instrument: `${INSTRUMENT_PREFIX}-A`,
+        total: 5,
+        byTimeframe: [expect.objectContaining({ timeframe: "1h", total: 5 })],
+      }),
+      expect.objectContaining({
+        instrument: `${INSTRUMENT_PREFIX}-B`,
+        total: 3,
+        byTimeframe: [expect.objectContaining({ timeframe: "1h", total: 3 })],
+      }),
+    ]);
   });
 });
 
