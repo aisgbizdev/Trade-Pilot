@@ -83,7 +83,8 @@ export function SignalSpeedometer({
       ? {
           wrapperW: "w-20 shrink-0",
           barHeight: 8,
-          thumbSize: 14,
+          markerWidth: 3,
+          markerHeight: 16,
           labelText: "text-xs",
           countText: "text-[8px]",
           labelMt: "mt-2",
@@ -92,7 +93,8 @@ export function SignalSpeedometer({
       ? {
           wrapperW: "w-full max-w-[150px]",
           barHeight: 11,
-          thumbSize: 18,
+          markerWidth: 3.5,
+          markerHeight: 21,
           labelText: "text-sm",
           countText: "text-[9px]",
           labelMt: "mt-2.5",
@@ -100,7 +102,8 @@ export function SignalSpeedometer({
       : {
           wrapperW: "w-full max-w-[220px]",
           barHeight: 14,
-          thumbSize: 24,
+          markerWidth: 4,
+          markerHeight: 28,
           labelText: "text-3xl",
           countText: "text-[10px]",
           labelMt: "mt-3",
@@ -114,7 +117,7 @@ export function SignalSpeedometer({
     >
       <div
         className="relative w-full"
-        style={{ height: sizing.thumbSize }}
+        style={{ height: sizing.markerHeight }}
         role="img"
         aria-label={centerLabel}
       >
@@ -131,18 +134,23 @@ export function SignalSpeedometer({
           ))}
         </div>
 
+        {/* A solid white pill with a dark ring reads against every stop in
+            the pink→orange→yellow→green track, unlike a translucent dot
+            (which washed out, especially over the yellow midpoint). Sized
+            taller than the track so it visibly "pins" a spot on the bar
+            rather than blending into it. */}
         <div
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/10 flex items-center justify-center"
-          style={{ left: `${positionPct}%`, width: sizing.thumbSize, height: sizing.thumbSize }}
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
+          style={{
+            left: `${positionPct}%`,
+            width: sizing.markerWidth,
+            height: sizing.markerHeight,
+            boxShadow: "0 0 0 1.5px rgba(15, 15, 15, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35)",
+          }}
           data-testid="speedometer-needle"
           data-angle={angle.toFixed(1)}
           data-position={positionPct.toFixed(1)}
-        >
-          <div
-            className="rounded-full bg-foreground/80"
-            style={{ width: sizing.thumbSize * 0.45, height: sizing.thumbSize * 0.45 }}
-          />
-        </div>
+        />
       </div>
 
       {showCenterLabel && (
