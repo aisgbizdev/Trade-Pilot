@@ -27,6 +27,7 @@ export const en = {
     dashboard: "Dashboard",
     analyze: "Analyze",
     history: "History & Performance",
+    guide: "Guide",
     analytics: "Statistics",
     profile: "Profile",
   },

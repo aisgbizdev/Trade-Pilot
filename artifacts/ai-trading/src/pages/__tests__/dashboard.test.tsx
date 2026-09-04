@@ -185,6 +185,14 @@ describe("DashboardPage: happy-path render", () => {
     expect(screen.getByTestId("mobile-bottom-nav").className).toContain(
       "lg:hidden",
     );
+    expect(screen.getByTestId("nav-guide").closest("a")).toHaveAttribute(
+      "href",
+      "/guide",
+    );
+    expect(screen.getByTestId("nav-desktop-guide")).toHaveAttribute(
+      "href",
+      "/guide",
+    );
   });
 });
 
