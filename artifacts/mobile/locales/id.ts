@@ -11,7 +11,7 @@ const id: Locale = {
   },
   auth: {
     welcome: "Trade Pilot",
-    tagline: "Analisis market dengan AI",
+    tagline: "UNIVERSE COMES TO US",
     email: "Email",
     password: "Password",
     display_name: "Nama Lengkap",

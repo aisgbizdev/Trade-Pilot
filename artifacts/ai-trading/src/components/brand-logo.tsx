@@ -1,14 +1,23 @@
 import { type ImgHTMLAttributes } from "react";
 
+interface BrandLogoProps extends ImgHTMLAttributes<HTMLImageElement> {
+  variant?: "horizontal" | "compact";
+}
+
 export function BrandLogo({
   className,
+  variant = "compact",
   ...props
-}: ImgHTMLAttributes<HTMLImageElement>) {
+}: BrandLogoProps) {
+  const src = variant === "horizontal"
+    ? "/logo-horizontal.png"
+    : "/logo-compact.png";
+
   return (
     <img
-      src="/trade-pilot-logo-3.png"
+      src={src}
       alt="Trade Pilot"
-      className={className}
+      className={`object-contain ${className || ""}`}
       data-testid="brand-logo"
       {...props}
     />

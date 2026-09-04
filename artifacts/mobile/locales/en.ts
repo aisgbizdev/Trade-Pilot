@@ -9,7 +9,7 @@ const en = {
   },
   auth: {
     welcome: "Trade Pilot",
-    tagline: "AI-powered trading analysis",
+    tagline: "UNIVERSE COMES TO US",
     email: "Email",
     password: "Password",
     display_name: "Full Name",

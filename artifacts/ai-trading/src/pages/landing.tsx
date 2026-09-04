@@ -9,7 +9,6 @@ import {
   Target,
   ArrowUpRight,
   Lightbulb,
-  Sparkles,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
@@ -22,10 +21,8 @@ import { LandingProductPreview } from "@/components/landing-product-preview";
 import { LandingFaq } from "@/components/landing-faq";
 import { useAuth } from "@/components/auth-provider";
 import { useEmbedMode } from "@/lib/embed-mode";
+import { motion } from "framer-motion";
 
-// One icon per value-prop, in display order. Hard-coded here so locale
-// files stay pure strings and translators don't have to deal with icon
-// identifiers. Keep the array length in sync with `landing.value_props`.
 const VALUE_PROP_ICONS = [Brain, Zap, Target];
 
 export default function LandingPage() {
@@ -41,14 +38,11 @@ export default function LandingPage() {
     setLocation(isAuthenticated ? "/analyze?embed=1" : "/login?embed=1");
   }, [isEmbed, isAuthenticated, isLoading, setLocation]);
 
-  // Not wrapped in <Layout> (which tracks page views for every other
-  // route) — highest-value pre-auth funnel page, tracks itself directly.
   useEffect(() => {
     trackEvent("page_view");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Don't render the marketing page while redirecting in embed mode
   if (isEmbed) return null;
 
   const stats = [
@@ -59,309 +53,310 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto w-full relative">
-      {/* Sticky group: header + ContinuousTicker stay pinned to the top
-          together while the page scrolls. Wrapping them in a single sticky
-          container is what keeps the ticker from disappearing on scroll —
-          making each child sticky independently would stack them on top
-          of one another at top:0. */}
-      <div className="sticky top-0 z-40">
-        <header className="backdrop-blur-xl border-b border-white/10 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between bg-background/80">
-          <div className="flex items-center gap-2">
-            <BrandLogo className="w-8 h-8" />
-            <div className="flex flex-col">
-              <span className="font-bold text-sm tracking-tight">
-                <span className="gradient-text">Trade</span>
-                <span className="text-foreground"> Pilot</span>
-              </span>
-              {SHOW_SPONSOR && (
-                <a
-                  href="https://www.sg-berjangka.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
-                  data-testid="link-header-sponsor"
-                  onClick={() => trackOutbound("landing-header", "sg-berjangka")}
-                >
-                  <span className="text-[8px] text-muted-foreground/70 leading-none lowercase">{t.brand.sponsored_by}</span>
-                  <span className="text-[9px] font-bold leading-none text-amber-400 tracking-wide">SOLID PRIME</span>
-                </a>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <LanguageToggle />
-            <Link href="/login">
-              <button className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-all" data-testid="link-login">
-                {t.landing.login}
-              </button>
-            </Link>
-            <Link href="/register">
-              <button className="text-sm font-medium px-4 py-1.5 rounded-lg btn-premium transition-all hover:opacity-90" data-testid="link-register">
-                {t.landing.register}
-              </button>
-            </Link>
-          </div>
-        </header>
-        <ContinuousTicker />
+    <div className="min-h-[100dvh] flex flex-col bg-[#020202] text-white w-full relative overflow-x-hidden selection:bg-primary selection:text-white">
+      {/* Background ambient lighting */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 flex justify-center">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 rounded-[100%] blur-[120px] opacity-70" />
+        <div className="absolute top-1/3 -right-64 w-[500px] h-[500px] bg-orange-600/5 rounded-[100%] blur-[100px] opacity-50" />
       </div>
 
-      <main className="flex-1 w-full">
+      <div className="sticky top-0 z-40 bg-[#020202]/80 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-5xl mx-auto w-full">
+          <header className="pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BrandLogo variant="horizontal" className="h-6 md:h-7 w-auto" />
+              {SHOW_SPONSOR && (
+                <div className="flex flex-col border-l border-white/10 pl-3 ml-1">
+                  <a
+                    href="https://www.sg-berjangka.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col hover:opacity-80 transition-opacity"
+                    data-testid="link-header-sponsor"
+                    onClick={() => trackOutbound("landing-header", "sg-berjangka")}
+                  >
+                    <span className="text-[7px] text-white/50 leading-none uppercase tracking-widest">{t.brand.sponsored_by}</span>
+                    <span className="text-[10px] font-bold leading-tight text-primary tracking-wide">SOLID PRIME</span>
+                  </a>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 md:gap-3">
+              <LanguageToggle />
+              <Link href="/login">
+                <button className="text-xs font-medium text-white/70 hover:text-white px-3 py-2 rounded-lg transition-colors" data-testid="link-login">
+                  {t.landing.login}
+                </button>
+              </Link>
+              <Link href="/register">
+                <button className="text-xs font-bold px-4 py-2 rounded-lg bg-white text-black hover:bg-white/90 transition-colors hidden sm:block" data-testid="link-register">
+                  {t.landing.register}
+                </button>
+              </Link>
+            </div>
+          </header>
+          <ContinuousTicker />
+        </div>
+      </div>
+
+      <main className="flex-1 w-full max-w-5xl mx-auto relative z-10">
 
         {/* HERO */}
-        <section className="hero-gradient px-5 pt-14 pb-10 text-center relative overflow-hidden">
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-8 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-400/12 rounded-full blur-3xl" />
-            <div className="absolute top-20 right-4 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl" />
-            <div className="absolute bottom-0 left-4 w-40 h-40 bg-orange-500/8 rounded-full blur-2xl" />
-          </div>
-
-          <div className="relative z-10 lg:max-w-xl lg:mx-auto">
+        <section className="px-5 pt-20 md:pt-32 pb-16 text-center relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="relative z-10 max-w-2xl mx-auto"
+          >
             <span
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-400/30 bg-amber-400/10 text-[10px] font-semibold uppercase tracking-widest text-amber-200 mb-4"
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-6"
               data-testid="text-hero-kicker"
             >
-              <Sparkles className="w-3 h-3 text-amber-400" aria-hidden="true" />
+              <div className="w-1.5 h-1.5 rounded-full bg-primary pulse-glow" />
               {t.landing.hero_kicker}
             </span>
 
-            <h1 className="text-[2rem] lg:text-[2.75rem] font-extrabold leading-[1.15] mb-4 text-white" data-testid="text-hero-headline">
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6 text-white" data-testid="text-hero-headline">
               <span className="gradient-text">{t.landing.tagline_part1}</span>
               <br />
               <span className="text-white">{t.landing.tagline_part2}</span>
             </h1>
 
-            <p className="text-sm text-slate-200 leading-relaxed mb-7 max-w-xs mx-auto" data-testid="text-hero-subtitle">
+            <p className="text-base md:text-lg text-white/60 leading-relaxed mb-10 max-w-md mx-auto" data-testid="text-hero-subtitle">
               {t.landing.subtitle_full}
             </p>
 
-            <div className="flex flex-col gap-3 mb-3">
-              <Link href="/register" className="block">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+              <Link href="/register" className="w-full sm:w-auto">
                 <button
-                  className="w-full h-12 rounded-xl font-semibold btn-premium flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
+                  className="w-full sm:w-auto px-8 h-12 rounded-xl font-bold btn-premium flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   data-testid="button-get-started"
                 >
                   {t.landing.cta_start}
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </Link>
-              <Link href="/login" className="block">
-                <button
-                  className="w-full h-11 rounded-xl font-medium text-amber-100 border border-amber-400/30 bg-amber-400/5 hover:bg-amber-400/10 transition-all"
-                  data-testid="button-login"
-                >
-                  {t.landing.cta_login}
-                </button>
-              </Link>
             </div>
 
-            {/* Subtle, confident reassurance line — replaces the old loud
-                "no credit card" chip. Trade Pilot is genuinely free with
-                no paid tier, so the copy says exactly that, quietly. */}
             <p
-              className="text-[11px] text-amber-100/70 mb-8"
+              className="text-xs text-white/40 mb-12 flex items-center justify-center gap-1.5"
               data-testid="text-always-free-note"
             >
+              <Shield className="w-3.5 h-3.5 text-white/30" />
               {t.landing.always_free_note}
             </p>
 
-            <div className="grid grid-cols-4 gap-3">
-              {stats.map(({ value, label }) => (
-                <div key={label} className="bg-white/5 rounded-xl p-2.5 border border-amber-400/15">
-                  <div className="text-base font-bold gradient-text">{value}</div>
-                  <div className="text-[9px] text-amber-100/80 mt-0.5 leading-tight">{label}</div>
-                </div>
+            <div className="grid grid-cols-4 gap-3 max-w-lg mx-auto">
+              {stats.map(({ value, label }, idx) => (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + (idx * 0.1), duration: 0.5 }}
+                  key={label}
+                  className="bg-white/[0.02] rounded-xl p-3 border border-white/5 backdrop-blur-sm"
+                >
+                  <div className="text-lg md:text-xl font-bold text-white tracking-tight">{value}</div>
+                  <div className="text-[10px] text-white/50 mt-1 uppercase tracking-wider">{label}</div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </section>
 
-        {/* Bridge: smooth fade from hero's dark end (#0d0905) into the
-            page's bg-background so the dark→light transition doesn't
-            land as a hard seam. */}
-        <div
-          className="h-20 bg-gradient-to-b from-[#0d0905] to-background -mt-px"
-          aria-hidden="true"
-        />
-
-        {/* VALUE PROPS — one tight strip of 3 one-liners. No paragraphs,
-            no card descriptions. Detail belongs inside the app, not on
-            the front door. */}
+        {/* VALUE PROPS */}
         <section
-          className="px-4 pt-2 pb-10"
+          className="px-4 py-8 md:py-16"
           data-testid="section-value-props"
         >
-          <ul className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-3 md:gap-3">
+          <ul className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
             {t.landing.value_props.map((text, idx) => {
               const Icon = VALUE_PROP_ICONS[idx] ?? Brain;
               return (
-                <li
+                <motion.li
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ delay: idx * 0.1, duration: 0.6 }}
                   key={idx}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card"
+                  className="group flex items-center gap-4 px-5 py-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-colors"
                   data-testid={`item-value-prop-${idx}`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400/15 to-yellow-500/15 border border-amber-400/20 flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-amber-400" />
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+                    <Icon className="w-5 h-5 text-primary" />
                   </div>
-                  <span className="text-sm font-medium text-foreground leading-snug">
+                  <span className="text-sm font-semibold text-white/90 leading-snug">
                     {text}
                   </span>
-                </li>
+                </motion.li>
               );
             })}
           </ul>
         </section>
 
-        {/* SOLID PRIME SPONSOR CTA — separates the AI tool (free) from
-            the regulated broker product (real-money). Never bundled with
-            the "Try Trade Pilot" CTAs above so it's clear they're distinct.
-            Hidden via SHOW_SPONSOR until the legal sponsorship agreement
-            is finalized; intentionally kept in the codebase for fast revival. */}
+        {/* SPONSOR CTA */}
         {SHOW_SPONSOR && (
-          <section className="px-4 pb-8" data-testid="section-solid-prime-cta">
-            <div className="rounded-2xl border border-amber-400/35 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t.brand.sponsored_by}
-                </span>
-                <span className="text-base font-extrabold tracking-wide text-amber-400">
-                  SOLID PRIME
-                </span>
+          <section className="px-4 pb-12" data-testid="section-solid-prime-cta">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 md:p-8 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3" />
+
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+                      {t.brand.sponsored_by}
+                    </span>
+                    <span className="text-lg font-extrabold tracking-wide text-primary">
+                      SOLID PRIME
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-white/60 mb-2 font-medium tracking-wide uppercase">
+                    {t.brand.solid_prime_subline} <span className="opacity-50 mx-1">·</span> {t.brand.solid_prime_regulated}
+                  </p>
+                  <p className="text-sm text-white/80 leading-relaxed max-w-md">
+                    {t.brand.open_account_subtitle}
+                  </p>
+                </div>
+                <a
+                  href="https://www.sg-berjangka.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="link-open-solid-prime-account"
+                  className="w-full md:w-auto shrink-0 h-12 px-6 rounded-xl font-bold bg-white text-black hover:bg-white/90 transition-all flex items-center justify-center gap-2"
+                  onClick={() => trackOutbound("landing-cta", "sg-berjangka")}
+                >
+                  {t.brand.open_account_cta}
+                  <ArrowUpRight className="w-4 h-4" />
+                </a>
               </div>
-              <p className="text-[10px] text-muted-foreground/80 mb-3 leading-snug">
-                {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
-              </p>
-              <p className="text-xs text-foreground/85 leading-relaxed mb-4">
-                {t.brand.open_account_subtitle}
-              </p>
-              <a
-                href="https://www.sg-berjangka.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-open-solid-prime-account"
-                className="w-full h-11 rounded-xl font-semibold btn-premium hover:opacity-90 transition-all flex items-center justify-center gap-2"
-                onClick={() => trackOutbound("landing-cta", "sg-berjangka")}
-              >
-                {t.brand.open_account_cta}
-                <ArrowUpRight className="w-4 h-4" />
-              </a>
-            </div>
+            </motion.div>
           </section>
         )}
 
-        {/* PRODUCT PREVIEW — illustrative mock of the analysis result UI */}
+        {/* PRODUCT PREVIEW */}
         <LandingProductPreview />
 
-        {/* PHILOSOPHY STRIP — differentiates Trade Pilot from blind signal groups */}
+        {/* PHILOSOPHY STRIP */}
         <section
-          className="px-4 pb-10"
+          className="px-4 pb-16"
           data-testid="section-philosophy"
         >
-          <div className="rounded-2xl border border-border bg-card px-5 py-5 flex gap-4 items-start md:items-center">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/15 to-yellow-500/10 border border-amber-400/20 flex items-center justify-center shrink-0">
-              <Lightbulb className="w-5 h-5 text-amber-400" />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6 }}
+            className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start md:items-center"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Lightbulb className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground mb-1">
+              <h2 className="text-lg font-bold text-white mb-2 tracking-tight">
                 {t.landing.philosophy_title}
               </h2>
-              <p className="text-[13px] text-muted-foreground leading-relaxed">
+              <p className="text-sm text-white/60 leading-relaxed max-w-2xl">
                 {t.landing.philosophy_body}
               </p>
-              <p className="text-[11px] text-amber-500/80 mt-1.5 font-medium">
+              <p className="text-xs text-primary/80 mt-3 font-semibold uppercase tracking-wider">
                 {t.landing.philosophy_subtext}
               </p>
             </div>
-          </div>
+          </motion.div>
         </section>
 
         {/* FAQ */}
         <LandingFaq />
 
         {/* BOTTOM CTA */}
-        <section className="px-4 pb-8 md:max-w-2xl md:mx-auto md:w-full">
-          <div className="relative rounded-2xl overflow-hidden">
-            <div className="hero-gradient p-6 text-center">
-              <div className="absolute inset-0">
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-48 h-24 bg-amber-400/18 rounded-full blur-2xl" />
+        <section className="px-4 pb-16 md:py-16 md:max-w-3xl md:mx-auto md:w-full">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="relative rounded-3xl overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent opacity-50" />
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-primary/20 rounded-full blur-[80px]" />
+
+            <div className="border border-white/10 bg-[#050505] p-10 md:p-14 text-center relative z-10 rounded-3xl">
+              <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center mx-auto mb-6 float-anim">
+                <BrandLogo variant="compact" className="w-8 h-8" />
               </div>
-              <div className="relative z-10">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400/20 to-yellow-500/15 border border-amber-400/30 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/30 float-anim">
-                  <BrandLogo className="w-8 h-8" />
-                </div>
-                <h2 className="text-lg font-bold text-white mb-2">
-                  {t.landing.cta_bottom_title} <span className="gradient-text">{t.landing.cta_bottom_highlight}</span>
-                </h2>
-                <p className="text-xs text-slate-200 leading-relaxed mb-5">
-                  {t.landing.cta_bottom_subtitle}
-                </p>
-                <Link href="/register">
-                  <button className="w-full h-11 rounded-xl font-semibold btn-premium hover:opacity-90 transition-all" data-testid="button-signup-bottom">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4 tracking-tight">
+                {t.landing.cta_bottom_title} <span className="text-primary">{t.landing.cta_bottom_highlight}</span>
+              </h2>
+              <p className="text-sm text-white/50 leading-relaxed mb-8 max-w-sm mx-auto">
+                {t.landing.cta_bottom_subtitle}
+              </p>
+              <div className="flex flex-col items-center gap-4">
+                <Link href="/register" className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto min-w-[200px] h-12 rounded-xl font-bold btn-premium hover:scale-[1.02] active:scale-[0.98] transition-transform" data-testid="button-signup-bottom">
                     {t.landing.cta_signup}
                   </button>
                 </Link>
-                {/* Single low-key reassurance line — same understated tone
-                    as the hero microcopy. Replaces the old two-chip row
-                    (no-credit-card + secure-data) which felt like a
-                    discount banner. */}
                 <p
-                  className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-amber-100/70"
+                  className="flex items-center gap-1.5 text-[11px] text-white/40 font-medium"
                   data-testid="text-bottom-always-free-note"
                 >
-                  <Shield className="w-3 h-3 text-amber-300/80" />
+                  <Shield className="w-3 h-3 text-white/30" />
                   {t.landing.always_free_note}
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
         </section>
       </main>
 
-      <footer className="border-t border-border/50 px-4 py-4 text-center space-y-2">
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
+      <footer className="border-t border-white/5 px-4 py-8 text-center space-y-4 bg-[#020202] relative z-20">
+        <p className="text-[11px] text-white/40 leading-relaxed max-w-xl mx-auto">
           {t.landing.footer}
         </p>
-        <div className="flex justify-center items-center gap-4 text-[11px]">
+        <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[11px] font-medium tracking-wide">
           <Link
             href="/privacy"
-            className="text-muted-foreground hover:text-foreground"
+            className="text-white/40 hover:text-white transition-colors"
             data-testid="link-footer-privacy"
           >
             {t.legal.privacy_link}
           </Link>
-          <span className="text-muted-foreground/50">·</span>
           <Link
             href="/terms"
-            className="text-muted-foreground hover:text-foreground"
+            className="text-white/40 hover:text-white transition-colors"
             data-testid="link-footer-terms"
           >
             {t.legal.terms_link}
           </Link>
-          <span className="text-muted-foreground/50">·</span>
           <Link
             href="/support"
-            className="text-muted-foreground hover:text-foreground"
+            className="text-white/40 hover:text-white transition-colors"
             data-testid="link-footer-support"
           >
             {t.legal.support_link}
           </Link>
-          <span className="text-muted-foreground/50">·</span>
           <Link
             href="/delete-account"
-            className="text-muted-foreground hover:text-foreground"
+            className="text-white/40 hover:text-white transition-colors"
             data-testid="link-footer-delete-account"
           >
             {t.legal.delete_account_link}
           </Link>
         </div>
+
         {SHOW_SPONSOR && (
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-[10px] text-white/30 pt-4">
             {t.brand.sponsored_by}{" "}
             <a
               href="https://www.sg-berjangka.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-amber-500 dark:text-amber-300 hover:text-amber-400 underline-offset-2 hover:underline"
+              className="font-bold text-primary hover:text-primary/80 transition-colors"
               data-testid="link-landing-footer-sponsor"
               onClick={() => trackOutbound("landing-footer", "sg-berjangka")}
             >
@@ -370,7 +365,7 @@ export default function LandingPage() {
           </p>
         )}
         {SHOW_NEWSMAKER && (
-          <p className="text-[9px] text-muted-foreground/50">
+          <p className="text-[9px] text-white/20">
             {t.brand.news_data_via}
           </p>
         )}
