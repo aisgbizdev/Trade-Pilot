@@ -2151,9 +2151,7 @@ export default function AnalysisDetailPage({
             {t.analysis_detail.analyzed_prefix}{" "}
             {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
               locale: lang === "id" ? idLocale : undefined,
-            })}{" "}
-            • {t.analysis_detail.mode_prefix}{" "}
-            {isBeginnerMode ? t.analysis_detail.beginner_mode : t.analysis_detail.pro_mode}
+            })}
           </div>
 
           {isExpired && (

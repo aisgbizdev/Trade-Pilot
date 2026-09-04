@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { TrendingUp, Plus, Clock, Loader2, Brain, Sparkles, Radio, ArrowUpRight, X } from "lucide-react";
+import { TrendingUp, Plus, Clock, Loader2, Brain, Radio, ArrowUpRight, X } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
 import { OnboardingModal, isOnboardingDone } from "@/components/onboarding-modal";
@@ -186,11 +186,9 @@ export default function DashboardPage() {
           <NewsWidget limit={5} />
         </div>
 
-        <div className="grid grid-cols-3 gap-2.5 md:mb-5 md:break-inside-avoid">
+        <div className="md:mb-5 md:break-inside-avoid">
           {[
             { label: t.dashboard.total_analyses, value: summaryLoading ? "—" : (summaryData?.totalAnalyses ?? 0), icon: Brain, gradient: "from-amber-400/20 to-yellow-500/20", iconColor: "text-amber-300" },
-            { label: t.dashboard.beginner_mode, value: summaryLoading ? "—" : (summaryData?.beginnerCount ?? 0), icon: Sparkles, gradient: "from-yellow-400/20 to-amber-500/20", iconColor: "text-yellow-300" },
-            { label: t.dashboard.pro_mode, value: summaryLoading ? "—" : (summaryData?.proCount ?? 0), icon: TrendingUp, gradient: "from-amber-500/20 to-orange-500/20", iconColor: "text-amber-400" },
           ].map(({ label, value, icon: Icon, gradient, iconColor }) => (
             <div key={label} className="bg-card border border-border rounded-2xl p-3 text-center">
               <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mx-auto mb-2`}>
@@ -382,7 +380,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          {a.mode === "beginner" ? t.common.beginner : t.common.pro} · {a.confidenceMin}–{a.confidenceMax}% {t.common.confidence}
+                          {a.confidenceMin}–{a.confidenceMax}% {t.common.confidence}
                         </span>
                         <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
                           {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: dateLocale })}

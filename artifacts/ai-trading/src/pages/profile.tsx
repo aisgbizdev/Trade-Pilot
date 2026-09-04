@@ -292,9 +292,6 @@ export default function ProfilePage() {
                 ? t.profile.role_admin
                 : t.profile.role_user}
             </Badge>
-            <Badge variant="outline" className="text-xs">
-              {user?.selectedMode === "beginner" ? `${t.profile.mode_label}: ${t.common.beginner}` : `${t.profile.mode_label}: ${t.common.pro}`}
-            </Badge>
             {user?.avatarUrl && (
               <button
                 type="button"

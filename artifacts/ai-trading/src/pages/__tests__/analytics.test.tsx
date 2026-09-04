@@ -120,9 +120,6 @@ describe("AnalyticsPage: happy-path render", () => {
     expect(screen.getByTestId("text-instrument-0").textContent).toBe("XAU/USD");
     expect(screen.getByTestId("text-instrument-1").textContent).toBe("EUR/USD");
 
-    // The dominant-mode card resolves to the localised mode label.
-    expect(screen.getByTestId("text-dominant-mode")).toBeInTheDocument();
-
     // The empty-state CTA must NOT render on the happy path.
     expect(
       screen.queryByTestId("button-start-analysis"),
@@ -151,9 +148,6 @@ describe("AnalyticsPage: empty branch", () => {
     expect(screen.queryByTestId("accuracy-gauge")).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("text-instrument-0"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId("text-dominant-mode"),
     ).not.toBeInTheDocument();
   });
 });

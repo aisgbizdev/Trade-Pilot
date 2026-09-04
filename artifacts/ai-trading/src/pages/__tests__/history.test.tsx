@@ -236,10 +236,10 @@ describe("HistoryPage: loading + empty branches", () => {
       </Wrapper>,
     );
 
-    // Open the filters panel and pick a Mode = beginner filter.
+    // Open the filters panel and pick a timeframe filter.
     fireEvent.click(await screen.findByTestId("button-toggle-filters"));
     expect(screen.getByTestId("filter-panel")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("filter-mode-beginner"));
+    fireEvent.click(screen.getByTestId("filter-timeframe-1h"));
 
     // Now an empty result with active filters should expose the "Clear
     // filters" CTA in the empty state.
@@ -253,7 +253,7 @@ describe("HistoryPage: loading + empty branches", () => {
 });
 
 describe("HistoryPage: user actions", () => {
-  it("toggles the filters panel and refetches with the picked mode in the query string", async () => {
+  it("toggles the filters panel and refetches with the picked timeframe in the query string", async () => {
     const { calls } = installFetchMock([
       listHandler({ analyses: SAMPLE_ANALYSES, total: SAMPLE_ANALYSES.length }),
     ]);
@@ -276,16 +276,16 @@ describe("HistoryPage: user actions", () => {
     expect(screen.getByTestId("filter-panel")).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByTestId("filter-mode-pro"));
+      fireEvent.click(screen.getByTestId("filter-timeframe-1h"));
     });
 
-    // The list query should fire again with mode=pro in the URL.
+    // The list query should fire again with timeframes=1h in the URL.
     await waitFor(() => {
       const filtered = calls.find(
         (c) =>
           c.method === "GET" &&
           /\/api\/analyses\?/.test(c.url) &&
-          c.url.includes("mode=pro"),
+          c.url.includes("timeframes=1h"),
       );
       expect(filtered).toBeDefined();
     });

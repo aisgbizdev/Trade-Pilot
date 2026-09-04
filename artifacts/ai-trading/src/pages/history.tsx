@@ -81,15 +81,12 @@ function normalizeList(raw: string[], allow?: Set<string>): string[] {
 
 function parseFiltersFromSearch(search: string): { filters: FilterState; page: number } {
   const sp = new URLSearchParams(search);
-  const modeRaw = sp.get("mode");
-  const mode: ListAnalysesMode | "" =
-    modeRaw === "beginner" || modeRaw === "pro" ? modeRaw : "";
   const pageRaw = Number(sp.get("page") ?? 1);
   const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
   return {
     page,
     filters: {
-      mode,
+      mode: "",
       instruments: normalizeList(sp.getAll("instruments"), ALL_INSTRUMENTS_SET),
       timeframes: normalizeList(sp.getAll("timeframes"), ALL_TIMEFRAMES_SET),
       from: sp.get("from") ?? "",
@@ -102,7 +99,6 @@ function parseFiltersFromSearch(search: string): { filters: FilterState; page: n
 
 function buildSearch(filters: FilterState, page: number): string {
   const sp = new URLSearchParams();
-  if (filters.mode) sp.set("mode", filters.mode);
   for (const i of filters.instruments) sp.append("instruments", i);
   for (const tf of filters.timeframes) sp.append("timeframes", tf);
   if (filters.from) sp.set("from", filters.from);
@@ -145,7 +141,6 @@ function extractApiError(err: unknown, fallback: string): string {
 // sets — order on disk shouldn't matter for "are these the same filter
 // combo?".
 function filtersEqual(a: FilterState, b: FilterState): boolean {
-  if (a.mode !== b.mode) return false;
   if (a.from !== b.from || a.to !== b.to || a.q !== b.q) return false;
   if (a.instruments.length !== b.instruments.length) return false;
   if (a.timeframes.length !== b.timeframes.length) return false;
@@ -160,9 +155,8 @@ function filtersEqual(a: FilterState, b: FilterState): boolean {
 // an older preset row is missing newer keys (e.g. saved before `q`
 // existed). Mirrors EMPTY_FILTERS for the defaults.
 function normalisePresetFilters(raw: FilterPreset["filters"]): FilterState {
-  const mode = raw?.mode === "beginner" || raw?.mode === "pro" ? raw.mode : "";
   return {
-    mode: mode as ListAnalysesMode | "",
+    mode: "",
     instruments: Array.isArray(raw?.instruments)
       ? normalizeList(raw.instruments, ALL_INSTRUMENTS_SET)
       : [],
@@ -208,7 +202,6 @@ export default function HistoryPage() {
   };
 
   const hasActiveFilters =
-    filters.mode !== "" ||
     filters.instruments.length > 0 ||
     filters.timeframes.length > 0 ||
     filters.from !== "" ||
@@ -316,7 +309,6 @@ export default function HistoryPage() {
   const params = {
     page,
     limit,
-    ...(filters.mode ? { mode: filters.mode } : {}),
     ...(filters.instruments.length > 0 ? { instruments: filters.instruments } : {}),
     ...(filters.timeframes.length > 0 ? { timeframes: filters.timeframes } : {}),
     ...(filters.from ? { from: filters.from } : {}),
@@ -367,13 +359,6 @@ export default function HistoryPage() {
   // so the user can tap × on a single instrument without nuking the rest.
   type Chip = { key: string; label: string; remove: () => void };
   const activeChips: Chip[] = [];
-  if (filters.mode) {
-    activeChips.push({
-      key: `mode-${filters.mode}`,
-      label: `${t.history.mode_chip_prefix ?? "Mode"}: ${filters.mode === "beginner" ? t.common.beginner : t.common.pro}`,
-      remove: () => updateFilters({ ...filters, mode: "" }),
-    });
-  }
   for (const inst of filters.instruments) {
     activeChips.push({
       key: `inst-${inst}`,
@@ -600,26 +585,6 @@ export default function HistoryPage() {
           {showFilters && (
             <div className="mt-3 p-3 rounded-xl border border-border bg-muted/30 space-y-3" data-testid="filter-panel">
               <div>
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Mode</p>
-                <div className="flex gap-2">
-                  {(["", "beginner", "pro"] as const).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => updateFilters({ ...filters, mode: m as ListAnalysesMode | "" })}
-                      data-testid={`filter-mode-${m || "all"}`}
-                      className={cn(
-                        "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all",
-                        filters.mode === m
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border text-muted-foreground hover:border-primary/50"
-                      )}
-                    >
-                      {m === "" ? t.common.all ?? "All" : m === "beginner" ? t.common.beginner : t.common.pro}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Outcome</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(["pending", "tp1_hit", "tp2_hit", "sl_hit", "expired", "invalidated"] as OutcomeStatus[]).map((outcome) => {
@@ -783,9 +748,6 @@ export default function HistoryPage() {
                         <span className="text-sm font-semibold text-foreground">{a.instrument}</span>
                         <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
                           {a.timeframe}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
-                          {a.mode === "beginner" ? t.common.beginner : t.common.pro}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">

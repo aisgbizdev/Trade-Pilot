@@ -972,12 +972,6 @@ export default function AnalyzePage() {
                 <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
                 <span className="font-semibold text-foreground">{selectedTimeframe}</span>
               </div>
-              <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-muted-foreground">{t.analyze.mode_label}:</span>
-                <span className="font-semibold text-foreground">
-                  {t.common.pro}
-                </span>
-              </div>
             </Card>
           )}
           </div>

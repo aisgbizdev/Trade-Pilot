@@ -139,14 +139,7 @@ export default function AnalyticsPage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-2 gap-3 md:contents">
-          <Card className="p-4 md:mb-5 md:break-inside-avoid">
-            <h3 className="text-xs text-muted-foreground mb-1">{t.analytics.dominant_mode}</h3>
-            <p className="text-base font-bold text-foreground capitalize" data-testid="text-dominant-mode">
-              {analytics.dominantMode === "beginner" ? t.common.beginner : t.common.pro}
-            </p>
-          </Card>
-
+        <div className="md:contents">
           <Card className="p-4 flex flex-col items-center md:mb-5 md:break-inside-avoid">
             <div className="flex items-center gap-1 mb-2 self-start">
               <h3 className="text-xs text-muted-foreground">{t.analytics.self_accuracy}</h3>

@@ -1039,9 +1039,6 @@ function AdminContent() {
         return key;
     }
   };
-  const modeLabel = (mode: string): string =>
-    mode === "beginner" ? t.admin.mode_beginner_label : t.admin.mode_pro_label;
-
   const { data: statsData, isLoading: statsLoading } = useGetAdminStats({
     query: { queryKey: getGetAdminStatsQueryKey() },
   });
@@ -1110,20 +1107,6 @@ function AdminContent() {
               </Card>
             )}
 
-            {stats?.modeBreakdown && Object.keys(stats.modeBreakdown).length > 0 && (
-              <Card className="p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-3">{t.admin.mode_breakdown_title}</h3>
-                <div className="space-y-2">
-                  {Object.entries(stats?.modeBreakdown ?? {}).map(([mode, count]) => (
-                    <div key={mode} className="flex items-center justify-between">
-                      <span className="text-sm text-foreground">{modeLabel(mode)}</span>
-                      <Badge variant="secondary" className="text-xs">{count}x</Badge>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
             <UsageAnalyticsPanel />
             <TokenUsagePanel />
 
@@ -1178,7 +1161,7 @@ function AdminContent() {
                           <Badge className={cn("text-[10px] px-1.5 py-0 border-0", mcColor)}>{mcLabel}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {userEmail} • {modeLabel(a.mode)}
+                          {userEmail}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
