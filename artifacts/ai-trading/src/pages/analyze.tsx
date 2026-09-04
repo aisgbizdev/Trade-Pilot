@@ -354,6 +354,7 @@ const ECON_CAL_CURRENCIES_KEY_BASE = "analyze.economicCalendar.currencies";
 const SHOW_SECONDARY_ANALYSIS_CARDS = false;
 const SHOW_NOTES_INPUT = false;
 const SHOW_ECONOMIC_CALENDAR_SECTION = false;
+const SHOW_RELEVANT_CALENDAR_PREVIEW = false;
 type CalendarImpactFilter = "-1" | "0" | "1";
 
 function readStoredCurrencies(storageKey: string): string[] | null {
@@ -836,7 +837,7 @@ export default function AnalyzePage() {
           </div>
 
           <div className="space-y-3">
-            {finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
+            {SHOW_RELEVANT_CALENDAR_PREVIEW && finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}
             {SHOW_NOTES_INPUT && selectedMode === "pro" && (
               <>
                 <div className="flex items-center justify-between">
