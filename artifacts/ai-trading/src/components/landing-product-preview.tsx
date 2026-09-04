@@ -216,11 +216,11 @@ export function LandingProductPreview() {
                     </div>
                   </div>
                   {!loading && (
-                    <Link href="/login" className="block mt-5">
+                    <Link href="/login" className="mt-5 flex justify-center">
                       <motion.button
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
-                        className="w-full h-10 rounded-lg btn-premium flex items-center justify-center gap-2 text-xs font-bold tracking-wide transition-all"
+                        className="flex h-10 min-w-[220px] max-w-full items-center justify-center gap-2 rounded-lg px-6 text-xs font-bold tracking-wide btn-premium transition-all"
                         data-testid="landing-preview-login"
                       >
                         {l.preview_locked_cta}

@@ -2161,7 +2161,7 @@ export default function AnalysisDetailPage({
 
           {isExpired && (
             <Button
-              className="w-full mt-2"
+              className="mt-2 w-auto min-w-40 px-6"
               onClick={openRefreshDialog}
               disabled={isRefreshing}
               data-testid="button-refresh-analysis"
@@ -2684,7 +2684,7 @@ export default function AnalysisDetailPage({
               {!feedbackSubmitted && (
                 <Button
                   size="sm"
-                  className="w-full"
+                  className="w-auto min-w-32 px-6"
                   onClick={handleFeedbackSubmit}
                   disabled={submitFeedback.isPending}
                   data-testid="button-submit-feedback"

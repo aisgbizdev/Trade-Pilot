@@ -130,9 +130,9 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
-              <Link href="/register" className="w-full sm:w-auto">
+              <Link href="/register">
                 <button
-                  className="w-full sm:w-auto px-8 h-12 rounded-xl font-bold btn-premium flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex h-12 min-w-[200px] items-center justify-center gap-2 rounded-xl px-8 font-bold btn-premium transition-all hover:scale-[1.02] active:scale-[0.98]"
                   data-testid="button-get-started"
                 >
                   {t.landing.cta_start}
@@ -298,8 +298,8 @@ export default function LandingPage() {
                 {t.landing.cta_bottom_subtitle}
               </p>
               <div className="flex flex-col items-center gap-3">
-                <Link href="/register" className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto min-w-[200px] h-12 rounded-xl font-bold btn-premium hover:scale-[1.02] active:scale-[0.98] transition-transform" data-testid="button-signup-bottom">
+                <Link href="/register">
+                  <button className="h-12 min-w-[200px] rounded-xl px-8 font-bold btn-premium hover:scale-[1.02] active:scale-[0.98] transition-transform" data-testid="button-signup-bottom">
                     {t.landing.cta_signup}
                   </button>
                 </Link>

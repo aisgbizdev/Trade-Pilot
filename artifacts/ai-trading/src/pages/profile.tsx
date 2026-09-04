@@ -574,7 +574,7 @@ export default function ProfilePage() {
             <p className="text-xs text-foreground/85 leading-relaxed mb-3">
               {t.brand.open_account_subtitle}
             </p>
-            <Button asChild className="w-full btn-premium font-semibold">
+            <Button asChild className="w-fit min-w-48 px-6 btn-premium font-semibold">
               <a
                 href="https://www.sg-berjangka.com"
                 target="_blank"
