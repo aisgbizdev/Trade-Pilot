@@ -32,7 +32,6 @@ import { AntiPatternGuardrails } from "@/components/anti-pattern-guardrails";
 import { CoolingOffBreathingDialog } from "@/components/cooling-off-breathing-dialog";
 import { useAntiPatternSignals } from "@/hooks/use-anti-pattern-signals";
 import AnalysisDetailPage from "./analysis-detail";
-import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -717,10 +716,7 @@ export default function AnalyzePage() {
     <Layout>
       <div className="px-4 py-5 md:max-w-3xl md:mx-auto">
         <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1">
-            <h1 className="text-lg font-bold text-foreground">{t.analyze.title}</h1>
-            <AnalysisGuideLink article="analysis-workflow" compact className="-ml-1.5 mt-0.5" />
-          </div>
+          <h1 className="flex-1 text-lg font-bold text-foreground">{t.analyze.title}</h1>
           {canShowQuotaChip && hourlyQuota && dailyQuota && (
             <span
               className={cn(
@@ -749,10 +745,7 @@ export default function AnalyzePage() {
             data-testid="instrument-chart-layout"
           >
           <div className="min-w-0">
-             <div className="mb-3 flex items-center justify-between gap-2">
-               <h2 className="text-sm font-semibold text-foreground">{t.analyze.select_instrument}</h2>
-               <AnalysisGuideLink article="analysis-workflow" compact />
-             </div>
+             <h2 className="mb-3 text-sm font-semibold text-foreground">{t.analyze.select_instrument}</h2>
             {VISIBLE_INSTRUMENT_CATEGORIES.length > 1 ? (
               <>
                 <div className="grid grid-cols-3 gap-2 mb-3">
