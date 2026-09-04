@@ -120,7 +120,7 @@ afterEach(() => {
 
 describe("AnalyzePage: happy-path render", () => {
   it(
-    "renders the instrument grid, timeframe grid, quota chip, and a disabled submit button",
+    "renders XAU/USD and its chart by default with the analysis action ready",
     async () => {
       const { calls } = installFetchMock(pageHandlers({}));
       const { Wrapper } = makeWrapper();
@@ -141,6 +141,8 @@ describe("AnalyzePage: happy-path render", () => {
        expect(await screen.findByTestId("instrument-options")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-XAU/USD")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-BRENT")).toBeInTheDocument();
+      expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveClass("border-primary");
+      expect(screen.getByTestId("mini-chart-section")).toBeInTheDocument();
 
       // Forex symbols are not yet rendered.
       expect(
@@ -171,12 +173,12 @@ describe("AnalyzePage: happy-path render", () => {
         ),
       ).toHaveLength(0);
 
-      // Submit is disabled until an instrument is chosen (timeframe now
-      // defaults to 1h since the picker is hidden).
+      // XAU/USD and 1h are the initial defaults, so the chart is visible and
+      // the user can run the analysis without an extra selection click.
       const submit = screen.getByTestId(
         "button-submit-analysis",
       ) as HTMLButtonElement;
-      expect(submit.disabled).toBe(true);
+      expect(submit.disabled).toBe(false);
 
       // Optional context is intentionally hidden in Beginner mode so the
       // first analysis flow stays focused on the required choices.
@@ -309,19 +311,7 @@ describe("AnalyzePage: user actions", () => {
     const submit = (await screen.findByTestId(
       "button-submit-analysis",
     )) as HTMLButtonElement;
-    expect(submit.disabled).toBe(true);
-
-    // Pick an instrument — timeframe defaults to 1h since the picker is
-    // hidden, so this alone enables submit.
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-instrument-XAU/USD"));
-    });
-    await waitFor(() => {
-      expect(
-        (screen.getByTestId("button-submit-analysis") as HTMLButtonElement)
-          .disabled,
-      ).toBe(false);
-    });
+    expect(submit.disabled).toBe(false);
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-submit-analysis"));

@@ -569,7 +569,7 @@ export default function AnalyzePage() {
   );
 
   const [openInstrumentCategory, setOpenInstrumentCategory] = useState<InstrumentCategory | null>("futures");
-  const [selectedInstrument, setSelectedInstrument] = useState("");
+  const [selectedInstrument, setSelectedInstrument] = useState("XAU/USD");
   const [customInstrument, setCustomInstrument] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
   // Mode selection is retired — every analysis now runs in "pro" mode.
