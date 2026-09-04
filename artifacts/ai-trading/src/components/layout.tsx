@@ -184,9 +184,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <span className="gradient-text">Trade</span>
                 <span className="text-foreground"> Pilot</span>
               </span>
-              <span className="text-[9px] text-muted-foreground leading-none mt-0.5 tracking-wide uppercase">
-                {user?.selectedMode === "pro" ? t.common.pro : t.common.beginner} Mode
-              </span>
             </div>
           </Link>
         </div>
