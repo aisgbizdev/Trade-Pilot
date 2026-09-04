@@ -355,6 +355,7 @@ const SHOW_SECONDARY_ANALYSIS_CARDS = false;
 const SHOW_NOTES_INPUT = false;
 const SHOW_ECONOMIC_CALENDAR_SECTION = false;
 const SHOW_RELEVANT_CALENDAR_PREVIEW = false;
+const SHOW_TIMEFRAME_PICKER = false;
 type CalendarImpactFilter = "-1" | "0" | "1";
 
 function readStoredCurrencies(storageKey: string): string[] | null {
@@ -565,7 +566,7 @@ export default function AnalyzePage() {
   const [openInstrumentCategory, setOpenInstrumentCategory] = useState<InstrumentCategory | null>("futures");
   const [selectedInstrument, setSelectedInstrument] = useState("");
   const [customInstrument, setCustomInstrument] = useState("");
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1D");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
   // Mode selection is retired — every analysis now runs in "pro" mode.
   // Kept as a variable (rather than a literal) since createAnalysis,
   // the notes gate, and the review card below all still read it.
@@ -815,26 +816,28 @@ export default function AnalyzePage() {
             </div>
           </div>
 
-          <div>
-            <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_timeframe}</h2>
-            <div className="flex flex-wrap gap-2">
-              {TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setSelectedTimeframe(tf)}
-                  data-testid={`button-timeframe-${tf}`}
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium rounded-lg border transition-all",
-                    selectedTimeframe === tf
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:border-primary/50"
-                  )}
-                >
-                  {tf}
-                </button>
-              ))}
+          {SHOW_TIMEFRAME_PICKER && (
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-3">{t.analyze.select_timeframe}</h2>
+              <div className="flex flex-wrap gap-2">
+                {TIMEFRAMES.map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => setSelectedTimeframe(tf)}
+                    data-testid={`button-timeframe-${tf}`}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium rounded-lg border transition-all",
+                      selectedTimeframe === tf
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:border-primary/50"
+                    )}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-3">
             {SHOW_RELEVANT_CALENDAR_PREVIEW && finalInstrument && <RelevantCalendarPreview instrument={finalInstrument} />}

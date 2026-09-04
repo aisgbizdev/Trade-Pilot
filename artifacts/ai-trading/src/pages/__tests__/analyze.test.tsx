@@ -147,9 +147,10 @@ describe("AnalyzePage: happy-path render", () => {
         screen.queryByTestId("button-instrument-EUR/USD"),
       ).not.toBeInTheDocument();
 
-      // All eight timeframes appear (1m, 5m, 15m, 30m, 1h, 4h, 1D, 1W).
+      // The timeframe picker is hidden — every first analysis defaults to
+      // 1h (SHOW_TIMEFRAME_PICKER = false in analyze.tsx).
       for (const tf of ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const) {
-        expect(screen.getByTestId(`button-timeframe-${tf}`)).toBeInTheDocument();
+        expect(screen.queryByTestId(`button-timeframe-${tf}`)).not.toBeInTheDocument();
       }
 
       // Quota chip resolves once the query settles.
@@ -170,8 +171,8 @@ describe("AnalyzePage: happy-path render", () => {
         ),
       ).toHaveLength(0);
 
-      // Submit is disabled until both instrument and timeframe are chosen.
-      // The default state has no instrument selected yet.
+      // Submit is disabled until an instrument is chosen (timeframe now
+      // defaults to 1h since the picker is hidden).
       const submit = screen.getByTestId(
         "button-submit-analysis",
       ) as HTMLButtonElement;
@@ -310,12 +311,10 @@ describe("AnalyzePage: user actions", () => {
     )) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
 
-    // Pick an instrument and a timeframe.
+    // Pick an instrument — timeframe defaults to 1h since the picker is
+    // hidden, so this alone enables submit.
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-instrument-XAU/USD"));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-timeframe-1h"));
     });
     await waitFor(() => {
       expect(
@@ -328,7 +327,7 @@ describe("AnalyzePage: user actions", () => {
       fireEvent.click(screen.getByTestId("button-submit-analysis"));
     });
 
-    // The POST eventually fires with the picked instrument + timeframe.
+    // The POST eventually fires with the picked instrument + default timeframe.
     await waitFor(() => {
       const posts = calls.filter(
         (c) => c.method === "POST" && /\/api\/analyses(\?|$)/.test(c.url),
@@ -468,10 +467,8 @@ describe("AnalyzePage: user actions", () => {
     });
     expect(customInput.value).toBe("PLATINUM");
 
-    // Pick a timeframe to make the submit button eligible.
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-timeframe-1D"));
-    });
+    // Timeframe defaults to 1h (picker is hidden) — submit is already
+    // eligible off the custom instrument alone.
     await waitFor(() => {
       expect(
         (screen.getByTestId("button-submit-analysis") as HTMLButtonElement)
