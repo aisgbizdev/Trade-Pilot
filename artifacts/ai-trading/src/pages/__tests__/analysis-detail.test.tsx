@@ -97,6 +97,26 @@ const STANDARD_RULES_PAYLOAD = {
       deliveryBy: "Cash settlement",
     },
     {
+      code: "BCO10_BBJ",
+      product: "Brent Crude Oil",
+      contractSize: 100,
+      contractUnit: "barrel",
+      tradingDays: "Monday–Friday",
+      tradingHours: { summer: "07:00–03:45 WIB", winter: "08:00–03:45 WIB" },
+      initialMarginUsdPerLot: 100,
+      facilityFeeUsdPerLotPerSide: 1.5,
+      vatPercent: 11,
+      rolloverUsdPerLotPerNight: 0.5,
+      priceSource: "Telequote",
+      priceGuidance: "Last Trade",
+      minimumSpread: "USD 0.10 / pip / barrel / side",
+      maximumSpread: "USD 0.30 / pip / barrel / side",
+      hecticSpread: "Based on market conditions",
+      minimumPriceMovement: "USD 0.01 / barrel",
+      limitStopRange: "USD 1–USD 20",
+      deliveryBy: "Cash settlement",
+    },
+    {
       code: "HKK50_BBJ",
       product: "Hang Seng Index",
       contractSize: 5,
@@ -362,6 +382,40 @@ describe("AnalysisDetailPage: happy-path render", () => {
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {
+  it("mounts Adaptive for canonical BRENT and uses the Brent trading rule", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          instrument: "BRENT",
+          tradePlan: {
+            ...TRADE_PLAN,
+            buy: { ...TRADE_PLAN.buy, entryZone: "80.10–80.20", stopLoss: "79.00" },
+            sell: { ...TRADE_PLAN.sell, entryZone: "80.10–80.20", stopLoss: "81.20" },
+          },
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ], { strict: false });
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("card-adaptive-position-plan")).toBeInTheDocument();
+    expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(
+      /contract size is 100 barrel/i,
+    );
+    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(
+      /canonical XAU\/USD and BRENT analyses/i,
+    );
+  });
+
   it("defaults to Mini, supports all account tiers, and keeps separate Buy and Sell ladders", async () => {
     installFetchMock([
       getAnalysisHandler({
@@ -390,7 +444,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/Current chart.*separate layer candidates/i);
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Maximum 0.9 lot applies to each position/i);
-    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/limited to canonical XAU\/USD analyses/i);
+    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/canonical XAU\/USD and BRENT analyses/i);
     const tradePlanCard = screen.getByTestId("card-trade-plan");
     expect(tradePlanCard).toBeInTheDocument();
     expect(screen.queryByTestId("card-trade-setup-summary")).not.toBeInTheDocument();
@@ -475,7 +529,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-tp-profit-sell-2")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect((screen.getByTestId("adaptive-risk-details") as HTMLDetailsElement).open).toBe(false);
 
-    const storedKey = `trade-pilot:adaptive-plan:v17:${ANALYSIS_ID}`;
+    const storedKey = `trade-pilot:adaptive-plan:v18:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(storedKey)).not.toBeNull());
     expect(JSON.parse(localStorage.getItem(storedKey)!).form.accountTier).toBe("micro");
 
@@ -580,7 +634,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v17:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v18:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -605,7 +659,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v17:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v18:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("does not restore an adaptive plan saved under the cumulative-cap v12 namespace", async () => {
@@ -668,7 +722,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v17:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v18:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {

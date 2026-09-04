@@ -88,7 +88,7 @@ import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
-import { isXauUsdMiniAdaptiveInstrument } from "@/lib/adaptive-position-plan";
+import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
 import { prioritizeNewsSources } from "@/lib/news-source-priority";
 
 type T = ReturnType<typeof useTranslation>["t"];
@@ -2209,7 +2209,7 @@ export default function AnalysisDetailPage({
 
         {/* Deterministic, situation-aware scaling plan. It reads the saved
             analysis context but never changes Standard Plan levels or executes orders. */}
-        {tradePlan && isXauUsdMiniAdaptiveInstrument(analysis.instrument) && (
+        {tradePlan && isAdaptivePositionInstrument(analysis.instrument) && (
           <AdaptivePositionPlan
             analysisId={analysis.id}
             instrument={analysis.instrument}

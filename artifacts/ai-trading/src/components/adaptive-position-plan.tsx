@@ -13,7 +13,7 @@ import {
   getAdaptiveMarginCapacity,
   getAdaptiveMarketRule,
   getAdaptiveStandardRuleCode,
-  isXauUsdMiniAdaptiveInstrument,
+  isAdaptivePositionInstrument,
   isAdaptiveLotProfile,
   isAdaptiveRiskStyle,
   type AdaptiveAnalysisContext,
@@ -59,7 +59,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v17:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v18:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -506,7 +506,7 @@ function PlanSide({
 }
 
 export function AdaptivePositionPlan(props: Props) {
-  if (!isXauUsdMiniAdaptiveInstrument(props.instrument)) return null;
+  if (!isAdaptivePositionInstrument(props.instrument)) return null;
   return <AdaptivePositionPlanContent {...props} />;
 }
 

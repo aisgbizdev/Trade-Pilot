@@ -335,8 +335,8 @@ function standardMarketForInstrument(instrument: string): AdaptiveMarket | null 
 
 /**
  * Adaptive is intentionally narrower than the Standard Plan. The saved
- * analysis identity must be the canonical XAU/USD symbol; aliases such as
- * GOLD, XAUUSD, or the broker rule code must not silently enable it.
+ * analysis identity must match a canonical product symbol; aliases and broker
+ * rule codes must not silently enable it.
  */
 export function isXauUsdAdaptiveInstrument(instrument: string): boolean {
   return instrument.trim().toUpperCase() === "XAU/USD";
@@ -345,8 +345,16 @@ export function isXauUsdAdaptiveInstrument(instrument: string): boolean {
 // Keep the original export for callers that still use the old Mini-only name.
 export const isXauUsdMiniAdaptiveInstrument = isXauUsdAdaptiveInstrument;
 
+export function isAdaptivePositionInstrument(instrument: string): boolean {
+  const canonical = instrument.trim().toUpperCase();
+  return canonical === "XAU/USD" || canonical === "BRENT";
+}
+
 function adaptiveMarketForInstrument(instrument: string): AdaptiveMarket | null {
-  return isXauUsdAdaptiveInstrument(instrument) ? "gold" : null;
+  const canonical = instrument.trim().toUpperCase();
+  if (canonical === "XAU/USD") return "gold";
+  if (canonical === "BRENT") return "brent";
+  return null;
 }
 
 function standardCodeForMarket(market: AdaptiveMarket): StandardTradingRuleInstrument["code"] {
@@ -834,7 +842,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const includeBuy = input.includedSides?.buy ?? true;
   const includeSell = input.includedSides?.sell ?? true;
 
-  if (!market) errors.push("Adaptive position planning is available only for the canonical XAU/USD instrument.");
+  if (!market) errors.push("Adaptive position planning is available only for supported canonical instruments.");
   if (!rule) errors.push("TP Standard Trading Rules are unavailable for this instrument.");
   if (!includeBuy && !includeSell) errors.push("At least one trade-plan side must be included.");
   if (input.availableFunds == null || input.availableFunds <= 0) errors.push("Available trading funds are required.");
@@ -912,7 +920,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     `Initial entry uses the Standard Plan; up to two manual additions can create at most three total positions. The ${tierText} range applies separately to each position, not to cumulative planned lots.`,
     `The entered USD ${maxCycleLoss} maximum loss is a hard amount for every position in the complete plan.`,
     "Available trading funds are used directly; the recommendation may reserve part of the entered loss ceiling according to risk style and market context.",
-    `Current open XAU/USD ${input.accountTier} exposure is ${input.existingExposure ?? 0} lot. It is not subtracted from the ${tierMax ?? "unlimited"}-lot per-position cap; entered free funds must already exclude margin committed elsewhere.`,
+    `Current open ${input.instrument} ${input.accountTier} exposure is ${input.existingExposure ?? 0} lot. It is not subtracted from the ${tierMax ?? "unlimited"}-lot per-position cap; entered free funds must already exclude margin committed elsewhere.`,
     "This Adaptive Position Plan is for day trading only: it uses the day/initial margin and excludes overnight holding, rollover, and overnight fees from every calculation.",
     "Broker auto-liquidation, spread, facility fee, VAT, slippage, and rejected orders are external risks and are not used to move ladder levels.",
   ];

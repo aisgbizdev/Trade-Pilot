@@ -9,6 +9,7 @@ import {
   getAdaptiveMarketRule,
   getAdaptiveStandardRuleCode,
   getStandardTradingRuleCode,
+  isAdaptivePositionInstrument,
   isXauUsdMiniAdaptiveInstrument,
 } from "./adaptive-position-plan";
 
@@ -58,6 +59,36 @@ const GOLD_RULE: StandardTradingRuleInstrument = {
   deliveryBy: "Cash settlement",
 };
 
+const BRENT_RULE: StandardTradingRuleInstrument = {
+  ...GOLD_RULE,
+  code: "BCO10_BBJ",
+  product: "Brent Crude Oil",
+  contractSize: 100,
+  contractUnit: "barrel",
+  minimumSpread: "USD 0.10 / pip / barrel / side",
+  maximumSpread: "USD 0.30 / pip / barrel / side",
+  minimumPriceMovement: "USD 0.01 / barrel",
+  limitStopRange: "USD 1–USD 20",
+};
+
+const BRENT_TRADE_PLAN: TradePlan = {
+  preferredSide: "buy",
+  buy: {
+    ...TRADE_PLAN.buy,
+    entryZone: "80.10–80.20",
+    stopLoss: "79.00",
+    takeProfit1: "81.50",
+    takeProfit2: "82.40",
+  },
+  sell: {
+    ...TRADE_PLAN.sell,
+    entryZone: "80.10–80.20",
+    stopLoss: "81.20",
+    takeProfit1: "79.00",
+    takeProfit2: "78.20",
+  },
+};
+
 const SUPPORTIVE_CONTEXT = {
   timeframe: "1h",
   marketCondition: "trending_up",
@@ -105,11 +136,48 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(isXauUsdMiniAdaptiveInstrument("XAU/USD")).toBe(true);
     expect(isXauUsdMiniAdaptiveInstrument(" xau/usd ")).toBe(true);
 
-    for (const alias of ["XAUUSD", "GOLD", "XUL10", "BRENT", "HSI", "NIKKEI", "EUR/USD"]) {
+    for (const alias of ["XAUUSD", "GOLD", "XUL10", "HSI", "NIKKEI", "EUR/USD"]) {
       expect(isXauUsdMiniAdaptiveInstrument(alias)).toBe(false);
       expect(getAdaptiveStandardRuleCode(alias)).toBeNull();
     }
+    expect(isXauUsdMiniAdaptiveInstrument("BRENT")).toBe(false);
     expect(getAdaptiveStandardRuleCode("XAU/USD")).toBe("XUL10");
+  });
+
+  it("enables only canonical XAU/USD and BRENT identities for Adaptive", () => {
+    expect(isAdaptivePositionInstrument("XAU/USD")).toBe(true);
+    expect(isAdaptivePositionInstrument(" brent ")).toBe(true);
+    expect(getAdaptiveStandardRuleCode("BRENT")).toBe("BCO10_BBJ");
+
+    for (const alias of ["BCO10_BBJ", "BCO", "OIL", "BRENT CRUDE", "HSI", "EUR/USD"]) {
+      expect(isAdaptivePositionInstrument(alias)).toBe(false);
+      expect(getAdaptiveStandardRuleCode(alias)).toBeNull();
+    }
+  });
+
+  it("builds Brent from its own contract, margin, movement, and gap rules", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      instrument: "BRENT",
+      tradePlan: BRENT_TRADE_PLAN,
+      standardRule: BRENT_RULE,
+      checkpointPrices: { buy: [79.83], sell: [80.47] },
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.market).toBe("brent");
+    expect(result.rule).toMatchObject({
+      contractSize: 100,
+      minimumLot: 0.1,
+      marginAtMinimumLot: 100,
+      minMovement: 0.01,
+      maxGapPercent: 2,
+    });
+    const isTickAligned = (price: number) =>
+      Math.abs(price / 0.01 - Math.round(price / 0.01)) < 1e-8;
+    expect(result.buy?.ladder.every((level) => isTickAligned(level.price))).toBe(true);
+    expect(result.sell?.ladder.every((level) => isTickAligned(level.price))).toBe(true);
+    expect(result.assumptions.join(" ")).toContain("Current open BRENT mini exposure");
   });
 
   it("keeps the broader Standard Plan resolver independent from Adaptive", () => {
@@ -619,12 +687,12 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(insufficientLossBudget.errors.join(" ")).toMatch(/loss at the final Stop Loss exceeds/i);
   });
 
-  it("rejects every non-XAU product from the Adaptive calculator", () => {
-    for (const instrument of ["BRENT", "HSI", "NIKKEI", "EUR/USD"]) {
+  it("rejects unsupported products from the Adaptive calculator", () => {
+    for (const instrument of ["HSI", "NIKKEI", "EUR/USD"]) {
       const result = buildAdaptivePositionPlan({ ...VALID_INPUT, instrument });
       expect(result.valid).toBe(false);
       expect(result.buy).toBeNull();
-      expect(result.errors.join(" ")).toMatch(/only for the canonical XAU\/USD/i);
+      expect(result.errors.join(" ")).toMatch(/only for supported canonical instruments/i);
     }
   });
 
