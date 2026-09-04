@@ -25,7 +25,7 @@ import AdminPage from "@/pages/admin";
 import AdminUsersPage from "@/pages/admin-users";
 import AdminFeedbackPage from "@/pages/admin-feedback";
 import LegalPage from "@/pages/legal";
-import MindsetPage from "@/pages/mindset";
+import GuidePage from "@/pages/guide";
 import JournalPage from "@/pages/journal";
 import MirrorPage from "@/pages/mirror";
 import PerformancePage, { PerformanceMethodologyPage } from "@/pages/performance";
@@ -140,10 +140,13 @@ function Router() {
             <MyAlertsPage />
           </ProtectedRoute>
         </Route>
-        <Route path="/mindset">
+        <Route path="/guide">
           <ProtectedRoute>
-            <MindsetPage />
+            <GuidePage />
           </ProtectedRoute>
+        </Route>
+        <Route path="/mindset">
+          <Redirect to="/guide?category=psychology" />
         </Route>
         <Route path="/journal">
           <ProtectedRoute>

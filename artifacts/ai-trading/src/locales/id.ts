@@ -1,6 +1,14 @@
 import type { Translations } from "./en";
 
 export const id: Translations = {
+  guide: {
+    title: "Pusat Panduan",
+    subtitle: "Pengetahuan, fitur, dan mindset.",
+    search_placeholder: "Cari panduan...",
+    no_results: "Artikel tidak ditemukan.",
+    back_to_guide: "Kembali ke Panduan",
+    table_of_contents: "Kategori",
+  },
   common: {
     loading: "Memuat...",
     error: "Error",
@@ -1355,8 +1363,8 @@ export const id: Translations = {
   },
   profile_extra: {
     learning_section_title: "Belajar",
-    mindset_link_title: "Mindset Trader",
-    mindset_link_subtitle: "8 modul singkat soal psikologi trading.",
+    guide_link_title: "Pusat Panduan",
+    guide_link_subtitle: "Pelajari fitur, baca analisis, dan kuasai mindset.",
     preferences_section_title: "Preferensi",
     mental_checklist_toggle_title: "Tampilkan cek mental pra-trade",
     mental_checklist_toggle_subtitle: "Tambah self-check 4 item di halaman Analisis sebelum kamu submit analisis baru.",

@@ -1,4 +1,12 @@
 export const en = {
+  guide: {
+    title: "Guide Center",
+    subtitle: "Knowledge, features, and mindset.",
+    search_placeholder: "Search guide...",
+    no_results: "No articles found.",
+    back_to_guide: "Back to Guide",
+    table_of_contents: "Categories",
+  },
   common: {
     loading: "Loading...",
     error: "Error",
@@ -1353,8 +1361,8 @@ export const en = {
   },
   profile_extra: {
     learning_section_title: "Learning",
-    mindset_link_title: "Trader's Mindset",
-    mindset_link_subtitle: "8 short modules on trading psychology.",
+    guide_link_title: "Guide Center",
+    guide_link_subtitle: "Learn features, read analyses, and master mindset.",
     preferences_section_title: "Preferences",
     mental_checklist_toggle_title: "Show pre-trade mental check",
     mental_checklist_toggle_subtitle: "Adds a 4-item self-check on the Analyze page before you submit a new analysis.",

@@ -533,20 +533,20 @@ export default function ProfilePage() {
         </Card>
 
         <Card className="p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">{t.profile_extra.learning_section_title}</h3>
+          <h3 className="text-sm font-semibold text-foreground">{(t as any).profile_extra.learning_section_title}</h3>
           <button
             type="button"
             className="w-full flex items-center gap-3 text-left p-2 -mx-2 rounded-lg hover:bg-muted/60 transition-colors"
-            onClick={() => setLocation("/mindset")}
-            data-testid="button-go-mindset"
+            onClick={() => setLocation("/guide")}
+            data-testid="button-go-guide"
           >
             <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <BookOpen className="w-4 h-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">{t.profile_extra.mindset_link_title}</p>
+              <p className="text-sm font-medium text-foreground">{(t as any).profile_extra.guide_link_title}</p>
               <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                {t.profile_extra.mindset_link_subtitle}
+                {(t as any).profile_extra.guide_link_subtitle}
               </p>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />

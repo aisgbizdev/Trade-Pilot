@@ -11,9 +11,7 @@ export function LandingFaq() {
   const items = [
     { q: l.faq_q1, a: l.faq_a1 },
     { q: l.faq_q2, a: l.faq_a2 },
-    { q: l.faq_q3, a: l.faq_a3 },
     { q: l.faq_q4, a: l.faq_a4 },
-    { q: l.faq_q5, a: l.faq_a5 },
   ];
 
   const toggle = (idx: number) => setOpen(open === idx ? null : idx);
