@@ -9,6 +9,12 @@ Pin the API generator to an emitter that matches the validator runtime and commi
 
 **How to apply:** Keep generator and runtime upgrades intentional and paired. Validate the generated barrel and route imports after regeneration.
 
+Orval's automatic Zod target can default to Zod 4 when it cannot resolve package metadata from the generator workspace, even when the monorepo still uses Zod 3.
+
+**Why:** A security-driven Orval upgrade emitted top-level `z.int()` and `z.email()` calls that do not exist in Zod 3.
+
+**How to apply:** Explicitly pin `override.zod.version` to the installed runtime major; do not rely on auto-detection in this workspace.
+
 Clean the Dart generated-part cache before rebuilding models.
 
 **Why:** Incremental build state can preserve stale builder fields and enum serializers after OpenAPI Generator rewrites model sources.
