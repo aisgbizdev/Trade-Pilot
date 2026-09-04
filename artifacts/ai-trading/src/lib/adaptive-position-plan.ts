@@ -347,13 +347,18 @@ export const isXauUsdMiniAdaptiveInstrument = isXauUsdAdaptiveInstrument;
 
 export function isAdaptivePositionInstrument(instrument: string): boolean {
   const canonical = instrument.trim().toUpperCase();
-  return canonical === "XAU/USD" || canonical === "BRENT";
+  return canonical === "XAU/USD" ||
+    canonical === "BRENT" ||
+    canonical === "HSI" ||
+    canonical === "NIKKEI";
 }
 
 function adaptiveMarketForInstrument(instrument: string): AdaptiveMarket | null {
   const canonical = instrument.trim().toUpperCase();
   if (canonical === "XAU/USD") return "gold";
   if (canonical === "BRENT") return "brent";
+  if (canonical === "HSI") return "hang_seng";
+  if (canonical === "NIKKEI") return "nikkei";
   return null;
 }
 

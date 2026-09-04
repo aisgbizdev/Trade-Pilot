@@ -59,7 +59,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v18:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v19:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

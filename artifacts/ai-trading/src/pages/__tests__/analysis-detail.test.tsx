@@ -136,6 +136,26 @@ const STANDARD_RULES_PAYLOAD = {
       limitStopRange: "20–500 points",
       deliveryBy: "Cash settlement",
     },
+    {
+      code: "JPK50_BBJ",
+      product: "Nikkei Index",
+      contractSize: 5,
+      contractUnit: "USD/point",
+      tradingDays: "Monday–Friday",
+      tradingHours: { summer: "06:30–13:55, 14:10–03:45 WIB", winter: "06:30–13:55, 14:10–03:45 WIB" },
+      initialMarginUsdPerLot: 100,
+      facilityFeeUsdPerLotPerSide: null,
+      vatPercent: 11,
+      rolloverUsdPerLotPerNight: 0.2,
+      priceSource: "Telequote",
+      priceGuidance: "Last Trade",
+      minimumSpread: "10 points / side",
+      maximumSpread: "25 points / side",
+      hecticSpread: "Based on market conditions",
+      minimumPriceMovement: "5 points",
+      limitStopRange: "20–500 points",
+      deliveryBy: "Cash settlement",
+    },
   ],
   disclaimer: { id: "Test disclaimer", en: "Test disclaimer" },
   relationshipDisclosure: { id: "Test disclosure", en: "Test disclosure" },
@@ -412,7 +432,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       /contract size is 100 barrel/i,
     );
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(
-      /canonical XAU\/USD and BRENT analyses/i,
+      /canonical XAU\/USD, BRENT, HSI, and NIKKEI analyses/i,
     );
   });
 
@@ -444,7 +464,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/Current chart.*separate layer candidates/i);
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Maximum 0.9 lot applies to each position/i);
-    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/canonical XAU\/USD and BRENT analyses/i);
+    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/canonical XAU\/USD, BRENT, HSI, and NIKKEI analyses/i);
     const tradePlanCard = screen.getByTestId("card-trade-plan");
     expect(tradePlanCard).toBeInTheDocument();
     expect(screen.queryByTestId("card-trade-setup-summary")).not.toBeInTheDocument();
@@ -529,7 +549,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-tp-profit-sell-2")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect((screen.getByTestId("adaptive-risk-details") as HTMLDetailsElement).open).toBe(false);
 
-    const storedKey = `trade-pilot:adaptive-plan:v18:${ANALYSIS_ID}`;
+    const storedKey = `trade-pilot:adaptive-plan:v19:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(storedKey)).not.toBeNull());
     expect(JSON.parse(localStorage.getItem(storedKey)!).form.accountTier).toBe("micro");
 
@@ -634,7 +654,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v18:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v19:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -659,7 +679,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v18:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v19:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("does not restore an adaptive plan saved under the cumulative-cap v12 namespace", async () => {
@@ -722,7 +742,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v18:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v19:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {
@@ -847,13 +867,20 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("adaptive-plan-valid")).not.toBeInTheDocument();
   });
 
-  it("keeps Hang Seng on Standard TP/SL without mounting Adaptive", async () => {
+  it.each([
+    ["HSI", "18,500–18,510", "18,450", "18,560", /contract size is 5 USD\/point/i],
+    ["NIKKEI", "38,500–38,510", "38,450", "38,560", /contract size is 5 USD\/point/i],
+  ])("mounts Adaptive for canonical %s with its index rule", async (instrument, entryZone, buyStop, sellStop, ruleText) => {
     installFetchMock([
       getAnalysisHandler({
         body: {
           ...ANALYSIS_PAYLOAD,
-          instrument: "HSI",
-          tradePlan: TRADE_PLAN,
+          instrument,
+          tradePlan: {
+            ...TRADE_PLAN,
+            buy: { ...TRADE_PLAN.buy, entryZone, stopLoss: buyStop },
+            sell: { ...TRADE_PLAN.sell, entryZone, stopLoss: sellStop },
+          },
           fundamentalContext: { newsItems: [], calendarEvents: [] },
         },
       }),
@@ -872,8 +899,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Stop Loss/i);
     expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Take Profit 1/i);
     expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Take Profit 2/i);
-    expect(screen.queryByTestId("input-adaptive-available-margin")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("button-calculate-adaptive-plan")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("input-adaptive-available-margin")).toBeInTheDocument();
+    expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(ruleText);
   });
 });
 

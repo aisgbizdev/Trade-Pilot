@@ -89,6 +89,47 @@ const BRENT_TRADE_PLAN: TradePlan = {
   },
 };
 
+const HSI_RULE: StandardTradingRuleInstrument = {
+  ...GOLD_RULE,
+  code: "HKK50_BBJ",
+  product: "Hang Seng Index",
+  contractSize: 5,
+  contractUnit: "USD/point",
+  facilityFeeUsdPerLotPerSide: null,
+  minimumSpread: "5 points / side",
+  maximumSpread: "25 points / side",
+  minimumPriceMovement: "1 point",
+  limitStopRange: "20–500 points",
+};
+
+const NIKKEI_RULE: StandardTradingRuleInstrument = {
+  ...HSI_RULE,
+  code: "JPK50_BBJ",
+  product: "Nikkei Index",
+  minimumSpread: "10 points / side",
+  minimumPriceMovement: "5 points",
+};
+
+function indexTradePlan(entryLow: number, entryHigh: number): TradePlan {
+  return {
+    preferredSide: "buy",
+    buy: {
+      ...TRADE_PLAN.buy,
+      entryZone: `${entryLow}–${entryHigh}`,
+      stopLoss: String(entryLow - 100),
+      takeProfit1: String(entryHigh + 150),
+      takeProfit2: String(entryHigh + 250),
+    },
+    sell: {
+      ...TRADE_PLAN.sell,
+      entryZone: `${entryLow}–${entryHigh}`,
+      stopLoss: String(entryHigh + 100),
+      takeProfit1: String(entryLow - 150),
+      takeProfit2: String(entryLow - 250),
+    },
+  };
+}
+
 const SUPPORTIVE_CONTEXT = {
   timeframe: "1h",
   marketCondition: "trending_up",
@@ -136,20 +177,36 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(isXauUsdMiniAdaptiveInstrument("XAU/USD")).toBe(true);
     expect(isXauUsdMiniAdaptiveInstrument(" xau/usd ")).toBe(true);
 
-    for (const alias of ["XAUUSD", "GOLD", "XUL10", "HSI", "NIKKEI", "EUR/USD"]) {
+    for (const alias of ["XAUUSD", "GOLD", "XUL10", "EUR/USD"]) {
       expect(isXauUsdMiniAdaptiveInstrument(alias)).toBe(false);
       expect(getAdaptiveStandardRuleCode(alias)).toBeNull();
     }
+    expect(isXauUsdMiniAdaptiveInstrument("HSI")).toBe(false);
+    expect(isXauUsdMiniAdaptiveInstrument("NIKKEI")).toBe(false);
     expect(isXauUsdMiniAdaptiveInstrument("BRENT")).toBe(false);
     expect(getAdaptiveStandardRuleCode("XAU/USD")).toBe("XUL10");
   });
 
-  it("enables only canonical XAU/USD and BRENT identities for Adaptive", () => {
+  it("enables only supported canonical identities for Adaptive", () => {
     expect(isAdaptivePositionInstrument("XAU/USD")).toBe(true);
     expect(isAdaptivePositionInstrument(" brent ")).toBe(true);
+    expect(isAdaptivePositionInstrument("HSI")).toBe(true);
+    expect(isAdaptivePositionInstrument("nikkei")).toBe(true);
     expect(getAdaptiveStandardRuleCode("BRENT")).toBe("BCO10_BBJ");
+    expect(getAdaptiveStandardRuleCode("HSI")).toBe("HKK50_BBJ");
+    expect(getAdaptiveStandardRuleCode("NIKKEI")).toBe("JPK50_BBJ");
 
-    for (const alias of ["BCO10_BBJ", "BCO", "OIL", "BRENT CRUDE", "HSI", "EUR/USD"]) {
+    for (const alias of [
+      "BCO10_BBJ",
+      "BCO",
+      "OIL",
+      "BRENT CRUDE",
+      "HKK50_BBJ",
+      "HANG SENG",
+      "JPK50_BBJ",
+      "NIKKEI 225",
+      "EUR/USD",
+    ]) {
       expect(isAdaptivePositionInstrument(alias)).toBe(false);
       expect(getAdaptiveStandardRuleCode(alias)).toBeNull();
     }
@@ -178,6 +235,94 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(result.buy?.ladder.every((level) => isTickAligned(level.price))).toBe(true);
     expect(result.sell?.ladder.every((level) => isTickAligned(level.price))).toBe(true);
     expect(result.assumptions.join(" ")).toContain("Current open BRENT mini exposure");
+  });
+
+  it.each([
+    {
+      instrument: "HSI",
+      market: "hang_seng",
+      rule: HSI_RULE,
+      tradePlan: indexTradePlan(18_500, 18_510),
+      checkpoints: { buy: [18_477.4], sell: [18_533.8] },
+      movement: 1,
+    },
+    {
+      instrument: "NIKKEI",
+      market: "nikkei",
+      rule: NIKKEI_RULE,
+      tradePlan: indexTradePlan(38_500, 38_510),
+      checkpoints: { buy: [38_477], sell: [38_533] },
+      movement: 5,
+    },
+  ])("builds $instrument with isolated index sizing and tick alignment", ({
+    instrument,
+    market,
+    rule,
+    tradePlan,
+    checkpoints,
+    movement,
+  }) => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      instrument,
+      tradePlan,
+      standardRule: rule,
+      checkpointPrices: checkpoints,
+      maximumLoss: 5_000,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.market).toBe(market);
+    expect(result.rule).toMatchObject({
+      contractSize: 5,
+      minimumLot: 0.1,
+      marginAtMinimumLot: 100,
+      minMovement: movement,
+      maxGapPercent: null,
+    });
+    const aligned = (price: number) => price % movement === 0;
+    expect(result.buy?.ladder.every((level) => aligned(level.price))).toBe(true);
+    expect(result.sell?.ladder.every((level) => aligned(level.price))).toBe(true);
+    expect(result.assumptions.join(" ")).toMatch(/no percentage gap limit is assumed/i);
+    expect(result.assumptions.join(" ")).toMatch(/facility fee.*external risks/i);
+  });
+
+  it("fails closed when an index is paired with another product rule", () => {
+    const hsiWithNikkeiRule = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      instrument: "HSI",
+      tradePlan: indexTradePlan(18_500, 18_510),
+      standardRule: NIKKEI_RULE,
+    });
+    const nikkeiWithGoldRule = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      instrument: "NIKKEI",
+      tradePlan: indexTradePlan(38_500, 38_510),
+      standardRule: GOLD_RULE,
+    });
+
+    expect(hsiWithNikkeiRule.valid).toBe(false);
+    expect(hsiWithNikkeiRule.rule).toBeNull();
+    expect(nikkeiWithGoldRule.valid).toBe(false);
+    expect(nikkeiWithGoldRule.rule).toBeNull();
+  });
+
+  it("scales index contract and margin by account tier without using Gold sizing", () => {
+    expect(getAdaptiveMarketRule("HSI", HSI_RULE, "micro")).toMatchObject({
+      contractSize: 0.5,
+      marginAtMinimumLot: 10,
+      minimumLot: 0.01,
+    });
+    expect(getAdaptiveMarketRule("HSI", HSI_RULE, "mini")).toMatchObject({
+      contractSize: 5,
+      marginAtMinimumLot: 100,
+      minimumLot: 0.1,
+    });
+    expect(getAdaptiveMarketRule("NIKKEI", NIKKEI_RULE, "regular")).toMatchObject({
+      contractSize: 50,
+      marginAtMinimumLot: 1_000,
+      minimumLot: 1,
+    });
   });
 
   it("keeps the broader Standard Plan resolver independent from Adaptive", () => {
@@ -688,7 +833,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
   });
 
   it("rejects unsupported products from the Adaptive calculator", () => {
-    for (const instrument of ["HSI", "NIKKEI", "EUR/USD"]) {
+    for (const instrument of ["HANG SENG", "NIKKEI 225", "EUR/USD"]) {
       const result = buildAdaptivePositionPlan({ ...VALID_INPUT, instrument });
       expect(result.valid).toBe(false);
       expect(result.buy).toBeNull();
