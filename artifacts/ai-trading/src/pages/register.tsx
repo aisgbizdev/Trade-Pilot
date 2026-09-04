@@ -71,7 +71,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-sm">
           <div className="flex items-center justify-center gap-2 mb-5">
             <BrandLogo className="w-10 h-10" />
-            <span className="text-xl font-bold text-foreground">Trade Pilot</span>
+            <span className="text-xl font-bold text-foreground">TradePilot<span className="text-primary">.id</span></span>
           </div>
 
           <div className="mb-5">

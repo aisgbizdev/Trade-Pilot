@@ -15,10 +15,10 @@ export function BrandLogo({
         <img src="/logo-compact.png" alt="" className={`object-contain shrink-0 ${className || ""}`} />
         <div className="flex flex-col justify-center">
           <span className="text-lg md:text-xl font-extrabold tracking-tight leading-none text-inherit">
-            Trade Pilot
+            TradePilot<span className="text-primary">.id</span>
           </span>
           <span className="text-[6px] md:text-[7px] font-semibold text-primary uppercase tracking-[0.22em] leading-none mt-1">
-            Universe Comes To Us
+            UNIVERSE COMES TO US
           </span>
         </div>
       </div>
@@ -28,7 +28,7 @@ export function BrandLogo({
   return (
     <img
       src="/logo-compact.png"
-      alt="Trade Pilot"
+      alt="TradePilot.id"
       className={`object-contain ${className || ""}`}
       data-testid="brand-logo"
       {...props}

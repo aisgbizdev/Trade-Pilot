@@ -16,7 +16,7 @@
  *     Terms of Service intro paragraphs
  *   - "Newsmaker.id" mention in the Terms indemnification clause
  *   - support@newsmaker.id contact email in the legal documents
- *     (replaced with a generic Trade Pilot address while hidden)
+ *     (replaced with a generic TradePilot address while hidden)
  *
  * Flip this to `true` to re-enable all Newsmaker-branded surfaces in
  * one place once the agreement is signed — the UI is left intact in

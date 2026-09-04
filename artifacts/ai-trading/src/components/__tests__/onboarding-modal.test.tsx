@@ -82,7 +82,7 @@ describe("OnboardingModal: happy-path render", () => {
     ).not.toBeInTheDocument();
 
     // The first step's title (from the EN locale) renders.
-    expect(screen.getByText(/Welcome to Trade Pilot/i)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome to TradePilot\.id/i)).toBeInTheDocument();
   });
 });
 

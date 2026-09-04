@@ -1,12 +1,12 @@
-# 📖 Trade Pilot — User Guide
+# 📖 TradePilot.id — User Guide
 
-Selamat datang di panduan lengkap Trade Pilot. Di sini kamu akan menemukan penjelasan detail untuk **setiap halaman, fitur, dan fungsi** yang ada di aplikasi.
+Selamat datang di panduan lengkap TradePilot. Di sini kamu akan menemukan penjelasan detail untuk **setiap halaman, fitur, dan fungsi** yang ada di aplikasi.
 
 ---
 
 ## 🚀 Quick Start — 3 Langkah Pertama untuk Pemula
 
-> **Baru pertama kali pakai Trade Pilot? Mulai dari sini.**
+> **Baru pertama kali pakai TradePilot? Mulai dari sini.**
 
 | Langkah | Yang Dilakukan | Panduan |
 |---------|----------------|---------|
@@ -49,9 +49,9 @@ Selamat datang di panduan lengkap Trade Pilot. Di sini kamu akan menemukan penje
 
 ---
 
-## ℹ️ Tentang Trade Pilot
+## ℹ️ Tentang TradePilot.id
 
-**Trade Pilot adalah alat analisa trading berbasis AI — bukan broker, bukan pialang.**
+**TradePilot adalah alat analisa trading berbasis AI — bukan broker, bukan pialang.**
 
 - ✅ **Gratis** untuk digunakan (ada batas kuota analisa harian)
 - ✅ Cocok untuk **pemula** dan **trader berpengalaman**

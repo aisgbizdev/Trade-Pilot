@@ -261,7 +261,7 @@ Di bawah Trade Plan ada area **catatan** untuk menyimpan pikiran atau observasi 
 - 👍 Thumbs Up = Analisa berguna, arah dan level masuk akal
 - 👎 Thumbs Down = Analisa kurang tepat atau tidak sesuai harapan
 
-Feedback kamu membantu meningkatkan kualitas AI Trade Pilot ke depannya.
+Feedback kamu membantu meningkatkan kualitas AI TradePilot ke depannya.
 
 ---
 

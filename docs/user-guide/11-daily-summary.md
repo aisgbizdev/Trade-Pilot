@@ -13,7 +13,7 @@ Daily Summary adalah **digest harian** yang merangkum kondisi market dan bias un
 
 ## 11.2 Apa itu Daily Summary?
 
-Setiap hari, Trade Pilot menyusun ringkasan kondisi market untuk instrumen-instrumen yang di-cover oleh sistem. Ringkasan ini mencakup:
+Setiap hari, TradePilot menyusun ringkasan kondisi market untuk instrumen-instrumen yang di-cover oleh sistem. Ringkasan ini mencakup:
 
 - **Bias harian** per instrumen (bullish / bearish / netral)
 - **Kondisi umum** market hari itu

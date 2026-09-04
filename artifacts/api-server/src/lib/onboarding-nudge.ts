@@ -90,7 +90,7 @@ export async function dispatchOnboardingNudges(
       }
       const title = "Tambah pair favoritmu 👇";
       const body =
-        "Tambahin pair favorit ke watchlist biar Trade Pilot bisa kirim info pasar yang relevan ke kamu →";
+        "Tambahin pair favorit ke watchlist biar TradePilot bisa kirim info pasar yang relevan ke kamu →";
       const created = await createNotification(
         user.id,
         { title, message: body, type: "info", category: CATEGORY, dedupeKey },

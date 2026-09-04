@@ -37,7 +37,7 @@ interface DispatchStats {
  * the dispatcher can stay short.
  */
 export function buildDormancyMessage(microStat?: string | null): { title: string; body: string } {
-  const title = "Kangen Trade Pilot? 👀";
+  const title = "Kangen TradePilot.id? 👀";
   const body = microStat
     ? `Pasar minggu ini lagi rame — ${microStat}`
     : "Pasar minggu ini lagi rame — cek analisa terbaru kamu.";

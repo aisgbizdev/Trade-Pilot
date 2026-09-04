@@ -1,6 +1,6 @@
 # 14 — Profile (Pengaturan Akun & Profil)
 
-Halaman Profile adalah tempat kamu mengatur semua yang berkaitan dengan akun Trade Pilot — identitas, keamanan, tampilan, dan preferensi penggunaan.
+Halaman Profile adalah tempat kamu mengatur semua yang berkaitan dengan akun TradePilot — identitas, keamanan, tampilan, dan preferensi penggunaan.
 
 ---
 
@@ -23,7 +23,7 @@ Kamu bisa mengunggah foto profil untuk tampil di aplikasi.
 ### Ketentuan
 - Format yang diterima: JPEG, PNG, WebP
 - Ukuran maksimal: **5 MB**
-- Foto disimpan aman di server Trade Pilot
+- Foto disimpan aman di server TradePilot
 
 ---
 
@@ -99,7 +99,7 @@ Pilih tema tampilan yang paling nyaman untuk mata kamu.
 
 ## 14.8 Bahasa / Language 🌐
 
-Trade Pilot tersedia dalam dua bahasa:
+TradePilot tersedia dalam dua bahasa:
 
 | Bahasa | Kode |
 |--------|------|

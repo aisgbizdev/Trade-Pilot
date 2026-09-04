@@ -114,9 +114,9 @@ export function SplashScreen() {
               color: "transparent",
             }}
           >
-            Trade
+            TradePilot
           </span>
-          <span style={{ color: "#ffffff" }}> Pilot</span>
+          <span style={{ color: "#ffffff" }}>.id</span>
         </div>
         <div
           data-testid="splash-tagline"

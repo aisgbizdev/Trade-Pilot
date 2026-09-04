@@ -1,20 +1,20 @@
 # 15 — Tips & FAQ
 
-Kumpulan tips praktis dan pertanyaan yang paling sering diajukan pengguna Trade Pilot.
+Kumpulan tips praktis dan pertanyaan yang paling sering diajukan pengguna TradePilot.
 
 ---
 
 ## FAQ — Pertanyaan Umum
 
-### ❓ Apakah Trade Pilot memberikan sinyal "buy" atau "sell" yang harus langsung diikuti?
+### ❓ Apakah TradePilot.id memberikan sinyal "buy" atau "sell" yang harus langsung diikuti?
 
-**Tidak.** Trade Pilot memberikan **analisa berbasis AI** — preferensi arah, level entry/SL/TP — bukan sinyal trading otomatis. Semua keputusan final tetap ada di tangan kamu. Gunakan hasil analisa sebagai salah satu input, bukan satu-satunya alasan masuk market.
+**Tidak.** TradePilot memberikan **analisa berbasis AI** — preferensi arah, level entry/SL/TP — bukan sinyal trading otomatis. Semua keputusan final tetap ada di tangan kamu. Gunakan hasil analisa sebagai salah satu input, bukan satu-satunya alasan masuk market.
 
 ---
 
 ### ❓ Kenapa hasil analisa beda dengan analisa broker atau trader lain?
 
-AI Trade Pilot menggunakan kombinasi indikator teknikal, konteks fundamental, dan data market saat analisa dibuat. Analisa trader lain mungkin menggunakan parameter atau metodologi yang berbeda. Perbedaan ini normal — kamu tetap perlu melakukan judgment sendiri.
+AI TradePilot menggunakan kombinasi indikator teknikal, konteks fundamental, dan data market saat analisa dibuat. Analisa trader lain mungkin menggunakan parameter atau metodologi yang berbeda. Perbedaan ini normal — kamu tetap perlu melakukan judgment sendiri.
 
 ---
 
@@ -39,7 +39,7 @@ Gauge hanya menghitung analisa yang **sudah diberi outcome** (Win/Loss/Breakeven
 3. Sistem akan memverifikasi dengan **pertanyaan keamanan** yang kamu set saat registrasi
 4. Kalau berhasil verifikasi, kamu bisa set password baru
 
-> ⚠️ Kalau kamu lupa jawaban pertanyaan keamanannya juga, hubungi support Trade Pilot.
+> ⚠️ Kalau kamu lupa jawaban pertanyaan keamanannya juga, hubungi support TradePilot.
 
 ---
 
@@ -48,7 +48,7 @@ Gauge hanya menghitung analisa yang **sudah diberi outcome** (Win/Loss/Breakeven
 Cek berurutan:
 1. Di halaman **Notifikasi**, pastikan status push adalah **"Aktif ✅"**
 2. Pastikan toggle untuk tipe notifikasi yang kamu inginkan sudah **ON**
-3. Cek **pengaturan browser** — apakah notifikasi untuk Trade Pilot diizinkan?
+3. Cek **pengaturan browser** — apakah notifikasi untuk TradePilot diizinkan?
 4. Cek **Do Not Disturb** di HP — kalau aktif, semua notifikasi diblokir
 5. Tap **"Kirim Test Push"** untuk uji — kalau test berhasil, berarti sistem jalan dan masalah ada di pengaturan kategori notifikasi
 
@@ -56,7 +56,7 @@ Cek berurutan:
 
 ### ❓ Apakah data jurnal dan analisa saya tersimpan kalau ganti HP?
 
-Ya. Semua data tersimpan di server Trade Pilot — bukan di HP kamu. Login dari HP manapun dengan akun yang sama, semua data tetap ada.
+Ya. Semua data tersimpan di server TradePilot — bukan di HP kamu. Login dari HP manapun dengan akun yang sama, semua data tetap ada.
 
 ---
 
@@ -66,13 +66,13 @@ Tergantung paket yang kamu gunakan. Kalau kuota harianmu habis, sistem akan mena
 
 ---
 
-### ❓ Apakah Trade Pilot tersedia di iOS dan Android?
+### ❓ Apakah TradePilot.id tersedia di iOS dan Android?
 
-Trade Pilot adalah **PWA (Progressive Web App)** — bisa diakses dari browser HP manapun tanpa perlu download dari App Store atau Play Store. Untuk pengalaman terbaik seperti app native:
+TradePilot adalah **PWA (Progressive Web App)** — bisa diakses dari browser HP manapun tanpa perlu download dari App Store atau Play Store. Untuk pengalaman terbaik seperti app native:
 - **Android:** Buka di Chrome → tap titik tiga (⋮) → **"Add to Home Screen"**
 - **iOS:** Buka di Safari → tap ikon **Share** (kotak dengan panah ke atas) → **"Add to Home Screen"**
 
-Setelah ditambahkan ke Home Screen, Trade Pilot akan terasa seperti aplikasi biasa — ikon di layar utama, bisa dibuka full-screen, dan mendukung push notification.
+Setelah ditambahkan ke Home Screen, TradePilot akan terasa seperti aplikasi biasa — ikon di layar utama, bisa dibuka full-screen, dan mendukung push notification.
 
 ---
 
@@ -85,7 +85,7 @@ Kemungkinan penyebab:
 
 ---
 
-## Tips Pro — Cara Menggunakan Trade Pilot Secara Efektif
+## Tips Pro — Cara Menggunakan TradePilot.id Secara Efektif
 
 ### 1. Rutinkan Analisa Pagi
 
@@ -148,4 +148,4 @@ Jadikan membaca modul Mindset sebagai ritual pekan trading. Bukan karena kamu le
 
 ---
 
-*Trade Pilot — Analisa cerdas, trading lebih tenang.*
+*TradePilot.id — Analisa cerdas, trading lebih tenang.*

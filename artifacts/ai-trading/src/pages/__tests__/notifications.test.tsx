@@ -68,7 +68,7 @@ const NOTIFICATIONS_PAYLOAD = {
     {
       id: 11,
       type: "info",
-      title: "Welcome to Trade Pilot",
+      title: "Welcome to TradePilot.id",
       message: "Your account is ready.",
       readAt: null,
       createdAt: new Date(Date.now() - 60_000).toISOString(),

@@ -1,6 +1,6 @@
 {
-  "name": "Trade Pilot",
-  "short_name": "TradePilot",
+  "name": "TradePilot.id",
+  "short_name": "TradePilot.id",
   "description": "AI-powered trading decision support",
   "start_url": "/",
   "display": "standalone",

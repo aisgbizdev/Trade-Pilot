@@ -1,6 +1,6 @@
 # 02 — Dashboard
 
-Dashboard adalah halaman utama Trade Pilot — pusat informasi market, analisa terbaru, dan akses ke semua fitur.
+Dashboard adalah halaman utama TradePilot — pusat informasi market, analisa terbaru, dan akses ke semua fitur.
 
 ---
 
@@ -80,7 +80,7 @@ Dari Dashboard, kamu bisa langsung tap instrumen di Watchlist untuk langsung mas
 
 ## 2.6 Kartu Ringkasan Analisa
 
-**Fungsi:** Menampilkan statistik keseluruhan penggunaan Trade Pilot kamu.
+**Fungsi:** Menampilkan statistik keseluruhan penggunaan TradePilot kamu.
 
 ### Informasi yang ditampilkan:
 
@@ -118,7 +118,7 @@ Tap kartu tersebut untuk ganti mode. Perubahan langsung berlaku dan memengaruhi 
 
 ## 2.9 Banner Live Analisa
 
-Kalau Trade Pilot sedang menjalankan sesi live analisa (misalnya jam tertentu setiap hari), akan muncul banner berwarna di atas Dashboard.
+Kalau TradePilot sedang menjalankan sesi live analisa (misalnya jam tertentu setiap hari), akan muncul banner berwarna di atas Dashboard.
 
 - Tap banner untuk join atau lihat info lebih lanjut
 - Tap ✕ di pojok kanan untuk dismiss banner (tidak muncul lagi sampai browser di-refresh)
@@ -127,7 +127,7 @@ Kalau Trade Pilot sedang menjalankan sesi live analisa (misalnya jam tertentu se
 
 ## 2.10 News Widget
 
-**Fungsi:** Menampilkan berita pasar terkini yang relevan dengan instrumen-instrumen yang ada di Trade Pilot.
+**Fungsi:** Menampilkan berita pasar terkini yang relevan dengan instrumen-instrumen yang ada di TradePilot.
 
 Cara baca:
 - Setiap item menampilkan judul berita, sumber, dan waktu tayang

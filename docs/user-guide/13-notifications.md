@@ -1,6 +1,6 @@
 # 13 — Notifications (Pengaturan Notifikasi)
 
-Halaman Notifications adalah pusat kendali semua notifikasi Trade Pilot — mulai dari price alert, daily digest, sinyal market, hingga pengingat sesi trading.
+Halaman Notifications adalah pusat kendali semua notifikasi TradePilot — mulai dari price alert, daily digest, sinyal market, hingga pengingat sesi trading.
 
 ---
 
@@ -26,7 +26,7 @@ Di tab **"In-App"**, kamu melihat daftar semua notifikasi yang masuk secara kron
 | **Weekly Recap** | Ringkasan performa trading minggu ini |
 | **Signal Flip** | Bias/sinyal berubah arah dari analisa sebelumnya |
 | **Dormancy Nudge** | Pengingat kalau kamu tidak aktif analisa cukup lama |
-| **Broadcast** | Pengumuman dari Tim Trade Pilot |
+| **Broadcast** | Pengumuman dari Tim TradePilot |
 
 ### Interaksi
 - Tap notifikasi untuk membuka detail atau halaman yang relevan (misal: tap alert → buka analisa terkait)
@@ -37,7 +37,7 @@ Di tab **"In-App"**, kamu melihat daftar semua notifikasi yang masuk secara kron
 
 ## 13.3 Push Notification — Aktifkan Dulu
 
-Push notification memungkinkan Trade Pilot mengirim alert ke HP bahkan saat aplikasi tidak sedang dibuka.
+Push notification memungkinkan TradePilot mengirim alert ke HP bahkan saat aplikasi tidak sedang dibuka.
 
 ### Cara Mengaktifkan Push Notification
 
@@ -48,7 +48,7 @@ Push notification memungkinkan Trade Pilot mengirim alert ke HP bahkan saat apli
 
 > ⚠️ Kalau kamu tidak tap "Allow" saat browser meminta izin, push notification tidak akan berfungsi. Kamu bisa reset izin di pengaturan browser:
 > - Chrome: Settings → Privacy and Security → Site Settings → Notifications
-> - Safari: Settings → Notifications → Trade Pilot
+> - Safari: Settings → Notifications → TradePilot
 
 ### Test Push
 
@@ -73,7 +73,7 @@ Di bagian **"Preferensi Push"**, kamu bisa kontrol tipe push notification mana y
 | **Weekly Recap** | Push ringkasan performa mingguan |
 | **Signal Flip** | Push ketika sinyal analisa berubah arah |
 | **Dormancy Nudge** | Push pengingat kalau kamu tidak aktif |
-| **Broadcast** | Push pengumuman dari Tim Trade Pilot |
+| **Broadcast** | Push pengumuman dari Tim TradePilot |
 
 Tap toggle untuk aktifkan/nonaktifkan masing-masing kategori.
 
@@ -81,7 +81,7 @@ Tap toggle untuk aktifkan/nonaktifkan masing-masing kategori.
 
 ## 13.5 Guardrail Notifications 🛡️
 
-**Apa itu:** Notifikasi peringatan yang dikirim Trade Pilot ketika AI mendeteksi kamu mungkin sedang dalam kondisi mental atau market yang berisiko untuk trading.
+**Apa itu:** Notifikasi peringatan yang dikirim TradePilot ketika AI mendeteksi kamu mungkin sedang dalam kondisi mental atau market yang berisiko untuk trading.
 
 | Guardrail | Kapan Terpicu |
 |-----------|--------------|

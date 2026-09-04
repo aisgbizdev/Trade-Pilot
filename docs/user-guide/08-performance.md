@@ -1,6 +1,6 @@
 # 08 — Performance (Performa AI)
 
-Halaman Performance menampilkan seberapa akurat rekomendasi AI Trade Pilot selama periode waktu tertentu — bukan hanya performa kamu, tapi kualitas analisa yang dihasilkan sistem secara keseluruhan.
+Halaman Performance menampilkan seberapa akurat rekomendasi AI TradePilot selama periode waktu tertentu — bukan hanya performa kamu, tapi kualitas analisa yang dihasilkan sistem secara keseluruhan.
 
 ---
 

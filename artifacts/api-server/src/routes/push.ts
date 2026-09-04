@@ -198,7 +198,7 @@ router.post("/push/test", requireAuth, pushTestLimiter, async (req: AuthRequest,
   }
 
   await sendPushToUser(userId, {
-    title: "Trade Pilot",
+    title: "TradePilot.id",
     body: "Notifikasi kamu sudah aktif. / Notifications are working.",
     tag: "trade-pilot-test",
   });

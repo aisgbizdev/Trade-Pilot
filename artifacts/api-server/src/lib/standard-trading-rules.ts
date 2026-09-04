@@ -48,7 +48,7 @@ export type StandardTradingRules = {
   relationshipDisclosure: LocalizedTradingRuleText;
 };
 
-/** Single broker-neutral ruleset used by Trade Pilot's standard TP estimates. */
+/** Single broker-neutral ruleset used by TradePilot's standard TP estimates. */
 export const STANDARD_TRADING_RULES: StandardTradingRules = {
   name: "TP Standard Trading Rules",
   version: "2026.02",

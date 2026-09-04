@@ -113,8 +113,8 @@ export default function LandingPage() {
               className="text-5xl md:text-7xl font-extrabold tracking-[-0.04em] leading-none text-white mb-5"
               data-testid="text-hero-kicker"
             >
-              <span className="gradient-text">Trade</span>{" "}
-              <span className="text-white">Pilot</span>
+              <span className="gradient-text">TradePilot</span>
+              <span className="text-white">.id</span>
             </h1>
 
             <p

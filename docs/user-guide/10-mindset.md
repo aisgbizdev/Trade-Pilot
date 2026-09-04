@@ -12,7 +12,7 @@ Tap **"Mindset"** dari navigation atau menu profil.
 
 ## 10.2 Apa itu Modul Mindset?
 
-Trade Pilot menyediakan modul-modul edukasi singkat yang dirancang untuk:
+TradePilot menyediakan modul-modul edukasi singkat yang dirancang untuk:
 - Dibaca dalam **3–5 menit** antar sesi trading
 - Memberikan insight praktis yang bisa langsung diterapkan
 - Membahas masalah psikologis yang paling umum dialami trader
@@ -32,7 +32,7 @@ Konten tersedia dalam **Bahasa Indonesia** dan **English** — otomatis menyesua
 | ⚖️ Loss Acceptance | Menerima Loss Sebagai Bagian dari Trading | 4 menit |
 | 🔄 Consistency | Konsistensi: Kunci Profitabilitas Jangka Panjang | 3 menit |
 
-> 💡 Modul bisa bertambah — Tim Trade Pilot secara berkala menambahkan konten baru.
+> 💡 Modul bisa bertambah — Tim TradePilot secara berkala menambahkan konten baru.
 
 ---
 

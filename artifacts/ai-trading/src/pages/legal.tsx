@@ -20,7 +20,7 @@ export default function LegalPage({ kind }: LegalPageProps) {
   // per-page metadata that's actually reachable — set it directly rather
   // than pulling in a head-management library for four static pages.
   useEffect(() => {
-    document.title = `${doc.title} — Trade Pilot`;
+    document.title = `${doc.title} — TradePilot.id`;
   }, [doc.title]);
 
   return (

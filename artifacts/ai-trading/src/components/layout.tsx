@@ -181,8 +181,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <BrandLogo className="w-8 h-8" />
             <div className="flex flex-col">
               <span className="font-bold text-[13px] leading-none tracking-tight">
-                <span className="gradient-text">Trade</span>
-                <span className="text-foreground"> Pilot</span>
+                <span className="gradient-text">TradePilot</span>
+                <span className="text-foreground">.id</span>
               </span>
             </div>
           </Link>

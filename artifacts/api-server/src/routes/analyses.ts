@@ -800,7 +800,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     { title: completeTitle, message: completeMessage, type: "info" },
     {
       title: "Analisis Selesai ✅",
-      body: `${instrument} (${timeframe}) — buka Trade Pilot untuk lihat hasilnya.`,
+      body: `${instrument} (${timeframe}) — buka TradePilot untuk lihat hasilnya.`,
       url: "/",
       tag: `analysis-${analysis.id}`,
     },

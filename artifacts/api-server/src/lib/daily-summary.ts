@@ -298,7 +298,7 @@ export async function dispatchDigestForUser(
     const title =
       kind === "quota_only"
         ? "Ringkasan Harian (kuota habis)"
-        : "Ringkasan Harian Trade Pilot";
+        : "Ringkasan Harian TradePilot.id";
     await createNotification(
       user.id,
       { title, message: summary, type: "info" },

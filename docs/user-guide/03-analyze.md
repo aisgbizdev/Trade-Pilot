@@ -1,6 +1,6 @@
 # 03 — Analyze (Buat Analisa Baru)
 
-Halaman Analyze adalah inti dari Trade Pilot — di sini kamu meminta AI menganalisa instrumen pilihanmu dan menghasilkan insight teknikal + fundamental beserta level trading yang konkret.
+Halaman Analyze adalah inti dari TradePilot — di sini kamu meminta AI menganalisa instrumen pilihanmu dan menghasilkan insight teknikal + fundamental beserta level trading yang konkret.
 
 ---
 
@@ -145,7 +145,7 @@ Pergi ke **Profil** → toggle **Mental Checklist** ON/OFF.
 ## 3.10 Anti-Pattern Guardrails ⚠️
 
 **Apa itu Anti-Pattern Guardrails?**
-Sistem deteksi otomatis yang memperingatkan kamu kalau Trade Pilot mendeteksi pola trading berbahaya berdasarkan riwayat aktivitasmu.
+Sistem deteksi otomatis yang memperingatkan kamu kalau TradePilot mendeteksi pola trading berbahaya berdasarkan riwayat aktivitasmu.
 
 ### Jenis Warning yang Bisa Muncul
 

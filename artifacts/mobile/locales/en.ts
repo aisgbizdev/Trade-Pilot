@@ -8,7 +8,7 @@ const en = {
     pro: "Pro",
   },
   auth: {
-    welcome: "Trade Pilot",
+    welcome: "TradePilot",
     tagline: "UNIVERSE COMES TO US",
     email: "Email",
     password: "Password",

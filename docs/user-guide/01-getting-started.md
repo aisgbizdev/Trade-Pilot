@@ -8,7 +8,7 @@ Panduan ini menjelaskan cara membuat akun, masuk ke app, menangani lupa password
 
 ### Langkah-langkah
 
-1. Buka Trade Pilot di browser atau install sebagai PWA (lihat [Tips Install PWA →](./15-tips-and-faq.md))
+1. Buka TradePilot di browser atau install sebagai PWA (lihat [Tips Install PWA →](./15-tips-and-faq.md))
 2. Klik tombol **"Daftar"** atau **"Sign Up"** di halaman login
 3. Isi formulir pendaftaran:
 
@@ -30,7 +30,7 @@ Panduan ini menjelaskan cara membuat akun, masuk ke app, menangani lupa password
 
 ## 1.2 Login
 
-1. Buka Trade Pilot
+1. Buka TradePilot
 2. Masukkan **Email** dan **Password** kamu
 3. Klik **"Masuk"**
 4. Kamu diarahkan ke **Dashboard**
@@ -41,7 +41,7 @@ Panduan ini menjelaskan cara membuat akun, masuk ke app, menangani lupa password
 
 ## 1.3 Lupa Password
 
-Trade Pilot tidak menggunakan verifikasi email. Reset password dilakukan lewat **pertanyaan keamanan** yang kamu set saat daftar.
+TradePilot tidak menggunakan verifikasi email. Reset password dilakukan lewat **pertanyaan keamanan** yang kamu set saat daftar.
 
 ### Langkah-langkah
 
@@ -61,19 +61,19 @@ Trade Pilot tidak menggunakan verifikasi email. Reset password dilakukan lewat *
 3. Klik **"Reset Password"**
 4. Kamu langsung masuk ke Dashboard
 
-> ⚠️ Kalau kamu lupa jawaban keamanan, tidak ada cara lain untuk memulihkan akun. Hubungi admin Trade Pilot.
+> ⚠️ Kalau kamu lupa jawaban keamanan, tidak ada cara lain untuk memulihkan akun. Hubungi admin TradePilot.
 
 ---
 
 ## 1.4 Onboarding — Pilih Mode
 
-Saat pertama kali masuk setelah daftar, kamu akan melihat **Onboarding Modal** — dialog 4 langkah yang memperkenalkan fitur utama Trade Pilot.
+Saat pertama kali masuk setelah daftar, kamu akan melihat **Onboarding Modal** — dialog 4 langkah yang memperkenalkan fitur utama TradePilot.
 
 ### 4 Langkah Onboarding
 
 | Langkah | Topik |
 |---------|-------|
-| 1 | Cara kerja analisa AI Trade Pilot |
+| 1 | Cara kerja analisa AI TradePilot |
 | 2 | Fitur edukasi & mindset |
 | 3 | Statistik & performa analisa |
 | 4 | Mulai! |
@@ -101,7 +101,7 @@ Cara ganti mode:
 
 ## 1.5 Ganti Bahasa
 
-Trade Pilot mendukung **Bahasa Indonesia** dan **English**.
+TradePilot mendukung **Bahasa Indonesia** dan **English**.
 
 Cara ganti:
 1. Buka halaman **Profil** (ikon orang di navigation bar bawah)
@@ -116,15 +116,15 @@ Perubahan langsung berlaku tanpa reload.
 
 ## 1.6 Install Sebagai Aplikasi (PWA)
 
-Trade Pilot adalah PWA (Progressive Web App) — bisa diinstall di HP seperti aplikasi biasa.
+TradePilot adalah PWA (Progressive Web App) — bisa diinstall di HP seperti aplikasi biasa.
 
 ### Di Android (Chrome)
-1. Buka Trade Pilot di browser Chrome
+1. Buka TradePilot di browser Chrome
 2. Tap menu ⋮ (titik tiga) → **"Add to Home Screen"** / **"Install App"**
 3. Konfirmasi install
 
 ### Di iPhone (Safari)
-1. Buka Trade Pilot di Safari
+1. Buka TradePilot di Safari
 2. Tap ikon Share (kotak dengan panah ke atas)
 3. Pilih **"Add to Home Screen"**
 4. Tap **"Add"**
