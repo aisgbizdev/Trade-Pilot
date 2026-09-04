@@ -57,14 +57,14 @@ export default function LandingPage() {
       {/* Background ambient lighting */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 flex justify-center">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 rounded-[100%] blur-[120px] opacity-70" />
-        <div className="absolute top-1/3 -right-64 w-[500px] h-[500px] bg-orange-600/5 rounded-[100%] blur-[100px] opacity-50" />
+        <div className="absolute top-1/3 -right-64 w-[500px] h-[500px] bg-amber-400/5 rounded-[100%] blur-[100px] opacity-50" />
       </div>
 
       <div className="sticky top-0 z-40 bg-[#020202]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-5xl mx-auto w-full">
           <header className="pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <BrandLogo variant="horizontal" className="h-6 md:h-7 w-auto" />
+              <BrandLogo variant="horizontal" className="h-8 md:h-9 w-auto" />
               {SHOW_SPONSOR && (
                 <div className="flex flex-col border-l border-white/10 pl-3 ml-1">
                   <a
@@ -109,19 +109,21 @@ export default function LandingPage() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="relative z-10 max-w-2xl mx-auto"
           >
-            <span
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-6"
+            <h1
+              className="text-5xl md:text-7xl font-extrabold tracking-[-0.04em] leading-none text-white mb-5"
               data-testid="text-hero-kicker"
             >
-              <div className="w-1.5 h-1.5 rounded-full bg-primary pulse-glow" />
-              {t.landing.hero_kicker}
-            </span>
-
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6 text-white" data-testid="text-hero-headline">
-              <span className="gradient-text">{t.landing.tagline_part1}</span>
-              <br />
-              <span className="text-white">{t.landing.tagline_part2}</span>
+              <span className="gradient-text">Trade</span>{" "}
+              <span className="text-white">Pilot</span>
             </h1>
+
+            <p
+              className="text-base md:text-xl font-semibold uppercase tracking-[0.16em] md:tracking-[0.22em] leading-relaxed text-white/70 mb-7"
+              data-testid="text-hero-headline"
+            >
+              <span className="text-primary">{t.landing.tagline_part1}</span>{" "}
+              <span>{t.landing.tagline_part2}</span>
+            </p>
 
             <p className="text-base md:text-lg text-white/60 leading-relaxed mb-10 max-w-md mx-auto" data-testid="text-hero-subtitle">
               {t.landing.subtitle_full}

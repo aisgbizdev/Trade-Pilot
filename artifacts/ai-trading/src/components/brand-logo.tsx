@@ -1,8 +1,8 @@
-import { type HTMLAttributes } from "react";
+import { type HTMLAttributes, type ImgHTMLAttributes } from "react";
 
-interface BrandLogoProps extends HTMLAttributes<HTMLDivElement | HTMLImageElement> {
+type BrandLogoProps = {
   variant?: "horizontal" | "compact";
-}
+} & HTMLAttributes<HTMLDivElement> & ImgHTMLAttributes<HTMLImageElement>;
 
 export function BrandLogo({
   className,
@@ -11,14 +11,14 @@ export function BrandLogo({
 }: BrandLogoProps) {
   if (variant === "horizontal") {
     return (
-      <div className="flex items-center gap-2 md:gap-2.5" data-testid="brand-logo" {...(props as any)}>
-        <img src="/logo-compact.png" alt="Trade Pilot Icon" className={`object-contain shrink-0 ${className || ""}`} />
+      <div className="flex items-center gap-2 md:gap-2.5" data-testid="brand-logo">
+        <img src="/logo-compact.png" alt="" className={`object-contain shrink-0 ${className || ""}`} />
         <div className="flex flex-col justify-center">
-          <span className="text-base md:text-lg font-extrabold tracking-tight leading-none text-inherit">
+          <span className="text-lg md:text-xl font-extrabold tracking-tight leading-none text-inherit">
             Trade Pilot
           </span>
-          <span className="text-[8px] md:text-[9px] font-bold text-primary uppercase tracking-[0.2em] leading-none mt-1">
-            Universe Comes To Us.
+          <span className="text-[6px] md:text-[7px] font-semibold text-primary uppercase tracking-[0.22em] leading-none mt-1">
+            Universe Comes To Us
           </span>
         </div>
       </div>
@@ -31,7 +31,7 @@ export function BrandLogo({
       alt="Trade Pilot"
       className={`object-contain ${className || ""}`}
       data-testid="brand-logo"
-      {...(props as any)}
+      {...props}
     />
   );
 }
