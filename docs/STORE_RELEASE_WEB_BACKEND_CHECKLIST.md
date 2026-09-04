@@ -285,7 +285,7 @@ timezone/date-window-sensitive assertions in `watchlist-alerts.test.ts`,
    exist anywhere in this repo and were deliberately left out rather than
    invented; the business owner needs to supply and add them to
    `src/lib/legal-content.ts` before a real store submission:
-   - A formal legal entity name (e.g. "PT ...") if `Trade Pilot`/`Newsmaker.id`
+   - A formal legal entity name (e.g. "PT ...") if `TradePilot.id`/`Newsmaker.id`
      isn't itself the correct legal operator to name in Privacy/Terms.
    - A registered business address, if the target store review requires one.
    - Whether a support-response-time SLA should be published on `/support`

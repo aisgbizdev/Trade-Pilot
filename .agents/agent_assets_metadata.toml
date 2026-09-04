@@ -11,39 +11,46 @@ id = "tv67OriJkrO8mKu4bofgz"
 uri = "file://docs/TECHNICAL.md"
 type = "text"
 title = "Technical Documentation"
+logical_id = "b78f90a9-0183-49f4-8da5-c4b8923ba48b"
 
 [[outputs]]
 id = "hV8G6zgBcKoRjxHsc6dGi"
 uri = "file://docs/USER_MANUAL.md"
 type = "text"
 title = "Buku Panduan Pengguna (User Manual)"
+logical_id = "323a76b7-3a27-48a8-9bd1-97f677523030"
 
 [[outputs]]
 id = "bsH36Le25mIr-11hLJOK6"
 uri = "file://attached_assets/trade-pilot-logo.svg"
 type = "image"
 title = "Trade Pilot Logo (SVG)"
+logical_id = "bd47abd8-a393-4bf5-a4d9-f93409ade081"
 
 [[outputs]]
 id = "dM69YQwwbGyTjHZuozet6"
 uri = "file://attached_assets/trade-pilot-logo.png"
 type = "image"
 title = "Trade Pilot Logo (PNG 1024x1024)"
+logical_id = "2a2e61aa-d689-46ac-b732-bb2d87906b49"
 
 [[outputs]]
 id = "b3-efavLT5_KgX9yS4lQ3"
 uri = "file://artifacts/ai-trading/public/icon-512.png"
 type = "image"
 title = "New PWA icon (512×512)"
+logical_id = "221dc3da-0e63-4952-ba77-0f297fd9fd0d"
 
 [[outputs]]
 id = "3IADm6wwMONdFG79V9a5j"
 uri = "file://artifacts/ai-trading/public/apple-touch-icon-180.png"
 type = "image"
 title = "New iOS home-screen icon (180×180)"
+logical_id = "19c1ff57-e24d-4a24-ac38-aba631591bc5"
 
 [[outputs]]
 id = "SowRumtfA_uVp2LHqTmif"
 uri = "file://attached_assets/USER_MANUAL_1783178332882.md"
 type = "text"
 title = "Buku Panduan Pengguna — Trade Pilot (Updated)"
+logical_id = "9fe25262-f560-4306-8a8f-6cfbdcc3799e"

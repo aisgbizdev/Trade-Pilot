@@ -18,7 +18,7 @@ export function LandingFaq() {
 
   return (
     <section
-      className="px-4 pb-16"
+      className="px-4 pb-10 md:pb-12"
       data-testid="section-faq"
     >
       <motion.div
@@ -27,9 +27,9 @@ export function LandingFaq() {
         viewport={{ once: true, margin: "-50px" }}
         transition={{ duration: 0.6 }}
       >
-        <h2 className="text-xl font-bold text-foreground mb-6 tracking-tight">{l.faq_title}</h2>
+        <h2 className="text-xl font-bold text-foreground mb-4 tracking-tight">{l.faq_title}</h2>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {items.map(({ q, a }, idx) => {
             const isOpen = open === idx;
             return (
@@ -45,7 +45,7 @@ export function LandingFaq() {
               >
                 <button
                   onClick={() => toggle(idx)}
-                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/10"
+                  className="w-full flex items-center justify-between gap-4 px-5 py-3.5 text-left transition-colors hover:bg-muted/10"
                   aria-expanded={isOpen}
                 >
                   <span className="text-sm font-semibold text-foreground leading-snug">{q}</span>

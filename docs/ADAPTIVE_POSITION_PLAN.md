@@ -1,7 +1,7 @@
 # Adaptive Position Plan — Dokumentasi Teknis
 
 > Referensi teknis untuk fitur **Adaptive Position Plan** pada halaman Analysis
-> Detail Trade Pilot. Dokumen ini menjelaskan perubahan yang sudah diterapkan,
+> Detail TradePilot. Dokumen ini menjelaskan perubahan yang sudah diterapkan,
 > sumber data, aturan perhitungan, dan cara sistem menampilkan estimasi profit
 > dalam USD.
 >

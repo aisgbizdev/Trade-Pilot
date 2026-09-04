@@ -218,13 +218,13 @@
   .btn-premium {
     background: linear-gradient(135deg, #F9C820 0%, #D99A00 100%);
     box-shadow: 0 4px 20px rgba(245, 184, 0, 0.32);
-    color: #ffffff;
+    color: #1a1208;
   }
 
   .dark .btn-premium {
     background: linear-gradient(135deg, #FFE06A 0%, #E3A400 100%);
     box-shadow: 0 4px 24px rgba(245, 184, 0, 0.42);
-    color: #ffffff;
+    color: #1a1208;
   }
 
   .ticker-scroll {

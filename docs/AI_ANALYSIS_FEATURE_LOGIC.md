@@ -1,6 +1,6 @@
 # Logic Fitur Analisis AI
 
-Dokumen ini menjelaskan cara kerja fitur **Analisis AI** Trade Pilot dari ujung
+Dokumen ini menjelaskan cara kerja fitur **Analisis AI** TradePilot dari ujung
 ke ujung: input pengguna, pengambilan data pasar, perhitungan indikator,
 penyusunan prompt, validasi output AI, perhitungan ulang Risk:Reward,
 penyimpanan database, sampai hasil dibuka di halaman Analysis Detail.

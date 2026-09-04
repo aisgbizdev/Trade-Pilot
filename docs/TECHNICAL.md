@@ -1,6 +1,6 @@
 # AI Trading Assistant — Technical Documentation
 
-> Internal engineering reference for the AI Trading Assistant ("Trade Pilot") MVP.
+> Internal engineering reference for the TradePilot.id MVP.
 > Last updated: 26 April 2026.
 
 ---

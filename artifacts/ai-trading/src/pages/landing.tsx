@@ -102,7 +102,7 @@ export default function LandingPage() {
       <main className="flex-1 w-full max-w-5xl mx-auto relative z-10">
 
         {/* HERO */}
-        <section className="px-5 pt-20 md:pt-32 pb-16 text-center relative">
+        <section className="px-5 pt-16 pb-10 md:pt-24 md:pb-12 text-center relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -142,7 +142,7 @@ export default function LandingPage() {
             </div>
 
             <p
-              className="text-xs text-white/40 mb-12 flex items-center justify-center gap-1.5"
+              className="text-xs text-white/40 mb-8 flex items-center justify-center gap-1.5"
               data-testid="text-always-free-note"
             >
               <Shield className="w-3.5 h-3.5 text-white/30" />
@@ -168,7 +168,7 @@ export default function LandingPage() {
 
         {/* VALUE PROPS */}
         <section
-          className="px-4 py-8 md:py-16"
+          className="px-4 py-6 md:py-8"
           data-testid="section-value-props"
         >
           <ul className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
@@ -245,7 +245,7 @@ export default function LandingPage() {
 
         {/* PHILOSOPHY STRIP */}
         <section
-          className="px-4 pb-16"
+          className="px-4 pb-10 md:pb-12"
           data-testid="section-philosophy"
         >
           <motion.div
@@ -253,7 +253,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.6 }}
-            className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start md:items-center"
+            className="rounded-3xl border border-white/5 bg-white/[0.02] p-5 md:p-6 flex flex-col md:flex-row gap-4 md:gap-5 items-start md:items-center"
           >
             <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
               <Lightbulb className="w-6 h-6 text-primary" />
@@ -276,7 +276,7 @@ export default function LandingPage() {
         <LandingFaq />
 
         {/* BOTTOM CTA */}
-        <section className="px-4 pb-16 md:py-16 md:max-w-3xl md:mx-auto md:w-full">
+        <section className="px-4 pt-2 pb-12 md:pt-4 md:pb-12 md:max-w-3xl md:mx-auto md:w-full">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -287,17 +287,17 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent opacity-50" />
             <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-primary/20 rounded-full blur-[80px]" />
 
-            <div className="border border-white/10 bg-[#050505] p-10 md:p-14 text-center relative z-10 rounded-3xl">
-              <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center mx-auto mb-6 float-anim">
+            <div className="border border-white/10 bg-[#050505] p-8 md:p-10 text-center relative z-10 rounded-3xl">
+              <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center mx-auto mb-4 float-anim">
                 <BrandLogo variant="compact" className="w-8 h-8" />
               </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4 tracking-tight">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3 tracking-tight">
                 {t.landing.cta_bottom_title} <span className="text-primary">{t.landing.cta_bottom_highlight}</span>
               </h2>
-              <p className="text-sm text-white/50 leading-relaxed mb-8 max-w-sm mx-auto">
+              <p className="text-sm text-white/50 leading-relaxed mb-6 max-w-sm mx-auto">
                 {t.landing.cta_bottom_subtitle}
               </p>
-              <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-3">
                 <Link href="/register" className="w-full sm:w-auto">
                   <button className="w-full sm:w-auto min-w-[200px] h-12 rounded-xl font-bold btn-premium hover:scale-[1.02] active:scale-[0.98] transition-transform" data-testid="button-signup-bottom">
                     {t.landing.cta_signup}

@@ -1,6 +1,6 @@
-# Trade Pilot — Master Documentation
+# TradePilot.id — Master Documentation
 
-Single consolidated reference for what Trade Pilot **does** and how it's
+Single consolidated reference for what TradePilot **does** and how it's
 **built**, merged from `TECHNICAL.md`, `USER_MANUAL.md`, `docs/user-guide/*`,
 `PANDUAN_SDK_FLUTTER.md`, `STORE_RELEASE_WEB_BACKEND_CHECKLIST.md`, and
 `replit.md`, cross-checked directly against the current codebase (schema,
@@ -29,9 +29,9 @@ This file is the **one place to start**. The older docs are left in place
 
 ---
 
-## 1. What Trade Pilot is
+## 1. What TradePilot.id is
 
-**Trade Pilot** is a mobile-first PWA that helps retail traders *understand*
+**TradePilot.id** is a mobile-first PWA that helps retail traders *understand*
 market conditions — it explicitly is **decision support, not a signal
 generator or broker**: no order execution, no guaranteed-profit claims. A
 user picks an instrument + timeframe, the backend calls OpenAI (GPT-4o)
@@ -299,7 +299,7 @@ Two unrelated things both touch "mobile" in this repo:
    the one file in that package safe from being overwritten by codegen)
    adds a bearer-token interceptor, since the OpenAPI spec has no formal
    `securityScheme` for the generator to wire up automatically.
-   **Explicitly not yet built**: account merging/SSO between Trade Pilot
+   **Explicitly not yet built**: account merging/SSO between TradePilot
    and SOLID accounts, and publishing the package to a pub server (it's
    consumed via a local path or git dependency today).
 
@@ -332,7 +332,7 @@ Found while reconciling the older docs against the actual codebase:
 - **`USER_MANUAL.md` is a stale early draft**, not a description of the
   current app: it uses a different product name/persona framing ("AI
   Trading Assistant" / AI persona "Rere" / named user "DR") that doesn't
-  match the shipped "Trade Pilot" branding anywhere else in the repo, and
+  match the shipped "TradePilot.id" branding anywhere else in the repo, and
   it's missing well over a dozen shipped features entirely (Journal,
   Mirror, Mindset, Daily Summary, Performance, My Alerts as a dedicated
   page, Filter Presets, Watchlist, Market Sessions, Mental Checklist,

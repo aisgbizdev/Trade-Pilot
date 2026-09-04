@@ -112,7 +112,7 @@ export function LandingProductPreview() {
 
   return (
     <section
-      className="px-4 pb-12"
+      className="px-4 pb-8 md:pb-10"
       data-testid="section-product-preview"
     >
       <motion.div
@@ -163,7 +163,7 @@ export function LandingProductPreview() {
         ) : (
           <div className="relative z-10">
             <div
-              className="px-5 pt-8 pb-6 flex flex-col items-center gap-3"
+              className="px-5 pt-6 pb-4 flex flex-col items-center gap-2.5"
               aria-busy={loading}
             >
               <GaugeArc score={confidence} loading={loading} />
@@ -177,7 +177,7 @@ export function LandingProductPreview() {
                 </span>
               </div>
               <span
-                className="text-[10px] text-muted-foreground/50 mt-2"
+                className="text-[10px] text-muted-foreground/50 mt-1"
                 data-testid="landing-preview-updated"
                 aria-live="polite"
               >
@@ -240,7 +240,7 @@ export function LandingProductPreview() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ delay: 0.3, duration: 0.7 }}
-        className="mt-4 text-center text-xs text-muted-foreground/60 leading-relaxed max-w-sm mx-auto px-4"
+        className="mt-3 text-center text-xs text-muted-foreground/60 leading-relaxed max-w-sm mx-auto px-4"
       >
         {isError && !data ? l.preview_error : l.preview_caption_locked}
       </motion.p>

@@ -1,15 +1,15 @@
-# Panduan SDK Flutter/Dart — Trade Pilot API Client
+# Panduan SDK Flutter/Dart — TradePilot.id API Client
 
 > Dokumentasi ini menjelaskan infrastruktur SDK Dart/Flutter yang dipakai untuk
-> mengintegrasikan Trade Pilot ke aplikasi mobile lain (mis. app trading Flutter
+> mengintegrasikan TradePilot ke aplikasi mobile lain (mis. app trading Flutter
 > milik SOLID), plus cara konfigurasinya. SDK ini di-generate dan di-maintain
-> dari dalam repo Trade Pilot, bukan di sisi konsumen.
+> dari dalam repo TradePilot, bukan di sisi konsumen.
 
 ---
 
 ## 1. Latar Belakang & Konsep
 
-Trade Pilot punya satu sumber kebenaran untuk seluruh API-nya: file
+TradePilot punya satu sumber kebenaran untuk seluruh API-nya: file
 `lib/api-spec/openapi.yaml`. Dari file spesifikasi ini, sekarang ada **3 client
 yang di-generate otomatis**:
 
@@ -23,15 +23,15 @@ Ketiganya digenerate dari spec yang **sama persis** — jadi begitu ada endpoint
 baru atau berubah di backend, tinggal jalankan satu perintah codegen dan
 ketiga client otomatis ikut update, gak perlu tulis manual satu-satu.
 
-**Kenapa bukan WebView aja?** Trade Pilot sebenarnya sudah punya mode embed
+**Kenapa bukan WebView aja?** TradePilot sebenarnya sudah punya mode embed
 (`?embed=1`, lihat `artifacts/ai-trading/src/lib/embed-mode.tsx`) yang bisa
 langsung ditempel di WebView — itu jalan paling cepat. Tapi karena rencananya
-akun Trade Pilot & SOLID mau digabung ke depannya, dan itu butuh kontrol
+akun TradePilot & SOLID mau digabung ke depannya, dan itu butuh kontrol
 auth/token yang presisi di level native, dipilih jalur SDK native Dart supaya
 tim Flutter SOLID bisa bikin UI sendiri yang benar-benar nyatu, dengan tipe
 data yang aman (typed) dan auth yang gampang di-custom.
 
-**Penting:** paket ini baru menyediakan *akses ke API Trade Pilot apa adanya*
+**Penting:** paket ini baru menyediakan *akses ke API TradePilot apa adanya*
 (login, register, bikin analisis, journal, dst). Penggabungan akun (SSO / tabel
 linked-account) **belum diimplementasikan** — itu keputusan desain backend
 terpisah yang menyusul nanti setelah strategi auth-nya diputuskan.
@@ -131,7 +131,7 @@ dart analyze                                                 # cek error/warning
 Karena SDK ini belum dipublikasikan ke pub.dev atau server pub privat, ada 2
 cara pakai untuk sekarang:
 
-### Opsi A — Path lokal (kalau repo Trade Pilot & Flutter ada di mesin yang sama)
+### Opsi A — Path lokal (kalau repo TradePilot & Flutter ada di mesin yang sama)
 
 ```yaml
 # pubspec.yaml (di project Flutter SOLID)
@@ -168,7 +168,7 @@ Setelah dependency terpasang, jalankan `flutter pub get` seperti biasa.
 ### Kenapa ada wrapper manual?
 
 `openapi.yaml` **tidak mendeklarasikan `securityScheme`** secara formal —
-autentikasi di backend Trade Pilot dicek manual lewat header
+autentikasi di backend TradePilot dicek manual lewat header
 `Authorization: Bearer <token>` (lihat `requireAuth` di
 `artifacts/api-server/src/middleware/auth.ts`), bukan lewat mekanisme OpenAPI
 resmi. Akibatnya, `BearerAuthInterceptor` bawaan hasil generate **tidak akan
@@ -197,7 +197,7 @@ final client = TradePilotClient(
 );
 ```
 
-- `baseUrl` — wajib diisi, arahkan ke domain API Trade Pilot yang sesuai
+- `baseUrl` — wajib diisi, arahkan ke domain API TradePilot yang sesuai
   (dev/staging/production).
 - `getToken` — opsional. Kalau tidak diisi, semua request dikirim tanpa header
   `Authorization` (cocok untuk endpoint publik seperti `login`/`register`).
@@ -303,7 +303,7 @@ menunggu keputusan/prioritas lebih lanjut:
 
 1. **Penggabungan akun (SSO / linked-account)** — desain backend terpisah,
    perlu diputuskan dulu strateginya (OAuth antar sistem, atau tabel mapping
-   user Trade Pilot ↔ user SOLID) sebelum diimplementasikan.
+   user TradePilot ↔ user SOLID) sebelum diimplementasikan.
 2. **Publish ke pub server privat** — supaya versioning SDK lebih rapi untuk
    banyak konsumen/rilis, saat ini masih pakai path/git dependency.
 3. **UI Flutter di sisi SOLID** — SDK ini hanya menyediakan lapisan data/API;
