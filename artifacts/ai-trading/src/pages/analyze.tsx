@@ -14,6 +14,7 @@ import { Layout } from "@/components/layout";
 import {
   useCreateAnalysis,
   useGetAnalysisQuota,
+  useGetProgressionSummary,
   getGetAnalysisQuotaQueryKey,
   useGetTimeframeRiskMap,
   getGetTimeframeRiskMapQueryKey,
@@ -27,6 +28,7 @@ import {
   type UserSelectedMode,
   type ProgressionEvidenceSession,
 } from "@workspace/api-client-react";
+import { useLocation } from "wouter";
 import {
   TradingViewMiniChart,
   type MiniChartDateRange,
@@ -47,6 +49,7 @@ import { AntiPatternGuardrails } from "@/components/anti-pattern-guardrails";
 import { CoolingOffBreathingDialog } from "@/components/cooling-off-breathing-dialog";
 import { useAntiPatternSignals } from "@/hooks/use-anti-pattern-signals";
 import AnalysisDetailPage from "./analysis-detail";
+import { ProgressionEmblem } from "@/components/progression/progression-emblem";
 
 function formatPrice(price: number, instrument: string): string {
   if (instrument === "USD/IDR") return price.toLocaleString("id-ID");
@@ -765,6 +768,7 @@ function TimeframeRiskMapSection({
 
 export default function AnalyzePage() {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createAnalysis = useCreateAnalysis();
   const trackEvent = useTrackEvent();
@@ -839,6 +843,9 @@ export default function AnalyzePage() {
 
   const { data: quota } = useGetAnalysisQuota({
     query: { queryKey: getGetAnalysisQuotaQueryKey(), staleTime: 30_000 },
+  });
+  const { data: progressionSummary } = useGetProgressionSummary({
+    query: { queryKey: getGetProgressionSummaryQueryKey(), staleTime: 30_000 },
   });
   const hourlyQuota = quota?.hourly;
   const dailyQuota = quota?.daily;
@@ -987,24 +994,55 @@ export default function AnalyzePage() {
   return (
     <Layout>
       <div className="px-4 py-5 md:max-w-3xl md:mx-auto">
-        <div className="flex items-center gap-3 mb-5">
-          <h1 className="flex-1 text-lg font-bold text-foreground">{t.analyze.title}</h1>
-          {canShowQuotaChip && hourlyQuota && dailyQuota && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
-                hourlyQuota.remaining === 0 || dailyQuota.remaining === 0
-                  ? "bg-destructive/10 border-destructive/40 text-destructive"
-                  : hourlyQuota.remaining <= 1 || dailyQuota.remaining <= 3
-                  ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
-                  : "bg-primary/10 border-primary/30 text-primary",
-              )}
-              data-testid="chip-quota"
-              title={`${t.analyze.quota_hour}: ${hourlyQuota.remaining}/${hourlyQuota.limit} • ${t.analyze.quota_day}: ${dailyQuota.remaining}/${dailyQuota.limit}`}
-            >
-              {hourlyQuota.remaining}/{hourlyQuota.limit} {t.analyze.quota_hour_short} · {dailyQuota.remaining}/{dailyQuota.limit} {t.analyze.quota_day_short}
-            </span>
-          )}
+        <div className="flex flex-wrap items-center gap-2.5 mb-5">
+          <h1 className="mr-auto text-lg font-bold text-foreground">{t.analyze.title}</h1>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {progressionSummary && (
+              <button
+                type="button"
+                onClick={() => setLocation("/progression")}
+                className="group inline-flex h-9 max-w-[11rem] items-center gap-2 rounded-full border border-border/60 bg-secondary/25 pl-1 pr-3 text-left transition-colors hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`${t.progression.title}: ${
+                  progressionSummary.masteryLevel > 0
+                    ? t.progression.mastery_level.replace("{n}", String(progressionSummary.masteryLevel))
+                    : t.progression.level.replace("{n}", String(progressionSummary.level))
+                }, ${t.progression.rank.replace("{rank}", progressionSummary.rank)}`}
+                data-testid="button-dashboard-progression"
+              >
+                <ProgressionEmblem
+                  level={progressionSummary.level}
+                  masteryLevel={progressionSummary.masteryLevel}
+                  className="h-7 w-7"
+                />
+                <span className="min-w-0">
+                  <span className="block text-[9px] font-bold uppercase leading-none tracking-wider text-primary">
+                    {progressionSummary.masteryLevel > 0
+                      ? t.progression.mastery_level.replace("{n}", String(progressionSummary.masteryLevel))
+                      : t.progression.level.replace("{n}", String(progressionSummary.level))}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] font-bold leading-tight text-foreground">
+                    {t.progression.rank.replace("{rank}", progressionSummary.rank)}
+                  </span>
+                </span>
+              </button>
+            )}
+            {canShowQuotaChip && hourlyQuota && dailyQuota && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
+                  hourlyQuota.remaining === 0 || dailyQuota.remaining === 0
+                    ? "bg-destructive/10 border-destructive/40 text-destructive"
+                    : hourlyQuota.remaining <= 1 || dailyQuota.remaining <= 3
+                    ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
+                    : "bg-primary/10 border-primary/30 text-primary",
+                )}
+                data-testid="chip-quota"
+                title={`${t.analyze.quota_hour}: ${hourlyQuota.remaining}/${hourlyQuota.limit} • ${t.analyze.quota_day}: ${dailyQuota.remaining}/${dailyQuota.limit}`}
+              >
+                {hourlyQuota.remaining}/{hourlyQuota.limit} {t.analyze.quota_hour_short} · {dailyQuota.remaining}/{dailyQuota.limit} {t.analyze.quota_day_short}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="mb-4 flex justify-start">

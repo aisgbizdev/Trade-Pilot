@@ -18,6 +18,7 @@ describe("AnalyzePage Progression: Checklist & Safe Wait", () => {
 
     installFetchMock([
       (url) => {
+        if (url.includes("/api/progression/summary")) return jsonResponse({ level: 1, masteryLevel: 0, rank: "Seedling" });
         if (url.includes("/api/analyses/quota")) return jsonResponse({ hourly: { remaining: 5 }, daily: { remaining: 10 } });
         if (url.includes("/api/trading-rules/standard")) return jsonResponse({ instruments: [{ name: "XAU/USD", category: "Futures", displayRank: 1 }] });
         if (url.includes("/api/analyses") && !url.includes("quota") && !url.includes("guardrails")) return jsonResponse({ analyses: [], total: 0 });

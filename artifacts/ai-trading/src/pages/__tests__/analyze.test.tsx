@@ -53,6 +53,12 @@ const LIVE_QUOTES_PAYLOAD = {
   ],
 };
 
+const PROGRESSION_PAYLOAD = {
+  level: 1,
+  masteryLevel: 0,
+  rank: "Seedling",
+};
+
 function pageHandlers(opts: {
   quota?: typeof QUOTA_PAYLOAD | { unlimited: true };
   createResult?: { id: number };
@@ -62,6 +68,12 @@ function pageHandlers(opts: {
     (url) => {
       if (url.includes("/api/analyses/quota")) {
         return jsonResponse(opts.quota ?? QUOTA_PAYLOAD);
+      }
+      return null;
+    },
+    (url) => {
+      if (url.includes("/api/progression/summary")) {
+        return jsonResponse(PROGRESSION_PAYLOAD);
       }
       return null;
     },
@@ -160,6 +172,10 @@ describe("AnalyzePage: happy-path render", () => {
       expect(chip.textContent).toMatch(/4\/5/);
       expect(chip.textContent).toMatch(/9\/10/);
 
+      const progression = await screen.findByTestId("button-dashboard-progression");
+      expect(progression).toHaveTextContent(/Level 1/i);
+      expect(progression).toHaveTextContent(/Seedling/i);
+
       // Saved analyses belong exclusively to History. Analyze must not
       // render the duplicated section or request the paginated list.
       expect(
@@ -215,9 +231,46 @@ describe("AnalyzePage: empty / loading branches", () => {
       expect(screen.queryByTestId("chip-quota")).not.toBeInTheDocument();
     });
   });
+
+  it("hides the progression badge when summary data is unavailable", async () => {
+    installFetchMock([
+      (url) => {
+        if (url.includes("/api/progression/summary")) {
+          return jsonResponse({ error: "unavailable" }, 503);
+        }
+        return null;
+      },
+      ...pageHandlers({}),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("instrument-options");
+    expect(screen.queryByTestId("button-dashboard-progression")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-submit-analysis")).toBeEnabled();
+  });
 });
 
 describe("AnalyzePage: user actions", () => {
+  it("opens the progression page from the dashboard badge", async () => {
+    installFetchMock(pageHandlers({}));
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    fireEvent.click(await screen.findByTestId("button-dashboard-progression"));
+    expect(window.location.pathname).toBe("/progression");
+  });
+
    // Skipped: the instrument picker is currently scoped to a futures-only
    // allowlist (VISIBLE_INSTRUMENTS in analyze.tsx), so the Forex tab this
    // test switches to no longer renders. Kept rather than deleted/rewritten
