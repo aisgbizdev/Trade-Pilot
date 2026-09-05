@@ -628,7 +628,7 @@ function TimeframeRiskMapSection({
 
   if (!isOpen) {
     return (
-      <Card className="p-3 border-dashed bg-muted/20" data-testid="section-risk-map-closed">
+      <Card className="min-[520px]:col-span-2 w-full p-3 border-dashed bg-muted/20" data-testid="section-risk-map-closed">
         <div className="flex flex-col gap-2">
           <div>
             <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
@@ -653,7 +653,7 @@ function TimeframeRiskMapSection({
   }
 
   return (
-    <Card className="p-3 space-y-3" data-testid="section-risk-map-open">
+    <Card className="min-[520px]:col-span-2 w-full p-3 space-y-3" data-testid="section-risk-map-open">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5 truncate">
