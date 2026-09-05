@@ -603,189 +603,157 @@ function RiskBadge({ category }: { category: string }) {
 function TimeframeRiskMapSection({
   instrument,
   selectedTimeframe,
+  open,
+  onOpenChange,
   onSelectTimeframe,
 }: {
   instrument: GetTimeframeRiskMapInstrument;
   selectedTimeframe: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSelectTimeframe: (tf: string) => void;
 }) {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [instrument]);
 
   const { data, isLoading, isError, refetch } = useGetTimeframeRiskMap(
     { instrument },
     {
       query: {
-        enabled: isOpen,
+        enabled: open,
         queryKey: getGetTimeframeRiskMapQueryKey({ instrument }),
       },
     }
   );
 
-  if (!isOpen) {
-    return (
-      <Card className="min-[520px]:col-span-2 w-full p-3 border-dashed bg-muted/20" data-testid="section-risk-map-closed">
-        <div className="flex flex-col gap-2">
-          <div>
-            <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
-              {t.risk_map.title}
-            </h3>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{t.risk_map.desc}</p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsOpen(true)}
-            data-testid="button-open-risk-map"
-            className="self-start text-xs font-semibold h-8"
-          >
-            {t.risk_map.btn_open}
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="min-[520px]:col-span-2 w-full p-3 space-y-3" data-testid="section-risk-map-open">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5 truncate">
-            <Activity className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-h-[85dvh] overflow-y-auto sm:max-w-lg"
+        data-testid="section-risk-map-open"
+      >
+        <div className="pr-7">
+          <h2 className="flex items-center gap-2 text-base font-bold text-foreground">
+            <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
             {t.risk_map.title}
-          </h3>
-          <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {t.risk_map.desc}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsOpen(false)}
-          data-testid="button-close-risk-map"
-          className="text-[10px] font-medium h-6 px-2 shrink-0"
-        >
-          {t.risk_map.btn_close}
-        </Button>
-      </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-[11px] font-medium">{t.risk_map.loading}</span>
-        </div>
-      ) : isError ? (
-        <div className="flex flex-col items-center justify-center py-4 gap-2 text-destructive">
-          <p className="text-[11px] font-medium">{t.risk_map.error}</p>
-          <Button type="button" variant="outline" size="sm" onClick={() => refetch()} className="text-[10px] h-7 px-3">
-            {t.risk_map.retry}
-          </Button>
-        </div>
-      ) : data ? (
         <div className="space-y-3">
-          <div className={cn(
-            "p-2 rounded-md border flex flex-col gap-1",
-            data.overall.state === "wait"
-              ? "bg-amber-500/10 border-amber-500/20"
-              : "bg-muted/40 border-border",
-          )}>
-            <span className={cn(
-              "text-[11px] font-bold",
-              data.overall.state === "wait"
-                ? "text-amber-700 dark:text-amber-400"
-                : "text-foreground",
-            )}>
-              {data.overall.state === "wait" ? t.risk_map.overall_wait : t.risk_map.overall_no_recommendation}
-            </span>
-            <span className="text-[10px] text-muted-foreground leading-snug">
-              {t.risk_map[`overall_${data.overall.reasonCode}` as keyof typeof t.risk_map] ??
-                t.risk_map.overall_reason_default}
-            </span>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-xs font-medium">{t.risk_map.loading}</span>
           </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-8 gap-3 text-destructive">
+            <p className="text-xs font-medium">{t.risk_map.error}</p>
+            <Button type="button" variant="outline" size="sm" onClick={() => refetch()} className="text-xs">
+              {t.risk_map.retry}
+            </Button>
+          </div>
+        ) : data ? (
+          <div className="space-y-3">
+            <div className={cn(
+              "p-3 rounded-lg border flex flex-col gap-1",
+              data.overall.state === "wait"
+                ? "bg-amber-500/10 border-amber-500/20"
+                : "bg-muted/40 border-border",
+            )}>
+              <span className={cn(
+                "text-xs font-bold",
+                data.overall.state === "wait"
+                  ? "text-amber-700 dark:text-amber-400"
+                  : "text-foreground",
+              )}>
+                {data.overall.state === "wait" ? t.risk_map.overall_wait : t.risk_map.overall_no_recommendation}
+              </span>
+              <span className="text-[11px] text-muted-foreground leading-snug">
+                {t.risk_map[`overall_${data.overall.reasonCode}` as keyof typeof t.risk_map] ??
+                  t.risk_map.overall_reason_default}
+              </span>
+            </div>
 
-          <div className="grid grid-cols-1 gap-2">
-            {data.timeframes.map((tf) => {
-              const isSelected = selectedTimeframe === tf.timeframe;
-              const isUnavailable = tf.status === "unavailable" || tf.riskCategory === "unavailable";
-              return (
-                <div
-                  key={tf.timeframe}
-                  data-testid={`risk-map-tf-${tf.timeframe}`}
-                  className={cn(
-                    "p-2.5 rounded-md border flex flex-col gap-2 transition-colors",
-                    isSelected
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-card hover:bg-muted/30"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[11px] uppercase w-8 tracking-wider">{tf.timeframe}</span>
-                      {!isUnavailable && <RiskBadge category={tf.riskCategory} />}
+            <div className="grid grid-cols-1 gap-2">
+              {data.timeframes.map((tf) => {
+                const isSelected = selectedTimeframe === tf.timeframe;
+                const isUnavailable = tf.status === "unavailable" || tf.riskCategory === "unavailable";
+                return (
+                  <div
+                    key={tf.timeframe}
+                    data-testid={`risk-map-tf-${tf.timeframe}`}
+                    className={cn(
+                      "p-3 rounded-lg border flex flex-col gap-2 transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card hover:bg-muted/30"
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs uppercase w-8 tracking-wider">{tf.timeframe}</span>
+                        {!isUnavailable && <RiskBadge category={tf.riskCategory} />}
+                        {!isUnavailable && (
+                          <span className="text-[10px] font-semibold tabular-nums text-foreground">
+                            {tf.riskScore}/100
+                          </span>
+                        )}
+                      </div>
                       {!isUnavailable && (
-                        <span className="text-[10px] font-semibold tabular-nums text-foreground">
-                          {tf.riskScore}/100
-                        </span>
+                        <div className="flex gap-1.5 items-center text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">
+                          <span className="bg-muted px-1.5 py-0.5 rounded" data-testid={`quality-${tf.timeframe}`}>
+                            {t.risk_map.quality}: {t.risk_map[`quality_${tf.dataQuality}` as keyof typeof t.risk_map] ?? tf.dataQuality}
+                          </span>
+                          <span className="bg-muted px-1.5 py-0.5 rounded" data-testid={`confidence-${tf.timeframe}`}>
+                            {t.risk_map.confidence}: {t.risk_map[`confidence_${tf.confidence}` as keyof typeof t.risk_map] ?? tf.confidence}
+                          </span>
+                        </div>
                       )}
                     </div>
+                    
                     {!isUnavailable && (
-                      <div className="flex gap-1.5 items-center text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">
-                        <span className="bg-muted px-1.5 py-0.5 rounded" data-testid={`quality-${tf.timeframe}`}>
-                          {t.risk_map.quality}: {t.risk_map[`quality_${tf.dataQuality}` as keyof typeof t.risk_map] ?? tf.dataQuality}
-                        </span>
-                        <span className="bg-muted px-1.5 py-0.5 rounded" data-testid={`confidence-${tf.timeframe}`}>
-                          {t.risk_map.confidence}: {t.risk_map[`confidence_${tf.confidence}` as keyof typeof t.risk_map] ?? tf.confidence}
-                        </span>
+                      <div className="grid grid-cols-[1fr_auto] gap-3 items-end mt-1">
+                        <div className="text-[10px] text-muted-foreground leading-relaxed font-medium">
+                          <span className="text-foreground">
+                            {t.risk_map[`recommendation_${tf.recommendation}` as keyof typeof t.risk_map]}
+                          </span>
+                          {" · "}
+                          {tf.reasonCodes
+                            .map((code) => t.risk_map[`reason_${code}` as keyof typeof t.risk_map] ?? code)
+                            .join(" · ")}
+                        </div>
+                        <Button
+                          type="button"
+                          variant={isSelected ? "default" : "secondary"}
+                          size="sm"
+                          disabled={isSelected}
+                          onClick={() => onSelectTimeframe(tf.timeframe)}
+                          className="text-[10px] font-semibold h-7 px-3 min-w-[72px]"
+                          data-testid={`btn-select-tf-${tf.timeframe}`}
+                        >
+                          {isSelected ? t.risk_map.action_selected : t.risk_map.action_select.replace("{tf}", tf.timeframe)}
+                        </Button>
+                      </div>
+                    )}
+                    {isUnavailable && (
+                      <div className="text-[10px] text-muted-foreground italic mt-1 font-medium">
+                        {t.risk_map.category_unavailable}
                       </div>
                     )}
                   </div>
-                  
-                  {!isUnavailable && (
-                    <div className="grid grid-cols-[1fr_auto] gap-3 items-end mt-1">
-                      <div className="text-[10px] text-muted-foreground leading-relaxed font-medium">
-                        <span className="text-foreground">
-                          {t.risk_map[`recommendation_${tf.recommendation}` as keyof typeof t.risk_map]}
-                        </span>
-                        {" · "}
-                        {tf.reasonCodes
-                          .map((code) => t.risk_map[`reason_${code}` as keyof typeof t.risk_map] ?? code)
-                          .join(" · ")}
-                      </div>
-                      <Button
-                        type="button"
-                        variant={isSelected ? "default" : "secondary"}
-                        size="sm"
-                        disabled={isSelected}
-                        onClick={() => onSelectTimeframe(tf.timeframe)}
-                        className="text-[10px] font-semibold h-7 px-3 min-w-[72px]"
-                        data-testid={`btn-select-tf-${tf.timeframe}`}
-                      >
-                        {isSelected ? t.risk_map.action_selected : t.risk_map.action_select.replace("{tf}", tf.timeframe)}
-                      </Button>
-                    </div>
-                  )}
-                  {isUnavailable && (
-                    <div className="text-[10px] text-muted-foreground italic mt-1 font-medium">
-                      {t.risk_map.category_unavailable}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-foreground italic text-center pt-1 font-medium border-t border-border/40">
+              {t.risk_map.note_relative_risk}
+            </p>
           </div>
-          <p className="text-[10px] text-muted-foreground italic text-center pt-1 font-medium border-t border-border/40">
-            {t.risk_map.note_relative_risk || "Note: This indicates relative risk, not guaranteed profit."}
-          </p>
+        ) : null}
         </div>
-      ) : null}
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -808,6 +776,7 @@ export default function AnalyzePage() {
   const [selectedInstrument, setSelectedInstrument] = useState("XAU/USD");
   const [customInstrument, setCustomInstrument] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
+  const [riskMapOpen, setRiskMapOpen] = useState(false);
   // Mode selection is retired — every analysis now runs in "pro" mode.
   // Kept as a variable (rather than a literal) since createAnalysis,
   // the notes gate, and the review card below all still read it.
@@ -854,6 +823,9 @@ export default function AnalyzePage() {
   }, [isLoading, t]);
 
   const finalInstrument = customInstrument.trim() || selectedInstrument;
+  useEffect(() => {
+    setRiskMapOpen(false);
+  }, [finalInstrument]);
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
   const [alertModalOpen, setAlertModalOpen] = useState(false);
 
@@ -1202,9 +1174,24 @@ export default function AnalyzePage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between text-sm mt-3">
+              <div className="flex items-center justify-between gap-3 text-sm mt-3">
                 <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
-                <span className="font-semibold text-foreground">{selectedTimeframe}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">{selectedTimeframe}</span>
+                  {!customInstrument && isAdvancedAnalysisInstrument(finalInstrument) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRiskMapOpen(true)}
+                      className="h-7 gap-1.5 px-2 text-[11px] font-semibold text-primary"
+                      data-testid="button-open-risk-map"
+                    >
+                      <Activity className="h-3.5 w-3.5" aria-hidden="true" />
+                      {t.risk_map.btn_compare}
+                    </Button>
+                  )}
+                </div>
               </div>
             </Card>
           )}
@@ -1213,7 +1200,12 @@ export default function AnalyzePage() {
             <TimeframeRiskMapSection
               instrument={finalInstrument}
               selectedTimeframe={selectedTimeframe}
-              onSelectTimeframe={setSelectedTimeframe}
+              open={riskMapOpen}
+              onOpenChange={setRiskMapOpen}
+              onSelectTimeframe={(timeframe) => {
+                setSelectedTimeframe(timeframe);
+                setRiskMapOpen(false);
+              }}
             />
           )}
           </div>

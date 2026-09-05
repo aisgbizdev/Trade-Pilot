@@ -3,6 +3,7 @@ export const en = {
     title: "Timeframe Risk Map",
     desc: "Compare technical risk across timeframes to find the best setup window.",
     btn_open: "Check Timeframe Risk",
+    btn_compare: "Compare Risk",
     btn_close: "Close Map",
     loading: "Scanning timeframes...",
     error: "Could not load risk map.",

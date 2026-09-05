@@ -741,7 +741,8 @@ describe("AnalyzePage: Timeframe Risk Map", () => {
 
     // Initial state: closed, no fetch
     await screen.findByTestId("instrument-options");
-    expect(screen.getByTestId("section-risk-map-closed")).toBeInTheDocument();
+    expect(screen.getByTestId("button-open-risk-map")).toBeInTheDocument();
+    expect(screen.queryByTestId("section-risk-map-open")).not.toBeInTheDocument();
     
     // Wait a tick to ensure no background fetches fire
     await act(async () => {
@@ -790,9 +791,9 @@ describe("AnalyzePage: Timeframe Risk Map", () => {
       fireEvent.click(select4hBtn);
     });
 
-    // It should now be selected and disabled
+    // Selecting a timeframe closes the optional dialog.
     await waitFor(() => {
-      expect((screen.getByTestId("btn-select-tf-4h") as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.queryByTestId("section-risk-map-open")).not.toBeInTheDocument();
     });
 
     // The POST /api/analyses should NOT have been called due to this click
@@ -806,7 +807,8 @@ describe("AnalyzePage: Timeframe Risk Map", () => {
     });
     
     await waitFor(() => {
-      expect(screen.getByTestId("section-risk-map-closed")).toBeInTheDocument();
+      expect(screen.getByTestId("button-open-risk-map")).toBeInTheDocument();
+      expect(screen.queryByTestId("section-risk-map-open")).not.toBeInTheDocument();
     });
   });
 
@@ -855,7 +857,7 @@ describe("AnalyzePage: Timeframe Risk Map", () => {
     await screen.findByTestId("instrument-options");
     
     // Official instrument has it
-    expect(screen.getByTestId("section-risk-map-closed")).toBeInTheDocument();
+    expect(screen.getByTestId("button-open-risk-map")).toBeInTheDocument();
 
     // Type a custom instrument
     await act(async () => {
@@ -863,6 +865,6 @@ describe("AnalyzePage: Timeframe Risk Map", () => {
     });
     
     // Custom instrument should not have it
-    expect(screen.queryByTestId("section-risk-map-closed")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-open-risk-map")).not.toBeInTheDocument();
   });
 });

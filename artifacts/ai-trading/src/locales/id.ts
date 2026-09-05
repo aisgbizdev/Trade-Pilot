@@ -5,6 +5,7 @@ export const id: Translations = {
     title: "Peta Risiko Timeframe",
     desc: "Bandingkan risiko teknikal di berbagai timeframe untuk mencari peluang terbaik.",
     btn_open: "Cek Risiko Timeframe",
+    btn_compare: "Bandingkan Risiko",
     btn_close: "Tutup Peta",
     loading: "Memindai timeframe...",
     error: "Gagal memuat peta risiko.",
