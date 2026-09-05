@@ -100,4 +100,43 @@ describe("GuidePage Progression", () => {
       expect(screen.getByTestId("button-mark-guide-complete")).toBeDisabled();
     },
   );
+
+  it("keeps article state in sync with browser back and forward navigation", async () => {
+    installFetchMock([
+      (url, init) => {
+        if (url.includes("/api/progression/evidence") && init?.method === "POST") {
+          return jsonResponse({
+            token: "mock_evidence_token",
+            source: "guide_completion",
+            subject: "how-ai-works",
+            minimumCompleteAt: new Date(Date.now() + 20_000).toISOString(),
+          });
+        }
+        return null;
+      },
+    ]);
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <GuidePage />
+      </Wrapper>,
+    );
+
+    fireEvent.click(await screen.findByTestId("guide-article-how-ai-works"));
+    expect(window.location.search).toContain("article=how-ai-works");
+    expect(screen.getByTestId("button-guide-back-to-list")).toBeInTheDocument();
+
+    window.history.replaceState(null, "", "/guide");
+    fireEvent(window, new PopStateEvent("popstate"));
+    expect(await screen.findByTestId("guide-article-how-ai-works")).toBeInTheDocument();
+
+    window.history.replaceState(
+      null,
+      "",
+      "/guide?category=getting-started&article=how-ai-works",
+    );
+    fireEvent(window, new PopStateEvent("popstate"));
+    expect(await screen.findByTestId("button-guide-back-to-list")).toBeInTheDocument();
+  });
 });

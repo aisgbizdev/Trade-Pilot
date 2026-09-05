@@ -174,22 +174,56 @@ export default function GuidePage() {
   }, [searchQuery, lang, selectedCategory]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (activeArticleId) {
-      params.set("article", activeArticleId);
-      const category = GUIDE_CATEGORIES.find((cat) =>
-        cat.articles.some((article) => article.id === activeArticleId),
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const articleId = params.get("article");
+      const categoryId = params.get("category");
+
+      setActiveArticleId(
+        articleId && isProgressionGuideId(articleId) ? articleId : null,
       );
-      if (category) params.set("category", category.id);
-    } else {
-      params.delete("article");
-    }
-    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
-  }, [activeArticleId]);
+      setSelectedCategory(
+        categoryId && GUIDE_CATEGORIES.some((category) => category.id === categoryId)
+          ? categoryId
+          : null,
+      );
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const updateGuideUrl = (
+    articleId: string | null,
+    categoryId: string | null,
+    mode: "push" | "replace",
+  ) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.set("category", categoryId);
+    if (articleId) params.set("article", articleId);
+    const query = params.toString();
+    window.history[`${mode}State`](null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  };
 
   const openArticle = (articleId: string) => {
+    const category = GUIDE_CATEGORIES.find((cat) =>
+      cat.articles.some((article) => article.id === articleId),
+    );
+    const categoryId = category?.id ?? selectedCategory;
+    updateGuideUrl(articleId, categoryId, "push");
     setActiveArticleId(articleId);
+    setSelectedCategory(categoryId);
     document.querySelector("[data-testid='app-scroll-container']")?.scrollTo({ top: 0 });
+  };
+
+  const showGuideList = () => {
+    updateGuideUrl(null, selectedCategory, "push");
+    setActiveArticleId(null);
+  };
+
+  const selectCategory = (categoryId: string | null) => {
+    updateGuideUrl(null, categoryId, "replace");
+    setSelectedCategory(categoryId);
   };
 
   return (
@@ -231,7 +265,7 @@ export default function GuidePage() {
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none" aria-label={t.guide.table_of_contents}>
               <button
                 type="button"
-                onClick={() => setSelectedCategory(null)}
+                onClick={() => selectCategory(null)}
                 className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                   selectedCategory === null
                     ? "border-primary bg-primary text-primary-foreground"
@@ -244,7 +278,7 @@ export default function GuidePage() {
                 <button
                   key={category.id}
                   type="button"
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => selectCategory(category.id)}
                   className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                     selectedCategory === category.id
                       ? "border-primary bg-primary text-primary-foreground"
@@ -295,7 +329,7 @@ export default function GuidePage() {
         ) : (
           <div className="space-y-4">
             <button
-              onClick={() => setActiveArticleId(null)}
+              onClick={showGuideList}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               data-testid="button-guide-back-to-list"
             >
