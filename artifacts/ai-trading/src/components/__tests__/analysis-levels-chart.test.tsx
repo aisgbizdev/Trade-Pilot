@@ -72,7 +72,7 @@ vi.mock("lightweight-charts", () => {
           }
           return series;
         }),
-        timeScale: () => ({ fitContent: vi.fn() }),
+        timeScale: () => ({ fitContent: vi.fn(), applyOptions: vi.fn() }),
         remove: vi.fn(),
       };
     },

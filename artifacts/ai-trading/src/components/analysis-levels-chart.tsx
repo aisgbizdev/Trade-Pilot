@@ -342,7 +342,7 @@ export function AnalysisLevelsChart({
     seriesRef.current = series;
     series.setData(buildCandleData(candles, cutoffSec, isDark));
     chart.timeScale().fitContent();
-    chart.timeScale().applyOptions?.({ barSpacing });
+    chart.timeScale().applyOptions?.({ barSpacing, rightOffset: 10 });
 
     return () => {
       priceLinesRef.current = [];
@@ -355,6 +355,13 @@ export function AnalysisLevelsChart({
   useEffect(() => {
     chartRef.current?.timeScale().applyOptions?.({ barSpacing });
   }, [barSpacing]);
+
+  const resetChartView = () => {
+    setBarSpacing(8);
+    const timeScale = chartRef.current?.timeScale();
+    timeScale?.fitContent();
+    timeScale?.applyOptions?.({ barSpacing: 8, rightOffset: 10 });
+  };
 
   // Draw / refresh price lines for the trade plan whenever plan changes.
   useEffect(() => {
@@ -470,7 +477,7 @@ export function AnalysisLevelsChart({
           </button>
           <button
             type="button"
-            onClick={() => setBarSpacing(8)}
+            onClick={resetChartView}
             className="flex h-7 items-center justify-center rounded-md px-2 text-[9px] font-bold text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-label={lang === "id" ? "Reset zoom grafik" : "Reset chart zoom"}
             data-testid="chart-zoom-reset"
