@@ -98,6 +98,16 @@ describe("ProfilePage: happy-path render", () => {
     // the active background classes.
     expect(screen.getByTestId("button-theme-light")).toBeInTheDocument();
     expect(screen.getByTestId("button-theme-dark")).toBeInTheDocument();
+    expect(screen.getByTestId("profile-container")).toHaveClass("max-w-4xl", "mx-auto");
+    expect(screen.getByTestId("theme-segmented-control")).toHaveClass("inline-flex");
+    expect(screen.getByTestId("button-theme-light")).not.toHaveClass("flex-1");
+    expect(screen.getByTestId("button-theme-dark")).not.toHaveClass("flex-1");
+
+    const settings = screen.getByTestId("profile-settings-group");
+    expect(settings).toContainElement(screen.getByTestId("button-toggle-password-section"));
+    expect(settings).toContainElement(screen.getByTestId("button-toggle-security-section"));
+    expect(settings).toContainElement(screen.getByTestId("button-go-my-alerts"));
+    expect(settings).toContainElement(screen.getByTestId("button-go-notification-settings"));
 
     // Logout button is rendered at the bottom of the page.
     expect(screen.getByTestId("button-logout")).toBeInTheDocument();
