@@ -1,10 +1,13 @@
+import { ProgressionEmblem } from "@/components/ProgressionEmblem";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
+import { Feather } from "@expo/vector-icons";
 import {
   type CreateAnalysisBodyTimeframe,
   useCreateAnalysis,
   useGetAnalysisQuota,
+  useGetProgressionSummary,
 } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -29,6 +32,25 @@ type Category = keyof typeof INSTRUMENTS;
 
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D"] as const;
 
+const RANK_KEYS = [
+  "seedling",
+  "observer",
+  "planner",
+  "guardian",
+  "navigator",
+  "strategist",
+  "sentinel",
+  "vanguard",
+  "steward",
+  "apex",
+] as const;
+
+type RankKey = (typeof RANK_KEYS)[number];
+
+function isRankKey(value: string): value is RankKey {
+  return (RANK_KEYS as readonly string[]).includes(value);
+}
+
 export default function AnalyzeScreen() {
   const colors = useColors();
   const { t } = useLang();
@@ -42,7 +64,24 @@ export default function AnalyzeScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const { data: quota } = useGetAnalysisQuota();
+  const progression = useGetProgressionSummary();
   const remaining = (quota as any)?.remaining as number | undefined;
+  const progressionRank = progression.data
+    ? isRankKey(progression.data.rank)
+      ? t.progression[`rank_${progression.data.rank}`]
+      : progression.data.rank
+    : null;
+  const progressionLevel = progression.data
+    ? (progression.data.masteryLevel > 0 ? t.progression.mastery : t.progression.level)
+        .replace(
+          "{n}",
+          String(
+            progression.data.masteryLevel > 0
+              ? progression.data.masteryLevel
+              : progression.data.level,
+          ),
+        )
+    : null;
 
   const { mutate: createAnalysis, isPending } = useCreateAnalysis({
     mutation: {
@@ -96,6 +135,36 @@ export default function AnalyzeScreen() {
     },
     modeText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.primary },
     section: { paddingHorizontal: 16, marginTop: 20 },
+    progressionCard: {
+      minHeight: 68,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: colors.radius,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+    },
+    progressionCopy: { flex: 1, minWidth: 0, marginLeft: 10 },
+    progressionRank: {
+      color: colors.foreground,
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 14,
+    },
+    progressionLevel: {
+      color: colors.primary,
+      fontFamily: "Inter_500Medium",
+      fontSize: 12,
+      marginTop: 2,
+    },
+    progressionLoading: {
+      flex: 1,
+      color: colors.mutedForeground,
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      marginLeft: 12,
+    },
     label: {
       fontSize: 11,
       fontFamily: "Inter_600SemiBold",
@@ -211,6 +280,53 @@ export default function AnalyzeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {!progression.isError ? (
+          <View style={s.section}>
+            <Pressable
+              testID="home-progression-link"
+              accessibilityRole="button"
+              accessibilityLabel={
+                progressionRank && progressionLevel
+                  ? `${t.progression.title}: ${progressionRank}, ${progressionLevel}`
+                  : t.progression.title
+              }
+              onPress={() => router.push("/progression" as never)}
+              style={({ pressed }) => [
+                s.progressionCard,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              {progression.data ? (
+                <>
+                  <ProgressionEmblem
+                    level={progression.data.level}
+                    masteryLevel={progression.data.masteryLevel}
+                    size={50}
+                  />
+                  <View style={s.progressionCopy}>
+                    <Text style={s.progressionRank} numberOfLines={1}>
+                      {progressionRank}
+                    </Text>
+                    <Text style={s.progressionLevel} numberOfLines={1}>
+                      {progressionLevel}
+                    </Text>
+                  </View>
+                  <Feather
+                    name="chevron-right"
+                    size={20}
+                    color={colors.mutedForeground}
+                  />
+                </>
+              ) : (
+                <>
+                  <ActivityIndicator color={colors.primary} size="small" />
+                  <Text style={s.progressionLoading}>{t.progression.loading}</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={s.section}>
           <Text style={s.label}>Instrument</Text>
           <View style={s.catRow}>
