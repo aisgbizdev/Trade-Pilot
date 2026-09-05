@@ -3,6 +3,7 @@ import { useTranslation } from "@/lib/i18n";
 import { leanFromCounts, type MarketContextLean } from "./market-context-summary";
 
 export type SpeedometerSize = "xs" | "sm" | "md";
+export type SpeedometerVariant = "bar" | "semicircle";
 
 const GRADIENT_STOPS: ReadonlyArray<{ offset: string; color: string }> = [
   { offset: "0%",   color: "#fda4af" },
@@ -41,6 +42,7 @@ export function SignalSpeedometer({
   rawLabel,
   testId,
   className,
+  variant = "bar",
 }: {
   buy: number;
   sell: number;
@@ -53,6 +55,7 @@ export function SignalSpeedometer({
   rawLabel?: string;
   testId?: string;
   className?: string;
+  variant?: SpeedometerVariant;
 }) {
   const { t } = useTranslation();
   const lean: MarketContextLean = leanFromCounts(buy, sell);
@@ -114,13 +117,65 @@ export function SignalSpeedometer({
       className={cn("flex flex-col items-center text-center", sizing.wrapperW, className)}
       data-testid={testId ?? "signal-speedometer"}
       data-lean={lean}
+      data-variant={variant}
     >
-      <div
-        className="relative w-full"
-        style={{ height: sizing.markerHeight }}
-        role="img"
-        aria-label={centerLabel}
-      >
+      {variant === "semicircle" ? (
+        <div className="relative w-full" role="img" aria-label={centerLabel}>
+          <svg
+            viewBox="0 0 220 112"
+            className="block h-auto w-full overflow-visible"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id={`bias-arc-${testId ?? "default"}`} x1="0" y1="0" x2="1" y2="0">
+                {GRADIENT_STOPS.map((stop) => (
+                  <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+                ))}
+              </linearGradient>
+            </defs>
+            <path
+              d="M 20 100 A 90 90 0 0 1 200 100"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="20"
+              strokeLinecap="round"
+              className="text-muted/50"
+            />
+            <path
+              d="M 20 100 A 90 90 0 0 1 200 100"
+              fill="none"
+              stroke={`url(#bias-arc-${testId ?? "default"})`}
+              strokeWidth="14"
+              strokeLinecap="round"
+            />
+            <g
+              transform={`rotate(${angle} 110 100)`}
+              data-testid="speedometer-needle"
+              data-angle={angle.toFixed(1)}
+              data-position={positionPct.toFixed(1)}
+            >
+              <line
+                x1="110"
+                y1="100"
+                x2="110"
+                y2="29"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                className="text-foreground"
+              />
+            </g>
+            <circle cx="110" cy="100" r="8" className="fill-foreground" />
+            <circle cx="110" cy="100" r="3" className="fill-background" />
+          </svg>
+        </div>
+      ) : (
+        <div
+          className="relative w-full"
+          style={{ height: sizing.markerHeight }}
+          role="img"
+          aria-label={centerLabel}
+        >
         <div
           className="absolute top-1/2 left-0 right-0 -translate-y-1/2 rounded-full overflow-hidden"
           style={{ height: sizing.barHeight, background: GRADIENT_CSS }}
@@ -151,7 +206,8 @@ export function SignalSpeedometer({
           data-angle={angle.toFixed(1)}
           data-position={positionPct.toFixed(1)}
         />
-      </div>
+        </div>
+      )}
 
       {showCenterLabel && (
         <div

@@ -392,7 +392,8 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
         showCounts={false}
         showCenterLabel={false}
         testId="bias-gauge"
-        className="mx-auto"
+        className="mx-auto max-w-[260px]"
+        variant="semicircle"
       />
       <div className="flex justify-between text-[10px] text-muted-foreground">
         <span>{t.analysis_detail.bias_bearish_strong}</span>
