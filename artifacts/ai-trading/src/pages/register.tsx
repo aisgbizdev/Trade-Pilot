@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod/v4";
+import { z } from "zod/v3";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export default function RegisterPage() {
   const register = useRegister();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema),
     defaultValues: {
       email: "", password: "", displayName: "",
       selectedMode: "pro", securityQuestion: "", securityAnswer: "",

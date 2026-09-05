@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod/v4";
+import { z } from "zod/v3";
 import { Eye, EyeOff, Loader2, Brain, CheckCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +16,32 @@ import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BrandLogo } from "@/components/brand-logo";
 import { useTrackEvent } from "@/hooks/use-track-event";
+
+type LoginRequestError = {
+  status?: number;
+  data?: { error?: string } | null;
+};
+
+export function loginErrorDescription(
+  err: unknown,
+  messages: {
+    credentials: string;
+    connection: string;
+    service: string;
+  },
+): string {
+  const requestError = err as LoginRequestError;
+  const status = requestError?.status;
+  const serverMessage = requestError?.data?.error;
+
+  if (status === 401) return serverMessage ?? messages.credentials;
+  if (status === 429 && serverMessage) return serverMessage;
+  if (typeof status === "number") {
+    if (status >= 500) return messages.service;
+    return serverMessage ?? messages.service;
+  }
+  return messages.connection;
+}
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -48,7 +74,7 @@ export default function LoginPage() {
   type FormValues = z.infer<typeof schema>;
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema),
     defaultValues: { email: "", password: "", rememberMe: false },
   });
 
@@ -62,7 +88,11 @@ export default function LoginPage() {
     } catch (err: unknown) {
       toast({
         title: t.auth.login_failed,
-        description: ((err as { data?: { error?: string } })?.data?.error) ?? t.auth.login_error,
+        description: loginErrorDescription(err, {
+          credentials: t.auth.login_error,
+          connection: t.auth.login_connection_error,
+          service: t.auth.login_service_error,
+        }),
         variant: "destructive",
       });
     }

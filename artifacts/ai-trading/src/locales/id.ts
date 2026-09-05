@@ -165,6 +165,8 @@ export const id: Translations = {
     register_free: "Daftar gratis",
     login_failed: "Login gagal",
     login_error: "Email atau password salah",
+    login_connection_error: "Tidak dapat terhubung ke server. Periksa koneksi atau coba lagi beberapa saat.",
+    login_service_error: "Layanan login sedang tidak tersedia. Coba lagi beberapa saat.",
     create_account: "Buat Akun",
     register_subtitle: "Daftar gratis dan mulai analisis",
     display_name_label: "Nama Tampilan",

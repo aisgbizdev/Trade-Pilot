@@ -163,6 +163,8 @@ export const en = {
     register_free: "Register free",
     login_failed: "Login failed",
     login_error: "Wrong email or password",
+    login_connection_error: "Could not connect to the server. Check your connection or try again shortly.",
+    login_service_error: "The login service is temporarily unavailable. Please try again shortly.",
     create_account: "Create Account",
     register_subtitle: "Join for free and start your analysis",
     display_name_label: "Display Name",

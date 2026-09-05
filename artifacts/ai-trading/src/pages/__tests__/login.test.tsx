@@ -17,7 +17,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import LoginPage from "../login";
+import LoginPage, { loginErrorDescription } from "../login";
 import {
   TEST_USER,
   installFetchMock,
@@ -204,5 +204,29 @@ describe("LoginPage: user actions", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/dashboard");
     });
+  });
+
+  it("distinguishes credentials, unavailable service, and connection errors", () => {
+    const messages = {
+      credentials: "Wrong email or password",
+      connection: "Could not connect",
+      service: "Login service unavailable",
+    };
+
+    expect(
+      loginErrorDescription(
+        { status: 401, data: { error: "Email atau password salah" } },
+        messages,
+      ),
+    ).toBe("Email atau password salah");
+    expect(
+      loginErrorDescription(
+        { status: 502, data: { error: "Bad Gateway" } },
+        messages,
+      ),
+    ).toBe("Login service unavailable");
+    expect(loginErrorDescription(new TypeError("Failed to fetch"), messages)).toBe(
+      "Could not connect",
+    );
   });
 });
