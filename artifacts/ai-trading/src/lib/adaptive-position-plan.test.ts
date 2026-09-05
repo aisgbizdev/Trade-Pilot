@@ -189,9 +189,12 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
 
   it("enables only supported canonical identities for Adaptive", () => {
     expect(isAdaptivePositionInstrument("XAU/USD")).toBe(true);
-    expect(isAdaptivePositionInstrument(" brent ")).toBe(true);
+    expect(isAdaptivePositionInstrument("BRENT")).toBe(true);
     expect(isAdaptivePositionInstrument("HSI")).toBe(true);
-    expect(isAdaptivePositionInstrument("nikkei")).toBe(true);
+    expect(isAdaptivePositionInstrument("NIKKEI")).toBe(true);
+    expect(isAdaptivePositionInstrument(" xau/usd ")).toBe(false);
+    expect(isAdaptivePositionInstrument("brent")).toBe(false);
+    expect(isAdaptivePositionInstrument("nikkei")).toBe(false);
     expect(getAdaptiveStandardRuleCode("BRENT")).toBe("BCO10_BBJ");
     expect(getAdaptiveStandardRuleCode("HSI")).toBe("HKK50_BBJ");
     expect(getAdaptiveStandardRuleCode("NIKKEI")).toBe("JPK50_BBJ");

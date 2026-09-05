@@ -84,6 +84,7 @@ Class | Method | HTTP request | Description
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisQuota**](doc/AnalysesApi.md#getanalysisquota) | **GET** /analyses/quota | Get current user&#39;s analysis quota usage
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getPersonalAnalytics**](doc/AnalysesApi.md#getpersonalanalytics) | **GET** /analyses/personal-analytics | Get personal analytics data
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getRecentInstruments**](doc/AnalysesApi.md#getrecentinstruments) | **GET** /analyses/recent-instruments | Get 3 most recently analyzed instruments
+[*AnalysesApi*](doc/AnalysesApi.md) | [**getTimeframeRiskMap**](doc/AnalysesApi.md#gettimeframeriskmap) | **GET** /risk-map/timeframes | Compare deterministic technical risk across supported timeframes
 [*AnalysesApi*](doc/AnalysesApi.md) | [**listAnalyses**](doc/AnalysesApi.md#listanalyses) | **GET** /analyses | List user&#39;s analyses with filters
 [*AnalysesApi*](doc/AnalysesApi.md) | [**refreshFundamentals**](doc/AnalysesApi.md#refreshfundamentals) | **POST** /analyses/{id}/refresh-fundamentals | Re-fetch news + economic calendar for an existing analysis (no AI re-run)
 [*AnalysesApi*](doc/AnalysesApi.md) | [**setAnalysisNote**](doc/AnalysesApi.md#setanalysisnote) | **PUT** /analyses/{id}/note | Save the user&#39;s private trading-journal note for an analysis
@@ -271,6 +272,10 @@ Class | Method | HTTP request | Description
  - [StandardTradingRules](doc/StandardTradingRules.md)
  - [StandardTradingRulesFixedRate](doc/StandardTradingRulesFixedRate.md)
  - [TagsList](doc/TagsList.md)
+ - [TimeframeRisk](doc/TimeframeRisk.md)
+ - [TimeframeRiskMap](doc/TimeframeRiskMap.md)
+ - [TimeframeRiskMapOverall](doc/TimeframeRiskMapOverall.md)
+ - [TimeframeRiskMetrics](doc/TimeframeRiskMetrics.md)
  - [TradePlan](doc/TradePlan.md)
  - [TradeSide](doc/TradeSide.md)
  - [TraderMirrorHighlight](doc/TraderMirrorHighlight.md)
@@ -295,7 +300,17 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Authorization
 
-Endpoints do not require authorization.
+
+Authentication schemes defined for the API:
+### bearerAuth
+
+- **Type**: HTTP Bearer Token authentication
+
+### sessionCookie
+
+- **Type**: API key
+- **API key parameter name**: session_token
+- **Location**: 
 
 
 ## Author

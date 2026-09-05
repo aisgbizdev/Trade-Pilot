@@ -864,6 +864,114 @@ export interface RecentInstruments {
   instruments: RecentInstrumentsInstrumentsItem[];
 }
 
+export interface TimeframeRiskMetrics {
+  buySignals: number;
+  sellSignals: number;
+  neutralSignals: number;
+  rsi14: number;
+  change20Pct: number;
+  bollingerWidthPct: number;
+}
+
+export type TimeframeRiskTimeframe =
+  (typeof TimeframeRiskTimeframe)[keyof typeof TimeframeRiskTimeframe];
+
+export const TimeframeRiskTimeframe = {
+  "15m": "15m",
+  "1h": "1h",
+  "4h": "4h",
+  "1D": "1D",
+  "1W": "1W",
+} as const;
+
+export type TimeframeRiskStatus =
+  (typeof TimeframeRiskStatus)[keyof typeof TimeframeRiskStatus];
+
+export const TimeframeRiskStatus = {
+  available: "available",
+  unavailable: "unavailable",
+  insufficient: "insufficient",
+} as const;
+
+export type TimeframeRiskRiskCategory =
+  (typeof TimeframeRiskRiskCategory)[keyof typeof TimeframeRiskRiskCategory];
+
+export const TimeframeRiskRiskCategory = {
+  low: "low",
+  moderate: "moderate",
+  high: "high",
+  unavailable: "unavailable",
+} as const;
+
+export type TimeframeRiskDataQuality =
+  (typeof TimeframeRiskDataQuality)[keyof typeof TimeframeRiskDataQuality];
+
+export const TimeframeRiskDataQuality = {
+  good: "good",
+  limited: "limited",
+  stale: "stale",
+  unavailable: "unavailable",
+} as const;
+
+export type TimeframeRiskConfidence =
+  (typeof TimeframeRiskConfidence)[keyof typeof TimeframeRiskConfidence];
+
+export const TimeframeRiskConfidence = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export type TimeframeRiskRecommendation =
+  (typeof TimeframeRiskRecommendation)[keyof typeof TimeframeRiskRecommendation];
+
+export const TimeframeRiskRecommendation = {
+  eligible: "eligible",
+  caution: "caution",
+  wait: "wait",
+} as const;
+
+export interface TimeframeRisk {
+  timeframe: TimeframeRiskTimeframe;
+  status: TimeframeRiskStatus;
+  /**
+   * @minimum 0
+   * @maximum 100
+   * @nullable
+   */
+  riskScore: number | null;
+  riskCategory: TimeframeRiskRiskCategory;
+  reasonCodes: string[];
+  metrics: TimeframeRiskMetrics | null;
+  dataQuality: TimeframeRiskDataQuality;
+  confidence: TimeframeRiskConfidence;
+  recommendation: TimeframeRiskRecommendation;
+}
+
+export type TimeframeRiskMapOverallState =
+  (typeof TimeframeRiskMapOverallState)[keyof typeof TimeframeRiskMapOverallState];
+
+export const TimeframeRiskMapOverallState = {
+  wait: "wait",
+  no_recommendation: "no_recommendation",
+} as const;
+
+export type TimeframeRiskMapOverall = {
+  state: TimeframeRiskMapOverallState;
+  reasonCode: string;
+};
+
+export interface TimeframeRiskMap {
+  instrument: string;
+  generatedAt: string;
+  /**
+   * @minItems 5
+   * @maxItems 5
+   */
+  timeframes: TimeframeRisk[];
+  overall: TimeframeRiskMapOverall;
+}
+
 export type AnalysisQuotaHourly = {
   limit: number;
   used: number;
@@ -1984,6 +2092,24 @@ export const ListAnalysesOutcomesItem = {
   sl_hit: "sl_hit",
   expired: "expired",
   invalidated: "invalidated",
+} as const;
+
+export type GetTimeframeRiskMapParams = {
+  /**
+   * @minLength 1
+   * @maxLength 32
+   */
+  instrument: GetTimeframeRiskMapInstrument;
+};
+
+export type GetTimeframeRiskMapInstrument =
+  (typeof GetTimeframeRiskMapInstrument)[keyof typeof GetTimeframeRiskMapInstrument];
+
+export const GetTimeframeRiskMapInstrument = {
+  "XAU/USD": "XAU/USD",
+  BRENT: "BRENT",
+  HSI: "HSI",
+  NIKKEI: "NIKKEI",
 } as const;
 
 export type GetAnalysisHistorySummaryParams = {

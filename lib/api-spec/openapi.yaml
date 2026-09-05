@@ -973,6 +973,49 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /risk-map/timeframes:
+    get:
+      operationId: getTimeframeRiskMap
+      tags: [analyses]
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      summary: Compare deterministic technical risk across supported timeframes
+      description: |
+        Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI,
+        and NIKKEI only. It uses the shared getIndicators cache/pipeline; it
+        never creates an analysis, consumes quota, calls AI, or writes user
+        history. Missing or stale/insufficient data is explicitly reported and
+        is not a low-risk result.
+      parameters:
+        - name: instrument
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 32
+            enum: ["XAU/USD", "BRENT", "HSI", "NIKKEI"]
+      responses:
+        "200":
+          description: Bounded multi-timeframe technical risk map
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeframeRiskMap"
+        "400":
+          description: Invalid instrument
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /analyses/summary:
     get:
       operationId: getAnalysesSummary
@@ -2409,6 +2452,16 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Session token returned by login or registration.
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session_token
+      description: Browser session cookie.
   schemas:
     StandardTradingRules:
       type: object
@@ -3753,6 +3806,52 @@ components:
               - mode
       required:
         - instruments
+
+    TimeframeRiskMetrics:
+      type: object
+      required: [buySignals, sellSignals, neutralSignals, rsi14, change20Pct, bollingerWidthPct]
+      properties:
+        buySignals: { type: integer }
+        sellSignals: { type: integer }
+        neutralSignals: { type: integer }
+        rsi14: { type: number }
+        change20Pct: { type: number }
+        bollingerWidthPct: { type: number }
+
+    TimeframeRisk:
+      type: object
+      required: [timeframe, status, riskScore, riskCategory, reasonCodes, metrics, dataQuality, confidence, recommendation]
+      properties:
+        timeframe: { type: string, enum: ["15m", "1h", "4h", "1D", "1W"] }
+        status: { type: string, enum: [available, unavailable, insufficient] }
+        riskScore: { type: [integer, "null"], minimum: 0, maximum: 100 }
+        riskCategory: { type: string, enum: [low, moderate, high, unavailable] }
+        reasonCodes: { type: array, items: { type: string } }
+        metrics:
+          oneOf:
+            - $ref: "#/components/schemas/TimeframeRiskMetrics"
+            - type: "null"
+        dataQuality: { type: string, enum: [good, limited, stale, unavailable] }
+        confidence: { type: string, enum: [low, medium, high] }
+        recommendation: { type: string, enum: [eligible, caution, wait] }
+
+    TimeframeRiskMap:
+      type: object
+      required: [instrument, generatedAt, timeframes, overall]
+      properties:
+        instrument: { type: string }
+        generatedAt: { type: string, format: date-time }
+        timeframes:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items: { $ref: "#/components/schemas/TimeframeRisk" }
+        overall:
+          type: object
+          required: [state, reasonCode]
+          properties:
+            state: { type: string, enum: [wait, no_recommendation] }
+            reasonCode: { type: string }
 
     AnalysisQuota:
       type: object

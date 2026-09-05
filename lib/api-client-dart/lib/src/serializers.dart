@@ -133,6 +133,10 @@ import 'package:trade_pilot_api_client/src/model/standard_trading_rule_text.dart
 import 'package:trade_pilot_api_client/src/model/standard_trading_rules.dart';
 import 'package:trade_pilot_api_client/src/model/standard_trading_rules_fixed_rate.dart';
 import 'package:trade_pilot_api_client/src/model/tags_list.dart';
+import 'package:trade_pilot_api_client/src/model/timeframe_risk.dart';
+import 'package:trade_pilot_api_client/src/model/timeframe_risk_map.dart';
+import 'package:trade_pilot_api_client/src/model/timeframe_risk_map_overall.dart';
+import 'package:trade_pilot_api_client/src/model/timeframe_risk_metrics.dart';
 import 'package:trade_pilot_api_client/src/model/trade_plan.dart';
 import 'package:trade_pilot_api_client/src/model/trade_side.dart';
 import 'package:trade_pilot_api_client/src/model/trader_mirror_highlight.dart';
@@ -276,6 +280,10 @@ part 'serializers.g.dart';
   StandardTradingRules,
   StandardTradingRulesFixedRate,
   TagsList,
+  TimeframeRisk,
+  TimeframeRiskMap,
+  TimeframeRiskMapOverall,
+  TimeframeRiskMetrics,
   TradePlan,
   TradeSide,
   TraderMirrorHighlight,
@@ -321,6 +329,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FundamentalCalendarEvent)]),
         () => ListBuilder<FundamentalCalendarEvent>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TimeframeRisk)]),
+        () => ListBuilder<TimeframeRisk>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(Broadcast)]),

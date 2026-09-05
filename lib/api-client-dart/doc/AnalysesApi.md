@@ -20,6 +20,7 @@ Method | HTTP request | Description
 [**getAnalysisQuota**](AnalysesApi.md#getanalysisquota) | **GET** /analyses/quota | Get current user&#39;s analysis quota usage
 [**getPersonalAnalytics**](AnalysesApi.md#getpersonalanalytics) | **GET** /analyses/personal-analytics | Get personal analytics data
 [**getRecentInstruments**](AnalysesApi.md#getrecentinstruments) | **GET** /analyses/recent-instruments | Get 3 most recently analyzed instruments
+[**getTimeframeRiskMap**](AnalysesApi.md#gettimeframeriskmap) | **GET** /risk-map/timeframes | Compare deterministic technical risk across supported timeframes
 [**listAnalyses**](AnalysesApi.md#listanalyses) | **GET** /analyses | List user&#39;s analyses with filters
 [**refreshFundamentals**](AnalysesApi.md#refreshfundamentals) | **POST** /analyses/{id}/refresh-fundamentals | Re-fetch news + economic calendar for an existing analysis (no AI re-run)
 [**setAnalysisNote**](AnalysesApi.md#setanalysisnote) | **PUT** /analyses/{id}/note | Save the user&#39;s private trading-journal note for an analysis
@@ -463,6 +464,53 @@ This endpoint does not need any parameter.
 ### Authorization
 
 No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getTimeframeRiskMap**
+> TimeframeRiskMap getTimeframeRiskMap(instrument)
+
+Compare deterministic technical risk across supported timeframes
+
+Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI, and NIKKEI only. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+// TODO Configure API key authorization: sessionCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKeyPrefix = 'Bearer';
+
+final api = TradePilotApiClient().getAnalysesApi();
+final String instrument = instrument_example; // String | 
+
+try {
+    final response = api.getTimeframeRiskMap(instrument);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AnalysesApi->getTimeframeRiskMap: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **instrument** | **String**|  | 
+
+### Return type
+
+[**TimeframeRiskMap**](TimeframeRiskMap.md)
+
+### Authorization
+
+[sessionCookie](../README.md#sessionCookie), [bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 

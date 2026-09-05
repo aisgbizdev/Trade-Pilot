@@ -681,3 +681,188 @@ describe("AnalyzePage: user actions", () => {
     });
   });
 });
+
+describe("AnalyzePage: Timeframe Risk Map", () => {
+  const mockRiskMap = {
+    instrument: "XAU/USD",
+    generatedAt: new Date().toISOString(),
+    timeframes: [
+      {
+        timeframe: "1h",
+        status: "available",
+        riskScore: 20,
+        riskCategory: "low",
+        reasonCodes: ["trend_aligned"],
+        metrics: null,
+        dataQuality: "good",
+        confidence: "high",
+        recommendation: "eligible",
+      },
+      {
+        timeframe: "4h",
+        status: "available",
+        riskScore: 85,
+        riskCategory: "high",
+        reasonCodes: ["overbought", "resistance_near"],
+        metrics: null,
+        dataQuality: "good",
+        confidence: "medium",
+        recommendation: "wait",
+      },
+    ],
+    overall: {
+      state: "wait",
+      reasonCode: "mixed_signals",
+    },
+  };
+
+  it("does not fetch initially, explicitly loads on click, updates state without submitting, and handles errors gracefully", async () => {
+    const { calls } = installFetchMock(
+      [
+        ...pageHandlers({}),
+        (url) => {
+          if (url.includes("/api/risk-map/timeframes")) {
+            if (url.includes("error=true")) {
+              return jsonResponse({ error: "fail" }, 500);
+            }
+            return jsonResponse(mockRiskMap);
+          }
+          return null;
+        },
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>
+    );
+
+    // Initial state: closed, no fetch
+    await screen.findByTestId("instrument-options");
+    expect(screen.getByTestId("section-risk-map-closed")).toBeInTheDocument();
+    
+    // Wait a tick to ensure no background fetches fire
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    
+    expect(
+      calls.filter((c) => c.url.includes("/api/risk-map/timeframes"))
+    ).toHaveLength(0);
+
+    // Open it
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-open-risk-map"));
+    });
+    
+    // Wait for the open state
+    await screen.findByTestId("section-risk-map-open");
+    
+    // Should have fetched
+    expect(
+      calls.filter((c) => c.url.includes("/api/risk-map/timeframes"))
+    ).toHaveLength(1);
+
+    // Renders data
+    expect(await screen.findByText("Overall: Wait")).toBeInTheDocument();
+    expect(
+      screen.getByText("Use the comparison below to choose a suitable risk level."),
+    ).toBeInTheDocument();
+    
+    // Timeframes
+    expect(screen.getByTestId("risk-map-tf-1h")).toBeInTheDocument();
+    expect(screen.getByTestId("risk-map-tf-4h")).toBeInTheDocument();
+
+    // The '1h' is the default timeframe, so its select button should be disabled
+    const select1hBtn = screen.getByTestId("btn-select-tf-1h") as HTMLButtonElement;
+    expect(select1hBtn.disabled).toBe(true);
+    expect(select1hBtn).toHaveTextContent("Selected");
+
+    // The '4h' is not selected
+    const select4hBtn = screen.getByTestId("btn-select-tf-4h") as HTMLButtonElement;
+    expect(select4hBtn.disabled).toBe(false);
+    expect(select4hBtn).toHaveTextContent("Select 4h");
+
+    // Click to select 4h
+    await act(async () => {
+      fireEvent.click(select4hBtn);
+    });
+
+    // It should now be selected and disabled
+    await waitFor(() => {
+      expect((screen.getByTestId("btn-select-tf-4h") as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    // The POST /api/analyses should NOT have been called due to this click
+    expect(
+      calls.filter((c) => c.method === "POST" && c.url.includes("/api/analyses"))
+    ).toHaveLength(0);
+    
+    // If we change instrument, the risk map should close automatically
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-instrument-BRENT"));
+    });
+    
+    await waitFor(() => {
+      expect(screen.getByTestId("section-risk-map-closed")).toBeInTheDocument();
+    });
+  });
+
+  it("handles failure without blocking the rest of the page", async () => {
+    installFetchMock(
+      [
+        ...pageHandlers({}),
+        (url) => {
+          if (url.includes("/api/risk-map/timeframes")) {
+            return jsonResponse({ error: "fail" }, 500);
+          }
+          return null;
+        },
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>
+    );
+
+    await screen.findByTestId("instrument-options");
+    
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-open-risk-map"));
+    });
+
+    expect(await screen.findByText("Could not load risk map.")).toBeInTheDocument();
+    
+    // The main submit button should still be available
+    expect(screen.getByTestId("button-submit-analysis")).toBeInTheDocument();
+    expect((screen.getByTestId("button-submit-analysis") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("custom instrument has no advisor", async () => {
+    installFetchMock(pageHandlers({}), { strict: false });
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>
+    );
+
+    await screen.findByTestId("instrument-options");
+    
+    // Official instrument has it
+    expect(screen.getByTestId("section-risk-map-closed")).toBeInTheDocument();
+
+    // Type a custom instrument
+    await act(async () => {
+      fireEvent.change(screen.getByTestId("input-custom-instrument"), { target: { value: "PLATINUM" } });
+    });
+    
+    // Custom instrument should not have it
+    expect(screen.queryByTestId("section-risk-map-closed")).not.toBeInTheDocument();
+  });
+});

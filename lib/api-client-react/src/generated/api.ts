@@ -66,6 +66,7 @@ import type {
   GetOutboundClickStatsParams,
   GetPerformanceSummaryParams,
   GetPersonalAnalyticsParams,
+  GetTimeframeRiskMapParams,
   HealthStatus,
   JournalEntry,
   JournalEntryList,
@@ -100,6 +101,7 @@ import type {
   SetAnalysisNoteBody,
   StandardTradingRules,
   TagsList,
+  TimeframeRiskMap,
   TraderMirrorResponse,
   UpdateJournalEntryBody,
   UpdateProfileBody,
@@ -3157,6 +3159,111 @@ export function useListAnalyses<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListAnalysesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetTimeframeRiskMapUrl = (
+  params: GetTimeframeRiskMapParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/risk-map/timeframes?${stringifiedParams}`
+    : `/api/risk-map/timeframes`;
+};
+
+/**
+ * Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI,
+ * and NIKKEI only. It uses the shared getIndicators cache/pipeline; it
+ * never creates an analysis, consumes quota, calls AI, or writes user
+ * history. Missing or stale/insufficient data is explicitly reported and
+ * is not a low-risk result.
+ * @summary Compare deterministic technical risk across supported timeframes
+ */
+export const getTimeframeRiskMap = async (
+  params: GetTimeframeRiskMapParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<TimeframeRiskMap> => {
+  return customFetch<TimeframeRiskMap>(getGetTimeframeRiskMapUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTimeframeRiskMapQueryKey = (
+  params?: GetTimeframeRiskMapParams,
+) => {
+  return [`/api/risk-map/timeframes`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetTimeframeRiskMapQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTimeframeRiskMap>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: GetTimeframeRiskMapParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTimeframeRiskMap>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTimeframeRiskMapQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTimeframeRiskMap>>
+  > = ({ signal }) =>
+    getTimeframeRiskMap(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTimeframeRiskMap>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTimeframeRiskMapQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTimeframeRiskMap>>
+>;
+export type GetTimeframeRiskMapQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Compare deterministic technical risk across supported timeframes
+ */
+
+export function useGetTimeframeRiskMap<
+  TData = Awaited<ReturnType<typeof getTimeframeRiskMap>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: GetTimeframeRiskMapParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTimeframeRiskMap>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTimeframeRiskMapQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

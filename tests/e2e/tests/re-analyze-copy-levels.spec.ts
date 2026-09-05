@@ -443,7 +443,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
 // ---------------------------------------------------------------------------
 
 test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", () => {
-  test("keeps non-XAU products analysis-only", async ({
+  test("keeps Adaptive on official products and custom products analysis-only", async ({
     page,
     baseURL,
   }) => {
@@ -477,9 +477,9 @@ test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", ()
     await page.goto(`/analyses/${STUB_ID_HSI_ADAPTIVE}`);
     await expect(page.getByTestId("text-instrument")).toHaveText("HSI");
     await expect(page.getByTestId("card-trade-plan")).toBeVisible();
-    await expect(page.getByTestId("card-adaptive-position-plan")).toHaveCount(0);
-    await expect(page.getByTestId("input-adaptive-available-margin")).toHaveCount(0);
-    await expect(page.getByTestId("button-calculate-adaptive-plan")).toHaveCount(0);
+    await expect(page.getByTestId("card-adaptive-position-plan")).toBeVisible();
+    await expect(page.getByTestId("input-adaptive-available-margin")).toBeVisible();
+    await expect(page.getByTestId("button-calculate-adaptive-plan")).toBeVisible();
 
     await page.goto(`/analyses/${STUB_ID_UNSUPPORTED_ADAPTIVE}`);
     await expect(page.getByTestId("text-instrument")).toHaveText("EUR/USD");

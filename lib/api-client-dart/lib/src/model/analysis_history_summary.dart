@@ -18,7 +18,7 @@ part 'analysis_history_summary.g.dart';
 /// * [range] 
 /// * [minSamples] 
 /// * [overall] 
-/// * [byInstrument]
+/// * [byInstrument] 
 /// * [byTimeframe] 
 @BuiltValue()
 abstract class AnalysisHistorySummary implements Built<AnalysisHistorySummary, AnalysisHistorySummaryBuilder> {

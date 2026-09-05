@@ -171,6 +171,17 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(StandardTradingRules.serializer)
       ..add(StandardTradingRulesFixedRate.serializer)
       ..add(TagsList.serializer)
+      ..add(TimeframeRisk.serializer)
+      ..add(TimeframeRiskConfidenceEnum.serializer)
+      ..add(TimeframeRiskDataQualityEnum.serializer)
+      ..add(TimeframeRiskMap.serializer)
+      ..add(TimeframeRiskMapOverall.serializer)
+      ..add(TimeframeRiskMapOverallStateEnum.serializer)
+      ..add(TimeframeRiskMetrics.serializer)
+      ..add(TimeframeRiskRecommendationEnum.serializer)
+      ..add(TimeframeRiskRiskCategoryEnum.serializer)
+      ..add(TimeframeRiskStatusEnum.serializer)
+      ..add(TimeframeRiskTimeframeEnum.serializer)
       ..add(TradePlan.serializer)
       ..add(TradePlanPreferredSideEnum.serializer)
       ..add(TradeSide.serializer)
@@ -342,6 +353,9 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(DailySummaryAnalysis)]),
           () => ListBuilder<DailySummaryAnalysis>())
@@ -357,6 +371,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(TimeframeRisk)]),
+          () => ListBuilder<TimeframeRisk>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(TraderMirrorHighlight)]),

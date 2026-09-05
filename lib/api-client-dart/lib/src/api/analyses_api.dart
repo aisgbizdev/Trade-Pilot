@@ -27,6 +27,7 @@ import 'package:trade_pilot_api_client/src/model/personal_analytics.dart';
 import 'package:trade_pilot_api_client/src/model/recent_instruments.dart';
 import 'package:trade_pilot_api_client/src/model/refresh_fundamentals_response.dart';
 import 'package:trade_pilot_api_client/src/model/set_analysis_note_request.dart';
+import 'package:trade_pilot_api_client/src/model/timeframe_risk_map.dart';
 
 class AnalysesApi {
 
@@ -878,6 +879,97 @@ class AnalysesApi {
     }
 
     return Response<RecentInstruments>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Compare deterministic technical risk across supported timeframes
+  /// Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI, and NIKKEI only. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result. 
+  ///
+  /// Parameters:
+  /// * [instrument] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [TimeframeRiskMap] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<TimeframeRiskMap>> getTimeframeRiskMap({ 
+    required String instrument,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/risk-map/timeframes';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'sessionCookie',
+            'keyName': 'session_token',
+            'where': '',
+          },{
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'instrument': encodeQueryParameter(_serializers, instrument, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    TimeframeRiskMap? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(TimeframeRiskMap),
+      ) as TimeframeRiskMap;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<TimeframeRiskMap>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

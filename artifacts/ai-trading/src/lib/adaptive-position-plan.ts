@@ -346,11 +346,10 @@ export function isXauUsdAdaptiveInstrument(instrument: string): boolean {
 export const isXauUsdMiniAdaptiveInstrument = isXauUsdAdaptiveInstrument;
 
 export function isAdaptivePositionInstrument(instrument: string): boolean {
-  const canonical = instrument.trim().toUpperCase();
-  return canonical === "XAU/USD" ||
-    canonical === "BRENT" ||
-    canonical === "HSI" ||
-    canonical === "NIKKEI";
+  return instrument === "XAU/USD" ||
+    instrument === "BRENT" ||
+    instrument === "HSI" ||
+    instrument === "NIKKEI";
 }
 
 function adaptiveMarketForInstrument(instrument: string): AdaptiveMarket | null {

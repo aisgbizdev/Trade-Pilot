@@ -133,6 +133,10 @@ doc/StandardTradingRulesFixedRate.md
 doc/StorageApi.md
 doc/SuperadminApi.md
 doc/TagsList.md
+doc/TimeframeRisk.md
+doc/TimeframeRiskMap.md
+doc/TimeframeRiskMapOverall.md
+doc/TimeframeRiskMetrics.md
 doc/TradeJournalApi.md
 doc/TradePlan.md
 doc/TradeSide.md
@@ -304,6 +308,10 @@ lib/src/model/standard_trading_rule_text.dart
 lib/src/model/standard_trading_rules.dart
 lib/src/model/standard_trading_rules_fixed_rate.dart
 lib/src/model/tags_list.dart
+lib/src/model/timeframe_risk.dart
+lib/src/model/timeframe_risk_map.dart
+lib/src/model/timeframe_risk_map_overall.dart
+lib/src/model/timeframe_risk_metrics.dart
 lib/src/model/trade_plan.dart
 lib/src/model/trade_side.dart
 lib/src/model/trader_mirror_highlight.dart
@@ -327,4 +335,3 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/analysis_history_instrument_stats_test.dart

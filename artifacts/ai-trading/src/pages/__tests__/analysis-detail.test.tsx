@@ -402,6 +402,34 @@ describe("AnalysisDetailPage: happy-path render", () => {
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {
+  it("custom analysis has no Adaptive", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          instrument: "PLATINUM",
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ], { strict: false });
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("text-instrument"); // Wait for load
+    expect(screen.getByText("PLATINUM")).toBeInTheDocument();
+    
+    // AdaptivePositionPlan should NOT be mounted
+    expect(screen.queryByTestId("card-adaptive-position-plan")).not.toBeInTheDocument();
+  });
+
   it("mounts Adaptive for canonical BRENT and uses the Brent trading rule", async () => {
     installFetchMock([
       getAnalysisHandler({

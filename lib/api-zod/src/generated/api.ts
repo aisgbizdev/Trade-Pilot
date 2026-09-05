@@ -1695,6 +1695,64 @@ export const ListAnalysesResponse = zod.object({
 });
 
 /**
+ * Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI,
+ * and NIKKEI only. It uses the shared getIndicators cache/pipeline; it
+ * never creates an analysis, consumes quota, calls AI, or writes user
+ * history. Missing or stale/insufficient data is explicitly reported and
+ * is not a low-risk result.
+ * @summary Compare deterministic technical risk across supported timeframes
+ */
+export const GetTimeframeRiskMapQueryParams = zod.object({
+  instrument: zod.enum(["XAU/USD", "BRENT", "HSI", "NIKKEI"]),
+});
+
+export const getTimeframeRiskMapResponseTimeframesItemRiskScoreMin = 0;
+export const getTimeframeRiskMapResponseTimeframesItemRiskScoreMax = 100;
+
+export const getTimeframeRiskMapResponseTimeframesMin = 5;
+export const getTimeframeRiskMapResponseTimeframesMax = 5;
+
+export const GetTimeframeRiskMapResponse = zod.object({
+  instrument: zod.string(),
+  generatedAt: zod.coerce.date(),
+  timeframes: zod
+    .array(
+      zod.object({
+        timeframe: zod.enum(["15m", "1h", "4h", "1D", "1W"]),
+        status: zod.enum(["available", "unavailable", "insufficient"]),
+        riskScore: zod
+          .number()
+          .int()
+          .min(getTimeframeRiskMapResponseTimeframesItemRiskScoreMin)
+          .max(getTimeframeRiskMapResponseTimeframesItemRiskScoreMax)
+          .nullable(),
+        riskCategory: zod.enum(["low", "moderate", "high", "unavailable"]),
+        reasonCodes: zod.array(zod.string()),
+        metrics: zod.union([
+          zod.object({
+            buySignals: zod.number().int(),
+            sellSignals: zod.number().int(),
+            neutralSignals: zod.number().int(),
+            rsi14: zod.number(),
+            change20Pct: zod.number(),
+            bollingerWidthPct: zod.number(),
+          }),
+          zod.null(),
+        ]),
+        dataQuality: zod.enum(["good", "limited", "stale", "unavailable"]),
+        confidence: zod.enum(["low", "medium", "high"]),
+        recommendation: zod.enum(["eligible", "caution", "wait"]),
+      }),
+    )
+    .min(getTimeframeRiskMapResponseTimeframesMin)
+    .max(getTimeframeRiskMapResponseTimeframesMax),
+  overall: zod.object({
+    state: zod.enum(["wait", "no_recommendation"]),
+    reasonCode: zod.string(),
+  }),
+});
+
+/**
  * @summary Get dashboard summary stats
  */
 export const GetAnalysesSummaryResponse = zod.object({

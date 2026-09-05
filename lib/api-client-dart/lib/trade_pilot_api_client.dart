@@ -148,6 +148,10 @@ export 'package:trade_pilot_api_client/src/model/standard_trading_rule_text.dart
 export 'package:trade_pilot_api_client/src/model/standard_trading_rules.dart';
 export 'package:trade_pilot_api_client/src/model/standard_trading_rules_fixed_rate.dart';
 export 'package:trade_pilot_api_client/src/model/tags_list.dart';
+export 'package:trade_pilot_api_client/src/model/timeframe_risk.dart';
+export 'package:trade_pilot_api_client/src/model/timeframe_risk_map.dart';
+export 'package:trade_pilot_api_client/src/model/timeframe_risk_map_overall.dart';
+export 'package:trade_pilot_api_client/src/model/timeframe_risk_metrics.dart';
 export 'package:trade_pilot_api_client/src/model/trade_plan.dart';
 export 'package:trade_pilot_api_client/src/model/trade_side.dart';
 export 'package:trade_pilot_api_client/src/model/trader_mirror_highlight.dart';
