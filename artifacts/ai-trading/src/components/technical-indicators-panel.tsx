@@ -24,7 +24,7 @@ function SignalCell({ signal, mode, testId }: { signal: RawSignal; mode: "beginn
     t.analyze.signal_neutral;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex w-full min-w-0 items-center gap-2">
       <SignalSpeedometer
         buy={counts.buy}
         sell={counts.sell}
@@ -33,9 +33,10 @@ function SignalCell({ signal, mode, testId }: { signal: RawSignal; mode: "beginn
         showCounts={false}
         showCenterLabel={false}
         testId={testId}
+        className="!w-auto min-w-0 flex-1 max-w-none"
       />
       {mode === "pro" && (
-        <span className="text-xs font-medium leading-none text-muted-foreground/70 min-w-[3.5rem] text-left tabular-nums">
+        <span className="shrink-0 text-xs font-medium leading-none text-muted-foreground/70 min-w-[3.5rem] text-left tabular-nums">
           {rawLabel}
         </span>
       )}
@@ -56,13 +57,15 @@ function IndicatorTile({
 }) {
   return (
     <div className="min-w-0 rounded-xl border border-border bg-background/40 p-2.5">
-      <p className="truncate text-xs font-medium text-muted-foreground" title={name}>
-        {name}
-      </p>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-sm font-mono text-foreground">
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <p className="min-w-0 text-xs font-medium text-muted-foreground" title={name}>
+          {name}
+        </p>
+        <span className="max-w-[68%] shrink-0 whitespace-normal break-words text-right text-xs font-mono tabular-nums text-foreground" title={value}>
           {value}
         </span>
+      </div>
+      <div className="mt-2">
         <SignalCell signal={signal} mode={mode} />
       </div>
     </div>
