@@ -41,6 +41,7 @@ export const en = {
     category_high: "High Risk",
     category_unavailable: "Unavailable",
     action_select: "Select {tf}",
+    action_use_analyze: "Use & Analyze {tf}",
     action_selected: "Selected",
     note_relative_risk: "Note: This indicates relative risk, not guaranteed profit.",
   },

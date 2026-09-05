@@ -43,6 +43,7 @@ export const id: Translations = {
     category_high: "Risiko Tinggi",
     category_unavailable: "Tidak Tersedia",
     action_select: "Pilih {tf}",
+    action_use_analyze: "Gunakan & Analisis {tf}",
     action_selected: "Terpilih",
     note_relative_risk: "Catatan: Peta ini menunjukkan risiko relatif, bukan jaminan profit.",
   },

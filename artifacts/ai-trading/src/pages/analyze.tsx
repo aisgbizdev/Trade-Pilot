@@ -776,7 +776,6 @@ export default function AnalyzePage() {
   const [selectedInstrument, setSelectedInstrument] = useState("XAU/USD");
   const [customInstrument, setCustomInstrument] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
-  const [riskMapOpen, setRiskMapOpen] = useState(false);
   // Mode selection is retired — every analysis now runs in "pro" mode.
   // Kept as a variable (rather than a literal) since createAnalysis,
   // the notes gate, and the review card below all still read it.
@@ -823,9 +822,6 @@ export default function AnalyzePage() {
   }, [isLoading, t]);
 
   const finalInstrument = customInstrument.trim() || selectedInstrument;
-  useEffect(() => {
-    setRiskMapOpen(false);
-  }, [finalInstrument]);
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
   const [alertModalOpen, setAlertModalOpen] = useState(false);
 
@@ -1176,37 +1172,9 @@ export default function AnalyzePage() {
               </div>
               <div className="flex items-center justify-between gap-3 text-sm mt-3">
                 <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-foreground">{selectedTimeframe}</span>
-                  {!customInstrument && isAdvancedAnalysisInstrument(finalInstrument) && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setRiskMapOpen(true)}
-                      className="h-7 gap-1.5 px-2 text-[11px] font-semibold text-primary"
-                      data-testid="button-open-risk-map"
-                    >
-                      <Activity className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t.risk_map.btn_compare}
-                    </Button>
-                  )}
-                </div>
+                <span className="font-semibold text-foreground">{selectedTimeframe}</span>
               </div>
             </Card>
-          )}
-
-          {finalInstrument && !customInstrument && isAdvancedAnalysisInstrument(finalInstrument) && (
-            <TimeframeRiskMapSection
-              instrument={finalInstrument}
-              selectedTimeframe={selectedTimeframe}
-              open={riskMapOpen}
-              onOpenChange={setRiskMapOpen}
-              onSelectTimeframe={(timeframe) => {
-                setSelectedTimeframe(timeframe);
-                setRiskMapOpen(false);
-              }}
-            />
           )}
           </div>
 

@@ -1699,6 +1699,74 @@ describe("AnalysisDetailPage: automatic timeframe analysis", () => {
     });
   });
 
+  it("opens risk comparison beside timeframe pills and analyzes only after confirmation", async () => {
+    const requestBodies: Record<string, unknown>[] = [];
+    const { calls } = installFetchMock([
+      getAnalysisHandler({}),
+      feedbackHandler(),
+      (url) => {
+        if (!url.includes("/api/risk-map/timeframes")) return null;
+        return jsonResponse({
+          instrument: "XAU/USD",
+          generatedAt: new Date().toISOString(),
+          overall: { state: "wait", reasonCode: "mixed_signals" },
+          timeframes: [
+            {
+              timeframe: "1h",
+              status: "available",
+              riskScore: 20,
+              riskCategory: "low",
+              reasonCodes: ["trend_aligned"],
+              metrics: null,
+              dataQuality: "good",
+              confidence: "high",
+              recommendation: "eligible",
+            },
+            {
+              timeframe: "4h",
+              status: "available",
+              riskScore: 72,
+              riskCategory: "high",
+              reasonCodes: ["resistance_near"],
+              metrics: null,
+              dataQuality: "good",
+              confidence: "medium",
+              recommendation: "wait",
+            },
+          ],
+        });
+      },
+      createAnalysisHandler((body) => {
+        requestBodies.push(body);
+        return jsonResponse({ id: 780 });
+      }),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("text-instrument");
+    expect(calls.filter((call) => call.url.includes("/api/risk-map/timeframes"))).toHaveLength(0);
+
+    fireEvent.click(screen.getByTestId("button-detail-risk-map"));
+    expect(await screen.findByTestId("detail-risk-map-dialog")).toBeInTheDocument();
+    expect(await screen.findByTestId("detail-risk-map-4h")).toBeInTheDocument();
+    expect(requestBodies).toHaveLength(0);
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-risk-analyze-4h"));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(requestBodies).toHaveLength(1));
+    expect(requestBodies[0]).toMatchObject({ instrument: "XAU/USD", timeframe: "4h" });
+    expect(screen.queryByTestId("detail-risk-map-dialog")).not.toBeInTheDocument();
+  });
+
   it("restores the previous analysis after failure and exposes a manual retry", async () => {
     const requestBodies: Record<string, unknown>[] = [];
     let attempt = 0;

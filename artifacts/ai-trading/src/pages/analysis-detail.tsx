@@ -23,6 +23,7 @@ import {
   RotateCcw,
   Copy,
   Check,
+  Activity,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,8 @@ import {
   useCancelAnalysisAlerts,
   getGetAnalysisAlertsQueryKey,
   useGetPushSubscriptionStatus,
+  useGetTimeframeRiskMap,
+  getGetTimeframeRiskMapQueryKey,
   useSetAnalysisNote,
   useGetJournalEntryForAnalysis,
   getGetJournalEntryForAnalysisQueryKey,
@@ -74,6 +77,7 @@ import {
   type FundamentalDrift,
   type AlertStatus,
   type AlertLevelRow,
+  type GetTimeframeRiskMapInstrument,
 } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
 import { Bell, BellOff } from "lucide-react";
@@ -93,6 +97,127 @@ import { prioritizeNewsSources } from "@/lib/news-source-priority";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 
 type T = ReturnType<typeof useTranslation>["t"];
+
+function TimeframeRiskDialog({
+  open,
+  instrument,
+  currentTimeframe,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  instrument: GetTimeframeRiskMapInstrument;
+  currentTimeframe: string;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (timeframe: string) => void;
+}) {
+  const { t } = useTranslation();
+  const { data, isLoading, isError, refetch } = useGetTimeframeRiskMap(
+    { instrument },
+    {
+      query: {
+        enabled: open,
+        queryKey: getGetTimeframeRiskMapQueryKey({ instrument }),
+      },
+    },
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg" data-testid="detail-risk-map-dialog">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
+            {t.risk_map.title}
+          </DialogTitle>
+          <DialogDescription>{t.risk_map.desc}</DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t.risk_map.loading}
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <p className="text-sm text-destructive">{t.risk_map.error}</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>{t.risk_map.retry}</Button>
+          </div>
+        ) : data ? (
+          <div className="space-y-3">
+            <div className={cn(
+              "rounded-lg border p-3 text-xs",
+              data.overall.state === "wait"
+                ? "border-amber-500/20 bg-amber-500/10"
+                : "border-border bg-muted/40",
+            )}>
+              <p className="font-bold">
+                {data.overall.state === "wait" ? t.risk_map.overall_wait : t.risk_map.overall_no_recommendation}
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                {t.risk_map[`overall_${data.overall.reasonCode}` as keyof typeof t.risk_map] ??
+                  t.risk_map.overall_reason_default}
+              </p>
+            </div>
+
+            {data.timeframes.map((tf) => {
+              const unavailable = tf.status === "unavailable" || tf.riskCategory === "unavailable";
+              const selected = currentTimeframe === tf.timeframe;
+              return (
+                <div
+                  key={tf.timeframe}
+                  className={cn(
+                    "rounded-lg border p-3",
+                    selected ? "border-primary bg-primary/5" : "border-border",
+                  )}
+                  data-testid={`detail-risk-map-${tf.timeframe}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold">{tf.timeframe}</span>
+                        {!unavailable && (
+                          <span className={cn(
+                            "rounded px-1.5 py-0.5 text-[10px] font-bold",
+                            tf.riskCategory === "low" && "bg-green-500/10 text-green-600",
+                            tf.riskCategory === "moderate" && "bg-amber-500/10 text-amber-600",
+                            tf.riskCategory === "high" && "bg-red-500/10 text-red-600",
+                          )}>
+                            {t.risk_map[`category_${tf.riskCategory}` as keyof typeof t.risk_map]}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {unavailable
+                          ? t.risk_map.category_unavailable
+                          : `${tf.riskScore}/100 · ${t.risk_map[`recommendation_${tf.recommendation}` as keyof typeof t.risk_map]}`}
+                      </p>
+                    </div>
+                    {!unavailable && (
+                      <Button
+                        size="sm"
+                        variant={selected ? "secondary" : "default"}
+                        disabled={selected}
+                        onClick={() => onConfirm(tf.timeframe)}
+                        data-testid={`button-risk-analyze-${tf.timeframe}`}
+                        className="shrink-0 text-xs"
+                      >
+                        {selected
+                          ? t.risk_map.action_selected
+                          : t.risk_map.action_use_analyze.replace("{tf}", tf.timeframe)}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            <p className="text-center text-[10px] italic text-muted-foreground">{t.risk_map.note_relative_risk}</p>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function getMarketConditionMeta(
   key: string | null | undefined,
@@ -1704,6 +1829,7 @@ export default function AnalysisDetailPage({
   const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
   const [refreshNotes, setRefreshNotes] = useState("");
   const [quickTimeframe, setQuickTimeframe] = useState<string | null>(null);
+  const [riskMapOpen, setRiskMapOpen] = useState(false);
   const [quickTimeframeStatus, setQuickTimeframeStatus] = useState<
     "idle" | "scheduled" | "loading" | "error"
   >("idle");
@@ -1759,6 +1885,7 @@ export default function AnalysisDetailPage({
       quickTimeframeTimerRef.current = null;
     }
     setQuickTimeframeStatus("idle");
+    setRiskMapOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, analysis?.timeframe]);
 
@@ -1827,6 +1954,18 @@ export default function AnalysisDetailPage({
     }
     quickTimeframeTargetRef.current = quickTimeframe;
     runQuickReanalysis(quickTimeframe);
+  };
+
+  const handleRiskMapConfirm = (timeframe: string) => {
+    if (!analysis || isRefreshing) return;
+    if (quickTimeframeTimerRef.current) {
+      clearTimeout(quickTimeframeTimerRef.current);
+      quickTimeframeTimerRef.current = null;
+    }
+    setRiskMapOpen(false);
+    setQuickTimeframe(timeframe);
+    quickTimeframeTargetRef.current = timeframe;
+    runQuickReanalysis(timeframe);
   };
 
   const quickTimeframeTransitioning =
@@ -2007,44 +2146,54 @@ export default function AnalysisDetailPage({
                 {tf}
               </button>
             ))}
-            <Button
-              size="sm"
-              className="h-8 shrink-0 px-2.5 text-xs"
-              onClick={handleQuickReanalyze}
-              disabled={
-                isRefreshing ||
-                !quickTimeframe ||
-                quickTimeframe === analysis.timeframe ||
-                quickTimeframeStatus === "scheduled" ||
-                quickTimeframeStatus === "loading"
-              }
-              data-testid="button-quick-analyze"
-            >
-              {isRefreshing ? (
-                <span className="flex items-center gap-1.5">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>{t.analyze.loading[refreshMsgIndex]}</span>
-                </span>
-              ) : (
-                quickTimeframeStatus === "error"
-                  ? t.analysis_detail.quick_timeframe_retry
-                  : t.analysis_detail.quick_timeframe_btn
-              )}
-            </Button>
+            {isAdaptivePositionInstrument(analysis.instrument) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 shrink-0 gap-1.5 px-2.5 text-xs font-semibold text-primary"
+                onClick={() => setRiskMapOpen(true)}
+                disabled={isRefreshing}
+                data-testid="button-detail-risk-map"
+              >
+                <Activity className="h-3.5 w-3.5" aria-hidden="true" />
+                {t.risk_map.btn_compare}
+              </Button>
+            )}
           </div>
           {quickTimeframeStatus === "error" && (
             <div
-              className="rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[11px] text-destructive"
+              className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[11px] text-destructive"
               role="alert"
               data-testid="quick-timeframe-error"
             >
-              <p className="font-medium">{t.analysis_detail.quick_timeframe_failed}</p>
-              <p className="mt-0.5 text-muted-foreground">
-                {t.analysis_detail.quick_timeframe_showing_previous}
-              </p>
+              <div>
+                <p className="font-medium">{t.analysis_detail.quick_timeframe_failed}</p>
+                <p className="mt-0.5 text-muted-foreground">
+                  {t.analysis_detail.quick_timeframe_showing_previous}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 shrink-0 text-[11px]"
+                onClick={handleQuickReanalyze}
+                data-testid="button-quick-analyze"
+              >
+                {t.analysis_detail.quick_timeframe_retry}
+              </Button>
             </div>
           )}
         </Card>
+
+        {isAdaptivePositionInstrument(analysis.instrument) && (
+          <TimeframeRiskDialog
+            open={riskMapOpen}
+            instrument={analysis.instrument as GetTimeframeRiskMapInstrument}
+            currentTimeframe={analysis.timeframe}
+            onOpenChange={setRiskMapOpen}
+            onConfirm={handleRiskMapConfirm}
+          />
+        )}
 
         {quickTimeframeTransitioning ? (
           <Card

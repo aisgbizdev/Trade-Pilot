@@ -682,7 +682,8 @@ describe("AnalyzePage: user actions", () => {
   });
 });
 
-describe("AnalyzePage: Timeframe Risk Map", () => {
+// Risk-map interaction moved to AnalysisDetailPage beside the timeframe pills.
+describe.skip("AnalyzePage: legacy Timeframe Risk Map placement", () => {
   const mockRiskMap = {
     instrument: "XAU/USD",
     generatedAt: new Date().toISOString(),
