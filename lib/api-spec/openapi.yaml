@@ -2671,7 +2671,7 @@ components:
       required: [source]
       properties:
         source: { type: string, enum: [pre_analysis_checklist, guide_completion] }
-        guideId: { type: string, enum: [how-ai-works, feature-map, reading-analysis, validity-confidence, adaptive-plan, analysis-workflow, bias-confidence-validity, levels-chart, technical-fundamental, standard-plan, adaptive-position-plan, account-rules, terms] }
+        guideId: { type: string, enum: [how-ai-works, feature-map, reading-analysis, validity-confidence, adaptive-plan, personal-progression, analysis-workflow, bias-confidence-validity, levels-chart, timeframe-risk-map, technical-fundamental, standard-plan, adaptive-position-plan, account-rules, terms] }
         checklist:
           type: object
           required: [instrument, timeframe]

@@ -8,9 +8,9 @@ import { feedback, progressionAchievements, progressionEvidenceSessions, progres
 import { ACHIEVEMENTS, awardProgression, checklistCycleSubject, levelForXp, rankForLevel, validProgressionTimezone } from "../lib/progression";
 
 const router = Router();
-const GUIDE_IDS = ["how-ai-works","feature-map","reading-analysis","validity-confidence","adaptive-plan","analysis-workflow","bias-confidence-validity","levels-chart","technical-fundamental","standard-plan","adaptive-position-plan","account-rules","terms"] as const;
+export const GUIDE_IDS = ["how-ai-works","feature-map","reading-analysis","validity-confidence","adaptive-plan","personal-progression","analysis-workflow","bias-confidence-validity","levels-chart","timeframe-risk-map","technical-fundamental","standard-plan","adaptive-position-plan","account-rules","terms"] as const;
 const CHECKLIST_ITEMS = ["risk_acknowledged","invalidation_reviewed","timeframe_checked","no_revenge_trade"] as const;
-const startEvidenceSchema = z.object({
+export const startEvidenceSchema = z.object({
   source: z.enum(["pre_analysis_checklist", "guide_completion"]),
   guideId: z.enum(GUIDE_IDS).optional(),
   checklist: z.object({ instrument: z.string().trim().min(1).max(32), timeframe: z.string().trim().min(1).max(16) }).optional(),

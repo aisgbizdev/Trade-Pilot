@@ -64,4 +64,37 @@ describe("GuidePage Progression", () => {
     await waitFor(() => expect(progressionCalled).toBe(true));
     expect(progressionBody.token).toBe("mock_evidence_token");
   });
+
+  it.each(["personal-progression", "timeframe-risk-map"] as const)(
+    "starts completion evidence for the %s article",
+    async (articleId) => {
+      let requestedGuideId: string | null = null;
+      window.history.replaceState(null, "", `/guide?article=${articleId}`);
+
+      installFetchMock([
+        (url, init) => {
+          if (url.includes("/api/progression/evidence") && init?.method === "POST") {
+            requestedGuideId = JSON.parse(init.body as string).guideId;
+            return jsonResponse({
+              token: "mock_evidence_token",
+              source: "guide_completion",
+              subject: articleId,
+              minimumCompleteAt: new Date(Date.now() + 20_000).toISOString(),
+            });
+          }
+          return null;
+        },
+      ]);
+
+      const { Wrapper } = makeWrapper();
+      render(
+        <Wrapper>
+          <GuidePage />
+        </Wrapper>,
+      );
+
+      await waitFor(() => expect(requestedGuideId).toBe(articleId));
+      expect(screen.getByTestId("button-mark-guide-complete")).toBeDisabled();
+    },
+  );
 });

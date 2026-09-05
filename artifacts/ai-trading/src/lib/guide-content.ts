@@ -147,6 +147,34 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
           { type: "callout", val: "Position plan adalah kalkulasi pendukung keputusan, bukan perintah eksekusi atau jaminan profit." }
         ],
         keywords: ["standard plan", "adaptive position plan", "layer", "account", "akun"]
+      },
+      {
+        id: "personal-progression",
+        title_en: "Levels, Ranks, Mastery & Achievement Badges",
+        title_id: "Level, Rank, Mastery & Achievement Badge",
+        content_en: [
+          { type: "h", val: "What personal progression measures" },
+          { type: "p", val: "Progression is your private record of preparation, reflection, emotional control, and consistency. XP is not awarded for profit, account size, win rate, trade count, or the number of analyses you generate." },
+          { type: "h", val: "How XP is earned" },
+          { type: "p", val: "Verified activities can include a quality journal reflection, an analysis evaluation, a completed pre-analysis checklist, completing guide material, maintaining a discipline streak, and explicitly choosing to wait when a risk warning appears. Duplicate submissions do not repeatedly award XP, and eligible sources can have daily limits." },
+          { type: "h", val: "Levels, ranks, and Mastery" },
+          { type: "p", val: "XP advances levels 1–100 across ten evolving ranks. After level 100, continued discipline advances Mastery without creating a public competition." },
+          { type: "h", val: "Badges, streaks, and history" },
+          { type: "p", val: "Achievement badges mark specific discipline milestones. Current and longest streaks summarize consistent active days, while XP History shows the verified events behind your total. Progress is private: there is no leaderboard or public profile." },
+          { type: "callout", val: "Progression rewards process, not trading outcomes. A higher level never promises better returns or removes market risk." }
+        ],
+        content_id: [
+          { type: "h", val: "Apa yang diukur progression pribadi" },
+          { type: "p", val: "Progression adalah catatan pribadi tentang persiapan, refleksi, kontrol emosi, dan konsistensi kamu. XP tidak diberikan dari profit, besar modal, win rate, jumlah trade, atau banyaknya analisis yang dibuat." },
+          { type: "h", val: "Cara mendapatkan XP" },
+          { type: "p", val: "Aktivitas terverifikasi dapat mencakup refleksi jurnal berkualitas, evaluasi analisis, checklist pra-analisis yang selesai, menuntaskan materi panduan, menjaga streak disiplin, dan memilih menunggu secara eksplisit saat peringatan risiko muncul. Pengiriman duplikat tidak memberi XP berulang, dan sumber tertentu dapat memiliki batas harian." },
+          { type: "h", val: "Level, rank, dan Mastery" },
+          { type: "p", val: "XP menaikkan level 1–100 melalui sepuluh rank yang terus berevolusi. Setelah level 100, disiplin berikutnya menaikkan Mastery tanpa menjadikannya kompetisi publik." },
+          { type: "h", val: "Badge, streak, dan riwayat" },
+          { type: "p", val: "Achievement badge menandai milestone disiplin tertentu. Streak aktif dan streak terpanjang merangkum konsistensi hari aktif, sedangkan Riwayat XP menunjukkan event terverifikasi yang membentuk total XP. Progres ini bersifat pribadi: tidak ada leaderboard atau profil publik." },
+          { type: "callout", val: "Progression menghargai proses, bukan hasil trading. Level tinggi tidak menjanjikan return lebih baik dan tidak menghilangkan risiko market." }
+        ],
+        keywords: ["progression", "XP", "level", "rank", "Mastery", "achievement", "badge", "streak", "riwayat XP", "XP history", "daily limit", "batas harian", "private", "pribadi", "leaderboard"]
       }
     ]
   },
@@ -192,11 +220,12 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
         id: "bias-confidence-validity",
         title_en: "Bias, Signal Strength, Confidence, Validity & Invalidation",
         title_id: "Bias, Signal Strength, Confidence, Validity & Invalidation",
-        keywords: ["bias", "bullish", "bearish", "neutral", "netral", "signal strength", "kekuatan sinyal", "confidence", "validity", "masa berlaku", "expired", "invalidation", "invalid"],
+        keywords: ["bias", "bias arah", "bias direction", "gauge", "needle", "jarum", "bullish", "bearish", "neutral", "netral", "signal strength", "kekuatan sinyal", "confidence", "validity", "masa berlaku", "expired", "invalidation", "invalid"],
         content_en: [
           { type: "h", val: "Meaning" },
           { type: "p", val: "Bias is the direction currently favored by the combined evidence. Signal strength summarizes how clearly directional factors lean. Confidence shows how strongly the available evidence supports the stated scenario. Validity is the time window in which the snapshot remains intended for use. Invalidation is a market condition that cancels the scenario." },
           { type: "h", val: "How to read them together" },
+          { type: "p", val: "On the Bias Direction half-gauge, the left side represents stronger bearish evidence, the center represents neutral or wait, and the right side represents stronger bullish evidence. The needle shows the current lean. Always use the written label as the precise reference rather than relying on color alone." },
           { type: "p", val: "Strong Bullish can coexist with a moderate confidence range when direction agrees but data quality, event risk, or conflicting evidence reduces certainty. Neutral means there is no sufficiently clear directional edge; it does not mean price will stay still." },
           { type: "h", val: "How results are obtained" },
           { type: "p", val: "TradePilot synthesizes available technical and fundamental evidence for the selected timeframe. Confidence reflects the quality, consistency, and conflicts in that evidence—not a historical win probability." },
@@ -210,6 +239,7 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
           { type: "h", val: "Arti" },
           { type: "p", val: "Bias adalah arah yang saat ini lebih didukung bukti gabungan. Signal strength merangkum seberapa jelas faktor arah condong. Confidence menunjukkan seberapa kuat bukti yang tersedia mendukung skenario. Validity adalah jendela waktu penggunaan snapshot. Invalidation adalah kondisi market yang membatalkan skenario." },
           { type: "h", val: "Cara membacanya bersama" },
+          { type: "p", val: "Pada gauge setengah lingkaran Bias Arah, sisi kiri menunjukkan bukti bearish yang makin kuat, bagian tengah berarti netral atau tunggu, dan sisi kanan menunjukkan bukti bullish yang makin kuat. Jarum menunjukkan kecenderungan saat ini. Tetap jadikan label teks sebagai acuan yang presisi, bukan warna saja." },
           { type: "p", val: "Bullish Kuat bisa muncul bersama rentang confidence sedang ketika arahnya sejalan, tetapi kualitas data, risiko event, atau bukti yang bertentangan mengurangi keyakinan. Netral berarti belum ada keunggulan arah yang cukup jelas; bukan berarti harga akan diam." },
           { type: "h", val: "Bagaimana hasil didapat" },
           { type: "p", val: "TradePilot menyintesis bukti teknikal dan fundamental yang tersedia untuk timeframe pilihan. Confidence mencerminkan kualitas, konsistensi, dan konflik bukti tersebut—bukan statistik peluang menang." },
@@ -224,14 +254,15 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
         id: "levels-chart",
         title_en: "Entry, Stop Loss, Take Profit, R:R, Support, Resistance & Chart",
         title_id: "Entry, Stop Loss, Take Profit, R:R, Support, Resistance & Chart",
-        keywords: ["entry", "entry zone", "zona entry", "SL", "stop loss", "TP", "take profit", "TP1", "TP2", "risk reward", "R:R", "RR", "support", "resistance", "chart", "candlestick"],
+        keywords: ["entry", "entry zone", "zona entry", "SL", "stop loss", "TP", "take profit", "TP1", "TP2", "risk reward", "R:R", "RR", "support", "resistance", "chart", "candlestick", "BUY", "SELL", "both", "keduanya", "running price", "zoom", "reset", "B-SL", "S-SL"],
         content_en: [
           { type: "h", val: "Meaning and purpose" },
           { type: "p", val: "The entry zone is an area for considering execution, not a mandatory exact price. Stop Loss (SL) limits the setup's planned downside. Take Profit (TP1/TP2) marks staged objectives. Risk:Reward (R:R) compares planned risk with potential reward. Support and resistance are reaction areas, not guaranteed turning points." },
           { type: "h", val: "How levels are obtained" },
           { type: "p", val: "Levels are derived from the selected side, timeframe, available market structure, volatility, and scenario logic. They belong together as one plan; moving only the SL or entry changes the original R:R." },
           { type: "h", val: "Reading the chart" },
-          { type: "p", val: "Dashed amber marks entry; red marks SL; green marks TP. The vertical marker shows the latest candle included when the analysis ran. Muted candles to its right happened later and were not visible to the original analysis." },
+          { type: "p", val: "Use BUY, SELL, or Both to show only the scenario you need. BUY entry is cyan and all BUY levels are solid. SELL entry is amber and all SELL levels are dashed. SL stays red, TP stays green, and the dotted gold line is the running price." },
+          { type: "p", val: "In Both mode, B-SL/B-TP labels belong to BUY and S-SL/S-TP labels belong to SELL. The latest candle has intentional space on its right so price labels remain readable. Use minus, RESET, and plus to change candle spacing; RESET restores the default view." },
           { type: "h", val: "Example" },
           { type: "p", val: "For a Buy plan, entry 100, SL 98, and TP 104 risks 2 units for 4 units of potential reward, or roughly 1:2 before fees and slippage." },
           { type: "h", val: "Limits and mistakes" },
@@ -243,7 +274,8 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
           { type: "h", val: "Bagaimana level didapat" },
           { type: "p", val: "Level disusun dari sisi pilihan, timeframe, struktur market yang tersedia, volatilitas, dan logika skenario. Semua level adalah satu paket plan; menggeser SL atau entry saja akan mengubah R:R awal." },
           { type: "h", val: "Membaca chart" },
-          { type: "p", val: "Garis amber putus-putus menandai entry; merah untuk SL; hijau untuk TP. Marker vertikal menunjukkan candle terakhir yang tersedia ketika analisis dibuat. Candle redup di kanannya terjadi sesudahnya dan tidak terlihat oleh analisis awal." },
+          { type: "p", val: "Gunakan BUY, SELL, atau Keduanya untuk menampilkan skenario yang dibutuhkan. Entry BUY berwarna cyan dan seluruh level BUY memakai garis solid. Entry SELL berwarna amber dan seluruh level SELL memakai garis putus-putus. SL tetap merah, TP tetap hijau, sedangkan garis gold bertitik adalah running price." },
+          { type: "p", val: "Dalam mode Keduanya, label B-SL/B-TP adalah milik BUY dan S-SL/S-TP adalah milik SELL. Di kanan candle terakhir sengaja tersedia ruang agar label harga mudah dibaca. Gunakan minus, RESET, dan plus untuk mengubah jarak candle; RESET mengembalikan tampilan awal." },
           { type: "h", val: "Contoh" },
           { type: "p", val: "Pada plan Buy dengan entry 100, SL 98, dan TP 104, risikonya 2 unit untuk potensi reward 4 unit, kira-kira 1:2 sebelum fee dan slippage." },
           { type: "h", val: "Batasan dan kesalahan" },
@@ -251,17 +283,45 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
         ],
       },
       {
+        id: "timeframe-risk-map",
+        title_en: "Comparing Risk Across Timeframes",
+        title_id: "Membandingkan Risiko Antar-Timeframe",
+        keywords: ["timeframe risk map", "risk map", "Peta Risiko Timeframe", "Bandingkan Risiko", "relative risk", "risiko relatif", "Gunakan dan Analisis", "XAU/USD", "BRENT", "HSI", "NIKKEI"],
+        content_en: [
+          { type: "h", val: "Meaning and location" },
+          { type: "p", val: "On an Analysis Detail page, open Compare Risk beside the timeframe choices to compare the same instrument across available timeframes. The feature currently supports the official XAU/USD, BRENT, HSI, and NIKKEI instruments." },
+          { type: "h", val: "How to read the map" },
+          { type: "p", val: "The map compares relative technical risk between the scanned timeframes. Lower relative risk means the available conditions look more orderly compared with the other options; it does not mean safe, guaranteed, or suitable for every trader." },
+          { type: "h", val: "Using a timeframe" },
+          { type: "p", val: "Choose Use & Analyze {timeframe} to switch and request a fresh analysis for that timeframe. The comparison itself does not silently replace the active analysis." },
+          { type: "h", val: "Insufficient or mixed data" },
+          { type: "p", val: "A timeframe with insufficient data is not treated as low risk. When no option is clearly actionable, compare the visible factors and match the timeframe to your intended holding horizon instead of forcing a recommendation." },
+          { type: "callout", val: "Relative risk is a comparison among available snapshots—not a prediction of loss, a guarantee of profit, or permission to ignore invalidation." }
+        ],
+        content_id: [
+          { type: "h", val: "Arti dan lokasi" },
+          { type: "p", val: "Di halaman Detail Analisis, buka Bandingkan Risiko yang berada di samping pilihan timeframe untuk membandingkan instrumen yang sama pada beberapa timeframe. Fitur ini saat ini tersedia untuk instrumen resmi XAU/USD, BRENT, HSI, dan NIKKEI." },
+          { type: "h", val: "Cara membaca peta" },
+          { type: "p", val: "Peta membandingkan risiko teknikal relatif antar-timeframe yang dipindai. Risiko relatif lebih rendah berarti kondisi yang tersedia tampak lebih tertata dibanding pilihan lain; bukan berarti aman, pasti, atau cocok untuk setiap trader." },
+          { type: "h", val: "Menggunakan timeframe" },
+          { type: "p", val: "Pilih Gunakan & Analisis {timeframe} untuk berpindah dan meminta analisis baru pada timeframe tersebut. Membuka perbandingan saja tidak diam-diam mengganti analisis aktif." },
+          { type: "h", val: "Data tidak cukup atau hasil campuran" },
+          { type: "p", val: "Timeframe dengan data tidak cukup tidak dianggap berisiko rendah. Saat tidak ada opsi yang jelas actionable, bandingkan faktor yang terlihat dan sesuaikan timeframe dengan durasi posisi kamu—jangan memaksa rekomendasi." },
+          { type: "callout", val: "Risiko relatif adalah perbandingan antar-snapshot yang tersedia—bukan prediksi kerugian, jaminan profit, atau izin mengabaikan invalidation." }
+        ]
+      },
+      {
         id: "technical-fundamental",
         title_en: "Technical and Fundamental Context",
         title_id: "Konteks Teknikal dan Fundamental",
-        keywords: ["technical", "teknikal", "indicator", "indikator", "oscillator", "moving average", "RSI", "MACD", "Bollinger", "fundamental", "news", "berita", "calendar", "kalender ekonomi", "citation", "source", "refresh"],
+        keywords: ["technical", "teknikal", "indicator", "indikator", "indicator value", "nilai indikator", "oscillator", "moving average", "RSI", "MACD", "Bollinger", "Beli", "Jual", "Netral", "fundamental", "news", "berita", "calendar", "kalender ekonomi", "citation", "source", "refresh"],
         content_en: [
           { type: "h", val: "Meaning and purpose" },
           { type: "p", val: "Technical context describes price, trend, momentum, volatility, and indicator readings. Fundamental context adds relevant news and scheduled economic events that may affect direction, volatility, or execution risk." },
           { type: "h", val: "How synthesis works" },
           { type: "p", val: "No single indicator or headline automatically decides the result. TradePilot looks for alignment and conflict across available categories, then explains which scenario is better supported. Citations connect narrative claims to the saved news and calendar snapshot." },
           { type: "h", val: "How to read and use it" },
-          { type: "list", val: ["Compare the technical lean with the stated bias.", "Open cited sources and distinguish reported facts from market interpretation.", "Treat high-impact calendar events as volatility risk, especially near release time.", "Use Refresh Fundamentals to inspect newer context; refreshing does not rerun or rewrite the original AI analysis."] },
+          { type: "list", val: ["On each technical card, the number is the indicator's reading; the bar and Buy/Sell/Neutral label summarize its directional interpretation.", "Never treat one RSI, MACD, Bollinger, or moving-average card as the final bias—the result synthesizes alignment and conflict across available evidence.", "Compare the combined technical lean with the stated bias.", "Open cited sources and distinguish reported facts from market interpretation.", "Treat high-impact calendar events as volatility risk, especially near release time.", "Use Refresh Fundamentals to inspect newer context; refreshing does not rerun or rewrite the original AI analysis."] },
           { type: "h", val: "Example" },
           { type: "p", val: "Bullish momentum with a high-impact central-bank decision ahead may support the direction while still lowering confidence or making waiting preferable." },
           { type: "h", val: "Limits" },
@@ -273,7 +333,7 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
           { type: "h", val: "Cara sintesis bekerja" },
           { type: "p", val: "Tidak ada satu indikator atau headline yang otomatis menentukan hasil. TradePilot mencari keselarasan dan konflik antar-kategori yang tersedia, lalu menjelaskan skenario mana yang lebih didukung. Sitasi menghubungkan narasi dengan snapshot berita dan kalender yang tersimpan." },
           { type: "h", val: "Cara membaca dan memakai" },
-          { type: "list", val: ["Bandingkan kecenderungan teknikal dengan bias akhir.", "Buka sumber sitasi dan bedakan fakta laporan dari interpretasi market.", "Perlakukan event berdampak tinggi sebagai risiko volatilitas, terutama mendekati waktu rilis.", "Gunakan Refresh Fundamental untuk melihat konteks yang lebih baru; refresh tidak menjalankan ulang atau menulis ulang analisis AI awal."] },
+          { type: "list", val: ["Pada setiap kartu teknikal, angka adalah nilai pembacaan indikator; bar dan label Beli/Jual/Netral merangkum interpretasi arahnya.", "Jangan jadikan satu kartu RSI, MACD, Bollinger, atau moving average sebagai bias akhir—hasil utama menyintesis keselarasan dan konflik seluruh bukti yang tersedia.", "Bandingkan kecenderungan teknikal gabungan dengan bias akhir.", "Buka sumber sitasi dan bedakan fakta laporan dari interpretasi market.", "Perlakukan event berdampak tinggi sebagai risiko volatilitas, terutama mendekati waktu rilis.", "Gunakan Refresh Fundamental untuk melihat konteks yang lebih baru; refresh tidak menjalankan ulang atau menulis ulang analisis AI awal."] },
           { type: "h", val: "Contoh" },
           { type: "p", val: "Momentum bullish menjelang keputusan bank sentral dapat mendukung arah, tetapi sekaligus menurunkan confidence atau membuat opsi menunggu lebih masuk akal." },
           { type: "h", val: "Batasan" },
@@ -404,7 +464,17 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
            { type: "h", val: "Margin / Margin Call / Liquidation" },
            { type: "p", val: "Margin is collateral for an open position. Margin call and liquidation thresholds are account controls defined by the displayed rules." },
            { type: "h", val: "Spread / Fee / Rollover / Slippage" },
-           { type: "p", val: "Trading costs and execution effects that can make the realized outcome differ from a simple entry-to-exit price calculation." }
+            { type: "p", val: "Trading costs and execution effects that can make the realized outcome differ from a simple entry-to-exit price calculation." },
+            { type: "h", val: "Timeframe Risk Map / Relative Risk" },
+            { type: "p", val: "A comparison of technical risk among available timeframe snapshots. Relative risk only ranks the compared options; lower does not mean risk-free." },
+            { type: "h", val: "BUY / SELL / Both" },
+            { type: "p", val: "Chart visibility controls for the BUY scenario, SELL scenario, or both scenarios together. They do not place an order or change the analysis." },
+            { type: "h", val: "Running Price" },
+            { type: "p", val: "The latest available reference price shown on the chart. It can move after the saved analysis levels were created." },
+            { type: "h", val: "XP / Level / Rank / Mastery" },
+            { type: "p", val: "XP records verified discipline activity. XP advances Levels 1–100 and their Ranks; after level 100, continued progress is recorded as Mastery." },
+            { type: "h", val: "Achievement Badge / Streak / XP History" },
+            { type: "p", val: "A badge marks a discipline milestone, a streak counts consistent active days, and XP History lists verified XP events. All are private and are not measures of profit or trading skill." }
         ],
         content_id: [
           { type: "h", val: "Bullish / Bearish" },
@@ -434,9 +504,19 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
            { type: "h", val: "Margin / Margin Call / Likuidasi" },
            { type: "p", val: "Margin adalah jaminan untuk posisi terbuka. Batas margin call dan likuidasi adalah kontrol akun dari aturan yang ditampilkan." },
            { type: "h", val: "Spread / Fee / Rollover / Slippage" },
-           { type: "p", val: "Biaya dan efek eksekusi yang dapat membuat hasil nyata berbeda dari kalkulasi sederhana harga entry ke exit." }
+            { type: "p", val: "Biaya dan efek eksekusi yang dapat membuat hasil nyata berbeda dari kalkulasi sederhana harga entry ke exit." },
+            { type: "h", val: "Peta Risiko Timeframe / Risiko Relatif" },
+            { type: "p", val: "Perbandingan risiko teknikal antar-snapshot timeframe yang tersedia. Risiko relatif hanya mengurutkan pilihan yang dibandingkan; lebih rendah bukan berarti bebas risiko." },
+            { type: "h", val: "BUY / SELL / Keduanya" },
+            { type: "p", val: "Kontrol tampilan chart untuk melihat skenario BUY, skenario SELL, atau keduanya sekaligus. Kontrol ini tidak memasang order dan tidak mengubah analisis." },
+            { type: "h", val: "Running Price" },
+            { type: "p", val: "Harga acuan terbaru yang tersedia pada chart. Nilainya dapat bergerak setelah level analisis tersimpan dibuat." },
+            { type: "h", val: "XP / Level / Rank / Mastery" },
+            { type: "p", val: "XP mencatat aktivitas disiplin yang terverifikasi. XP menaikkan Level 1–100 beserta Rank; setelah level 100, progres berikutnya dicatat sebagai Mastery." },
+            { type: "h", val: "Achievement Badge / Streak / Riwayat XP" },
+            { type: "p", val: "Badge menandai milestone disiplin, streak menghitung konsistensi hari aktif, dan Riwayat XP mencantumkan event XP terverifikasi. Semuanya pribadi dan bukan ukuran profit atau keahlian trading." }
         ],
-        keywords: ["bullish", "bearish", "neutral", "netral", "SL", "stop loss", "TP", "take profit", "RR", "R:R", "risk reward", "timeframe", "support", "resistance", "fundamental", "bias", "signal strength", "confidence", "validity", "invalidation", "expired", "standard plan", "preferred side", "wait", "tunggu", "adaptive position plan", "layer", "margin", "margin call", "liquidation", "likuidasi", "spread", "fee", "rollover", "slippage"],
+        keywords: ["bullish", "bearish", "neutral", "netral", "SL", "stop loss", "TP", "take profit", "RR", "R:R", "risk reward", "timeframe", "support", "resistance", "fundamental", "bias", "signal strength", "confidence", "validity", "invalidation", "expired", "standard plan", "preferred side", "wait", "tunggu", "adaptive position plan", "layer", "margin", "margin call", "liquidation", "likuidasi", "spread", "fee", "rollover", "slippage", "Peta Risiko Timeframe", "relative risk", "risiko relatif", "BUY", "SELL", "Keduanya", "Both", "running price", "XP", "level", "rank", "Mastery", "achievement badge", "streak", "XP history", "Riwayat XP"],
         relatedArticleId: "levels-chart"
       }
     ]

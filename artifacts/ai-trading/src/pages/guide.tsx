@@ -7,9 +7,15 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/lib/i18n";
 import { GUIDE_CATEGORIES, type GuideBlock } from "@/lib/guide-content";
-import { useRecordProgressionActivity, useStartProgressionEvidence, getGetProgressionSummaryQueryKey, getGetProgressionCatalogQueryKey, getGetProgressionHistoryQueryKey, type ProgressionEvidenceSession } from "@workspace/api-client-react";
+import { useRecordProgressionActivity, useStartProgressionEvidence, getGetProgressionSummaryQueryKey, getGetProgressionCatalogQueryKey, getGetProgressionHistoryQueryKey, type ProgressionEvidenceSession, type ProgressionEvidenceStartInputGuideId } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+
+const guideArticleIds = new Set(GUIDE_CATEGORIES.flatMap((category) => category.articles.map((article) => article.id)));
+
+function isProgressionGuideId(value: string): value is ProgressionEvidenceStartInputGuideId {
+  return guideArticleIds.has(value);
+}
 
 function renderBlock(block: GuideBlock, idx: number) {
   switch (block.type) {
@@ -86,12 +92,12 @@ export default function GuidePage() {
   const [evidenceSession, setEvidenceSession] = useState<ProgressionEvidenceSession | null>(null);
 
   useEffect(() => {
-    if (activeArticleId) {
+    if (activeArticleId && isProgressionGuideId(activeArticleId)) {
       setEvidenceSession(null);
       startEvidence.mutateAsync({
         data: {
           source: "guide_completion",
-          guideId: activeArticleId as any
+          guideId: activeArticleId
         }
       }).then(setEvidenceSession).catch(() => {});
     }
