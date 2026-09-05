@@ -23,7 +23,7 @@ void main() {
       // TODO
     });
 
-    // Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price. 
+    // Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.
     // String direction
     test('to test the property `direction`', () async {
       // TODO

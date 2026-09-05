@@ -2,6 +2,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
 import { Feather } from "@expo/vector-icons";
+import { useGetProgressionSummary } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -22,6 +23,7 @@ export default function ProfileScreen() {
   const { user, signOut, token } = useAuth();
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const progression = useGetProgressionSummary();
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -128,6 +130,9 @@ export default function ProfileScreen() {
       borderRadius: 8,
     },
     modeBadgeText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.primary },
+    progressionCopy: { flex: 1, marginLeft: 12 },
+    progressionTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    progressionDetail: { marginTop: 3, fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground },
   });
 
   const initials = user?.displayName
@@ -178,6 +183,31 @@ export default function ProfileScreen() {
             </View>
           </View>
         ) : null}
+
+        <View style={s.section}>
+          <Pressable
+            testID="profile-progression-link"
+            accessibilityRole="button"
+            accessibilityLabel={t.profile.progression}
+            onPress={() => router.push("/progression" as never)}
+            style={({ pressed }) => [s.card, s.row, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Feather name="award" size={22} color={colors.primary} />
+            <View style={s.progressionCopy}>
+              <Text style={s.progressionTitle}>{t.profile.progression}</Text>
+              <Text style={s.progressionDetail}>
+                {progression.data
+                  ? t.profile.progression_summary
+                      .replace("{level}", String(progression.data.level))
+                      .replace("{xp}", progression.data.totalXp.toLocaleString())
+                  : progression.isError
+                    ? t.profile.progression_unavailable
+                    : t.common.loading}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+          </Pressable>
+        </View>
 
         <View style={s.section}>
           <View style={s.card}>

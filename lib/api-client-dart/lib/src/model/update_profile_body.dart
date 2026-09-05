@@ -12,10 +12,10 @@ part 'update_profile_body.g.dart';
 /// UpdateProfileBody
 ///
 /// Properties:
-/// * [displayName] 
-/// * [selectedMode] 
-/// * [themePreference] 
-/// * [onboardingCompleted] 
+/// * [displayName]
+/// * [selectedMode]
+/// * [themePreference]
+/// * [onboardingCompleted]
 /// * [lang] - UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language.
 /// * [avatarUrl] - Object-storage path returned by the storage upload flow. Pass `null` to remove the current avatar.
 @BuiltValue()

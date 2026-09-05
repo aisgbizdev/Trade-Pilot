@@ -11,10 +11,10 @@ part 'journal_group_stat.g.dart';
 /// Aggregate stats for one instrument or session bucket (best/worst rankings).
 ///
 /// Properties:
-/// * [key] 
-/// * [winRate] 
-/// * [total] 
-/// * [avgPnlPercent] 
+/// * [key]
+/// * [winRate]
+/// * [total]
+/// * [avgPnlPercent]
 @BuiltValue()
 abstract class JournalGroupStat implements Built<JournalGroupStat, JournalGroupStatBuilder> {
   @BuiltValueField(wireName: r'key')

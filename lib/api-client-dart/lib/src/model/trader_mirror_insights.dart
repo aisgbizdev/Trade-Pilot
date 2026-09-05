@@ -12,14 +12,14 @@ part 'trader_mirror_insights.g.dart';
 /// Personal trader-mirror insights bundle (task #162). Every category respects a minimum-sample guardrail.
 ///
 /// Properties:
-/// * [windowDays] 
-/// * [totalResolved] 
-/// * [overallGated] 
-/// * [sessions] 
-/// * [instruments] 
-/// * [timing] 
-/// * [postLoss] 
-/// * [exitDiscipline] 
+/// * [windowDays]
+/// * [totalResolved]
+/// * [overallGated]
+/// * [sessions]
+/// * [instruments]
+/// * [timing]
+/// * [postLoss]
+/// * [exitDiscipline]
 @BuiltValue()
 abstract class TraderMirrorInsights implements Built<TraderMirrorInsights, TraderMirrorInsightsBuilder> {
   @BuiltValueField(wireName: r'windowDays')

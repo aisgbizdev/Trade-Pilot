@@ -11,8 +11,8 @@ part 'analytics_usage_stats_browser_breakdown_inner.g.dart';
 /// AnalyticsUsageStatsBrowserBreakdownInner
 ///
 /// Properties:
-/// * [browser] 
-/// * [count] 
+/// * [browser]
+/// * [count]
 @BuiltValue()
 abstract class AnalyticsUsageStatsBrowserBreakdownInner implements Built<AnalyticsUsageStatsBrowserBreakdownInner, AnalyticsUsageStatsBrowserBreakdownInnerBuilder> {
   @BuiltValueField(wireName: r'browser')

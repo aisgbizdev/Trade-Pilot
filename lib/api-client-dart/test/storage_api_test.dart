@@ -16,7 +16,7 @@ void main() {
 
     // Request a presigned URL for file upload
     //
-    // Returns a presigned GCS URL for direct upload. The client sends JSON metadata here, then uploads the file directly to the returned URL. 
+    // Returns a presigned GCS URL for direct upload. The client sends JSON metadata here, then uploads the file directly to the returned URL.
     //
     //Future<UploadUrlResponse> requestUploadUrl(UploadUrlRequest uploadUrlRequest) async
     test('test requestUploadUrl', () async {

@@ -12,15 +12,15 @@ part 'broadcast.g.dart';
 /// Broadcast
 ///
 /// Properties:
-/// * [id] 
-/// * [senderId] 
-/// * [senderName] 
-/// * [title] 
-/// * [message] 
-/// * [audienceType] 
-/// * [audienceValue] 
-/// * [recipientCount] 
-/// * [createdAt] 
+/// * [id]
+/// * [senderId]
+/// * [senderName]
+/// * [title]
+/// * [message]
+/// * [audienceType]
+/// * [audienceValue]
+/// * [recipientCount]
+/// * [createdAt]
 @BuiltValue()
 abstract class Broadcast implements Built<Broadcast, BroadcastBuilder> {
   @BuiltValueField(wireName: r'id')

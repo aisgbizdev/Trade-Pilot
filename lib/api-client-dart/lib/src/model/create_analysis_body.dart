@@ -12,10 +12,10 @@ part 'create_analysis_body.g.dart';
 /// CreateAnalysisBody
 ///
 /// Properties:
-/// * [instrument] 
-/// * [timeframe] 
-/// * [userInputContext] 
-/// * [mode] 
+/// * [instrument]
+/// * [timeframe]
+/// * [userInputContext]
+/// * [mode]
 @BuiltValue()
 abstract class CreateAnalysisBody implements Built<CreateAnalysisBody, CreateAnalysisBodyBuilder> {
   @BuiltValueField(wireName: r'instrument')

@@ -11,13 +11,13 @@ part 'journal_stats_totals.g.dart';
 /// JournalStatsTotals
 ///
 /// Properties:
-/// * [entries] 
-/// * [wins] 
-/// * [losses] 
-/// * [breakevens] 
-/// * [open] 
-/// * [skipped] 
-/// * [resolved] 
+/// * [entries]
+/// * [wins]
+/// * [losses]
+/// * [breakevens]
+/// * [open]
+/// * [skipped]
+/// * [resolved]
 @BuiltValue()
 abstract class JournalStatsTotals implements Built<JournalStatsTotals, JournalStatsTotalsBuilder> {
   @BuiltValueField(wireName: r'entries')

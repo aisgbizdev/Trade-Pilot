@@ -13,10 +13,10 @@ part 'analyses_list.g.dart';
 /// AnalysesList
 ///
 /// Properties:
-/// * [analyses] 
-/// * [total] 
-/// * [page] 
-/// * [limit] 
+/// * [analyses]
+/// * [total]
+/// * [page]
+/// * [limit]
 @BuiltValue()
 abstract class AnalysesList implements Built<AnalysesList, AnalysesListBuilder> {
   @BuiltValueField(wireName: r'analyses')

@@ -12,13 +12,13 @@ part 'alert_level_row.g.dart';
 /// AlertLevelRow
 ///
 /// Properties:
-/// * [level] 
-/// * [side] 
+/// * [level]
+/// * [side]
 /// * [price] - AI-generated level price, stored verbatim for precision.
-/// * [direction] - Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price. 
-/// * [triggeredAt] 
+/// * [direction] - Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.
+/// * [triggeredAt]
 /// * [triggeredPrice] - Live price the watcher saw when it fired the alert.
-/// * [cancelledAt] 
+/// * [cancelledAt]
 @BuiltValue()
 abstract class AlertLevelRow implements Built<AlertLevelRow, AlertLevelRowBuilder> {
   @BuiltValueField(wireName: r'level')
@@ -33,7 +33,7 @@ abstract class AlertLevelRow implements Built<AlertLevelRow, AlertLevelRowBuilde
   @BuiltValueField(wireName: r'price')
   String get price;
 
-  /// Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price. 
+  /// Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.
   @BuiltValueField(wireName: r'direction')
   AlertLevelRowDirectionEnum get direction;
   // enum directionEnum {  above,  below,  };
@@ -243,10 +243,10 @@ class AlertLevelRowSideEnum extends EnumClass {
 
 class AlertLevelRowDirectionEnum extends EnumClass {
 
-  /// Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price. 
+  /// Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.
   @BuiltValueEnumConst(wireName: r'above')
   static const AlertLevelRowDirectionEnum above = _$alertLevelRowDirectionEnum_above;
-  /// Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price. 
+  /// Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.
   @BuiltValueEnumConst(wireName: r'below')
   static const AlertLevelRowDirectionEnum below = _$alertLevelRowDirectionEnum_below;
 

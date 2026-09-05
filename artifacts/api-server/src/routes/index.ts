@@ -23,6 +23,7 @@ import storageRouter from "./storage";
 import tradingRulesRouter from "./trading-rules";
 import landingPreviewRouter from "./landing-preview";
 import timeframeRiskRouter from "./timeframe-risk";
+import progressionRouter from "./progression";
 
 const router: IRouter = Router();
 
@@ -50,5 +51,6 @@ router.use(storageRouter);
 router.use(tradingRulesRouter);
 router.use(landingPreviewRouter);
 router.use(timeframeRiskRouter);
+router.use(progressionRouter);
 
 export default router;

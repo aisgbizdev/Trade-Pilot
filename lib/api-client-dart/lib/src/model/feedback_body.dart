@@ -12,9 +12,9 @@ part 'feedback_body.g.dart';
 /// FeedbackBody
 ///
 /// Properties:
-/// * [feedbackType] 
-/// * [outcome] 
-/// * [note] 
+/// * [feedbackType]
+/// * [outcome]
+/// * [note]
 @BuiltValue()
 abstract class FeedbackBody implements Built<FeedbackBody, FeedbackBodyBuilder> {
   @BuiltValueField(wireName: r'feedbackType')

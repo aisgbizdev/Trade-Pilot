@@ -5,6 +5,139 @@
  * AI Trading Assistant API
  * OpenAPI spec version: 0.1.0
  */
+export interface ProgressionSummary {
+  /** @minimum 0 */
+  totalXp: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  level: number;
+  /** @minimum 0 */
+  masteryLevel: number;
+  rank: string;
+  /**
+   * Absolute XP floor for current level
+   * @minimum 0
+   */
+  currentLevelXp: number;
+  /**
+   * Absolute XP target for next level or Mastery step
+   * @minimum 1
+   */
+  nextLevelXp: number;
+  /** @minimum 0 */
+  currentStreak: number;
+  /** @minimum 0 */
+  longestStreak: number;
+}
+
+export interface ProgressionAchievement {
+  key: string;
+  unlocked: boolean;
+  /** @nullable */
+  unlockedAt: string | null;
+}
+
+export interface ProgressionCatalog {
+  achievements: ProgressionAchievement[];
+}
+
+export interface ProgressionLedgerEntry {
+  id: number;
+  source: string;
+  xp: number;
+  dayBucket: string;
+  ruleVersion: string;
+  createdAt: string;
+}
+
+export interface ProgressionHistory {
+  entries: ProgressionLedgerEntry[];
+}
+
+export interface ProgressionActivityInput {
+  /** @minLength 32 */
+  token: string;
+}
+
+export type ProgressionEvidenceStartInputSource =
+  (typeof ProgressionEvidenceStartInputSource)[keyof typeof ProgressionEvidenceStartInputSource];
+
+export const ProgressionEvidenceStartInputSource = {
+  pre_analysis_checklist: "pre_analysis_checklist",
+  guide_completion: "guide_completion",
+} as const;
+
+export type ProgressionEvidenceStartInputGuideId =
+  (typeof ProgressionEvidenceStartInputGuideId)[keyof typeof ProgressionEvidenceStartInputGuideId];
+
+export const ProgressionEvidenceStartInputGuideId = {
+  "how-ai-works": "how-ai-works",
+  "feature-map": "feature-map",
+  "reading-analysis": "reading-analysis",
+  "validity-confidence": "validity-confidence",
+  "adaptive-plan": "adaptive-plan",
+  "analysis-workflow": "analysis-workflow",
+  "bias-confidence-validity": "bias-confidence-validity",
+  "levels-chart": "levels-chart",
+  "technical-fundamental": "technical-fundamental",
+  "standard-plan": "standard-plan",
+  "adaptive-position-plan": "adaptive-position-plan",
+  "account-rules": "account-rules",
+  terms: "terms",
+} as const;
+
+export type ProgressionEvidenceStartInputChecklist = {
+  instrument: string;
+  timeframe: string;
+};
+
+export interface ProgressionEvidenceStartInput {
+  source: ProgressionEvidenceStartInputSource;
+  guideId?: ProgressionEvidenceStartInputGuideId;
+  checklist?: ProgressionEvidenceStartInputChecklist;
+}
+
+export interface ProgressionEvidenceSession {
+  token: string;
+  source: string;
+  subject: string;
+  minimumCompleteAt: string;
+}
+
+export interface ProgressionAward {
+  awarded: boolean;
+  xp: number;
+  reason?: string;
+}
+
+export type ProgressionAuditEntryMetadata = { [key: string]: unknown };
+
+export interface ProgressionAuditEntry {
+  id: number;
+  userId: number;
+  source: string;
+  sourceEventId: string;
+  xp: number;
+  dayBucket: string;
+  ruleVersion: string;
+  metadata: ProgressionAuditEntryMetadata;
+  createdAt: string;
+}
+
+export interface ProgressionAudit {
+  entries: ProgressionAuditEntry[];
+}
+
+export interface ProgressionBackfillResult {
+  /** @minimum 0 */
+  awarded: number;
+  /** @minimum 0 */
+  scanned: number;
+  ruleVersion: string;
+}
+
 export type StandardTradingRulesFixedRate = {
   usd: number;
   idr: number;
@@ -201,6 +334,8 @@ export interface PushPrefs {
   quietHoursEnd: string;
   /** IANA timezone quietHoursStart/quietHoursEnd are interpreted in. */
   notificationTimezone: string;
+  /** Enable personal progression notifications. */
+  progressionNotificationsEnabled: boolean;
 }
 
 export interface PushTestResult {
@@ -247,6 +382,7 @@ export interface PushPrefsUpdate {
   quietHoursEnd?: string;
   /** IANA timezone. */
   notificationTimezone?: string;
+  progressionNotificationsEnabled?: boolean;
 }
 
 export interface DailySummarySettings {
@@ -1994,6 +2130,45 @@ export interface JournalSentiment {
   buyPct: number | null;
   sellPct: number | null;
 }
+
+export type GetProgressionHistoryParams = {
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+};
+
+export type GetProgressionAuditParams = {
+  userId?: number;
+};
+
+export type GetGuardrailsParams = {
+  instrument: string;
+};
+
+export type GetGuardrails200SignalsItem = { [key: string]: unknown };
+
+export type GetGuardrails200Prefs = { [key: string]: unknown };
+
+export type GetGuardrails200 = {
+  signals?: GetGuardrails200SignalsItem[];
+  prefs?: GetGuardrails200Prefs;
+};
+
+export type RecordGuardrailTelemetryBodyMetadata = { [key: string]: unknown };
+
+export type RecordGuardrailTelemetryBody = {
+  kind: string;
+  instrument?: string;
+  proceeded?: boolean;
+  metadata?: RecordGuardrailTelemetryBodyMetadata;
+};
+
+export type RecordGuardrailTelemetry201 = {
+  ok: boolean;
+  id: number;
+};
 
 export type ListJournalEntriesParams = {
   instrument?: string;

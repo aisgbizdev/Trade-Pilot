@@ -48,13 +48,12 @@ import 'package:trade_pilot_api_client/trade_pilot_api_client.dart';
 
 
 final api = TradePilotApiClient().getAdminApi();
-final BroadcastNotificationBody broadcastNotificationBody = ; // BroadcastNotificationBody | 
 
 try {
-    final response = await api.broadcastNotification(broadcastNotificationBody);
+    final response = await api.backfillProgression();
     print(response);
 } on DioException catch (e) {
-    print("Exception when calling AdminApi->broadcastNotification: $e\n");
+    print("Exception when calling AdminApi->backfillProgression: $e\n");
 }
 
 ```
@@ -65,6 +64,7 @@ All URIs are relative to */api*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+[*AdminApi*](doc/AdminApi.md) | [**backfillProgression**](doc/AdminApi.md#backfillprogression) | **POST** /admin/progression/backfill | Safely backfill only unequivocal historical progression evidence
 [*AdminApi*](doc/AdminApi.md) | [**broadcastNotification**](doc/AdminApi.md#broadcastnotification) | **POST** /admin/notifications | Broadcast notification to selected audience
 [*AdminApi*](doc/AdminApi.md) | [**getAdminAnalyticsTokens**](doc/AdminApi.md#getadminanalyticstokens) | **GET** /admin/analytics/tokens | AI (OpenAI) token usage and estimated cost breakdown
 [*AdminApi*](doc/AdminApi.md) | [**getAdminAnalyticsUsage**](doc/AdminApi.md#getadminanalyticsusage) | **GET** /admin/analytics/usage | Feature-usage, device, browser, and country breakdown from analytics events
@@ -73,6 +73,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**getAllAnalyses**](doc/AdminApi.md#getallanalyses) | **GET** /admin/analyses | Get all analyses (admin only)
 [*AdminApi*](doc/AdminApi.md) | [**getBroadcasts**](doc/AdminApi.md#getbroadcasts) | **GET** /admin/broadcasts | Broadcast history
 [*AdminApi*](doc/AdminApi.md) | [**getOutboundClickStats**](doc/AdminApi.md#getoutboundclickstats) | **GET** /admin/outbound-clicks/stats | Aggregated counts of sponsor / partner outbound link clicks
+[*AdminApi*](doc/AdminApi.md) | [**getProgressionAudit**](doc/AdminApi.md#getprogressionaudit) | **GET** /admin/progression/audit | Read-only progression ledger audit; never a leaderboard
 [*AnalysesApi*](doc/AnalysesApi.md) | [**armAnalysisAlerts**](doc/AnalysesApi.md#armanalysisalerts) | **POST** /analyses/{id}/alerts | Arm price alerts for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**cancelAnalysisAlerts**](doc/AnalysesApi.md#cancelanalysisalerts) | **DELETE** /analyses/{id}/alerts | Cancel any un-fired price alerts for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**createAnalysis**](doc/AnalysesApi.md#createanalysis) | **POST** /analyses | Create new analysis (triggers AI)
@@ -82,13 +83,16 @@ Class | Method | HTTP request | Description
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisHistorySummary**](doc/AnalysesApi.md#getanalysishistorysummary) | **GET** /analyses/history-summary | Get the current user&#39;s analysis-outcome summary by timeframe
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisOutcomesSummary**](doc/AnalysesApi.md#getanalysisoutcomessummary) | **GET** /analyses/outcomes-summary | AI trade-plan outcome roll-up over the last 30 days
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getAnalysisQuota**](doc/AnalysesApi.md#getanalysisquota) | **GET** /analyses/quota | Get current user&#39;s analysis quota usage
+[*AnalysesApi*](doc/AnalysesApi.md) | [**getGuardrails**](doc/AnalysesApi.md#getguardrails) | **GET** /analyses/guardrails | Detect active soft warnings for the requested instrument
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getPersonalAnalytics**](doc/AnalysesApi.md#getpersonalanalytics) | **GET** /analyses/personal-analytics | Get personal analytics data
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getRecentInstruments**](doc/AnalysesApi.md#getrecentinstruments) | **GET** /analyses/recent-instruments | Get 3 most recently analyzed instruments
 [*AnalysesApi*](doc/AnalysesApi.md) | [**getTimeframeRiskMap**](doc/AnalysesApi.md#gettimeframeriskmap) | **GET** /risk-map/timeframes | Compare deterministic technical risk across supported timeframes
 [*AnalysesApi*](doc/AnalysesApi.md) | [**listAnalyses**](doc/AnalysesApi.md#listanalyses) | **GET** /analyses | List user&#39;s analyses with filters
+[*AnalysesApi*](doc/AnalysesApi.md) | [**recordGuardrailTelemetry**](doc/AnalysesApi.md#recordguardrailtelemetry) | **POST** /analyses/guardrails/telemetry | Record impression or override of a guardrail
 [*AnalysesApi*](doc/AnalysesApi.md) | [**refreshFundamentals**](doc/AnalysesApi.md#refreshfundamentals) | **POST** /analyses/{id}/refresh-fundamentals | Re-fetch news + economic calendar for an existing analysis (no AI re-run)
 [*AnalysesApi*](doc/AnalysesApi.md) | [**setAnalysisNote**](doc/AnalysesApi.md#setanalysisnote) | **PUT** /analyses/{id}/note | Save the user&#39;s private trading-journal note for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**submitFeedback**](doc/AnalysesApi.md#submitfeedback) | **POST** /analyses/{id}/feedback | Submit feedback for analysis
+[*AnalysesApi*](doc/AnalysesApi.md) | [**waitGuardrail**](doc/AnalysesApi.md#waitguardrail) | **POST** /analyses/guardrails/{id}/wait | Record an explicit decision to wait
 [*AuthApi*](doc/AuthApi.md) | [**changePassword**](doc/AuthApi.md#changepassword) | **PATCH** /auth/password | Change own password
 [*AuthApi*](doc/AuthApi.md) | [**changeSecurityQuestion**](doc/AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
 [*AuthApi*](doc/AuthApi.md) | [**deleteAccount**](doc/AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
@@ -115,6 +119,11 @@ Class | Method | HTTP request | Description
 [*NotificationsApi*](doc/NotificationsApi.md) | [**markAllNotificationsRead**](doc/NotificationsApi.md#markallnotificationsread) | **PATCH** /notifications/read-all | Mark all notifications as read
 [*NotificationsApi*](doc/NotificationsApi.md) | [**markNotificationRead**](doc/NotificationsApi.md#marknotificationread) | **PATCH** /notifications/{id}/read | Mark single notification as read
 [*PerformanceApi*](doc/PerformanceApi.md) | [**getPerformanceSummary**](doc/PerformanceApi.md#getperformancesummary) | **GET** /performance/summary | Public AI transparency dashboard (task
+[*ProgressionApi*](doc/ProgressionApi.md) | [**getProgressionCatalog**](doc/ProgressionApi.md#getprogressioncatalog) | **GET** /progression/catalog | Get private achievement catalog and unlock state
+[*ProgressionApi*](doc/ProgressionApi.md) | [**getProgressionHistory**](doc/ProgressionApi.md#getprogressionhistory) | **GET** /progression/history | Get private append-only XP history
+[*ProgressionApi*](doc/ProgressionApi.md) | [**getProgressionSummary**](doc/ProgressionApi.md#getprogressionsummary) | **GET** /progression/summary | Get the authenticated user&#39;s private progression summary
+[*ProgressionApi*](doc/ProgressionApi.md) | [**recordProgressionActivity**](doc/ProgressionApi.md#recordprogressionactivity) | **POST** /progression/activity | Record a server-verifiable checklist or guide completion
+[*ProgressionApi*](doc/ProgressionApi.md) | [**startProgressionEvidence**](doc/ProgressionApi.md#startprogressionevidence) | **POST** /progression/evidence | Issue a one-time server evidence token for a known guide or checklist
 [*PushApi*](doc/PushApi.md) | [**getPushPrefs**](doc/PushApi.md#getpushprefs) | **GET** /push/prefs | Get current user&#39;s push notification preferences
 [*PushApi*](doc/PushApi.md) | [**getPushPublicKey**](doc/PushApi.md#getpushpublickey) | **GET** /push/public-key | Get the VAPID public key for Web Push subscription
 [*PushApi*](doc/PushApi.md) | [**getPushSubscriptionStatus**](doc/PushApi.md#getpushsubscriptionstatus) | **GET** /push/subscription-status | Check whether the current user has any active push subscription
@@ -219,6 +228,7 @@ Class | Method | HTTP request | Description
  - [FundamentalDrift](doc/FundamentalDrift.md)
  - [FundamentalDriftCitation](doc/FundamentalDriftCitation.md)
  - [FundamentalNewsItem](doc/FundamentalNewsItem.md)
+ - [GetGuardrails200Response](doc/GetGuardrails200Response.md)
  - [HealthStatus](doc/HealthStatus.md)
  - [JournalEntry](doc/JournalEntry.md)
  - [JournalEntryList](doc/JournalEntryList.md)
@@ -247,6 +257,19 @@ Class | Method | HTTP request | Description
  - [PersonalAnalytics](doc/PersonalAnalytics.md)
  - [PersonalAnalyticsTopInstrumentsInner](doc/PersonalAnalyticsTopInstrumentsInner.md)
  - [PersonalAnalyticsWeeklyDataInner](doc/PersonalAnalyticsWeeklyDataInner.md)
+ - [ProgressionAchievement](doc/ProgressionAchievement.md)
+ - [ProgressionActivityInput](doc/ProgressionActivityInput.md)
+ - [ProgressionAudit](doc/ProgressionAudit.md)
+ - [ProgressionAuditEntry](doc/ProgressionAuditEntry.md)
+ - [ProgressionAward](doc/ProgressionAward.md)
+ - [ProgressionBackfillResult](doc/ProgressionBackfillResult.md)
+ - [ProgressionCatalog](doc/ProgressionCatalog.md)
+ - [ProgressionEvidenceSession](doc/ProgressionEvidenceSession.md)
+ - [ProgressionEvidenceStartInput](doc/ProgressionEvidenceStartInput.md)
+ - [ProgressionEvidenceStartInputChecklist](doc/ProgressionEvidenceStartInputChecklist.md)
+ - [ProgressionHistory](doc/ProgressionHistory.md)
+ - [ProgressionLedgerEntry](doc/ProgressionLedgerEntry.md)
+ - [ProgressionSummary](doc/ProgressionSummary.md)
  - [PushPrefs](doc/PushPrefs.md)
  - [PushPrefsUpdate](doc/PushPrefsUpdate.md)
  - [PushPublicKey](doc/PushPublicKey.md)
@@ -257,6 +280,8 @@ Class | Method | HTTP request | Description
  - [PushUnsubscribeBody](doc/PushUnsubscribeBody.md)
  - [RecentInstruments](doc/RecentInstruments.md)
  - [RecentInstrumentsInstrumentsInner](doc/RecentInstrumentsInstrumentsInner.md)
+ - [RecordGuardrailTelemetry201Response](doc/RecordGuardrailTelemetry201Response.md)
+ - [RecordGuardrailTelemetryRequest](doc/RecordGuardrailTelemetryRequest.md)
  - [RefreshFundamentalsResponse](doc/RefreshFundamentalsResponse.md)
  - [RegisterBody](doc/RegisterBody.md)
  - [RenameFilterPresetBody](doc/RenameFilterPresetBody.md)
@@ -310,7 +335,7 @@ Authentication schemes defined for the API:
 
 - **Type**: API key
 - **API key parameter name**: session_token
-- **Location**: 
+- **Location**:
 
 
 ## Author

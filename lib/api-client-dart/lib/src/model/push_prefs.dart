@@ -12,14 +12,14 @@ part 'push_prefs.g.dart';
 /// PushPrefs
 ///
 /// Properties:
-/// * [pushExpiry] 
-/// * [pushBroadcast] 
-/// * [pushDailySummary] 
-/// * [pushMarketNews] 
-/// * [pushCalendarEvents] 
-/// * [pushPriceAnomaly] 
-/// * [pushWeeklyRecap] 
-/// * [pushSignalFlip] 
+/// * [pushExpiry]
+/// * [pushBroadcast]
+/// * [pushDailySummary]
+/// * [pushMarketNews]
+/// * [pushCalendarEvents]
+/// * [pushPriceAnomaly]
+/// * [pushWeeklyRecap]
+/// * [pushSignalFlip]
 /// * [marketOpenSessions] - FX sessions the user wants a 5-min pre-open ping for. Empty = off.
 /// * [pushDormancyNudge] - Opt-in toggle for the weekly \"we miss you\" nudge after 7+ days idle.
 /// * [pushOnboarding] - One-shot 24h-after-signup empty-watchlist nudge.
@@ -37,6 +37,7 @@ part 'push_prefs.g.dart';
 /// * [quietHoursStart] - HH:MM 24h local time quiet hours begin.
 /// * [quietHoursEnd] - HH:MM 24h local time quiet hours end.
 /// * [notificationTimezone] - IANA timezone quietHoursStart/quietHoursEnd are interpreted in.
+/// * [progressionNotificationsEnabled] - Enable personal progression notifications.
 @BuiltValue()
 abstract class PushPrefs implements Built<PushPrefs, PushPrefsBuilder> {
   @BuiltValueField(wireName: r'pushExpiry')
@@ -131,6 +132,10 @@ abstract class PushPrefs implements Built<PushPrefs, PushPrefsBuilder> {
   /// IANA timezone quietHoursStart/quietHoursEnd are interpreted in.
   @BuiltValueField(wireName: r'notificationTimezone')
   String get notificationTimezone;
+
+  /// Enable personal progression notifications.
+  @BuiltValueField(wireName: r'progressionNotificationsEnabled')
+  bool get progressionNotificationsEnabled;
 
   PushPrefs._();
 
@@ -281,6 +286,11 @@ class _$PushPrefsSerializer implements PrimitiveSerializer<PushPrefs> {
     yield serializers.serialize(
       object.notificationTimezone,
       specifiedType: const FullType(String),
+    );
+    yield r'progressionNotificationsEnabled';
+    yield serializers.serialize(
+      object.progressionNotificationsEnabled,
+      specifiedType: const FullType(bool),
     );
   }
 
@@ -480,6 +490,13 @@ class _$PushPrefsSerializer implements PrimitiveSerializer<PushPrefs> {
             specifiedType: const FullType(String),
           ) as String;
           result.notificationTimezone = valueDes;
+          break;
+        case r'progressionNotificationsEnabled':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.progressionNotificationsEnabled = valueDes;
           break;
         default:
           unhandled.add(key);

@@ -13,9 +13,9 @@ part 'trade_plan.g.dart';
 /// Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; 'wait' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).
 ///
 /// Properties:
-/// * [preferredSide] 
-/// * [buy] 
-/// * [sell] 
+/// * [preferredSide]
+/// * [buy]
+/// * [sell]
 @BuiltValue()
 abstract class TradePlan implements Built<TradePlan, TradePlanBuilder> {
   @BuiltValueField(wireName: r'preferredSide')

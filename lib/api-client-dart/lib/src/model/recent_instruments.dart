@@ -13,7 +13,7 @@ part 'recent_instruments.g.dart';
 /// RecentInstruments
 ///
 /// Properties:
-/// * [instruments] 
+/// * [instruments]
 @BuiltValue()
 abstract class RecentInstruments implements Built<RecentInstruments, RecentInstrumentsBuilder> {
   @BuiltValueField(wireName: r'instruments')

@@ -12,13 +12,13 @@ part 'register_body.g.dart';
 /// RegisterBody
 ///
 /// Properties:
-/// * [email] 
-/// * [password] 
-/// * [displayName] 
-/// * [selectedMode] 
-/// * [securityQuestion] 
-/// * [securityAnswer] 
-/// * [rememberMe] 
+/// * [email]
+/// * [password]
+/// * [displayName]
+/// * [selectedMode]
+/// * [securityQuestion]
+/// * [securityAnswer]
+/// * [rememberMe]
 @BuiltValue()
 abstract class RegisterBody implements Built<RegisterBody, RegisterBodyBuilder> {
   @BuiltValueField(wireName: r'email')

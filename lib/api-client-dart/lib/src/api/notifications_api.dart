@@ -22,10 +22,10 @@ class NotificationsApi {
   const NotificationsApi(this._dio, this._serializers);
 
   /// Get notifications for current user
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [unreadOnly] 
+  /// * [unreadOnly]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -35,7 +35,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [NotificationsList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<NotificationsList>> getNotifications({ 
+  Future<Response<NotificationsList>> getNotifications({
     bool? unreadOnly,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -102,7 +102,7 @@ class NotificationsApi {
   }
 
   /// Mark all notifications as read
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -114,7 +114,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> markAllNotificationsRead({ 
+  Future<Response<MessageResponse>> markAllNotificationsRead({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -175,10 +175,10 @@ class NotificationsApi {
   }
 
   /// Mark single notification as read
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -188,7 +188,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> markNotificationRead({ 
+  Future<Response<MessageResponse>> markNotificationRead({
     required int id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

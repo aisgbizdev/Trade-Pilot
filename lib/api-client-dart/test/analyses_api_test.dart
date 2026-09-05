@@ -9,7 +9,7 @@ void main() {
   group(AnalysesApi, () {
     // Arm price alerts for an analysis
     //
-    // Arms one push alert per AI level on the preferred trade side. The background watcher polls live prices every ~30s and fires the first time each level is touched, deep-linking back to this analysis. 
+    // Arms one push alert per AI level on the preferred trade side. The background watcher polls live prices every ~30s and fires the first time each level is touched, deep-linking back to this analysis.
     //
     //Future<AlertStatus> armAnalysisAlerts(int id) async
     test('test armAnalysisAlerts', () async {
@@ -46,7 +46,7 @@ void main() {
 
     // Get price-alert status for an analysis
     //
-    // Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the \"Alerts: ON · N levels armed\" indicator on the analysis-detail page. 
+    // Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the \"Alerts: ON · N levels armed\" indicator on the analysis-detail page.
     //
     //Future<AlertStatus> getAnalysisAlerts(int id) async
     test('test getAnalysisAlerts', () async {
@@ -55,7 +55,7 @@ void main() {
 
     // AI trade-plan outcome roll-up over the last 30 days
     //
-    // Aggregates the after-the-fact outcomes the background resolver has written to each analysis (TP1/TP2 hit, SL hit, expired, invalidated, or still pending) for the current user over the past 30 days. Drives the \"AI accuracy\" card on the dashboard. 
+    // Aggregates the after-the-fact outcomes the background resolver has written to each analysis (TP1/TP2 hit, SL hit, expired, invalidated, or still pending) for the current user over the past 30 days. Drives the \"AI accuracy\" card on the dashboard.
     //
     //Future<AnalysisOutcomesSummary> getAnalysisOutcomesSummary() async
     test('test getAnalysisOutcomesSummary', () async {
@@ -92,7 +92,7 @@ void main() {
 
     // Re-fetch news + economic calendar for an existing analysis (no AI re-run)
     //
-    // Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit \"Fundamental Context\" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base. 
+    // Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit \"Fundamental Context\" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base.
     //
     //Future<RefreshFundamentalsResponse> refreshFundamentals(int id) async
     test('test refreshFundamentals', () async {
@@ -101,7 +101,7 @@ void main() {
 
     // Save the user's private trading-journal note for an analysis
     //
-    // Persists a plain-text journal note scoped to this analysis and the authenticated user. Sending an empty / whitespace-only string clears the note. The note is never included in any AI prompt — it is purely a private user field for the trading-journal UI on the detail page. 
+    // Persists a plain-text journal note scoped to this analysis and the authenticated user. Sending an empty / whitespace-only string clears the note. The note is never included in any AI prompt — it is purely a private user field for the trading-journal UI on the detail page.
     //
     //Future<AnalysisNoteResponse> setAnalysisNote(int id, SetAnalysisNoteRequest setAnalysisNoteRequest) async
     test('test setAnalysisNote', () async {

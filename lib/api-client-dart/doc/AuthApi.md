@@ -32,7 +32,7 @@ Change own password
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final ChangePasswordBody changePasswordBody = ; // ChangePasswordBody | 
+final ChangePasswordBody changePasswordBody = ; // ChangePasswordBody |
 
 try {
     final response = api.changePassword(changePasswordBody);
@@ -46,7 +46,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **changePasswordBody** | [**ChangePasswordBody**](ChangePasswordBody.md)|  | 
+ **changePasswordBody** | [**ChangePasswordBody**](ChangePasswordBody.md)|  |
 
 ### Return type
 
@@ -73,7 +73,7 @@ Change security question
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final ChangeSecurityQuestionBody changeSecurityQuestionBody = ; // ChangeSecurityQuestionBody | 
+final ChangeSecurityQuestionBody changeSecurityQuestionBody = ; // ChangeSecurityQuestionBody |
 
 try {
     final response = api.changeSecurityQuestion(changeSecurityQuestionBody);
@@ -87,7 +87,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **changeSecurityQuestionBody** | [**ChangeSecurityQuestionBody**](ChangeSecurityQuestionBody.md)|  | 
+ **changeSecurityQuestionBody** | [**ChangeSecurityQuestionBody**](ChangeSecurityQuestionBody.md)|  |
 
 ### Return type
 
@@ -116,7 +116,7 @@ Re-authenticates with `currentPassword`, then permanently deletes the authentica
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final DeleteAccountBody deleteAccountBody = ; // DeleteAccountBody | 
+final DeleteAccountBody deleteAccountBody = ; // DeleteAccountBody |
 
 try {
     final response = api.deleteAccount(deleteAccountBody);
@@ -130,7 +130,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **deleteAccountBody** | [**DeleteAccountBody**](DeleteAccountBody.md)|  | 
+ **deleteAccountBody** | [**DeleteAccountBody**](DeleteAccountBody.md)|  |
 
 ### Return type
 
@@ -157,7 +157,7 @@ Get security question for email
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final ForgotPasswordQuestionBody forgotPasswordQuestionBody = ; // ForgotPasswordQuestionBody | 
+final ForgotPasswordQuestionBody forgotPasswordQuestionBody = ; // ForgotPasswordQuestionBody |
 
 try {
     final response = api.getForgotPasswordQuestion(forgotPasswordQuestionBody);
@@ -171,7 +171,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **forgotPasswordQuestionBody** | [**ForgotPasswordQuestionBody**](ForgotPasswordQuestionBody.md)|  | 
+ **forgotPasswordQuestionBody** | [**ForgotPasswordQuestionBody**](ForgotPasswordQuestionBody.md)|  |
 
 ### Return type
 
@@ -235,7 +235,7 @@ Login user
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final LoginBody loginBody = ; // LoginBody | 
+final LoginBody loginBody = ; // LoginBody |
 
 try {
     final response = api.login(loginBody);
@@ -249,7 +249,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **loginBody** | [**LoginBody**](LoginBody.md)|  | 
+ **loginBody** | [**LoginBody**](LoginBody.md)|  |
 
 ### Return type
 
@@ -313,7 +313,7 @@ Register new user
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final RegisterBody registerBody = ; // RegisterBody | 
+final RegisterBody registerBody = ; // RegisterBody |
 
 try {
     final response = api.register(registerBody);
@@ -327,7 +327,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **registerBody** | [**RegisterBody**](RegisterBody.md)|  | 
+ **registerBody** | [**RegisterBody**](RegisterBody.md)|  |
 
 ### Return type
 
@@ -354,7 +354,7 @@ Reset password with token
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final ResetPasswordBody resetPasswordBody = ; // ResetPasswordBody | 
+final ResetPasswordBody resetPasswordBody = ; // ResetPasswordBody |
 
 try {
     final response = api.resetPassword(resetPasswordBody);
@@ -368,7 +368,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **resetPasswordBody** | [**ResetPasswordBody**](ResetPasswordBody.md)|  | 
+ **resetPasswordBody** | [**ResetPasswordBody**](ResetPasswordBody.md)|  |
 
 ### Return type
 
@@ -395,7 +395,7 @@ Update user profile
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final UpdateProfileBody updateProfileBody = ; // UpdateProfileBody | 
+final UpdateProfileBody updateProfileBody = ; // UpdateProfileBody |
 
 try {
     final response = api.updateProfile(updateProfileBody);
@@ -409,7 +409,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **updateProfileBody** | [**UpdateProfileBody**](UpdateProfileBody.md)|  | 
+ **updateProfileBody** | [**UpdateProfileBody**](UpdateProfileBody.md)|  |
 
 ### Return type
 
@@ -436,7 +436,7 @@ Verify security answer and get reset token
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAuthApi();
-final VerifySecurityAnswerBody verifySecurityAnswerBody = ; // VerifySecurityAnswerBody | 
+final VerifySecurityAnswerBody verifySecurityAnswerBody = ; // VerifySecurityAnswerBody |
 
 try {
     final response = api.verifySecurityAnswer(verifySecurityAnswerBody);
@@ -450,7 +450,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **verifySecurityAnswerBody** | [**VerifySecurityAnswerBody**](VerifySecurityAnswerBody.md)|  | 
+ **verifySecurityAnswerBody** | [**VerifySecurityAnswerBody**](VerifySecurityAnswerBody.md)|  |
 
 ### Return type
 

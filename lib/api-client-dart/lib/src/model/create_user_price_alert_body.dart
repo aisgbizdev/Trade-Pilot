@@ -12,10 +12,10 @@ part 'create_user_price_alert_body.g.dart';
 /// CreateUserPriceAlertBody
 ///
 /// Properties:
-/// * [instrument] 
+/// * [instrument]
 /// * [targetPrice] - Target price. Must be a positive finite number.
-/// * [triggerDirection] 
-/// * [note] 
+/// * [triggerDirection]
+/// * [note]
 /// * [lang] - UI language at create time; controls push notification language.
 @BuiltValue()
 abstract class CreateUserPriceAlertBody implements Built<CreateUserPriceAlertBody, CreateUserPriceAlertBodyBuilder> {

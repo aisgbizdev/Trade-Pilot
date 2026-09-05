@@ -11,8 +11,8 @@ part 'analytics_usage_stats_device_breakdown_inner.g.dart';
 /// AnalyticsUsageStatsDeviceBreakdownInner
 ///
 /// Properties:
-/// * [deviceType] 
-/// * [count] 
+/// * [deviceType]
+/// * [count]
 @BuiltValue()
 abstract class AnalyticsUsageStatsDeviceBreakdownInner implements Built<AnalyticsUsageStatsDeviceBreakdownInner, AnalyticsUsageStatsDeviceBreakdownInnerBuilder> {
   @BuiltValueField(wireName: r'deviceType')

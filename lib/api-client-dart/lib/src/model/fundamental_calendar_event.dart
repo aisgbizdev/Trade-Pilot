@@ -11,14 +11,14 @@ part 'fundamental_calendar_event.g.dart';
 /// A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.
 ///
 /// Properties:
-/// * [date] 
-/// * [time] 
-/// * [currency] 
-/// * [event] 
+/// * [date]
+/// * [time]
+/// * [currency]
+/// * [event]
 /// * [impact] - Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.
-/// * [actual] 
-/// * [forecast] 
-/// * [previous] 
+/// * [actual]
+/// * [forecast]
+/// * [previous]
 @BuiltValue()
 abstract class FundamentalCalendarEvent implements Built<FundamentalCalendarEvent, FundamentalCalendarEventBuilder> {
   @BuiltValueField(wireName: r'date')

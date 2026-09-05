@@ -65,7 +65,7 @@ void main() {
 
     // Set or clear a per-user analysis-quota override
     //
-    // Each field is either a positive integer (override for just this user) or null (clear the override, revert to the global default from PATCH /superadmin/quota-settings). 
+    // Each field is either a positive integer (override for just this user) or null (clear the override, revert to the global default from PATCH /superadmin/quota-settings).
     //
     //Future<UserQuota> updateUserQuota(int id, UpdateUserQuotaBody updateUserQuotaBody) async
     test('test updateUserQuota', () async {

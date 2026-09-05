@@ -11,7 +11,7 @@ part 'push_subscription_status.g.dart';
 /// PushSubscriptionStatus
 ///
 /// Properties:
-/// * [subscribed] 
+/// * [subscribed]
 @BuiltValue()
 abstract class PushSubscriptionStatus implements Built<PushSubscriptionStatus, PushSubscriptionStatusBuilder> {
   @BuiltValueField(wireName: r'subscribed')

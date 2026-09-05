@@ -8,9 +8,9 @@ import 'package:trade_pilot_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**email** | **String** |  | 
-**password** | **String** |  | 
-**displayName** | **String** |  | 
+**email** | **String** |  |
+**password** | **String** |  |
+**displayName** | **String** |  |
 **role** | **String** |  | [optional] [default to 'user']
 **securityQuestion** | **String** |  | [optional] [default to 'Nama hewan peliharaan pertama kamu?']
 **securityAnswer** | **String** |  | [optional] [default to 'default']

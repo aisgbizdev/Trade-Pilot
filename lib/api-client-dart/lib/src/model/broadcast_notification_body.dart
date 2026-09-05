@@ -12,10 +12,10 @@ part 'broadcast_notification_body.g.dart';
 /// BroadcastNotificationBody
 ///
 /// Properties:
-/// * [title] 
-/// * [message] 
-/// * [type] 
-/// * [audienceType] 
+/// * [title]
+/// * [message]
+/// * [type]
+/// * [audienceType]
 /// * [audienceValue] - Role name when audienceType=role; tag name when audienceType=tag
 /// * [targetRole] - Deprecated: use audienceType=role + audienceValue instead
 @BuiltValue()

@@ -28,12 +28,14 @@ import {
   useLogout,
   useDeleteAccount,
   getGetMeQueryKey,
+  useGetProgressionSummary
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
+import { ProgressionEmblem } from "@/components/progression/progression-emblem";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -120,6 +122,8 @@ export default function ProfilePage() {
     setTheme(th);
     await updateProfile.mutateAsync({ data: { themePreference: th } });
   };
+
+  const { data: progressionSummary } = useGetProgressionSummary();
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
@@ -339,6 +343,28 @@ export default function ProfilePage() {
           </div>
         </Card>
 
+        {progressionSummary && (
+          <Card className="p-4 progression-card cursor-pointer overflow-hidden relative group" onClick={() => setLocation("/progression")}>
+            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-32 h-32 bg-primary/20 rounded-full blur-2xl pointer-events-none group-hover:bg-primary/30 transition-colors" />
+            <div className="flex items-center justify-between z-10 relative">
+              <div className="flex items-center gap-3">
+                <ProgressionEmblem level={progressionSummary.level} masteryLevel={progressionSummary.masteryLevel} className="w-14 h-14 drop-shadow" />
+                <div>
+                  <p className="text-xs font-bold text-primary uppercase tracking-widest leading-none">
+                    {progressionSummary.masteryLevel > 0
+                      ? t.progression.mastery_level.replace("{n}", String(progressionSummary.masteryLevel))
+                      : t.progression.level.replace("{n}", String(progressionSummary.level))}
+                  </p>
+                  <p className="text-lg font-black text-white progression-text-glow leading-tight mt-0.5">
+                    {t.progression.rank.replace("{rank}", progressionSummary.rank)}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-white/50 group-hover:text-white transition-colors" />
+            </div>
+          </Card>
+        )}
+
         <Card className="p-4 space-y-3">
           <button
             className="w-full flex items-center justify-between py-2"
@@ -539,6 +565,15 @@ export default function ProfilePage() {
               >
                 <Shield className="w-4 h-4 mr-2" />
                 {t.profile.admin_dashboard}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => setLocation("/admin/progression")}
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                {t.progression.admin_audit}
               </Button>
               {user?.role === "super_admin" && (
                 <Button

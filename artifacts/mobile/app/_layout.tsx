@@ -37,6 +37,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="analysis/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+      <Stack.Screen name="progression" options={{ headerShown: false, animation: "slide_from_right" }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

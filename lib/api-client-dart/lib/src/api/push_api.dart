@@ -27,7 +27,7 @@ class PushApi {
   const PushApi(this._dio, this._serializers);
 
   /// Get current user&#39;s push notification preferences
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -39,7 +39,7 @@ class PushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PushPrefs] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PushPrefs>> getPushPrefs({ 
+  Future<Response<PushPrefs>> getPushPrefs({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -100,7 +100,7 @@ class PushApi {
   }
 
   /// Get the VAPID public key for Web Push subscription
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -112,7 +112,7 @@ class PushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PushPublicKey] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PushPublicKey>> getPushPublicKey({ 
+  Future<Response<PushPublicKey>> getPushPublicKey({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -173,7 +173,7 @@ class PushApi {
   }
 
   /// Check whether the current user has any active push subscription
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -185,7 +185,7 @@ class PushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PushSubscriptionStatus] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PushSubscriptionStatus>> getPushSubscriptionStatus({ 
+  Future<Response<PushSubscriptionStatus>> getPushSubscriptionStatus({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -246,7 +246,7 @@ class PushApi {
   }
 
   /// Send a sample push notification to the calling user&#39;s subscribed devices
-  /// Lets a signed-in user verify their phone actually pops up an OS-level notification. Sends to every subscription endpoint registered for the caller. Per-user rate limited so a misbehaving client cannot spam their own devices. 
+  /// Lets a signed-in user verify their phone actually pops up an OS-level notification. Sends to every subscription endpoint registered for the caller. Per-user rate limited so a misbehaving client cannot spam their own devices.
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -258,7 +258,7 @@ class PushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PushTestResult] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PushTestResult>> sendPushTest({ 
+  Future<Response<PushTestResult>> sendPushTest({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -319,10 +319,10 @@ class PushApi {
   }
 
   /// Register a Web Push subscription for the current user
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [pushSubscriptionBody] 
+  /// * [pushSubscriptionBody]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -332,7 +332,7 @@ class PushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> subscribePush({ 
+  Future<Response<MessageResponse>> subscribePush({
     required PushSubscriptionBody pushSubscriptionBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -414,10 +414,10 @@ class PushApi {
   }
 
   /// Remove a Web Push subscription for the current user
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [pushUnsubscribeBody] 
+  /// * [pushUnsubscribeBody]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -427,7 +427,7 @@ class PushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> unsubscribePush({ 
+  Future<Response<MessageResponse>> unsubscribePush({
     required PushUnsubscribeBody pushUnsubscribeBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -509,10 +509,10 @@ class PushApi {
   }
 
   /// Update push notification preferences
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [pushPrefsUpdate] 
+  /// * [pushPrefsUpdate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -522,7 +522,7 @@ class PushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PushPrefs] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PushPrefs>> updatePushPrefs({ 
+  Future<Response<PushPrefs>> updatePushPrefs({
     required PushPrefsUpdate pushPrefsUpdate,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

@@ -14,8 +14,8 @@ part 'fundamental_context.g.dart';
 /// Snapshot of fundamental inputs the AI saw at analysis time.
 ///
 /// Properties:
-/// * [newsItems] 
-/// * [calendarEvents] 
+/// * [newsItems]
+/// * [calendarEvents]
 @BuiltValue()
 abstract class FundamentalContext implements Built<FundamentalContext, FundamentalContextBuilder> {
   @BuiltValueField(wireName: r'newsItems')

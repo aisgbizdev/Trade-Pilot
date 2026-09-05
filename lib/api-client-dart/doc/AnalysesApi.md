@@ -18,13 +18,16 @@ Method | HTTP request | Description
 [**getAnalysisHistorySummary**](AnalysesApi.md#getanalysishistorysummary) | **GET** /analyses/history-summary | Get the current user&#39;s analysis-outcome summary by timeframe
 [**getAnalysisOutcomesSummary**](AnalysesApi.md#getanalysisoutcomessummary) | **GET** /analyses/outcomes-summary | AI trade-plan outcome roll-up over the last 30 days
 [**getAnalysisQuota**](AnalysesApi.md#getanalysisquota) | **GET** /analyses/quota | Get current user&#39;s analysis quota usage
+[**getGuardrails**](AnalysesApi.md#getguardrails) | **GET** /analyses/guardrails | Detect active soft warnings for the requested instrument
 [**getPersonalAnalytics**](AnalysesApi.md#getpersonalanalytics) | **GET** /analyses/personal-analytics | Get personal analytics data
 [**getRecentInstruments**](AnalysesApi.md#getrecentinstruments) | **GET** /analyses/recent-instruments | Get 3 most recently analyzed instruments
 [**getTimeframeRiskMap**](AnalysesApi.md#gettimeframeriskmap) | **GET** /risk-map/timeframes | Compare deterministic technical risk across supported timeframes
 [**listAnalyses**](AnalysesApi.md#listanalyses) | **GET** /analyses | List user&#39;s analyses with filters
+[**recordGuardrailTelemetry**](AnalysesApi.md#recordguardrailtelemetry) | **POST** /analyses/guardrails/telemetry | Record impression or override of a guardrail
 [**refreshFundamentals**](AnalysesApi.md#refreshfundamentals) | **POST** /analyses/{id}/refresh-fundamentals | Re-fetch news + economic calendar for an existing analysis (no AI re-run)
 [**setAnalysisNote**](AnalysesApi.md#setanalysisnote) | **PUT** /analyses/{id}/note | Save the user&#39;s private trading-journal note for an analysis
 [**submitFeedback**](AnalysesApi.md#submitfeedback) | **POST** /analyses/{id}/feedback | Submit feedback for analysis
+[**waitGuardrail**](AnalysesApi.md#waitguardrail) | **POST** /analyses/guardrails/{id}/wait | Record an explicit decision to wait
 
 
 # **armAnalysisAlerts**
@@ -32,14 +35,14 @@ Method | HTTP request | Description
 
 Arm price alerts for an analysis
 
-Arms one push alert per AI level on the preferred trade side. The background watcher polls live prices every ~30s and fires the first time each level is touched, deep-linking back to this analysis. 
+Arms one push alert per AI level on the preferred trade side. The background watcher polls live prices every ~30s and fires the first time each level is touched, deep-linking back to this analysis.
 
 ### Example
 ```dart
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final int id = 56; // int | 
+final int id = 56; // int |
 
 try {
     final response = api.armAnalysisAlerts(id);
@@ -53,7 +56,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
+ **id** | **int**|  |
 
 ### Return type
 
@@ -80,7 +83,7 @@ Cancel any un-fired price alerts for an analysis
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final int id = 56; // int | 
+final int id = 56; // int |
 
 try {
     final response = api.cancelAnalysisAlerts(id);
@@ -94,7 +97,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
+ **id** | **int**|  |
 
 ### Return type
 
@@ -121,7 +124,7 @@ Create new analysis (triggers AI)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final CreateAnalysisBody createAnalysisBody = ; // CreateAnalysisBody | 
+final CreateAnalysisBody createAnalysisBody = ; // CreateAnalysisBody |
 
 try {
     final response = api.createAnalysis(createAnalysisBody);
@@ -135,7 +138,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createAnalysisBody** | [**CreateAnalysisBody**](CreateAnalysisBody.md)|  | 
+ **createAnalysisBody** | [**CreateAnalysisBody**](CreateAnalysisBody.md)|  |
 
 ### Return type
 
@@ -199,7 +202,7 @@ Get single analysis
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final int id = 56; // int | 
+final int id = 56; // int |
 
 try {
     final response = api.getAnalysis(id);
@@ -213,7 +216,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
+ **id** | **int**|  |
 
 ### Return type
 
@@ -235,14 +238,14 @@ No authorization required
 
 Get price-alert status for an analysis
 
-Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the \"Alerts: ON · N levels armed\" indicator on the analysis-detail page. 
+Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the \"Alerts: ON · N levels armed\" indicator on the analysis-detail page.
 
 ### Example
 ```dart
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final int id = 56; // int | 
+final int id = 56; // int |
 
 try {
     final response = api.getAnalysisAlerts(id);
@@ -256,7 +259,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
+ **id** | **int**|  |
 
 ### Return type
 
@@ -283,9 +286,9 @@ Get the current user's analysis-outcome summary by timeframe
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final String range = range_example; // String | 
-final BuiltList<String> instruments = ; // BuiltList<String> | 
-final BuiltList<String> timeframes = ; // BuiltList<String> | 
+final String range = range_example; // String |
+final BuiltList<String> instruments = ; // BuiltList<String> |
+final BuiltList<String> timeframes = ; // BuiltList<String> |
 
 try {
     final response = api.getAnalysisHistorySummary(range, instruments, timeframes);
@@ -300,8 +303,8 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **range** | **String**|  | [optional] [default to '30']
- **instruments** | [**BuiltList&lt;String&gt;**](String.md)|  | [optional] 
- **timeframes** | [**BuiltList&lt;String&gt;**](String.md)|  | [optional] 
+ **instruments** | [**BuiltList&lt;String&gt;**](String.md)|  | [optional]
+ **timeframes** | [**BuiltList&lt;String&gt;**](String.md)|  | [optional]
 
 ### Return type
 
@@ -323,7 +326,7 @@ No authorization required
 
 AI trade-plan outcome roll-up over the last 30 days
 
-Aggregates the after-the-fact outcomes the background resolver has written to each analysis (TP1/TP2 hit, SL hit, expired, invalidated, or still pending) for the current user over the past 30 days. Drives the \"AI accuracy\" card on the dashboard. 
+Aggregates the after-the-fact outcomes the background resolver has written to each analysis (TP1/TP2 hit, SL hit, expired, invalidated, or still pending) for the current user over the past 30 days. Drives the \"AI accuracy\" card on the dashboard.
 
 ### Example
 ```dart
@@ -382,6 +385,47 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**AnalysisQuota**](AnalysisQuota.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getGuardrails**
+> GetGuardrails200Response getGuardrails(instrument)
+
+Detect active soft warnings for the requested instrument
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAnalysesApi();
+final String instrument = instrument_example; // String |
+
+try {
+    final response = api.getGuardrails(instrument);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AnalysesApi->getGuardrails: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **instrument** | **String**|  |
+
+### Return type
+
+[**GetGuardrails200Response**](GetGuardrails200Response.md)
 
 ### Authorization
 
@@ -477,7 +521,7 @@ No authorization required
 
 Compare deterministic technical risk across supported timeframes
 
-Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI, and NIKKEI only. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result. 
+Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI, and NIKKEI only. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result.
 
 ### Example
 ```dart
@@ -488,7 +532,7 @@ import 'package:trade_pilot_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKeyPrefix = 'Bearer';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final String instrument = instrument_example; // String | 
+final String instrument = instrument_example; // String |
 
 try {
     final response = api.getTimeframeRiskMap(instrument);
@@ -502,7 +546,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **instrument** | **String**|  | 
+ **instrument** | **String**|  |
 
 ### Return type
 
@@ -529,13 +573,13 @@ List user's analyses with filters
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final String mode = mode_example; // String | 
-final String instrument = instrument_example; // String | 
+final String mode = mode_example; // String |
+final String instrument = instrument_example; // String |
 final BuiltList<String> instruments = ; // BuiltList<String> | Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.
 final BuiltList<String> timeframes = ; // BuiltList<String> | Multi-select timeframe filter (repeatable).
 final BuiltList<String> outcomes = ; // BuiltList<String> | Multi-select resolved outcome filter (repeatable).
-final int page = 56; // int | 
-final int limit = 56; // int | 
+final int page = 56; // int |
+final int limit = 56; // int |
 final String q = q_example; // String | Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).
 final Date from = 2013-10-20; // Date | Filter analyses created on or after this date (ISO 8601)
 final Date to = 2013-10-20; // Date | Filter analyses created on or before this date (ISO 8601)
@@ -552,16 +596,16 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **mode** | **String**|  | [optional] 
- **instrument** | **String**|  | [optional] 
- **instruments** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select instrument filter (repeatable). Wins over `instrument` when both provided. | [optional] 
- **timeframes** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select timeframe filter (repeatable). | [optional] 
- **outcomes** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select resolved outcome filter (repeatable). | [optional] 
+ **mode** | **String**|  | [optional]
+ **instrument** | **String**|  | [optional]
+ **instruments** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select instrument filter (repeatable). Wins over `instrument` when both provided. | [optional]
+ **timeframes** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select timeframe filter (repeatable). | [optional]
+ **outcomes** | [**BuiltList&lt;String&gt;**](String.md)| Multi-select resolved outcome filter (repeatable). | [optional]
  **page** | **int**|  | [optional] [default to 1]
  **limit** | **int**|  | [optional] [default to 20]
- **q** | **String**| Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive). | [optional] 
- **from** | **Date**| Filter analyses created on or after this date (ISO 8601) | [optional] 
- **to** | **Date**| Filter analyses created on or before this date (ISO 8601) | [optional] 
+ **q** | **String**| Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive). | [optional]
+ **from** | **Date**| Filter analyses created on or after this date (ISO 8601) | [optional]
+ **to** | **Date**| Filter analyses created on or before this date (ISO 8601) | [optional]
 
 ### Return type
 
@@ -578,19 +622,60 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **refreshFundamentals**
-> RefreshFundamentalsResponse refreshFundamentals(id)
+# **recordGuardrailTelemetry**
+> RecordGuardrailTelemetry201Response recordGuardrailTelemetry(recordGuardrailTelemetryRequest)
 
-Re-fetch news + economic calendar for an existing analysis (no AI re-run)
-
-Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit \"Fundamental Context\" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base. 
+Record impression or override of a guardrail
 
 ### Example
 ```dart
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final int id = 56; // int | 
+final RecordGuardrailTelemetryRequest recordGuardrailTelemetryRequest = ; // RecordGuardrailTelemetryRequest |
+
+try {
+    final response = api.recordGuardrailTelemetry(recordGuardrailTelemetryRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AnalysesApi->recordGuardrailTelemetry: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **recordGuardrailTelemetryRequest** | [**RecordGuardrailTelemetryRequest**](RecordGuardrailTelemetryRequest.md)|  |
+
+### Return type
+
+[**RecordGuardrailTelemetry201Response**](RecordGuardrailTelemetry201Response.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **refreshFundamentals**
+> RefreshFundamentalsResponse refreshFundamentals(id)
+
+Re-fetch news + economic calendar for an existing analysis (no AI re-run)
+
+Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit \"Fundamental Context\" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base.
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAnalysesApi();
+final int id = 56; // int |
 
 try {
     final response = api.refreshFundamentals(id);
@@ -604,7 +689,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
+ **id** | **int**|  |
 
 ### Return type
 
@@ -626,15 +711,15 @@ No authorization required
 
 Save the user's private trading-journal note for an analysis
 
-Persists a plain-text journal note scoped to this analysis and the authenticated user. Sending an empty / whitespace-only string clears the note. The note is never included in any AI prompt — it is purely a private user field for the trading-journal UI on the detail page. 
+Persists a plain-text journal note scoped to this analysis and the authenticated user. Sending an empty / whitespace-only string clears the note. The note is never included in any AI prompt — it is purely a private user field for the trading-journal UI on the detail page.
 
 ### Example
 ```dart
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final int id = 56; // int | 
-final SetAnalysisNoteRequest setAnalysisNoteRequest = ; // SetAnalysisNoteRequest | 
+final int id = 56; // int |
+final SetAnalysisNoteRequest setAnalysisNoteRequest = ; // SetAnalysisNoteRequest |
 
 try {
     final response = api.setAnalysisNote(id, setAnalysisNoteRequest);
@@ -648,8 +733,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
- **setAnalysisNoteRequest** | [**SetAnalysisNoteRequest**](SetAnalysisNoteRequest.md)|  | 
+ **id** | **int**|  |
+ **setAnalysisNoteRequest** | [**SetAnalysisNoteRequest**](SetAnalysisNoteRequest.md)|  |
 
 ### Return type
 
@@ -676,8 +761,8 @@ Submit feedback for analysis
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAnalysesApi();
-final int id = 56; // int | 
-final FeedbackBody feedbackBody = ; // FeedbackBody | 
+final int id = 56; // int |
+final FeedbackBody feedbackBody = ; // FeedbackBody |
 
 try {
     final response = api.submitFeedback(id, feedbackBody);
@@ -691,8 +776,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
- **feedbackBody** | [**FeedbackBody**](FeedbackBody.md)|  | 
+ **id** | **int**|  |
+ **feedbackBody** | [**FeedbackBody**](FeedbackBody.md)|  |
 
 ### Return type
 
@@ -705,6 +790,47 @@ No authorization required
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **waitGuardrail**
+> ProgressionAward waitGuardrail(id)
+
+Record an explicit decision to wait
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAnalysesApi();
+final int id = 56; // int |
+
+try {
+    final response = api.waitGuardrail(id);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AnalysesApi->waitGuardrail: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **int**|  |
+
+### Return type
+
+[**ProgressionAward**](ProgressionAward.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

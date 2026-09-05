@@ -24,10 +24,10 @@ class WatchlistApi {
   const WatchlistApi(this._dio, this._serializers);
 
   /// Star an instrument
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [addWatchlistBody] 
+  /// * [addWatchlistBody]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -37,7 +37,7 @@ class WatchlistApi {
   ///
   /// Returns a [Future] containing a [Response] with a [WatchlistItem] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<WatchlistItem>> addWatchlistItem({ 
+  Future<Response<WatchlistItem>> addWatchlistItem({
     required AddWatchlistBody addWatchlistBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -119,7 +119,7 @@ class WatchlistApi {
   }
 
   /// Get the current user&#39;s instrument watchlist
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -131,7 +131,7 @@ class WatchlistApi {
   ///
   /// Returns a [Future] containing a [Response] with a [Watchlist] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<Watchlist>> getWatchlist({ 
+  Future<Response<Watchlist>> getWatchlist({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -192,10 +192,10 @@ class WatchlistApi {
   }
 
   /// Unstar an instrument
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [instrument] 
+  /// * [instrument]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -205,7 +205,7 @@ class WatchlistApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> removeWatchlistItem({ 
+  Future<Response<MessageResponse>> removeWatchlistItem({
     required String instrument,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

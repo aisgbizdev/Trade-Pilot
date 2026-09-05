@@ -54,25 +54,34 @@ vi.mock("@/hooks/use-relevant-calendar", () => ({
   ) => mockRelevantCalendar(instrument, opts),
 }));
 
-vi.mock("@workspace/api-client-react", () => ({
-  useCreateAnalysis: () => ({ mutateAsync: vi.fn() }),
-  useUpdateProfile: () => ({ mutate: vi.fn() }),
-  getGetMeQueryKey: () => ["me"],
-  useGetRecentInstruments: () => ({ data: undefined }),
-  getGetRecentInstrumentsQueryKey: () => ["recent"],
-  useGetTimeframeRiskMap: () => ({ data: undefined, isLoading: false, isError: false }),
-  getGetTimeframeRiskMapQueryKey: () => ["risk-map"],
-  useGetAnalysisQuota: () => ({ data: undefined }),
-  getGetAnalysisQuotaQueryKey: () => ["quota"],
-  useGetStandardTradingRules: () => ({ data: undefined, isLoading: false, isError: false }),
-  useListAnalyses: () => ({ data: undefined }),
-  getListAnalysesQueryKey: () => ["analyses"],
-  // LocalSentimentWidget on the Analyze page calls this; the widget
-  // hides itself when `data` is undefined, which is exactly what we
-  // want in these tests — they aren't asserting on sentiment UI.
-  useGetJournalSentiment: () => ({ data: undefined, isLoading: false }),
-  getGetJournalSentimentQueryKey: () => ["sentiment"],
-}));
+vi.mock("@workspace/api-client-react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/api-client-react")>();
+  return {
+    ...actual,
+    useCreateAnalysis: () => ({ mutateAsync: vi.fn() }),
+    useUpdateProfile: () => ({ mutate: vi.fn() }),
+    getGetMeQueryKey: () => ["me"],
+    useGetRecentInstruments: () => ({ data: undefined }),
+    getGetRecentInstrumentsQueryKey: () => ["recent"],
+    useGetTimeframeRiskMap: () => ({ data: undefined, isLoading: false, isError: false }),
+    getGetTimeframeRiskMapQueryKey: () => ["risk-map"],
+    useGetAnalysisQuota: () => ({ data: undefined }),
+    getGetAnalysisQuotaQueryKey: () => ["quota"],
+    useGetStandardTradingRules: () => ({ data: undefined, isLoading: false, isError: false }),
+    useListAnalyses: () => ({ data: undefined }),
+    getListAnalysesQueryKey: () => ["analyses"],
+    useRecordProgressionActivity: () => ({ mutateAsync: vi.fn() }),
+    useStartProgressionEvidence: () => ({ mutateAsync: vi.fn() }),
+    getGetProgressionSummaryQueryKey: () => ["progression-summary"],
+    getGetProgressionCatalogQueryKey: () => ["progression-catalog"],
+    getGetProgressionHistoryQueryKey: () => ["progression-history"],
+    // LocalSentimentWidget on the Analyze page calls this; the widget
+    // hides itself when `data` is undefined, which is exactly what we
+    // want in these tests — they aren't asserting on sentiment UI.
+    useGetJournalSentiment: () => ({ data: undefined, isLoading: false }),
+    getGetJournalSentimentQueryKey: () => ["sentiment"],
+  };
+});
 
 vi.mock("wouter", () => ({
   useLocation: () => ["/analyze", vi.fn()],

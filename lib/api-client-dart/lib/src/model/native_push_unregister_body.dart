@@ -11,7 +11,7 @@ part 'native_push_unregister_body.g.dart';
 /// NativePushUnregisterBody
 ///
 /// Properties:
-/// * [token] 
+/// * [token]
 @BuiltValue()
 abstract class NativePushUnregisterBody implements Built<NativePushUnregisterBody, NativePushUnregisterBodyBuilder> {
   @BuiltValueField(wireName: r'token')

@@ -60,12 +60,16 @@ import type {
   GetAllUsersParams,
   GetAnalysisHistorySummaryParams,
   GetBroadcastsParams,
+  GetGuardrails200,
+  GetGuardrailsParams,
   GetJournalSentimentParams,
   GetJournalStatsParams,
   GetNotificationsParams,
   GetOutboundClickStatsParams,
   GetPerformanceSummaryParams,
   GetPersonalAnalyticsParams,
+  GetProgressionAuditParams,
+  GetProgressionHistoryParams,
   GetTimeframeRiskMapParams,
   HealthStatus,
   JournalEntry,
@@ -83,6 +87,15 @@ import type {
   OutboundClickStats,
   PerformanceSummary,
   PersonalAnalytics,
+  ProgressionActivityInput,
+  ProgressionAudit,
+  ProgressionAward,
+  ProgressionBackfillResult,
+  ProgressionCatalog,
+  ProgressionEvidenceSession,
+  ProgressionEvidenceStartInput,
+  ProgressionHistory,
+  ProgressionSummary,
   PushPrefs,
   PushPrefsUpdate,
   PushPublicKey,
@@ -91,6 +104,8 @@ import type {
   PushTestResult,
   PushUnsubscribeBody,
   RecentInstruments,
+  RecordGuardrailTelemetry201,
+  RecordGuardrailTelemetryBody,
   RefreshFundamentalsResponse,
   RegisterBody,
   RenameFilterPresetBody,
@@ -144,6 +159,939 @@ const withQueryKey = <T extends object, K>(
     });
   }
   return result;
+};
+
+export const getGetProgressionSummaryUrl = () => {
+  return `/api/progression/summary`;
+};
+
+/**
+ * @summary Get the authenticated user's private progression summary
+ */
+export const getProgressionSummary = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ProgressionSummary> => {
+  return customFetch<ProgressionSummary>(getGetProgressionSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProgressionSummaryQueryKey = () => {
+  return [`/api/progression/summary`] as const;
+};
+
+export const getGetProgressionSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProgressionSummary>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressionSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProgressionSummaryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProgressionSummary>>
+  > = ({ signal }) => getProgressionSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressionSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProgressionSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProgressionSummary>>
+>;
+export type GetProgressionSummaryQueryError = ErrorType<void>;
+
+/**
+ * @summary Get the authenticated user's private progression summary
+ */
+
+export function useGetProgressionSummary<
+  TData = Awaited<ReturnType<typeof getProgressionSummary>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressionSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProgressionSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetProgressionCatalogUrl = () => {
+  return `/api/progression/catalog`;
+};
+
+/**
+ * @summary Get private achievement catalog and unlock state
+ */
+export const getProgressionCatalog = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ProgressionCatalog> => {
+  return customFetch<ProgressionCatalog>(getGetProgressionCatalogUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProgressionCatalogQueryKey = () => {
+  return [`/api/progression/catalog`] as const;
+};
+
+export const getGetProgressionCatalogQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProgressionCatalog>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressionCatalog>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProgressionCatalogQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProgressionCatalog>>
+  > = ({ signal }) => getProgressionCatalog({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressionCatalog>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProgressionCatalogQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProgressionCatalog>>
+>;
+export type GetProgressionCatalogQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get private achievement catalog and unlock state
+ */
+
+export function useGetProgressionCatalog<
+  TData = Awaited<ReturnType<typeof getProgressionCatalog>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressionCatalog>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProgressionCatalogQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetProgressionHistoryUrl = (
+  params?: GetProgressionHistoryParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/progression/history?${stringifiedParams}`
+    : `/api/progression/history`;
+};
+
+/**
+ * @summary Get private append-only XP history
+ */
+export const getProgressionHistory = async (
+  params?: GetProgressionHistoryParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ProgressionHistory> => {
+  return customFetch<ProgressionHistory>(getGetProgressionHistoryUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProgressionHistoryQueryKey = (
+  params?: GetProgressionHistoryParams,
+) => {
+  return [`/api/progression/history`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetProgressionHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProgressionHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetProgressionHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProgressionHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetProgressionHistoryQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProgressionHistory>>
+  > = ({ signal }) =>
+    getProgressionHistory(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressionHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProgressionHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProgressionHistory>>
+>;
+export type GetProgressionHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get private append-only XP history
+ */
+
+export function useGetProgressionHistory<
+  TData = Awaited<ReturnType<typeof getProgressionHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetProgressionHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProgressionHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProgressionHistoryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRecordProgressionActivityUrl = () => {
+  return `/api/progression/activity`;
+};
+
+/**
+ * @summary Record a server-verifiable checklist or guide completion
+ */
+export const recordProgressionActivity = async (
+  progressionActivityInput: ProgressionActivityInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ProgressionAward> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<ProgressionAward>(getRecordProgressionActivityUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(progressionActivityInput),
+  });
+};
+
+export const getRecordProgressionActivityMutationKey = () =>
+  ["recordProgressionActivity"] as const;
+
+export const getRecordProgressionActivityMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordProgressionActivity>>,
+    TError,
+    RecordProgressionActivityMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordProgressionActivity>>,
+  TError,
+  RecordProgressionActivityMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRecordProgressionActivityMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordProgressionActivity>>,
+    RecordProgressionActivityMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return recordProgressionActivity(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordProgressionActivityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordProgressionActivity>>
+>;
+export type RecordProgressionActivityMutationBody =
+  BodyType<ProgressionActivityInput>;
+export type RecordProgressionActivityMutationError = ErrorType<void>;
+export type RecordProgressionActivityMutationVariables = {
+  data: BodyType<ProgressionActivityInput>;
+};
+
+/**
+ * @summary Record a server-verifiable checklist or guide completion
+ */
+export const useRecordProgressionActivity = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordProgressionActivity>>,
+    TError,
+    RecordProgressionActivityMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordProgressionActivity>>,
+  TError,
+  RecordProgressionActivityMutationVariables,
+  TContext
+> => {
+  return useMutation(getRecordProgressionActivityMutationOptions(options));
+};
+
+export const getStartProgressionEvidenceUrl = () => {
+  return `/api/progression/evidence`;
+};
+
+/**
+ * @summary Issue a one-time server evidence token for a known guide or checklist
+ */
+export const startProgressionEvidence = async (
+  progressionEvidenceStartInput: ProgressionEvidenceStartInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ProgressionEvidenceSession> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<ProgressionEvidenceSession>(
+    getStartProgressionEvidenceUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(progressionEvidenceStartInput),
+    },
+  );
+};
+
+export const getStartProgressionEvidenceMutationKey = () =>
+  ["startProgressionEvidence"] as const;
+
+export const getStartProgressionEvidenceMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startProgressionEvidence>>,
+    TError,
+    StartProgressionEvidenceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startProgressionEvidence>>,
+  TError,
+  StartProgressionEvidenceMutationVariables,
+  TContext
+> => {
+  const mutationKey = getStartProgressionEvidenceMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startProgressionEvidence>>,
+    StartProgressionEvidenceMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startProgressionEvidence(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartProgressionEvidenceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startProgressionEvidence>>
+>;
+export type StartProgressionEvidenceMutationBody =
+  BodyType<ProgressionEvidenceStartInput>;
+export type StartProgressionEvidenceMutationError = ErrorType<void>;
+export type StartProgressionEvidenceMutationVariables = {
+  data: BodyType<ProgressionEvidenceStartInput>;
+};
+
+/**
+ * @summary Issue a one-time server evidence token for a known guide or checklist
+ */
+export const useStartProgressionEvidence = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startProgressionEvidence>>,
+    TError,
+    StartProgressionEvidenceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startProgressionEvidence>>,
+  TError,
+  StartProgressionEvidenceMutationVariables,
+  TContext
+> => {
+  return useMutation(getStartProgressionEvidenceMutationOptions(options));
+};
+
+export const getGetProgressionAuditUrl = (
+  params?: GetProgressionAuditParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/progression/audit?${stringifiedParams}`
+    : `/api/admin/progression/audit`;
+};
+
+/**
+ * @summary Read-only progression ledger audit; never a leaderboard
+ */
+export const getProgressionAudit = async (
+  params?: GetProgressionAuditParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ProgressionAudit> => {
+  return customFetch<ProgressionAudit>(getGetProgressionAuditUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProgressionAuditQueryKey = (
+  params?: GetProgressionAuditParams,
+) => {
+  return [`/api/admin/progression/audit`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetProgressionAuditQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProgressionAudit>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetProgressionAuditParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProgressionAudit>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetProgressionAuditQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProgressionAudit>>
+  > = ({ signal }) =>
+    getProgressionAudit(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProgressionAudit>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProgressionAuditQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProgressionAudit>>
+>;
+export type GetProgressionAuditQueryError = ErrorType<void>;
+
+/**
+ * @summary Read-only progression ledger audit; never a leaderboard
+ */
+
+export function useGetProgressionAudit<
+  TData = Awaited<ReturnType<typeof getProgressionAudit>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetProgressionAuditParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProgressionAudit>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProgressionAuditQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getBackfillProgressionUrl = () => {
+  return `/api/admin/progression/backfill`;
+};
+
+/**
+ * @summary Safely backfill only unequivocal historical progression evidence
+ */
+export const backfillProgression = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ProgressionBackfillResult> => {
+  return customFetch<ProgressionBackfillResult>(getBackfillProgressionUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getBackfillProgressionMutationKey = () =>
+  ["backfillProgression"] as const;
+
+export const getBackfillProgressionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof backfillProgression>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof backfillProgression>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = getBackfillProgressionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof backfillProgression>>,
+    void
+  > = () => {
+    return backfillProgression(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BackfillProgressionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof backfillProgression>>
+>;
+
+export type BackfillProgressionMutationError = ErrorType<void>;
+
+/**
+ * @summary Safely backfill only unequivocal historical progression evidence
+ */
+export const useBackfillProgression = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof backfillProgression>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof backfillProgression>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getBackfillProgressionMutationOptions(options));
+};
+
+export const getGetGuardrailsUrl = (params: GetGuardrailsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/analyses/guardrails?${stringifiedParams}`
+    : `/api/analyses/guardrails`;
+};
+
+/**
+ * @summary Detect active soft warnings for the requested instrument
+ */
+export const getGuardrails = async (
+  params: GetGuardrailsParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<GetGuardrails200> => {
+  return customFetch<GetGuardrails200>(getGetGuardrailsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGuardrailsQueryKey = (params?: GetGuardrailsParams) => {
+  return [`/api/analyses/guardrails`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetGuardrailsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGuardrails>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetGuardrailsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGuardrails>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGuardrailsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGuardrails>>> = ({
+    signal,
+  }) => getGuardrails(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGuardrails>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGuardrailsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGuardrails>>
+>;
+export type GetGuardrailsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Detect active soft warnings for the requested instrument
+ */
+
+export function useGetGuardrails<
+  TData = Awaited<ReturnType<typeof getGuardrails>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetGuardrailsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGuardrails>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGuardrailsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRecordGuardrailTelemetryUrl = () => {
+  return `/api/analyses/guardrails/telemetry`;
+};
+
+/**
+ * @summary Record impression or override of a guardrail
+ */
+export const recordGuardrailTelemetry = async (
+  recordGuardrailTelemetryBody: RecordGuardrailTelemetryBody,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<RecordGuardrailTelemetry201> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<RecordGuardrailTelemetry201>(
+    getRecordGuardrailTelemetryUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(recordGuardrailTelemetryBody),
+    },
+  );
+};
+
+export const getRecordGuardrailTelemetryMutationKey = () =>
+  ["recordGuardrailTelemetry"] as const;
+
+export const getRecordGuardrailTelemetryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordGuardrailTelemetry>>,
+    TError,
+    RecordGuardrailTelemetryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordGuardrailTelemetry>>,
+  TError,
+  RecordGuardrailTelemetryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRecordGuardrailTelemetryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordGuardrailTelemetry>>,
+    RecordGuardrailTelemetryMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return recordGuardrailTelemetry(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordGuardrailTelemetryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordGuardrailTelemetry>>
+>;
+export type RecordGuardrailTelemetryMutationBody =
+  BodyType<RecordGuardrailTelemetryBody>;
+export type RecordGuardrailTelemetryMutationError = ErrorType<unknown>;
+export type RecordGuardrailTelemetryMutationVariables = {
+  data: BodyType<RecordGuardrailTelemetryBody>;
+};
+
+/**
+ * @summary Record impression or override of a guardrail
+ */
+export const useRecordGuardrailTelemetry = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordGuardrailTelemetry>>,
+    TError,
+    RecordGuardrailTelemetryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordGuardrailTelemetry>>,
+  TError,
+  RecordGuardrailTelemetryMutationVariables,
+  TContext
+> => {
+  return useMutation(getRecordGuardrailTelemetryMutationOptions(options));
+};
+
+export const getWaitGuardrailUrl = (id: number) => {
+  return `/api/analyses/guardrails/${id}/wait`;
+};
+
+/**
+ * @summary Record an explicit decision to wait
+ */
+export const waitGuardrail = async (
+  id: number,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ProgressionAward> => {
+  return customFetch<ProgressionAward>(getWaitGuardrailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getWaitGuardrailMutationKey = () => ["waitGuardrail"] as const;
+
+export const getWaitGuardrailMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof waitGuardrail>>,
+    TError,
+    WaitGuardrailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof waitGuardrail>>,
+  TError,
+  WaitGuardrailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getWaitGuardrailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof waitGuardrail>>,
+    WaitGuardrailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return waitGuardrail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WaitGuardrailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof waitGuardrail>>
+>;
+
+export type WaitGuardrailMutationError = ErrorType<unknown>;
+export type WaitGuardrailMutationVariables = { id: number };
+
+/**
+ * @summary Record an explicit decision to wait
+ */
+export const useWaitGuardrail = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof waitGuardrail>>,
+    TError,
+    WaitGuardrailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof waitGuardrail>>,
+  TError,
+  WaitGuardrailMutationVariables,
+  TContext
+> => {
+  return useMutation(getWaitGuardrailMutationOptions(options));
 };
 
 export const getHealthCheckUrl = () => {

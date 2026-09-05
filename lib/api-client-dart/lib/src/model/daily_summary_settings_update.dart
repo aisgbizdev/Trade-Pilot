@@ -11,9 +11,9 @@ part 'daily_summary_settings_update.g.dart';
 /// DailySummarySettingsUpdate
 ///
 /// Properties:
-/// * [enabled] 
-/// * [time] 
-/// * [timezone] 
+/// * [enabled]
+/// * [time]
+/// * [timezone]
 @BuiltValue()
 abstract class DailySummarySettingsUpdate implements Built<DailySummarySettingsUpdate, DailySummarySettingsUpdateBuilder> {
   @BuiltValueField(wireName: r'enabled')

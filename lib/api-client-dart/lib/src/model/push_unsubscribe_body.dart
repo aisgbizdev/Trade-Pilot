@@ -11,7 +11,7 @@ part 'push_unsubscribe_body.g.dart';
 /// PushUnsubscribeBody
 ///
 /// Properties:
-/// * [endpoint] 
+/// * [endpoint]
 @BuiltValue()
 abstract class PushUnsubscribeBody implements Built<PushUnsubscribeBody, PushUnsubscribeBodyBuilder> {
   @BuiltValueField(wireName: r'endpoint')

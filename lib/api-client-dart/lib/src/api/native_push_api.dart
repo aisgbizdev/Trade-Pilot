@@ -25,7 +25,7 @@ class NativePushApi {
   /// Upserts on the globally-unique device token: if the same physical device token was previously registered under a different account, ownership transfers to the current authenticated user (the correct behavior when a device logs out and a different user logs in).
   ///
   /// Parameters:
-  /// * [nativePushRegisterBody] 
+  /// * [nativePushRegisterBody]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -35,7 +35,7 @@ class NativePushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> registerNativePushDevice({ 
+  Future<Response<MessageResponse>> registerNativePushDevice({
     required NativePushRegisterBody nativePushRegisterBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -117,10 +117,10 @@ class NativePushApi {
   }
 
   /// Remove the caller&#39;s own native push device registration
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [nativePushUnregisterBody] 
+  /// * [nativePushUnregisterBody]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -130,7 +130,7 @@ class NativePushApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> unregisterNativePushDevice({ 
+  Future<Response<MessageResponse>> unregisterNativePushDevice({
     required NativePushUnregisterBody nativePushUnregisterBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

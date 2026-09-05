@@ -102,6 +102,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(FundamentalDriftCitation.serializer)
       ..add(FundamentalDriftCitationKindEnum.serializer)
       ..add(FundamentalNewsItem.serializer)
+      ..add(GetGuardrails200Response.serializer)
       ..add(HealthStatus.serializer)
       ..add(JournalEntry.serializer)
       ..add(JournalEntryList.serializer)
@@ -141,6 +142,21 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PersonalAnalytics.serializer)
       ..add(PersonalAnalyticsTopInstrumentsInner.serializer)
       ..add(PersonalAnalyticsWeeklyDataInner.serializer)
+      ..add(ProgressionAchievement.serializer)
+      ..add(ProgressionActivityInput.serializer)
+      ..add(ProgressionAudit.serializer)
+      ..add(ProgressionAuditEntry.serializer)
+      ..add(ProgressionAward.serializer)
+      ..add(ProgressionBackfillResult.serializer)
+      ..add(ProgressionCatalog.serializer)
+      ..add(ProgressionEvidenceSession.serializer)
+      ..add(ProgressionEvidenceStartInput.serializer)
+      ..add(ProgressionEvidenceStartInputChecklist.serializer)
+      ..add(ProgressionEvidenceStartInputGuideIdEnum.serializer)
+      ..add(ProgressionEvidenceStartInputSource_Enum.serializer)
+      ..add(ProgressionHistory.serializer)
+      ..add(ProgressionLedgerEntry.serializer)
+      ..add(ProgressionSummary.serializer)
       ..add(PushPrefs.serializer)
       ..add(PushPrefsMarketOpenSessionsEnum.serializer)
       ..add(PushPrefsUpdate.serializer)
@@ -153,6 +169,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PushUnsubscribeBody.serializer)
       ..add(RecentInstruments.serializer)
       ..add(RecentInstrumentsInstrumentsInner.serializer)
+      ..add(RecordGuardrailTelemetry201Response.serializer)
+      ..add(RecordGuardrailTelemetryRequest.serializer)
       ..add(RefreshFundamentalsResponse.serializer)
       ..add(RegisterBody.serializer)
       ..add(RegisterBodySelectedModeEnum.serializer)
@@ -280,6 +298,20 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(Broadcast)]),
           () => ListBuilder<Broadcast>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(FeedbackWithDetails)]),
           () => ListBuilder<FeedbackWithDetails>())
@@ -327,6 +359,18 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList,
               const [const FullType(PersonalAnalyticsWeeklyDataInner)]),
           () => ListBuilder<PersonalAnalyticsWeeklyDataInner>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(ProgressionAchievement)]),
+          () => ListBuilder<ProgressionAchievement>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(ProgressionAuditEntry)]),
+          () => ListBuilder<ProgressionAuditEntry>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(ProgressionLedgerEntry)]),
+          () => ListBuilder<ProgressionLedgerEntry>())
       ..addBuilderFactory(
           const FullType(BuiltList,
               const [const FullType(PushPrefsMarketOpenSessionsEnum)]),
@@ -387,6 +431,18 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(WatchlistItem)]),
           () => ListBuilder<WatchlistItem>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

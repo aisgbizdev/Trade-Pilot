@@ -13,12 +13,12 @@ part 'analyses_summary.g.dart';
 /// AnalysesSummary
 ///
 /// Properties:
-/// * [totalAnalyses] 
-/// * [beginnerCount] 
-/// * [proCount] 
-/// * [avgConfidenceMin] 
-/// * [avgConfidenceMax] 
-/// * [recentAnalyses] 
+/// * [totalAnalyses]
+/// * [beginnerCount]
+/// * [proCount]
+/// * [avgConfidenceMin]
+/// * [avgConfidenceMax]
+/// * [recentAnalyses]
 @BuiltValue()
 abstract class AnalysesSummary implements Built<AnalysesSummary, AnalysesSummaryBuilder> {
   @BuiltValueField(wireName: r'totalAnalyses')

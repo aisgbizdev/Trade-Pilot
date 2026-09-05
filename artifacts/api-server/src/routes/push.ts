@@ -135,6 +135,7 @@ const prefsSchema = z
       .string()
       .refine(isValidIanaTimezone, "Zona waktu tidak valid")
       .optional(),
+    progressionNotificationsEnabled: z.boolean().optional(),
   })
   .strict();
 
@@ -164,6 +165,7 @@ const PREF_SELECT = {
   quietHoursStart: users.quietHoursStart,
   quietHoursEnd: users.quietHoursEnd,
   notificationTimezone: users.notificationTimezone,
+  progressionNotificationsEnabled: users.progressionNotificationsEnabled,
 } as const;
 
 router.get("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
@@ -289,6 +291,7 @@ router.patch("/push/prefs", requireAuth, async (req: AuthRequest, res) => {
   if (typeof d.quietHoursStart === "string") updates["quietHoursStart"] = d.quietHoursStart;
   if (typeof d.quietHoursEnd === "string") updates["quietHoursEnd"] = d.quietHoursEnd;
   if (typeof d.notificationTimezone === "string") updates["notificationTimezone"] = d.notificationTimezone;
+  if (typeof d.progressionNotificationsEnabled === "boolean") updates["progressionNotificationsEnabled"] = d.progressionNotificationsEnabled;
 
   if (reEnabled.length > 0) {
     const nowIso = new Date().toISOString();

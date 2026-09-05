@@ -123,6 +123,8 @@ class _$PushPrefs extends PushPrefs {
   final String quietHoursEnd;
   @override
   final String notificationTimezone;
+  @override
+  final bool progressionNotificationsEnabled;
 
   factory _$PushPrefs([void Function(PushPrefsBuilder)? updates]) =>
       (PushPrefsBuilder()..update(updates))._build();
@@ -152,7 +154,8 @@ class _$PushPrefs extends PushPrefs {
       required this.quietHoursEnabled,
       required this.quietHoursStart,
       required this.quietHoursEnd,
-      required this.notificationTimezone})
+      required this.notificationTimezone,
+      required this.progressionNotificationsEnabled})
       : super._();
   @override
   PushPrefs rebuild(void Function(PushPrefsBuilder) updates) =>
@@ -189,7 +192,9 @@ class _$PushPrefs extends PushPrefs {
         quietHoursEnabled == other.quietHoursEnabled &&
         quietHoursStart == other.quietHoursStart &&
         quietHoursEnd == other.quietHoursEnd &&
-        notificationTimezone == other.notificationTimezone;
+        notificationTimezone == other.notificationTimezone &&
+        progressionNotificationsEnabled ==
+            other.progressionNotificationsEnabled;
   }
 
   @override
@@ -220,6 +225,7 @@ class _$PushPrefs extends PushPrefs {
     _$hash = $jc(_$hash, quietHoursStart.hashCode);
     _$hash = $jc(_$hash, quietHoursEnd.hashCode);
     _$hash = $jc(_$hash, notificationTimezone.hashCode);
+    _$hash = $jc(_$hash, progressionNotificationsEnabled.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -251,7 +257,9 @@ class _$PushPrefs extends PushPrefs {
           ..add('quietHoursEnabled', quietHoursEnabled)
           ..add('quietHoursStart', quietHoursStart)
           ..add('quietHoursEnd', quietHoursEnd)
-          ..add('notificationTimezone', notificationTimezone))
+          ..add('notificationTimezone', notificationTimezone)
+          ..add('progressionNotificationsEnabled',
+              progressionNotificationsEnabled))
         .toString();
   }
 }
@@ -385,6 +393,12 @@ class PushPrefsBuilder implements Builder<PushPrefs, PushPrefsBuilder> {
   set notificationTimezone(String? notificationTimezone) =>
       _$this._notificationTimezone = notificationTimezone;
 
+  bool? _progressionNotificationsEnabled;
+  bool? get progressionNotificationsEnabled =>
+      _$this._progressionNotificationsEnabled;
+  set progressionNotificationsEnabled(bool? progressionNotificationsEnabled) =>
+      _$this._progressionNotificationsEnabled = progressionNotificationsEnabled;
+
   PushPrefsBuilder() {
     PushPrefs._defaults(this);
   }
@@ -417,6 +431,7 @@ class PushPrefsBuilder implements Builder<PushPrefs, PushPrefsBuilder> {
       _quietHoursStart = $v.quietHoursStart;
       _quietHoursEnd = $v.quietHoursEnd;
       _notificationTimezone = $v.notificationTimezone;
+      _progressionNotificationsEnabled = $v.progressionNotificationsEnabled;
       _$v = null;
     }
     return this;
@@ -488,6 +503,11 @@ class PushPrefsBuilder implements Builder<PushPrefs, PushPrefsBuilder> {
                 quietHoursEnd, r'PushPrefs', 'quietHoursEnd'),
             notificationTimezone: BuiltValueNullFieldError.checkNotNull(
                 notificationTimezone, r'PushPrefs', 'notificationTimezone'),
+            progressionNotificationsEnabled:
+                BuiltValueNullFieldError.checkNotNull(
+                    progressionNotificationsEnabled,
+                    r'PushPrefs',
+                    'progressionNotificationsEnabled'),
           );
     } catch (_) {
       late String _$failedField;

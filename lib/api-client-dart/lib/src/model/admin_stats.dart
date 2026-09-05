@@ -14,13 +14,13 @@ part 'admin_stats.g.dart';
 /// AdminStats
 ///
 /// Properties:
-/// * [totalUsersToday] 
-/// * [totalAnalysesToday] 
-/// * [totalAnalysesThisWeek] 
-/// * [totalAnalysesThisMonth] 
-/// * [totalUsers] 
-/// * [instrumentBreakdown] 
-/// * [modeBreakdown] 
+/// * [totalUsersToday]
+/// * [totalAnalysesToday]
+/// * [totalAnalysesThisWeek]
+/// * [totalAnalysesThisMonth]
+/// * [totalUsers]
+/// * [instrumentBreakdown]
+/// * [modeBreakdown]
 @BuiltValue()
 abstract class AdminStats implements Built<AdminStats, AdminStatsBuilder> {
   @BuiltValueField(wireName: r'totalUsersToday')

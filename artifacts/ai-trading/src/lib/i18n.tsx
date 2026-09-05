@@ -4,6 +4,7 @@ import { id } from "@/locales/id";
 import type { Translations } from "@/locales/en";
 import { updateProfile } from "@workspace/api-client-react";
 
+export type { Translations } from "@/locales/en";
 export type Language = "en" | "id";
 
 const translations: Record<Language, Translations> = { en, id };

@@ -12,31 +12,32 @@ part 'push_prefs_update.g.dart';
 /// PushPrefsUpdate
 ///
 /// Properties:
-/// * [pushExpiry] 
-/// * [pushBroadcast] 
-/// * [pushDailySummary] 
-/// * [pushMarketNews] 
-/// * [pushCalendarEvents] 
-/// * [pushPriceAnomaly] 
-/// * [pushWeeklyRecap] 
-/// * [pushSignalFlip] 
-/// * [marketOpenSessions] 
-/// * [pushDormancyNudge] 
-/// * [pushOnboarding] 
+/// * [pushExpiry]
+/// * [pushBroadcast]
+/// * [pushDailySummary]
+/// * [pushMarketNews]
+/// * [pushCalendarEvents]
+/// * [pushPriceAnomaly]
+/// * [pushWeeklyRecap]
+/// * [pushSignalFlip]
+/// * [marketOpenSessions]
+/// * [pushDormancyNudge]
+/// * [pushOnboarding]
 /// * [dismissDisengageNotice] - Pass true to clear the one-time auto-pause banner.
-/// * [guardrailRevenge] 
-/// * [guardrailOvertrading] 
-/// * [guardrailHighRisk] 
-/// * [coolingOffEnabled] 
-/// * [pushAnalysisCompleted] 
-/// * [pushTpSlHit] 
-/// * [pushLoginAlert] 
-/// * [nativePushEnabled] 
-/// * [webPushEnabled] 
-/// * [quietHoursEnabled] 
+/// * [guardrailRevenge]
+/// * [guardrailOvertrading]
+/// * [guardrailHighRisk]
+/// * [coolingOffEnabled]
+/// * [pushAnalysisCompleted]
+/// * [pushTpSlHit]
+/// * [pushLoginAlert]
+/// * [nativePushEnabled]
+/// * [webPushEnabled]
+/// * [quietHoursEnabled]
 /// * [quietHoursStart] - HH:MM 24h local time.
 /// * [quietHoursEnd] - HH:MM 24h local time.
 /// * [notificationTimezone] - IANA timezone.
+/// * [progressionNotificationsEnabled]
 @BuiltValue()
 abstract class PushPrefsUpdate implements Built<PushPrefsUpdate, PushPrefsUpdateBuilder> {
   @BuiltValueField(wireName: r'pushExpiry')
@@ -118,6 +119,9 @@ abstract class PushPrefsUpdate implements Built<PushPrefsUpdate, PushPrefsUpdate
   /// IANA timezone.
   @BuiltValueField(wireName: r'notificationTimezone')
   String? get notificationTimezone;
+
+  @BuiltValueField(wireName: r'progressionNotificationsEnabled')
+  bool? get progressionNotificationsEnabled;
 
   PushPrefsUpdate._();
 
@@ -315,6 +319,13 @@ class _$PushPrefsUpdateSerializer implements PrimitiveSerializer<PushPrefsUpdate
       yield serializers.serialize(
         object.notificationTimezone,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.progressionNotificationsEnabled != null) {
+      yield r'progressionNotificationsEnabled';
+      yield serializers.serialize(
+        object.progressionNotificationsEnabled,
+        specifiedType: const FullType(bool),
       );
     }
   }
@@ -539,6 +550,14 @@ class _$PushPrefsUpdateSerializer implements PrimitiveSerializer<PushPrefsUpdate
           ) as String?;
           if (valueDes == null) continue;
           result.notificationTimezone = valueDes;
+          break;
+        case r'progressionNotificationsEnabled':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.progressionNotificationsEnabled = valueDes;
           break;
         default:
           unhandled.add(key);

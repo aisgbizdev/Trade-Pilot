@@ -11,8 +11,8 @@ part 'admin_stats_mode_breakdown.g.dart';
 /// AdminStatsModeBreakdown
 ///
 /// Properties:
-/// * [beginner] 
-/// * [pro] 
+/// * [beginner]
+/// * [pro]
 @BuiltValue()
 abstract class AdminStatsModeBreakdown implements Built<AdminStatsModeBreakdown, AdminStatsModeBreakdownBuilder> {
   @BuiltValueField(wireName: r'beginner')

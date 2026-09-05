@@ -12,8 +12,8 @@ part 'timeframe_risk_map_overall.g.dart';
 /// TimeframeRiskMapOverall
 ///
 /// Properties:
-/// * [state] 
-/// * [reasonCode] 
+/// * [state]
+/// * [reasonCode]
 @BuiltValue()
 abstract class TimeframeRiskMapOverall implements Built<TimeframeRiskMapOverall, TimeframeRiskMapOverallBuilder> {
   @BuiltValueField(wireName: r'state')

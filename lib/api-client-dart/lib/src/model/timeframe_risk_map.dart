@@ -14,10 +14,10 @@ part 'timeframe_risk_map.g.dart';
 /// TimeframeRiskMap
 ///
 /// Properties:
-/// * [instrument] 
-/// * [generatedAt] 
-/// * [timeframes] 
-/// * [overall] 
+/// * [instrument]
+/// * [generatedAt]
+/// * [timeframes]
+/// * [overall]
 @BuiltValue()
 abstract class TimeframeRiskMap implements Built<TimeframeRiskMap, TimeframeRiskMapBuilder> {
   @BuiltValueField(wireName: r'instrument')

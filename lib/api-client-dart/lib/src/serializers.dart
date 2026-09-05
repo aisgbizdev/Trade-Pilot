@@ -80,6 +80,7 @@ import 'package:trade_pilot_api_client/src/model/fundamental_context.dart';
 import 'package:trade_pilot_api_client/src/model/fundamental_drift.dart';
 import 'package:trade_pilot_api_client/src/model/fundamental_drift_citation.dart';
 import 'package:trade_pilot_api_client/src/model/fundamental_news_item.dart';
+import 'package:trade_pilot_api_client/src/model/get_guardrails200_response.dart';
 import 'package:trade_pilot_api_client/src/model/health_status.dart';
 import 'package:trade_pilot_api_client/src/model/journal_entry.dart';
 import 'package:trade_pilot_api_client/src/model/journal_entry_list.dart';
@@ -108,6 +109,19 @@ import 'package:trade_pilot_api_client/src/model/performance_summary.dart';
 import 'package:trade_pilot_api_client/src/model/personal_analytics.dart';
 import 'package:trade_pilot_api_client/src/model/personal_analytics_top_instruments_inner.dart';
 import 'package:trade_pilot_api_client/src/model/personal_analytics_weekly_data_inner.dart';
+import 'package:trade_pilot_api_client/src/model/progression_achievement.dart';
+import 'package:trade_pilot_api_client/src/model/progression_activity_input.dart';
+import 'package:trade_pilot_api_client/src/model/progression_audit.dart';
+import 'package:trade_pilot_api_client/src/model/progression_audit_entry.dart';
+import 'package:trade_pilot_api_client/src/model/progression_award.dart';
+import 'package:trade_pilot_api_client/src/model/progression_backfill_result.dart';
+import 'package:trade_pilot_api_client/src/model/progression_catalog.dart';
+import 'package:trade_pilot_api_client/src/model/progression_evidence_session.dart';
+import 'package:trade_pilot_api_client/src/model/progression_evidence_start_input.dart';
+import 'package:trade_pilot_api_client/src/model/progression_evidence_start_input_checklist.dart';
+import 'package:trade_pilot_api_client/src/model/progression_history.dart';
+import 'package:trade_pilot_api_client/src/model/progression_ledger_entry.dart';
+import 'package:trade_pilot_api_client/src/model/progression_summary.dart';
 import 'package:trade_pilot_api_client/src/model/push_prefs.dart';
 import 'package:trade_pilot_api_client/src/model/push_prefs_update.dart';
 import 'package:trade_pilot_api_client/src/model/push_public_key.dart';
@@ -118,6 +132,8 @@ import 'package:trade_pilot_api_client/src/model/push_test_result.dart';
 import 'package:trade_pilot_api_client/src/model/push_unsubscribe_body.dart';
 import 'package:trade_pilot_api_client/src/model/recent_instruments.dart';
 import 'package:trade_pilot_api_client/src/model/recent_instruments_instruments_inner.dart';
+import 'package:trade_pilot_api_client/src/model/record_guardrail_telemetry201_response.dart';
+import 'package:trade_pilot_api_client/src/model/record_guardrail_telemetry_request.dart';
 import 'package:trade_pilot_api_client/src/model/refresh_fundamentals_response.dart';
 import 'package:trade_pilot_api_client/src/model/register_body.dart';
 import 'package:trade_pilot_api_client/src/model/rename_filter_preset_body.dart';
@@ -227,6 +243,7 @@ part 'serializers.g.dart';
   FundamentalDrift,
   FundamentalDriftCitation,
   FundamentalNewsItem,
+  GetGuardrails200Response,
   HealthStatus,
   JournalEntry,
   JournalEntryList,
@@ -255,6 +272,19 @@ part 'serializers.g.dart';
   PersonalAnalytics,
   PersonalAnalyticsTopInstrumentsInner,
   PersonalAnalyticsWeeklyDataInner,
+  ProgressionAchievement,
+  ProgressionActivityInput,
+  ProgressionAudit,
+  ProgressionAuditEntry,
+  ProgressionAward,
+  ProgressionBackfillResult,
+  ProgressionCatalog,
+  ProgressionEvidenceSession,
+  ProgressionEvidenceStartInput,
+  ProgressionEvidenceStartInputChecklist,
+  ProgressionHistory,
+  ProgressionLedgerEntry,
+  ProgressionSummary,
   PushPrefs,
   PushPrefsUpdate,
   PushPublicKey,
@@ -265,6 +295,8 @@ part 'serializers.g.dart';
   PushUnsubscribeBody,
   RecentInstruments,
   RecentInstrumentsInstrumentsInner,
+  RecordGuardrailTelemetry201Response,
+  RecordGuardrailTelemetryRequest,
   RefreshFundamentalsResponse,
   RegisterBody,
   RenameFilterPresetBody,
@@ -343,6 +375,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<PersonalAnalyticsTopInstrumentsInner>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProgressionAchievement)]),
+        () => ListBuilder<ProgressionAchievement>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(UserWithStats)]),
         () => ListBuilder<UserWithStats>(),
       )
@@ -363,12 +399,20 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AnalyticsTokenStatsByModelInner>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType(JsonObject)])]),
+        () => ListBuilder<BuiltMap<String, JsonObject>>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalysisHistoryTimeframeStats)]),
         () => ListBuilder<AnalysisHistoryTimeframeStats>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsUsageStatsCountryBreakdownInner)]),
         () => ListBuilder<AnalyticsUsageStatsCountryBreakdownInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProgressionLedgerEntry)]),
+        () => ListBuilder<ProgressionLedgerEntry>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsTokenStatsDailyTokensInner)]),
@@ -427,16 +471,20 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<PersonalAnalyticsWeeklyDataInner>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProgressionAuditEntry)]),
+        () => ListBuilder<ProgressionAuditEntry>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        () => MapBuilder<String, JsonObject?>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FundamentalNewsItem)]),
         () => ListBuilder<FundamentalNewsItem>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalysisHistoryInstrumentStats)]),
         () => ListBuilder<AnalysisHistoryInstrumentStats>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-        () => MapBuilder<String, JsonObject?>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(String)]),

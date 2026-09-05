@@ -11,10 +11,10 @@ part 'daily_summary_settings.g.dart';
 /// DailySummarySettings
 ///
 /// Properties:
-/// * [enabled] 
+/// * [enabled]
 /// * [time] - HH:MM 24h local time the digest should fire
 /// * [timezone] - IANA timezone the time is interpreted in
-/// * [pushDailySummary] 
+/// * [pushDailySummary]
 /// * [lastSentDate] - YYYY-MM-DD in user's TZ; null if never sent
 @BuiltValue()
 abstract class DailySummarySettings implements Built<DailySummarySettings, DailySummarySettingsBuilder> {

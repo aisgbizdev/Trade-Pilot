@@ -11,8 +11,8 @@ part 'personal_analytics_top_instruments_inner.g.dart';
 /// PersonalAnalyticsTopInstrumentsInner
 ///
 /// Properties:
-/// * [instrument] 
-/// * [count] 
+/// * [instrument]
+/// * [count]
 @BuiltValue()
 abstract class PersonalAnalyticsTopInstrumentsInner implements Built<PersonalAnalyticsTopInstrumentsInner, PersonalAnalyticsTopInstrumentsInnerBuilder> {
   @BuiltValueField(wireName: r'instrument')

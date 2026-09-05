@@ -283,6 +283,7 @@ export const users = pgTable("users", {
   quietHoursStart: text("quiet_hours_start").notNull().default("22:00"),
   quietHoursEnd: text("quiet_hours_end").notNull().default("07:00"),
   notificationTimezone: text("notification_timezone").notNull().default("Asia/Jakarta"),
+  progressionNotificationsEnabled: boolean("progression_notifications_enabled").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -815,6 +816,88 @@ export const guardrailEvents = pgTable("guardrail_events", {
 
 export type GuardrailEvent = typeof guardrailEvents.$inferSelect;
 export type NewGuardrailEvent = typeof guardrailEvents.$inferInsert;
+
+// Personal progression (task #104). These records intentionally contain no
+// P/L, trade count, outcome, or market-performance fields. The ledger is
+// append-only: corrections are separate negative/positive rows linked through
+// metadata, never an update or delete of a prior award.
+export const progressionProfiles = pgTable("progression_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  totalXp: integer("total_xp").notNull().default(0),
+  level: integer("level").notNull().default(1),
+  masteryLevel: integer("mastery_level").notNull().default(0),
+  rankKey: text("rank_key").notNull().default("seedling"),
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastDisciplineDay: text("last_discipline_day"),
+  // Frozen on first progression activity so preference changes cannot rewrite
+  // historical cap/streak/checklist calendar boundaries.
+  progressionTimezone: text("progression_timezone").notNull().default("UTC"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({ perUser: uniqueIndex("progression_profiles_user_unique").on(t.userId) }));
+
+// Atomic anti-noise gate for progression notifications. It is deliberately
+// separate from the ledger: suppressing a notice never suppresses an award.
+export const progressionNotificationCooldowns = pgTable("progression_notification_cooldowns", {
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+  lastSentAt: timestamp("last_sent_at").notNull().defaultNow(),
+}, (t) => ({ perUserCategory: uniqueIndex("progression_notification_cooldowns_unique").on(t.userId, t.category) }));
+
+export const progressionProofs = pgTable("progression_proofs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  source: text("source").notNull(),
+  sourceEventId: text("source_event_id").notNull(),
+  qualityScore: integer("quality_score").notNull().default(0),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  decision: text("decision").notNull().default("accepted"),
+  rejectionReason: text("rejection_reason"),
+  occurredAt: timestamp("occurred_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ perUserSource: uniqueIndex("progression_proofs_user_source_unique").on(t.userId, t.source, t.sourceEventId) }));
+
+export const xpLedger = pgTable("xp_ledger", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  source: text("source").notNull(),
+  sourceEventId: text("source_event_id").notNull(),
+  proofId: integer("proof_id").references(() => progressionProofs.id, { onDelete: "restrict" }),
+  xp: integer("xp").notNull(),
+  dayBucket: text("day_bucket").notNull(),
+  ruleVersion: text("rule_version").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  // Kept as an immutable ledger id rather than a self FK so schema
+  // initialization remains acyclic; correction service verifies it.
+  correctionOfLedgerId: integer("correction_of_ledger_id"),
+  correctionReason: text("correction_reason"),
+  signature: text("signature"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ perUserSource: uniqueIndex("xp_ledger_user_source_event_unique").on(t.userId, t.source, t.sourceEventId) }));
+
+export const progressionAchievements = pgTable("progression_achievements", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull(),
+  unlockedAt: timestamp("unlocked_at").notNull().defaultNow(),
+  sourceLedgerId: integer("source_ledger_id").references(() => xpLedger.id, { onDelete: "restrict" }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+}, (t) => ({ perUserAchievement: uniqueIndex("progression_achievements_user_key_unique").on(t.userId, t.key) }));
+
+// Server-issued, one-time completion challenge. The plaintext token is only
+// returned at issue time; completing an activity consumes this row atomically.
+export const progressionEvidenceSessions = pgTable("progression_evidence_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  subject: text("subject").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  issuedAt: timestamp("issued_at").notNull().defaultNow(),
+  minimumCompleteAt: timestamp("minimum_complete_at").notNull(),
+  consumedAt: timestamp("consumed_at"),
+  decision: text("decision").notNull().default("issued"),
+});
 
 // Generic app-usage telemetry: one row per page view or key action
 // (see the server-side eventType allowlist in routes/events.ts).

@@ -14,14 +14,14 @@ part 'personal_analytics.g.dart';
 /// PersonalAnalytics
 ///
 /// Properties:
-/// * [totalAllTime] 
-/// * [totalThisMonth] 
-/// * [totalThisWeek] 
-/// * [topInstruments] 
-/// * [dominantMode] 
-/// * [accuracyRate] 
-/// * [feedbackCount] 
-/// * [weeklyData] 
+/// * [totalAllTime]
+/// * [totalThisMonth]
+/// * [totalThisWeek]
+/// * [topInstruments]
+/// * [dominantMode]
+/// * [accuracyRate]
+/// * [feedbackCount]
+/// * [weeklyData]
 @BuiltValue()
 abstract class PersonalAnalytics implements Built<PersonalAnalytics, PersonalAnalyticsBuilder> {
   @BuiltValueField(wireName: r'totalAllTime')

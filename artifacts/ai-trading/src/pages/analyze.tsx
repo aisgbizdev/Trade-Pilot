@@ -17,9 +17,15 @@ import {
   getGetAnalysisQuotaQueryKey,
   useGetTimeframeRiskMap,
   getGetTimeframeRiskMapQueryKey,
+  useRecordProgressionActivity,
+  useStartProgressionEvidence,
+  getGetProgressionSummaryQueryKey,
+  getGetProgressionCatalogQueryKey,
+  getGetProgressionHistoryQueryKey,
   type CreateAnalysisBodyTimeframe,
   type GetTimeframeRiskMapInstrument,
   type UserSelectedMode,
+  type ProgressionEvidenceSession,
 } from "@workspace/api-client-react";
 import {
   TradingViewMiniChart,
@@ -763,6 +769,74 @@ export default function AnalyzePage() {
   const createAnalysis = useCreateAnalysis();
   const trackEvent = useTrackEvent();
   const queryClient = useQueryClient();
+  const recordActivity = useRecordProgressionActivity();
+  const startEvidence = useStartProgressionEvidence();
+
+  const { enabled: mentalChecklistEnabled } = useMentalChecklistPref();
+
+  const [openInstrumentCategory, setOpenInstrumentCategory] = useState<InstrumentCategory | null>("futures");
+  const [selectedInstrument, setSelectedInstrument] = useState("XAU/USD");
+  const [customInstrument, setCustomInstrument] = useState("");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
+
+  const [evidenceSession, setEvidenceSession] = useState<ProgressionEvidenceSession | null>(null);
+
+  const finalInstrument = customInstrument.trim() || selectedInstrument;
+
+  useEffect(() => {
+    if (mentalChecklistEnabled && finalInstrument && selectedTimeframe) {
+      setEvidenceSession(null);
+      startEvidence.mutateAsync({
+        data: {
+          source: "pre_analysis_checklist",
+          checklist: {
+            instrument: finalInstrument,
+            timeframe: selectedTimeframe
+          }
+        }
+      }).then(setEvidenceSession).catch(() => {});
+    }
+  }, [mentalChecklistEnabled, finalInstrument, selectedTimeframe]);
+
+  const handleChecklistComplete = async () => {
+    if (!evidenceSession) return;
+    try {
+      const res = await recordActivity.mutateAsync({
+        data: {
+          token: evidenceSession.token
+        }
+      });
+      if (res.awarded) {
+        queryClient.invalidateQueries({ queryKey: getGetProgressionSummaryQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetProgressionCatalogQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetProgressionHistoryQueryKey() });
+        toast({ title: t.progression.activity_awarded.replace("{xp}", String(res.xp)).replace("{reason}", t.progression.reason_pre_analysis_checklist) });
+      } else {
+        // Just invalidate queries, it might have been awarded before, no success toast
+        queryClient.invalidateQueries({ queryKey: getGetProgressionSummaryQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetProgressionCatalogQueryKey() });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Gagal menyimpan checklist" });
+    }
+  };
+
+  const handleSafeWait = () => {
+    toast({ title: t.progression.safe_wait_action, description: t.progression.safe_wait_tooltip });
+    setResultAnalysisId(null);
+    if (mentalChecklistEnabled && finalInstrument && selectedTimeframe) {
+      startEvidence.mutateAsync({
+        data: {
+          source: "pre_analysis_checklist",
+          checklist: {
+            instrument: finalInstrument,
+            timeframe: selectedTimeframe
+          }
+        }
+      }).then(setEvidenceSession).catch(() => {});
+    }
+  };
+
   const { data: quota } = useGetAnalysisQuota({
     query: { queryKey: getGetAnalysisQuotaQueryKey(), staleTime: 30_000 },
   });
@@ -772,10 +846,6 @@ export default function AnalyzePage() {
     quota && !quota.unlimited && hourlyQuota && dailyQuota,
   );
 
-  const [openInstrumentCategory, setOpenInstrumentCategory] = useState<InstrumentCategory | null>("futures");
-  const [selectedInstrument, setSelectedInstrument] = useState("XAU/USD");
-  const [customInstrument, setCustomInstrument] = useState("");
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
   // Mode selection is retired — every analysis now runs in "pro" mode.
   // Kept as a variable (rather than a literal) since createAnalysis,
   // the notes gate, and the review card below all still read it.
@@ -788,7 +858,6 @@ export default function AnalyzePage() {
   const [resultAnalysisId, setResultAnalysisId] = useState<number | null>(null);
   const resultSectionRef = useRef<HTMLDivElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { enabled: mentalChecklistEnabled } = useMentalChecklistPref();
 
   useEffect(() => {
     if (resultAnalysisId != null) {
@@ -821,7 +890,6 @@ export default function AnalyzePage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isLoading, t]);
 
-  const finalInstrument = customInstrument.trim() || selectedInstrument;
   const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
   const [alertModalOpen, setAlertModalOpen] = useState(false);
 
@@ -1189,6 +1257,7 @@ export default function AnalyzePage() {
               instrument={finalInstrument}
               proceedHandleRef={guardrailProceedRef}
               onCoolingOffChange={setCoolingOffActive}
+              onSafeWait={handleSafeWait}
             />
           )}
           <CoolingOffBreathingDialog
@@ -1202,7 +1271,7 @@ export default function AnalyzePage() {
           />
 
 
-          {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist />}
+          {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist onComplete={handleChecklistComplete} />}
 
           {resultAnalysisId == null && (
             <div className="flex justify-center">

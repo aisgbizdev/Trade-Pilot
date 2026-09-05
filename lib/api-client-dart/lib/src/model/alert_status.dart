@@ -15,7 +15,7 @@ part 'alert_status.g.dart';
 /// Properties:
 /// * [enabled] - Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.
 /// * [armedCount] - Number of currently armed levels (un-triggered, un-cancelled, in-validity).
-/// * [levels] 
+/// * [levels]
 @BuiltValue()
 abstract class AlertStatus implements Built<AlertStatus, AlertStatusBuilder> {
   /// Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.

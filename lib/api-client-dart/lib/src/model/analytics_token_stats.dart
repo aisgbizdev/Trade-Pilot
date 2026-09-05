@@ -17,12 +17,12 @@ part 'analytics_token_stats.g.dart';
 /// AnalyticsTokenStats
 ///
 /// Properties:
-/// * [windowDays] 
-/// * [dailyTokens] 
-/// * [byModel] 
-/// * [byInstrument] 
-/// * [topUsers] 
-/// * [totals] 
+/// * [windowDays]
+/// * [dailyTokens]
+/// * [byModel]
+/// * [byInstrument]
+/// * [topUsers]
+/// * [totals]
 @BuiltValue()
 abstract class AnalyticsTokenStats implements Built<AnalyticsTokenStats, AnalyticsTokenStatsBuilder> {
   @BuiltValueField(wireName: r'windowDays')

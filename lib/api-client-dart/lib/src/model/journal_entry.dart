@@ -12,21 +12,21 @@ part 'journal_entry.g.dart';
 /// A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.
 ///
 /// Properties:
-/// * [id] 
+/// * [id]
 /// * [analysisId] - Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.
-/// * [instrument] 
-/// * [side] 
-/// * [entryPrice] 
-/// * [exitPrice] 
-/// * [quantity] 
+/// * [instrument]
+/// * [side]
+/// * [entryPrice]
+/// * [exitPrice]
+/// * [quantity]
 /// * [pnlAmount] - Auto-computed from (exit - entry) * direction * quantity unless the user overrode it.
 /// * [pnlPercent] - Auto-computed from (exit - entry) / entry * 100 (signed by side) unless the user overrode it.
-/// * [outcome] 
-/// * [mood] 
-/// * [note] 
-/// * [tradedAt] 
-/// * [createdAt] 
-/// * [updatedAt] 
+/// * [outcome]
+/// * [mood]
+/// * [note]
+/// * [tradedAt]
+/// * [createdAt]
+/// * [updatedAt]
 @BuiltValue()
 abstract class JournalEntry implements Built<JournalEntry, JournalEntryBuilder> {
   @BuiltValueField(wireName: r'id')

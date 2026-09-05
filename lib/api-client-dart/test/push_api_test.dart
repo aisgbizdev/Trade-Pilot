@@ -30,7 +30,7 @@ void main() {
 
     // Send a sample push notification to the calling user's subscribed devices
     //
-    // Lets a signed-in user verify their phone actually pops up an OS-level notification. Sends to every subscription endpoint registered for the caller. Per-user rate limited so a misbehaving client cannot spam their own devices. 
+    // Lets a signed-in user verify their phone actually pops up an OS-level notification. Sends to every subscription endpoint registered for the caller. Per-user rate limited so a misbehaving client cannot spam their own devices.
     //
     //Future<PushTestResult> sendPushTest() async
     test('test sendPushTest', () async {

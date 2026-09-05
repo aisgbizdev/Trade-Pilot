@@ -70,11 +70,16 @@ export function getConfiguredReplitOrigins(
 }
 
 // In deployed artifacts REPLIT_DOMAINS contains the published domains.
-// In the workspace shell it contains the development domain, which is also
-// a legitimate preview origin. Keep both sources to support local previews
-// and published deployments without allowing wildcard Replit domains.
+// In the workspace shell it contains the development domain, while Expo web
+// previews use their own exact runtime domain. Keep all exact sources to
+// support previews and published deployments without allowing wildcard
+// Replit domains.
 const REPLIT_RUNTIME_ORIGINS = getConfiguredReplitOrigins(
-  [process.env["REPLIT_DOMAINS"], process.env["REPLIT_DEV_DOMAIN"]],
+  [
+    process.env["REPLIT_DOMAINS"],
+    process.env["REPLIT_DEV_DOMAIN"],
+    process.env["REPLIT_EXPO_DEV_DOMAIN"],
+  ],
 );
 
 app.use(

@@ -11,8 +11,8 @@ part 'change_password_body.g.dart';
 /// ChangePasswordBody
 ///
 /// Properties:
-/// * [currentPassword] 
-/// * [newPassword] 
+/// * [currentPassword]
+/// * [newPassword]
 @BuiltValue()
 abstract class ChangePasswordBody implements Built<ChangePasswordBody, ChangePasswordBodyBuilder> {
   @BuiltValueField(wireName: r'currentPassword')

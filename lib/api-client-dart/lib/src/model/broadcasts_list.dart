@@ -13,10 +13,10 @@ part 'broadcasts_list.g.dart';
 /// BroadcastsList
 ///
 /// Properties:
-/// * [broadcasts] 
-/// * [total] 
-/// * [page] 
-/// * [limit] 
+/// * [broadcasts]
+/// * [total]
+/// * [page]
+/// * [limit]
 @BuiltValue()
 abstract class BroadcastsList implements Built<BroadcastsList, BroadcastsListBuilder> {
   @BuiltValueField(wireName: r'broadcasts')

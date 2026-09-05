@@ -12,8 +12,8 @@ part 'create_filter_preset_body.g.dart';
 /// CreateFilterPresetBody
 ///
 /// Properties:
-/// * [name] 
-/// * [filters] 
+/// * [name]
+/// * [filters]
 @BuiltValue()
 abstract class CreateFilterPresetBody implements Built<CreateFilterPresetBody, CreateFilterPresetBodyBuilder> {
   @BuiltValueField(wireName: r'name')

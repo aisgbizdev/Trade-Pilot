@@ -11,15 +11,15 @@ part 'journal_sentiment.g.dart';
 /// Anonymised long-vs-short aggregate for an instrument over the last `windowDays`, gated when sample is too small to safely de-identify.
 ///
 /// Properties:
-/// * [instrument] 
-/// * [windowDays] 
-/// * [minSampleSize] 
-/// * [minDistinctTraders] 
+/// * [instrument]
+/// * [windowDays]
+/// * [minSampleSize]
+/// * [minDistinctTraders]
 /// * [sampleSize] - Number of directional (buy/sell) entries in the window. Null when `gated` is true (suppressed to prevent membership inference on thin instruments).
 /// * [distinctTraders] - Number of distinct user IDs contributing entries. Null when `gated` is true.
 /// * [gated] - True when sample is below thresholds; percentages, sampleSize, and distinctTraders are all null.
-/// * [buyPct] 
-/// * [sellPct] 
+/// * [buyPct]
+/// * [sellPct]
 @BuiltValue()
 abstract class JournalSentiment implements Built<JournalSentiment, JournalSentimentBuilder> {
   @BuiltValueField(wireName: r'instrument')

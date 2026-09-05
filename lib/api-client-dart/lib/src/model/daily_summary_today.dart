@@ -13,12 +13,12 @@ part 'daily_summary_today.g.dart';
 /// DailySummaryToday
 ///
 /// Properties:
-/// * [digestDate] 
-/// * [kind] 
-/// * [instruments] 
-/// * [summary] 
-/// * [createdAt] 
-/// * [analyses] 
+/// * [digestDate]
+/// * [kind]
+/// * [instruments]
+/// * [summary]
+/// * [createdAt]
+/// * [analyses]
 @BuiltValue()
 abstract class DailySummaryToday implements Built<DailySummaryToday, DailySummaryTodayBuilder> {
   @BuiltValueField(wireName: r'digestDate')

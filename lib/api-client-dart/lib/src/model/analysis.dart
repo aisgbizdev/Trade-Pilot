@@ -16,32 +16,32 @@ part 'analysis.g.dart';
 /// Analysis
 ///
 /// Properties:
-/// * [id] 
-/// * [userId] 
-/// * [instrument] 
-/// * [timeframe] 
-/// * [userInputContext] 
-/// * [mode] 
-/// * [validUntil] 
-/// * [marketCondition] 
-/// * [riskLevel] 
-/// * [confidenceMin] 
-/// * [confidenceMax] 
-/// * [mainScenario] 
-/// * [alternativeScenario] 
-/// * [whyReason] 
-/// * [failureConditions] 
-/// * [baseCase] 
-/// * [bullishScenario] 
-/// * [bearishScenario] 
-/// * [keyDriversTechnical] 
-/// * [keyDriversFundamental] 
-/// * [marketContext] 
-/// * [invalidationConditions] 
-/// * [uncertaintyNotes] 
+/// * [id]
+/// * [userId]
+/// * [instrument]
+/// * [timeframe]
+/// * [userInputContext]
+/// * [mode]
+/// * [validUntil]
+/// * [marketCondition]
+/// * [riskLevel]
+/// * [confidenceMin]
+/// * [confidenceMax]
+/// * [mainScenario]
+/// * [alternativeScenario]
+/// * [whyReason]
+/// * [failureConditions]
+/// * [baseCase]
+/// * [bullishScenario]
+/// * [bearishScenario]
+/// * [keyDriversTechnical]
+/// * [keyDriversFundamental]
+/// * [marketContext]
+/// * [invalidationConditions]
+/// * [uncertaintyNotes]
 /// * [tradingBias] - Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.
-/// * [opportunity] 
-/// * [risk] 
+/// * [opportunity]
+/// * [risk]
 /// * [techBuyCount] - Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.
 /// * [techSellCount] - Snapshot of the technical-indicator sell tally captured at analysis time.
 /// * [techNeutralCount] - Snapshot of the technical-indicator neutral tally captured at analysis time.
@@ -54,10 +54,10 @@ part 'analysis.g.dart';
 /// * [userNote] - Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.
 /// * [userNoteUpdatedAt] - When `userNote` was last saved server-side. Null when no note has been written.
 /// * [hasNote] - True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.
-/// * [feedback] 
+/// * [feedback]
 /// * [usefulCount] - Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.
 /// * [notUsefulCount] - Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.
-/// * [createdAt] 
+/// * [createdAt]
 @BuiltValue()
 abstract class Analysis implements Built<Analysis, AnalysisBuilder> {
   @BuiltValueField(wireName: r'id')

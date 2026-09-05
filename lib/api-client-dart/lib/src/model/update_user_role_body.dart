@@ -12,7 +12,7 @@ part 'update_user_role_body.g.dart';
 /// UpdateUserRoleBody
 ///
 /// Properties:
-/// * [role] 
+/// * [role]
 @BuiltValue()
 abstract class UpdateUserRoleBody implements Built<UpdateUserRoleBody, UpdateUserRoleBodyBuilder> {
   @BuiltValueField(wireName: r'role')

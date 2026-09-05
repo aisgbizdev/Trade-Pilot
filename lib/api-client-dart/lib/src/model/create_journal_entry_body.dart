@@ -13,18 +13,18 @@ part 'create_journal_entry_body.g.dart';
 /// CreateJournalEntryBody
 ///
 /// Properties:
-/// * [analysisId] 
-/// * [instrument] 
-/// * [side] 
-/// * [entryPrice] 
-/// * [exitPrice] 
-/// * [quantity] 
-/// * [pnlAmount] 
-/// * [pnlPercent] 
-/// * [outcome] 
-/// * [mood] 
-/// * [note] 
-/// * [tradedAt] 
+/// * [analysisId]
+/// * [instrument]
+/// * [side]
+/// * [entryPrice]
+/// * [exitPrice]
+/// * [quantity]
+/// * [pnlAmount]
+/// * [pnlPercent]
+/// * [outcome]
+/// * [mood]
+/// * [note]
+/// * [tradedAt]
 @BuiltValue()
 abstract class CreateJournalEntryBody implements Built<CreateJournalEntryBody, CreateJournalEntryBodyBuilder> {
   @BuiltValueField(wireName: r'analysisId')

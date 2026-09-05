@@ -14,9 +14,9 @@ part 'trader_mirror_response.g.dart';
 /// TraderMirrorResponse
 ///
 /// Properties:
-/// * [insights] 
-/// * [highlights] 
-/// * [timezone] 
+/// * [insights]
+/// * [highlights]
+/// * [timezone]
 @BuiltValue()
 abstract class TraderMirrorResponse implements Built<TraderMirrorResponse, TraderMirrorResponseBuilder> {
   @BuiltValueField(wireName: r'insights')

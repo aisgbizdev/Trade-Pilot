@@ -22,7 +22,7 @@ class DailySummaryApi {
   const DailySummaryApi(this._dio, this._serializers);
 
   /// Get current user&#39;s daily summary settings + today&#39;s digest
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -34,7 +34,7 @@ class DailySummaryApi {
   ///
   /// Returns a [Future] containing a [Response] with a [DailySummaryResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<DailySummaryResponse>> getDailySummary({ 
+  Future<Response<DailySummaryResponse>> getDailySummary({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -95,10 +95,10 @@ class DailySummaryApi {
   }
 
   /// Update daily summary settings (enabled, time, timezone)
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [dailySummarySettingsUpdate] 
+  /// * [dailySummarySettingsUpdate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -108,7 +108,7 @@ class DailySummaryApi {
   ///
   /// Returns a [Future] containing a [Response] with a [DailySummarySettings] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<DailySummarySettings>> updateDailySummarySettings({ 
+  Future<Response<DailySummarySettings>> updateDailySummarySettings({
     required DailySummarySettingsUpdate dailySummarySettingsUpdate,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

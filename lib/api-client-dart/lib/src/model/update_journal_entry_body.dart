@@ -13,18 +13,18 @@ part 'update_journal_entry_body.g.dart';
 /// Partial update — every field is optional. Recomputes pnlAmount/pnlPercent/outcome from entry+exit+side when the user didn't pass an explicit override.
 ///
 /// Properties:
-/// * [analysisId] 
-/// * [instrument] 
-/// * [side] 
-/// * [entryPrice] 
-/// * [exitPrice] 
-/// * [quantity] 
-/// * [pnlAmount] 
-/// * [pnlPercent] 
-/// * [outcome] 
-/// * [mood] 
-/// * [note] 
-/// * [tradedAt] 
+/// * [analysisId]
+/// * [instrument]
+/// * [side]
+/// * [entryPrice]
+/// * [exitPrice]
+/// * [quantity]
+/// * [pnlAmount]
+/// * [pnlPercent]
+/// * [outcome]
+/// * [mood]
+/// * [note]
+/// * [tradedAt]
 @BuiltValue()
 abstract class UpdateJournalEntryBody implements Built<UpdateJournalEntryBody, UpdateJournalEntryBodyBuilder> {
   @BuiltValueField(wireName: r'analysisId')

@@ -13,8 +13,8 @@ part 'daily_summary_response.g.dart';
 /// DailySummaryResponse
 ///
 /// Properties:
-/// * [settings] 
-/// * [today] 
+/// * [settings]
+/// * [today]
 @BuiltValue()
 abstract class DailySummaryResponse implements Built<DailySummaryResponse, DailySummaryResponseBuilder> {
   @BuiltValueField(wireName: r'settings')

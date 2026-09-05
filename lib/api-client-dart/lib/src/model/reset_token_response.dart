@@ -11,8 +11,8 @@ part 'reset_token_response.g.dart';
 /// ResetTokenResponse
 ///
 /// Properties:
-/// * [resetToken] 
-/// * [message] 
+/// * [resetToken]
+/// * [message]
 @BuiltValue()
 abstract class ResetTokenResponse implements Built<ResetTokenResponse, ResetTokenResponseBuilder> {
   @BuiltValueField(wireName: r'resetToken')

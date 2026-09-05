@@ -28,7 +28,7 @@ Log a new manual trade-journal entry (optionally linked to an analysis)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getTradeJournalApi();
-final CreateJournalEntryBody createJournalEntryBody = ; // CreateJournalEntryBody | 
+final CreateJournalEntryBody createJournalEntryBody = ; // CreateJournalEntryBody |
 
 try {
     final response = api.createJournalEntry(createJournalEntryBody);
@@ -42,7 +42,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createJournalEntryBody** | [**CreateJournalEntryBody**](CreateJournalEntryBody.md)|  | 
+ **createJournalEntryBody** | [**CreateJournalEntryBody**](CreateJournalEntryBody.md)|  |
 
 ### Return type
 
@@ -69,7 +69,7 @@ Delete a journal entry
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getTradeJournalApi();
-final int id = 56; // int | 
+final int id = 56; // int |
 
 try {
     final response = api.deleteJournalEntry(id);
@@ -83,7 +83,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
+ **id** | **int**|  |
 
 ### Return type
 
@@ -112,7 +112,7 @@ Returns the first journal entry the authenticated user linked to a specific anal
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getTradeJournalApi();
-final int analysisId = 56; // int | 
+final int analysisId = 56; // int |
 
 try {
     final response = api.getJournalEntryForAnalysis(analysisId);
@@ -126,7 +126,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **analysisId** | **int**|  | 
+ **analysisId** | **int**|  |
 
 ### Return type
 
@@ -153,7 +153,7 @@ Anonymised long-vs-short aggregate for an instrument across all users (last 7 da
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getTradeJournalApi();
-final String instrument = instrument_example; // String | 
+final String instrument = instrument_example; // String |
 
 try {
     final response = api.getJournalSentiment(instrument);
@@ -167,7 +167,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **instrument** | **String**|  | 
+ **instrument** | **String**|  |
 
 ### Return type
 
@@ -194,8 +194,8 @@ Summary stats for the user's trade journal (win rate, avg P/L, best/worst)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getTradeJournalApi();
-final DateTime from = 2013-10-20T19:20:30+01:00; // DateTime | 
-final DateTime to = 2013-10-20T19:20:30+01:00; // DateTime | 
+final DateTime from = 2013-10-20T19:20:30+01:00; // DateTime |
+final DateTime to = 2013-10-20T19:20:30+01:00; // DateTime |
 
 try {
     final response = api.getJournalStats(from, to);
@@ -209,8 +209,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **from** | **DateTime**|  | [optional] 
- **to** | **DateTime**|  | [optional] 
+ **from** | **DateTime**|  | [optional]
+ **to** | **DateTime**|  | [optional]
 
 ### Return type
 
@@ -237,11 +237,11 @@ List the current user's trade journal entries with optional filters
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getTradeJournalApi();
-final String instrument = instrument_example; // String | 
-final String outcome = outcome_example; // String | 
-final DateTime from = 2013-10-20T19:20:30+01:00; // DateTime | 
-final DateTime to = 2013-10-20T19:20:30+01:00; // DateTime | 
-final int limit = 56; // int | 
+final String instrument = instrument_example; // String |
+final String outcome = outcome_example; // String |
+final DateTime from = 2013-10-20T19:20:30+01:00; // DateTime |
+final DateTime to = 2013-10-20T19:20:30+01:00; // DateTime |
+final int limit = 56; // int |
 
 try {
     final response = api.listJournalEntries(instrument, outcome, from, to, limit);
@@ -255,11 +255,11 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **instrument** | **String**|  | [optional] 
- **outcome** | **String**|  | [optional] 
- **from** | **DateTime**|  | [optional] 
- **to** | **DateTime**|  | [optional] 
- **limit** | **int**|  | [optional] 
+ **instrument** | **String**|  | [optional]
+ **outcome** | **String**|  | [optional]
+ **from** | **DateTime**|  | [optional]
+ **to** | **DateTime**|  | [optional]
+ **limit** | **int**|  | [optional]
 
 ### Return type
 
@@ -286,8 +286,8 @@ Update an existing journal entry (e.g. close out an open trade)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getTradeJournalApi();
-final int id = 56; // int | 
-final UpdateJournalEntryBody updateJournalEntryBody = ; // UpdateJournalEntryBody | 
+final int id = 56; // int |
+final UpdateJournalEntryBody updateJournalEntryBody = ; // UpdateJournalEntryBody |
 
 try {
     final response = api.updateJournalEntry(id, updateJournalEntryBody);
@@ -301,8 +301,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  | 
- **updateJournalEntryBody** | [**UpdateJournalEntryBody**](UpdateJournalEntryBody.md)|  | 
+ **id** | **int**|  |
+ **updateJournalEntryBody** | [**UpdateJournalEntryBody**](UpdateJournalEntryBody.md)|  |
 
 ### Return type
 

@@ -29,6 +29,8 @@ import GuidePage from "@/pages/guide";
 import JournalPage from "@/pages/journal";
 import MirrorPage from "@/pages/mirror";
 import PerformancePage, { PerformanceMethodologyPage } from "@/pages/performance";
+import ProgressionPage from "@/pages/progression";
+import AdminProgressionPage from "@/pages/admin-progression";
 import { SplashScreen } from "@/components/splash-screen";
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
@@ -125,6 +127,11 @@ function Router() {
             <ProfilePage />
           </ProtectedRoute>
         </Route>
+        <Route path="/progression">
+          <ProtectedRoute>
+            <ProgressionPage />
+          </ProtectedRoute>
+        </Route>
         <Route path="/notifications">
           <ProtectedRoute>
             <NotificationsPage />
@@ -161,6 +168,11 @@ function Router() {
         <Route path="/admin">
           <ProtectedRoute requiredRole="admin">
             <AdminPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/progression">
+          <ProtectedRoute requiredRole="admin">
+            <AdminProgressionPage />
           </ProtectedRoute>
         </Route>
         <Route path="/admin/users">

@@ -11,10 +11,10 @@ part 'analytics_token_stats_top_users_inner.g.dart';
 /// AnalyticsTokenStatsTopUsersInner
 ///
 /// Properties:
-/// * [userId] 
-/// * [email] 
-/// * [totalTokens] 
-/// * [estimatedCostUsd] 
+/// * [userId]
+/// * [email]
+/// * [totalTokens]
+/// * [estimatedCostUsd]
 @BuiltValue()
 abstract class AnalyticsTokenStatsTopUsersInner implements Built<AnalyticsTokenStatsTopUsersInner, AnalyticsTokenStatsTopUsersInnerBuilder> {
   @BuiltValueField(wireName: r'userId')

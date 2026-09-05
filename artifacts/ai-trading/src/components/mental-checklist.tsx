@@ -22,11 +22,20 @@ const ITEMS = [
   { key: "calm",  label_en: "I'm not trading to recover a previous loss (no revenge)", label_id: "Gw nggak trade buat balas dendam loss sebelumnya" },
 ] as const;
 
-export function MentalChecklist() {
+export function MentalChecklist({ onComplete }: { onComplete?: () => void }) {
   const { t, lang } = useTranslation();
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
-  const toggle = (key: string) => setChecked((s) => ({ ...s, [key]: !s[key] }));
+  const toggle = (key: string) => {
+    setChecked((s) => {
+      const next = { ...s, [key]: !s[key] };
+      const nowAllChecked = ITEMS.every((it) => next[it.key]);
+      if (nowAllChecked && !ITEMS.every((it) => s[it.key])) {
+        onComplete?.();
+      }
+      return next;
+    });
+  };
   const allChecked = ITEMS.every((it) => checked[it.key]);
 
   return (

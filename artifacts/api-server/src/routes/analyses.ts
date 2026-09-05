@@ -42,6 +42,7 @@ import { resetDormancyStreak } from "../lib/dormancy";
 import { detectGuardrailSignals, GUARDRAIL_KINDS, type GuardrailKind } from "../lib/anti-pattern";
 import { guardrailEvents } from "@workspace/db/schema";
 import { z } from "zod";
+import { awardProgression, revokeProgressionEvidence, riskWaitSourceEventId } from "../lib/progression";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -310,14 +311,41 @@ router.post("/analyses/guardrails/telemetry", requireAuth, async (req: AuthReque
     return;
   }
   const { kind, instrument, proceeded, metadata } = parsed.data;
-  await db.insert(guardrailEvents).values({
+  const [event] = await db.insert(guardrailEvents).values({
     userId: req.userId!,
     kind,
     instrument: instrument ?? null,
     proceeded: proceeded === true,
     metadata: metadata ?? {},
-  });
-  res.status(201).json({ ok: true });
+  }).returning({ id: guardrailEvents.id });
+  // Telemetry is an impression/proceed record only. It never grants XP;
+  // the dedicated /wait action below is the sole safe-wait award path.
+  res.status(201).json({ ok: true, id: event!.id });
+});
+
+// Dedicated user action, separate from passive impression telemetry. This is
+// the only endpoint that can record an explicit decision to wait.
+router.post("/analyses/guardrails/:id/wait", requireAuth, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isInteger(id) || id <= 0) { res.status(400).json({ error: "ID peringatan tidak valid" }); return; }
+  const [warning] = await db.select({ id: guardrailEvents.id, kind: guardrailEvents.kind, instrument: guardrailEvents.instrument, firedAt: guardrailEvents.firedAt }).from(guardrailEvents)
+    .where(and(eq(guardrailEvents.id, id), eq(guardrailEvents.userId, req.userId!))).limit(1);
+  if (!warning) { res.status(404).json({ error: "Peringatan tidak ditemukan" }); return; }
+  // Only the independently re-checkable calendar risk signal is eligible.
+  // Impression telemetry kinds such as unusual-hour are deliberately excluded.
+  if (warning.kind !== "high_risk_window" || !warning.instrument || Date.now() - warning.firedAt.getTime() > 15 * 60_000) {
+    res.status(400).json({ error: "Peringatan tidak memenuhi syarat safe-wait" }); return;
+  }
+  const active = await detectGuardrailSignals(req.userId!, warning.instrument);
+  const signal = active?.signals.find((candidate) => candidate.kind === "high_risk_window");
+  if (!signal || signal.kind !== "high_risk_window") {
+    res.status(400).json({ error: "Peringatan risiko tidak lagi aktif" }); return;
+  }
+  // Dedupe by independently detected economic event identity, never by the
+  // caller-created impression row. Forging many impressions cannot multiply XP.
+  const sourceEventId = riskWaitSourceEventId(warning.instrument, signal.event);
+  const result = await awardProgression({ userId: req.userId!, source: "risk_warning_wait", sourceEventId, qualityScore: 100, metadata: { guardrailEventId: warning.id, eventIdentity: sourceEventId, explicitWait: true } });
+  res.status(result.awarded ? 201 : 200).json(result);
 });
 
 router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
@@ -1286,6 +1314,8 @@ router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res)
       .set({ feedbackType, outcome: outcome ?? null, note: note ?? null })
       .where(eq(feedback.id, existing[0].id))
       .returning();
+    if (typeof note === "string" && note.trim().length >= 40) void awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(updated.id), qualityScore: 100, metadata: { analysisId, feedbackId: updated.id } });
+    else void revokeProgressionEvidence(req.userId!, "analysis_evaluation", String(updated.id), "Evaluation no longer meets minimum quality");
     res.json(updated);
     return;
   }
@@ -1300,7 +1330,7 @@ router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res)
       note: note ?? null,
     })
     .returning();
-
+  if (typeof note === "string" && note.trim().length >= 40) void awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(newFeedback.id), qualityScore: 100, metadata: { analysisId, feedbackId: newFeedback.id } });
   res.status(201).json(newFeedback);
 });
 

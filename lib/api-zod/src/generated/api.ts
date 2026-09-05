@@ -8,6 +8,217 @@
 import * as zod from "zod";
 
 /**
+ * @summary Get the authenticated user's private progression summary
+ */
+export const getProgressionSummaryResponseTotalXpMin = 0;
+
+export const getProgressionSummaryResponseLevelMax = 100;
+
+export const getProgressionSummaryResponseMasteryLevelMin = 0;
+
+export const getProgressionSummaryResponseCurrentLevelXpMin = 0;
+
+export const getProgressionSummaryResponseCurrentStreakMin = 0;
+
+export const getProgressionSummaryResponseLongestStreakMin = 0;
+
+export const GetProgressionSummaryResponse = zod.object({
+  totalXp: zod.number().int().min(getProgressionSummaryResponseTotalXpMin),
+  level: zod.number().int().min(1).max(getProgressionSummaryResponseLevelMax),
+  masteryLevel: zod
+    .number()
+    .int()
+    .min(getProgressionSummaryResponseMasteryLevelMin),
+  rank: zod.string(),
+  currentLevelXp: zod
+    .number()
+    .int()
+    .min(getProgressionSummaryResponseCurrentLevelXpMin)
+    .describe("Absolute XP floor for current level"),
+  nextLevelXp: zod
+    .number()
+    .int()
+    .min(1)
+    .describe("Absolute XP target for next level or Mastery step"),
+  currentStreak: zod
+    .number()
+    .int()
+    .min(getProgressionSummaryResponseCurrentStreakMin),
+  longestStreak: zod
+    .number()
+    .int()
+    .min(getProgressionSummaryResponseLongestStreakMin),
+});
+
+/**
+ * @summary Get private achievement catalog and unlock state
+ */
+export const GetProgressionCatalogResponse = zod.object({
+  achievements: zod.array(
+    zod.object({
+      key: zod.string(),
+      unlocked: zod.boolean(),
+      unlockedAt: zod.coerce.date().nullable(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get private append-only XP history
+ */
+export const getProgressionHistoryQueryLimitMax = 100;
+
+export const GetProgressionHistoryQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(getProgressionHistoryQueryLimitMax)
+    .optional(),
+});
+
+export const GetProgressionHistoryResponse = zod.object({
+  entries: zod.array(
+    zod.object({
+      id: zod.number().int(),
+      source: zod.string(),
+      xp: zod.number().int(),
+      dayBucket: zod.string(),
+      ruleVersion: zod.string(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Record a server-verifiable checklist or guide completion
+ */
+export const recordProgressionActivityBodyTokenMin = 32;
+
+export const RecordProgressionActivityBody = zod.object({
+  token: zod.string().min(recordProgressionActivityBodyTokenMin),
+});
+
+export const RecordProgressionActivityResponse = zod.object({
+  awarded: zod.boolean(),
+  xp: zod.number().int(),
+  reason: zod.string().optional(),
+});
+
+/**
+ * @summary Issue a one-time server evidence token for a known guide or checklist
+ */
+export const StartProgressionEvidenceBody = zod.object({
+  source: zod.enum(["pre_analysis_checklist", "guide_completion"]),
+  guideId: zod
+    .enum([
+      "how-ai-works",
+      "feature-map",
+      "reading-analysis",
+      "validity-confidence",
+      "adaptive-plan",
+      "analysis-workflow",
+      "bias-confidence-validity",
+      "levels-chart",
+      "technical-fundamental",
+      "standard-plan",
+      "adaptive-position-plan",
+      "account-rules",
+      "terms",
+    ])
+    .optional(),
+  checklist: zod
+    .object({
+      instrument: zod.string(),
+      timeframe: zod.string(),
+    })
+    .optional(),
+});
+
+export const StartProgressionEvidenceResponse = zod.object({
+  token: zod.string(),
+  source: zod.string(),
+  subject: zod.string(),
+  minimumCompleteAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Read-only progression ledger audit; never a leaderboard
+ */
+export const GetProgressionAuditQueryParams = zod.object({
+  userId: zod.coerce.number().int().optional(),
+});
+
+export const GetProgressionAuditResponse = zod.object({
+  entries: zod.array(
+    zod.object({
+      id: zod.number().int(),
+      userId: zod.number().int(),
+      source: zod.string(),
+      sourceEventId: zod.string(),
+      xp: zod.number().int(),
+      dayBucket: zod.string(),
+      ruleVersion: zod.string(),
+      metadata: zod.record(zod.string(), zod.unknown()),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Safely backfill only unequivocal historical progression evidence
+ */
+export const backfillProgressionResponseAwardedMin = 0;
+
+export const backfillProgressionResponseScannedMin = 0;
+
+export const BackfillProgressionResponse = zod.object({
+  awarded: zod.number().int().min(backfillProgressionResponseAwardedMin),
+  scanned: zod.number().int().min(backfillProgressionResponseScannedMin),
+  ruleVersion: zod.string(),
+});
+
+/**
+ * @summary Detect active soft warnings for the requested instrument
+ */
+export const GetGuardrailsQueryParams = zod.object({
+  instrument: zod.coerce.string(),
+});
+
+export const GetGuardrailsResponse = zod.object({
+  signals: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  prefs: zod.record(zod.string(), zod.unknown()).optional(),
+});
+
+/**
+ * @summary Record impression or override of a guardrail
+ */
+export const RecordGuardrailTelemetryBody = zod.object({
+  kind: zod.string(),
+  instrument: zod.string().optional(),
+  proceeded: zod.boolean().optional(),
+  metadata: zod.record(zod.string(), zod.unknown()).optional(),
+});
+
+export const RecordGuardrailTelemetryResponse = zod.object({
+  ok: zod.boolean(),
+  id: zod.number().int(),
+});
+
+/**
+ * @summary Record an explicit decision to wait
+ */
+export const WaitGuardrailParams = zod.object({
+  id: zod.coerce.number().int(),
+});
+
+export const WaitGuardrailResponse = zod.object({
+  awarded: zod.boolean(),
+  xp: zod.number().int(),
+  reason: zod.string().optional(),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -2940,6 +3151,9 @@ export const GetPushPrefsResponse = zod.object({
     .describe(
       "IANA timezone quietHoursStart\/quietHoursEnd are interpreted in.",
     ),
+  progressionNotificationsEnabled: zod
+    .boolean()
+    .describe("Enable personal progression notifications."),
 });
 
 /**
@@ -2976,6 +3190,7 @@ export const UpdatePushPrefsBody = zod.object({
   quietHoursStart: zod.string().optional().describe("HH:MM 24h local time."),
   quietHoursEnd: zod.string().optional().describe("HH:MM 24h local time."),
   notificationTimezone: zod.string().optional().describe("IANA timezone."),
+  progressionNotificationsEnabled: zod.boolean().optional(),
 });
 
 export const UpdatePushPrefsResponse = zod.object({
@@ -3059,6 +3274,9 @@ export const UpdatePushPrefsResponse = zod.object({
     .describe(
       "IANA timezone quietHoursStart\/quietHoursEnd are interpreted in.",
     ),
+  progressionNotificationsEnabled: zod
+    .boolean()
+    .describe("Enable personal progression notifications."),
 });
 
 /**

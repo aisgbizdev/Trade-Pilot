@@ -134,7 +134,7 @@ No authorization required
 
 Send a sample push notification to the calling user's subscribed devices
 
-Lets a signed-in user verify their phone actually pops up an OS-level notification. Sends to every subscription endpoint registered for the caller. Per-user rate limited so a misbehaving client cannot spam their own devices. 
+Lets a signed-in user verify their phone actually pops up an OS-level notification. Sends to every subscription endpoint registered for the caller. Per-user rate limited so a misbehaving client cannot spam their own devices.
 
 ### Example
 ```dart
@@ -178,7 +178,7 @@ Register a Web Push subscription for the current user
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getPushApi();
-final PushSubscriptionBody pushSubscriptionBody = ; // PushSubscriptionBody | 
+final PushSubscriptionBody pushSubscriptionBody = ; // PushSubscriptionBody |
 
 try {
     final response = api.subscribePush(pushSubscriptionBody);
@@ -192,7 +192,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **pushSubscriptionBody** | [**PushSubscriptionBody**](PushSubscriptionBody.md)|  | 
+ **pushSubscriptionBody** | [**PushSubscriptionBody**](PushSubscriptionBody.md)|  |
 
 ### Return type
 
@@ -219,7 +219,7 @@ Remove a Web Push subscription for the current user
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getPushApi();
-final PushUnsubscribeBody pushUnsubscribeBody = ; // PushUnsubscribeBody | 
+final PushUnsubscribeBody pushUnsubscribeBody = ; // PushUnsubscribeBody |
 
 try {
     final response = api.unsubscribePush(pushUnsubscribeBody);
@@ -233,7 +233,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **pushUnsubscribeBody** | [**PushUnsubscribeBody**](PushUnsubscribeBody.md)|  | 
+ **pushUnsubscribeBody** | [**PushUnsubscribeBody**](PushUnsubscribeBody.md)|  |
 
 ### Return type
 
@@ -260,7 +260,7 @@ Update push notification preferences
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getPushApi();
-final PushPrefsUpdate pushPrefsUpdate = ; // PushPrefsUpdate | 
+final PushPrefsUpdate pushPrefsUpdate = ; // PushPrefsUpdate |
 
 try {
     final response = api.updatePushPrefs(pushPrefsUpdate);
@@ -274,7 +274,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **pushPrefsUpdate** | [**PushPrefsUpdate**](PushPrefsUpdate.md)|  | 
+ **pushPrefsUpdate** | [**PushPrefsUpdate**](PushPrefsUpdate.md)|  |
 
 ### Return type
 

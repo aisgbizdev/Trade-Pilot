@@ -84,6 +84,12 @@ export function installFetchMock(
       }
       return null;
     },
+    (url, init) => {
+      if (url.includes("/api/events/track")) {
+        return jsonResponse({ success: true });
+      }
+      return null;
+    },
     // Default layout bell query: zero unread notifications.
     (url) => {
       if (url.includes("/api/notifications") && url.includes("unreadOnly=true")) {

@@ -5,7 +5,7 @@
 - [Dashboard desktop masonry](dashboard-desktop-masonry.md) — desktop dashboard widgets use CSS multicol (lg:columns-2), not grid auto-flow, to avoid odd trailing gaps while keeping mobile DOM order/spacing identical.
 - [Tablet-only width constraint](tablet-only-width-constraint.md) — to narrow content at tablet while leaving desktop full-width, use `md:max-w-3xl md:mx-auto lg:max-w-none` (Layout caps at md:max-w-4xl/lg:max-w-6xl).
 - [Mobile Expo auth pattern](mobile-expo-auth-pattern.md) — orval mutations take `{ data: Body }`, mode required in CreateAnalysisBody, use `"/(tabs)"` not `"/(tabs)/"`, colors.radius lives alongside palette tokens.
-- [Replit deployment CORS origins](replit-deployment-cors-origins.md) — use exact runtime `REPLIT_DOMAINS` origins alongside custom domains; dev-domain-only CORS blocks browser registration after publishing.
+- [Replit deployment CORS origins](replit-deployment-cors-origins.md) — allow exact web, Expo, and published runtime origins; never wildcard credentialed CORS.
 - [Situation-aware adaptive scaling](situation-aware-adaptive-scaling.md) — staged additions must fail closed unless the saved analysis context is complete and directionally aligned.
 - [Artifact mirror duplicate](artifact-mirror-duplicate.md) — validate and publish canonical root artifacts; the tracked trade-pilot tree creates duplicate workflow entries.
 - [Adaptive-plan cache versioning](adaptive-plan-cache-versioning.md) — bump the browser storage namespace whenever calculator semantics change, or saved recommendations can mask a correct fix.

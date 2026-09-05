@@ -12,8 +12,8 @@ part 'push_subscription_body.g.dart';
 /// PushSubscriptionBody
 ///
 /// Properties:
-/// * [endpoint] 
-/// * [keys] 
+/// * [endpoint]
+/// * [keys]
 @BuiltValue()
 abstract class PushSubscriptionBody implements Built<PushSubscriptionBody, PushSubscriptionBodyBuilder> {
   @BuiltValueField(wireName: r'endpoint')

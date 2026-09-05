@@ -11,7 +11,7 @@ part 'delete_account_body.g.dart';
 /// DeleteAccountBody
 ///
 /// Properties:
-/// * [currentPassword] 
+/// * [currentPassword]
 @BuiltValue()
 abstract class DeleteAccountBody implements Built<DeleteAccountBody, DeleteAccountBodyBuilder> {
   @BuiltValueField(wireName: r'currentPassword')

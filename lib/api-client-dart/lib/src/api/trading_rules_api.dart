@@ -31,7 +31,7 @@ class TradingRulesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [StandardTradingRules] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<StandardTradingRules>> getStandardTradingRules({ 
+  Future<Response<StandardTradingRules>> getStandardTradingRules({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

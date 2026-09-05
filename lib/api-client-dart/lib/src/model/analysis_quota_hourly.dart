@@ -11,9 +11,9 @@ part 'analysis_quota_hourly.g.dart';
 /// AnalysisQuotaHourly
 ///
 /// Properties:
-/// * [limit] 
-/// * [used] 
-/// * [remaining] 
+/// * [limit]
+/// * [used]
+/// * [remaining]
 @BuiltValue()
 abstract class AnalysisQuotaHourly implements Built<AnalysisQuotaHourly, AnalysisQuotaHourlyBuilder> {
   @BuiltValueField(wireName: r'limit')

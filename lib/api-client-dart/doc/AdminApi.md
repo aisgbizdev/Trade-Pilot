@@ -9,6 +9,7 @@ All URIs are relative to */api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**backfillProgression**](AdminApi.md#backfillprogression) | **POST** /admin/progression/backfill | Safely backfill only unequivocal historical progression evidence
 [**broadcastNotification**](AdminApi.md#broadcastnotification) | **POST** /admin/notifications | Broadcast notification to selected audience
 [**getAdminAnalyticsTokens**](AdminApi.md#getadminanalyticstokens) | **GET** /admin/analytics/tokens | AI (OpenAI) token usage and estimated cost breakdown
 [**getAdminAnalyticsUsage**](AdminApi.md#getadminanalyticsusage) | **GET** /admin/analytics/usage | Feature-usage, device, browser, and country breakdown from analytics events
@@ -17,7 +18,45 @@ Method | HTTP request | Description
 [**getAllAnalyses**](AdminApi.md#getallanalyses) | **GET** /admin/analyses | Get all analyses (admin only)
 [**getBroadcasts**](AdminApi.md#getbroadcasts) | **GET** /admin/broadcasts | Broadcast history
 [**getOutboundClickStats**](AdminApi.md#getoutboundclickstats) | **GET** /admin/outbound-clicks/stats | Aggregated counts of sponsor / partner outbound link clicks
+[**getProgressionAudit**](AdminApi.md#getprogressionaudit) | **GET** /admin/progression/audit | Read-only progression ledger audit; never a leaderboard
 
+
+# **backfillProgression**
+> ProgressionBackfillResult backfillProgression()
+
+Safely backfill only unequivocal historical progression evidence
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+
+try {
+    final response = api.backfillProgression();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->backfillProgression: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**ProgressionBackfillResult**](ProgressionBackfillResult.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **broadcastNotification**
 > BroadcastSendResult broadcastNotification(broadcastNotificationBody)
@@ -29,7 +68,7 @@ Broadcast notification to selected audience
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final BroadcastNotificationBody broadcastNotificationBody = ; // BroadcastNotificationBody | 
+final BroadcastNotificationBody broadcastNotificationBody = ; // BroadcastNotificationBody |
 
 try {
     final response = api.broadcastNotification(broadcastNotificationBody);
@@ -43,7 +82,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **broadcastNotificationBody** | [**BroadcastNotificationBody**](BroadcastNotificationBody.md)|  | 
+ **broadcastNotificationBody** | [**BroadcastNotificationBody**](BroadcastNotificationBody.md)|  |
 
 ### Return type
 
@@ -152,8 +191,8 @@ List user feedback rows (admin only)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final int page = 56; // int | 
-final int limit = 56; // int | 
+final int page = 56; // int |
+final int limit = 56; // int |
 final String search = search_example; // String | Free-text ILIKE filter matched against the user's email or the analysis instrument
 final String feedbackType = feedbackType_example; // String | Restrict to a single feedback reaction
 final Date from = 2013-10-20; // Date | Only include feedback created on or after this date (ISO 8601 date)
@@ -174,11 +213,11 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **page** | **int**|  | [optional] [default to 1]
  **limit** | **int**|  | [optional] [default to 50]
- **search** | **String**| Free-text ILIKE filter matched against the user's email or the analysis instrument | [optional] 
- **feedbackType** | **String**| Restrict to a single feedback reaction | [optional] 
- **from** | **Date**| Only include feedback created on or after this date (ISO 8601 date) | [optional] 
- **to** | **Date**| Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day) | [optional] 
- **analysisId** | **int**| When set, only return feedback for the given analysis id. | [optional] 
+ **search** | **String**| Free-text ILIKE filter matched against the user's email or the analysis instrument | [optional]
+ **feedbackType** | **String**| Restrict to a single feedback reaction | [optional]
+ **from** | **Date**| Only include feedback created on or after this date (ISO 8601 date) | [optional]
+ **to** | **Date**| Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day) | [optional]
+ **analysisId** | **int**| When set, only return feedback for the given analysis id. | [optional]
 
 ### Return type
 
@@ -242,8 +281,8 @@ Get all analyses (admin only)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final int page = 56; // int | 
-final int limit = 56; // int | 
+final int page = 56; // int |
+final int limit = 56; // int |
 
 try {
     final response = api.getAllAnalyses(page, limit);
@@ -285,8 +324,8 @@ Broadcast history
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final int page = 56; // int | 
-final int limit = 56; // int | 
+final int page = 56; // int |
+final int limit = 56; // int |
 
 try {
     final response = api.getBroadcasts(page, limit);
@@ -347,6 +386,47 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**OutboundClickStats**](OutboundClickStats.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getProgressionAudit**
+> ProgressionAudit getProgressionAudit(userId)
+
+Read-only progression ledger audit; never a leaderboard
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+final int userId = 56; // int |
+
+try {
+    final response = api.getProgressionAudit(userId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->getProgressionAudit: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userId** | **int**|  | [optional]
+
+### Return type
+
+[**ProgressionAudit**](ProgressionAudit.md)
 
 ### Authorization
 

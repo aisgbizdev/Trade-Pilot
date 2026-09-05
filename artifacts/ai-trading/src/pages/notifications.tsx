@@ -92,7 +92,8 @@ export default function NotificationsPage() {
       | "guardrailRevenge"
       | "guardrailOvertrading"
       | "guardrailHighRisk"
-      | "coolingOffEnabled",
+      | "coolingOffEnabled"
+      | "progressionNotificationsEnabled",
     value: boolean,
   ) => {
     try {
@@ -521,6 +522,22 @@ export default function NotificationsPage() {
                   onCheckedChange={(v) => handlePrefToggle("pushSignalFlip", v)}
                   disabled={updatePushPrefs.isPending}
                   data-testid="switch-pref-signal-flip"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {t.notifications.push_pref_progression_title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.notifications.push_pref_progression_desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={pushPrefs.progressionNotificationsEnabled}
+                  onCheckedChange={(v) => handlePrefToggle("progressionNotificationsEnabled", v)}
+                  disabled={updatePushPrefs.isPending}
+                  data-testid="switch-pref-progression"
                 />
               </div>
             </div>

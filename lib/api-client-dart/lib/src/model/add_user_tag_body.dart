@@ -11,7 +11,7 @@ part 'add_user_tag_body.g.dart';
 /// AddUserTagBody
 ///
 /// Properties:
-/// * [tag] 
+/// * [tag]
 @BuiltValue()
 abstract class AddUserTagBody implements Built<AddUserTagBody, AddUserTagBodyBuilder> {
   @BuiltValueField(wireName: r'tag')

@@ -69,19 +69,30 @@ vi.mock("@/hooks/use-relevant-calendar", () => ({
   useRelevantCalendar: () => ({ data: { events: [] }, isLoading: false, isError: false }),
 }));
 
-vi.mock("@workspace/api-client-react", () => ({
-  useCreateAnalysis: () => ({ mutateAsync: vi.fn() }),
-  useUpdateProfile: () => ({ mutate: vi.fn() }),
-  getGetMeQueryKey: () => ["me"],
-  useGetRecentInstruments: () => ({ data: undefined }),
-  getGetRecentInstrumentsQueryKey: () => ["recent"],
-  useGetTimeframeRiskMap: () => ({ data: undefined, isLoading: false, isError: false }),
-  getGetTimeframeRiskMapQueryKey: () => ["risk-map"],
-  useGetAnalysisQuota: () => ({ data: undefined }),
-  getGetAnalysisQuotaQueryKey: () => ["quota"],
-  useListAnalyses: () => ({ data: undefined }),
-  getListAnalysesQueryKey: () => ["analyses"],
-}));
+vi.mock("@workspace/api-client-react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/api-client-react")>();
+  return {
+    ...actual,
+    useCreateAnalysis: () => ({ mutateAsync: vi.fn() }),
+    useUpdateProfile: () => ({ mutate: vi.fn() }),
+    getGetMeQueryKey: () => ["me"],
+    useGetRecentInstruments: () => ({ data: undefined }),
+    getGetRecentInstrumentsQueryKey: () => ["recent"],
+    useGetTimeframeRiskMap: () => ({ data: undefined, isLoading: false, isError: false }),
+    getGetTimeframeRiskMapQueryKey: () => ["risk-map"],
+    useGetAnalysisQuota: () => ({ data: undefined }),
+    getGetAnalysisQuotaQueryKey: () => ["quota"],
+    useListAnalyses: () => ({ data: undefined }),
+    getListAnalysesQueryKey: () => ["analyses"],
+    useRecordProgressionActivity: () => ({ mutateAsync: vi.fn() }),
+    useStartProgressionEvidence: () => ({ mutateAsync: vi.fn() }),
+    getGetProgressionSummaryQueryKey: () => ["progression-summary"],
+    getGetProgressionCatalogQueryKey: () => ["progression-catalog"],
+    getGetProgressionHistoryQueryKey: () => ["progression-history"],
+    useGetJournalSentiment: () => ({ data: undefined, isLoading: false }),
+    getGetJournalSentimentQueryKey: () => ["sentiment"],
+  };
+});
 
 vi.mock("wouter", () => ({
   useLocation: () => ["/analyze", vi.fn()],

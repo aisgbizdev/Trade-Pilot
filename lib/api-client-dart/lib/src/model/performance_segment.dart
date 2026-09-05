@@ -13,10 +13,10 @@ part 'performance_segment.g.dart';
 /// A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.
 ///
 /// Properties:
-/// * [gated] 
-/// * [need] 
-/// * [have] 
-/// * [buckets] 
+/// * [gated]
+/// * [need]
+/// * [have]
+/// * [buckets]
 @BuiltValue()
 abstract class PerformanceSegment implements Built<PerformanceSegment, PerformanceSegmentBuilder> {
   @BuiltValueField(wireName: r'gated')

@@ -60,7 +60,7 @@ Update daily summary settings (enabled, time, timezone)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getDailySummaryApi();
-final DailySummarySettingsUpdate dailySummarySettingsUpdate = ; // DailySummarySettingsUpdate | 
+final DailySummarySettingsUpdate dailySummarySettingsUpdate = ; // DailySummarySettingsUpdate |
 
 try {
     final response = api.updateDailySummarySettings(dailySummarySettingsUpdate);
@@ -74,7 +74,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **dailySummarySettingsUpdate** | [**DailySummarySettingsUpdate**](DailySummarySettingsUpdate.md)|  | 
+ **dailySummarySettingsUpdate** | [**DailySummarySettingsUpdate**](DailySummarySettingsUpdate.md)|  |
 
 ### Return type
 

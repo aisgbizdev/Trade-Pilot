@@ -20,7 +20,7 @@ class TraderMirrorApi {
   const TraderMirrorApi(this._dio, this._serializers);
 
   /// Behavioural insights about the caller as a trader (task
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -32,7 +32,7 @@ class TraderMirrorApi {
   ///
   /// Returns a [Future] containing a [Response] with a [TraderMirrorResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TraderMirrorResponse>> getTraderMirrorInsights({ 
+  Future<Response<TraderMirrorResponse>> getTraderMirrorInsights({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

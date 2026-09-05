@@ -14,18 +14,18 @@ part 'analysis_history_instrument_stats.g.dart';
 /// AnalysisHistoryInstrumentStats
 ///
 /// Properties:
-/// * [total] 
-/// * [pending] 
-/// * [activeValid] 
-/// * [tp1Hit] 
-/// * [tp2Hit] 
-/// * [slHit] 
-/// * [expired] 
-/// * [invalidated] 
-/// * [winRate] 
-/// * [completionRate] 
-/// * [instrument] 
-/// * [byTimeframe] 
+/// * [total]
+/// * [pending]
+/// * [activeValid]
+/// * [tp1Hit]
+/// * [tp2Hit]
+/// * [slHit]
+/// * [expired]
+/// * [invalidated]
+/// * [winRate]
+/// * [completionRate]
+/// * [instrument]
+/// * [byTimeframe]
 @BuiltValue()
 abstract class AnalysisHistoryInstrumentStats implements AnalysisHistoryOutcomeStats, Built<AnalysisHistoryInstrumentStats, AnalysisHistoryInstrumentStatsBuilder> {
   @BuiltValueField(wireName: r'instrument')

@@ -25,7 +25,7 @@ Upserts on the globally-unique device token: if the same physical device token w
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getNativePushApi();
-final NativePushRegisterBody nativePushRegisterBody = ; // NativePushRegisterBody | 
+final NativePushRegisterBody nativePushRegisterBody = ; // NativePushRegisterBody |
 
 try {
     final response = api.registerNativePushDevice(nativePushRegisterBody);
@@ -39,7 +39,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **nativePushRegisterBody** | [**NativePushRegisterBody**](NativePushRegisterBody.md)|  | 
+ **nativePushRegisterBody** | [**NativePushRegisterBody**](NativePushRegisterBody.md)|  |
 
 ### Return type
 
@@ -66,7 +66,7 @@ Remove the caller's own native push device registration
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getNativePushApi();
-final NativePushUnregisterBody nativePushUnregisterBody = ; // NativePushUnregisterBody | 
+final NativePushUnregisterBody nativePushUnregisterBody = ; // NativePushUnregisterBody |
 
 try {
     final response = api.unregisterNativePushDevice(nativePushUnregisterBody);
@@ -80,7 +80,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **nativePushUnregisterBody** | [**NativePushUnregisterBody**](NativePushUnregisterBody.md)|  | 
+ **nativePushUnregisterBody** | [**NativePushUnregisterBody**](NativePushUnregisterBody.md)|  |
 
 ### Return type
 

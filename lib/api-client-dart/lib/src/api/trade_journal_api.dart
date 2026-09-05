@@ -27,10 +27,10 @@ class TradeJournalApi {
   const TradeJournalApi(this._dio, this._serializers);
 
   /// Log a new manual trade-journal entry (optionally linked to an analysis)
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [createJournalEntryBody] 
+  /// * [createJournalEntryBody]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -40,7 +40,7 @@ class TradeJournalApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JournalEntry] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JournalEntry>> createJournalEntry({ 
+  Future<Response<JournalEntry>> createJournalEntry({
     required CreateJournalEntryBody createJournalEntryBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -122,10 +122,10 @@ class TradeJournalApi {
   }
 
   /// Delete a journal entry
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -135,7 +135,7 @@ class TradeJournalApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> deleteJournalEntry({ 
+  Future<Response<MessageResponse>> deleteJournalEntry({
     required int id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -200,7 +200,7 @@ class TradeJournalApi {
   /// Returns the first journal entry the authenticated user linked to a specific analysis. Returns 404 when no entry is found.
   ///
   /// Parameters:
-  /// * [analysisId] 
+  /// * [analysisId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -210,7 +210,7 @@ class TradeJournalApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JournalEntry] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JournalEntry>> getJournalEntryForAnalysis({ 
+  Future<Response<JournalEntry>> getJournalEntryForAnalysis({
     required int analysisId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -272,10 +272,10 @@ class TradeJournalApi {
   }
 
   /// Anonymised long-vs-short aggregate for an instrument across all users (last 7 days)
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [instrument] 
+  /// * [instrument]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -285,7 +285,7 @@ class TradeJournalApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JournalSentiment] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JournalSentiment>> getJournalSentiment({ 
+  Future<Response<JournalSentiment>> getJournalSentiment({
     required String instrument,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -352,11 +352,11 @@ class TradeJournalApi {
   }
 
   /// Summary stats for the user&#39;s trade journal (win rate, avg P/L, best/worst)
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [from] 
-  /// * [to] 
+  /// * [from]
+  /// * [to]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -366,7 +366,7 @@ class TradeJournalApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JournalStats] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JournalStats>> getJournalStats({ 
+  Future<Response<JournalStats>> getJournalStats({
     DateTime? from,
     DateTime? to,
     CancelToken? cancelToken,
@@ -435,14 +435,14 @@ class TradeJournalApi {
   }
 
   /// List the current user&#39;s trade journal entries with optional filters
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [instrument] 
-  /// * [outcome] 
-  /// * [from] 
-  /// * [to] 
-  /// * [limit] 
+  /// * [instrument]
+  /// * [outcome]
+  /// * [from]
+  /// * [to]
+  /// * [limit]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -452,7 +452,7 @@ class TradeJournalApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JournalEntryList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JournalEntryList>> listJournalEntries({ 
+  Future<Response<JournalEntryList>> listJournalEntries({
     String? instrument,
     String? outcome,
     DateTime? from,
@@ -527,11 +527,11 @@ class TradeJournalApi {
   }
 
   /// Update an existing journal entry (e.g. close out an open trade)
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [updateJournalEntryBody] 
+  /// * [id]
+  /// * [updateJournalEntryBody]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -541,7 +541,7 @@ class TradeJournalApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JournalEntry] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JournalEntry>> updateJournalEntry({ 
+  Future<Response<JournalEntry>> updateJournalEntry({
     required int id,
     required UpdateJournalEntryBody updateJournalEntryBody,
     CancelToken? cancelToken,

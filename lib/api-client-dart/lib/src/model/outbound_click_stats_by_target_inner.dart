@@ -11,8 +11,8 @@ part 'outbound_click_stats_by_target_inner.g.dart';
 /// OutboundClickStatsByTargetInner
 ///
 /// Properties:
-/// * [target] 
-/// * [count] 
+/// * [target]
+/// * [count]
 @BuiltValue()
 abstract class OutboundClickStatsByTargetInner implements Built<OutboundClickStatsByTargetInner, OutboundClickStatsByTargetInnerBuilder> {
   @BuiltValueField(wireName: r'target')
