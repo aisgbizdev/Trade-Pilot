@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, Search, BookOpen, ChevronRight, X } from "lucide-react";
-import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { useGetProgressionCatalog } from "@workspace/api-client-react";
 import { Card } from "@/components/ui/card";
@@ -57,7 +56,6 @@ function renderBlock(block: GuideBlock, idx: number) {
 
 export default function GuidePage() {
   const { t, lang } = useTranslation();
-  const [, setLocation] = useLocation();
   const requestedArticle = new URLSearchParams(window.location.search).get("article");
   const initialArticle = GUIDE_CATEGORIES.some((category) =>
     category.articles.some((article) => article.id === requestedArticle),
@@ -199,15 +197,8 @@ export default function GuidePage() {
       <div className="px-4 py-5 space-y-4 md:max-w-3xl md:mx-auto lg:max-w-none">
         {!activeArticle ? (
           <>
-            <div className="flex items-center gap-3 mb-2">
-              <button
-                onClick={() => setLocation("/profile")}
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
-                data-testid="button-guide-back-to-profile"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="flex-1">
+            <div className="mb-2">
+              <div>
                 <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-primary" />
                   {t.guide.title}

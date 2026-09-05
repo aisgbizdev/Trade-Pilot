@@ -48,6 +48,7 @@ describe("GuidePage Progression", () => {
     // "how-ai-works" is the first article ID in GUIDE_CATEGORIES
     const articleBtn = await screen.findByTestId("guide-article-how-ai-works");
     expect(articleBtn).toBeInTheDocument();
+    expect(screen.queryByTestId("button-guide-back-to-profile")).not.toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(articleBtn);
@@ -56,6 +57,8 @@ describe("GuidePage Progression", () => {
     // Mark complete button should be visible at the bottom
     const markCompleteBtn = await screen.findByTestId("button-mark-guide-complete");
     expect(markCompleteBtn).toBeInTheDocument();
+    const backToGuide = screen.getByTestId("button-guide-back-to-list");
+    expect(backToGuide).toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(markCompleteBtn);
