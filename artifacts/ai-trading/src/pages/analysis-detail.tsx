@@ -20,7 +20,6 @@ import {
   Newspaper,
   CalendarClock,
   ExternalLink,
-  RotateCcw,
   Copy,
   Check,
   Activity,
@@ -2105,14 +2104,6 @@ export default function AnalysisDetailPage({
               />
             </div>
           </div>
-          <Link
-            href={`/analyze?instrument=${encodeURIComponent(analysis.instrument)}&timeframe=${analysis.timeframe}`}
-            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 whitespace-nowrap shrink-0 px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
-            data-testid="button-re-analyze"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t.analysis_detail.re_analyze}</span>
-          </Link>
         </div>
 
         {/* Quick timeframe switch — selecting a different timeframe
