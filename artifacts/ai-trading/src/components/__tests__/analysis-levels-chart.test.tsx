@@ -19,13 +19,13 @@
  *   2. Sell plan whose entryZone is descriptive copy
  *      ("menunggu konfirmasi…") ⇒ entry line is omitted; the remaining
  *      numeric levels still render.
- *   3. "wait" preferredSide draws lines for BOTH sides so the user can
- *      see structure either way.
+ *   3. "wait" preferredSide defaults to one side and exposes BUY / SELL /
+ *      Both controls so overlapping levels remain readable.
  *   4. Directional entry text containing timeframe tokens keeps the actual
  *      price instead of treating the timeframe digits as a range bound.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import type { AutoscaleInfoProvider } from "lightweight-charts";
 
 // --- lightweight-charts mock --------------------------------------------
@@ -181,12 +181,12 @@ describe("AnalysisLevelsChart", () => {
     expect(byTitle["TP1"].price).toBe(2360.0);
     expect(byTitle["TP2"].price).toBe(2370.0);
 
-    // Entry line is dashed; the rest are solid.
-    expect(byTitle["BUY Entry"].lineStyle).toBe(2);
+    // BUY uses solid lines; SELL uses dashed lines in comparison mode.
+    expect(byTitle["BUY Entry"].lineStyle).toBe(0);
     expect(byTitle["SL"].lineStyle).toBe(0);
 
-    // Colors follow the documented palette (amber entry, red SL, emerald TP).
-    expect(byTitle["BUY Entry"].color).toBe("#f59e0b");
+    // BUY entry is cyan; SL stays red and TP stays emerald.
+    expect(byTitle["BUY Entry"].color).toBe("#06b6d4");
     expect(byTitle["SL"].color).toBe("#ef4444");
     expect(byTitle["TP1"].color).toBe("#10b981");
     expect(byTitle["TP2"].color).toBe("#10b981");
@@ -242,9 +242,12 @@ describe("AnalysisLevelsChart", () => {
         screen.getByTestId("analysis-levels-chart").getAttribute("data-state"),
       ).toBe("ready"),
     );
-    await waitFor(() => expect(createdPriceLines).toHaveLength(8));
-
+    await waitFor(() => expect(createdPriceLines).toHaveLength(4));
     expect(createdPriceLines.find((line) => line.title === "BUY Entry")?.price).toBe(4505);
+
+    createdPriceLines.length = 0;
+    fireEvent.click(screen.getByTestId("chart-level-mode-both"));
+    await waitFor(() => expect(createdPriceLines).toHaveLength(8));
     expect(createdPriceLines.find((line) => line.title === "SELL Entry")?.price).toBe(4410);
   });
 
@@ -274,7 +277,7 @@ describe("AnalysisLevelsChart", () => {
     expect(createdPriceLines.find((line) => line.title === "BUY Entry")?.price).toBe(4505);
   });
 
-  it("draws lines for BOTH sides when the AI says 'wait'", async () => {
+  it("shows one side by default and draws both sides only when requested", async () => {
     const plan: TradePlan = {
       preferredSide: "wait",
       buy: makeSide({
@@ -299,14 +302,19 @@ describe("AnalysisLevelsChart", () => {
       ).toBe("ready"),
     );
 
-    // 4 levels × 2 sides = 8 price lines.
-    expect(createdPriceLines).toHaveLength(8);
+    expect(createdPriceLines).toHaveLength(4);
+    expect(screen.getByTestId("chart-level-mode-buy")).toHaveAttribute("aria-pressed", "true");
+
+    createdPriceLines.length = 0;
+    fireEvent.click(screen.getByTestId("chart-level-mode-both"));
+    await waitFor(() => expect(createdPriceLines).toHaveLength(8));
+
     const titles = createdPriceLines.map((l) => l.title);
     expect(titles.filter((t) => t === "BUY Entry")).toHaveLength(1);
     expect(titles.filter((t) => t === "SELL Entry")).toHaveLength(1);
-    expect(titles.filter((t) => t === "SL")).toHaveLength(2);
-    expect(titles.filter((t) => t === "TP1")).toHaveLength(2);
-    expect(titles.filter((t) => t === "TP2")).toHaveLength(2);
+    expect(titles).toEqual(expect.arrayContaining(["B-SL", "S-SL", "B-TP1", "S-TP1", "B-TP2", "S-TP2"]));
+    expect(createdPriceLines.find((line) => line.title === "BUY Entry")?.lineStyle).toBe(0);
+    expect(createdPriceLines.find((line) => line.title === "SELL Entry")?.lineStyle).toBe(2);
   });
 });
 

@@ -84,21 +84,27 @@ interface LevelDef {
   label: string;
   color: string;
   testId: string;
+  lineStyle: LineStyle;
 }
+
+type LevelDisplayMode = "buy" | "sell" | "both";
 
 function buildLevels(
   plan: TradePlan,
   side: TradePlanPreferredSide,
+  combined: boolean,
 ): LevelDef[] {
   // Color palette tuned to the rest of the app: SL red, TP green, entry
   // neutral/amber so it reads as "decision point" rather than directional.
   const COLORS = {
-    entry: "#f59e0b", // amber-500
+    entry: side === "buy" ? "#06b6d4" : "#f59e0b",
     sl: "#ef4444",    // red-500
     tp: "#10b981",    // emerald-500
   };
   const targetSide = side === "sell" ? plan.sell : plan.buy;
   const sidePrefix = side === "sell" ? "SELL" : "BUY";
+  const shortPrefix = side === "sell" ? "S" : "B";
+  const lineStyle = side === "sell" ? LineStyle.Dashed : LineStyle.Solid;
   const levels: LevelDef[] = [];
   const entry = parsePriceLevel(targetSide.entryZone);
   if (entry != null) {
@@ -108,6 +114,7 @@ function buildLevels(
       label: `${sidePrefix} Entry`,
       color: COLORS.entry,
       testId: `chart-level-entry-${side}`,
+      lineStyle,
     });
   }
   const sl = parsePriceLevel(targetSide.stopLoss);
@@ -115,9 +122,10 @@ function buildLevels(
     levels.push({
       key: `${side}-sl`,
       price: sl,
-      label: "SL",
+      label: combined ? `${shortPrefix}-SL` : "SL",
       color: COLORS.sl,
       testId: `chart-level-sl-${side}`,
+      lineStyle,
     });
   }
   const tp1 = parsePriceLevel(targetSide.takeProfit1);
@@ -125,9 +133,10 @@ function buildLevels(
     levels.push({
       key: `${side}-tp1`,
       price: tp1,
-      label: "TP1",
+      label: combined ? `${shortPrefix}-TP1` : "TP1",
       color: COLORS.tp,
       testId: `chart-level-tp1-${side}`,
+      lineStyle,
     });
   }
   const tp2 = parsePriceLevel(targetSide.takeProfit2);
@@ -135,21 +144,19 @@ function buildLevels(
     levels.push({
       key: `${side}-tp2`,
       price: tp2,
-      label: "TP2",
+      label: combined ? `${shortPrefix}-TP2` : "TP2",
       color: COLORS.tp,
       testId: `chart-level-tp2-${side}`,
+      lineStyle,
     });
   }
   return levels;
 }
 
-function buildDisplayedLevels(plan: TradePlan | null): LevelDef[] {
+function buildDisplayedLevels(plan: TradePlan | null, mode: LevelDisplayMode): LevelDef[] {
   if (!plan) return [];
-  const sides: TradePlanPreferredSide[] =
-    plan.preferredSide === "wait"
-      ? ["buy", "sell"]
-      : [plan.preferredSide];
-  return sides.flatMap((side) => buildLevels(plan, side));
+  const sides: TradePlanPreferredSide[] = mode === "both" ? ["buy", "sell"] : [mode];
+  return sides.flatMap((side) => buildLevels(plan, side, mode === "both"));
 }
 
 function toCssSize(value: number | string): string {
@@ -214,6 +221,14 @@ export function AnalysisLevelsChart({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [candles, setCandles] = useState<Candle[] | null>(null);
   const [markerX, setMarkerX] = useState<number | null>(null);
+  const [barSpacing, setBarSpacing] = useState(8);
+  const [levelDisplayMode, setLevelDisplayMode] = useState<LevelDisplayMode>(
+    tradePlan?.preferredSide === "sell" ? "sell" : "buy",
+  );
+
+  useEffect(() => {
+    setLevelDisplayMode(tradePlan?.preferredSide === "sell" ? "sell" : "buy");
+  }, [tradePlan?.preferredSide]);
 
   const cutoffSec = useMemo<number | null>(() => {
     if (!analysisCreatedAt) return null;
@@ -223,8 +238,8 @@ export function AnalysisLevelsChart({
   }, [analysisCreatedAt]);
 
   const displayedLevels = useMemo(
-    () => buildDisplayedLevels(tradePlan),
-    [tradePlan],
+    () => buildDisplayedLevels(tradePlan, levelDisplayMode),
+    [tradePlan, levelDisplayMode],
   );
   const latestClose = candles?.at(-1)?.close ?? null;
   const autoscaleInfoProvider = useMemo(
@@ -306,6 +321,11 @@ export function AnalysisLevelsChart({
         secondsVisible: false,
       },
       crosshair: { mode: 0 },
+      handleScale: {
+        mouseWheel: true,
+        pinch: true,
+        axisPressedMouseMove: true,
+      },
     });
     chartRef.current = chart;
     const series = chart.addSeries(CandlestickSeries, {
@@ -315,11 +335,14 @@ export function AnalysisLevelsChart({
       borderDownColor: "#ef4444",
       wickUpColor: "#10b981",
       wickDownColor: "#ef4444",
+      priceLineColor: "#eab308",
+      priceLineStyle: LineStyle.Dotted,
       autoscaleInfoProvider,
     });
     seriesRef.current = series;
     series.setData(buildCandleData(candles, cutoffSec, isDark));
     chart.timeScale().fitContent();
+    chart.timeScale().applyOptions?.({ barSpacing });
 
     return () => {
       priceLinesRef.current = [];
@@ -328,6 +351,10 @@ export function AnalysisLevelsChart({
       seriesRef.current = null;
     };
   }, [candles, state, theme, cutoffSec, autoscaleInfoProvider]);
+
+  useEffect(() => {
+    chartRef.current?.timeScale().applyOptions?.({ barSpacing });
+  }, [barSpacing]);
 
   // Draw / refresh price lines for the trade plan whenever plan changes.
   useEffect(() => {
@@ -343,7 +370,7 @@ export function AnalysisLevelsChart({
         price: lvl.price,
         color: lvl.color,
         lineWidth: 2,
-        lineStyle: lvl.key.includes("entry") ? LineStyle.Dashed : LineStyle.Solid,
+        lineStyle: lvl.lineStyle,
         axisLabelVisible: true,
         title: lvl.label,
       });
@@ -389,12 +416,78 @@ export function AnalysisLevelsChart({
       data-instrument={instrument}
       data-timeframe={timeframe}
       data-analysis-cutoff={cutoffSec ?? ""}
+      data-level-mode={levelDisplayMode}
     >
       <div
         ref={hostRef}
         className="absolute inset-0"
         style={{ visibility: state === "ready" ? "visible" : "hidden" }}
       />
+      {state === "ready" && tradePlan?.preferredSide === "wait" && (
+        <div
+          className="absolute left-2 top-2 z-10 flex rounded-lg border border-border/70 bg-background/90 p-0.5 shadow-sm backdrop-blur"
+          role="group"
+          aria-label={lang === "id" ? "Skenario level harga" : "Price level scenario"}
+          data-testid="chart-level-mode"
+        >
+          {(["buy", "sell", "both"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setLevelDisplayMode(mode)}
+              aria-pressed={levelDisplayMode === mode}
+              data-testid={`chart-level-mode-${mode}`}
+              className={`rounded-md px-2 py-1 text-[10px] font-bold transition-colors ${
+                levelDisplayMode === mode
+                  ? mode === "buy"
+                    ? "bg-cyan-500 text-white"
+                    : mode === "sell"
+                      ? "bg-amber-500 text-[#1a1208]"
+                      : "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {mode === "buy" ? "BUY" : mode === "sell" ? "SELL" : lang === "id" ? "Keduanya" : "Both"}
+            </button>
+          ))}
+        </div>
+      )}
+      {state === "ready" && (
+        <div
+          className="absolute right-2 top-2 z-10 flex rounded-lg border border-border/70 bg-background/90 p-0.5 shadow-sm backdrop-blur"
+          role="group"
+          aria-label={lang === "id" ? "Kontrol zoom grafik" : "Chart zoom controls"}
+          data-testid="chart-zoom-controls"
+        >
+          <button
+            type="button"
+            onClick={() => setBarSpacing((value) => Math.max(4, value - 2))}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-sm font-bold text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label={lang === "id" ? "Perkecil grafik" : "Zoom out chart"}
+            data-testid="chart-zoom-out"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onClick={() => setBarSpacing(8)}
+            className="flex h-7 items-center justify-center rounded-md px-2 text-[9px] font-bold text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label={lang === "id" ? "Reset zoom grafik" : "Reset chart zoom"}
+            data-testid="chart-zoom-reset"
+          >
+            RESET
+          </button>
+          <button
+            type="button"
+            onClick={() => setBarSpacing((value) => Math.min(28, value + 2))}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-sm font-bold text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label={lang === "id" ? "Perbesar grafik" : "Zoom in chart"}
+            data-testid="chart-zoom-in"
+          >
+            +
+          </button>
+        </div>
+      )}
       {state === "ready" && markerX != null && (
         <>
           {/* Vertical dashed marker line. Leaves room at the bottom for
