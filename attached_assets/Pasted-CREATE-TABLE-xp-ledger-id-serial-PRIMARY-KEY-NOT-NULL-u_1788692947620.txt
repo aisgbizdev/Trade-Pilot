@@ -1,0 +1,79 @@
+CREATE TABLE "xp_ledger" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"user_id" integer NOT NULL,
+	"source" text NOT NULL,
+	"source_event_id" text NOT NULL,
+	"proof_id" integer,
+	"xp" integer NOT NULL,
+	"day_bucket" text NOT NULL,
+	"rule_version" text NOT NULL,
+	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"correction_of_ledger_id" integer,
+	"correction_reason" text,
+	"signature" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "progression_achievements" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"key" text NOT NULL,
+	"unlocked_at" timestamp DEFAULT now() NOT NULL,
+	"source_ledger_id" integer,
+	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"user_id" integer NOT NULL
+);
+CREATE TABLE "progression_evidence_sessions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"user_id" integer NOT NULL,
+	"kind" text NOT NULL,
+	"subject" text NOT NULL,
+	"token_hash" text NOT NULL,
+	"issued_at" timestamp DEFAULT now() NOT NULL,
+	"minimum_complete_at" timestamp NOT NULL,
+	"consumed_at" timestamp,
+	"decision" text DEFAULT 'issued' NOT NULL,
+	CONSTRAINT "progression_evidence_sessions_token_hash_unique" UNIQUE("token_hash")
+);
+CREATE TABLE "progression_notification_cooldowns" (
+	"user_id" integer NOT NULL,
+	"category" text NOT NULL,
+	"last_sent_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "progression_profiles" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"user_id" integer NOT NULL,
+	"total_xp" integer DEFAULT 0 NOT NULL,
+	"level" integer DEFAULT 1 NOT NULL,
+	"mastery_level" integer DEFAULT 0 NOT NULL,
+	"rank_key" text DEFAULT 'seedling' NOT NULL,
+	"current_streak" integer DEFAULT 0 NOT NULL,
+	"longest_streak" integer DEFAULT 0 NOT NULL,
+	"last_discipline_day" text,
+	"progression_timezone" text DEFAULT 'UTC' NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "progression_proofs" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"user_id" integer NOT NULL,
+	"source" text NOT NULL,
+	"source_event_id" text NOT NULL,
+	"quality_score" integer DEFAULT 0 NOT NULL,
+	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"decision" text DEFAULT 'accepted' NOT NULL,
+	"rejection_reason" text,
+	"occurred_at" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+ALTER TABLE "users" ADD COLUMN "progression_notifications_enabled" boolean DEFAULT true NOT NULL;
+ALTER TABLE "xp_ledger" ADD CONSTRAINT "xp_ledger_proof_id_progression_proofs_id_fk" FOREIGN KEY ("proof_id") REFERENCES "public"."progression_proofs"("id") ON DELETE restrict ON UPDATE no action;
+ALTER TABLE "xp_ledger" ADD CONSTRAINT "xp_ledger_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "progression_achievements" ADD CONSTRAINT "progression_achievements_source_ledger_id_xp_ledger_id_fk" FOREIGN KEY ("source_ledger_id") REFERENCES "public"."xp_ledger"("id") ON DELETE restrict ON UPDATE no action;
+ALTER TABLE "progression_achievements" ADD CONSTRAINT "progression_achievements_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "progression_evidence_sessions" ADD CONSTRAINT "progression_evidence_sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "progression_notification_cooldowns" ADD CONSTRAINT "progression_notification_cooldowns_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "progression_profiles" ADD CONSTRAINT "progression_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "progression_proofs" ADD CONSTRAINT "progression_proofs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+CREATE UNIQUE INDEX "xp_ledger_user_source_event_unique" ON "xp_ledger" USING btree ("user_id","source","source_event_id");
+CREATE UNIQUE INDEX "progression_achievements_user_key_unique" ON "progression_achievements" USING btree ("user_id","key");
+CREATE UNIQUE INDEX "progression_notification_cooldowns_unique" ON "progression_notification_cooldowns" USING btree ("user_id","category");
+CREATE UNIQUE INDEX "progression_profiles_user_unique" ON "progression_profiles" USING btree ("user_id");
+CREATE UNIQUE INDEX "progression_proofs_user_source_unique" ON "progression_proofs" USING btree ("user_id","source","source_event_id");
