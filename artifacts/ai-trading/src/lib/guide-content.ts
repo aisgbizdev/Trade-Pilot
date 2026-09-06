@@ -126,7 +126,7 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
         title_id: "Standard dan Adaptive Position Plan",
         content_en: [
           { type: "p", val: "The Standard Plan presents the analysis levels directly. The Adaptive Position Plan translates a supported analysis into account-aware position checkpoints and risk limits." },
-          { type: "p", val: "Adaptive calculations currently apply only to canonical XAU/USD, BRENT, HSI, and NIKKEI analyses. Other instruments still receive the regular analysis and Standard Plan." },
+          { type: "p", val: "Adaptive calculations currently apply only to XAU/USD, BRENT, HSI, and NIKKEI analyses. Other instruments still receive the regular analysis and Standard Plan." },
           { type: "list", val: [
             "Choose the account type and enter current available funds accurately.",
             "Treat every additional layer as a manual checkpoint, never an automatic instruction.",
@@ -137,7 +137,7 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
         ],
         content_id: [
           { type: "p", val: "Standard Plan menampilkan level analisis secara langsung. Adaptive Position Plan menerjemahkan analisis yang didukung menjadi checkpoint posisi dan batas risiko sesuai kondisi akun." },
-          { type: "p", val: "Kalkulasi Adaptive saat ini hanya berlaku untuk analisis kanonikal XAU/USD, BRENT, HSI, dan NIKKEI. Instrumen lain tetap memperoleh analisis reguler dan Standard Plan." },
+          { type: "p", val: "Kalkulasi Adaptive saat ini hanya berlaku untuk analisis XAU/USD, BRENT, HSI, dan NIKKEI. Instrumen lain tetap memperoleh analisis reguler dan Standard Plan." },
           { type: "list", val: [
             "Pilih jenis akun dan masukkan dana tersedia saat ini dengan akurat.",
             "Perlakukan setiap layer tambahan sebagai checkpoint manual, bukan instruksi otomatis.",

@@ -460,7 +460,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       /contract size is 100 barrel/i,
     );
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(
-      /canonical XAU\/USD, BRENT, HSI, and NIKKEI analyses/i,
+      /supports XAU\/USD, BRENT, HSI, and NIKKEI analyses/i,
     );
   });
 
@@ -492,7 +492,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-analysis-basis")).toHaveTextContent(/Current chart.*separate layer candidates/i);
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Maximum 0.9 lot applies to each position/i);
-    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/canonical XAU\/USD, BRENT, HSI, and NIKKEI analyses/i);
+    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/supports XAU\/USD, BRENT, HSI, and NIKKEI analyses/i);
     const tradePlanCard = screen.getByTestId("card-trade-plan");
     expect(tradePlanCard).toBeInTheDocument();
     expect(screen.queryByTestId("card-trade-setup-summary")).not.toBeInTheDocument();
