@@ -13,14 +13,14 @@ part 'journal_stats.g.dart';
 /// Summary stats for the user's trade journal, computed over the optional from/to date range.
 ///
 /// Properties:
-/// * [totals]
+/// * [totals] 
 /// * [winRate] - wins / (wins + losses); null when no resolved trades.
-/// * [avgPnlPercent]
-/// * [avgPnlAmount]
-/// * [bestInstrument]
-/// * [worstInstrument]
-/// * [bestSession]
-/// * [worstSession]
+/// * [avgPnlPercent] 
+/// * [avgPnlAmount] 
+/// * [bestInstrument] 
+/// * [worstInstrument] 
+/// * [bestSession] 
+/// * [worstSession] 
 @BuiltValue()
 abstract class JournalStats implements Built<JournalStats, JournalStatsBuilder> {
   @BuiltValueField(wireName: r'totals')

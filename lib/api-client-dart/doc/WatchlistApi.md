@@ -24,7 +24,7 @@ Star an instrument
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getWatchlistApi();
-final AddWatchlistBody addWatchlistBody = ; // AddWatchlistBody |
+final AddWatchlistBody addWatchlistBody = ; // AddWatchlistBody | 
 
 try {
     final response = api.addWatchlistItem(addWatchlistBody);
@@ -38,7 +38,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **addWatchlistBody** | [**AddWatchlistBody**](AddWatchlistBody.md)|  |
+ **addWatchlistBody** | [**AddWatchlistBody**](AddWatchlistBody.md)|  | 
 
 ### Return type
 
@@ -102,7 +102,7 @@ Unstar an instrument
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getWatchlistApi();
-final String instrument = instrument_example; // String |
+final String instrument = instrument_example; // String | 
 
 try {
     final response = api.removeWatchlistItem(instrument);
@@ -116,7 +116,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **instrument** | **String**|  |
+ **instrument** | **String**|  | 
 
 ### Return type
 

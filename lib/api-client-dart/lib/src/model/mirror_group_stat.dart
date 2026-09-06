@@ -11,11 +11,11 @@ part 'mirror_group_stat.g.dart';
 /// Aggregate stats for one bucket inside a trader-mirror category (session, instrument, time-of-day, etc.).
 ///
 /// Properties:
-/// * [key]
-/// * [total]
-/// * [wins]
-/// * [winRate]
-/// * [avgPnlPercent]
+/// * [key] 
+/// * [total] 
+/// * [wins] 
+/// * [winRate] 
+/// * [avgPnlPercent] 
 @BuiltValue()
 abstract class MirrorGroupStat implements Built<MirrorGroupStat, MirrorGroupStatBuilder> {
   @BuiltValueField(wireName: r'key')

@@ -13,7 +13,7 @@ part 'progression_audit.g.dart';
 /// ProgressionAudit
 ///
 /// Properties:
-/// * [entries]
+/// * [entries] 
 @BuiltValue()
 abstract class ProgressionAudit implements Built<ProgressionAudit, ProgressionAuditBuilder> {
   @BuiltValueField(wireName: r'entries')

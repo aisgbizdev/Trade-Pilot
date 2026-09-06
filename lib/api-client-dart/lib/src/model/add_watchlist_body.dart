@@ -11,7 +11,7 @@ part 'add_watchlist_body.g.dart';
 /// AddWatchlistBody
 ///
 /// Properties:
-/// * [instrument]
+/// * [instrument] 
 @BuiltValue()
 abstract class AddWatchlistBody implements Built<AddWatchlistBody, AddWatchlistBodyBuilder> {
   @BuiltValueField(wireName: r'instrument')

@@ -20,3 +20,9 @@ Clean the Dart generated-part cache before rebuilding models.
 **Why:** Incremental build state can preserve stale builder fields and enum serializers after OpenAPI Generator rewrites model sources.
 
 **How to apply:** Clean, rebuild, and analyze Dart generated parts; warnings from generator templates may be non-fatal, but analyzer errors must fail codegen.
+
+Before regenerating, verify the installed generator version matches the lockfile/package declaration; reinstall the frozen lockfile when they differ.
+
+**Why:** A stale workspace install can run an older Orval even though the manifest and lockfile pin a newer release, producing invalid validators and broad generated-file drift.
+
+**How to apply:** Check the generator package's resolved version before codegen, then run the full codegen pipeline and the root typecheck.

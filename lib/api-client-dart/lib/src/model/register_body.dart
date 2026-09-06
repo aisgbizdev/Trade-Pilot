@@ -12,13 +12,13 @@ part 'register_body.g.dart';
 /// RegisterBody
 ///
 /// Properties:
-/// * [email]
-/// * [password]
-/// * [displayName]
-/// * [selectedMode]
-/// * [securityQuestion]
-/// * [securityAnswer]
-/// * [rememberMe]
+/// * [email] 
+/// * [password] 
+/// * [displayName] 
+/// * [selectedMode] 
+/// * [securityQuestion] 
+/// * [securityAnswer] 
+/// * [rememberMe] 
 @BuiltValue()
 abstract class RegisterBody implements Built<RegisterBody, RegisterBodyBuilder> {
   @BuiltValueField(wireName: r'email')
@@ -49,7 +49,7 @@ abstract class RegisterBody implements Built<RegisterBody, RegisterBodyBuilder> 
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(RegisterBodyBuilder b) => b
-      ..selectedMode = RegisterBodySelectedModeEnum.valueOf('beginner')
+      ..selectedMode = RegisterBodySelectedModeEnum.valueOf('pro')
       ..rememberMe = false;
 
   @BuiltValueSerializer(custom: true)

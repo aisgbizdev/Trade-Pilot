@@ -13,15 +13,15 @@ part 'progression_audit_entry.g.dart';
 /// ProgressionAuditEntry
 ///
 /// Properties:
-/// * [id]
-/// * [userId]
-/// * [source_]
-/// * [sourceEventId]
-/// * [xp]
-/// * [dayBucket]
-/// * [ruleVersion]
-/// * [metadata]
-/// * [createdAt]
+/// * [id] 
+/// * [userId] 
+/// * [source_] 
+/// * [sourceEventId] 
+/// * [xp] 
+/// * [dayBucket] 
+/// * [ruleVersion] 
+/// * [metadata] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class ProgressionAuditEntry implements Built<ProgressionAuditEntry, ProgressionAuditEntryBuilder> {
   @BuiltValueField(wireName: r'id')

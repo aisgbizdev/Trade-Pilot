@@ -12,13 +12,13 @@ part 'performance_banner.g.dart';
 /// Honesty banner comparing the last `recentDays` hit-rate against the 30-day baseline. `severity: warn` fires only when recent is >=15pp below baseline AND both windows cleared the minimum-sample guardrail.
 ///
 /// Properties:
-/// * [severity]
-/// * [recentDays]
-/// * [recentSample]
-/// * [baselineSample]
-/// * [recentHitRate]
-/// * [baselineHitRate]
-/// * [delta]
+/// * [severity] 
+/// * [recentDays] 
+/// * [recentSample] 
+/// * [baselineSample] 
+/// * [recentHitRate] 
+/// * [baselineHitRate] 
+/// * [delta] 
 @BuiltValue()
 abstract class PerformanceBanner implements Built<PerformanceBanner, PerformanceBannerBuilder> {
   @BuiltValueField(wireName: r'severity')

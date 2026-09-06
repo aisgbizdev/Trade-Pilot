@@ -11,8 +11,8 @@ part 'push_subscription_keys.g.dart';
 /// PushSubscriptionKeys
 ///
 /// Properties:
-/// * [p256dh]
-/// * [auth]
+/// * [p256dh] 
+/// * [auth] 
 @BuiltValue()
 abstract class PushSubscriptionKeys implements Built<PushSubscriptionKeys, PushSubscriptionKeysBuilder> {
   @BuiltValueField(wireName: r'p256dh')

@@ -14,11 +14,11 @@ part 'outbound_click_stats.g.dart';
 /// OutboundClickStats
 ///
 /// Properties:
-/// * [windowDays]
-/// * [totalAllTime]
-/// * [totalInWindow]
-/// * [byPlacement]
-/// * [byTarget]
+/// * [windowDays] 
+/// * [totalAllTime] 
+/// * [totalInWindow] 
+/// * [byPlacement] 
+/// * [byTarget] 
 @BuiltValue()
 abstract class OutboundClickStats implements Built<OutboundClickStats, OutboundClickStatsBuilder> {
   @BuiltValueField(wireName: r'windowDays')

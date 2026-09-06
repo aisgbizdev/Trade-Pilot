@@ -12,7 +12,7 @@ part 'tags_list.g.dart';
 /// TagsList
 ///
 /// Properties:
-/// * [tags]
+/// * [tags] 
 @BuiltValue()
 abstract class TagsList implements Built<TagsList, TagsListBuilder> {
   @BuiltValueField(wireName: r'tags')

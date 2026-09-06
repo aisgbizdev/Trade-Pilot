@@ -3290,7 +3290,7 @@ components:
         selectedMode:
           type: string
           enum: [beginner, pro]
-          default: beginner
+          default: pro
         securityQuestion:
           type: string
         securityAnswer:

@@ -11,15 +11,15 @@ part 'standard_trading_rule_account.g.dart';
 /// StandardTradingRuleAccount
 ///
 /// Properties:
-/// * [minimumDepositUsd]
-/// * [minimumLot]
-/// * [maximumLot]
-/// * [maintenanceMarginPercent]
-/// * [marginCallBelowPercent]
-/// * [marginCallRestorePercent]
-/// * [autoLiquidationAtOrBelowPercent]
-/// * [equityReviewThresholdUsd]
-/// * [equityReviewThresholdIdr]
+/// * [minimumDepositUsd] 
+/// * [minimumLot] 
+/// * [maximumLot] 
+/// * [maintenanceMarginPercent] 
+/// * [marginCallBelowPercent] 
+/// * [marginCallRestorePercent] 
+/// * [autoLiquidationAtOrBelowPercent] 
+/// * [equityReviewThresholdUsd] 
+/// * [equityReviewThresholdIdr] 
 @BuiltValue()
 abstract class StandardTradingRuleAccount implements Built<StandardTradingRuleAccount, StandardTradingRuleAccountBuilder> {
   @BuiltValueField(wireName: r'minimumDepositUsd')

@@ -11,9 +11,9 @@ part 'analytics_token_stats_daily_tokens_inner.g.dart';
 /// AnalyticsTokenStatsDailyTokensInner
 ///
 /// Properties:
-/// * [date]
-/// * [totalTokens]
-/// * [estimatedCostUsd]
+/// * [date] 
+/// * [totalTokens] 
+/// * [estimatedCostUsd] 
 @BuiltValue()
 abstract class AnalyticsTokenStatsDailyTokensInner implements Built<AnalyticsTokenStatsDailyTokensInner, AnalyticsTokenStatsDailyTokensInnerBuilder> {
   @BuiltValueField(wireName: r'date')

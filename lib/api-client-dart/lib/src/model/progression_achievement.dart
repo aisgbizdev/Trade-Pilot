@@ -11,9 +11,9 @@ part 'progression_achievement.g.dart';
 /// ProgressionAchievement
 ///
 /// Properties:
-/// * [key]
-/// * [unlocked]
-/// * [unlockedAt]
+/// * [key] 
+/// * [unlocked] 
+/// * [unlockedAt] 
 @BuiltValue()
 abstract class ProgressionAchievement implements Built<ProgressionAchievement, ProgressionAchievementBuilder> {
   @BuiltValueField(wireName: r'key')

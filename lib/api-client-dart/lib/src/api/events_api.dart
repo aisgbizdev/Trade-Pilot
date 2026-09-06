@@ -20,10 +20,10 @@ class EventsApi {
   const EventsApi(this._dio, this._serializers);
 
   /// Record a sponsor / partner outbound link click
-  /// Fire-and-forget telemetry. Auth is optional — most surfaces are reachable while signed out (splash, landing). Always returns 204 even when validation rejects the body so a malformed beacon never blocks the user&#39;s outbound navigation.
+  /// Fire-and-forget telemetry. Auth is optional — most surfaces are reachable while signed out (splash, landing). Always returns 204 even when validation rejects the body so a malformed beacon never blocks the user&#39;s outbound navigation. 
   ///
   /// Parameters:
-  /// * [outboundClickBody]
+  /// * [outboundClickBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +33,7 @@ class EventsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> recordOutboundClick({
+  Future<Response<void>> recordOutboundClick({ 
     required OutboundClickBody outboundClickBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -87,10 +87,10 @@ class EventsApi {
   }
 
   /// Record a page-view or key-action analytics event
-  /// Fire-and-forget app-usage telemetry (admin analytics dashboard). Auth is optional — page views happen pre-login too (landing, login). Always returns 204 even when validation rejects the body so a malformed beacon never blocks navigation. Device/browser/OS and country are resolved server-side from the request itself (User-Agent + IP) — never trust client-supplied values for these.
+  /// Fire-and-forget app-usage telemetry (admin analytics dashboard). Auth is optional — page views happen pre-login too (landing, login). Always returns 204 even when validation rejects the body so a malformed beacon never blocks navigation. Device/browser/OS and country are resolved server-side from the request itself (User-Agent + IP) — never trust client-supplied values for these. 
   ///
   /// Parameters:
-  /// * [analyticsEventBody]
+  /// * [analyticsEventBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -100,7 +100,7 @@ class EventsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> trackAnalyticsEvent({
+  Future<Response<void>> trackAnalyticsEvent({ 
     required AnalyticsEventBody analyticsEventBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

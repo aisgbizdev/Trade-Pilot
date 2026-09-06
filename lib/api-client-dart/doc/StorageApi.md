@@ -23,7 +23,7 @@ Serve an object entity from PRIVATE_OBJECT_DIR
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getStorageApi();
-final String objectPath = objectPath_example; // String |
+final String objectPath = objectPath_example; // String | 
 
 try {
     final response = api.getStorageObject(objectPath);
@@ -37,7 +37,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **objectPath** | **String**|  |
+ **objectPath** | **String**|  | 
 
 ### Return type
 
@@ -59,14 +59,14 @@ No authorization required
 
 Request a presigned URL for file upload
 
-Returns a presigned GCS URL for direct upload. The client sends JSON metadata here, then uploads the file directly to the returned URL.
+Returns a presigned GCS URL for direct upload. The client sends JSON metadata here, then uploads the file directly to the returned URL. 
 
 ### Example
 ```dart
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getStorageApi();
-final UploadUrlRequest uploadUrlRequest = ; // UploadUrlRequest |
+final UploadUrlRequest uploadUrlRequest = ; // UploadUrlRequest | 
 
 try {
     final response = api.requestUploadUrl(uploadUrlRequest);
@@ -80,7 +80,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **uploadUrlRequest** | [**UploadUrlRequest**](UploadUrlRequest.md)|  |
+ **uploadUrlRequest** | [**UploadUrlRequest**](UploadUrlRequest.md)|  | 
 
 ### Return type
 

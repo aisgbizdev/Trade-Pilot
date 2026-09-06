@@ -11,7 +11,7 @@ part 'health_status.g.dart';
 /// HealthStatus
 ///
 /// Properties:
-/// * [status]
+/// * [status] 
 @BuiltValue()
 abstract class HealthStatus implements Built<HealthStatus, HealthStatusBuilder> {
   @BuiltValueField(wireName: r'status')

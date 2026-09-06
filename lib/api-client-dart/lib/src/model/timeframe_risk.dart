@@ -13,15 +13,15 @@ part 'timeframe_risk.g.dart';
 /// TimeframeRisk
 ///
 /// Properties:
-/// * [timeframe]
-/// * [status]
-/// * [riskScore]
-/// * [riskCategory]
-/// * [reasonCodes]
-/// * [metrics]
-/// * [dataQuality]
-/// * [confidence]
-/// * [recommendation]
+/// * [timeframe] 
+/// * [status] 
+/// * [riskScore] 
+/// * [riskCategory] 
+/// * [reasonCodes] 
+/// * [metrics] 
+/// * [dataQuality] 
+/// * [confidence] 
+/// * [recommendation] 
 @BuiltValue()
 abstract class TimeframeRisk implements Built<TimeframeRisk, TimeframeRiskBuilder> {
   @BuiltValueField(wireName: r'timeframe')

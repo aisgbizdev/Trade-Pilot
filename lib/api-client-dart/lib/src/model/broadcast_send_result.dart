@@ -11,9 +11,9 @@ part 'broadcast_send_result.g.dart';
 /// BroadcastSendResult
 ///
 /// Properties:
-/// * [broadcastId]
-/// * [recipientCount]
-/// * [message]
+/// * [broadcastId] 
+/// * [recipientCount] 
+/// * [message] 
 @BuiltValue()
 abstract class BroadcastSendResult implements Built<BroadcastSendResult, BroadcastSendResultBuilder> {
   @BuiltValueField(wireName: r'broadcastId')

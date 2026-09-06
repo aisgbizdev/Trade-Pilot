@@ -13,10 +13,10 @@ part 'record_guardrail_telemetry_request.g.dart';
 /// RecordGuardrailTelemetryRequest
 ///
 /// Properties:
-/// * [kind]
-/// * [instrument]
-/// * [proceeded]
-/// * [metadata]
+/// * [kind] 
+/// * [instrument] 
+/// * [proceeded] 
+/// * [metadata] 
 @BuiltValue()
 abstract class RecordGuardrailTelemetryRequest implements Built<RecordGuardrailTelemetryRequest, RecordGuardrailTelemetryRequestBuilder> {
   @BuiltValueField(wireName: r'kind')

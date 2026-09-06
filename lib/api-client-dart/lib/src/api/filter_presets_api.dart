@@ -24,10 +24,10 @@ class FilterPresetsApi {
   const FilterPresetsApi(this._dio, this._serializers);
 
   /// Save the current filter combination as a named preset
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [createFilterPresetBody]
+  /// * [createFilterPresetBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -37,7 +37,7 @@ class FilterPresetsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FilterPreset] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FilterPreset>> createFilterPreset({
+  Future<Response<FilterPreset>> createFilterPreset({ 
     required CreateFilterPresetBody createFilterPresetBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -119,10 +119,10 @@ class FilterPresetsApi {
   }
 
   /// Delete a preset
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -132,7 +132,7 @@ class FilterPresetsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> deleteFilterPreset({
+  Future<Response<void>> deleteFilterPreset({ 
     required int id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -166,7 +166,7 @@ class FilterPresetsApi {
   }
 
   /// List the signed-in user&#39;s saved filter presets
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -178,7 +178,7 @@ class FilterPresetsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FilterPresetList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FilterPresetList>> listFilterPresets({
+  Future<Response<FilterPresetList>> listFilterPresets({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -239,11 +239,11 @@ class FilterPresetsApi {
   }
 
   /// Rename an existing preset
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
-  /// * [renameFilterPresetBody]
+  /// * [id] 
+  /// * [renameFilterPresetBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -253,7 +253,7 @@ class FilterPresetsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FilterPreset] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FilterPreset>> renameFilterPreset({
+  Future<Response<FilterPreset>> renameFilterPreset({ 
     required int id,
     required RenameFilterPresetBody renameFilterPresetBody,
     CancelToken? cancelToken,

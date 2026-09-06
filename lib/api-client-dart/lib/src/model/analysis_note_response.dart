@@ -11,8 +11,8 @@ part 'analysis_note_response.g.dart';
 /// Response shape for PUT /analyses/{id}/note — the persisted note body (null when cleared) and the server-stamped updatedAt.
 ///
 /// Properties:
-/// * [note]
-/// * [updatedAt]
+/// * [note] 
+/// * [updatedAt] 
 @BuiltValue()
 abstract class AnalysisNoteResponse implements Built<AnalysisNoteResponse, AnalysisNoteResponseBuilder> {
   @BuiltValueField(wireName: r'note')

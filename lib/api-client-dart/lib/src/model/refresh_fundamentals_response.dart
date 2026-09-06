@@ -13,9 +13,9 @@ part 'refresh_fundamentals_response.g.dart';
 /// Response from POST /analyses/{id}/refresh-fundamentals — the freshly-fetched fundamental snapshot plus a drift report against the AI's original citations.
 ///
 /// Properties:
-/// * [fundamentalContext]
+/// * [fundamentalContext] 
 /// * [refreshedAt] - Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the 'updated N minutes ago' banner.
-/// * [drift]
+/// * [drift] 
 @BuiltValue()
 abstract class RefreshFundamentalsResponse implements Built<RefreshFundamentalsResponse, RefreshFundamentalsResponseBuilder> {
   @BuiltValueField(wireName: r'fundamentalContext')

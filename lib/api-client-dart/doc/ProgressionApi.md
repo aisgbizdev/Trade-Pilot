@@ -63,7 +63,7 @@ Get private append-only XP history
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getProgressionApi();
-final int limit = 56; // int |
+final int limit = 56; // int | 
 
 try {
     final response = api.getProgressionHistory(limit);
@@ -77,7 +77,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **limit** | **int**|  | [optional]
+ **limit** | **int**|  | [optional] 
 
 ### Return type
 
@@ -141,7 +141,7 @@ Record a server-verifiable checklist or guide completion
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getProgressionApi();
-final ProgressionActivityInput progressionActivityInput = ; // ProgressionActivityInput |
+final ProgressionActivityInput progressionActivityInput = ; // ProgressionActivityInput | 
 
 try {
     final response = api.recordProgressionActivity(progressionActivityInput);
@@ -155,7 +155,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **progressionActivityInput** | [**ProgressionActivityInput**](ProgressionActivityInput.md)|  |
+ **progressionActivityInput** | [**ProgressionActivityInput**](ProgressionActivityInput.md)|  | 
 
 ### Return type
 
@@ -182,7 +182,7 @@ Issue a one-time server evidence token for a known guide or checklist
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getProgressionApi();
-final ProgressionEvidenceStartInput progressionEvidenceStartInput = ; // ProgressionEvidenceStartInput |
+final ProgressionEvidenceStartInput progressionEvidenceStartInput = ; // ProgressionEvidenceStartInput | 
 
 try {
     final response = api.startProgressionEvidence(progressionEvidenceStartInput);
@@ -196,7 +196,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **progressionEvidenceStartInput** | [**ProgressionEvidenceStartInput**](ProgressionEvidenceStartInput.md)|  |
+ **progressionEvidenceStartInput** | [**ProgressionEvidenceStartInput**](ProgressionEvidenceStartInput.md)|  | 
 
 ### Return type
 

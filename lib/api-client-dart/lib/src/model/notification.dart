@@ -12,17 +12,17 @@ part 'notification.g.dart';
 /// Notification
 ///
 /// Properties:
-/// * [id]
-/// * [userId]
-/// * [targetRole]
-/// * [title]
-/// * [message]
-/// * [type]
-/// * [readAt]
+/// * [id] 
+/// * [userId] 
+/// * [targetRole] 
+/// * [title] 
+/// * [message] 
+/// * [type] 
+/// * [readAt] 
 /// * [category] - Category slug used by the anti-annoyance/frequency-cap engine (e.g. \"market_news\", \"security_alert\"). Informational for clients — not itself a tap-target.
 /// * [actionType] - Allowlisted tap-target. Clients should treat any value they don't recognise the same as null (no special action, just mark read) so new action types can be added without breaking older clients.
 /// * [actionId] - The id `actionType` refers to (e.g. an analysis id for \"open_analysis\").
-/// * [createdAt]
+/// * [createdAt] 
 @BuiltValue()
 abstract class Notification implements Built<Notification, NotificationBuilder> {
   @BuiltValueField(wireName: r'id')

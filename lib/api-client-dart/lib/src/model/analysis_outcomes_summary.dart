@@ -11,14 +11,14 @@ part 'analysis_outcomes_summary.g.dart';
 /// Outcome roll-up powering the dashboard's AI accuracy card. Counts every analysis created in the last `rangeDays` days; `scored` is the resolved + non-invalidated subset that the hit-rate percentages are computed against.
 ///
 /// Properties:
-/// * [rangeDays]
-/// * [total]
-/// * [pending]
-/// * [tp1Hit]
-/// * [tp2Hit]
-/// * [slHit]
-/// * [expired]
-/// * [invalidated]
+/// * [rangeDays] 
+/// * [total] 
+/// * [pending] 
+/// * [tp1Hit] 
+/// * [tp2Hit] 
+/// * [slHit] 
+/// * [expired] 
+/// * [invalidated] 
 /// * [scored] - Denominator used for tpHitRate / slHitRate. Equals tp1Hit + tp2Hit + slHit + expired (excludes pending and invalidated).
 /// * [tpHitRate] - (tp1Hit + tp2Hit) / scored. Null when scored == 0.
 /// * [slHitRate] - slHit / scored. Null when scored == 0.

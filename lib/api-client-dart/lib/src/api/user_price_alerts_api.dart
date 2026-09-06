@@ -24,10 +24,10 @@ class UserPriceAlertsApi {
   const UserPriceAlertsApi(this._dio, this._serializers);
 
   /// Create a new price alert for an instrument
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [createUserPriceAlertBody]
+  /// * [createUserPriceAlertBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -37,7 +37,7 @@ class UserPriceAlertsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [UserPriceAlert] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<UserPriceAlert>> createUserPriceAlert({
+  Future<Response<UserPriceAlert>> createUserPriceAlert({ 
     required CreateUserPriceAlertBody createUserPriceAlertBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -119,10 +119,10 @@ class UserPriceAlertsApi {
   }
 
   /// Delete one of the user&#39;s price alerts
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -132,7 +132,7 @@ class UserPriceAlertsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> deleteUserPriceAlert({
+  Future<Response<MessageResponse>> deleteUserPriceAlert({ 
     required int id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -194,7 +194,7 @@ class UserPriceAlertsApi {
   }
 
   /// List the current user&#39;s price alerts (active + recently triggered)
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -206,7 +206,7 @@ class UserPriceAlertsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [UserPriceAlertList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<UserPriceAlertList>> listUserPriceAlerts({
+  Future<Response<UserPriceAlertList>> listUserPriceAlerts({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

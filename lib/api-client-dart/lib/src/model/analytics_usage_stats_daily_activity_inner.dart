@@ -11,8 +11,8 @@ part 'analytics_usage_stats_daily_activity_inner.g.dart';
 /// AnalyticsUsageStatsDailyActivityInner
 ///
 /// Properties:
-/// * [date]
-/// * [count]
+/// * [date] 
+/// * [count] 
 @BuiltValue()
 abstract class AnalyticsUsageStatsDailyActivityInner implements Built<AnalyticsUsageStatsDailyActivityInner, AnalyticsUsageStatsDailyActivityInnerBuilder> {
   @BuiltValueField(wireName: r'date')

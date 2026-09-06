@@ -11,8 +11,8 @@ part 'standard_trading_rule_instrument_trading_hours.g.dart';
 /// StandardTradingRuleInstrumentTradingHours
 ///
 /// Properties:
-/// * [summer]
-/// * [winter]
+/// * [summer] 
+/// * [winter] 
 @BuiltValue()
 abstract class StandardTradingRuleInstrumentTradingHours implements Built<StandardTradingRuleInstrumentTradingHours, StandardTradingRuleInstrumentTradingHoursBuilder> {
   @BuiltValueField(wireName: r'summer')

@@ -33,10 +33,10 @@ class AuthApi {
   const AuthApi(this._dio, this._serializers);
 
   /// Change own password
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [changePasswordBody]
+  /// * [changePasswordBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -46,7 +46,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> changePassword({
+  Future<Response<MessageResponse>> changePassword({ 
     required ChangePasswordBody changePasswordBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -128,10 +128,10 @@ class AuthApi {
   }
 
   /// Change security question
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [changeSecurityQuestionBody]
+  /// * [changeSecurityQuestionBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -141,7 +141,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> changeSecurityQuestion({
+  Future<Response<MessageResponse>> changeSecurityQuestion({ 
     required ChangeSecurityQuestionBody changeSecurityQuestionBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -226,7 +226,7 @@ class AuthApi {
   /// Re-authenticates with &#x60;currentPassword&#x60;, then permanently deletes the authenticated user&#39;s account and every row that references it (analyses, notifications, sessions, push subscriptions, native push devices, journal entries, watchlist, alerts, etc.) via cascading foreign keys. Cannot be used to delete another user&#39;s account — the target is always the authenticated caller.
   ///
   /// Parameters:
-  /// * [deleteAccountBody]
+  /// * [deleteAccountBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -236,7 +236,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> deleteAccount({
+  Future<Response<MessageResponse>> deleteAccount({ 
     required DeleteAccountBody deleteAccountBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -318,10 +318,10 @@ class AuthApi {
   }
 
   /// Get security question for email
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [forgotPasswordQuestionBody]
+  /// * [forgotPasswordQuestionBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -331,7 +331,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [SecurityQuestionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<SecurityQuestionResponse>> getForgotPasswordQuestion({
+  Future<Response<SecurityQuestionResponse>> getForgotPasswordQuestion({ 
     required ForgotPasswordQuestionBody forgotPasswordQuestionBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -413,7 +413,7 @@ class AuthApi {
   }
 
   /// Get current user
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -425,7 +425,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [User] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<User>> getMe({
+  Future<Response<User>> getMe({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -486,10 +486,10 @@ class AuthApi {
   }
 
   /// Login user
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [loginBody]
+  /// * [loginBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -499,7 +499,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AuthResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AuthResponse>> login({
+  Future<Response<AuthResponse>> login({ 
     required LoginBody loginBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -581,7 +581,7 @@ class AuthApi {
   }
 
   /// Logout user
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -593,7 +593,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> logout({
+  Future<Response<MessageResponse>> logout({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -654,10 +654,10 @@ class AuthApi {
   }
 
   /// Register new user
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [registerBody]
+  /// * [registerBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -667,7 +667,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AuthResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AuthResponse>> register({
+  Future<Response<AuthResponse>> register({ 
     required RegisterBody registerBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -749,10 +749,10 @@ class AuthApi {
   }
 
   /// Reset password with token
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [resetPasswordBody]
+  /// * [resetPasswordBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -762,7 +762,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MessageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MessageResponse>> resetPassword({
+  Future<Response<MessageResponse>> resetPassword({ 
     required ResetPasswordBody resetPasswordBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -844,10 +844,10 @@ class AuthApi {
   }
 
   /// Update user profile
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [updateProfileBody]
+  /// * [updateProfileBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -857,7 +857,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [User] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<User>> updateProfile({
+  Future<Response<User>> updateProfile({ 
     required UpdateProfileBody updateProfileBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -939,10 +939,10 @@ class AuthApi {
   }
 
   /// Verify security answer and get reset token
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [verifySecurityAnswerBody]
+  /// * [verifySecurityAnswerBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -952,7 +952,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ResetTokenResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ResetTokenResponse>> verifySecurityAnswer({
+  Future<Response<ResetTokenResponse>> verifySecurityAnswer({ 
     required VerifySecurityAnswerBody verifySecurityAnswerBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

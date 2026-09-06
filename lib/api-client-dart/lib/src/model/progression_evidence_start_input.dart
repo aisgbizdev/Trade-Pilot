@@ -13,9 +13,9 @@ part 'progression_evidence_start_input.g.dart';
 /// ProgressionEvidenceStartInput
 ///
 /// Properties:
-/// * [source_]
-/// * [guideId]
-/// * [checklist]
+/// * [source_] 
+/// * [guideId] 
+/// * [checklist] 
 @BuiltValue()
 abstract class ProgressionEvidenceStartInput implements Built<ProgressionEvidenceStartInput, ProgressionEvidenceStartInputBuilder> {
   @BuiltValueField(wireName: r'source')
@@ -24,7 +24,7 @@ abstract class ProgressionEvidenceStartInput implements Built<ProgressionEvidenc
 
   @BuiltValueField(wireName: r'guideId')
   ProgressionEvidenceStartInputGuideIdEnum? get guideId;
-  // enum guideIdEnum {  how-ai-works,  feature-map,  reading-analysis,  validity-confidence,  adaptive-plan,  analysis-workflow,  bias-confidence-validity,  levels-chart,  technical-fundamental,  standard-plan,  adaptive-position-plan,  account-rules,  terms,  };
+  // enum guideIdEnum {  how-ai-works,  feature-map,  reading-analysis,  validity-confidence,  adaptive-plan,  personal-progression,  analysis-workflow,  bias-confidence-validity,  levels-chart,  timeframe-risk-map,  technical-fundamental,  standard-plan,  adaptive-position-plan,  account-rules,  terms,  };
 
   @BuiltValueField(wireName: r'checklist')
   ProgressionEvidenceStartInputChecklist? get checklist;
@@ -173,12 +173,16 @@ class ProgressionEvidenceStartInputGuideIdEnum extends EnumClass {
   static const ProgressionEvidenceStartInputGuideIdEnum validityConfidence = _$progressionEvidenceStartInputGuideIdEnum_validityConfidence;
   @BuiltValueEnumConst(wireName: r'adaptive-plan')
   static const ProgressionEvidenceStartInputGuideIdEnum adaptivePlan = _$progressionEvidenceStartInputGuideIdEnum_adaptivePlan;
+  @BuiltValueEnumConst(wireName: r'personal-progression')
+  static const ProgressionEvidenceStartInputGuideIdEnum personalProgression = _$progressionEvidenceStartInputGuideIdEnum_personalProgression;
   @BuiltValueEnumConst(wireName: r'analysis-workflow')
   static const ProgressionEvidenceStartInputGuideIdEnum analysisWorkflow = _$progressionEvidenceStartInputGuideIdEnum_analysisWorkflow;
   @BuiltValueEnumConst(wireName: r'bias-confidence-validity')
   static const ProgressionEvidenceStartInputGuideIdEnum biasConfidenceValidity = _$progressionEvidenceStartInputGuideIdEnum_biasConfidenceValidity;
   @BuiltValueEnumConst(wireName: r'levels-chart')
   static const ProgressionEvidenceStartInputGuideIdEnum levelsChart = _$progressionEvidenceStartInputGuideIdEnum_levelsChart;
+  @BuiltValueEnumConst(wireName: r'timeframe-risk-map')
+  static const ProgressionEvidenceStartInputGuideIdEnum timeframeRiskMap = _$progressionEvidenceStartInputGuideIdEnum_timeframeRiskMap;
   @BuiltValueEnumConst(wireName: r'technical-fundamental')
   static const ProgressionEvidenceStartInputGuideIdEnum technicalFundamental = _$progressionEvidenceStartInputGuideIdEnum_technicalFundamental;
   @BuiltValueEnumConst(wireName: r'standard-plan')

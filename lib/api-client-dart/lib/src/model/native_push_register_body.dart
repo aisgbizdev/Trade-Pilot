@@ -12,8 +12,8 @@ part 'native_push_register_body.g.dart';
 /// NativePushRegisterBody
 ///
 /// Properties:
-/// * [token]
-/// * [platform]
+/// * [token] 
+/// * [platform] 
 @BuiltValue()
 abstract class NativePushRegisterBody implements Built<NativePushRegisterBody, NativePushRegisterBodyBuilder> {
   @BuiltValueField(wireName: r'token')

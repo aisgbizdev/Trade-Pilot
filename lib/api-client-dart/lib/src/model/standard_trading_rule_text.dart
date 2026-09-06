@@ -11,8 +11,8 @@ part 'standard_trading_rule_text.g.dart';
 /// StandardTradingRuleText
 ///
 /// Properties:
-/// * [id]
-/// * [en]
+/// * [id] 
+/// * [en] 
 @BuiltValue()
 abstract class StandardTradingRuleText implements Built<StandardTradingRuleText, StandardTradingRuleTextBuilder> {
   @BuiltValueField(wireName: r'id')

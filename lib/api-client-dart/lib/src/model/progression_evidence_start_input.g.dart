@@ -48,6 +48,9 @@ const ProgressionEvidenceStartInputGuideIdEnum
     _$progressionEvidenceStartInputGuideIdEnum_adaptivePlan =
     const ProgressionEvidenceStartInputGuideIdEnum._('adaptivePlan');
 const ProgressionEvidenceStartInputGuideIdEnum
+    _$progressionEvidenceStartInputGuideIdEnum_personalProgression =
+    const ProgressionEvidenceStartInputGuideIdEnum._('personalProgression');
+const ProgressionEvidenceStartInputGuideIdEnum
     _$progressionEvidenceStartInputGuideIdEnum_analysisWorkflow =
     const ProgressionEvidenceStartInputGuideIdEnum._('analysisWorkflow');
 const ProgressionEvidenceStartInputGuideIdEnum
@@ -56,6 +59,9 @@ const ProgressionEvidenceStartInputGuideIdEnum
 const ProgressionEvidenceStartInputGuideIdEnum
     _$progressionEvidenceStartInputGuideIdEnum_levelsChart =
     const ProgressionEvidenceStartInputGuideIdEnum._('levelsChart');
+const ProgressionEvidenceStartInputGuideIdEnum
+    _$progressionEvidenceStartInputGuideIdEnum_timeframeRiskMap =
+    const ProgressionEvidenceStartInputGuideIdEnum._('timeframeRiskMap');
 const ProgressionEvidenceStartInputGuideIdEnum
     _$progressionEvidenceStartInputGuideIdEnum_technicalFundamental =
     const ProgressionEvidenceStartInputGuideIdEnum._('technicalFundamental');
@@ -85,12 +91,16 @@ ProgressionEvidenceStartInputGuideIdEnum
       return _$progressionEvidenceStartInputGuideIdEnum_validityConfidence;
     case 'adaptivePlan':
       return _$progressionEvidenceStartInputGuideIdEnum_adaptivePlan;
+    case 'personalProgression':
+      return _$progressionEvidenceStartInputGuideIdEnum_personalProgression;
     case 'analysisWorkflow':
       return _$progressionEvidenceStartInputGuideIdEnum_analysisWorkflow;
     case 'biasConfidenceValidity':
       return _$progressionEvidenceStartInputGuideIdEnum_biasConfidenceValidity;
     case 'levelsChart':
       return _$progressionEvidenceStartInputGuideIdEnum_levelsChart;
+    case 'timeframeRiskMap':
+      return _$progressionEvidenceStartInputGuideIdEnum_timeframeRiskMap;
     case 'technicalFundamental':
       return _$progressionEvidenceStartInputGuideIdEnum_technicalFundamental;
     case 'standardPlan':
@@ -114,9 +124,11 @@ final BuiltSet<ProgressionEvidenceStartInputGuideIdEnum>
   _$progressionEvidenceStartInputGuideIdEnum_readingAnalysis,
   _$progressionEvidenceStartInputGuideIdEnum_validityConfidence,
   _$progressionEvidenceStartInputGuideIdEnum_adaptivePlan,
+  _$progressionEvidenceStartInputGuideIdEnum_personalProgression,
   _$progressionEvidenceStartInputGuideIdEnum_analysisWorkflow,
   _$progressionEvidenceStartInputGuideIdEnum_biasConfidenceValidity,
   _$progressionEvidenceStartInputGuideIdEnum_levelsChart,
+  _$progressionEvidenceStartInputGuideIdEnum_timeframeRiskMap,
   _$progressionEvidenceStartInputGuideIdEnum_technicalFundamental,
   _$progressionEvidenceStartInputGuideIdEnum_standardPlan,
   _$progressionEvidenceStartInputGuideIdEnum_adaptivePositionPlan,
@@ -171,9 +183,11 @@ class _$ProgressionEvidenceStartInputGuideIdEnumSerializer
     'readingAnalysis': 'reading-analysis',
     'validityConfidence': 'validity-confidence',
     'adaptivePlan': 'adaptive-plan',
+    'personalProgression': 'personal-progression',
     'analysisWorkflow': 'analysis-workflow',
     'biasConfidenceValidity': 'bias-confidence-validity',
     'levelsChart': 'levels-chart',
+    'timeframeRiskMap': 'timeframe-risk-map',
     'technicalFundamental': 'technical-fundamental',
     'standardPlan': 'standard-plan',
     'adaptivePositionPlan': 'adaptive-position-plan',
@@ -186,9 +200,11 @@ class _$ProgressionEvidenceStartInputGuideIdEnumSerializer
     'reading-analysis': 'readingAnalysis',
     'validity-confidence': 'validityConfidence',
     'adaptive-plan': 'adaptivePlan',
+    'personal-progression': 'personalProgression',
     'analysis-workflow': 'analysisWorkflow',
     'bias-confidence-validity': 'biasConfidenceValidity',
     'levels-chart': 'levelsChart',
+    'timeframe-risk-map': 'timeframeRiskMap',
     'technical-fundamental': 'technicalFundamental',
     'standard-plan': 'standardPlan',
     'adaptive-position-plan': 'adaptivePositionPlan',

@@ -12,12 +12,12 @@ part 'create_user_body.g.dart';
 /// CreateUserBody
 ///
 /// Properties:
-/// * [email]
-/// * [password]
-/// * [displayName]
-/// * [role]
-/// * [securityQuestion]
-/// * [securityAnswer]
+/// * [email] 
+/// * [password] 
+/// * [displayName] 
+/// * [role] 
+/// * [securityQuestion] 
+/// * [securityAnswer] 
 @BuiltValue()
 abstract class CreateUserBody implements Built<CreateUserBody, CreateUserBodyBuilder> {
   @BuiltValueField(wireName: r'email')

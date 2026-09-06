@@ -11,14 +11,14 @@ part 'progression_summary.g.dart';
 /// ProgressionSummary
 ///
 /// Properties:
-/// * [totalXp]
-/// * [level]
-/// * [masteryLevel]
-/// * [rank]
+/// * [totalXp] 
+/// * [level] 
+/// * [masteryLevel] 
+/// * [rank] 
 /// * [currentLevelXp] - Absolute XP floor for current level
 /// * [nextLevelXp] - Absolute XP target for next level or Mastery step
-/// * [currentStreak]
-/// * [longestStreak]
+/// * [currentStreak] 
+/// * [longestStreak] 
 @BuiltValue()
 abstract class ProgressionSummary implements Built<ProgressionSummary, ProgressionSummaryBuilder> {
   @BuiltValueField(wireName: r'totalXp')

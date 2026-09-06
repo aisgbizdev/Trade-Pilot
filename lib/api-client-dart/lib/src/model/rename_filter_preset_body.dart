@@ -11,7 +11,7 @@ part 'rename_filter_preset_body.g.dart';
 /// RenameFilterPresetBody
 ///
 /// Properties:
-/// * [name]
+/// * [name] 
 @BuiltValue()
 abstract class RenameFilterPresetBody implements Built<RenameFilterPresetBody, RenameFilterPresetBodyBuilder> {
   @BuiltValueField(wireName: r'name')

@@ -15,11 +15,11 @@ part 'analysis_history_summary.g.dart';
 /// AnalysisHistorySummary
 ///
 /// Properties:
-/// * [range]
-/// * [minSamples]
-/// * [overall]
-/// * [byInstrument]
-/// * [byTimeframe]
+/// * [range] 
+/// * [minSamples] 
+/// * [overall] 
+/// * [byInstrument] 
+/// * [byTimeframe] 
 @BuiltValue()
 abstract class AnalysisHistorySummary implements Built<AnalysisHistorySummary, AnalysisHistorySummaryBuilder> {
   @BuiltValueField(wireName: r'range')

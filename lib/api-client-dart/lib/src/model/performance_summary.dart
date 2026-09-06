@@ -16,15 +16,15 @@ part 'performance_summary.g.dart';
 /// Public AI transparency snapshot for the rolling `windowDays` window (task #164).
 ///
 /// Properties:
-/// * [windowDays]
-/// * [generatedAt]
-/// * [windowStart]
-/// * [minSamples]
-/// * [overall]
-/// * [banner]
-/// * [byInstrument]
-/// * [bySession]
-/// * [byCondition]
+/// * [windowDays] 
+/// * [generatedAt] 
+/// * [windowStart] 
+/// * [minSamples] 
+/// * [overall] 
+/// * [banner] 
+/// * [byInstrument] 
+/// * [bySession] 
+/// * [byCondition] 
 /// * [byVolatility] - Deterministic regime classification derived from the stored indicator tally (trending / ranging / choppy). Replaces ADX where raw OHLC isn't kept per analysis.
 /// * [byNewsActivity] - news_week vs quiet_week, derived from whether the AI's fundamental snapshot included any high-impact calendar event at analysis time.
 @BuiltValue()

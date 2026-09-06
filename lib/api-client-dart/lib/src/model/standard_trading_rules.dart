@@ -17,16 +17,16 @@ part 'standard_trading_rules.g.dart';
 /// The single broker-neutral ruleset used for TP Standard Trading Rules estimates.
 ///
 /// Properties:
-/// * [name]
-/// * [version]
-/// * [effectiveDate]
-/// * [sourceDocument]
-/// * [fixedRate]
-/// * [account]
-/// * [transactionFormula]
-/// * [instruments]
-/// * [disclaimer]
-/// * [relationshipDisclosure]
+/// * [name] 
+/// * [version] 
+/// * [effectiveDate] 
+/// * [sourceDocument] 
+/// * [fixedRate] 
+/// * [account] 
+/// * [transactionFormula] 
+/// * [instruments] 
+/// * [disclaimer] 
+/// * [relationshipDisclosure] 
 @BuiltValue()
 abstract class StandardTradingRules implements Built<StandardTradingRules, StandardTradingRulesBuilder> {
   @BuiltValueField(wireName: r'name')

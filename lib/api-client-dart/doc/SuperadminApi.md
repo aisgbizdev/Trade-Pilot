@@ -31,8 +31,8 @@ Add a tag to a user
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
-final int id = 56; // int |
-final AddUserTagBody addUserTagBody = ; // AddUserTagBody |
+final int id = 56; // int | 
+final AddUserTagBody addUserTagBody = ; // AddUserTagBody | 
 
 try {
     final response = api.addUserTag(id, addUserTagBody);
@@ -46,8 +46,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
- **addUserTagBody** | [**AddUserTagBody**](AddUserTagBody.md)|  |
+ **id** | **int**|  | 
+ **addUserTagBody** | [**AddUserTagBody**](AddUserTagBody.md)|  | 
 
 ### Return type
 
@@ -74,7 +74,7 @@ Create new user (superadmin only)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
-final CreateUserBody createUserBody = ; // CreateUserBody |
+final CreateUserBody createUserBody = ; // CreateUserBody | 
 
 try {
     final response = api.createUser(createUserBody);
@@ -88,7 +88,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createUserBody** | [**CreateUserBody**](CreateUserBody.md)|  |
+ **createUserBody** | [**CreateUserBody**](CreateUserBody.md)|  | 
 
 ### Return type
 
@@ -115,7 +115,7 @@ Delete user (superadmin only)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
-final int id = 56; // int |
+final int id = 56; // int | 
 
 try {
     final response = api.deleteUser(id);
@@ -129,7 +129,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
+ **id** | **int**|  | 
 
 ### Return type
 
@@ -194,8 +194,8 @@ import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
 final String search = search_example; // String | ILIKE filter on email or display name
-final int page = 56; // int |
-final int limit = 56; // int |
+final int page = 56; // int | 
+final int limit = 56; // int | 
 
 try {
     final response = api.getAllUsers(search, page, limit);
@@ -209,7 +209,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **search** | **String**| ILIKE filter on email or display name | [optional]
+ **search** | **String**| ILIKE filter on email or display name | [optional] 
  **page** | **int**|  | [optional] [default to 1]
  **limit** | **int**|  | [optional] [default to 50]
 
@@ -238,7 +238,7 @@ Get all tags for a specific user
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
-final int id = 56; // int |
+final int id = 56; // int | 
 
 try {
     final response = api.getUserTags(id);
@@ -252,7 +252,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
+ **id** | **int**|  | 
 
 ### Return type
 
@@ -279,8 +279,8 @@ Remove a tag from a user
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
-final int id = 56; // int |
-final String tag = tag_example; // String |
+final int id = 56; // int | 
+final String tag = tag_example; // String | 
 
 try {
     final response = api.removeUserTag(id, tag);
@@ -294,8 +294,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
- **tag** | **String**|  |
+ **id** | **int**|  | 
+ **tag** | **String**|  | 
 
 ### Return type
 
@@ -322,8 +322,8 @@ Reset user password (superadmin only)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
-final int id = 56; // int |
-final ResetUserPasswordBody resetUserPasswordBody = ; // ResetUserPasswordBody |
+final int id = 56; // int | 
+final ResetUserPasswordBody resetUserPasswordBody = ; // ResetUserPasswordBody | 
 
 try {
     final response = api.resetUserPassword(id, resetUserPasswordBody);
@@ -337,8 +337,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
- **resetUserPasswordBody** | [**ResetUserPasswordBody**](ResetUserPasswordBody.md)|  |
+ **id** | **int**|  | 
+ **resetUserPasswordBody** | [**ResetUserPasswordBody**](ResetUserPasswordBody.md)|  | 
 
 ### Return type
 
@@ -360,15 +360,15 @@ No authorization required
 
 Set or clear a per-user analysis-quota override
 
-Each field is either a positive integer (override for just this user) or null (clear the override, revert to the global default from PATCH /superadmin/quota-settings).
+Each field is either a positive integer (override for just this user) or null (clear the override, revert to the global default from PATCH /superadmin/quota-settings). 
 
 ### Example
 ```dart
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
-final int id = 56; // int |
-final UpdateUserQuotaBody updateUserQuotaBody = ; // UpdateUserQuotaBody |
+final int id = 56; // int | 
+final UpdateUserQuotaBody updateUserQuotaBody = ; // UpdateUserQuotaBody | 
 
 try {
     final response = api.updateUserQuota(id, updateUserQuotaBody);
@@ -382,8 +382,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
- **updateUserQuotaBody** | [**UpdateUserQuotaBody**](UpdateUserQuotaBody.md)|  |
+ **id** | **int**|  | 
+ **updateUserQuotaBody** | [**UpdateUserQuotaBody**](UpdateUserQuotaBody.md)|  | 
 
 ### Return type
 
@@ -410,8 +410,8 @@ Update user role (superadmin only)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
-final int id = 56; // int |
-final UpdateUserRoleBody updateUserRoleBody = ; // UpdateUserRoleBody |
+final int id = 56; // int | 
+final UpdateUserRoleBody updateUserRoleBody = ; // UpdateUserRoleBody | 
 
 try {
     final response = api.updateUserRole(id, updateUserRoleBody);
@@ -425,8 +425,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
- **updateUserRoleBody** | [**UpdateUserRoleBody**](UpdateUserRoleBody.md)|  |
+ **id** | **int**|  | 
+ **updateUserRoleBody** | [**UpdateUserRoleBody**](UpdateUserRoleBody.md)|  | 
 
 ### Return type
 

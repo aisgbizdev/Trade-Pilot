@@ -13,8 +13,8 @@ part 'get_guardrails200_response.g.dart';
 /// GetGuardrails200Response
 ///
 /// Properties:
-/// * [signals]
-/// * [prefs]
+/// * [signals] 
+/// * [prefs] 
 @BuiltValue()
 abstract class GetGuardrails200Response implements Built<GetGuardrails200Response, GetGuardrails200ResponseBuilder> {
   @BuiltValueField(wireName: r'signals')

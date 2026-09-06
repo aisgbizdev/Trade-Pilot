@@ -18,14 +18,14 @@ Method | HTTP request | Description
 
 Record a sponsor / partner outbound link click
 
-Fire-and-forget telemetry. Auth is optional — most surfaces are reachable while signed out (splash, landing). Always returns 204 even when validation rejects the body so a malformed beacon never blocks the user's outbound navigation.
+Fire-and-forget telemetry. Auth is optional — most surfaces are reachable while signed out (splash, landing). Always returns 204 even when validation rejects the body so a malformed beacon never blocks the user's outbound navigation. 
 
 ### Example
 ```dart
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getEventsApi();
-final OutboundClickBody outboundClickBody = ; // OutboundClickBody |
+final OutboundClickBody outboundClickBody = ; // OutboundClickBody | 
 
 try {
     api.recordOutboundClick(outboundClickBody);
@@ -38,7 +38,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **outboundClickBody** | [**OutboundClickBody**](OutboundClickBody.md)|  |
+ **outboundClickBody** | [**OutboundClickBody**](OutboundClickBody.md)|  | 
 
 ### Return type
 
@@ -60,14 +60,14 @@ No authorization required
 
 Record a page-view or key-action analytics event
 
-Fire-and-forget app-usage telemetry (admin analytics dashboard). Auth is optional — page views happen pre-login too (landing, login). Always returns 204 even when validation rejects the body so a malformed beacon never blocks navigation. Device/browser/OS and country are resolved server-side from the request itself (User-Agent + IP) — never trust client-supplied values for these.
+Fire-and-forget app-usage telemetry (admin analytics dashboard). Auth is optional — page views happen pre-login too (landing, login). Always returns 204 even when validation rejects the body so a malformed beacon never blocks navigation. Device/browser/OS and country are resolved server-side from the request itself (User-Agent + IP) — never trust client-supplied values for these. 
 
 ### Example
 ```dart
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getEventsApi();
-final AnalyticsEventBody analyticsEventBody = ; // AnalyticsEventBody |
+final AnalyticsEventBody analyticsEventBody = ; // AnalyticsEventBody | 
 
 try {
     api.trackAnalyticsEvent(analyticsEventBody);
@@ -80,7 +80,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **analyticsEventBody** | [**AnalyticsEventBody**](AnalyticsEventBody.md)|  |
+ **analyticsEventBody** | [**AnalyticsEventBody**](AnalyticsEventBody.md)|  | 
 
 ### Return type
 

@@ -11,9 +11,9 @@ part 'analytics_token_stats_totals.g.dart';
 /// AnalyticsTokenStatsTotals
 ///
 /// Properties:
-/// * [totalTokens]
-/// * [totalCostUsd]
-/// * [totalCalls]
+/// * [totalTokens] 
+/// * [totalCostUsd] 
+/// * [totalCalls] 
 @BuiltValue()
 abstract class AnalyticsTokenStatsTotals implements Built<AnalyticsTokenStatsTotals, AnalyticsTokenStatsTotalsBuilder> {
   @BuiltValueField(wireName: r'totalTokens')

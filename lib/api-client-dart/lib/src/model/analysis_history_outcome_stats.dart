@@ -11,16 +11,16 @@ part 'analysis_history_outcome_stats.g.dart';
 /// AnalysisHistoryOutcomeStats
 ///
 /// Properties:
-/// * [total]
-/// * [pending]
-/// * [activeValid]
-/// * [tp1Hit]
-/// * [tp2Hit]
-/// * [slHit]
-/// * [expired]
-/// * [invalidated]
-/// * [winRate]
-/// * [completionRate]
+/// * [total] 
+/// * [pending] 
+/// * [activeValid] 
+/// * [tp1Hit] 
+/// * [tp2Hit] 
+/// * [slHit] 
+/// * [expired] 
+/// * [invalidated] 
+/// * [winRate] 
+/// * [completionRate] 
 @BuiltValue(instantiable: false)
 abstract class AnalysisHistoryOutcomeStats  {
   @BuiltValueField(wireName: r'total')

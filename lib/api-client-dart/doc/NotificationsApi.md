@@ -24,7 +24,7 @@ Get notifications for current user
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getNotificationsApi();
-final bool unreadOnly = true; // bool |
+final bool unreadOnly = true; // bool | 
 
 try {
     final response = api.getNotifications(unreadOnly);
@@ -38,7 +38,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **unreadOnly** | **bool**|  | [optional]
+ **unreadOnly** | **bool**|  | [optional] 
 
 ### Return type
 
@@ -102,7 +102,7 @@ Mark single notification as read
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getNotificationsApi();
-final int id = 56; // int |
+final int id = 56; // int | 
 
 try {
     final response = api.markNotificationRead(id);
@@ -116,7 +116,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
+ **id** | **int**|  | 
 
 ### Return type
 

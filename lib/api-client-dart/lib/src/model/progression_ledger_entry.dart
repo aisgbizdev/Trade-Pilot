@@ -11,12 +11,12 @@ part 'progression_ledger_entry.g.dart';
 /// ProgressionLedgerEntry
 ///
 /// Properties:
-/// * [id]
-/// * [source_]
-/// * [xp]
-/// * [dayBucket]
-/// * [ruleVersion]
-/// * [createdAt]
+/// * [id] 
+/// * [source_] 
+/// * [xp] 
+/// * [dayBucket] 
+/// * [ruleVersion] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class ProgressionLedgerEntry implements Built<ProgressionLedgerEntry, ProgressionLedgerEntryBuilder> {
   @BuiltValueField(wireName: r'id')

@@ -25,7 +25,7 @@ Save the current filter combination as a named preset
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getFilterPresetsApi();
-final CreateFilterPresetBody createFilterPresetBody = ; // CreateFilterPresetBody |
+final CreateFilterPresetBody createFilterPresetBody = ; // CreateFilterPresetBody | 
 
 try {
     final response = api.createFilterPreset(createFilterPresetBody);
@@ -39,7 +39,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createFilterPresetBody** | [**CreateFilterPresetBody**](CreateFilterPresetBody.md)|  |
+ **createFilterPresetBody** | [**CreateFilterPresetBody**](CreateFilterPresetBody.md)|  | 
 
 ### Return type
 
@@ -66,7 +66,7 @@ Delete a preset
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getFilterPresetsApi();
-final int id = 56; // int |
+final int id = 56; // int | 
 
 try {
     api.deleteFilterPreset(id);
@@ -79,7 +79,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
+ **id** | **int**|  | 
 
 ### Return type
 
@@ -143,8 +143,8 @@ Rename an existing preset
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getFilterPresetsApi();
-final int id = 56; // int |
-final RenameFilterPresetBody renameFilterPresetBody = ; // RenameFilterPresetBody |
+final int id = 56; // int | 
+final RenameFilterPresetBody renameFilterPresetBody = ; // RenameFilterPresetBody | 
 
 try {
     final response = api.renameFilterPreset(id, renameFilterPresetBody);
@@ -158,8 +158,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
- **renameFilterPresetBody** | [**RenameFilterPresetBody**](RenameFilterPresetBody.md)|  |
+ **id** | **int**|  | 
+ **renameFilterPresetBody** | [**RenameFilterPresetBody**](RenameFilterPresetBody.md)|  | 
 
 ### Return type
 

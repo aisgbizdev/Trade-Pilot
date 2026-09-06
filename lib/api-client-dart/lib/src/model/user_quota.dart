@@ -11,9 +11,9 @@ part 'user_quota.g.dart';
 /// UserQuota
 ///
 /// Properties:
-/// * [id]
-/// * [customQuotaPerHour]
-/// * [customQuotaPerDay]
+/// * [id] 
+/// * [customQuotaPerHour] 
+/// * [customQuotaPerDay] 
 @BuiltValue()
 abstract class UserQuota implements Built<UserQuota, UserQuotaBuilder> {
   @BuiltValueField(wireName: r'id')

@@ -12,12 +12,12 @@ part 'filter_preset_filters.g.dart';
 /// Mirrors the URL-derived filter state used by the history page.
 ///
 /// Properties:
-/// * [mode]
-/// * [instruments]
-/// * [timeframes]
-/// * [from]
-/// * [to]
-/// * [q]
+/// * [mode] 
+/// * [instruments] 
+/// * [timeframes] 
+/// * [from] 
+/// * [to] 
+/// * [q] 
 @BuiltValue()
 abstract class FilterPresetFilters implements Built<FilterPresetFilters, FilterPresetFiltersBuilder> {
   @BuiltValueField(wireName: r'mode')

@@ -11,10 +11,10 @@ part 'analytics_token_stats_by_model_inner.g.dart';
 /// AnalyticsTokenStatsByModelInner
 ///
 /// Properties:
-/// * [model]
-/// * [totalTokens]
-/// * [estimatedCostUsd]
-/// * [callCount]
+/// * [model] 
+/// * [totalTokens] 
+/// * [estimatedCostUsd] 
+/// * [callCount] 
 @BuiltValue()
 abstract class AnalyticsTokenStatsByModelInner implements Built<AnalyticsTokenStatsByModelInner, AnalyticsTokenStatsByModelInnerBuilder> {
   @BuiltValueField(wireName: r'model')

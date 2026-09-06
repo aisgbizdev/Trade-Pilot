@@ -11,9 +11,9 @@ part 'progression_award.g.dart';
 /// ProgressionAward
 ///
 /// Properties:
-/// * [awarded]
-/// * [xp]
-/// * [reason]
+/// * [awarded] 
+/// * [xp] 
+/// * [reason] 
 @BuiltValue()
 abstract class ProgressionAward implements Built<ProgressionAward, ProgressionAwardBuilder> {
   @BuiltValueField(wireName: r'awarded')

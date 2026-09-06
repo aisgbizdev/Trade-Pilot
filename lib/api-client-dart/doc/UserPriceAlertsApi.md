@@ -24,7 +24,7 @@ Create a new price alert for an instrument
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getUserPriceAlertsApi();
-final CreateUserPriceAlertBody createUserPriceAlertBody = ; // CreateUserPriceAlertBody |
+final CreateUserPriceAlertBody createUserPriceAlertBody = ; // CreateUserPriceAlertBody | 
 
 try {
     final response = api.createUserPriceAlert(createUserPriceAlertBody);
@@ -38,7 +38,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createUserPriceAlertBody** | [**CreateUserPriceAlertBody**](CreateUserPriceAlertBody.md)|  |
+ **createUserPriceAlertBody** | [**CreateUserPriceAlertBody**](CreateUserPriceAlertBody.md)|  | 
 
 ### Return type
 
@@ -65,7 +65,7 @@ Delete one of the user's price alerts
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getUserPriceAlertsApi();
-final int id = 56; // int |
+final int id = 56; // int | 
 
 try {
     final response = api.deleteUserPriceAlert(id);
@@ -79,7 +79,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **int**|  |
+ **id** | **int**|  | 
 
 ### Return type
 

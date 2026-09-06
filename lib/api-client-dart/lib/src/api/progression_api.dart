@@ -26,7 +26,7 @@ class ProgressionApi {
   const ProgressionApi(this._dio, this._serializers);
 
   /// Get private achievement catalog and unlock state
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -38,7 +38,7 @@ class ProgressionApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ProgressionCatalog] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ProgressionCatalog>> getProgressionCatalog({
+  Future<Response<ProgressionCatalog>> getProgressionCatalog({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -99,10 +99,10 @@ class ProgressionApi {
   }
 
   /// Get private append-only XP history
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [limit]
+  /// * [limit] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -112,7 +112,7 @@ class ProgressionApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ProgressionHistory] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ProgressionHistory>> getProgressionHistory({
+  Future<Response<ProgressionHistory>> getProgressionHistory({ 
     int? limit,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -179,7 +179,7 @@ class ProgressionApi {
   }
 
   /// Get the authenticated user&#39;s private progression summary
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -191,7 +191,7 @@ class ProgressionApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ProgressionSummary] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ProgressionSummary>> getProgressionSummary({
+  Future<Response<ProgressionSummary>> getProgressionSummary({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -252,10 +252,10 @@ class ProgressionApi {
   }
 
   /// Record a server-verifiable checklist or guide completion
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [progressionActivityInput]
+  /// * [progressionActivityInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -265,7 +265,7 @@ class ProgressionApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ProgressionAward] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ProgressionAward>> recordProgressionActivity({
+  Future<Response<ProgressionAward>> recordProgressionActivity({ 
     required ProgressionActivityInput progressionActivityInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -347,10 +347,10 @@ class ProgressionApi {
   }
 
   /// Issue a one-time server evidence token for a known guide or checklist
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [progressionEvidenceStartInput]
+  /// * [progressionEvidenceStartInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -360,7 +360,7 @@ class ProgressionApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ProgressionEvidenceSession] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ProgressionEvidenceSession>> startProgressionEvidence({
+  Future<Response<ProgressionEvidenceSession>> startProgressionEvidence({ 
     required ProgressionEvidenceStartInput progressionEvidenceStartInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

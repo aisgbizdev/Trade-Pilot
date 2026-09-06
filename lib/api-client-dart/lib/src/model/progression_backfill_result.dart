@@ -11,9 +11,9 @@ part 'progression_backfill_result.g.dart';
 /// ProgressionBackfillResult
 ///
 /// Properties:
-/// * [awarded]
-/// * [scanned]
-/// * [ruleVersion]
+/// * [awarded] 
+/// * [scanned] 
+/// * [ruleVersion] 
 @BuiltValue()
 abstract class ProgressionBackfillResult implements Built<ProgressionBackfillResult, ProgressionBackfillResultBuilder> {
   @BuiltValueField(wireName: r'awarded')

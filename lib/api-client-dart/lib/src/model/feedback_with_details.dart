@@ -12,15 +12,15 @@ part 'feedback_with_details.g.dart';
 /// FeedbackWithDetails
 ///
 /// Properties:
-/// * [id]
-/// * [analysisId]
-/// * [instrument]
-/// * [userId]
-/// * [userEmail]
-/// * [feedbackType]
-/// * [outcome]
-/// * [note]
-/// * [createdAt]
+/// * [id] 
+/// * [analysisId] 
+/// * [instrument] 
+/// * [userId] 
+/// * [userEmail] 
+/// * [feedbackType] 
+/// * [outcome] 
+/// * [note] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class FeedbackWithDetails implements Built<FeedbackWithDetails, FeedbackWithDetailsBuilder> {
   @BuiltValueField(wireName: r'id')

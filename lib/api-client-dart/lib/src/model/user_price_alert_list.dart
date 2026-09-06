@@ -13,7 +13,7 @@ part 'user_price_alert_list.g.dart';
 /// UserPriceAlertList
 ///
 /// Properties:
-/// * [alerts]
+/// * [alerts] 
 @BuiltValue()
 abstract class UserPriceAlertList implements Built<UserPriceAlertList, UserPriceAlertListBuilder> {
   @BuiltValueField(wireName: r'alerts')

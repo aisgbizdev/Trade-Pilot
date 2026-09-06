@@ -13,7 +13,7 @@ part 'watchlist.g.dart';
 /// Watchlist
 ///
 /// Properties:
-/// * [items]
+/// * [items] 
 @BuiltValue()
 abstract class Watchlist implements Built<Watchlist, WatchlistBuilder> {
   @BuiltValueField(wireName: r'items')

@@ -297,7 +297,7 @@ export const GetStandardTradingRulesResponse = zod
  */
 export const registerBodyPasswordMin = 6;
 
-export const registerBodySelectedModeDefault = `beginner`;
+export const registerBodySelectedModeDefault = `pro`;
 export const registerBodyRememberMeDefault = false;
 
 export const RegisterBody = zod.object({

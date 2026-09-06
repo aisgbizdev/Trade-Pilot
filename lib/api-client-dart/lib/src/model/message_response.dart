@@ -11,7 +11,7 @@ part 'message_response.g.dart';
 /// MessageResponse
 ///
 /// Properties:
-/// * [message]
+/// * [message] 
 @BuiltValue()
 abstract class MessageResponse implements Built<MessageResponse, MessageResponseBuilder> {
   @BuiltValueField(wireName: r'message')

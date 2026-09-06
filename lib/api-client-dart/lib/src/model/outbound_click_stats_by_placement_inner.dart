@@ -11,9 +11,9 @@ part 'outbound_click_stats_by_placement_inner.g.dart';
 /// OutboundClickStatsByPlacementInner
 ///
 /// Properties:
-/// * [placement]
-/// * [target]
-/// * [count]
+/// * [placement] 
+/// * [target] 
+/// * [count] 
 @BuiltValue()
 abstract class OutboundClickStatsByPlacementInner implements Built<OutboundClickStatsByPlacementInner, OutboundClickStatsByPlacementInnerBuilder> {
   @BuiltValueField(wireName: r'placement')

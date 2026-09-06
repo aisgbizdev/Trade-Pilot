@@ -13,7 +13,7 @@ part 'filter_preset_list.g.dart';
 /// FilterPresetList
 ///
 /// Properties:
-/// * [presets]
+/// * [presets] 
 @BuiltValue()
 abstract class FilterPresetList implements Built<FilterPresetList, FilterPresetListBuilder> {
   @BuiltValueField(wireName: r'presets')

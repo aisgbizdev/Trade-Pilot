@@ -13,7 +13,7 @@ part 'progression_catalog.g.dart';
 /// ProgressionCatalog
 ///
 /// Properties:
-/// * [achievements]
+/// * [achievements] 
 @BuiltValue()
 abstract class ProgressionCatalog implements Built<ProgressionCatalog, ProgressionCatalogBuilder> {
   @BuiltValueField(wireName: r'achievements')

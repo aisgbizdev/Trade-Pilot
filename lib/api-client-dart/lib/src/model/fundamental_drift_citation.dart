@@ -12,8 +12,8 @@ part 'fundamental_drift_citation.g.dart';
 /// A single original AI citation that no longer matches anything in the freshly-fetched news/calendar window.
 ///
 /// Properties:
-/// * [kind]
-/// * [label]
+/// * [kind] 
+/// * [label] 
 @BuiltValue()
 abstract class FundamentalDriftCitation implements Built<FundamentalDriftCitation, FundamentalDriftCitationBuilder> {
   @BuiltValueField(wireName: r'kind')

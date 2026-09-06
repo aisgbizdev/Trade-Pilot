@@ -13,10 +13,10 @@ part 'feedback_list.g.dart';
 /// FeedbackList
 ///
 /// Properties:
-/// * [feedback]
-/// * [total]
-/// * [page]
-/// * [limit]
+/// * [feedback] 
+/// * [total] 
+/// * [page] 
+/// * [limit] 
 @BuiltValue()
 abstract class FeedbackList implements Built<FeedbackList, FeedbackListBuilder> {
   @BuiltValueField(wireName: r'feedback')

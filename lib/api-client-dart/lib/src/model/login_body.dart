@@ -12,8 +12,8 @@ part 'login_body.g.dart';
 ///
 /// Properties:
 /// * [email] - Username or email used to identify the account
-/// * [password]
-/// * [rememberMe]
+/// * [password] 
+/// * [rememberMe] 
 @BuiltValue()
 abstract class LoginBody implements Built<LoginBody, LoginBodyBuilder> {
   /// Username or email used to identify the account

@@ -11,8 +11,8 @@ part 'reset_password_body.g.dart';
 /// ResetPasswordBody
 ///
 /// Properties:
-/// * [resetToken]
-/// * [newPassword]
+/// * [resetToken] 
+/// * [newPassword] 
 @BuiltValue()
 abstract class ResetPasswordBody implements Built<ResetPasswordBody, ResetPasswordBodyBuilder> {
   @BuiltValueField(wireName: r'resetToken')

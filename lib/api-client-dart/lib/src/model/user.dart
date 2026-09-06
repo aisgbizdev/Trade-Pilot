@@ -12,16 +12,16 @@ part 'user.g.dart';
 /// User
 ///
 /// Properties:
-/// * [id]
-/// * [email]
-/// * [displayName]
+/// * [id] 
+/// * [email] 
+/// * [displayName] 
 /// * [avatarUrl] - Object-storage path (e.g. `/objects/uploads/uuid`) for the user's profile photo. Null if not set.
-/// * [role]
-/// * [selectedMode]
-/// * [themePreference]
-/// * [securityQuestion]
-/// * [onboardingCompleted]
-/// * [createdAt]
+/// * [role] 
+/// * [selectedMode] 
+/// * [themePreference] 
+/// * [securityQuestion] 
+/// * [onboardingCompleted] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class User implements Built<User, UserBuilder> {
   @BuiltValueField(wireName: r'id')

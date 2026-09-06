@@ -11,8 +11,8 @@ part 'personal_analytics_weekly_data_inner.g.dart';
 /// PersonalAnalyticsWeeklyDataInner
 ///
 /// Properties:
-/// * [week]
-/// * [count]
+/// * [week] 
+/// * [count] 
 @BuiltValue()
 abstract class PersonalAnalyticsWeeklyDataInner implements Built<PersonalAnalyticsWeeklyDataInner, PersonalAnalyticsWeeklyDataInnerBuilder> {
   @BuiltValueField(wireName: r'week')

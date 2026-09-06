@@ -11,8 +11,8 @@ part 'verify_security_answer_body.g.dart';
 /// VerifySecurityAnswerBody
 ///
 /// Properties:
-/// * [email]
-/// * [securityAnswer]
+/// * [email] 
+/// * [securityAnswer] 
 @BuiltValue()
 abstract class VerifySecurityAnswerBody implements Built<VerifySecurityAnswerBody, VerifySecurityAnswerBodyBuilder> {
   @BuiltValueField(wireName: r'email')

@@ -11,12 +11,12 @@ part 'fundamental_news_item.g.dart';
 /// A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.
 ///
 /// Properties:
-/// * [id]
-/// * [title]
-/// * [summary]
+/// * [id] 
+/// * [title] 
+/// * [summary] 
 /// * [source_] - Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.
-/// * [url]
-/// * [publishedAt]
+/// * [url] 
+/// * [publishedAt] 
 @BuiltValue()
 abstract class FundamentalNewsItem implements Built<FundamentalNewsItem, FundamentalNewsItemBuilder> {
   @BuiltValueField(wireName: r'id')

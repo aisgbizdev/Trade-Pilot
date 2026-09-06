@@ -11,9 +11,9 @@ part 'upload_url_request.g.dart';
 /// UploadUrlRequest
 ///
 /// Properties:
-/// * [name]
-/// * [size]
-/// * [contentType]
+/// * [name] 
+/// * [size] 
+/// * [contentType] 
 @BuiltValue()
 abstract class UploadUrlRequest implements Built<UploadUrlRequest, UploadUrlRequestBuilder> {
   @BuiltValueField(wireName: r'name')

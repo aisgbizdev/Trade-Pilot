@@ -12,16 +12,16 @@ part 'user_with_stats.g.dart';
 /// UserWithStats
 ///
 /// Properties:
-/// * [id]
-/// * [email]
-/// * [displayName]
-/// * [role]
-/// * [selectedMode]
-/// * [analysisCount]
-/// * [tags]
+/// * [id] 
+/// * [email] 
+/// * [displayName] 
+/// * [role] 
+/// * [selectedMode] 
+/// * [analysisCount] 
+/// * [tags] 
 /// * [customQuotaPerHour] - Per-user analysis-quota override. Null = uses the global default.
 /// * [customQuotaPerDay] - Per-user analysis-quota override. Null = uses the global default.
-/// * [createdAt]
+/// * [createdAt] 
 @BuiltValue()
 abstract class UserWithStats implements Built<UserWithStats, UserWithStatsBuilder> {
   @BuiltValueField(wireName: r'id')

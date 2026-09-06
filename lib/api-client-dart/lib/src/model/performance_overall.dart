@@ -11,13 +11,13 @@ part 'performance_overall.g.dart';
 /// PerformanceOverall
 ///
 /// Properties:
-/// * [triggered]
-/// * [wins]
-/// * [losses]
-/// * [expired]
-/// * [total]
-/// * [winRate]
-/// * [hitRate]
+/// * [triggered] 
+/// * [wins] 
+/// * [losses] 
+/// * [expired] 
+/// * [total] 
+/// * [winRate] 
+/// * [hitRate] 
 @BuiltValue()
 abstract class PerformanceOverall implements Built<PerformanceOverall, PerformanceOverallBuilder> {
   @BuiltValueField(wireName: r'triggered')

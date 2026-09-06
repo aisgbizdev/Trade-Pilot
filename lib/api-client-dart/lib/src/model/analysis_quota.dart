@@ -13,8 +13,8 @@ part 'analysis_quota.g.dart';
 ///
 /// Properties:
 /// * [unlimited] - True for admin/super_admin, who bypass quota
-/// * [hourly]
-/// * [daily]
+/// * [hourly] 
+/// * [daily] 
 @BuiltValue()
 abstract class AnalysisQuota implements Built<AnalysisQuota, AnalysisQuotaBuilder> {
   /// True for admin/super_admin, who bypass quota

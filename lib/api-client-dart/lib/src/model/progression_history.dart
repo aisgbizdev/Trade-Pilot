@@ -13,7 +13,7 @@ part 'progression_history.g.dart';
 /// ProgressionHistory
 ///
 /// Properties:
-/// * [entries]
+/// * [entries] 
 @BuiltValue()
 abstract class ProgressionHistory implements Built<ProgressionHistory, ProgressionHistoryBuilder> {
   @BuiltValueField(wireName: r'entries')

@@ -11,8 +11,8 @@ part 'analytics_usage_stats_country_breakdown_inner.g.dart';
 /// AnalyticsUsageStatsCountryBreakdownInner
 ///
 /// Properties:
-/// * [country]
-/// * [count]
+/// * [country] 
+/// * [count] 
 @BuiltValue()
 abstract class AnalyticsUsageStatsCountryBreakdownInner implements Built<AnalyticsUsageStatsCountryBreakdownInner, AnalyticsUsageStatsCountryBreakdownInnerBuilder> {
   @BuiltValueField(wireName: r'country')

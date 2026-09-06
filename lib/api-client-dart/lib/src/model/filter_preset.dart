@@ -12,11 +12,11 @@ part 'filter_preset.g.dart';
 /// FilterPreset
 ///
 /// Properties:
-/// * [id]
-/// * [name]
-/// * [filters]
-/// * [createdAt]
-/// * [updatedAt]
+/// * [id] 
+/// * [name] 
+/// * [filters] 
+/// * [createdAt] 
+/// * [updatedAt] 
 @BuiltValue()
 abstract class FilterPreset implements Built<FilterPreset, FilterPresetBuilder> {
   @BuiltValueField(wireName: r'id')

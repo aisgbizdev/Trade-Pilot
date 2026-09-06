@@ -11,7 +11,7 @@ part 'progression_activity_input.g.dart';
 /// ProgressionActivityInput
 ///
 /// Properties:
-/// * [token]
+/// * [token] 
 @BuiltValue()
 abstract class ProgressionActivityInput implements Built<ProgressionActivityInput, ProgressionActivityInputBuilder> {
   @BuiltValueField(wireName: r'token')

@@ -13,7 +13,7 @@ part 'journal_entry_list.g.dart';
 /// JournalEntryList
 ///
 /// Properties:
-/// * [entries]
+/// * [entries] 
 @BuiltValue()
 abstract class JournalEntryList implements Built<JournalEntryList, JournalEntryListBuilder> {
   @BuiltValueField(wireName: r'entries')

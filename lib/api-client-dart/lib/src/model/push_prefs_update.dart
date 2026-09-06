@@ -12,32 +12,32 @@ part 'push_prefs_update.g.dart';
 /// PushPrefsUpdate
 ///
 /// Properties:
-/// * [pushExpiry]
-/// * [pushBroadcast]
-/// * [pushDailySummary]
-/// * [pushMarketNews]
-/// * [pushCalendarEvents]
-/// * [pushPriceAnomaly]
-/// * [pushWeeklyRecap]
-/// * [pushSignalFlip]
-/// * [marketOpenSessions]
-/// * [pushDormancyNudge]
-/// * [pushOnboarding]
+/// * [pushExpiry] 
+/// * [pushBroadcast] 
+/// * [pushDailySummary] 
+/// * [pushMarketNews] 
+/// * [pushCalendarEvents] 
+/// * [pushPriceAnomaly] 
+/// * [pushWeeklyRecap] 
+/// * [pushSignalFlip] 
+/// * [marketOpenSessions] 
+/// * [pushDormancyNudge] 
+/// * [pushOnboarding] 
 /// * [dismissDisengageNotice] - Pass true to clear the one-time auto-pause banner.
-/// * [guardrailRevenge]
-/// * [guardrailOvertrading]
-/// * [guardrailHighRisk]
-/// * [coolingOffEnabled]
-/// * [pushAnalysisCompleted]
-/// * [pushTpSlHit]
-/// * [pushLoginAlert]
-/// * [nativePushEnabled]
-/// * [webPushEnabled]
-/// * [quietHoursEnabled]
+/// * [guardrailRevenge] 
+/// * [guardrailOvertrading] 
+/// * [guardrailHighRisk] 
+/// * [coolingOffEnabled] 
+/// * [pushAnalysisCompleted] 
+/// * [pushTpSlHit] 
+/// * [pushLoginAlert] 
+/// * [nativePushEnabled] 
+/// * [webPushEnabled] 
+/// * [quietHoursEnabled] 
 /// * [quietHoursStart] - HH:MM 24h local time.
 /// * [quietHoursEnd] - HH:MM 24h local time.
 /// * [notificationTimezone] - IANA timezone.
-/// * [progressionNotificationsEnabled]
+/// * [progressionNotificationsEnabled] 
 @BuiltValue()
 abstract class PushPrefsUpdate implements Built<PushPrefsUpdate, PushPrefsUpdateBuilder> {
   @BuiltValueField(wireName: r'pushExpiry')

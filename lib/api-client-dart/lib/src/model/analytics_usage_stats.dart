@@ -17,12 +17,12 @@ part 'analytics_usage_stats.g.dart';
 /// AnalyticsUsageStats
 ///
 /// Properties:
-/// * [windowDays]
-/// * [dailyActivity]
-/// * [featureBreakdown]
-/// * [deviceBreakdown]
-/// * [browserBreakdown]
-/// * [countryBreakdown]
+/// * [windowDays] 
+/// * [dailyActivity] 
+/// * [featureBreakdown] 
+/// * [deviceBreakdown] 
+/// * [browserBreakdown] 
+/// * [countryBreakdown] 
 @BuiltValue()
 abstract class AnalyticsUsageStats implements Built<AnalyticsUsageStats, AnalyticsUsageStatsBuilder> {
   @BuiltValueField(wireName: r'windowDays')

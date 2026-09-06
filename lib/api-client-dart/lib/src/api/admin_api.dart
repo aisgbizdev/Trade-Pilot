@@ -32,7 +32,7 @@ class AdminApi {
   const AdminApi(this._dio, this._serializers);
 
   /// Safely backfill only unequivocal historical progression evidence
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -44,7 +44,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ProgressionBackfillResult] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ProgressionBackfillResult>> backfillProgression({
+  Future<Response<ProgressionBackfillResult>> backfillProgression({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -105,10 +105,10 @@ class AdminApi {
   }
 
   /// Broadcast notification to selected audience
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [broadcastNotificationBody]
+  /// * [broadcastNotificationBody] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -118,7 +118,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [BroadcastSendResult] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<BroadcastSendResult>> broadcastNotification({
+  Future<Response<BroadcastSendResult>> broadcastNotification({ 
     required BroadcastNotificationBody broadcastNotificationBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -200,7 +200,7 @@ class AdminApi {
   }
 
   /// AI (OpenAI) token usage and estimated cost breakdown
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [days] - Window size in days. Defaults to 30. Clamped 1..365.
@@ -213,7 +213,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AnalyticsTokenStats] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AnalyticsTokenStats>> getAdminAnalyticsTokens({
+  Future<Response<AnalyticsTokenStats>> getAdminAnalyticsTokens({ 
     int? days = 30,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -280,7 +280,7 @@ class AdminApi {
   }
 
   /// Feature-usage, device, browser, and country breakdown from analytics events
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [days] - Window size in days. Defaults to 30. Clamped 1..365.
@@ -293,7 +293,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AnalyticsUsageStats] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AnalyticsUsageStats>> getAdminAnalyticsUsage({
+  Future<Response<AnalyticsUsageStats>> getAdminAnalyticsUsage({ 
     int? days = 30,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -360,11 +360,11 @@ class AdminApi {
   }
 
   /// List user feedback rows (admin only)
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [page]
-  /// * [limit]
+  /// * [page] 
+  /// * [limit] 
   /// * [search] - Free-text ILIKE filter matched against the user's email or the analysis instrument
   /// * [feedbackType] - Restrict to a single feedback reaction
   /// * [from] - Only include feedback created on or after this date (ISO 8601 date)
@@ -379,7 +379,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminFeedbackList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminFeedbackList>> getAdminFeedback({
+  Future<Response<AdminFeedbackList>> getAdminFeedback({ 
     int? page = 1,
     int? limit = 50,
     String? search,
@@ -458,7 +458,7 @@ class AdminApi {
   }
 
   /// Get admin statistics
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -470,7 +470,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminStats] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminStats>> getAdminStats({
+  Future<Response<AdminStats>> getAdminStats({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -531,11 +531,11 @@ class AdminApi {
   }
 
   /// Get all analyses (admin only)
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [page]
-  /// * [limit]
+  /// * [page] 
+  /// * [limit] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -545,7 +545,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AnalysesList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AnalysesList>> getAllAnalyses({
+  Future<Response<AnalysesList>> getAllAnalyses({ 
     int? page = 1,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -614,11 +614,11 @@ class AdminApi {
   }
 
   /// Broadcast history
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [page]
-  /// * [limit]
+  /// * [page] 
+  /// * [limit] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -628,7 +628,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [BroadcastsList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<BroadcastsList>> getBroadcasts({
+  Future<Response<BroadcastsList>> getBroadcasts({ 
     int? page = 1,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -697,7 +697,7 @@ class AdminApi {
   }
 
   /// Aggregated counts of sponsor / partner outbound link clicks
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [days] - Window size for the \"recent\" totals. Defaults to 30. Clamped 1..365.
@@ -710,7 +710,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [OutboundClickStats] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<OutboundClickStats>> getOutboundClickStats({
+  Future<Response<OutboundClickStats>> getOutboundClickStats({ 
     int? days = 30,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -777,10 +777,10 @@ class AdminApi {
   }
 
   /// Read-only progression ledger audit; never a leaderboard
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [userId]
+  /// * [userId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -790,7 +790,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ProgressionAudit] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ProgressionAudit>> getProgressionAudit({
+  Future<Response<ProgressionAudit>> getProgressionAudit({ 
     int? userId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

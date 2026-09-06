@@ -11,8 +11,8 @@ part 'watchlist_item.g.dart';
 /// WatchlistItem
 ///
 /// Properties:
-/// * [instrument]
-/// * [addedAt]
+/// * [instrument] 
+/// * [addedAt] 
 /// * [mostRecentAnalysisId] - ID of the user's most recent analysis for this instrument, or null if none exists.
 /// * [mostRecentAnalysisAt] - Created-at of the most recent analysis for this instrument, or null if none exists.
 @BuiltValue()

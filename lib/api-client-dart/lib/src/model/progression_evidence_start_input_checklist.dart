@@ -11,8 +11,8 @@ part 'progression_evidence_start_input_checklist.g.dart';
 /// ProgressionEvidenceStartInputChecklist
 ///
 /// Properties:
-/// * [instrument]
-/// * [timeframe]
+/// * [instrument] 
+/// * [timeframe] 
 @BuiltValue()
 abstract class ProgressionEvidenceStartInputChecklist implements Built<ProgressionEvidenceStartInputChecklist, ProgressionEvidenceStartInputChecklistBuilder> {
   @BuiltValueField(wireName: r'instrument')

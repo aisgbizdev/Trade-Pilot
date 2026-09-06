@@ -11,8 +11,8 @@ part 'analytics_usage_stats_feature_breakdown_inner.g.dart';
 /// AnalyticsUsageStatsFeatureBreakdownInner
 ///
 /// Properties:
-/// * [eventType]
-/// * [count]
+/// * [eventType] 
+/// * [count] 
 @BuiltValue()
 abstract class AnalyticsUsageStatsFeatureBreakdownInner implements Built<AnalyticsUsageStatsFeatureBreakdownInner, AnalyticsUsageStatsFeatureBreakdownInnerBuilder> {
   @BuiltValueField(wireName: r'eventType')

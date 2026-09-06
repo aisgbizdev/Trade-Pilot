@@ -13,11 +13,11 @@ part 'mirror_gated_insight.g.dart';
 /// Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.
 ///
 /// Properties:
-/// * [gated]
-/// * [reason]
-/// * [need]
-/// * [have]
-/// * [data]
+/// * [gated] 
+/// * [reason] 
+/// * [need] 
+/// * [have] 
+/// * [data] 
 @BuiltValue()
 abstract class MirrorGatedInsight implements Built<MirrorGatedInsight, MirrorGatedInsightBuilder> {
   @BuiltValueField(wireName: r'gated')

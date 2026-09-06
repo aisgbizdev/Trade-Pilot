@@ -11,15 +11,15 @@ part 'daily_summary_analysis.g.dart';
 /// DailySummaryAnalysis
 ///
 /// Properties:
-/// * [id]
-/// * [instrument]
-/// * [timeframe]
-/// * [tradingBias]
-/// * [confidenceMin]
-/// * [confidenceMax]
-/// * [preferredSide]
-/// * [mainScenario]
-/// * [createdAt]
+/// * [id] 
+/// * [instrument] 
+/// * [timeframe] 
+/// * [tradingBias] 
+/// * [confidenceMin] 
+/// * [confidenceMax] 
+/// * [preferredSide] 
+/// * [mainScenario] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class DailySummaryAnalysis implements Built<DailySummaryAnalysis, DailySummaryAnalysisBuilder> {
   @BuiltValueField(wireName: r'id')

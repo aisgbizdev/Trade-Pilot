@@ -11,7 +11,7 @@ part 'forgot_password_question_body.g.dart';
 /// ForgotPasswordQuestionBody
 ///
 /// Properties:
-/// * [email]
+/// * [email] 
 @BuiltValue()
 abstract class ForgotPasswordQuestionBody implements Built<ForgotPasswordQuestionBody, ForgotPasswordQuestionBodyBuilder> {
   @BuiltValueField(wireName: r'email')

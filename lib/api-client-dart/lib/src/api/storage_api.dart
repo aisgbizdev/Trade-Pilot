@@ -23,10 +23,10 @@ class StorageApi {
   const StorageApi(this._dio, this._serializers);
 
   /// Serve an object entity from PRIVATE_OBJECT_DIR
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [objectPath]
+  /// * [objectPath] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -36,7 +36,7 @@ class StorageApi {
   ///
   /// Returns a [Future] containing a [Response] with a [Uint8List] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<Uint8List>> getStorageObject({
+  Future<Response<Uint8List>> getStorageObject({ 
     required String objectPath,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -96,10 +96,10 @@ class StorageApi {
   }
 
   /// Request a presigned URL for file upload
-  /// Returns a presigned GCS URL for direct upload. The client sends JSON metadata here, then uploads the file directly to the returned URL.
+  /// Returns a presigned GCS URL for direct upload. The client sends JSON metadata here, then uploads the file directly to the returned URL. 
   ///
   /// Parameters:
-  /// * [uploadUrlRequest]
+  /// * [uploadUrlRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -109,7 +109,7 @@ class StorageApi {
   ///
   /// Returns a [Future] containing a [Response] with a [UploadUrlResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<UploadUrlResponse>> requestUploadUrl({
+  Future<Response<UploadUrlResponse>> requestUploadUrl({ 
     required UploadUrlRequest uploadUrlRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

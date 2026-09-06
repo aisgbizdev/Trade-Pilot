@@ -20,7 +20,7 @@ class PerformanceApi {
   const PerformanceApi(this._dio, this._serializers);
 
   /// Public AI transparency dashboard (task
-  /// Anonymised, aggregated outcome ledger across every analysis the AI has produced inside the rolling window. No per-user data is included — this is the AI&#39;s own track record. Every segment (by instrument, FX session, market condition) is gated by a minimum-sample guardrail so a 3-trade hot streak never reads as a confident win rate.
+  /// Anonymised, aggregated outcome ledger across every analysis the AI has produced inside the rolling window. No per-user data is included — this is the AI&#39;s own track record. Every segment (by instrument, FX session, market condition) is gated by a minimum-sample guardrail so a 3-trade hot streak never reads as a confident win rate. 
   ///
   /// Parameters:
   /// * [window] - Rolling window in days. Only 30 or 90 are accepted; anything else falls back to 30.
@@ -33,7 +33,7 @@ class PerformanceApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PerformanceSummary] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PerformanceSummary>> getPerformanceSummary({
+  Future<Response<PerformanceSummary>> getPerformanceSummary({ 
     int? window = 30,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

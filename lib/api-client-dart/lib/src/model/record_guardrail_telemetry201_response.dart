@@ -11,8 +11,8 @@ part 'record_guardrail_telemetry201_response.g.dart';
 /// RecordGuardrailTelemetry201Response
 ///
 /// Properties:
-/// * [ok]
-/// * [id]
+/// * [ok] 
+/// * [id] 
 @BuiltValue()
 abstract class RecordGuardrailTelemetry201Response implements Built<RecordGuardrailTelemetry201Response, RecordGuardrailTelemetry201ResponseBuilder> {
   @BuiltValueField(wireName: r'ok')

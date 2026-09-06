@@ -12,15 +12,15 @@ part 'user_price_alert.g.dart';
 /// UserPriceAlert
 ///
 /// Properties:
-/// * [id]
-/// * [instrument]
+/// * [id] 
+/// * [instrument] 
 /// * [targetPrice] - Target price as a string, preserving the precision the user typed.
-/// * [triggerDirection]
-/// * [note]
-/// * [status]
-/// * [triggeredAt]
-/// * [triggeredPrice]
-/// * [createdAt]
+/// * [triggerDirection] 
+/// * [note] 
+/// * [status] 
+/// * [triggeredAt] 
+/// * [triggeredPrice] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class UserPriceAlert implements Built<UserPriceAlert, UserPriceAlertBuilder> {
   @BuiltValueField(wireName: r'id')

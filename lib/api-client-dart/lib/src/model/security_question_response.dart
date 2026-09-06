@@ -11,8 +11,8 @@ part 'security_question_response.g.dart';
 /// SecurityQuestionResponse
 ///
 /// Properties:
-/// * [securityQuestion]
-/// * [email]
+/// * [securityQuestion] 
+/// * [email] 
 @BuiltValue()
 abstract class SecurityQuestionResponse implements Built<SecurityQuestionResponse, SecurityQuestionResponseBuilder> {
   @BuiltValueField(wireName: r'securityQuestion')

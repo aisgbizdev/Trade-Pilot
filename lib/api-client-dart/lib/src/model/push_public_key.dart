@@ -11,7 +11,7 @@ part 'push_public_key.g.dart';
 /// PushPublicKey
 ///
 /// Properties:
-/// * [publicKey]
+/// * [publicKey] 
 @BuiltValue()
 abstract class PushPublicKey implements Built<PushPublicKey, PushPublicKeyBuilder> {
   @BuiltValueField(wireName: r'publicKey')

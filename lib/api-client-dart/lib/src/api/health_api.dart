@@ -19,7 +19,7 @@ class HealthApi {
   const HealthApi(this._dio, this._serializers);
 
   /// Health check
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -31,7 +31,7 @@ class HealthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [HealthStatus] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<HealthStatus>> healthCheck({
+  Future<Response<HealthStatus>> healthCheck({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

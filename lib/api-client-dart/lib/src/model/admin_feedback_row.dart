@@ -12,15 +12,15 @@ part 'admin_feedback_row.g.dart';
 /// AdminFeedbackRow
 ///
 /// Properties:
-/// * [id]
-/// * [analysisId]
-/// * [instrument]
-/// * [userId]
-/// * [userEmail]
-/// * [feedbackType]
-/// * [outcome]
-/// * [note]
-/// * [createdAt]
+/// * [id] 
+/// * [analysisId] 
+/// * [instrument] 
+/// * [userId] 
+/// * [userEmail] 
+/// * [feedbackType] 
+/// * [outcome] 
+/// * [note] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class AdminFeedbackRow implements Built<AdminFeedbackRow, AdminFeedbackRowBuilder> {
   @BuiltValueField(wireName: r'id')

@@ -13,10 +13,10 @@ part 'admin_feedback_list.g.dart';
 /// AdminFeedbackList
 ///
 /// Properties:
-/// * [feedback]
-/// * [total]
-/// * [page]
-/// * [limit]
+/// * [feedback] 
+/// * [total] 
+/// * [page] 
+/// * [limit] 
 @BuiltValue()
 abstract class AdminFeedbackList implements Built<AdminFeedbackList, AdminFeedbackListBuilder> {
   @BuiltValueField(wireName: r'feedback')

@@ -12,8 +12,8 @@ part 'auth_response.g.dart';
 /// AuthResponse
 ///
 /// Properties:
-/// * [user]
-/// * [message]
+/// * [user] 
+/// * [message] 
 /// * [token] - Session token for mobile Bearer auth. Only present when a new session was created (login or register).
 @BuiltValue()
 abstract class AuthResponse implements Built<AuthResponse, AuthResponseBuilder> {

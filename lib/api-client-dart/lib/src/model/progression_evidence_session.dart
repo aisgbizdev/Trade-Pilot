@@ -11,10 +11,10 @@ part 'progression_evidence_session.g.dart';
 /// ProgressionEvidenceSession
 ///
 /// Properties:
-/// * [token]
-/// * [source_]
-/// * [subject]
-/// * [minimumCompleteAt]
+/// * [token] 
+/// * [source_] 
+/// * [subject] 
+/// * [minimumCompleteAt] 
 @BuiltValue()
 abstract class ProgressionEvidenceSession implements Built<ProgressionEvidenceSession, ProgressionEvidenceSessionBuilder> {
   @BuiltValueField(wireName: r'token')

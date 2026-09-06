@@ -11,9 +11,9 @@ part 'standard_trading_rules_fixed_rate.g.dart';
 /// StandardTradingRulesFixedRate
 ///
 /// Properties:
-/// * [usd]
-/// * [idr]
-/// * [label]
+/// * [usd] 
+/// * [idr] 
+/// * [label] 
 @BuiltValue()
 abstract class StandardTradingRulesFixedRate implements Built<StandardTradingRulesFixedRate, StandardTradingRulesFixedRateBuilder> {
   @BuiltValueField(wireName: r'usd')

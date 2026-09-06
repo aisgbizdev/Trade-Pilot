@@ -11,9 +11,9 @@ part 'trader_mirror_highlight.g.dart';
 /// Short bilingual one-liner pulled from the insights bundle. Used for both the dashboard hero strip and the weekly trader-report push. `id` is the stable highlight key; `en` and `idText` are the English and Indonesian copy.
 ///
 /// Properties:
-/// * [id]
-/// * [en]
-/// * [idText]
+/// * [id] 
+/// * [en] 
+/// * [idText] 
 @BuiltValue()
 abstract class TraderMirrorHighlight implements Built<TraderMirrorHighlight, TraderMirrorHighlightBuilder> {
   @BuiltValueField(wireName: r'id')

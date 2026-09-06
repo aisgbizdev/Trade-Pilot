@@ -68,7 +68,7 @@ Broadcast notification to selected audience
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final BroadcastNotificationBody broadcastNotificationBody = ; // BroadcastNotificationBody |
+final BroadcastNotificationBody broadcastNotificationBody = ; // BroadcastNotificationBody | 
 
 try {
     final response = api.broadcastNotification(broadcastNotificationBody);
@@ -82,7 +82,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **broadcastNotificationBody** | [**BroadcastNotificationBody**](BroadcastNotificationBody.md)|  |
+ **broadcastNotificationBody** | [**BroadcastNotificationBody**](BroadcastNotificationBody.md)|  | 
 
 ### Return type
 
@@ -191,8 +191,8 @@ List user feedback rows (admin only)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final int page = 56; // int |
-final int limit = 56; // int |
+final int page = 56; // int | 
+final int limit = 56; // int | 
 final String search = search_example; // String | Free-text ILIKE filter matched against the user's email or the analysis instrument
 final String feedbackType = feedbackType_example; // String | Restrict to a single feedback reaction
 final Date from = 2013-10-20; // Date | Only include feedback created on or after this date (ISO 8601 date)
@@ -213,11 +213,11 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **page** | **int**|  | [optional] [default to 1]
  **limit** | **int**|  | [optional] [default to 50]
- **search** | **String**| Free-text ILIKE filter matched against the user's email or the analysis instrument | [optional]
- **feedbackType** | **String**| Restrict to a single feedback reaction | [optional]
- **from** | **Date**| Only include feedback created on or after this date (ISO 8601 date) | [optional]
- **to** | **Date**| Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day) | [optional]
- **analysisId** | **int**| When set, only return feedback for the given analysis id. | [optional]
+ **search** | **String**| Free-text ILIKE filter matched against the user's email or the analysis instrument | [optional] 
+ **feedbackType** | **String**| Restrict to a single feedback reaction | [optional] 
+ **from** | **Date**| Only include feedback created on or after this date (ISO 8601 date) | [optional] 
+ **to** | **Date**| Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day) | [optional] 
+ **analysisId** | **int**| When set, only return feedback for the given analysis id. | [optional] 
 
 ### Return type
 
@@ -281,8 +281,8 @@ Get all analyses (admin only)
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final int page = 56; // int |
-final int limit = 56; // int |
+final int page = 56; // int | 
+final int limit = 56; // int | 
 
 try {
     final response = api.getAllAnalyses(page, limit);
@@ -324,8 +324,8 @@ Broadcast history
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final int page = 56; // int |
-final int limit = 56; // int |
+final int page = 56; // int | 
+final int limit = 56; // int | 
 
 try {
     final response = api.getBroadcasts(page, limit);
@@ -408,7 +408,7 @@ Read-only progression ledger audit; never a leaderboard
 import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getAdminApi();
-final int userId = 56; // int |
+final int userId = 56; // int | 
 
 try {
     final response = api.getProgressionAudit(userId);
@@ -422,7 +422,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **int**|  | [optional]
+ **userId** | **int**|  | [optional] 
 
 ### Return type
 

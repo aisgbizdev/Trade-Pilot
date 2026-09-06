@@ -12,14 +12,14 @@ part 'push_prefs.g.dart';
 /// PushPrefs
 ///
 /// Properties:
-/// * [pushExpiry]
-/// * [pushBroadcast]
-/// * [pushDailySummary]
-/// * [pushMarketNews]
-/// * [pushCalendarEvents]
-/// * [pushPriceAnomaly]
-/// * [pushWeeklyRecap]
-/// * [pushSignalFlip]
+/// * [pushExpiry] 
+/// * [pushBroadcast] 
+/// * [pushDailySummary] 
+/// * [pushMarketNews] 
+/// * [pushCalendarEvents] 
+/// * [pushPriceAnomaly] 
+/// * [pushWeeklyRecap] 
+/// * [pushSignalFlip] 
 /// * [marketOpenSessions] - FX sessions the user wants a 5-min pre-open ping for. Empty = off.
 /// * [pushDormancyNudge] - Opt-in toggle for the weekly \"we miss you\" nudge after 7+ days idle.
 /// * [pushOnboarding] - One-shot 24h-after-signup empty-watchlist nudge.

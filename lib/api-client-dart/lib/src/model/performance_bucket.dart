@@ -11,14 +11,14 @@ part 'performance_bucket.g.dart';
 /// Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins / (wins + losses) — only trades that actually triggered. `hitRate` is wins / total resolved (expired included).
 ///
 /// Properties:
-/// * [key]
-/// * [triggered]
-/// * [wins]
-/// * [losses]
-/// * [expired]
-/// * [total]
-/// * [winRate]
-/// * [hitRate]
+/// * [key] 
+/// * [triggered] 
+/// * [wins] 
+/// * [losses] 
+/// * [expired] 
+/// * [total] 
+/// * [winRate] 
+/// * [hitRate] 
 @BuiltValue()
 abstract class PerformanceBucket implements Built<PerformanceBucket, PerformanceBucketBuilder> {
   @BuiltValueField(wireName: r'key')

@@ -12,17 +12,17 @@ part 'analysis_history_timeframe_stats.g.dart';
 /// AnalysisHistoryTimeframeStats
 ///
 /// Properties:
-/// * [total]
-/// * [pending]
-/// * [activeValid]
-/// * [tp1Hit]
-/// * [tp2Hit]
-/// * [slHit]
-/// * [expired]
-/// * [invalidated]
-/// * [winRate]
-/// * [completionRate]
-/// * [timeframe]
+/// * [total] 
+/// * [pending] 
+/// * [activeValid] 
+/// * [tp1Hit] 
+/// * [tp2Hit] 
+/// * [slHit] 
+/// * [expired] 
+/// * [invalidated] 
+/// * [winRate] 
+/// * [completionRate] 
+/// * [timeframe] 
 @BuiltValue()
 abstract class AnalysisHistoryTimeframeStats implements AnalysisHistoryOutcomeStats, Built<AnalysisHistoryTimeframeStats, AnalysisHistoryTimeframeStatsBuilder> {
   @BuiltValueField(wireName: r'timeframe')

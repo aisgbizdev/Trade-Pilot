@@ -11,9 +11,9 @@ part 'change_security_question_body.g.dart';
 /// ChangeSecurityQuestionBody
 ///
 /// Properties:
-/// * [currentPassword]
-/// * [securityQuestion]
-/// * [securityAnswer]
+/// * [currentPassword] 
+/// * [securityQuestion] 
+/// * [securityAnswer] 
 @BuiltValue()
 abstract class ChangeSecurityQuestionBody implements Built<ChangeSecurityQuestionBody, ChangeSecurityQuestionBodyBuilder> {
   @BuiltValueField(wireName: r'currentPassword')

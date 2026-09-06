@@ -11,12 +11,12 @@ part 'trade_side.g.dart';
 /// One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.
 ///
 /// Properties:
-/// * [entryZone]
-/// * [stopLoss]
-/// * [takeProfit1]
-/// * [takeProfit2]
-/// * [riskRewardRatio]
-/// * [rationale]
+/// * [entryZone] 
+/// * [stopLoss] 
+/// * [takeProfit1] 
+/// * [takeProfit2] 
+/// * [riskRewardRatio] 
+/// * [rationale] 
 @BuiltValue()
 abstract class TradeSide implements Built<TradeSide, TradeSideBuilder> {
   @BuiltValueField(wireName: r'entryZone')

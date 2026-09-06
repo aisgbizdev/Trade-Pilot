@@ -12,12 +12,12 @@ part 'feedback.g.dart';
 /// Feedback
 ///
 /// Properties:
-/// * [id]
-/// * [analysisId]
-/// * [feedbackType]
-/// * [outcome]
-/// * [note]
-/// * [createdAt]
+/// * [id] 
+/// * [analysisId] 
+/// * [feedbackType] 
+/// * [outcome] 
+/// * [note] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class Feedback implements Built<Feedback, FeedbackBuilder> {
   @BuiltValueField(wireName: r'id')

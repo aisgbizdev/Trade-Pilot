@@ -11,12 +11,12 @@ part 'timeframe_risk_metrics.g.dart';
 /// TimeframeRiskMetrics
 ///
 /// Properties:
-/// * [buySignals]
-/// * [sellSignals]
-/// * [neutralSignals]
-/// * [rsi14]
-/// * [change20Pct]
-/// * [bollingerWidthPct]
+/// * [buySignals] 
+/// * [sellSignals] 
+/// * [neutralSignals] 
+/// * [rsi14] 
+/// * [change20Pct] 
+/// * [bollingerWidthPct] 
 @BuiltValue()
 abstract class TimeframeRiskMetrics implements Built<TimeframeRiskMetrics, TimeframeRiskMetricsBuilder> {
   @BuiltValueField(wireName: r'buySignals')

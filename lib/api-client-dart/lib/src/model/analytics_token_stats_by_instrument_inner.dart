@@ -11,9 +11,9 @@ part 'analytics_token_stats_by_instrument_inner.g.dart';
 /// AnalyticsTokenStatsByInstrumentInner
 ///
 /// Properties:
-/// * [instrument]
-/// * [totalTokens]
-/// * [estimatedCostUsd]
+/// * [instrument] 
+/// * [totalTokens] 
+/// * [estimatedCostUsd] 
 @BuiltValue()
 abstract class AnalyticsTokenStatsByInstrumentInner implements Built<AnalyticsTokenStatsByInstrumentInner, AnalyticsTokenStatsByInstrumentInnerBuilder> {
   @BuiltValueField(wireName: r'instrument')

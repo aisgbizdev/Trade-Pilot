@@ -12,9 +12,9 @@ part 'upload_url_response.g.dart';
 /// UploadUrlResponse
 ///
 /// Properties:
-/// * [uploadURL]
-/// * [objectPath]
-/// * [metadata]
+/// * [uploadURL] 
+/// * [objectPath] 
+/// * [metadata] 
 @BuiltValue()
 abstract class UploadUrlResponse implements Built<UploadUrlResponse, UploadUrlResponseBuilder> {
   @BuiltValueField(wireName: r'uploadURL')

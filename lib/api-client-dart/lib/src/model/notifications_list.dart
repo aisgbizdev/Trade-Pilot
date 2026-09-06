@@ -13,8 +13,8 @@ part 'notifications_list.g.dart';
 /// NotificationsList
 ///
 /// Properties:
-/// * [notifications]
-/// * [unreadCount]
+/// * [notifications] 
+/// * [unreadCount] 
 @BuiltValue()
 abstract class NotificationsList implements Built<NotificationsList, NotificationsListBuilder> {
   @BuiltValueField(wireName: r'notifications')
