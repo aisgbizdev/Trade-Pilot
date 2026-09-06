@@ -1,5 +1,6 @@
 import type { Language } from "@/lib/i18n";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
+import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 
 export interface LegalSection {
   heading: string;
@@ -16,7 +17,9 @@ export interface LegalDocument {
 
 const LAST_UPDATED_EN = "April 25, 2026";
 const LAST_UPDATED_ID = "25 April 2026";
-const CONTACT_EMAIL = "support@newsmaker.id";
+const CONTACT_EMAIL = SHOW_NEWSMAKER
+  ? "support@newsmaker.id"
+  : "support@tradepilot.id";
 
 const PRIVACY_EN: LegalDocument = {
   title: "Privacy Policy",
@@ -437,12 +440,6 @@ const SUPPORT_EN: LegalDocument = {
         "You can permanently delete your own account at any time from Profile > Delete Account inside the app — see the Delete Account page for exactly what that removes. If you'd rather not delete your account but want to access, correct, or export your data, or if you can't sign in to delete it yourself, email us and we'll assist.",
       ],
     },
-    {
-      heading: "4. Related Pages",
-      paragraphs: [
-        "See our Privacy Policy and Terms of Service for how we handle your data and the rules of using TradePilot, and the Delete Account page for details on account deletion.",
-      ],
-    },
   ],
 };
 
@@ -469,12 +466,6 @@ const SUPPORT_ID: LegalDocument = {
       heading: "3. Meminta Akses, Koreksi, atau Penghapusan Data",
       paragraphs: [
         "Anda dapat menghapus akun Anda sendiri kapan saja melalui Profil > Hapus Akun di dalam aplikasi — lihat halaman Hapus Akun untuk detail data apa saja yang dihapus. Jika Anda tidak ingin menghapus akun tapi ingin mengakses, mengoreksi, atau mengekspor data Anda, atau tidak bisa login untuk menghapusnya sendiri, kirim email dan kami akan bantu.",
-      ],
-    },
-    {
-      heading: "4. Halaman Terkait",
-      paragraphs: [
-        "Lihat Kebijakan Privasi dan Syarat Layanan kami untuk tahu bagaimana kami menangani data Anda dan aturan menggunakan TradePilot, serta halaman Hapus Akun untuk detail penghapusan akun.",
       ],
     },
   ],

@@ -11,6 +11,28 @@ interface LegalPageProps {
   kind: LegalKind;
 }
 
+const EMAIL_PATTERN = /[\w.+-]+@[\w-]+\.[\w.-]+/g;
+
+function renderWithMailLinks(text: string) {
+  const parts = text.split(EMAIL_PATTERN);
+  const emails = text.match(EMAIL_PATTERN) ?? [];
+  return parts.flatMap((part, idx) => {
+    const email = emails[idx];
+    return email
+      ? [
+          part,
+          <a
+            key={idx}
+            href={`mailto:${email}`}
+            className="text-foreground underline underline-offset-2 hover:text-primary"
+          >
+            {email}
+          </a>,
+        ]
+      : [part];
+  });
+}
+
 export default function LegalPage({ kind }: LegalPageProps) {
   const { lang, t } = useTranslation();
   const doc = getLegalDocument(kind, lang);
@@ -88,7 +110,7 @@ export default function LegalPage({ kind }: LegalPageProps) {
                     key={pIdx}
                     className="text-sm leading-relaxed text-foreground/80"
                   >
-                    {paragraph}
+                    {renderWithMailLinks(paragraph)}
                   </p>
                 ))}
               </div>
