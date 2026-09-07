@@ -9,22 +9,22 @@ export interface ProgressionSummary {
   /** @minimum 0 */
   totalXp: number;
   /**
-   * @minimum 1
-   * @maximum 100
-   */
+     * @minimum 1
+     * @maximum 100
+     */
   level: number;
   /** @minimum 0 */
   masteryLevel: number;
   rank: string;
   /**
-   * Absolute XP floor for current level
-   * @minimum 0
-   */
+     * Absolute XP floor for current level
+     * @minimum 0
+     */
   currentLevelXp: number;
   /**
-   * Absolute XP target for next level or Mastery step
-   * @minimum 1
-   */
+     * Absolute XP target for next level or Mastery step
+     * @minimum 1
+     */
   nextLevelXp: number;
   /** @minimum 0 */
   currentStreak: number;
@@ -61,33 +61,33 @@ export interface ProgressionActivityInput {
   token: string;
 }
 
-export type ProgressionEvidenceStartInputSource =
-  (typeof ProgressionEvidenceStartInputSource)[keyof typeof ProgressionEvidenceStartInputSource];
+export type ProgressionEvidenceStartInputSource = typeof ProgressionEvidenceStartInputSource[keyof typeof ProgressionEvidenceStartInputSource];
+
 
 export const ProgressionEvidenceStartInputSource = {
-  pre_analysis_checklist: "pre_analysis_checklist",
-  guide_completion: "guide_completion",
+  pre_analysis_checklist: 'pre_analysis_checklist',
+  guide_completion: 'guide_completion',
 } as const;
 
-export type ProgressionEvidenceStartInputGuideId =
-  (typeof ProgressionEvidenceStartInputGuideId)[keyof typeof ProgressionEvidenceStartInputGuideId];
+export type ProgressionEvidenceStartInputGuideId = typeof ProgressionEvidenceStartInputGuideId[keyof typeof ProgressionEvidenceStartInputGuideId];
+
 
 export const ProgressionEvidenceStartInputGuideId = {
-  "how-ai-works": "how-ai-works",
-  "feature-map": "feature-map",
-  "reading-analysis": "reading-analysis",
-  "validity-confidence": "validity-confidence",
-  "adaptive-plan": "adaptive-plan",
-  "personal-progression": "personal-progression",
-  "analysis-workflow": "analysis-workflow",
-  "bias-confidence-validity": "bias-confidence-validity",
-  "levels-chart": "levels-chart",
-  "timeframe-risk-map": "timeframe-risk-map",
-  "technical-fundamental": "technical-fundamental",
-  "standard-plan": "standard-plan",
-  "adaptive-position-plan": "adaptive-position-plan",
-  "account-rules": "account-rules",
-  terms: "terms",
+  'how-ai-works': 'how-ai-works',
+  'feature-map': 'feature-map',
+  'reading-analysis': 'reading-analysis',
+  'validity-confidence': 'validity-confidence',
+  'adaptive-plan': 'adaptive-plan',
+  'personal-progression': 'personal-progression',
+  'analysis-workflow': 'analysis-workflow',
+  'bias-confidence-validity': 'bias-confidence-validity',
+  'levels-chart': 'levels-chart',
+  'timeframe-risk-map': 'timeframe-risk-map',
+  'technical-fundamental': 'technical-fundamental',
+  'standard-plan': 'standard-plan',
+  'adaptive-position-plan': 'adaptive-position-plan',
+  'account-rules': 'account-rules',
+  terms: 'terms',
 } as const;
 
 export type ProgressionEvidenceStartInputChecklist = {
@@ -158,23 +158,23 @@ export interface StandardTradingRuleAccount {
   equityReviewThresholdIdr: number;
 }
 
-export type StandardTradingRuleInstrumentCode =
-  (typeof StandardTradingRuleInstrumentCode)[keyof typeof StandardTradingRuleInstrumentCode];
+export type StandardTradingRuleInstrumentCode = typeof StandardTradingRuleInstrumentCode[keyof typeof StandardTradingRuleInstrumentCode];
+
 
 export const StandardTradingRuleInstrumentCode = {
-  XUL10: "XUL10",
-  BCO10_BBJ: "BCO10_BBJ",
-  HKK50_BBJ: "HKK50_BBJ",
-  JPK50_BBJ: "JPK50_BBJ",
+  XUL10: 'XUL10',
+  BCO10_BBJ: 'BCO10_BBJ',
+  HKK50_BBJ: 'HKK50_BBJ',
+  JPK50_BBJ: 'JPK50_BBJ',
 } as const;
 
-export type StandardTradingRuleInstrumentContractUnit =
-  (typeof StandardTradingRuleInstrumentContractUnit)[keyof typeof StandardTradingRuleInstrumentContractUnit];
+export type StandardTradingRuleInstrumentContractUnit = typeof StandardTradingRuleInstrumentContractUnit[keyof typeof StandardTradingRuleInstrumentContractUnit];
+
 
 export const StandardTradingRuleInstrumentContractUnit = {
-  troy_ounce: "troy ounce",
-  barrel: "barrel",
-  "USD/point": "USD/point",
+  troy_ounce: 'troy ounce',
+  barrel: 'barrel',
+  'USD/point': 'USD/point',
 } as const;
 
 export type StandardTradingRuleInstrumentTradingHours = {
@@ -255,28 +255,28 @@ export interface PushUnsubscribeBody {
   endpoint: string;
 }
 
-export type NativePushRegisterBodyPlatform =
-  (typeof NativePushRegisterBodyPlatform)[keyof typeof NativePushRegisterBodyPlatform];
+export type NativePushRegisterBodyPlatform = typeof NativePushRegisterBodyPlatform[keyof typeof NativePushRegisterBodyPlatform];
+
 
 export const NativePushRegisterBodyPlatform = {
-  android: "android",
-  ios: "ios",
+  android: 'android',
+  ios: 'ios',
 } as const;
 
 export interface NativePushRegisterBody {
   /**
-   * @minLength 20
-   * @maxLength 4096
-   */
+     * @minLength 20
+     * @maxLength 4096
+     */
   token: string;
   platform: NativePushRegisterBodyPlatform;
 }
 
 export interface NativePushUnregisterBody {
   /**
-   * @minLength 20
-   * @maxLength 4096
-   */
+     * @minLength 20
+     * @maxLength 4096
+     */
   token: string;
 }
 
@@ -284,13 +284,13 @@ export interface PushSubscriptionStatus {
   subscribed: boolean;
 }
 
-export type PushPrefsMarketOpenSessionsItem =
-  (typeof PushPrefsMarketOpenSessionsItem)[keyof typeof PushPrefsMarketOpenSessionsItem];
+export type PushPrefsMarketOpenSessionsItem = typeof PushPrefsMarketOpenSessionsItem[keyof typeof PushPrefsMarketOpenSessionsItem];
+
 
 export const PushPrefsMarketOpenSessionsItem = {
-  tokyo: "tokyo",
-  london: "london",
-  newyork: "newyork",
+  tokyo: 'tokyo',
+  london: 'london',
+  newyork: 'newyork',
 } as const;
 
 export interface PushPrefs {
@@ -345,13 +345,13 @@ export interface PushTestResult {
   delivered: number;
 }
 
-export type PushPrefsUpdateMarketOpenSessionsItem =
-  (typeof PushPrefsUpdateMarketOpenSessionsItem)[keyof typeof PushPrefsUpdateMarketOpenSessionsItem];
+export type PushPrefsUpdateMarketOpenSessionsItem = typeof PushPrefsUpdateMarketOpenSessionsItem[keyof typeof PushPrefsUpdateMarketOpenSessionsItem];
+
 
 export const PushPrefsUpdateMarketOpenSessionsItem = {
-  tokyo: "tokyo",
-  london: "london",
-  newyork: "newyork",
+  tokyo: 'tokyo',
+  london: 'london',
+  newyork: 'newyork',
 } as const;
 
 export interface PushPrefsUpdate {
@@ -416,12 +416,12 @@ export interface DailySummaryAnalysis {
   createdAt: string;
 }
 
-export type DailySummaryTodayKind =
-  (typeof DailySummaryTodayKind)[keyof typeof DailySummaryTodayKind];
+export type DailySummaryTodayKind = typeof DailySummaryTodayKind[keyof typeof DailySummaryTodayKind];
+
 
 export const DailySummaryTodayKind = {
-  full: "full",
-  quota_only: "quota_only",
+  full: 'full',
+  quota_only: 'quota_only',
 } as const;
 
 export interface DailySummaryToday {
@@ -438,28 +438,29 @@ export interface DailySummaryResponse {
   today?: DailySummaryToday | null;
 }
 
-export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+export type UserRole = typeof UserRole[keyof typeof UserRole];
+
 
 export const UserRole = {
-  user: "user",
-  admin: "admin",
-  super_admin: "super_admin",
+  user: 'user',
+  admin: 'admin',
+  super_admin: 'super_admin',
 } as const;
 
-export type UserSelectedMode =
-  (typeof UserSelectedMode)[keyof typeof UserSelectedMode];
+export type UserSelectedMode = typeof UserSelectedMode[keyof typeof UserSelectedMode];
+
 
 export const UserSelectedMode = {
-  beginner: "beginner",
-  pro: "pro",
+  beginner: 'beginner',
+  pro: 'pro',
 } as const;
 
-export type UserThemePreference =
-  (typeof UserThemePreference)[keyof typeof UserThemePreference];
+export type UserThemePreference = typeof UserThemePreference[keyof typeof UserThemePreference];
+
 
 export const UserThemePreference = {
-  light: "light",
-  dark: "dark",
+  light: 'light',
+  dark: 'dark',
 } as const;
 
 export interface User {
@@ -483,12 +484,12 @@ export interface AuthResponse {
   token?: string;
 }
 
-export type RegisterBodySelectedMode =
-  (typeof RegisterBodySelectedMode)[keyof typeof RegisterBodySelectedMode];
+export type RegisterBodySelectedMode = typeof RegisterBodySelectedMode[keyof typeof RegisterBodySelectedMode];
+
 
 export const RegisterBodySelectedMode = {
-  beginner: "beginner",
-  pro: "pro",
+  beginner: 'beginner',
+  pro: 'pro',
 } as const;
 
 export interface RegisterBody {
@@ -534,31 +535,31 @@ export interface ResetPasswordBody {
   newPassword: string;
 }
 
-export type UpdateProfileBodySelectedMode =
-  (typeof UpdateProfileBodySelectedMode)[keyof typeof UpdateProfileBodySelectedMode];
+export type UpdateProfileBodySelectedMode = typeof UpdateProfileBodySelectedMode[keyof typeof UpdateProfileBodySelectedMode];
+
 
 export const UpdateProfileBodySelectedMode = {
-  beginner: "beginner",
-  pro: "pro",
+  beginner: 'beginner',
+  pro: 'pro',
 } as const;
 
-export type UpdateProfileBodyThemePreference =
-  (typeof UpdateProfileBodyThemePreference)[keyof typeof UpdateProfileBodyThemePreference];
+export type UpdateProfileBodyThemePreference = typeof UpdateProfileBodyThemePreference[keyof typeof UpdateProfileBodyThemePreference];
+
 
 export const UpdateProfileBodyThemePreference = {
-  light: "light",
-  dark: "dark",
+  light: 'light',
+  dark: 'dark',
 } as const;
 
 /**
  * UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language.
  */
-export type UpdateProfileBodyLang =
-  (typeof UpdateProfileBodyLang)[keyof typeof UpdateProfileBodyLang];
+export type UpdateProfileBodyLang = typeof UpdateProfileBodyLang[keyof typeof UpdateProfileBodyLang];
+
 
 export const UpdateProfileBodyLang = {
-  en: "en",
-  id: "id",
+  en: 'en',
+  id: 'id',
 } as const;
 
 export interface UpdateProfileBody {
@@ -569,9 +570,9 @@ export interface UpdateProfileBody {
   /** UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language. */
   lang?: UpdateProfileBodyLang;
   /**
-   * Object-storage path returned by the storage upload flow. Pass `null` to remove the current avatar.
-   * @maxLength 500
-   */
+     * Object-storage path returned by the storage upload flow. Pass `null` to remove the current avatar.
+     * @maxLength 500
+     */
   avatarUrl?: string | null;
 }
 
@@ -618,13 +619,13 @@ export interface TradeSide {
   rationale: string;
 }
 
-export type TradePlanPreferredSide =
-  (typeof TradePlanPreferredSide)[keyof typeof TradePlanPreferredSide];
+export type TradePlanPreferredSide = typeof TradePlanPreferredSide[keyof typeof TradePlanPreferredSide];
+
 
 export const TradePlanPreferredSide = {
-  buy: "buy",
-  sell: "sell",
-  wait: "wait",
+  buy: 'buy',
+  sell: 'sell',
+  wait: 'wait',
 } as const;
 
 /**
@@ -672,12 +673,12 @@ export interface FundamentalContext {
   calendarEvents: FundamentalCalendarEvent[];
 }
 
-export type FundamentalDriftCitationKind =
-  (typeof FundamentalDriftCitationKind)[keyof typeof FundamentalDriftCitationKind];
+export type FundamentalDriftCitationKind = typeof FundamentalDriftCitationKind[keyof typeof FundamentalDriftCitationKind];
+
 
 export const FundamentalDriftCitationKind = {
-  news: "news",
-  calendar: "calendar",
+  news: 'news',
+  calendar: 'calendar',
 } as const;
 
 /**
@@ -718,44 +719,44 @@ export interface FundamentalCitations {
   calendarEvents: string[];
 }
 
-export type AnalysisMode = (typeof AnalysisMode)[keyof typeof AnalysisMode];
+export type AnalysisMode = typeof AnalysisMode[keyof typeof AnalysisMode];
+
 
 export const AnalysisMode = {
-  beginner: "beginner",
-  pro: "pro",
+  beginner: 'beginner',
+  pro: 'pro',
 } as const;
 
 /**
  * After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.
  */
-export type AnalysisOutcomeStatus =
-  (typeof AnalysisOutcomeStatus)[keyof typeof AnalysisOutcomeStatus];
+export type AnalysisOutcomeStatus = typeof AnalysisOutcomeStatus[keyof typeof AnalysisOutcomeStatus];
+
 
 export const AnalysisOutcomeStatus = {
-  pending: "pending",
-  tp1_hit: "tp1_hit",
-  tp2_hit: "tp2_hit",
-  sl_hit: "sl_hit",
-  expired: "expired",
-  invalidated: "invalidated",
+  pending: 'pending',
+  tp1_hit: 'tp1_hit',
+  tp2_hit: 'tp2_hit',
+  sl_hit: 'sl_hit',
+  expired: 'expired',
+  invalidated: 'invalidated',
 } as const;
 
-export type FeedbackFeedbackType =
-  (typeof FeedbackFeedbackType)[keyof typeof FeedbackFeedbackType];
+export type FeedbackFeedbackType = typeof FeedbackFeedbackType[keyof typeof FeedbackFeedbackType];
+
 
 export const FeedbackFeedbackType = {
-  useful: "useful",
-  not_useful: "not_useful",
+  useful: 'useful',
+  not_useful: 'not_useful',
 } as const;
 
-export type FeedbackOutcome =
-  | (typeof FeedbackOutcome)[keyof typeof FeedbackOutcome]
-  | null;
+export type FeedbackOutcome = typeof FeedbackOutcome[keyof typeof FeedbackOutcome] | null;
+
 
 export const FeedbackOutcome = {
-  correct: "correct",
-  wrong: "wrong",
-  unknown: "unknown",
+  correct: 'correct',
+  wrong: 'wrong',
+  unknown: 'unknown',
 } as const;
 
 export interface Feedback {
@@ -828,6 +829,14 @@ export interface Analysis {
 }
 
 /**
+ * The 201 response of POST /analyses — an Analysis, plus whether it consumed a purchased credit instead of counting against the free quota.
+ */
+export type CreateAnalysisResult = Analysis & {
+  creditConsumed: boolean;
+  creditBalance?: number;
+};
+
+/**
  * Response shape for PUT /analyses/{id}/note — the persisted note body (null when cleared) and the server-stamped updatedAt.
  */
 export interface AnalysisNoteResponse {
@@ -842,13 +851,13 @@ export interface AnalysesList {
   limit: number;
 }
 
-export type FilterPresetFiltersMode =
-  (typeof FilterPresetFiltersMode)[keyof typeof FilterPresetFiltersMode];
+export type FilterPresetFiltersMode = typeof FilterPresetFiltersMode[keyof typeof FilterPresetFiltersMode];
+
 
 export const FilterPresetFiltersMode = {
-  "": "",
-  beginner: "beginner",
-  pro: "pro",
+  '': '',
+  beginner: 'beginner',
+  pro: 'pro',
 } as const;
 
 /**
@@ -877,41 +886,41 @@ export interface FilterPresetList {
 
 export interface CreateFilterPresetBody {
   /**
-   * @minLength 1
-   * @maxLength 40
-   */
+     * @minLength 1
+     * @maxLength 40
+     */
   name: string;
   filters: FilterPresetFilters;
 }
 
 export interface RenameFilterPresetBody {
   /**
-   * @minLength 1
-   * @maxLength 40
-   */
+     * @minLength 1
+     * @maxLength 40
+     */
   name: string;
 }
 
-export type CreateAnalysisBodyTimeframe =
-  (typeof CreateAnalysisBodyTimeframe)[keyof typeof CreateAnalysisBodyTimeframe];
+export type CreateAnalysisBodyTimeframe = typeof CreateAnalysisBodyTimeframe[keyof typeof CreateAnalysisBodyTimeframe];
+
 
 export const CreateAnalysisBodyTimeframe = {
-  "1m": "1m",
-  "5m": "5m",
-  "15m": "15m",
-  "30m": "30m",
-  "1h": "1h",
-  "4h": "4h",
-  "1D": "1D",
-  "1W": "1W",
+  '1m': '1m',
+  '5m': '5m',
+  '15m': '15m',
+  '30m': '30m',
+  '1h': '1h',
+  '4h': '4h',
+  '1D': '1D',
+  '1W': '1W',
 } as const;
 
-export type CreateAnalysisBodyMode =
-  (typeof CreateAnalysisBodyMode)[keyof typeof CreateAnalysisBodyMode];
+export type CreateAnalysisBodyMode = typeof CreateAnalysisBodyMode[keyof typeof CreateAnalysisBodyMode];
+
 
 export const CreateAnalysisBodyMode = {
-  beginner: "beginner",
-  pro: "pro",
+  beginner: 'beginner',
+  pro: 'pro',
 } as const;
 
 export interface CreateAnalysisBody {
@@ -974,14 +983,14 @@ export type AnalysisHistoryInstrumentStats = AnalysisHistoryOutcomeStats & {
   byTimeframe: AnalysisHistoryTimeframeStats[];
 };
 
-export type AnalysisHistorySummaryRange =
-  (typeof AnalysisHistorySummaryRange)[keyof typeof AnalysisHistorySummaryRange];
+export type AnalysisHistorySummaryRange = typeof AnalysisHistorySummaryRange[keyof typeof AnalysisHistorySummaryRange];
+
 
 export const AnalysisHistorySummaryRange = {
-  NUMBER_7: "7",
-  NUMBER_30: "30",
-  NUMBER_90: "90",
-  all: "all",
+  NUMBER_7: '7',
+  NUMBER_30: '30',
+  NUMBER_90: '90',
+  all: 'all',
 } as const;
 
 export interface AnalysisHistorySummary {
@@ -1011,72 +1020,72 @@ export interface TimeframeRiskMetrics {
   bollingerWidthPct: number;
 }
 
-export type TimeframeRiskTimeframe =
-  (typeof TimeframeRiskTimeframe)[keyof typeof TimeframeRiskTimeframe];
+export type TimeframeRiskTimeframe = typeof TimeframeRiskTimeframe[keyof typeof TimeframeRiskTimeframe];
+
 
 export const TimeframeRiskTimeframe = {
-  "15m": "15m",
-  "1h": "1h",
-  "4h": "4h",
-  "1D": "1D",
-  "1W": "1W",
+  '15m': '15m',
+  '1h': '1h',
+  '4h': '4h',
+  '1D': '1D',
+  '1W': '1W',
 } as const;
 
-export type TimeframeRiskStatus =
-  (typeof TimeframeRiskStatus)[keyof typeof TimeframeRiskStatus];
+export type TimeframeRiskStatus = typeof TimeframeRiskStatus[keyof typeof TimeframeRiskStatus];
+
 
 export const TimeframeRiskStatus = {
-  available: "available",
-  unavailable: "unavailable",
-  insufficient: "insufficient",
+  available: 'available',
+  unavailable: 'unavailable',
+  insufficient: 'insufficient',
 } as const;
 
-export type TimeframeRiskRiskCategory =
-  (typeof TimeframeRiskRiskCategory)[keyof typeof TimeframeRiskRiskCategory];
+export type TimeframeRiskRiskCategory = typeof TimeframeRiskRiskCategory[keyof typeof TimeframeRiskRiskCategory];
+
 
 export const TimeframeRiskRiskCategory = {
-  low: "low",
-  moderate: "moderate",
-  high: "high",
-  unavailable: "unavailable",
+  low: 'low',
+  moderate: 'moderate',
+  high: 'high',
+  unavailable: 'unavailable',
 } as const;
 
-export type TimeframeRiskDataQuality =
-  (typeof TimeframeRiskDataQuality)[keyof typeof TimeframeRiskDataQuality];
+export type TimeframeRiskDataQuality = typeof TimeframeRiskDataQuality[keyof typeof TimeframeRiskDataQuality];
+
 
 export const TimeframeRiskDataQuality = {
-  good: "good",
-  limited: "limited",
-  stale: "stale",
-  unavailable: "unavailable",
+  good: 'good',
+  limited: 'limited',
+  stale: 'stale',
+  unavailable: 'unavailable',
 } as const;
 
-export type TimeframeRiskConfidence =
-  (typeof TimeframeRiskConfidence)[keyof typeof TimeframeRiskConfidence];
+export type TimeframeRiskConfidence = typeof TimeframeRiskConfidence[keyof typeof TimeframeRiskConfidence];
+
 
 export const TimeframeRiskConfidence = {
-  low: "low",
-  medium: "medium",
-  high: "high",
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
 } as const;
 
-export type TimeframeRiskRecommendation =
-  (typeof TimeframeRiskRecommendation)[keyof typeof TimeframeRiskRecommendation];
+export type TimeframeRiskRecommendation = typeof TimeframeRiskRecommendation[keyof typeof TimeframeRiskRecommendation];
+
 
 export const TimeframeRiskRecommendation = {
-  eligible: "eligible",
-  caution: "caution",
-  wait: "wait",
+  eligible: 'eligible',
+  caution: 'caution',
+  wait: 'wait',
 } as const;
 
 export interface TimeframeRisk {
   timeframe: TimeframeRiskTimeframe;
   status: TimeframeRiskStatus;
   /**
-   * @minimum 0
-   * @maximum 100
-   * @nullable
-   */
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
   riskScore: number | null;
   riskCategory: TimeframeRiskRiskCategory;
   reasonCodes: string[];
@@ -1086,12 +1095,12 @@ export interface TimeframeRisk {
   recommendation: TimeframeRiskRecommendation;
 }
 
-export type TimeframeRiskMapOverallState =
-  (typeof TimeframeRiskMapOverallState)[keyof typeof TimeframeRiskMapOverallState];
+export type TimeframeRiskMapOverallState = typeof TimeframeRiskMapOverallState[keyof typeof TimeframeRiskMapOverallState];
+
 
 export const TimeframeRiskMapOverallState = {
-  wait: "wait",
-  no_recommendation: "no_recommendation",
+  wait: 'wait',
+  no_recommendation: 'no_recommendation',
 } as const;
 
 export type TimeframeRiskMapOverall = {
@@ -1103,9 +1112,9 @@ export interface TimeframeRiskMap {
   instrument: string;
   generatedAt: string;
   /**
-   * @minItems 5
-   * @maxItems 5
-   */
+     * @minItems 5
+     * @maxItems 5
+     */
   timeframes: TimeframeRisk[];
   overall: TimeframeRiskMapOverall;
 }
@@ -1122,11 +1131,95 @@ export type AnalysisQuotaDaily = {
   remaining: number;
 };
 
+export type AnalysisQuotaCredits = {
+  balance: number;
+};
+
 export interface AnalysisQuota {
   /** True for admin/super_admin, who bypass quota */
   unlimited: boolean;
   hourly: AnalysisQuotaHourly;
   daily: AnalysisQuotaDaily;
+  credits: AnalysisQuotaCredits;
+}
+
+export interface TopupConfig {
+  rupiahPerCredit: number;
+  qrisImageUrl: string;
+}
+
+export interface CreditBalance {
+  balance: number;
+}
+
+export interface CreateTopupRequestBody {
+  /** @minimum 1 */
+  amountRupiah: number;
+  paymentReferenceNote?: string;
+  proofObjectPath?: string;
+}
+
+export type TopupRequestStatus = typeof TopupRequestStatus[keyof typeof TopupRequestStatus];
+
+
+export const TopupRequestStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface TopupRequest {
+  id: number;
+  userId: number;
+  amountRupiah: number;
+  creditsRequested: number;
+  conversionRateSnapshot: number;
+  paymentReferenceNote: string | null;
+  proofObjectPath: string | null;
+  status: TopupRequestStatus;
+  reviewedByUserId: number | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  creditsGranted: number | null;
+  createdAt: string;
+}
+
+export type TopupRequestWithUser = TopupRequest & {
+  userEmail: string;
+  userDisplayName: string;
+};
+
+export interface TopupRequestList {
+  requests: TopupRequest[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface TopupRequestWithUserList {
+  requests: TopupRequestWithUser[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export type ReviewTopupRequestBodyStatus = typeof ReviewTopupRequestBodyStatus[keyof typeof ReviewTopupRequestBodyStatus];
+
+
+export const ReviewTopupRequestBodyStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface ReviewTopupRequestBody {
+  status: ReviewTopupRequestBodyStatus;
+  creditsGranted?: number;
+  reviewNote?: string;
+}
+
+export interface UpdateTopupConfigBody {
+  /** @minimum 1 */
+  rupiahPerCredit: number;
 }
 
 export type PersonalAnalyticsTopInstrumentsItem = {
@@ -1150,22 +1243,21 @@ export interface PersonalAnalytics {
   weeklyData: PersonalAnalyticsWeeklyDataItem[];
 }
 
-export type FeedbackWithDetailsFeedbackType =
-  (typeof FeedbackWithDetailsFeedbackType)[keyof typeof FeedbackWithDetailsFeedbackType];
+export type FeedbackWithDetailsFeedbackType = typeof FeedbackWithDetailsFeedbackType[keyof typeof FeedbackWithDetailsFeedbackType];
+
 
 export const FeedbackWithDetailsFeedbackType = {
-  useful: "useful",
-  not_useful: "not_useful",
+  useful: 'useful',
+  not_useful: 'not_useful',
 } as const;
 
-export type FeedbackWithDetailsOutcome =
-  | (typeof FeedbackWithDetailsOutcome)[keyof typeof FeedbackWithDetailsOutcome]
-  | null;
+export type FeedbackWithDetailsOutcome = typeof FeedbackWithDetailsOutcome[keyof typeof FeedbackWithDetailsOutcome] | null;
+
 
 export const FeedbackWithDetailsOutcome = {
-  correct: "correct",
-  wrong: "wrong",
-  unknown: "unknown",
+  correct: 'correct',
+  wrong: 'wrong',
+  unknown: 'unknown',
 } as const;
 
 export interface FeedbackWithDetails {
@@ -1187,33 +1279,33 @@ export interface FeedbackList {
   limit: number;
 }
 
-export type AlertLevelRowLevel =
-  (typeof AlertLevelRowLevel)[keyof typeof AlertLevelRowLevel];
+export type AlertLevelRowLevel = typeof AlertLevelRowLevel[keyof typeof AlertLevelRowLevel];
+
 
 export const AlertLevelRowLevel = {
-  entry: "entry",
-  sl: "sl",
-  tp1: "tp1",
-  tp2: "tp2",
+  entry: 'entry',
+  sl: 'sl',
+  tp1: 'tp1',
+  tp2: 'tp2',
 } as const;
 
-export type AlertLevelRowSide =
-  (typeof AlertLevelRowSide)[keyof typeof AlertLevelRowSide];
+export type AlertLevelRowSide = typeof AlertLevelRowSide[keyof typeof AlertLevelRowSide];
+
 
 export const AlertLevelRowSide = {
-  buy: "buy",
-  sell: "sell",
+  buy: 'buy',
+  sell: 'sell',
 } as const;
 
 /**
  * Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.
  */
-export type AlertLevelRowDirection =
-  (typeof AlertLevelRowDirection)[keyof typeof AlertLevelRowDirection];
+export type AlertLevelRowDirection = typeof AlertLevelRowDirection[keyof typeof AlertLevelRowDirection];
+
 
 export const AlertLevelRowDirection = {
-  above: "above",
-  below: "below",
+  above: 'above',
+  below: 'below',
 } as const;
 
 export interface AlertLevelRow {
@@ -1237,22 +1329,21 @@ export interface AlertStatus {
   levels: AlertLevelRow[];
 }
 
-export type FeedbackBodyFeedbackType =
-  (typeof FeedbackBodyFeedbackType)[keyof typeof FeedbackBodyFeedbackType];
+export type FeedbackBodyFeedbackType = typeof FeedbackBodyFeedbackType[keyof typeof FeedbackBodyFeedbackType];
+
 
 export const FeedbackBodyFeedbackType = {
-  useful: "useful",
-  not_useful: "not_useful",
+  useful: 'useful',
+  not_useful: 'not_useful',
 } as const;
 
-export type FeedbackBodyOutcome =
-  | (typeof FeedbackBodyOutcome)[keyof typeof FeedbackBodyOutcome]
-  | null;
+export type FeedbackBodyOutcome = typeof FeedbackBodyOutcome[keyof typeof FeedbackBodyOutcome] | null;
+
 
 export const FeedbackBodyOutcome = {
-  correct: "correct",
-  wrong: "wrong",
-  unknown: "unknown",
+  correct: 'correct',
+  wrong: 'wrong',
+  unknown: 'unknown',
 } as const;
 
 export interface FeedbackBody {
@@ -1261,22 +1352,21 @@ export interface FeedbackBody {
   note?: string | null;
 }
 
-export type AdminFeedbackRowFeedbackType =
-  (typeof AdminFeedbackRowFeedbackType)[keyof typeof AdminFeedbackRowFeedbackType];
+export type AdminFeedbackRowFeedbackType = typeof AdminFeedbackRowFeedbackType[keyof typeof AdminFeedbackRowFeedbackType];
+
 
 export const AdminFeedbackRowFeedbackType = {
-  useful: "useful",
-  not_useful: "not_useful",
+  useful: 'useful',
+  not_useful: 'not_useful',
 } as const;
 
-export type AdminFeedbackRowOutcome =
-  | (typeof AdminFeedbackRowOutcome)[keyof typeof AdminFeedbackRowOutcome]
-  | null;
+export type AdminFeedbackRowOutcome = typeof AdminFeedbackRowOutcome[keyof typeof AdminFeedbackRowOutcome] | null;
+
 
 export const AdminFeedbackRowOutcome = {
-  correct: "correct",
-  wrong: "wrong",
-  unknown: "unknown",
+  correct: 'correct',
+  wrong: 'wrong',
+  unknown: 'unknown',
 } as const;
 
 export interface AdminFeedbackRow {
@@ -1298,25 +1388,24 @@ export interface AdminFeedbackList {
   limit: number;
 }
 
-export type NotificationType =
-  (typeof NotificationType)[keyof typeof NotificationType];
+export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
+
 
 export const NotificationType = {
-  info: "info",
-  warning: "warning",
-  error: "error",
+  info: 'info',
+  warning: 'warning',
+  error: 'error',
 } as const;
 
 /**
  * Allowlisted tap-target. Clients should treat any value they don't recognise the same as null (no special action, just mark read) so new action types can be added without breaking older clients.
  */
-export type NotificationActionType =
-  | (typeof NotificationActionType)[keyof typeof NotificationActionType]
-  | null;
+export type NotificationActionType = typeof NotificationActionType[keyof typeof NotificationActionType] | null;
+
 
 export const NotificationActionType = {
-  open_notification: "open_notification",
-  open_analysis: "open_analysis",
+  open_notification: 'open_notification',
+  open_analysis: 'open_analysis',
 } as const;
 
 export interface Notification {
@@ -1341,36 +1430,35 @@ export interface NotificationsList {
   unreadCount: number;
 }
 
-export type BroadcastNotificationBodyType =
-  (typeof BroadcastNotificationBodyType)[keyof typeof BroadcastNotificationBodyType];
+export type BroadcastNotificationBodyType = typeof BroadcastNotificationBodyType[keyof typeof BroadcastNotificationBodyType];
+
 
 export const BroadcastNotificationBodyType = {
-  info: "info",
-  warning: "warning",
-  error: "error",
+  info: 'info',
+  warning: 'warning',
+  error: 'error',
 } as const;
 
-export type BroadcastNotificationBodyAudienceType =
-  (typeof BroadcastNotificationBodyAudienceType)[keyof typeof BroadcastNotificationBodyAudienceType];
+export type BroadcastNotificationBodyAudienceType = typeof BroadcastNotificationBodyAudienceType[keyof typeof BroadcastNotificationBodyAudienceType];
+
 
 export const BroadcastNotificationBodyAudienceType = {
-  all: "all",
-  role: "role",
-  tag: "tag",
+  all: 'all',
+  role: 'role',
+  tag: 'tag',
 } as const;
 
 /**
  * Deprecated: use audienceType=role + audienceValue instead
  * @deprecated
  */
-export type BroadcastNotificationBodyTargetRole =
-  | (typeof BroadcastNotificationBodyTargetRole)[keyof typeof BroadcastNotificationBodyTargetRole]
-  | null;
+export type BroadcastNotificationBodyTargetRole = typeof BroadcastNotificationBodyTargetRole[keyof typeof BroadcastNotificationBodyTargetRole] | null;
+
 
 export const BroadcastNotificationBodyTargetRole = {
-  user: "user",
-  admin: "admin",
-  super_admin: "super_admin",
+  user: 'user',
+  admin: 'admin',
+  super_admin: 'super_admin',
 } as const;
 
 export interface BroadcastNotificationBody {
@@ -1381,9 +1469,9 @@ export interface BroadcastNotificationBody {
   /** Role name when audienceType=role; tag name when audienceType=tag */
   audienceValue?: string | null;
   /**
-   * Deprecated: use audienceType=role + audienceValue instead
-   * @deprecated
-   */
+     * Deprecated: use audienceType=role + audienceValue instead
+     * @deprecated
+     */
   targetRole?: BroadcastNotificationBodyTargetRole;
 }
 
@@ -1393,13 +1481,13 @@ export interface BroadcastSendResult {
   message: string;
 }
 
-export type BroadcastAudienceType =
-  (typeof BroadcastAudienceType)[keyof typeof BroadcastAudienceType];
+export type BroadcastAudienceType = typeof BroadcastAudienceType[keyof typeof BroadcastAudienceType];
+
 
 export const BroadcastAudienceType = {
-  all: "all",
-  role: "role",
-  tag: "tag",
+  all: 'all',
+  role: 'role',
+  tag: 'tag',
 } as const;
 
 export interface Broadcast {
@@ -1427,9 +1515,9 @@ export interface TagsList {
 
 export interface AddUserTagBody {
   /**
-   * @minLength 1
-   * @maxLength 40
-   */
+     * @minLength 1
+     * @maxLength 40
+     */
   tag: string;
 }
 
@@ -1456,39 +1544,39 @@ export interface AdminStats {
 /**
  * Stable slug describing where the link was clicked
  */
-export type OutboundClickBodyPlacement =
-  (typeof OutboundClickBodyPlacement)[keyof typeof OutboundClickBodyPlacement];
+export type OutboundClickBodyPlacement = typeof OutboundClickBodyPlacement[keyof typeof OutboundClickBodyPlacement];
+
 
 export const OutboundClickBodyPlacement = {
-  splash: "splash",
-  "landing-header": "landing-header",
-  "landing-cta": "landing-cta",
-  "landing-footer": "landing-footer",
-  "layout-footer": "layout-footer",
-  "profile-cta": "profile-cta",
-  "dashboard-tiktok": "dashboard-tiktok",
+  splash: 'splash',
+  'landing-header': 'landing-header',
+  'landing-cta': 'landing-cta',
+  'landing-footer': 'landing-footer',
+  'layout-footer': 'layout-footer',
+  'profile-cta': 'profile-cta',
+  'dashboard-tiktok': 'dashboard-tiktok',
 } as const;
 
 /**
  * Partner the click was directed to
  */
-export type OutboundClickBodyTarget =
-  (typeof OutboundClickBodyTarget)[keyof typeof OutboundClickBodyTarget];
+export type OutboundClickBodyTarget = typeof OutboundClickBodyTarget[keyof typeof OutboundClickBodyTarget];
+
 
 export const OutboundClickBodyTarget = {
-  "sg-berjangka": "sg-berjangka",
-  tiktok: "tiktok",
+  'sg-berjangka': 'sg-berjangka',
+  tiktok: 'tiktok',
 } as const;
 
 /**
  * UI language at click time
  */
-export type OutboundClickBodyLang =
-  (typeof OutboundClickBodyLang)[keyof typeof OutboundClickBodyLang];
+export type OutboundClickBodyLang = typeof OutboundClickBodyLang[keyof typeof OutboundClickBodyLang];
+
 
 export const OutboundClickBodyLang = {
-  en: "en",
-  id: "id",
+  en: 'en',
+  id: 'id',
 } as const;
 
 export interface OutboundClickBody {
@@ -1522,15 +1610,15 @@ export interface OutboundClickStats {
 /**
  * Server validates against a fixed allowlist — unknown values are silently dropped, never persisted as-is
  */
-export type AnalyticsEventBodyEventType =
-  (typeof AnalyticsEventBodyEventType)[keyof typeof AnalyticsEventBodyEventType];
+export type AnalyticsEventBodyEventType = typeof AnalyticsEventBodyEventType[keyof typeof AnalyticsEventBodyEventType];
+
 
 export const AnalyticsEventBodyEventType = {
-  page_view: "page_view",
-  analysis_created: "analysis_created",
-  trade_logged: "trade_logged",
-  alert_armed: "alert_armed",
-  feedback_submitted: "feedback_submitted",
+  page_view: 'page_view',
+  analysis_created: 'analysis_created',
+  trade_logged: 'trade_logged',
+  alert_armed: 'alert_armed',
+  feedback_submitted: 'feedback_submitted',
 } as const;
 
 /**
@@ -1622,21 +1710,21 @@ export interface AnalyticsTokenStats {
   totals: AnalyticsTokenStatsTotals;
 }
 
-export type UserWithStatsRole =
-  (typeof UserWithStatsRole)[keyof typeof UserWithStatsRole];
+export type UserWithStatsRole = typeof UserWithStatsRole[keyof typeof UserWithStatsRole];
+
 
 export const UserWithStatsRole = {
-  user: "user",
-  admin: "admin",
-  super_admin: "super_admin",
+  user: 'user',
+  admin: 'admin',
+  super_admin: 'super_admin',
 } as const;
 
-export type UserWithStatsSelectedMode =
-  (typeof UserWithStatsSelectedMode)[keyof typeof UserWithStatsSelectedMode];
+export type UserWithStatsSelectedMode = typeof UserWithStatsSelectedMode[keyof typeof UserWithStatsSelectedMode];
+
 
 export const UserWithStatsSelectedMode = {
-  beginner: "beginner",
-  pro: "pro",
+  beginner: 'beginner',
+  pro: 'pro',
 } as const;
 
 export interface UserWithStats {
@@ -1674,13 +1762,13 @@ export interface UsersList {
   limit: number;
 }
 
-export type CreateUserBodyRole =
-  (typeof CreateUserBodyRole)[keyof typeof CreateUserBodyRole];
+export type CreateUserBodyRole = typeof CreateUserBodyRole[keyof typeof CreateUserBodyRole];
+
 
 export const CreateUserBodyRole = {
-  user: "user",
-  admin: "admin",
-  super_admin: "super_admin",
+  user: 'user',
+  admin: 'admin',
+  super_admin: 'super_admin',
 } as const;
 
 export interface CreateUserBody {
@@ -1698,13 +1786,13 @@ export interface ResetUserPasswordBody {
   newPassword: string;
 }
 
-export type UpdateUserRoleBodyRole =
-  (typeof UpdateUserRoleBodyRole)[keyof typeof UpdateUserRoleBodyRole];
+export type UpdateUserRoleBodyRole = typeof UpdateUserRoleBodyRole[keyof typeof UpdateUserRoleBodyRole];
+
 
 export const UpdateUserRoleBodyRole = {
-  user: "user",
-  admin: "admin",
-  super_admin: "super_admin",
+  user: 'user',
+  admin: 'admin',
+  super_admin: 'super_admin',
 } as const;
 
 export interface UpdateUserRoleBody {
@@ -1729,21 +1817,21 @@ export interface AddWatchlistBody {
   instrument: string;
 }
 
-export type UserPriceAlertTriggerDirection =
-  (typeof UserPriceAlertTriggerDirection)[keyof typeof UserPriceAlertTriggerDirection];
+export type UserPriceAlertTriggerDirection = typeof UserPriceAlertTriggerDirection[keyof typeof UserPriceAlertTriggerDirection];
+
 
 export const UserPriceAlertTriggerDirection = {
-  above: "above",
-  below: "below",
+  above: 'above',
+  below: 'below',
 } as const;
 
-export type UserPriceAlertStatus =
-  (typeof UserPriceAlertStatus)[keyof typeof UserPriceAlertStatus];
+export type UserPriceAlertStatus = typeof UserPriceAlertStatus[keyof typeof UserPriceAlertStatus];
+
 
 export const UserPriceAlertStatus = {
-  active: "active",
-  triggered: "triggered",
-  cancelled: "cancelled",
+  active: 'active',
+  triggered: 'triggered',
+  cancelled: 'cancelled',
 } as const;
 
 export interface UserPriceAlert {
@@ -1763,23 +1851,23 @@ export interface UserPriceAlertList {
   alerts: UserPriceAlert[];
 }
 
-export type CreateUserPriceAlertBodyTriggerDirection =
-  (typeof CreateUserPriceAlertBodyTriggerDirection)[keyof typeof CreateUserPriceAlertBodyTriggerDirection];
+export type CreateUserPriceAlertBodyTriggerDirection = typeof CreateUserPriceAlertBodyTriggerDirection[keyof typeof CreateUserPriceAlertBodyTriggerDirection];
+
 
 export const CreateUserPriceAlertBodyTriggerDirection = {
-  above: "above",
-  below: "below",
+  above: 'above',
+  below: 'below',
 } as const;
 
 /**
  * UI language at create time; controls push notification language.
  */
-export type CreateUserPriceAlertBodyLang =
-  (typeof CreateUserPriceAlertBodyLang)[keyof typeof CreateUserPriceAlertBodyLang];
+export type CreateUserPriceAlertBodyLang = typeof CreateUserPriceAlertBodyLang[keyof typeof CreateUserPriceAlertBodyLang];
+
 
 export const CreateUserPriceAlertBodyLang = {
-  en: "en",
-  id: "id",
+  en: 'en',
+  id: 'id',
 } as const;
 
 export interface CreateUserPriceAlertBody {
@@ -1794,23 +1882,23 @@ export interface CreateUserPriceAlertBody {
   lang?: CreateUserPriceAlertBodyLang;
 }
 
-export type JournalEntrySide =
-  (typeof JournalEntrySide)[keyof typeof JournalEntrySide];
+export type JournalEntrySide = typeof JournalEntrySide[keyof typeof JournalEntrySide];
+
 
 export const JournalEntrySide = {
-  buy: "buy",
-  sell: "sell",
+  buy: 'buy',
+  sell: 'sell',
 } as const;
 
-export type JournalEntryOutcome =
-  (typeof JournalEntryOutcome)[keyof typeof JournalEntryOutcome];
+export type JournalEntryOutcome = typeof JournalEntryOutcome[keyof typeof JournalEntryOutcome];
+
 
 export const JournalEntryOutcome = {
-  win: "win",
-  loss: "loss",
-  breakeven: "breakeven",
-  open: "open",
-  skipped: "skipped",
+  win: 'win',
+  loss: 'loss',
+  breakeven: 'breakeven',
+  open: 'open',
+  skipped: 'skipped',
 } as const;
 
 /**
@@ -1841,31 +1929,31 @@ export interface JournalEntryList {
   entries: JournalEntry[];
 }
 
-export type CreateJournalEntryBodySide =
-  (typeof CreateJournalEntryBodySide)[keyof typeof CreateJournalEntryBodySide];
+export type CreateJournalEntryBodySide = typeof CreateJournalEntryBodySide[keyof typeof CreateJournalEntryBodySide];
+
 
 export const CreateJournalEntryBodySide = {
-  buy: "buy",
-  sell: "sell",
+  buy: 'buy',
+  sell: 'sell',
 } as const;
 
-export type CreateJournalEntryBodyOutcome =
-  (typeof CreateJournalEntryBodyOutcome)[keyof typeof CreateJournalEntryBodyOutcome];
+export type CreateJournalEntryBodyOutcome = typeof CreateJournalEntryBodyOutcome[keyof typeof CreateJournalEntryBodyOutcome];
+
 
 export const CreateJournalEntryBodyOutcome = {
-  win: "win",
-  loss: "loss",
-  breakeven: "breakeven",
-  open: "open",
-  skipped: "skipped",
+  win: 'win',
+  loss: 'loss',
+  breakeven: 'breakeven',
+  open: 'open',
+  skipped: 'skipped',
 } as const;
 
 export interface CreateJournalEntryBody {
   analysisId?: number | null;
   /**
-   * @minLength 1
-   * @maxLength 64
-   */
+     * @minLength 1
+     * @maxLength 64
+     */
   instrument: string;
   side: CreateJournalEntryBodySide;
   entryPrice?: string | number | null;
@@ -1881,23 +1969,23 @@ export interface CreateJournalEntryBody {
   tradedAt?: string;
 }
 
-export type UpdateJournalEntryBodySide =
-  (typeof UpdateJournalEntryBodySide)[keyof typeof UpdateJournalEntryBodySide];
+export type UpdateJournalEntryBodySide = typeof UpdateJournalEntryBodySide[keyof typeof UpdateJournalEntryBodySide];
+
 
 export const UpdateJournalEntryBodySide = {
-  buy: "buy",
-  sell: "sell",
+  buy: 'buy',
+  sell: 'sell',
 } as const;
 
-export type UpdateJournalEntryBodyOutcome =
-  (typeof UpdateJournalEntryBodyOutcome)[keyof typeof UpdateJournalEntryBodyOutcome];
+export type UpdateJournalEntryBodyOutcome = typeof UpdateJournalEntryBodyOutcome[keyof typeof UpdateJournalEntryBodyOutcome];
+
 
 export const UpdateJournalEntryBodyOutcome = {
-  win: "win",
-  loss: "loss",
-  breakeven: "breakeven",
-  open: "open",
-  skipped: "skipped",
+  win: 'win',
+  loss: 'loss',
+  breakeven: 'breakeven',
+  open: 'open',
+  skipped: 'skipped',
 } as const;
 
 /**
@@ -1906,9 +1994,9 @@ export const UpdateJournalEntryBodyOutcome = {
 export interface UpdateJournalEntryBody {
   analysisId?: number | null;
   /**
-   * @minLength 1
-   * @maxLength 64
-   */
+     * @minLength 1
+     * @maxLength 64
+     */
   instrument?: string;
   side?: UpdateJournalEntryBodySide;
   entryPrice?: string | number | null;
@@ -1970,12 +2058,11 @@ export interface MirrorGroupStat {
   avgPnlPercent: number | null;
 }
 
-export type MirrorGatedInsightReason =
-  | (typeof MirrorGatedInsightReason)[keyof typeof MirrorGatedInsightReason]
-  | null;
+export type MirrorGatedInsightReason = typeof MirrorGatedInsightReason[keyof typeof MirrorGatedInsightReason] | null;
+
 
 export const MirrorGatedInsightReason = {
-  need_more_data: "need_more_data",
+  need_more_data: 'need_more_data',
 } as const;
 
 export type MirrorGatedInsightData = { [key: string]: unknown } | null;
@@ -2054,13 +2141,13 @@ export interface PerformanceOverall {
   hitRate: number | null;
 }
 
-export type PerformanceBannerSeverity =
-  (typeof PerformanceBannerSeverity)[keyof typeof PerformanceBannerSeverity];
+export type PerformanceBannerSeverity = typeof PerformanceBannerSeverity[keyof typeof PerformanceBannerSeverity];
+
 
 export const PerformanceBannerSeverity = {
-  ok: "ok",
-  watch: "watch",
-  warn: "warn",
+  ok: 'ok',
+  watch: 'watch',
+  warn: 'warn',
 } as const;
 
 /**
@@ -2076,8 +2163,8 @@ export interface PerformanceBanner {
   delta: number | null;
 }
 
-export type PerformanceSummaryWindowDays =
-  (typeof PerformanceSummaryWindowDays)[keyof typeof PerformanceSummaryWindowDays];
+export type PerformanceSummaryWindowDays = typeof PerformanceSummaryWindowDays[keyof typeof PerformanceSummaryWindowDays];
+
 
 export const PerformanceSummaryWindowDays = {
   NUMBER_30: 30,
@@ -2134,19 +2221,42 @@ export interface JournalSentiment {
 }
 
 export type GetProgressionHistoryParams = {
-  /**
-   * @minimum 1
-   * @maximum 100
-   */
-  limit?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
 };
 
 export type GetProgressionAuditParams = {
-  userId?: number;
+userId?: number;
 };
 
+export type GetMyTopupRequestsParams = {
+page?: number;
+limit?: number;
+};
+
+export type GetPendingTopupRequestsParams = {
+/**
+ * Filter by review status; defaults to pending
+ */
+status?: GetPendingTopupRequestsStatus;
+page?: number;
+limit?: number;
+};
+
+export type GetPendingTopupRequestsStatus = typeof GetPendingTopupRequestsStatus[keyof typeof GetPendingTopupRequestsStatus];
+
+
+export const GetPendingTopupRequestsStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
 export type GetGuardrailsParams = {
-  instrument: string;
+instrument: string;
 };
 
 export type GetGuardrails200SignalsItem = { [key: string]: unknown };
@@ -2173,46 +2283,46 @@ export type RecordGuardrailTelemetry201 = {
 };
 
 export type ListJournalEntriesParams = {
-  instrument?: string;
-  outcome?: ListJournalEntriesOutcome;
-  from?: string;
-  to?: string;
-  /**
-   * @minimum 1
-   * @maximum 500
-   */
-  limit?: number;
+instrument?: string;
+outcome?: ListJournalEntriesOutcome;
+from?: string;
+to?: string;
+/**
+ * @minimum 1
+ * @maximum 500
+ */
+limit?: number;
 };
 
-export type ListJournalEntriesOutcome =
-  (typeof ListJournalEntriesOutcome)[keyof typeof ListJournalEntriesOutcome];
+export type ListJournalEntriesOutcome = typeof ListJournalEntriesOutcome[keyof typeof ListJournalEntriesOutcome];
+
 
 export const ListJournalEntriesOutcome = {
-  win: "win",
-  loss: "loss",
-  breakeven: "breakeven",
-  open: "open",
-  skipped: "skipped",
+  win: 'win',
+  loss: 'loss',
+  breakeven: 'breakeven',
+  open: 'open',
+  skipped: 'skipped',
 } as const;
 
 export type GetJournalSentimentParams = {
-  instrument: string;
+instrument: string;
 };
 
 export type GetJournalStatsParams = {
-  from?: string;
-  to?: string;
+from?: string;
+to?: string;
 };
 
 export type GetPerformanceSummaryParams = {
-  /**
-   * Rolling window in days. Only 30 or 90 are accepted; anything else falls back to 30.
-   */
-  window?: GetPerformanceSummaryWindow;
+/**
+ * Rolling window in days. Only 30 or 90 are accepted; anything else falls back to 30.
+ */
+window?: GetPerformanceSummaryWindow;
 };
 
-export type GetPerformanceSummaryWindow =
-  (typeof GetPerformanceSummaryWindow)[keyof typeof GetPerformanceSummaryWindow];
+export type GetPerformanceSummaryWindow = typeof GetPerformanceSummaryWindow[keyof typeof GetPerformanceSummaryWindow];
+
 
 export const GetPerformanceSummaryWindow = {
   NUMBER_30: 30,
@@ -2220,105 +2330,105 @@ export const GetPerformanceSummaryWindow = {
 } as const;
 
 export type ListAnalysesParams = {
-  mode?: ListAnalysesMode;
-  instrument?: string;
-  /**
-   * Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.
-   */
-  instruments?: string[];
-  /**
-   * Multi-select timeframe filter (repeatable).
-   */
-  timeframes?: string[];
-  /**
-   * Multi-select resolved outcome filter (repeatable).
-   */
-  outcomes?: ListAnalysesOutcomesItem[];
-  page?: number;
-  limit?: number;
-  /**
-   * Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).
-   * @maxLength 100
-   */
-  q?: string;
-  /**
-   * Filter analyses created on or after this date (ISO 8601)
-   */
-  from?: string;
-  /**
-   * Filter analyses created on or before this date (ISO 8601)
-   */
-  to?: string;
+mode?: ListAnalysesMode;
+instrument?: string;
+/**
+ * Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.
+ */
+instruments?: string[];
+/**
+ * Multi-select timeframe filter (repeatable).
+ */
+timeframes?: string[];
+/**
+ * Multi-select resolved outcome filter (repeatable).
+ */
+outcomes?: ListAnalysesOutcomesItem[];
+page?: number;
+limit?: number;
+/**
+ * Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).
+ * @maxLength 100
+ */
+q?: string;
+/**
+ * Filter analyses created on or after this date (ISO 8601)
+ */
+from?: string;
+/**
+ * Filter analyses created on or before this date (ISO 8601)
+ */
+to?: string;
 };
 
-export type ListAnalysesMode =
-  (typeof ListAnalysesMode)[keyof typeof ListAnalysesMode];
+export type ListAnalysesMode = typeof ListAnalysesMode[keyof typeof ListAnalysesMode];
+
 
 export const ListAnalysesMode = {
-  beginner: "beginner",
-  pro: "pro",
+  beginner: 'beginner',
+  pro: 'pro',
 } as const;
 
-export type ListAnalysesOutcomesItem =
-  (typeof ListAnalysesOutcomesItem)[keyof typeof ListAnalysesOutcomesItem];
+export type ListAnalysesOutcomesItem = typeof ListAnalysesOutcomesItem[keyof typeof ListAnalysesOutcomesItem];
+
 
 export const ListAnalysesOutcomesItem = {
-  pending: "pending",
-  tp1_hit: "tp1_hit",
-  tp2_hit: "tp2_hit",
-  sl_hit: "sl_hit",
-  expired: "expired",
-  invalidated: "invalidated",
+  pending: 'pending',
+  tp1_hit: 'tp1_hit',
+  tp2_hit: 'tp2_hit',
+  sl_hit: 'sl_hit',
+  expired: 'expired',
+  invalidated: 'invalidated',
 } as const;
 
 export type GetTimeframeRiskMapParams = {
-  /**
-   * @minLength 1
-   * @maxLength 32
-   */
-  instrument: GetTimeframeRiskMapInstrument;
+/**
+ * @minLength 1
+ * @maxLength 32
+ */
+instrument: GetTimeframeRiskMapInstrument;
 };
 
-export type GetTimeframeRiskMapInstrument =
-  (typeof GetTimeframeRiskMapInstrument)[keyof typeof GetTimeframeRiskMapInstrument];
+export type GetTimeframeRiskMapInstrument = typeof GetTimeframeRiskMapInstrument[keyof typeof GetTimeframeRiskMapInstrument];
+
 
 export const GetTimeframeRiskMapInstrument = {
-  "XAU/USD": "XAU/USD",
-  BRENT: "BRENT",
-  HSI: "HSI",
-  NIKKEI: "NIKKEI",
+  'XAU/USD': 'XAU/USD',
+  BRENT: 'BRENT',
+  HSI: 'HSI',
+  NIKKEI: 'NIKKEI',
 } as const;
 
 export type GetAnalysisHistorySummaryParams = {
-  range?: GetAnalysisHistorySummaryRange;
-  instruments?: string[];
-  timeframes?: string[];
+range?: GetAnalysisHistorySummaryRange;
+instruments?: string[];
+timeframes?: string[];
 };
 
-export type GetAnalysisHistorySummaryRange =
-  (typeof GetAnalysisHistorySummaryRange)[keyof typeof GetAnalysisHistorySummaryRange];
+export type GetAnalysisHistorySummaryRange = typeof GetAnalysisHistorySummaryRange[keyof typeof GetAnalysisHistorySummaryRange];
+
 
 export const GetAnalysisHistorySummaryRange = {
-  NUMBER_7: "7",
-  NUMBER_30: "30",
-  NUMBER_90: "90",
-  all: "all",
+  NUMBER_7: '7',
+  NUMBER_30: '30',
+  NUMBER_90: '90',
+  all: 'all',
 } as const;
 
 export type GetPersonalAnalyticsParams = {
-  /**
-   * Time-bucket range for the chart series. `daily` returns the last 7 days, `weekly` the last 7 weeks, `monthly` the last 6 months.
-   */
-  range?: GetPersonalAnalyticsRange;
+/**
+ * Time-bucket range for the chart series. `daily` returns the last 7 days, `weekly` the last 7 weeks, `monthly` the last 6 months.
+ */
+range?: GetPersonalAnalyticsRange;
 };
 
-export type GetPersonalAnalyticsRange =
-  (typeof GetPersonalAnalyticsRange)[keyof typeof GetPersonalAnalyticsRange];
+export type GetPersonalAnalyticsRange = typeof GetPersonalAnalyticsRange[keyof typeof GetPersonalAnalyticsRange];
+
 
 export const GetPersonalAnalyticsRange = {
-  daily: "daily",
-  weekly: "weekly",
-  monthly: "monthly",
+  daily: 'daily',
+  weekly: 'weekly',
+  monthly: 'monthly',
 } as const;
 
 export type SetAnalysisNoteBody = {
@@ -2327,78 +2437,79 @@ export type SetAnalysisNoteBody = {
 };
 
 export type GetNotificationsParams = {
-  unreadOnly?: boolean;
+unreadOnly?: boolean;
 };
 
 export type GetOutboundClickStatsParams = {
-  /**
-   * Window size for the "recent" totals. Defaults to 30. Clamped 1..365.
-   */
-  days?: number;
+/**
+ * Window size for the "recent" totals. Defaults to 30. Clamped 1..365.
+ */
+days?: number;
 };
 
 export type GetAdminAnalyticsUsageParams = {
-  /**
-   * Window size in days. Defaults to 30. Clamped 1..365.
-   */
-  days?: number;
+/**
+ * Window size in days. Defaults to 30. Clamped 1..365.
+ */
+days?: number;
 };
 
 export type GetAdminAnalyticsTokensParams = {
-  /**
-   * Window size in days. Defaults to 30. Clamped 1..365.
-   */
-  days?: number;
+/**
+ * Window size in days. Defaults to 30. Clamped 1..365.
+ */
+days?: number;
 };
 
 export type GetAllAnalysesParams = {
-  page?: number;
-  limit?: number;
+page?: number;
+limit?: number;
 };
 
 export type GetAdminFeedbackParams = {
-  page?: number;
-  limit?: number;
-  /**
-   * Free-text ILIKE filter matched against the user's email or the analysis instrument
-   */
-  search?: string;
-  /**
-   * Restrict to a single feedback reaction
-   */
-  feedbackType?: GetAdminFeedbackFeedbackType;
-  /**
-   * Only include feedback created on or after this date (ISO 8601 date)
-   */
-  from?: string;
-  /**
-   * Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day)
-   */
-  to?: string;
-  /**
-   * When set, only return feedback for the given analysis id.
-   */
-  analysisId?: number;
+page?: number;
+limit?: number;
+/**
+ * Free-text ILIKE filter matched against the user's email or the analysis instrument
+ */
+search?: string;
+/**
+ * Restrict to a single feedback reaction
+ */
+feedbackType?: GetAdminFeedbackFeedbackType;
+/**
+ * Only include feedback created on or after this date (ISO 8601 date)
+ */
+from?: string;
+/**
+ * Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day)
+ */
+to?: string;
+/**
+ * When set, only return feedback for the given analysis id.
+ */
+analysisId?: number;
 };
 
-export type GetAdminFeedbackFeedbackType =
-  (typeof GetAdminFeedbackFeedbackType)[keyof typeof GetAdminFeedbackFeedbackType];
+export type GetAdminFeedbackFeedbackType = typeof GetAdminFeedbackFeedbackType[keyof typeof GetAdminFeedbackFeedbackType];
+
 
 export const GetAdminFeedbackFeedbackType = {
-  useful: "useful",
-  not_useful: "not_useful",
+  useful: 'useful',
+  not_useful: 'not_useful',
 } as const;
 
 export type GetBroadcastsParams = {
-  page?: number;
-  limit?: number;
+page?: number;
+limit?: number;
 };
 
 export type GetAllUsersParams = {
-  /**
-   * ILIKE filter on email or display name
-   */
-  search?: string;
-  page?: number;
-  limit?: number;
+/**
+ * ILIKE filter on email or display name
+ */
+search?: string;
+page?: number;
+limit?: number;
 };
+

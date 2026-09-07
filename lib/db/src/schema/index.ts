@@ -9,6 +9,7 @@ import {
   numeric,
   pgEnum,
   uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
 
 export type TradeSideShape = {
@@ -898,6 +899,63 @@ export const progressionEvidenceSessions = pgTable("progression_evidence_session
   consumedAt: timestamp("consumed_at"),
   decision: text("decision").notNull().default("issued"),
 });
+
+export const creditTopupStatusEnum = pgEnum("credit_topup_status", ["pending", "approved", "rejected"]);
+
+// One row per top-up attempt — the manual submit-then-admin-review workflow.
+// Money is stored as a whole-Rupiah integer (no subunit in practice), not a
+// float. creditsRequested/conversionRateSnapshot are frozen at submission
+// time so a later rate change can't retroactively alter what an
+// already-submitted request is worth.
+export const creditTopupRequests = pgTable("credit_topup_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amountRupiah: integer("amount_rupiah").notNull(),
+  creditsRequested: integer("credits_requested").notNull(),
+  conversionRateSnapshot: integer("conversion_rate_snapshot").notNull(),
+  paymentReferenceNote: text("payment_reference_note"),
+  proofObjectPath: text("proof_object_path"),
+  status: creditTopupStatusEnum("status").notNull().default("pending"),
+  reviewedByUserId: integer("reviewed_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNote: text("review_note"),
+  creditsGranted: integer("credits_granted"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  statusIdx: index("credit_topup_requests_status_idx").on(t.status),
+  userIdx: index("credit_topup_requests_user_idx").on(t.userId),
+}));
+
+// Append-only ledger of every credit movement (top-up approvals, analysis
+// consumption, admin corrections) — mirrors xp_ledger exactly: never
+// UPDATE/DELETE a row, idempotency via the unique (userId, source,
+// sourceEventId) index, corrections are new rows referencing the original.
+export const creditLedger = pgTable("credit_ledger", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  source: text("source").notNull(),
+  sourceEventId: text("source_event_id").notNull(),
+  amount: integer("amount").notNull(),
+  topupRequestId: integer("topup_request_id").references(() => creditTopupRequests.id, { onDelete: "restrict" }),
+  analysisId: integer("analysis_id").references(() => analyses.id, { onDelete: "restrict" }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  correctionOfLedgerId: integer("correction_of_ledger_id"),
+  correctionReason: text("correction_reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  perUserSource: uniqueIndex("credit_ledger_user_source_event_unique").on(t.userId, t.source, t.sourceEventId),
+}));
+
+// Denormalized running total, recomputed via sum(creditLedger.amount) inside
+// the same transaction as every ledger insert — the same role
+// progressionProfiles plays for xpLedger. Kept in its own table rather than
+// a column on `users` to keep money state physically separate from the
+// large identity/preferences user row.
+export const creditBalances = pgTable("credit_balances", {
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  balance: integer("balance").notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({ perUser: uniqueIndex("credit_balances_user_unique").on(t.userId) }));
 
 // Generic app-usage telemetry: one row per page view or key action
 // (see the server-side eventType allowlist in routes/events.ts).

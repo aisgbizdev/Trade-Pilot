@@ -14,6 +14,7 @@ import {
   Users as UsersIcon,
   Activity,
   Coins,
+  Wallet,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,8 @@ import {
   useRemoveUserTag,
   useGetBroadcasts,
   getGetBroadcastsQueryKey,
+  useGetPendingTopupRequests,
+  getGetPendingTopupRequestsQueryKey,
   type AnalysesList,
   type Analysis,
   type UsersList,
@@ -1018,6 +1021,31 @@ function QuotaSettingsPanel() {
   );
 }
 
+function TopupsShortcutPanel() {
+  const { t } = useTranslation();
+  const params = { status: "pending" as const, page: 1, limit: 1 };
+  const { data } = useGetPendingTopupRequests(params, { query: { queryKey: getGetPendingTopupRequestsQueryKey(params) } });
+  const pendingCount = data?.total ?? 0;
+
+  return (
+    <Card className="p-4 space-y-2" data-testid="card-topups-shortcut">
+      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <Wallet className="w-4 h-4" /> {t.admin.topups_nav_label}
+      </h3>
+      <p className="text-xs text-muted-foreground" data-testid="text-topups-pending-count">
+        {t.admin.topups_pending_count.replace("{n}", String(pendingCount))}
+      </p>
+      <Link
+        href="/admin/topups"
+        className="block text-center text-xs text-primary hover:underline pt-1"
+        data-testid="link-admin-topups"
+      >
+        {t.admin.open_topups_page}
+      </Link>
+    </Card>
+  );
+}
+
 function AdminContent() {
   const [, setLocation] = useLocation();
   const { t, lang } = useTranslation();
@@ -1128,6 +1156,8 @@ function AdminContent() {
             {t.admin.open_feedback_page}
           </Link>
         </Card>
+
+        <TopupsShortcutPanel />
 
         <BroadcastComposer />
 

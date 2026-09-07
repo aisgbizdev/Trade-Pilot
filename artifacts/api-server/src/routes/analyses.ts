@@ -43,6 +43,7 @@ import { detectGuardrailSignals, GUARDRAIL_KINDS, type GuardrailKind } from "../
 import { guardrailEvents } from "@workspace/db/schema";
 import { z } from "zod";
 import { awardProgression, revokeProgressionEvidence, riskWaitSourceEventId } from "../lib/progression";
+import { applyCreditLedgerEntry, CREDIT_BALANCE_LOCK_NAMESPACE, getCreditBalanceForUser } from "../lib/credits";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -351,11 +352,13 @@ router.post("/analyses/guardrails/:id/wait", requireAuth, async (req: AuthReques
 router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
   const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
   const { perHour, perDay } = await getEffectiveQuota(req.userId!);
+  const creditBalance = await getCreditBalanceForUser(req.userId!);
   if (isPrivilegedRole) {
     res.json({
       unlimited: true,
       hourly: { limit: perHour, used: 0, remaining: perHour },
       daily: { limit: perDay, used: 0, remaining: perDay },
+      credits: { balance: creditBalance },
     });
     return;
   }
@@ -392,6 +395,7 @@ router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
       used: dailyUsed,
       remaining: Math.max(0, perDay - dailyUsed),
     },
+    credits: { balance: creditBalance },
   });
 });
 
@@ -542,7 +546,7 @@ async function getEffectiveQuota(userId: number): Promise<{ perHour: number; per
 type AIResult = AIOutput;
 type AnalysisRow = typeof analyses.$inferSelect;
 type QuotaOutcome =
-  | { kind: "ok"; analysis: AnalysisRow }
+  | { kind: "ok"; analysis: AnalysisRow; creditConsumed: boolean; creditBalance?: number }
   | { kind: "busy" }
   | { kind: "hour"; used: number; limit: number }
   | { kind: "day"; used: number; limit: number }
@@ -721,7 +725,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     }).catch((err) => {
       logger.warn({ err }, "[analyses] failed to record AI token usage");
     });
-    outcome = { kind: "ok", analysis };
+    outcome = { kind: "ok", analysis, creditConsumed: false };
   } else {
     // Atomically: take a per-user xact-scoped advisory lock, count usage,
     // call AI, and insert. The lock auto-releases on COMMIT/ROLLBACK so
@@ -749,11 +753,20 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       const hourlyCount = Number(usage?.hourly ?? 0);
       const dailyCount = Number(usage?.daily ?? 0);
 
-      if (hourlyCount >= perHour) {
-        return { kind: "hour", used: hourlyCount, limit: perHour };
-      }
-      if (dailyCount >= perDay) {
-        return { kind: "day", used: dailyCount, limit: perDay };
+      // Only decide WHETHER a credit will be needed here — the actual
+      // ledger deduction happens after generateAnalysis() succeeds (see
+      // below), same as the free quota itself only ever "counts" a
+      // successful, inserted analysis. Deducting up front would charge
+      // the user for analyses that fail at the AI step.
+      let willConsumeCredit = false;
+      if (hourlyCount >= perHour || dailyCount >= perDay) {
+        const balance = await getCreditBalanceForUser(userId);
+        if (balance <= 0) {
+          // Unchanged existing behavior: no credits, block exactly as before.
+          if (hourlyCount >= perHour) return { kind: "hour", used: hourlyCount, limit: perHour };
+          return { kind: "day", used: dailyCount, limit: perDay };
+        }
+        willConsumeCredit = true;
       }
 
       let aiResult: AIResult;
@@ -788,7 +801,24 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       }).catch((err) => {
         logger.warn({ err }, "[analyses] failed to record AI token usage");
       });
-      return { kind: "ok", analysis };
+
+      let creditBalanceAfter: number | undefined;
+      if (willConsumeCredit) {
+        // Same advisory-lock namespace topups.ts uses for approval grants,
+        // so a concurrent top-up approval for this user can't race this
+        // spend into a lost balance update. A purchased credit bypasses
+        // both the hourly and daily cap — "one more analysis, whenever,"
+        // not a pacing extension.
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${CREDIT_BALANCE_LOCK_NAMESPACE}::int, ${userId}::int)`);
+        creditBalanceAfter = await applyCreditLedgerEntry(tx, {
+          userId,
+          amount: -1,
+          source: "analysis_consumption",
+          sourceEventId: `analysis:${analysis.id}`,
+          analysisId: analysis.id,
+        });
+      }
+      return { kind: "ok", analysis, creditConsumed: willConsumeCredit, creditBalance: creditBalanceAfter };
     });
   }
 
@@ -868,7 +898,11 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   // next idle streak starts fresh from zero.
   void resetDormancyStreak(req.userId!);
 
-  res.status(201).json(analysis);
+  res.status(201).json({
+    ...analysis,
+    creditConsumed: outcome.creditConsumed,
+    ...(outcome.creditBalance !== undefined ? { creditBalance: outcome.creditBalance } : {}),
+  });
 });
 
 router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {

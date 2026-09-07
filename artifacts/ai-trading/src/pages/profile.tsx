@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, Trash2, KeyRound } from "lucide-react";
+import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, Trash2, KeyRound, Wallet } from "lucide-react";
 import { avatarSrc, uploadAvatar, validateAvatarFile } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,9 @@ import {
   useLogout,
   useDeleteAccount,
   getGetMeQueryKey,
-  useGetProgressionSummary
+  useGetProgressionSummary,
+  useGetCreditBalance,
+  getGetCreditBalanceQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -124,6 +126,7 @@ export default function ProfilePage() {
   };
 
   const { data: progressionSummary } = useGetProgressionSummary();
+  const { data: creditBalanceData } = useGetCreditBalance({ query: { queryKey: getGetCreditBalanceQueryKey() } });
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
@@ -557,6 +560,19 @@ export default function ProfilePage() {
                     {t.profile_extra.notifications_link_subtitle}
                   </p>
                 </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+              <button
+                type="button"
+                className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => setLocation("/topup")}
+                data-testid="button-go-topup"
+              >
+                <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="flex-1 text-sm font-medium text-foreground">{t.profile.credit_topup_nav_label}</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mr-1" data-testid="badge-credit-balance">
+                  {creditBalanceData?.balance ?? 0}
+                </Badge>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
             </Card>

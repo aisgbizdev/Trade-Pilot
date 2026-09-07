@@ -40,6 +40,8 @@ tags:
     description: Public AI transparency dashboard — aggregated outcome ledger (task #164)
   - name: Storage
     description: Object storage upload and serving endpoints.
+  - name: topups
+    description: Manual GoPay QRIS credit top-up requests and balance
 paths:
 
   /progression/summary:
@@ -125,6 +127,118 @@ paths:
           description: Idempotent backfill result
           content: { application/json: { schema: { $ref: "#/components/schemas/ProgressionBackfillResult" } } }
         "403": { description: Admin access required }
+  /topups/config:
+    get:
+      operationId: getTopupConfig
+      tags: [topups]
+      summary: Get the current Rupiah-to-credit conversion rate and QRIS image URL
+      responses:
+        "200":
+          description: Top-up configuration
+          content: { application/json: { schema: { $ref: "#/components/schemas/TopupConfig" } } }
+  /topups/balance:
+    get:
+      operationId: getCreditBalance
+      tags: [topups]
+      summary: Get the authenticated user's analysis credit balance
+      responses:
+        "200":
+          description: Credit balance
+          content: { application/json: { schema: { $ref: "#/components/schemas/CreditBalance" } } }
+        "401": { description: Not authenticated }
+  /topups:
+    post:
+      operationId: createTopupRequest
+      tags: [topups]
+      summary: Submit a manual top-up request for admin review
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateTopupRequestBody" } } }
+      responses:
+        "201":
+          description: Top-up request submitted
+          content: { application/json: { schema: { $ref: "#/components/schemas/TopupRequest" } } }
+        "400":
+          description: Invalid amount
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "401": { description: Not authenticated }
+  /topups/mine:
+    get:
+      operationId: getMyTopupRequests
+      tags: [topups]
+      summary: List the authenticated user's own top-up request history
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        "200":
+          description: Own top-up request history
+          content: { application/json: { schema: { $ref: "#/components/schemas/TopupRequestList" } } }
+        "401": { description: Not authenticated }
+  /admin/topups:
+    get:
+      operationId: getPendingTopupRequests
+      tags: [admin]
+      summary: List top-up requests for admin review
+      parameters:
+        - name: status
+          in: query
+          description: Filter by review status; defaults to pending
+          schema: { type: string, enum: [pending, approved, rejected], default: pending }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        "200":
+          description: Top-up requests
+          content: { application/json: { schema: { $ref: "#/components/schemas/TopupRequestWithUserList" } } }
+        "403":
+          description: Forbidden
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /admin/topups/{id}/status:
+    patch:
+      operationId: reviewCreditTopupRequest
+      tags: [admin]
+      summary: Approve or reject a top-up request, crediting the user's balance on approval
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ReviewTopupRequestBody" } } }
+      responses:
+        "200":
+          description: Updated top-up request
+          content: { application/json: { schema: { $ref: "#/components/schemas/TopupRequest" } } }
+        "400":
+          description: Invalid status
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: Forbidden
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "404":
+          description: Request not found
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "409":
+          description: Request already reviewed
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /admin/topups/config:
+    patch:
+      operationId: updateTopupConfig
+      tags: [admin]
+      summary: Set the Rupiah-to-credit conversion rate
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateTopupConfigBody" } } }
+      responses:
+        "200":
+          description: Updated top-up configuration
+          content: { application/json: { schema: { $ref: "#/components/schemas/TopupConfig" } } }
+        "400":
+          description: Invalid rate
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: Forbidden
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
   /analyses/guardrails:
     get:
       operationId: getGuardrails
@@ -1034,7 +1148,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Analysis"
+                $ref: "#/components/schemas/CreateAnalysisResult"
         "401":
           description: Not authenticated
           content:
@@ -3790,6 +3904,18 @@ components:
         - validUntil
         - createdAt
 
+    CreateAnalysisResult:
+      description: The 201 response of POST /analyses — an Analysis, plus whether it consumed a purchased credit instead of counting against the free quota.
+      allOf:
+        - $ref: "#/components/schemas/Analysis"
+        - type: object
+          properties:
+            creditConsumed:
+              type: boolean
+            creditBalance:
+              type: integer
+          required: [creditConsumed]
+
     AnalysisNoteResponse:
       type: object
       description: "Response shape for PUT /analyses/{id}/note — the persisted note body (null when cleared) and the server-stamped updatedAt."
@@ -4141,7 +4267,158 @@ components:
             remaining:
               type: integer
           required: [limit, used, remaining]
-      required: [unlimited, hourly, daily]
+        credits:
+          type: object
+          properties:
+            balance:
+              type: integer
+          required: [balance]
+      required: [unlimited, hourly, daily, credits]
+
+    TopupConfig:
+      type: object
+      properties:
+        rupiahPerCredit:
+          type: integer
+        qrisImageUrl:
+          type: string
+      required: [rupiahPerCredit, qrisImageUrl]
+
+    CreditBalance:
+      type: object
+      properties:
+        balance:
+          type: integer
+      required: [balance]
+
+    CreateTopupRequestBody:
+      type: object
+      properties:
+        amountRupiah:
+          type: integer
+          minimum: 1
+        paymentReferenceNote:
+          type: string
+        proofObjectPath:
+          type: string
+      required: [amountRupiah]
+
+    TopupRequestStatus:
+      type: string
+      enum: [pending, approved, rejected]
+
+    TopupRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        amountRupiah:
+          type: integer
+        creditsRequested:
+          type: integer
+        conversionRateSnapshot:
+          type: integer
+        paymentReferenceNote:
+          type: string
+          nullable: true
+        proofObjectPath:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/TopupRequestStatus"
+        reviewedByUserId:
+          type: integer
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewNote:
+          type: string
+          nullable: true
+        creditsGranted:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - amountRupiah
+        - creditsRequested
+        - conversionRateSnapshot
+        - paymentReferenceNote
+        - proofObjectPath
+        - status
+        - reviewedByUserId
+        - reviewedAt
+        - reviewNote
+        - creditsGranted
+        - createdAt
+
+    TopupRequestWithUser:
+      allOf:
+        - $ref: "#/components/schemas/TopupRequest"
+        - type: object
+          properties:
+            userEmail:
+              type: string
+            userDisplayName:
+              type: string
+          required: [userEmail, userDisplayName]
+
+    TopupRequestList:
+      type: object
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopupRequest"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [requests, total, page, limit]
+
+    TopupRequestWithUserList:
+      type: object
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopupRequestWithUser"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [requests, total, page, limit]
+
+    ReviewTopupRequestBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        creditsGranted:
+          type: integer
+        reviewNote:
+          type: string
+      required: [status]
+
+    UpdateTopupConfigBody:
+      type: object
+      properties:
+        rupiahPerCredit:
+          type: integer
+          minimum: 1
+      required: [rupiahPerCredit]
 
     PersonalAnalytics:
       type: object

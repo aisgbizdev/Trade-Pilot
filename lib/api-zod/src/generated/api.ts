@@ -5,7 +5,8 @@
  * AI Trading Assistant API
  * OpenAPI spec version: 0.1.0
  */
-import * as zod from "zod";
+import * as zod from 'zod';
+
 
 /**
  * @summary Get the authenticated user's private progression summary
@@ -18,154 +19,119 @@ export const getProgressionSummaryResponseMasteryLevelMin = 0;
 
 export const getProgressionSummaryResponseCurrentLevelXpMin = 0;
 
+
 export const getProgressionSummaryResponseCurrentStreakMin = 0;
 
 export const getProgressionSummaryResponseLongestStreakMin = 0;
 
+
+
 export const GetProgressionSummaryResponse = zod.object({
-  totalXp: zod.number().int().min(getProgressionSummaryResponseTotalXpMin),
-  level: zod.number().int().min(1).max(getProgressionSummaryResponseLevelMax),
-  masteryLevel: zod
-    .number()
-    .int()
-    .min(getProgressionSummaryResponseMasteryLevelMin),
-  rank: zod.string(),
-  currentLevelXp: zod
-    .number()
-    .int()
-    .min(getProgressionSummaryResponseCurrentLevelXpMin)
-    .describe("Absolute XP floor for current level"),
-  nextLevelXp: zod
-    .number()
-    .int()
-    .min(1)
-    .describe("Absolute XP target for next level or Mastery step"),
-  currentStreak: zod
-    .number()
-    .int()
-    .min(getProgressionSummaryResponseCurrentStreakMin),
-  longestStreak: zod
-    .number()
-    .int()
-    .min(getProgressionSummaryResponseLongestStreakMin),
-});
+  "totalXp": zod.number().int().min(getProgressionSummaryResponseTotalXpMin),
+  "level": zod.number().int().min(1).max(getProgressionSummaryResponseLevelMax),
+  "masteryLevel": zod.number().int().min(getProgressionSummaryResponseMasteryLevelMin),
+  "rank": zod.string(),
+  "currentLevelXp": zod.number().int().min(getProgressionSummaryResponseCurrentLevelXpMin).describe('Absolute XP floor for current level'),
+  "nextLevelXp": zod.number().int().min(1).describe('Absolute XP target for next level or Mastery step'),
+  "currentStreak": zod.number().int().min(getProgressionSummaryResponseCurrentStreakMin),
+  "longestStreak": zod.number().int().min(getProgressionSummaryResponseLongestStreakMin)
+})
+
 
 /**
  * @summary Get private achievement catalog and unlock state
  */
 export const GetProgressionCatalogResponse = zod.object({
-  achievements: zod.array(
-    zod.object({
-      key: zod.string(),
-      unlocked: zod.boolean(),
-      unlockedAt: zod.coerce.date().nullable(),
-    }),
-  ),
-});
+  "achievements": zod.array(zod.object({
+  "key": zod.string(),
+  "unlocked": zod.boolean(),
+  "unlockedAt": zod.coerce.date().nullable()
+}))
+})
+
 
 /**
  * @summary Get private append-only XP history
  */
 export const getProgressionHistoryQueryLimitMax = 100;
 
+
+
 export const GetProgressionHistoryQueryParams = zod.object({
-  limit: zod.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(getProgressionHistoryQueryLimitMax)
-    .optional(),
-});
+  "limit": zod.coerce.number().int().min(1).max(getProgressionHistoryQueryLimitMax).optional()
+})
 
 export const GetProgressionHistoryResponse = zod.object({
-  entries: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      source: zod.string(),
-      xp: zod.number().int(),
-      dayBucket: zod.string(),
-      ruleVersion: zod.string(),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-});
+  "entries": zod.array(zod.object({
+  "id": zod.number().int(),
+  "source": zod.string(),
+  "xp": zod.number().int(),
+  "dayBucket": zod.string(),
+  "ruleVersion": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
 
 /**
  * @summary Record a server-verifiable checklist or guide completion
  */
 export const recordProgressionActivityBodyTokenMin = 32;
 
+
+
 export const RecordProgressionActivityBody = zod.object({
-  token: zod.string().min(recordProgressionActivityBodyTokenMin),
-});
+  "token": zod.string().min(recordProgressionActivityBodyTokenMin)
+})
 
 export const RecordProgressionActivityResponse = zod.object({
-  awarded: zod.boolean(),
-  xp: zod.number().int(),
-  reason: zod.string().optional(),
-});
+  "awarded": zod.boolean(),
+  "xp": zod.number().int(),
+  "reason": zod.string().optional()
+})
+
 
 /**
  * @summary Issue a one-time server evidence token for a known guide or checklist
  */
 export const StartProgressionEvidenceBody = zod.object({
-  source: zod.enum(["pre_analysis_checklist", "guide_completion"]),
-  guideId: zod
-    .enum([
-      "how-ai-works",
-      "feature-map",
-      "reading-analysis",
-      "validity-confidence",
-      "adaptive-plan",
-      "personal-progression",
-      "analysis-workflow",
-      "bias-confidence-validity",
-      "levels-chart",
-      "timeframe-risk-map",
-      "technical-fundamental",
-      "standard-plan",
-      "adaptive-position-plan",
-      "account-rules",
-      "terms",
-    ])
-    .optional(),
-  checklist: zod
-    .object({
-      instrument: zod.string(),
-      timeframe: zod.string(),
-    })
-    .optional(),
-});
+  "source": zod.enum(['pre_analysis_checklist', 'guide_completion']),
+  "guideId": zod.enum(['how-ai-works', 'feature-map', 'reading-analysis', 'validity-confidence', 'adaptive-plan', 'personal-progression', 'analysis-workflow', 'bias-confidence-validity', 'levels-chart', 'timeframe-risk-map', 'technical-fundamental', 'standard-plan', 'adaptive-position-plan', 'account-rules', 'terms']).optional(),
+  "checklist": zod.object({
+  "instrument": zod.string(),
+  "timeframe": zod.string()
+}).optional()
+})
 
 export const StartProgressionEvidenceResponse = zod.object({
-  token: zod.string(),
-  source: zod.string(),
-  subject: zod.string(),
-  minimumCompleteAt: zod.coerce.date(),
-});
+  "token": zod.string(),
+  "source": zod.string(),
+  "subject": zod.string(),
+  "minimumCompleteAt": zod.coerce.date()
+})
+
 
 /**
  * @summary Read-only progression ledger audit; never a leaderboard
  */
 export const GetProgressionAuditQueryParams = zod.object({
-  userId: zod.coerce.number().int().optional(),
-});
+  "userId": zod.coerce.number().int().optional()
+})
 
 export const GetProgressionAuditResponse = zod.object({
-  entries: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      userId: zod.number().int(),
-      source: zod.string(),
-      sourceEventId: zod.string(),
-      xp: zod.number().int(),
-      dayBucket: zod.string(),
-      ruleVersion: zod.string(),
-      metadata: zod.record(zod.string(), zod.unknown()),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-});
+  "entries": zod.array(zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "source": zod.string(),
+  "sourceEventId": zod.string(),
+  "xp": zod.number().int(),
+  "dayBucket": zod.string(),
+  "ruleVersion": zod.string(),
+  "metadata": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.coerce.date()
+}))
+})
+
 
 /**
  * @summary Safely backfill only unequivocal historical progression evidence
@@ -174,123 +140,288 @@ export const backfillProgressionResponseAwardedMin = 0;
 
 export const backfillProgressionResponseScannedMin = 0;
 
+
+
 export const BackfillProgressionResponse = zod.object({
-  awarded: zod.number().int().min(backfillProgressionResponseAwardedMin),
-  scanned: zod.number().int().min(backfillProgressionResponseScannedMin),
-  ruleVersion: zod.string(),
-});
+  "awarded": zod.number().int().min(backfillProgressionResponseAwardedMin),
+  "scanned": zod.number().int().min(backfillProgressionResponseScannedMin),
+  "ruleVersion": zod.string()
+})
+
+
+/**
+ * @summary Get the current Rupiah-to-credit conversion rate and QRIS image URL
+ */
+export const GetTopupConfigResponse = zod.object({
+  "rupiahPerCredit": zod.number().int(),
+  "qrisImageUrl": zod.string()
+})
+
+
+/**
+ * @summary Get the authenticated user's analysis credit balance
+ */
+export const GetCreditBalanceResponse = zod.object({
+  "balance": zod.number().int()
+})
+
+
+/**
+ * @summary Submit a manual top-up request for admin review
+ */
+
+
+
+export const CreateTopupRequestBody = zod.object({
+  "amountRupiah": zod.number().int().min(1),
+  "paymentReferenceNote": zod.string().optional(),
+  "proofObjectPath": zod.string().optional()
+})
+
+export const CreateTopupRequestResponse = zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "amountRupiah": zod.number().int(),
+  "creditsRequested": zod.number().int(),
+  "conversionRateSnapshot": zod.number().int(),
+  "paymentReferenceNote": zod.string().nullable(),
+  "proofObjectPath": zod.string().nullable(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "reviewedByUserId": zod.number().int().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reviewNote": zod.string().nullable(),
+  "creditsGranted": zod.number().int().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List the authenticated user's own top-up request history
+ */
+export const getMyTopupRequestsQueryPageDefault = 1;
+export const getMyTopupRequestsQueryLimitDefault = 20;
+
+export const GetMyTopupRequestsQueryParams = zod.object({
+  "page": zod.coerce.number().int().default(getMyTopupRequestsQueryPageDefault),
+  "limit": zod.coerce.number().int().default(getMyTopupRequestsQueryLimitDefault)
+})
+
+export const GetMyTopupRequestsResponse = zod.object({
+  "requests": zod.array(zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "amountRupiah": zod.number().int(),
+  "creditsRequested": zod.number().int(),
+  "conversionRateSnapshot": zod.number().int(),
+  "paymentReferenceNote": zod.string().nullable(),
+  "proofObjectPath": zod.string().nullable(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "reviewedByUserId": zod.number().int().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reviewNote": zod.string().nullable(),
+  "creditsGranted": zod.number().int().nullable(),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "limit": zod.number().int()
+})
+
+
+/**
+ * @summary List top-up requests for admin review
+ */
+export const getPendingTopupRequestsQueryStatusDefault = `pending`;
+export const getPendingTopupRequestsQueryPageDefault = 1;
+export const getPendingTopupRequestsQueryLimitDefault = 20;
+
+export const GetPendingTopupRequestsQueryParams = zod.object({
+  "status": zod.enum(['pending', 'approved', 'rejected']).default(getPendingTopupRequestsQueryStatusDefault).describe('Filter by review status; defaults to pending'),
+  "page": zod.coerce.number().int().default(getPendingTopupRequestsQueryPageDefault),
+  "limit": zod.coerce.number().int().default(getPendingTopupRequestsQueryLimitDefault)
+})
+
+export const GetPendingTopupRequestsResponse = zod.object({
+  "requests": zod.array(zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "amountRupiah": zod.number().int(),
+  "creditsRequested": zod.number().int(),
+  "conversionRateSnapshot": zod.number().int(),
+  "paymentReferenceNote": zod.string().nullable(),
+  "proofObjectPath": zod.string().nullable(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "reviewedByUserId": zod.number().int().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reviewNote": zod.string().nullable(),
+  "creditsGranted": zod.number().int().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "userEmail": zod.string(),
+  "userDisplayName": zod.string()
+}))),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "limit": zod.number().int()
+})
+
+
+/**
+ * @summary Approve or reject a top-up request, crediting the user's balance on approval
+ */
+export const ReviewCreditTopupRequestParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const ReviewCreditTopupRequestBody = zod.object({
+  "status": zod.enum(['approved', 'rejected']),
+  "creditsGranted": zod.number().int().optional(),
+  "reviewNote": zod.string().optional()
+})
+
+export const ReviewCreditTopupRequestResponse = zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "amountRupiah": zod.number().int(),
+  "creditsRequested": zod.number().int(),
+  "conversionRateSnapshot": zod.number().int(),
+  "paymentReferenceNote": zod.string().nullable(),
+  "proofObjectPath": zod.string().nullable(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "reviewedByUserId": zod.number().int().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "reviewNote": zod.string().nullable(),
+  "creditsGranted": zod.number().int().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Set the Rupiah-to-credit conversion rate
+ */
+
+
+
+export const UpdateTopupConfigBody = zod.object({
+  "rupiahPerCredit": zod.number().int().min(1)
+})
+
+export const UpdateTopupConfigResponse = zod.object({
+  "rupiahPerCredit": zod.number().int(),
+  "qrisImageUrl": zod.string()
+})
+
 
 /**
  * @summary Detect active soft warnings for the requested instrument
  */
 export const GetGuardrailsQueryParams = zod.object({
-  instrument: zod.coerce.string(),
-});
+  "instrument": zod.coerce.string()
+})
 
 export const GetGuardrailsResponse = zod.object({
-  signals: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
-  prefs: zod.record(zod.string(), zod.unknown()).optional(),
-});
+  "signals": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "prefs": zod.record(zod.string(), zod.unknown()).optional()
+})
+
 
 /**
  * @summary Record impression or override of a guardrail
  */
 export const RecordGuardrailTelemetryBody = zod.object({
-  kind: zod.string(),
-  instrument: zod.string().optional(),
-  proceeded: zod.boolean().optional(),
-  metadata: zod.record(zod.string(), zod.unknown()).optional(),
-});
+  "kind": zod.string(),
+  "instrument": zod.string().optional(),
+  "proceeded": zod.boolean().optional(),
+  "metadata": zod.record(zod.string(), zod.unknown()).optional()
+})
 
 export const RecordGuardrailTelemetryResponse = zod.object({
-  ok: zod.boolean(),
-  id: zod.number().int(),
-});
+  "ok": zod.boolean(),
+  "id": zod.number().int()
+})
+
 
 /**
  * @summary Record an explicit decision to wait
  */
 export const WaitGuardrailParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const WaitGuardrailResponse = zod.object({
-  awarded: zod.boolean(),
-  xp: zod.number().int(),
-  reason: zod.string().optional(),
-});
+  "awarded": zod.boolean(),
+  "xp": zod.number().int(),
+  "reason": zod.string().optional()
+})
+
 
 /**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
-  status: zod.string(),
-});
+  "status": zod.string()
+})
+
 
 /**
  * Broker-neutral disclosure for the single TP Standard Trading Rules definition. This endpoint intentionally has no broker selector.
  * @summary Get the fixed TP Standard Trading Rules
  */
-export const GetStandardTradingRulesResponse = zod
-  .object({
-    name: zod.string(),
-    version: zod.string(),
-    effectiveDate: zod.coerce.date(),
-    sourceDocument: zod.string(),
-    fixedRate: zod.object({
-      usd: zod.number(),
-      idr: zod.number(),
-      label: zod.string(),
-    }),
-    account: zod.object({
-      minimumDepositUsd: zod.number(),
-      minimumLot: zod.number(),
-      maximumLot: zod.number(),
-      maintenanceMarginPercent: zod.number(),
-      marginCallBelowPercent: zod.number(),
-      marginCallRestorePercent: zod.number(),
-      autoLiquidationAtOrBelowPercent: zod.number(),
-      equityReviewThresholdUsd: zod.number(),
-      equityReviewThresholdIdr: zod.number(),
-    }),
-    transactionFormula: zod.string(),
-    instruments: zod.array(
-      zod.object({
-        code: zod.enum(["XUL10", "BCO10_BBJ", "HKK50_BBJ", "JPK50_BBJ"]),
-        product: zod.string(),
-        contractSize: zod.number(),
-        contractUnit: zod.enum(["troy ounce", "barrel", "USD/point"]),
-        tradingDays: zod.string(),
-        tradingHours: zod.object({
-          summer: zod.string(),
-          winter: zod.string(),
-        }),
-        initialMarginUsdPerLot: zod.number(),
-        facilityFeeUsdPerLotPerSide: zod.number().nullable(),
-        vatPercent: zod.number(),
-        rolloverUsdPerLotPerNight: zod.number(),
-        priceSource: zod.string(),
-        priceGuidance: zod.string(),
-        minimumSpread: zod.string(),
-        maximumSpread: zod.string(),
-        hecticSpread: zod.string(),
-        minimumPriceMovement: zod.string(),
-        limitStopRange: zod.string(),
-        deliveryBy: zod.string(),
-      }),
-    ),
-    disclaimer: zod.object({
-      id: zod.string(),
-      en: zod.string(),
-    }),
-    relationshipDisclosure: zod.object({
-      id: zod.string(),
-      en: zod.string(),
-    }),
-  })
-  .describe(
-    "The single broker-neutral ruleset used for TP Standard Trading Rules estimates.",
-  );
+export const GetStandardTradingRulesResponse = zod.object({
+  "name": zod.string(),
+  "version": zod.string(),
+  "effectiveDate": zod.coerce.date(),
+  "sourceDocument": zod.string(),
+  "fixedRate": zod.object({
+  "usd": zod.number(),
+  "idr": zod.number(),
+  "label": zod.string()
+}),
+  "account": zod.object({
+  "minimumDepositUsd": zod.number(),
+  "minimumLot": zod.number(),
+  "maximumLot": zod.number(),
+  "maintenanceMarginPercent": zod.number(),
+  "marginCallBelowPercent": zod.number(),
+  "marginCallRestorePercent": zod.number(),
+  "autoLiquidationAtOrBelowPercent": zod.number(),
+  "equityReviewThresholdUsd": zod.number(),
+  "equityReviewThresholdIdr": zod.number()
+}),
+  "transactionFormula": zod.string(),
+  "instruments": zod.array(zod.object({
+  "code": zod.enum(['XUL10', 'BCO10_BBJ', 'HKK50_BBJ', 'JPK50_BBJ']),
+  "product": zod.string(),
+  "contractSize": zod.number(),
+  "contractUnit": zod.enum(['troy ounce', 'barrel', 'USD/point']),
+  "tradingDays": zod.string(),
+  "tradingHours": zod.object({
+  "summer": zod.string(),
+  "winter": zod.string()
+}),
+  "initialMarginUsdPerLot": zod.number(),
+  "facilityFeeUsdPerLotPerSide": zod.number().nullable(),
+  "vatPercent": zod.number(),
+  "rolloverUsdPerLotPerNight": zod.number(),
+  "priceSource": zod.string(),
+  "priceGuidance": zod.string(),
+  "minimumSpread": zod.string(),
+  "maximumSpread": zod.string(),
+  "hecticSpread": zod.string(),
+  "minimumPriceMovement": zod.string(),
+  "limitStopRange": zod.string(),
+  "deliveryBy": zod.string()
+})),
+  "disclaimer": zod.object({
+  "id": zod.string(),
+  "en": zod.string()
+}),
+  "relationshipDisclosure": zod.object({
+  "id": zod.string(),
+  "en": zod.string()
+})
+}).describe('The single broker-neutral ruleset used for TP Standard Trading Rules estimates.')
+
 
 /**
  * @summary Register new user
@@ -301,43 +432,32 @@ export const registerBodySelectedModeDefault = `pro`;
 export const registerBodyRememberMeDefault = false;
 
 export const RegisterBody = zod.object({
-  email: zod.string().email(),
-  password: zod.string().min(registerBodyPasswordMin),
-  displayName: zod.string(),
-  selectedMode: zod
-    .enum(["beginner", "pro"])
-    .default(registerBodySelectedModeDefault),
-  securityQuestion: zod.string(),
-  securityAnswer: zod.string(),
-  rememberMe: zod.boolean().default(registerBodyRememberMeDefault),
-});
+  "email": zod.string().email(),
+  "password": zod.string().min(registerBodyPasswordMin),
+  "displayName": zod.string(),
+  "selectedMode": zod.enum(['beginner', 'pro']).default(registerBodySelectedModeDefault),
+  "securityQuestion": zod.string(),
+  "securityAnswer": zod.string(),
+  "rememberMe": zod.boolean().default(registerBodyRememberMeDefault)
+})
 
 export const RegisterResponse = zod.object({
-  user: zod.object({
-    id: zod.number().int(),
-    email: zod.string(),
-    displayName: zod.string(),
-    avatarUrl: zod
-      .string()
-      .nullish()
-      .describe(
-        "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
-      ),
-    role: zod.enum(["user", "admin", "super_admin"]),
-    selectedMode: zod.enum(["beginner", "pro"]),
-    themePreference: zod.enum(["light", "dark"]),
-    securityQuestion: zod.string().optional(),
-    onboardingCompleted: zod.boolean(),
-    createdAt: zod.coerce.date(),
-  }),
-  message: zod.string().optional(),
-  token: zod
-    .string()
-    .optional()
-    .describe(
-      "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
-    ),
-});
+  "user": zod.object({
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "avatarUrl": zod.string().nullish().describe('Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user\'s profile photo. Null if not set.'),
+  "role": zod.enum(['user', 'admin', 'super_admin']),
+  "selectedMode": zod.enum(['beginner', 'pro']),
+  "themePreference": zod.enum(['light', 'dark']),
+  "securityQuestion": zod.string().optional(),
+  "onboardingCompleted": zod.boolean(),
+  "createdAt": zod.coerce.date()
+}),
+  "message": zod.string().optional(),
+  "token": zod.string().optional().describe('Session token for mobile Bearer auth. Only present when a new session was created (login or register).')
+})
+
 
 /**
  * @summary Login user
@@ -345,106 +465,97 @@ export const RegisterResponse = zod.object({
 export const loginBodyRememberMeDefault = false;
 
 export const LoginBody = zod.object({
-  email: zod
-    .string()
-    .describe("Username or email used to identify the account"),
-  password: zod.string(),
-  rememberMe: zod.boolean().default(loginBodyRememberMeDefault),
-});
+  "email": zod.string().describe('Username or email used to identify the account'),
+  "password": zod.string(),
+  "rememberMe": zod.boolean().default(loginBodyRememberMeDefault)
+})
 
 export const LoginResponse = zod.object({
-  user: zod.object({
-    id: zod.number().int(),
-    email: zod.string(),
-    displayName: zod.string(),
-    avatarUrl: zod
-      .string()
-      .nullish()
-      .describe(
-        "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
-      ),
-    role: zod.enum(["user", "admin", "super_admin"]),
-    selectedMode: zod.enum(["beginner", "pro"]),
-    themePreference: zod.enum(["light", "dark"]),
-    securityQuestion: zod.string().optional(),
-    onboardingCompleted: zod.boolean(),
-    createdAt: zod.coerce.date(),
-  }),
-  message: zod.string().optional(),
-  token: zod
-    .string()
-    .optional()
-    .describe(
-      "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
-    ),
-});
+  "user": zod.object({
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "avatarUrl": zod.string().nullish().describe('Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user\'s profile photo. Null if not set.'),
+  "role": zod.enum(['user', 'admin', 'super_admin']),
+  "selectedMode": zod.enum(['beginner', 'pro']),
+  "themePreference": zod.enum(['light', 'dark']),
+  "securityQuestion": zod.string().optional(),
+  "onboardingCompleted": zod.boolean(),
+  "createdAt": zod.coerce.date()
+}),
+  "message": zod.string().optional(),
+  "token": zod.string().optional().describe('Session token for mobile Bearer auth. Only present when a new session was created (login or register).')
+})
+
 
 /**
  * @summary Logout user
  */
 export const LogoutResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Get current user
  */
 export const GetMeResponse = zod.object({
-  id: zod.number().int(),
-  email: zod.string(),
-  displayName: zod.string(),
-  avatarUrl: zod
-    .string()
-    .nullish()
-    .describe(
-      "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
-    ),
-  role: zod.enum(["user", "admin", "super_admin"]),
-  selectedMode: zod.enum(["beginner", "pro"]),
-  themePreference: zod.enum(["light", "dark"]),
-  securityQuestion: zod.string().optional(),
-  onboardingCompleted: zod.boolean(),
-  createdAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "avatarUrl": zod.string().nullish().describe('Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user\'s profile photo. Null if not set.'),
+  "role": zod.enum(['user', 'admin', 'super_admin']),
+  "selectedMode": zod.enum(['beginner', 'pro']),
+  "themePreference": zod.enum(['light', 'dark']),
+  "securityQuestion": zod.string().optional(),
+  "onboardingCompleted": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
 
 /**
  * @summary Get security question for email
  */
 export const GetForgotPasswordQuestionBody = zod.object({
-  email: zod.string().email(),
-});
+  "email": zod.string().email()
+})
 
 export const GetForgotPasswordQuestionResponse = zod.object({
-  securityQuestion: zod.string(),
-  email: zod.string(),
-});
+  "securityQuestion": zod.string(),
+  "email": zod.string()
+})
+
 
 /**
  * @summary Verify security answer and get reset token
  */
 export const VerifySecurityAnswerBody = zod.object({
-  email: zod.string().email(),
-  securityAnswer: zod.string(),
-});
+  "email": zod.string().email(),
+  "securityAnswer": zod.string()
+})
 
 export const VerifySecurityAnswerResponse = zod.object({
-  resetToken: zod.string(),
-  message: zod.string(),
-});
+  "resetToken": zod.string(),
+  "message": zod.string()
+})
+
 
 /**
  * @summary Reset password with token
  */
 export const resetPasswordBodyNewPasswordMin = 6;
 
+
+
 export const ResetPasswordBody = zod.object({
-  resetToken: zod.string(),
-  newPassword: zod.string().min(resetPasswordBodyNewPasswordMin),
-});
+  "resetToken": zod.string(),
+  "newPassword": zod.string().min(resetPasswordBodyNewPasswordMin)
+})
 
 export const ResetPasswordResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * Returns a presigned GCS URL for direct upload. The client sends JSON
@@ -452,199 +563,176 @@ export const ResetPasswordResponse = zod.object({
  * @summary Request a presigned URL for file upload
  */
 
+
+
+
+
 export const RequestUploadUrlBody = zod.object({
-  name: zod.string().min(1),
-  size: zod.number().int().min(1),
-  contentType: zod.string().min(1),
-});
+  "name": zod.string().min(1),
+  "size": zod.number().int().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
 
 export const RequestUploadUrlResponse = zod.object({
-  uploadURL: zod.string().url(),
-  objectPath: zod.string(),
-  metadata: zod
-    .object({
-      name: zod.string().min(1),
-      size: zod.number().int().min(1),
-      contentType: zod.string().min(1),
-    })
-    .optional(),
-});
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().int().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
 
 /**
  * @summary Serve an object entity from PRIVATE_OBJECT_DIR
  */
 export const GetStorageObjectParams = zod.object({
-  objectPath: zod.coerce.string(),
-});
+  "objectPath": zod.coerce.string()
+})
 
-export const GetStorageObjectResponse = zod.unknown();
+export const GetStorageObjectResponse = zod.unknown()
+
 
 /**
  * @summary Update user profile
  */
 export const updateProfileBodyAvatarUrlMax = 500;
 
+
+
 export const UpdateProfileBody = zod.object({
-  displayName: zod.string().optional(),
-  selectedMode: zod.enum(["beginner", "pro"]).optional(),
-  themePreference: zod.enum(["light", "dark"]).optional(),
-  onboardingCompleted: zod.boolean().optional(),
-  lang: zod
-    .enum(["en", "id"])
-    .optional()
-    .describe(
-      "UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user's chosen language.",
-    ),
-  avatarUrl: zod
-    .string()
-    .max(updateProfileBodyAvatarUrlMax)
-    .nullish()
-    .describe(
-      "Object-storage path returned by the storage upload flow. Pass `null` to remove the current avatar.",
-    ),
-});
+  "displayName": zod.string().optional(),
+  "selectedMode": zod.enum(['beginner', 'pro']).optional(),
+  "themePreference": zod.enum(['light', 'dark']).optional(),
+  "onboardingCompleted": zod.boolean().optional(),
+  "lang": zod.enum(['en', 'id']).optional().describe('UI language preference — synced from the client so background dispatchers (e.g. weekly trader-mirror report) render notifications in the user\'s chosen language.'),
+  "avatarUrl": zod.string().max(updateProfileBodyAvatarUrlMax).nullish().describe('Object-storage path returned by the storage upload flow. Pass `null` to remove the current avatar.')
+})
 
 export const UpdateProfileResponse = zod.object({
-  id: zod.number().int(),
-  email: zod.string(),
-  displayName: zod.string(),
-  avatarUrl: zod
-    .string()
-    .nullish()
-    .describe(
-      "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
-    ),
-  role: zod.enum(["user", "admin", "super_admin"]),
-  selectedMode: zod.enum(["beginner", "pro"]),
-  themePreference: zod.enum(["light", "dark"]),
-  securityQuestion: zod.string().optional(),
-  onboardingCompleted: zod.boolean(),
-  createdAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "avatarUrl": zod.string().nullish().describe('Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user\'s profile photo. Null if not set.'),
+  "role": zod.enum(['user', 'admin', 'super_admin']),
+  "selectedMode": zod.enum(['beginner', 'pro']),
+  "themePreference": zod.enum(['light', 'dark']),
+  "securityQuestion": zod.string().optional(),
+  "onboardingCompleted": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
 
 /**
  * @summary Change own password
  */
 export const changePasswordBodyNewPasswordMin = 6;
 
+
+
 export const ChangePasswordBody = zod.object({
-  currentPassword: zod.string(),
-  newPassword: zod.string().min(changePasswordBodyNewPasswordMin),
-});
+  "currentPassword": zod.string(),
+  "newPassword": zod.string().min(changePasswordBodyNewPasswordMin)
+})
 
 export const ChangePasswordResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Change security question
  */
 export const ChangeSecurityQuestionBody = zod.object({
-  currentPassword: zod.string(),
-  securityQuestion: zod.string(),
-  securityAnswer: zod.string(),
-});
+  "currentPassword": zod.string(),
+  "securityQuestion": zod.string(),
+  "securityAnswer": zod.string()
+})
 
 export const ChangeSecurityQuestionResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * Re-authenticates with `currentPassword`, then permanently deletes the authenticated user's account and every row that references it (analyses, notifications, sessions, push subscriptions, native push devices, journal entries, watchlist, alerts, etc.) via cascading foreign keys. Cannot be used to delete another user's account — the target is always the authenticated caller.
  * @summary Permanently delete the current user's own account
  */
 export const DeleteAccountBody = zod.object({
-  currentPassword: zod.string(),
-});
+  "currentPassword": zod.string()
+})
 
 export const DeleteAccountResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Get the current user's instrument watchlist
  */
 export const GetWatchlistResponse = zod.object({
-  items: zod.array(
-    zod.object({
-      instrument: zod.string(),
-      addedAt: zod.coerce.date(),
-      mostRecentAnalysisId: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "ID of the user's most recent analysis for this instrument, or null if none exists.",
-        ),
-      mostRecentAnalysisAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "Created-at of the most recent analysis for this instrument, or null if none exists.",
-        ),
-    }),
-  ),
-});
+  "items": zod.array(zod.object({
+  "instrument": zod.string(),
+  "addedAt": zod.coerce.date(),
+  "mostRecentAnalysisId": zod.number().int().nullish().describe('ID of the user\'s most recent analysis for this instrument, or null if none exists.'),
+  "mostRecentAnalysisAt": zod.coerce.date().nullish().describe('Created-at of the most recent analysis for this instrument, or null if none exists.')
+}))
+})
+
 
 /**
  * @summary Star an instrument
  */
 
+
+
 export const AddWatchlistItemBody = zod.object({
-  instrument: zod.string().min(1),
-});
+  "instrument": zod.string().min(1)
+})
 
 export const AddWatchlistItemResponse = zod.object({
-  instrument: zod.string(),
-  addedAt: zod.coerce.date(),
-  mostRecentAnalysisId: zod
-    .number()
-    .int()
-    .nullish()
-    .describe(
-      "ID of the user's most recent analysis for this instrument, or null if none exists.",
-    ),
-  mostRecentAnalysisAt: zod.coerce
-    .date()
-    .nullish()
-    .describe(
-      "Created-at of the most recent analysis for this instrument, or null if none exists.",
-    ),
-});
+  "instrument": zod.string(),
+  "addedAt": zod.coerce.date(),
+  "mostRecentAnalysisId": zod.number().int().nullish().describe('ID of the user\'s most recent analysis for this instrument, or null if none exists.'),
+  "mostRecentAnalysisAt": zod.coerce.date().nullish().describe('Created-at of the most recent analysis for this instrument, or null if none exists.')
+})
+
 
 /**
  * @summary Unstar an instrument
  */
 export const RemoveWatchlistItemParams = zod.object({
-  instrument: zod.coerce.string(),
-});
+  "instrument": zod.coerce.string()
+})
 
 export const RemoveWatchlistItemResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary List the current user's price alerts (active + recently triggered)
  */
 export const ListUserPriceAlertsResponse = zod.object({
-  alerts: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      instrument: zod.string(),
-      targetPrice: zod
-        .string()
-        .describe(
-          "Target price as a string, preserving the precision the user typed.",
-        ),
-      triggerDirection: zod.enum(["above", "below"]),
-      note: zod.string().nullish(),
-      status: zod.enum(["active", "triggered", "cancelled"]),
-      triggeredAt: zod.coerce.date().nullish(),
-      triggeredPrice: zod.string().nullish(),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-});
+  "alerts": zod.array(zod.object({
+  "id": zod.number().int(),
+  "instrument": zod.string(),
+  "targetPrice": zod.string().describe('Target price as a string, preserving the precision the user typed.'),
+  "triggerDirection": zod.enum(['above', 'below']),
+  "note": zod.string().nullish(),
+  "status": zod.enum(['active', 'triggered', 'cancelled']),
+  "triggeredAt": zod.coerce.date().nullish(),
+  "triggeredPrice": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
 
 /**
  * @summary Create a new price alert for an instrument
@@ -652,107 +740,76 @@ export const ListUserPriceAlertsResponse = zod.object({
 
 export const createUserPriceAlertBodyNoteMax = 200;
 
+
+
 export const CreateUserPriceAlertBody = zod.object({
-  instrument: zod.string().min(1),
-  targetPrice: zod
-    .number()
-    .describe("Target price. Must be a positive finite number."),
-  triggerDirection: zod.enum(["above", "below"]),
-  note: zod.string().max(createUserPriceAlertBodyNoteMax).nullish(),
-  lang: zod
-    .enum(["en", "id"])
-    .optional()
-    .describe(
-      "UI language at create time; controls push notification language.",
-    ),
-});
+  "instrument": zod.string().min(1),
+  "targetPrice": zod.number().describe('Target price. Must be a positive finite number.'),
+  "triggerDirection": zod.enum(['above', 'below']),
+  "note": zod.string().max(createUserPriceAlertBodyNoteMax).nullish(),
+  "lang": zod.enum(['en', 'id']).optional().describe('UI language at create time; controls push notification language.')
+})
 
 export const CreateUserPriceAlertResponse = zod.object({
-  id: zod.number().int(),
-  instrument: zod.string(),
-  targetPrice: zod
-    .string()
-    .describe(
-      "Target price as a string, preserving the precision the user typed.",
-    ),
-  triggerDirection: zod.enum(["above", "below"]),
-  note: zod.string().nullish(),
-  status: zod.enum(["active", "triggered", "cancelled"]),
-  triggeredAt: zod.coerce.date().nullish(),
-  triggeredPrice: zod.string().nullish(),
-  createdAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "instrument": zod.string(),
+  "targetPrice": zod.string().describe('Target price as a string, preserving the precision the user typed.'),
+  "triggerDirection": zod.enum(['above', 'below']),
+  "note": zod.string().nullish(),
+  "status": zod.enum(['active', 'triggered', 'cancelled']),
+  "triggeredAt": zod.coerce.date().nullish(),
+  "triggeredPrice": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
 
 /**
  * @summary Delete one of the user's price alerts
  */
 export const DeleteUserPriceAlertParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const DeleteUserPriceAlertResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary List the current user's trade journal entries with optional filters
  */
 export const listJournalEntriesQueryLimitMax = 500;
 
+
+
 export const ListJournalEntriesQueryParams = zod.object({
-  instrument: zod.coerce.string().optional(),
-  outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]).optional(),
-  from: zod.date().optional(),
-  to: zod.date().optional(),
-  limit: zod.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(listJournalEntriesQueryLimitMax)
-    .optional(),
-});
+  "instrument": zod.coerce.string().optional(),
+  "outcome": zod.enum(['win', 'loss', 'breakeven', 'open', 'skipped']).optional(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "limit": zod.coerce.number().int().min(1).max(listJournalEntriesQueryLimitMax).optional()
+})
 
 export const ListJournalEntriesResponse = zod.object({
-  entries: zod.array(
-    zod
-      .object({
-        id: zod.number().int(),
-        analysisId: zod
-          .number()
-          .int()
-          .nullish()
-          .describe(
-            "Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.",
-          ),
-        instrument: zod.string(),
-        side: zod.enum(["buy", "sell"]),
-        entryPrice: zod.string().nullish(),
-        exitPrice: zod.string().nullish(),
-        quantity: zod.string().nullish(),
-        pnlAmount: zod
-          .string()
-          .nullish()
-          .describe(
-            "Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.",
-          ),
-        pnlPercent: zod
-          .string()
-          .nullish()
-          .describe(
-            "Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.",
-          ),
-        outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]),
-        mood: zod.string().nullish(),
-        note: zod.string().nullish(),
-        tradedAt: zod.coerce.date(),
-        createdAt: zod.coerce.date(),
-        updatedAt: zod.coerce.date(),
-      })
-      .describe(
-        "A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.",
-      ),
-  ),
-});
+  "entries": zod.array(zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int().nullish().describe('Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.'),
+  "instrument": zod.string(),
+  "side": zod.enum(['buy', 'sell']),
+  "entryPrice": zod.string().nullish(),
+  "exitPrice": zod.string().nullish(),
+  "quantity": zod.string().nullish(),
+  "pnlAmount": zod.string().nullish().describe('Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.'),
+  "pnlPercent": zod.string().nullish().describe('Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.'),
+  "outcome": zod.enum(['win', 'loss', 'breakeven', 'open', 'skipped']),
+  "mood": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "tradedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).describe('A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.'))
+})
+
 
 /**
  * @summary Log a new manual trade-journal entry (optionally linked to an analysis)
@@ -763,194 +820,116 @@ export const createJournalEntryBodyMoodMax = 40;
 
 export const createJournalEntryBodyNoteMax = 2000;
 
-export const CreateJournalEntryBody = zod.object({
-  analysisId: zod.number().int().nullish(),
-  instrument: zod.string().min(1).max(createJournalEntryBodyInstrumentMax),
-  side: zod.enum(["buy", "sell"]),
-  entryPrice: zod.union([zod.string(), zod.number()]).nullish(),
-  exitPrice: zod.union([zod.string(), zod.number()]).nullish(),
-  quantity: zod.union([zod.string(), zod.number()]).nullish(),
-  pnlAmount: zod.union([zod.string(), zod.number()]).nullish(),
-  pnlPercent: zod.union([zod.string(), zod.number()]).nullish(),
-  outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]).optional(),
-  mood: zod.string().max(createJournalEntryBodyMoodMax).nullish(),
-  note: zod.string().max(createJournalEntryBodyNoteMax).nullish(),
-  tradedAt: zod.coerce.date().optional(),
-});
 
-export const CreateJournalEntryResponse = zod
-  .object({
-    id: zod.number().int(),
-    analysisId: zod
-      .number()
-      .int()
-      .nullish()
-      .describe(
-        "Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.",
-      ),
-    instrument: zod.string(),
-    side: zod.enum(["buy", "sell"]),
-    entryPrice: zod.string().nullish(),
-    exitPrice: zod.string().nullish(),
-    quantity: zod.string().nullish(),
-    pnlAmount: zod
-      .string()
-      .nullish()
-      .describe(
-        "Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.",
-      ),
-    pnlPercent: zod
-      .string()
-      .nullish()
-      .describe(
-        "Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.",
-      ),
-    outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]),
-    mood: zod.string().nullish(),
-    note: zod.string().nullish(),
-    tradedAt: zod.coerce.date(),
-    createdAt: zod.coerce.date(),
-    updatedAt: zod.coerce.date(),
-  })
-  .describe(
-    "A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.",
-  );
+
+export const CreateJournalEntryBody = zod.object({
+  "analysisId": zod.number().int().nullish(),
+  "instrument": zod.string().min(1).max(createJournalEntryBodyInstrumentMax),
+  "side": zod.enum(['buy', 'sell']),
+  "entryPrice": zod.union([zod.string(),zod.number()]).nullish(),
+  "exitPrice": zod.union([zod.string(),zod.number()]).nullish(),
+  "quantity": zod.union([zod.string(),zod.number()]).nullish(),
+  "pnlAmount": zod.union([zod.string(),zod.number()]).nullish(),
+  "pnlPercent": zod.union([zod.string(),zod.number()]).nullish(),
+  "outcome": zod.enum(['win', 'loss', 'breakeven', 'open', 'skipped']).optional(),
+  "mood": zod.string().max(createJournalEntryBodyMoodMax).nullish(),
+  "note": zod.string().max(createJournalEntryBodyNoteMax).nullish(),
+  "tradedAt": zod.coerce.date().optional()
+})
+
+export const CreateJournalEntryResponse = zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int().nullish().describe('Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.'),
+  "instrument": zod.string(),
+  "side": zod.enum(['buy', 'sell']),
+  "entryPrice": zod.string().nullish(),
+  "exitPrice": zod.string().nullish(),
+  "quantity": zod.string().nullish(),
+  "pnlAmount": zod.string().nullish().describe('Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.'),
+  "pnlPercent": zod.string().nullish().describe('Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.'),
+  "outcome": zod.enum(['win', 'loss', 'breakeven', 'open', 'skipped']),
+  "mood": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "tradedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).describe('A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.')
+
 
 /**
  * @summary Anonymised long-vs-short aggregate for an instrument across all users (last 7 days)
  */
 export const GetJournalSentimentQueryParams = zod.object({
-  instrument: zod.coerce.string(),
-});
+  "instrument": zod.coerce.string()
+})
 
-export const GetJournalSentimentResponse = zod
-  .object({
-    instrument: zod.string(),
-    windowDays: zod.number().int(),
-    minSampleSize: zod.number().int(),
-    minDistinctTraders: zod.number().int(),
-    sampleSize: zod
-      .number()
-      .int()
-      .nullable()
-      .describe(
-        "Number of directional (buy\/sell) entries in the window. Null when `gated` is true (suppressed to prevent membership inference on thin instruments).",
-      ),
-    distinctTraders: zod
-      .number()
-      .int()
-      .nullable()
-      .describe(
-        "Number of distinct user IDs contributing entries. Null when `gated` is true.",
-      ),
-    gated: zod
-      .boolean()
-      .describe(
-        "True when sample is below thresholds; percentages, sampleSize, and distinctTraders are all null.",
-      ),
-    buyPct: zod.number().int().nullable(),
-    sellPct: zod.number().int().nullable(),
-  })
-  .describe(
-    "Anonymised long-vs-short aggregate for an instrument over the last `windowDays`, gated when sample is too small to safely de-identify.",
-  );
+export const GetJournalSentimentResponse = zod.object({
+  "instrument": zod.string(),
+  "windowDays": zod.number().int(),
+  "minSampleSize": zod.number().int(),
+  "minDistinctTraders": zod.number().int(),
+  "sampleSize": zod.number().int().nullable().describe('Number of directional (buy\/sell) entries in the window. Null when `gated` is true (suppressed to prevent membership inference on thin instruments).'),
+  "distinctTraders": zod.number().int().nullable().describe('Number of distinct user IDs contributing entries. Null when `gated` is true.'),
+  "gated": zod.boolean().describe('True when sample is below thresholds; percentages, sampleSize, and distinctTraders are all null.'),
+  "buyPct": zod.number().int().nullable(),
+  "sellPct": zod.number().int().nullable()
+}).describe('Anonymised long-vs-short aggregate for an instrument over the last `windowDays`, gated when sample is too small to safely de-identify.')
+
 
 /**
  * @summary Summary stats for the user's trade journal (win rate, avg P/L, best/worst)
  */
 export const GetJournalStatsQueryParams = zod.object({
-  from: zod.date().optional(),
-  to: zod.date().optional(),
-});
+  "from": zod.date().optional(),
+  "to": zod.date().optional()
+})
 
-export const GetJournalStatsResponse = zod
-  .object({
-    totals: zod.object({
-      entries: zod.number().int(),
-      wins: zod.number().int(),
-      losses: zod.number().int(),
-      breakevens: zod.number().int(),
-      open: zod.number().int(),
-      skipped: zod.number().int(),
-      resolved: zod.number().int(),
-    }),
-    winRate: zod
-      .number()
-      .nullish()
-      .describe("wins \/ (wins + losses); null when no resolved trades."),
-    avgPnlPercent: zod.number().nullish(),
-    avgPnlAmount: zod.number().nullish(),
-    bestInstrument: zod
-      .union([
-        zod
-          .object({
-            key: zod.string(),
-            winRate: zod.number(),
-            total: zod.number().int(),
-            avgPnlPercent: zod.number().nullish(),
-          })
-          .describe(
-            "Aggregate stats for one instrument or session bucket (best\/worst rankings).",
-          ),
-        zod.null(),
-      ])
-      .optional(),
-    worstInstrument: zod
-      .union([
-        zod
-          .object({
-            key: zod.string(),
-            winRate: zod.number(),
-            total: zod.number().int(),
-            avgPnlPercent: zod.number().nullish(),
-          })
-          .describe(
-            "Aggregate stats for one instrument or session bucket (best\/worst rankings).",
-          ),
-        zod.null(),
-      ])
-      .optional(),
-    bestSession: zod
-      .union([
-        zod
-          .object({
-            key: zod.string(),
-            winRate: zod.number(),
-            total: zod.number().int(),
-            avgPnlPercent: zod.number().nullish(),
-          })
-          .describe(
-            "Aggregate stats for one instrument or session bucket (best\/worst rankings).",
-          ),
-        zod.null(),
-      ])
-      .optional(),
-    worstSession: zod
-      .union([
-        zod
-          .object({
-            key: zod.string(),
-            winRate: zod.number(),
-            total: zod.number().int(),
-            avgPnlPercent: zod.number().nullish(),
-          })
-          .describe(
-            "Aggregate stats for one instrument or session bucket (best\/worst rankings).",
-          ),
-        zod.null(),
-      ])
-      .optional(),
-  })
-  .describe(
-    "Summary stats for the user's trade journal, computed over the optional from\/to date range.",
-  );
+export const GetJournalStatsResponse = zod.object({
+  "totals": zod.object({
+  "entries": zod.number().int(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "breakevens": zod.number().int(),
+  "open": zod.number().int(),
+  "skipped": zod.number().int(),
+  "resolved": zod.number().int()
+}),
+  "winRate": zod.number().nullish().describe('wins \/ (wins + losses); null when no resolved trades.'),
+  "avgPnlPercent": zod.number().nullish(),
+  "avgPnlAmount": zod.number().nullish(),
+  "bestInstrument": zod.union([zod.object({
+  "key": zod.string(),
+  "winRate": zod.number(),
+  "total": zod.number().int(),
+  "avgPnlPercent": zod.number().nullish()
+}).describe('Aggregate stats for one instrument or session bucket (best\/worst rankings).'),zod.null()]).optional(),
+  "worstInstrument": zod.union([zod.object({
+  "key": zod.string(),
+  "winRate": zod.number(),
+  "total": zod.number().int(),
+  "avgPnlPercent": zod.number().nullish()
+}).describe('Aggregate stats for one instrument or session bucket (best\/worst rankings).'),zod.null()]).optional(),
+  "bestSession": zod.union([zod.object({
+  "key": zod.string(),
+  "winRate": zod.number(),
+  "total": zod.number().int(),
+  "avgPnlPercent": zod.number().nullish()
+}).describe('Aggregate stats for one instrument or session bucket (best\/worst rankings).'),zod.null()]).optional(),
+  "worstSession": zod.union([zod.object({
+  "key": zod.string(),
+  "winRate": zod.number(),
+  "total": zod.number().int(),
+  "avgPnlPercent": zod.number().nullish()
+}).describe('Aggregate stats for one instrument or session bucket (best\/worst rankings).'),zod.null()]).optional()
+}).describe('Summary stats for the user\'s trade journal, computed over the optional from\/to date range.')
+
 
 /**
  * @summary Update an existing journal entry (e.g. close out an open trade)
  */
 export const UpdateJournalEntryParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const updateJournalEntryBodyInstrumentMax = 64;
 
@@ -958,125 +937,80 @@ export const updateJournalEntryBodyMoodMax = 40;
 
 export const updateJournalEntryBodyNoteMax = 2000;
 
-export const UpdateJournalEntryBody = zod
-  .object({
-    analysisId: zod.number().int().nullish(),
-    instrument: zod
-      .string()
-      .min(1)
-      .max(updateJournalEntryBodyInstrumentMax)
-      .optional(),
-    side: zod.enum(["buy", "sell"]).optional(),
-    entryPrice: zod.union([zod.string(), zod.number()]).nullish(),
-    exitPrice: zod.union([zod.string(), zod.number()]).nullish(),
-    quantity: zod.union([zod.string(), zod.number()]).nullish(),
-    pnlAmount: zod.union([zod.string(), zod.number()]).nullish(),
-    pnlPercent: zod.union([zod.string(), zod.number()]).nullish(),
-    outcome: zod
-      .enum(["win", "loss", "breakeven", "open", "skipped"])
-      .optional(),
-    mood: zod.string().max(updateJournalEntryBodyMoodMax).nullish(),
-    note: zod.string().max(updateJournalEntryBodyNoteMax).nullish(),
-    tradedAt: zod.coerce.date().optional(),
-  })
-  .describe(
-    "Partial update — every field is optional. Recomputes pnlAmount\/pnlPercent\/outcome from entry+exit+side when the user didn't pass an explicit override.",
-  );
 
-export const UpdateJournalEntryResponse = zod
-  .object({
-    id: zod.number().int(),
-    analysisId: zod
-      .number()
-      .int()
-      .nullish()
-      .describe(
-        "Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.",
-      ),
-    instrument: zod.string(),
-    side: zod.enum(["buy", "sell"]),
-    entryPrice: zod.string().nullish(),
-    exitPrice: zod.string().nullish(),
-    quantity: zod.string().nullish(),
-    pnlAmount: zod
-      .string()
-      .nullish()
-      .describe(
-        "Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.",
-      ),
-    pnlPercent: zod
-      .string()
-      .nullish()
-      .describe(
-        "Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.",
-      ),
-    outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]),
-    mood: zod.string().nullish(),
-    note: zod.string().nullish(),
-    tradedAt: zod.coerce.date(),
-    createdAt: zod.coerce.date(),
-    updatedAt: zod.coerce.date(),
-  })
-  .describe(
-    "A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.",
-  );
+
+export const UpdateJournalEntryBody = zod.object({
+  "analysisId": zod.number().int().nullish(),
+  "instrument": zod.string().min(1).max(updateJournalEntryBodyInstrumentMax).optional(),
+  "side": zod.enum(['buy', 'sell']).optional(),
+  "entryPrice": zod.union([zod.string(),zod.number()]).nullish(),
+  "exitPrice": zod.union([zod.string(),zod.number()]).nullish(),
+  "quantity": zod.union([zod.string(),zod.number()]).nullish(),
+  "pnlAmount": zod.union([zod.string(),zod.number()]).nullish(),
+  "pnlPercent": zod.union([zod.string(),zod.number()]).nullish(),
+  "outcome": zod.enum(['win', 'loss', 'breakeven', 'open', 'skipped']).optional(),
+  "mood": zod.string().max(updateJournalEntryBodyMoodMax).nullish(),
+  "note": zod.string().max(updateJournalEntryBodyNoteMax).nullish(),
+  "tradedAt": zod.coerce.date().optional()
+}).describe('Partial update — every field is optional. Recomputes pnlAmount\/pnlPercent\/outcome from entry+exit+side when the user didn\'t pass an explicit override.')
+
+export const UpdateJournalEntryResponse = zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int().nullish().describe('Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.'),
+  "instrument": zod.string(),
+  "side": zod.enum(['buy', 'sell']),
+  "entryPrice": zod.string().nullish(),
+  "exitPrice": zod.string().nullish(),
+  "quantity": zod.string().nullish(),
+  "pnlAmount": zod.string().nullish().describe('Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.'),
+  "pnlPercent": zod.string().nullish().describe('Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.'),
+  "outcome": zod.enum(['win', 'loss', 'breakeven', 'open', 'skipped']),
+  "mood": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "tradedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).describe('A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.')
+
 
 /**
  * @summary Delete a journal entry
  */
 export const DeleteJournalEntryParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const DeleteJournalEntryResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * Returns the first journal entry the authenticated user linked to a specific analysis. Returns 404 when no entry is found.
  * @summary Get the journal entry linked to a specific analysis
  */
 export const GetJournalEntryForAnalysisParams = zod.object({
-  analysisId: zod.coerce.number().int(),
-});
+  "analysisId": zod.coerce.number().int()
+})
 
-export const GetJournalEntryForAnalysisResponse = zod
-  .object({
-    id: zod.number().int(),
-    analysisId: zod
-      .number()
-      .int()
-      .nullish()
-      .describe(
-        "Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.",
-      ),
-    instrument: zod.string(),
-    side: zod.enum(["buy", "sell"]),
-    entryPrice: zod.string().nullish(),
-    exitPrice: zod.string().nullish(),
-    quantity: zod.string().nullish(),
-    pnlAmount: zod
-      .string()
-      .nullish()
-      .describe(
-        "Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.",
-      ),
-    pnlPercent: zod
-      .string()
-      .nullish()
-      .describe(
-        "Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.",
-      ),
-    outcome: zod.enum(["win", "loss", "breakeven", "open", "skipped"]),
-    mood: zod.string().nullish(),
-    note: zod.string().nullish(),
-    tradedAt: zod.coerce.date(),
-    createdAt: zod.coerce.date(),
-    updatedAt: zod.coerce.date(),
-  })
-  .describe(
-    "A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.",
-  );
+export const GetJournalEntryForAnalysisResponse = zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int().nullish().describe('Optional FK to the originating analysis. Nulled out (but row preserved) if the analysis is later deleted.'),
+  "instrument": zod.string(),
+  "side": zod.enum(['buy', 'sell']),
+  "entryPrice": zod.string().nullish(),
+  "exitPrice": zod.string().nullish(),
+  "quantity": zod.string().nullish(),
+  "pnlAmount": zod.string().nullish().describe('Auto-computed from (exit - entry) \* direction \* quantity unless the user overrode it.'),
+  "pnlPercent": zod.string().nullish().describe('Auto-computed from (exit - entry) \/ entry \* 100 (signed by side) unless the user overrode it.'),
+  "outcome": zod.enum(['win', 'loss', 'breakeven', 'open', 'skipped']),
+  "mood": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "tradedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).describe('A single manual trade-journal entry (task #161). Prices are returned as strings to preserve the exact precision the user typed.')
+
 
 /**
  * Anonymised, aggregated outcome ledger across every analysis the AI
@@ -1090,521 +1024,272 @@ export const GetJournalEntryForAnalysisResponse = zod
 export const getPerformanceSummaryQueryWindowDefault = 30;
 
 export const GetPerformanceSummaryQueryParams = zod.object({
-  window: zod
-    .union([zod.literal(30), zod.literal(90)])
-    .default(getPerformanceSummaryQueryWindowDefault)
-    .describe(
-      "Rolling window in days. Only 30 or 90 are accepted; anything else falls back to 30.",
-    ),
-});
+  "window": zod.union([zod.literal(30),zod.literal(90)]).default(getPerformanceSummaryQueryWindowDefault).describe('Rolling window in days. Only 30 or 90 are accepted; anything else falls back to 30.')
+})
 
-export const GetPerformanceSummaryResponse = zod
-  .object({
-    windowDays: zod.union([zod.literal(30), zod.literal(90)]),
-    generatedAt: zod.coerce.date(),
-    windowStart: zod.coerce.date().nullable(),
-    minSamples: zod
-      .object({
-        bucket: zod
-          .number()
-          .int()
-          .describe(
-            "Minimum resolved analyses per bucket before that bucket renders.",
-          ),
-        overall: zod
-          .number()
-          .int()
-          .describe(
-            "Minimum resolved analyses overall before any segment renders.",
-          ),
-        banner: zod
-          .number()
-          .int()
-          .describe(
-            "Minimum resolved analyses in the recent window before the current-state banner makes a claim.",
-          ),
-      })
-      .describe(
-        "Sample-size guardrails the server enforces — published so the UI's honesty copy can quote them directly instead of hardcoding.",
-      ),
-    overall: zod.object({
-      triggered: zod.number().int(),
-      wins: zod.number().int(),
-      losses: zod.number().int(),
-      expired: zod.number().int(),
-      total: zod.number().int(),
-      winRate: zod.number().nullable(),
-      hitRate: zod.number().nullable(),
-    }),
-    banner: zod
-      .object({
-        severity: zod.enum(["ok", "watch", "warn"]),
-        recentDays: zod.number().int(),
-        recentSample: zod.number().int(),
-        baselineSample: zod.number().int(),
-        recentHitRate: zod.number().nullable(),
-        baselineHitRate: zod.number().nullable(),
-        delta: zod.number().nullable(),
-      })
-      .describe(
-        "Honesty banner comparing the last `recentDays` hit-rate against the 30-day baseline. `severity: warn` fires only when recent is >=15pp below baseline AND both windows cleared the minimum-sample guardrail.",
-      ),
-    byInstrument: zod
-      .object({
-        gated: zod.boolean(),
-        need: zod.number().int(),
-        have: zod.number().int(),
-        buckets: zod.array(
-          zod
-            .object({
-              key: zod.string(),
-              triggered: zod.number().int(),
-              wins: zod.number().int(),
-              losses: zod.number().int(),
-              expired: zod.number().int(),
-              total: zod.number().int(),
-              winRate: zod.number().nullable(),
-              hitRate: zod.number().nullable(),
-            })
-            .describe(
-              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
-            ),
-        ),
-      })
-      .describe(
-        "A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.",
-      ),
-    bySession: zod
-      .object({
-        gated: zod.boolean(),
-        need: zod.number().int(),
-        have: zod.number().int(),
-        buckets: zod.array(
-          zod
-            .object({
-              key: zod.string(),
-              triggered: zod.number().int(),
-              wins: zod.number().int(),
-              losses: zod.number().int(),
-              expired: zod.number().int(),
-              total: zod.number().int(),
-              winRate: zod.number().nullable(),
-              hitRate: zod.number().nullable(),
-            })
-            .describe(
-              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
-            ),
-        ),
-      })
-      .describe(
-        "A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.",
-      ),
-    byCondition: zod
-      .object({
-        gated: zod.boolean(),
-        need: zod.number().int(),
-        have: zod.number().int(),
-        buckets: zod.array(
-          zod
-            .object({
-              key: zod.string(),
-              triggered: zod.number().int(),
-              wins: zod.number().int(),
-              losses: zod.number().int(),
-              expired: zod.number().int(),
-              total: zod.number().int(),
-              winRate: zod.number().nullable(),
-              hitRate: zod.number().nullable(),
-            })
-            .describe(
-              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
-            ),
-        ),
-      })
-      .describe(
-        "A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a 'need more data' placeholder instead of cherry-picking the largest bucket.",
-      ),
-    byVolatility: zod
-      .object({
-        gated: zod.boolean(),
-        need: zod.number().int(),
-        have: zod.number().int(),
-        buckets: zod.array(
-          zod
-            .object({
-              key: zod.string(),
-              triggered: zod.number().int(),
-              wins: zod.number().int(),
-              losses: zod.number().int(),
-              expired: zod.number().int(),
-              total: zod.number().int(),
-              winRate: zod.number().nullable(),
-              hitRate: zod.number().nullable(),
-            })
-            .describe(
-              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
-            ),
-        ),
-      })
-      .describe(
-        "Deterministic regime classification derived from the stored indicator tally (trending \/ ranging \/ choppy). Replaces ADX where raw OHLC isn't kept per analysis.",
-      ),
-    byNewsActivity: zod
-      .object({
-        gated: zod.boolean(),
-        need: zod.number().int(),
-        have: zod.number().int(),
-        buckets: zod.array(
-          zod
-            .object({
-              key: zod.string(),
-              triggered: zod.number().int(),
-              wins: zod.number().int(),
-              losses: zod.number().int(),
-              expired: zod.number().int(),
-              total: zod.number().int(),
-              winRate: zod.number().nullable(),
-              hitRate: zod.number().nullable(),
-            })
-            .describe(
-              "Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).",
-            ),
-        ),
-      })
-      .describe(
-        "news_week vs quiet_week, derived from whether the AI's fundamental snapshot included any high-impact calendar event at analysis time.",
-      ),
-  })
-  .describe(
-    "Public AI transparency snapshot for the rolling `windowDays` window (task #164).",
-  );
+export const GetPerformanceSummaryResponse = zod.object({
+  "windowDays": zod.union([zod.literal(30),zod.literal(90)]),
+  "generatedAt": zod.coerce.date(),
+  "windowStart": zod.coerce.date().nullable(),
+  "minSamples": zod.object({
+  "bucket": zod.number().int().describe('Minimum resolved analyses per bucket before that bucket renders.'),
+  "overall": zod.number().int().describe('Minimum resolved analyses overall before any segment renders.'),
+  "banner": zod.number().int().describe('Minimum resolved analyses in the recent window before the current-state banner makes a claim.')
+}).describe('Sample-size guardrails the server enforces — published so the UI\'s honesty copy can quote them directly instead of hardcoding.'),
+  "overall": zod.object({
+  "triggered": zod.number().int(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "expired": zod.number().int(),
+  "total": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "hitRate": zod.number().nullable()
+}),
+  "banner": zod.object({
+  "severity": zod.enum(['ok', 'watch', 'warn']),
+  "recentDays": zod.number().int(),
+  "recentSample": zod.number().int(),
+  "baselineSample": zod.number().int(),
+  "recentHitRate": zod.number().nullable(),
+  "baselineHitRate": zod.number().nullable(),
+  "delta": zod.number().nullable()
+}).describe('Honesty banner comparing the last `recentDays` hit-rate against the 30-day baseline. `severity: warn` fires only when recent is >=15pp below baseline AND both windows cleared the minimum-sample guardrail.'),
+  "byInstrument": zod.object({
+  "gated": zod.boolean(),
+  "need": zod.number().int(),
+  "have": zod.number().int(),
+  "buckets": zod.array(zod.object({
+  "key": zod.string(),
+  "triggered": zod.number().int(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "expired": zod.number().int(),
+  "total": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "hitRate": zod.number().nullable()
+}).describe('Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).'))
+}).describe('A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a \'need more data\' placeholder instead of cherry-picking the largest bucket.'),
+  "bySession": zod.object({
+  "gated": zod.boolean(),
+  "need": zod.number().int(),
+  "have": zod.number().int(),
+  "buckets": zod.array(zod.object({
+  "key": zod.string(),
+  "triggered": zod.number().int(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "expired": zod.number().int(),
+  "total": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "hitRate": zod.number().nullable()
+}).describe('Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).'))
+}).describe('A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a \'need more data\' placeholder instead of cherry-picking the largest bucket.'),
+  "byCondition": zod.object({
+  "gated": zod.boolean(),
+  "need": zod.number().int(),
+  "have": zod.number().int(),
+  "buckets": zod.array(zod.object({
+  "key": zod.string(),
+  "triggered": zod.number().int(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "expired": zod.number().int(),
+  "total": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "hitRate": zod.number().nullable()
+}).describe('Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).'))
+}).describe('A segmentation of the outcome ledger. `gated` is true when no bucket inside the segment crossed the minimum-sample threshold; the UI then renders a \'need more data\' placeholder instead of cherry-picking the largest bucket.'),
+  "byVolatility": zod.object({
+  "gated": zod.boolean(),
+  "need": zod.number().int(),
+  "have": zod.number().int(),
+  "buckets": zod.array(zod.object({
+  "key": zod.string(),
+  "triggered": zod.number().int(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "expired": zod.number().int(),
+  "total": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "hitRate": zod.number().nullable()
+}).describe('Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).'))
+}).describe('Deterministic regime classification derived from the stored indicator tally (trending \/ ranging \/ choppy). Replaces ADX where raw OHLC isn\'t kept per analysis.'),
+  "byNewsActivity": zod.object({
+  "gated": zod.boolean(),
+  "need": zod.number().int(),
+  "have": zod.number().int(),
+  "buckets": zod.array(zod.object({
+  "key": zod.string(),
+  "triggered": zod.number().int(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "expired": zod.number().int(),
+  "total": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "hitRate": zod.number().nullable()
+}).describe('Single bucket inside a performance segment (per instrument, FX session, or market-condition). `winRate` is wins \/ (wins + losses) — only trades that actually triggered. `hitRate` is wins \/ total resolved (expired included).'))
+}).describe('news_week vs quiet_week, derived from whether the AI\'s fundamental snapshot included any high-impact calendar event at analysis time.')
+}).describe('Public AI transparency snapshot for the rolling `windowDays` window (task #164).')
+
 
 /**
  * @summary Behavioural insights about the caller as a trader (task
  */
 export const GetTraderMirrorInsightsResponse = zod.object({
-  insights: zod
-    .object({
-      windowDays: zod.number().int().nullable(),
-      totalResolved: zod.number().int(),
-      overallGated: zod.boolean(),
-      sessions: zod
-        .object({
-          gated: zod.boolean(),
-          reason: zod.enum(["need_more_data"]).nullish(),
-          need: zod.number().int().nullish(),
-          have: zod.number().int().nullish(),
-          data: zod.record(zod.string(), zod.unknown()).nullish(),
-        })
-        .describe(
-          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
-        ),
-      instruments: zod
-        .object({
-          gated: zod.boolean(),
-          reason: zod.enum(["need_more_data"]).nullish(),
-          need: zod.number().int().nullish(),
-          have: zod.number().int().nullish(),
-          data: zod.record(zod.string(), zod.unknown()).nullish(),
-        })
-        .describe(
-          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
-        ),
-      timing: zod
-        .object({
-          gated: zod.boolean(),
-          reason: zod.enum(["need_more_data"]).nullish(),
-          need: zod.number().int().nullish(),
-          have: zod.number().int().nullish(),
-          data: zod.record(zod.string(), zod.unknown()).nullish(),
-        })
-        .describe(
-          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
-        ),
-      postLoss: zod
-        .object({
-          gated: zod.boolean(),
-          reason: zod.enum(["need_more_data"]).nullish(),
-          need: zod.number().int().nullish(),
-          have: zod.number().int().nullish(),
-          data: zod.record(zod.string(), zod.unknown()).nullish(),
-        })
-        .describe(
-          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
-        ),
-      exitDiscipline: zod
-        .object({
-          gated: zod.boolean(),
-          reason: zod.enum(["need_more_data"]).nullish(),
-          need: zod.number().int().nullish(),
-          have: zod.number().int().nullish(),
-          data: zod.record(zod.string(), zod.unknown()).nullish(),
-        })
-        .describe(
-          "Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a 'need more data' placeholder.",
-        ),
-    })
-    .describe(
-      "Personal trader-mirror insights bundle (task #162). Every category respects a minimum-sample guardrail.",
-    ),
-  highlights: zod.array(
-    zod
-      .object({
-        id: zod.string(),
-        en: zod.string(),
-        idText: zod.string(),
-      })
-      .describe(
-        "Short bilingual one-liner pulled from the insights bundle. Used for both the dashboard hero strip and the weekly trader-report push. `id` is the stable highlight key; `en` and `idText` are the English and Indonesian copy.",
-      ),
-  ),
-  timezone: zod.string(),
-});
+  "insights": zod.object({
+  "windowDays": zod.number().int().nullable(),
+  "totalResolved": zod.number().int(),
+  "overallGated": zod.boolean(),
+  "sessions": zod.object({
+  "gated": zod.boolean(),
+  "reason": zod.enum(['need_more_data']).nullish(),
+  "need": zod.number().int().nullish(),
+  "have": zod.number().int().nullish(),
+  "data": zod.record(zod.string(), zod.unknown()).nullish()
+}).describe('Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a \'need more data\' placeholder.'),
+  "instruments": zod.object({
+  "gated": zod.boolean(),
+  "reason": zod.enum(['need_more_data']).nullish(),
+  "need": zod.number().int().nullish(),
+  "have": zod.number().int().nullish(),
+  "data": zod.record(zod.string(), zod.unknown()).nullish()
+}).describe('Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a \'need more data\' placeholder.'),
+  "timing": zod.object({
+  "gated": zod.boolean(),
+  "reason": zod.enum(['need_more_data']).nullish(),
+  "need": zod.number().int().nullish(),
+  "have": zod.number().int().nullish(),
+  "data": zod.record(zod.string(), zod.unknown()).nullish()
+}).describe('Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a \'need more data\' placeholder.'),
+  "postLoss": zod.object({
+  "gated": zod.boolean(),
+  "reason": zod.enum(['need_more_data']).nullish(),
+  "need": zod.number().int().nullish(),
+  "have": zod.number().int().nullish(),
+  "data": zod.record(zod.string(), zod.unknown()).nullish()
+}).describe('Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a \'need more data\' placeholder.'),
+  "exitDiscipline": zod.object({
+  "gated": zod.boolean(),
+  "reason": zod.enum(['need_more_data']).nullish(),
+  "need": zod.number().int().nullish(),
+  "have": zod.number().int().nullish(),
+  "data": zod.record(zod.string(), zod.unknown()).nullish()
+}).describe('Wrapper around a trader-mirror insight category. When `gated` is true the cohort was below the minimum sample threshold and `data` is omitted; the UI should render a \'need more data\' placeholder.')
+}).describe('Personal trader-mirror insights bundle (task #162). Every category respects a minimum-sample guardrail.'),
+  "highlights": zod.array(zod.object({
+  "id": zod.string(),
+  "en": zod.string(),
+  "idText": zod.string()
+}).describe('Short bilingual one-liner pulled from the insights bundle. Used for both the dashboard hero strip and the weekly trader-report push. `id` is the stable highlight key; `en` and `idText` are the English and Indonesian copy.')),
+  "timezone": zod.string()
+})
+
 
 /**
  * @summary Create new analysis (triggers AI)
  */
 export const CreateAnalysisBody = zod.object({
-  instrument: zod.string(),
-  timeframe: zod.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"]),
-  userInputContext: zod.string().optional(),
-  mode: zod.enum(["beginner", "pro"]),
-});
+  "instrument": zod.string(),
+  "timeframe": zod.enum(['1m', '5m', '15m', '30m', '1h', '4h', '1D', '1W']),
+  "userInputContext": zod.string().optional(),
+  "mode": zod.enum(['beginner', 'pro'])
+})
 
 export const CreateAnalysisResponse = zod.object({
-  id: zod.number().int(),
-  userId: zod.number().int(),
-  instrument: zod.string(),
-  timeframe: zod.string(),
-  userInputContext: zod.string().nullish(),
-  mode: zod.enum(["beginner", "pro"]),
-  validUntil: zod.coerce.date(),
-  marketCondition: zod.string().nullish(),
-  riskLevel: zod.string().nullish(),
-  confidenceMin: zod.number().int().nullish(),
-  confidenceMax: zod.number().int().nullish(),
-  mainScenario: zod.string().nullish(),
-  alternativeScenario: zod.string().nullish(),
-  whyReason: zod.string().nullish(),
-  failureConditions: zod.string().nullish(),
-  baseCase: zod.string().nullish(),
-  bullishScenario: zod.string().nullish(),
-  bearishScenario: zod.string().nullish(),
-  keyDriversTechnical: zod.string().nullish(),
-  keyDriversFundamental: zod.string().nullish(),
-  marketContext: zod.string().nullish(),
-  invalidationConditions: zod.string().nullish(),
-  uncertaintyNotes: zod.string().nullish(),
-  tradingBias: zod
-    .string()
-    .nullish()
-    .describe(
-      "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
-    ),
-  opportunity: zod.string().nullish(),
-  risk: zod.string().nullish(),
-  techBuyCount: zod
-    .number()
-    .int()
-    .nullish()
-    .describe(
-      "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
-    ),
-  techSellCount: zod
-    .number()
-    .int()
-    .nullish()
-    .describe(
-      "Snapshot of the technical-indicator sell tally captured at analysis time.",
-    ),
-  techNeutralCount: zod
-    .number()
-    .int()
-    .nullish()
-    .describe(
-      "Snapshot of the technical-indicator neutral tally captured at analysis time.",
-    ),
-  tradePlan: zod
-    .union([
-      zod
-        .object({
-          preferredSide: zod.enum(["buy", "sell", "wait"]),
-          buy: zod
-            .object({
-              entryZone: zod.string(),
-              stopLoss: zod.string(),
-              takeProfit1: zod.string(),
-              takeProfit2: zod.string(),
-              riskRewardRatio: zod.string(),
-              rationale: zod.string(),
-            })
-            .describe(
-              "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-            ),
-          sell: zod
-            .object({
-              entryZone: zod.string(),
-              stopLoss: zod.string(),
-              takeProfit1: zod.string(),
-              takeProfit2: zod.string(),
-              riskRewardRatio: zod.string(),
-              rationale: zod.string(),
-            })
-            .describe(
-              "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-            ),
-        })
-        .describe(
-          "Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; 'wait' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).",
-        ),
-      zod.null(),
-    ])
-    .optional()
-    .describe(
-      "Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.",
-    ),
-  fundamentalContext: zod
-    .union([
-      zod
-        .object({
-          newsItems: zod.array(
-            zod
-              .object({
-                id: zod.string(),
-                title: zod.string(),
-                summary: zod.string(),
-                source: zod
-                  .string()
-                  .describe(
-                    "Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.",
-                  ),
-                url: zod.string().nullable(),
-                publishedAt: zod.coerce.date(),
-              })
-              .describe(
-                "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
-              ),
-          ),
-          calendarEvents: zod.array(
-            zod
-              .object({
-                date: zod.string(),
-                time: zod.string().nullable(),
-                currency: zod.string(),
-                event: zod.string(),
-                impact: zod
-                  .string()
-                  .nullable()
-                  .describe(
-                    "Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.",
-                  ),
-                actual: zod.string().nullable(),
-                forecast: zod.string().nullable(),
-                previous: zod.string().nullable(),
-              })
-              .describe(
-                "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
-              ),
-          ),
-        })
-        .describe(
-          "Snapshot of fundamental inputs the AI saw at analysis time.",
-        ),
-      zod.null(),
-    ])
-    .optional()
-    .describe(
-      "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
-    ),
-  fundamentalCitations: zod
-    .union([
-      zod
-        .object({
-          newsTitles: zod
-            .array(zod.string())
-            .describe(
-              "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
-            ),
-          calendarEvents: zod
-            .array(zod.string())
-            .describe(
-              "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
-            ),
-        })
-        .describe(
-          "Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).",
-        ),
-      zod.null(),
-    ])
-    .optional()
-    .describe(
-      "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
-    ),
-  outcomeStatus: zod
-    .enum(["pending", "tp1_hit", "tp2_hit", "sl_hit", "expired", "invalidated"])
-    .optional()
-    .describe(
-      "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
-    ),
-  outcomeResolvedAt: zod.coerce
-    .date()
-    .nullish()
-    .describe(
-      "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
-    ),
-  outcomeCheckedAt: zod.coerce
-    .date()
-    .nullish()
-    .describe(
-      "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
-    ),
-  userNote: zod
-    .string()
-    .nullish()
-    .describe(
-      "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
-    ),
-  userNoteUpdatedAt: zod.coerce
-    .date()
-    .nullish()
-    .describe(
-      "When `userNote` was last saved server-side. Null when no note has been written.",
-    ),
-  hasNote: zod
-    .boolean()
-    .optional()
-    .describe(
-      "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
-    ),
-  feedback: zod
-    .union([
-      zod.object({
-        id: zod.number().int(),
-        analysisId: zod.number().int(),
-        feedbackType: zod.enum(["useful", "not_useful"]),
-        outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
-        note: zod.string().nullish(),
-        createdAt: zod.coerce.date(),
-      }),
-      zod.null(),
-    ])
-    .optional(),
-  usefulCount: zod
-    .number()
-    .int()
-    .optional()
-    .describe(
-      'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-    ),
-  notUsefulCount: zod
-    .number()
-    .int()
-    .optional()
-    .describe(
-      'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-    ),
-  createdAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "instrument": zod.string(),
+  "timeframe": zod.string(),
+  "userInputContext": zod.string().nullish(),
+  "mode": zod.enum(['beginner', 'pro']),
+  "validUntil": zod.coerce.date(),
+  "marketCondition": zod.string().nullish(),
+  "riskLevel": zod.string().nullish(),
+  "confidenceMin": zod.number().int().nullish(),
+  "confidenceMax": zod.number().int().nullish(),
+  "mainScenario": zod.string().nullish(),
+  "alternativeScenario": zod.string().nullish(),
+  "whyReason": zod.string().nullish(),
+  "failureConditions": zod.string().nullish(),
+  "baseCase": zod.string().nullish(),
+  "bullishScenario": zod.string().nullish(),
+  "bearishScenario": zod.string().nullish(),
+  "keyDriversTechnical": zod.string().nullish(),
+  "keyDriversFundamental": zod.string().nullish(),
+  "marketContext": zod.string().nullish(),
+  "invalidationConditions": zod.string().nullish(),
+  "uncertaintyNotes": zod.string().nullish(),
+  "tradingBias": zod.string().nullish().describe('Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.'),
+  "opportunity": zod.string().nullish(),
+  "risk": zod.string().nullish(),
+  "techBuyCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.'),
+  "techSellCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator sell tally captured at analysis time.'),
+  "techNeutralCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator neutral tally captured at analysis time.'),
+  "tradePlan": zod.union([zod.object({
+  "preferredSide": zod.enum(['buy', 'sell', 'wait']),
+  "buy": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.'),
+  "sell": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.')
+}).describe('Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; \'wait\' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).'),zod.null()]).optional().describe('Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.'),
+  "fundamentalContext": zod.union([zod.object({
+  "newsItems": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "source": zod.string().describe('Human-readable source label, e.g. \'Newsmaker.id\' or \'Yahoo Finance\'.'),
+  "url": zod.string().nullable(),
+  "publishedAt": zod.coerce.date()
+}).describe('A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.')),
+  "calendarEvents": zod.array(zod.object({
+  "date": zod.string(),
+  "time": zod.string().nullable(),
+  "currency": zod.string(),
+  "event": zod.string(),
+  "impact": zod.string().nullable().describe('Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.'),
+  "actual": zod.string().nullable(),
+  "forecast": zod.string().nullable(),
+  "previous": zod.string().nullable()
+}).describe('A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.'))
+}).describe('Snapshot of fundamental inputs the AI saw at analysis time.'),zod.null()]).optional().describe('Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.'),
+  "fundamentalCitations": zod.union([zod.object({
+  "newsTitles": zod.array(zod.string()).describe('News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).'),
+  "calendarEvents": zod.array(zod.string()).describe('Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).')
+}).describe('Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).'),zod.null()]).optional().describe('Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI\'s reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn\'t lean on any fundamental input.'),
+  "outcomeStatus": zod.enum(['pending', 'tp1_hit', 'tp2_hit', 'sl_hit', 'expired', 'invalidated']).optional().describe('After-the-fact resolution of the AI\'s trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.'),
+  "outcomeResolvedAt": zod.coerce.date().nullish().describe('Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.'),
+  "outcomeCheckedAt": zod.coerce.date().nullish().describe('When the background resolver last looked at this row. Null until the first resolver pass touches it.'),
+  "userNote": zod.string().nullish().describe('Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.'),
+  "userNoteUpdatedAt": zod.coerce.date().nullish().describe('When `userNote` was last saved server-side. Null when no note has been written.'),
+  "hasNote": zod.boolean().optional().describe('True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a \'journaled\' icon without loading the full note body.'),
+  "feedback": zod.union([zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int(),
+  "feedbackType": zod.enum(['useful', 'not_useful']),
+  "outcome": zod.enum(['correct', 'wrong', 'unknown']).nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]).optional(),
+  "usefulCount": zod.number().int().optional().describe('Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "notUsefulCount": zod.number().int().optional().describe('Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "creditConsumed": zod.boolean(),
+  "creditBalance": zod.number().int().optional()
+})).describe('The 201 response of POST \/analyses — an Analysis, plus whether it consumed a purchased credit instead of counting against the free quota.')
+
 
 /**
  * @summary List user's analyses with filters
@@ -1613,299 +1298,118 @@ export const listAnalysesQueryPageDefault = 1;
 export const listAnalysesQueryLimitDefault = 20;
 export const listAnalysesQueryQMax = 100;
 
+
+
 export const ListAnalysesQueryParams = zod.object({
-  mode: zod.enum(["beginner", "pro"]).optional(),
-  instrument: zod.coerce.string().optional(),
-  instruments: zod
-    .array(zod.coerce.string())
-    .optional()
-    .describe(
-      "Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.",
-    ),
-  timeframes: zod
-    .array(zod.coerce.string())
-    .optional()
-    .describe("Multi-select timeframe filter (repeatable)."),
-  outcomes: zod
-    .array(
-      zod.enum([
-        "pending",
-        "tp1_hit",
-        "tp2_hit",
-        "sl_hit",
-        "expired",
-        "invalidated",
-      ]),
-    )
-    .optional()
-    .describe("Multi-select resolved outcome filter (repeatable)."),
-  page: zod.coerce.number().int().default(listAnalysesQueryPageDefault),
-  limit: zod.coerce.number().int().default(listAnalysesQueryLimitDefault),
-  q: zod.coerce
-    .string()
-    .max(listAnalysesQueryQMax)
-    .optional()
-    .describe(
-      "Free-text search across instrument, user note, and the AI's narrative blocks (parameterised ILIKE, case-insensitive).",
-    ),
-  from: zod
-    .date()
-    .optional()
-    .describe("Filter analyses created on or after this date (ISO 8601)"),
-  to: zod
-    .date()
-    .optional()
-    .describe("Filter analyses created on or before this date (ISO 8601)"),
-});
+  "mode": zod.enum(['beginner', 'pro']).optional(),
+  "instrument": zod.coerce.string().optional(),
+  "instruments": zod.array(zod.coerce.string()).optional().describe('Multi-select instrument filter (repeatable). Wins over `instrument` when both provided.'),
+  "timeframes": zod.array(zod.coerce.string()).optional().describe('Multi-select timeframe filter (repeatable).'),
+  "outcomes": zod.array(zod.enum(['pending', 'tp1_hit', 'tp2_hit', 'sl_hit', 'expired', 'invalidated'])).optional().describe('Multi-select resolved outcome filter (repeatable).'),
+  "page": zod.coerce.number().int().default(listAnalysesQueryPageDefault),
+  "limit": zod.coerce.number().int().default(listAnalysesQueryLimitDefault),
+  "q": zod.coerce.string().max(listAnalysesQueryQMax).optional().describe('Free-text search across instrument, user note, and the AI\'s narrative blocks (parameterised ILIKE, case-insensitive).'),
+  "from": zod.date().optional().describe('Filter analyses created on or after this date (ISO 8601)'),
+  "to": zod.date().optional().describe('Filter analyses created on or before this date (ISO 8601)')
+})
 
 export const ListAnalysesResponse = zod.object({
-  analyses: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      userId: zod.number().int(),
-      instrument: zod.string(),
-      timeframe: zod.string(),
-      userInputContext: zod.string().nullish(),
-      mode: zod.enum(["beginner", "pro"]),
-      validUntil: zod.coerce.date(),
-      marketCondition: zod.string().nullish(),
-      riskLevel: zod.string().nullish(),
-      confidenceMin: zod.number().int().nullish(),
-      confidenceMax: zod.number().int().nullish(),
-      mainScenario: zod.string().nullish(),
-      alternativeScenario: zod.string().nullish(),
-      whyReason: zod.string().nullish(),
-      failureConditions: zod.string().nullish(),
-      baseCase: zod.string().nullish(),
-      bullishScenario: zod.string().nullish(),
-      bearishScenario: zod.string().nullish(),
-      keyDriversTechnical: zod.string().nullish(),
-      keyDriversFundamental: zod.string().nullish(),
-      marketContext: zod.string().nullish(),
-      invalidationConditions: zod.string().nullish(),
-      uncertaintyNotes: zod.string().nullish(),
-      tradingBias: zod
-        .string()
-        .nullish()
-        .describe(
-          "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
-        ),
-      opportunity: zod.string().nullish(),
-      risk: zod.string().nullish(),
-      techBuyCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
-        ),
-      techSellCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator sell tally captured at analysis time.",
-        ),
-      techNeutralCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator neutral tally captured at analysis time.",
-        ),
-      tradePlan: zod
-        .union([
-          zod
-            .object({
-              preferredSide: zod.enum(["buy", "sell", "wait"]),
-              buy: zod
-                .object({
-                  entryZone: zod.string(),
-                  stopLoss: zod.string(),
-                  takeProfit1: zod.string(),
-                  takeProfit2: zod.string(),
-                  riskRewardRatio: zod.string(),
-                  rationale: zod.string(),
-                })
-                .describe(
-                  "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-                ),
-              sell: zod
-                .object({
-                  entryZone: zod.string(),
-                  stopLoss: zod.string(),
-                  takeProfit1: zod.string(),
-                  takeProfit2: zod.string(),
-                  riskRewardRatio: zod.string(),
-                  rationale: zod.string(),
-                })
-                .describe(
-                  "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-                ),
-            })
-            .describe(
-              "Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; 'wait' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.",
-        ),
-      fundamentalContext: zod
-        .union([
-          zod
-            .object({
-              newsItems: zod.array(
-                zod
-                  .object({
-                    id: zod.string(),
-                    title: zod.string(),
-                    summary: zod.string(),
-                    source: zod
-                      .string()
-                      .describe(
-                        "Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.",
-                      ),
-                    url: zod.string().nullable(),
-                    publishedAt: zod.coerce.date(),
-                  })
-                  .describe(
-                    "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
-                  ),
-              ),
-              calendarEvents: zod.array(
-                zod
-                  .object({
-                    date: zod.string(),
-                    time: zod.string().nullable(),
-                    currency: zod.string(),
-                    event: zod.string(),
-                    impact: zod
-                      .string()
-                      .nullable()
-                      .describe(
-                        "Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.",
-                      ),
-                    actual: zod.string().nullable(),
-                    forecast: zod.string().nullable(),
-                    previous: zod.string().nullable(),
-                  })
-                  .describe(
-                    "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
-                  ),
-              ),
-            })
-            .describe(
-              "Snapshot of fundamental inputs the AI saw at analysis time.",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
-        ),
-      fundamentalCitations: zod
-        .union([
-          zod
-            .object({
-              newsTitles: zod
-                .array(zod.string())
-                .describe(
-                  "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
-                ),
-              calendarEvents: zod
-                .array(zod.string())
-                .describe(
-                  "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
-                ),
-            })
-            .describe(
-              "Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
-        ),
-      outcomeStatus: zod
-        .enum([
-          "pending",
-          "tp1_hit",
-          "tp2_hit",
-          "sl_hit",
-          "expired",
-          "invalidated",
-        ])
-        .optional()
-        .describe(
-          "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
-        ),
-      outcomeResolvedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
-        ),
-      outcomeCheckedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
-        ),
-      userNote: zod
-        .string()
-        .nullish()
-        .describe(
-          "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
-        ),
-      userNoteUpdatedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "When `userNote` was last saved server-side. Null when no note has been written.",
-        ),
-      hasNote: zod
-        .boolean()
-        .optional()
-        .describe(
-          "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
-        ),
-      feedback: zod
-        .union([
-          zod.object({
-            id: zod.number().int(),
-            analysisId: zod.number().int(),
-            feedbackType: zod.enum(["useful", "not_useful"]),
-            outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
-            note: zod.string().nullish(),
-            createdAt: zod.coerce.date(),
-          }),
-          zod.null(),
-        ])
-        .optional(),
-      usefulCount: zod
-        .number()
-        .int()
-        .optional()
-        .describe(
-          'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-        ),
-      notUsefulCount: zod
-        .number()
-        .int()
-        .optional()
-        .describe(
-          'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-        ),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-  total: zod.number().int(),
-  page: zod.number().int(),
-  limit: zod.number().int(),
-});
+  "analyses": zod.array(zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "instrument": zod.string(),
+  "timeframe": zod.string(),
+  "userInputContext": zod.string().nullish(),
+  "mode": zod.enum(['beginner', 'pro']),
+  "validUntil": zod.coerce.date(),
+  "marketCondition": zod.string().nullish(),
+  "riskLevel": zod.string().nullish(),
+  "confidenceMin": zod.number().int().nullish(),
+  "confidenceMax": zod.number().int().nullish(),
+  "mainScenario": zod.string().nullish(),
+  "alternativeScenario": zod.string().nullish(),
+  "whyReason": zod.string().nullish(),
+  "failureConditions": zod.string().nullish(),
+  "baseCase": zod.string().nullish(),
+  "bullishScenario": zod.string().nullish(),
+  "bearishScenario": zod.string().nullish(),
+  "keyDriversTechnical": zod.string().nullish(),
+  "keyDriversFundamental": zod.string().nullish(),
+  "marketContext": zod.string().nullish(),
+  "invalidationConditions": zod.string().nullish(),
+  "uncertaintyNotes": zod.string().nullish(),
+  "tradingBias": zod.string().nullish().describe('Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.'),
+  "opportunity": zod.string().nullish(),
+  "risk": zod.string().nullish(),
+  "techBuyCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.'),
+  "techSellCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator sell tally captured at analysis time.'),
+  "techNeutralCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator neutral tally captured at analysis time.'),
+  "tradePlan": zod.union([zod.object({
+  "preferredSide": zod.enum(['buy', 'sell', 'wait']),
+  "buy": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.'),
+  "sell": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.')
+}).describe('Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; \'wait\' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).'),zod.null()]).optional().describe('Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.'),
+  "fundamentalContext": zod.union([zod.object({
+  "newsItems": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "source": zod.string().describe('Human-readable source label, e.g. \'Newsmaker.id\' or \'Yahoo Finance\'.'),
+  "url": zod.string().nullable(),
+  "publishedAt": zod.coerce.date()
+}).describe('A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.')),
+  "calendarEvents": zod.array(zod.object({
+  "date": zod.string(),
+  "time": zod.string().nullable(),
+  "currency": zod.string(),
+  "event": zod.string(),
+  "impact": zod.string().nullable().describe('Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.'),
+  "actual": zod.string().nullable(),
+  "forecast": zod.string().nullable(),
+  "previous": zod.string().nullable()
+}).describe('A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.'))
+}).describe('Snapshot of fundamental inputs the AI saw at analysis time.'),zod.null()]).optional().describe('Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.'),
+  "fundamentalCitations": zod.union([zod.object({
+  "newsTitles": zod.array(zod.string()).describe('News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).'),
+  "calendarEvents": zod.array(zod.string()).describe('Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).')
+}).describe('Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).'),zod.null()]).optional().describe('Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI\'s reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn\'t lean on any fundamental input.'),
+  "outcomeStatus": zod.enum(['pending', 'tp1_hit', 'tp2_hit', 'sl_hit', 'expired', 'invalidated']).optional().describe('After-the-fact resolution of the AI\'s trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.'),
+  "outcomeResolvedAt": zod.coerce.date().nullish().describe('Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.'),
+  "outcomeCheckedAt": zod.coerce.date().nullish().describe('When the background resolver last looked at this row. Null until the first resolver pass touches it.'),
+  "userNote": zod.string().nullish().describe('Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.'),
+  "userNoteUpdatedAt": zod.coerce.date().nullish().describe('When `userNote` was last saved server-side. Null when no note has been written.'),
+  "hasNote": zod.boolean().optional().describe('True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a \'journaled\' icon without loading the full note body.'),
+  "feedback": zod.union([zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int(),
+  "feedbackType": zod.enum(['useful', 'not_useful']),
+  "outcome": zod.enum(['correct', 'wrong', 'unknown']).nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]).optional(),
+  "usefulCount": zod.number().int().optional().describe('Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "notUsefulCount": zod.number().int().optional().describe('Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "limit": zod.number().int()
+})
+
 
 /**
  * Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI,
@@ -1916,8 +1420,8 @@ export const ListAnalysesResponse = zod.object({
  * @summary Compare deterministic technical risk across supported timeframes
  */
 export const GetTimeframeRiskMapQueryParams = zod.object({
-  instrument: zod.enum(["XAU/USD", "BRENT", "HSI", "NIKKEI"]),
-});
+  "instrument": zod.enum(['XAU/USD', 'BRENT', 'HSI', 'NIKKEI'])
+})
 
 export const getTimeframeRiskMapResponseTimeframesItemRiskScoreMin = 0;
 export const getTimeframeRiskMapResponseTimeframesItemRiskScoreMax = 100;
@@ -1925,332 +1429,157 @@ export const getTimeframeRiskMapResponseTimeframesItemRiskScoreMax = 100;
 export const getTimeframeRiskMapResponseTimeframesMin = 5;
 export const getTimeframeRiskMapResponseTimeframesMax = 5;
 
+
+
 export const GetTimeframeRiskMapResponse = zod.object({
-  instrument: zod.string(),
-  generatedAt: zod.coerce.date(),
-  timeframes: zod
-    .array(
-      zod.object({
-        timeframe: zod.enum(["15m", "1h", "4h", "1D", "1W"]),
-        status: zod.enum(["available", "unavailable", "insufficient"]),
-        riskScore: zod
-          .number()
-          .int()
-          .min(getTimeframeRiskMapResponseTimeframesItemRiskScoreMin)
-          .max(getTimeframeRiskMapResponseTimeframesItemRiskScoreMax)
-          .nullable(),
-        riskCategory: zod.enum(["low", "moderate", "high", "unavailable"]),
-        reasonCodes: zod.array(zod.string()),
-        metrics: zod.union([
-          zod.object({
-            buySignals: zod.number().int(),
-            sellSignals: zod.number().int(),
-            neutralSignals: zod.number().int(),
-            rsi14: zod.number(),
-            change20Pct: zod.number(),
-            bollingerWidthPct: zod.number(),
-          }),
-          zod.null(),
-        ]),
-        dataQuality: zod.enum(["good", "limited", "stale", "unavailable"]),
-        confidence: zod.enum(["low", "medium", "high"]),
-        recommendation: zod.enum(["eligible", "caution", "wait"]),
-      }),
-    )
-    .min(getTimeframeRiskMapResponseTimeframesMin)
-    .max(getTimeframeRiskMapResponseTimeframesMax),
-  overall: zod.object({
-    state: zod.enum(["wait", "no_recommendation"]),
-    reasonCode: zod.string(),
-  }),
-});
+  "instrument": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "timeframes": zod.array(zod.object({
+  "timeframe": zod.enum(['15m', '1h', '4h', '1D', '1W']),
+  "status": zod.enum(['available', 'unavailable', 'insufficient']),
+  "riskScore": zod.number().int().min(getTimeframeRiskMapResponseTimeframesItemRiskScoreMin).max(getTimeframeRiskMapResponseTimeframesItemRiskScoreMax).nullable(),
+  "riskCategory": zod.enum(['low', 'moderate', 'high', 'unavailable']),
+  "reasonCodes": zod.array(zod.string()),
+  "metrics": zod.union([zod.object({
+  "buySignals": zod.number().int(),
+  "sellSignals": zod.number().int(),
+  "neutralSignals": zod.number().int(),
+  "rsi14": zod.number(),
+  "change20Pct": zod.number(),
+  "bollingerWidthPct": zod.number()
+}),zod.null()]),
+  "dataQuality": zod.enum(['good', 'limited', 'stale', 'unavailable']),
+  "confidence": zod.enum(['low', 'medium', 'high']),
+  "recommendation": zod.enum(['eligible', 'caution', 'wait'])
+})).min(getTimeframeRiskMapResponseTimeframesMin).max(getTimeframeRiskMapResponseTimeframesMax),
+  "overall": zod.object({
+  "state": zod.enum(['wait', 'no_recommendation']),
+  "reasonCode": zod.string()
+})
+})
+
 
 /**
  * @summary Get dashboard summary stats
  */
 export const GetAnalysesSummaryResponse = zod.object({
-  totalAnalyses: zod.number().int(),
-  beginnerCount: zod.number().int(),
-  proCount: zod.number().int(),
-  avgConfidenceMin: zod.number().nullish(),
-  avgConfidenceMax: zod.number().nullish(),
-  recentAnalyses: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      userId: zod.number().int(),
-      instrument: zod.string(),
-      timeframe: zod.string(),
-      userInputContext: zod.string().nullish(),
-      mode: zod.enum(["beginner", "pro"]),
-      validUntil: zod.coerce.date(),
-      marketCondition: zod.string().nullish(),
-      riskLevel: zod.string().nullish(),
-      confidenceMin: zod.number().int().nullish(),
-      confidenceMax: zod.number().int().nullish(),
-      mainScenario: zod.string().nullish(),
-      alternativeScenario: zod.string().nullish(),
-      whyReason: zod.string().nullish(),
-      failureConditions: zod.string().nullish(),
-      baseCase: zod.string().nullish(),
-      bullishScenario: zod.string().nullish(),
-      bearishScenario: zod.string().nullish(),
-      keyDriversTechnical: zod.string().nullish(),
-      keyDriversFundamental: zod.string().nullish(),
-      marketContext: zod.string().nullish(),
-      invalidationConditions: zod.string().nullish(),
-      uncertaintyNotes: zod.string().nullish(),
-      tradingBias: zod
-        .string()
-        .nullish()
-        .describe(
-          "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
-        ),
-      opportunity: zod.string().nullish(),
-      risk: zod.string().nullish(),
-      techBuyCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
-        ),
-      techSellCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator sell tally captured at analysis time.",
-        ),
-      techNeutralCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator neutral tally captured at analysis time.",
-        ),
-      tradePlan: zod
-        .union([
-          zod
-            .object({
-              preferredSide: zod.enum(["buy", "sell", "wait"]),
-              buy: zod
-                .object({
-                  entryZone: zod.string(),
-                  stopLoss: zod.string(),
-                  takeProfit1: zod.string(),
-                  takeProfit2: zod.string(),
-                  riskRewardRatio: zod.string(),
-                  rationale: zod.string(),
-                })
-                .describe(
-                  "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-                ),
-              sell: zod
-                .object({
-                  entryZone: zod.string(),
-                  stopLoss: zod.string(),
-                  takeProfit1: zod.string(),
-                  takeProfit2: zod.string(),
-                  riskRewardRatio: zod.string(),
-                  rationale: zod.string(),
-                })
-                .describe(
-                  "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-                ),
-            })
-            .describe(
-              "Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; 'wait' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.",
-        ),
-      fundamentalContext: zod
-        .union([
-          zod
-            .object({
-              newsItems: zod.array(
-                zod
-                  .object({
-                    id: zod.string(),
-                    title: zod.string(),
-                    summary: zod.string(),
-                    source: zod
-                      .string()
-                      .describe(
-                        "Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.",
-                      ),
-                    url: zod.string().nullable(),
-                    publishedAt: zod.coerce.date(),
-                  })
-                  .describe(
-                    "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
-                  ),
-              ),
-              calendarEvents: zod.array(
-                zod
-                  .object({
-                    date: zod.string(),
-                    time: zod.string().nullable(),
-                    currency: zod.string(),
-                    event: zod.string(),
-                    impact: zod
-                      .string()
-                      .nullable()
-                      .describe(
-                        "Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.",
-                      ),
-                    actual: zod.string().nullable(),
-                    forecast: zod.string().nullable(),
-                    previous: zod.string().nullable(),
-                  })
-                  .describe(
-                    "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
-                  ),
-              ),
-            })
-            .describe(
-              "Snapshot of fundamental inputs the AI saw at analysis time.",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
-        ),
-      fundamentalCitations: zod
-        .union([
-          zod
-            .object({
-              newsTitles: zod
-                .array(zod.string())
-                .describe(
-                  "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
-                ),
-              calendarEvents: zod
-                .array(zod.string())
-                .describe(
-                  "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
-                ),
-            })
-            .describe(
-              "Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
-        ),
-      outcomeStatus: zod
-        .enum([
-          "pending",
-          "tp1_hit",
-          "tp2_hit",
-          "sl_hit",
-          "expired",
-          "invalidated",
-        ])
-        .optional()
-        .describe(
-          "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
-        ),
-      outcomeResolvedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
-        ),
-      outcomeCheckedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
-        ),
-      userNote: zod
-        .string()
-        .nullish()
-        .describe(
-          "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
-        ),
-      userNoteUpdatedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "When `userNote` was last saved server-side. Null when no note has been written.",
-        ),
-      hasNote: zod
-        .boolean()
-        .optional()
-        .describe(
-          "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
-        ),
-      feedback: zod
-        .union([
-          zod.object({
-            id: zod.number().int(),
-            analysisId: zod.number().int(),
-            feedbackType: zod.enum(["useful", "not_useful"]),
-            outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
-            note: zod.string().nullish(),
-            createdAt: zod.coerce.date(),
-          }),
-          zod.null(),
-        ])
-        .optional(),
-      usefulCount: zod
-        .number()
-        .int()
-        .optional()
-        .describe(
-          'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-        ),
-      notUsefulCount: zod
-        .number()
-        .int()
-        .optional()
-        .describe(
-          'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-        ),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-});
+  "totalAnalyses": zod.number().int(),
+  "beginnerCount": zod.number().int(),
+  "proCount": zod.number().int(),
+  "avgConfidenceMin": zod.number().nullish(),
+  "avgConfidenceMax": zod.number().nullish(),
+  "recentAnalyses": zod.array(zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "instrument": zod.string(),
+  "timeframe": zod.string(),
+  "userInputContext": zod.string().nullish(),
+  "mode": zod.enum(['beginner', 'pro']),
+  "validUntil": zod.coerce.date(),
+  "marketCondition": zod.string().nullish(),
+  "riskLevel": zod.string().nullish(),
+  "confidenceMin": zod.number().int().nullish(),
+  "confidenceMax": zod.number().int().nullish(),
+  "mainScenario": zod.string().nullish(),
+  "alternativeScenario": zod.string().nullish(),
+  "whyReason": zod.string().nullish(),
+  "failureConditions": zod.string().nullish(),
+  "baseCase": zod.string().nullish(),
+  "bullishScenario": zod.string().nullish(),
+  "bearishScenario": zod.string().nullish(),
+  "keyDriversTechnical": zod.string().nullish(),
+  "keyDriversFundamental": zod.string().nullish(),
+  "marketContext": zod.string().nullish(),
+  "invalidationConditions": zod.string().nullish(),
+  "uncertaintyNotes": zod.string().nullish(),
+  "tradingBias": zod.string().nullish().describe('Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.'),
+  "opportunity": zod.string().nullish(),
+  "risk": zod.string().nullish(),
+  "techBuyCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.'),
+  "techSellCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator sell tally captured at analysis time.'),
+  "techNeutralCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator neutral tally captured at analysis time.'),
+  "tradePlan": zod.union([zod.object({
+  "preferredSide": zod.enum(['buy', 'sell', 'wait']),
+  "buy": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.'),
+  "sell": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.')
+}).describe('Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; \'wait\' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).'),zod.null()]).optional().describe('Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.'),
+  "fundamentalContext": zod.union([zod.object({
+  "newsItems": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "source": zod.string().describe('Human-readable source label, e.g. \'Newsmaker.id\' or \'Yahoo Finance\'.'),
+  "url": zod.string().nullable(),
+  "publishedAt": zod.coerce.date()
+}).describe('A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.')),
+  "calendarEvents": zod.array(zod.object({
+  "date": zod.string(),
+  "time": zod.string().nullable(),
+  "currency": zod.string(),
+  "event": zod.string(),
+  "impact": zod.string().nullable().describe('Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.'),
+  "actual": zod.string().nullable(),
+  "forecast": zod.string().nullable(),
+  "previous": zod.string().nullable()
+}).describe('A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.'))
+}).describe('Snapshot of fundamental inputs the AI saw at analysis time.'),zod.null()]).optional().describe('Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.'),
+  "fundamentalCitations": zod.union([zod.object({
+  "newsTitles": zod.array(zod.string()).describe('News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).'),
+  "calendarEvents": zod.array(zod.string()).describe('Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).')
+}).describe('Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).'),zod.null()]).optional().describe('Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI\'s reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn\'t lean on any fundamental input.'),
+  "outcomeStatus": zod.enum(['pending', 'tp1_hit', 'tp2_hit', 'sl_hit', 'expired', 'invalidated']).optional().describe('After-the-fact resolution of the AI\'s trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.'),
+  "outcomeResolvedAt": zod.coerce.date().nullish().describe('Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.'),
+  "outcomeCheckedAt": zod.coerce.date().nullish().describe('When the background resolver last looked at this row. Null until the first resolver pass touches it.'),
+  "userNote": zod.string().nullish().describe('Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.'),
+  "userNoteUpdatedAt": zod.coerce.date().nullish().describe('When `userNote` was last saved server-side. Null when no note has been written.'),
+  "hasNote": zod.boolean().optional().describe('True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a \'journaled\' icon without loading the full note body.'),
+  "feedback": zod.union([zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int(),
+  "feedbackType": zod.enum(['useful', 'not_useful']),
+  "outcome": zod.enum(['correct', 'wrong', 'unknown']).nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]).optional(),
+  "usefulCount": zod.number().int().optional().describe('Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "notUsefulCount": zod.number().int().optional().describe('Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "createdAt": zod.coerce.date()
+}))
+})
+
 
 /**
  * Aggregates the after-the-fact outcomes the background resolver has written to each analysis (TP1/TP2 hit, SL hit, expired, invalidated, or still pending) for the current user over the past 30 days. Drives the "AI accuracy" card on the dashboard.
  * @summary AI trade-plan outcome roll-up over the last 30 days
  */
-export const GetAnalysisOutcomesSummaryResponse = zod
-  .object({
-    rangeDays: zod.number().int(),
-    total: zod.number().int(),
-    pending: zod.number().int(),
-    tp1Hit: zod.number().int(),
-    tp2Hit: zod.number().int(),
-    slHit: zod.number().int(),
-    expired: zod.number().int(),
-    invalidated: zod.number().int(),
-    scored: zod
-      .number()
-      .int()
-      .describe(
-        "Denominator used for tpHitRate \/ slHitRate. Equals tp1Hit + tp2Hit + slHit + expired (excludes pending and invalidated).",
-      ),
-    tpHitRate: zod
-      .number()
-      .nullish()
-      .describe("(tp1Hit + tp2Hit) \/ scored. Null when scored == 0."),
-    slHitRate: zod
-      .number()
-      .nullish()
-      .describe("slHit \/ scored. Null when scored == 0."),
-  })
-  .describe(
-    "Outcome roll-up powering the dashboard's AI accuracy card. Counts every analysis created in the last `rangeDays` days; `scored` is the resolved + non-invalidated subset that the hit-rate percentages are computed against.",
-  );
+export const GetAnalysisOutcomesSummaryResponse = zod.object({
+  "rangeDays": zod.number().int(),
+  "total": zod.number().int(),
+  "pending": zod.number().int(),
+  "tp1Hit": zod.number().int(),
+  "tp2Hit": zod.number().int(),
+  "slHit": zod.number().int(),
+  "expired": zod.number().int(),
+  "invalidated": zod.number().int(),
+  "scored": zod.number().int().describe('Denominator used for tpHitRate \/ slHitRate. Equals tp1Hit + tp2Hit + slHit + expired (excludes pending and invalidated).'),
+  "tpHitRate": zod.number().nullish().describe('(tp1Hit + tp2Hit) \/ scored. Null when scored == 0.'),
+  "slHitRate": zod.number().nullish().describe('slHit \/ scored. Null when scored == 0.')
+}).describe('Outcome roll-up powering the dashboard\'s AI accuracy card. Counts every analysis created in the last `rangeDays` days; `scored` is the resolved + non-invalidated subset that the hit-rate percentages are computed against.')
+
 
 /**
  * @summary Get the current user's analysis-outcome summary by timeframe
@@ -2258,121 +1587,103 @@ export const GetAnalysisOutcomesSummaryResponse = zod
 export const getAnalysisHistorySummaryQueryRangeDefault = `30`;
 
 export const GetAnalysisHistorySummaryQueryParams = zod.object({
-  range: zod
-    .enum(["7", "30", "90", "all"])
-    .default(getAnalysisHistorySummaryQueryRangeDefault),
-  instruments: zod.array(zod.coerce.string()).optional(),
-  timeframes: zod.array(zod.coerce.string()).optional(),
-});
+  "range": zod.enum(['7', '30', '90', 'all']).default(getAnalysisHistorySummaryQueryRangeDefault),
+  "instruments": zod.array(zod.coerce.string()).optional(),
+  "timeframes": zod.array(zod.coerce.string()).optional()
+})
 
 export const GetAnalysisHistorySummaryResponse = zod.object({
-  range: zod.enum(["7", "30", "90", "all"]),
-  minSamples: zod.number().int(),
-  overall: zod.object({
-    total: zod.number().int(),
-    pending: zod.number().int(),
-    activeValid: zod.number().int(),
-    tp1Hit: zod.number().int(),
-    tp2Hit: zod.number().int(),
-    slHit: zod.number().int(),
-    expired: zod.number().int(),
-    invalidated: zod.number().int(),
-    winRate: zod.number().nullable(),
-    completionRate: zod.number().nullable(),
-  }),
-  byInstrument: zod.array(
-    zod
-      .object({
-        total: zod.number().int(),
-        pending: zod.number().int(),
-        activeValid: zod.number().int(),
-        tp1Hit: zod.number().int(),
-        tp2Hit: zod.number().int(),
-        slHit: zod.number().int(),
-        expired: zod.number().int(),
-        invalidated: zod.number().int(),
-        winRate: zod.number().nullable(),
-        completionRate: zod.number().nullable(),
-      })
-      .and(
-        zod.object({
-          instrument: zod.string(),
-          byTimeframe: zod.array(
-            zod
-              .object({
-                total: zod.number().int(),
-                pending: zod.number().int(),
-                activeValid: zod.number().int(),
-                tp1Hit: zod.number().int(),
-                tp2Hit: zod.number().int(),
-                slHit: zod.number().int(),
-                expired: zod.number().int(),
-                invalidated: zod.number().int(),
-                winRate: zod.number().nullable(),
-                completionRate: zod.number().nullable(),
-              })
-              .and(
-                zod.object({
-                  timeframe: zod.string(),
-                }),
-              ),
-          ),
-        }),
-      ),
-  ),
-  byTimeframe: zod.array(
-    zod
-      .object({
-        total: zod.number().int(),
-        pending: zod.number().int(),
-        activeValid: zod.number().int(),
-        tp1Hit: zod.number().int(),
-        tp2Hit: zod.number().int(),
-        slHit: zod.number().int(),
-        expired: zod.number().int(),
-        invalidated: zod.number().int(),
-        winRate: zod.number().nullable(),
-        completionRate: zod.number().nullable(),
-      })
-      .and(
-        zod.object({
-          timeframe: zod.string(),
-        }),
-      ),
-  ),
-});
+  "range": zod.enum(['7', '30', '90', 'all']),
+  "minSamples": zod.number().int(),
+  "overall": zod.object({
+  "total": zod.number().int(),
+  "pending": zod.number().int(),
+  "activeValid": zod.number().int(),
+  "tp1Hit": zod.number().int(),
+  "tp2Hit": zod.number().int(),
+  "slHit": zod.number().int(),
+  "expired": zod.number().int(),
+  "invalidated": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "completionRate": zod.number().nullable()
+}),
+  "byInstrument": zod.array(zod.object({
+  "total": zod.number().int(),
+  "pending": zod.number().int(),
+  "activeValid": zod.number().int(),
+  "tp1Hit": zod.number().int(),
+  "tp2Hit": zod.number().int(),
+  "slHit": zod.number().int(),
+  "expired": zod.number().int(),
+  "invalidated": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "completionRate": zod.number().nullable()
+}).and(zod.object({
+  "instrument": zod.string(),
+  "byTimeframe": zod.array(zod.object({
+  "total": zod.number().int(),
+  "pending": zod.number().int(),
+  "activeValid": zod.number().int(),
+  "tp1Hit": zod.number().int(),
+  "tp2Hit": zod.number().int(),
+  "slHit": zod.number().int(),
+  "expired": zod.number().int(),
+  "invalidated": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "completionRate": zod.number().nullable()
+}).and(zod.object({
+  "timeframe": zod.string()
+})))
+}))),
+  "byTimeframe": zod.array(zod.object({
+  "total": zod.number().int(),
+  "pending": zod.number().int(),
+  "activeValid": zod.number().int(),
+  "tp1Hit": zod.number().int(),
+  "tp2Hit": zod.number().int(),
+  "slHit": zod.number().int(),
+  "expired": zod.number().int(),
+  "invalidated": zod.number().int(),
+  "winRate": zod.number().nullable(),
+  "completionRate": zod.number().nullable()
+}).and(zod.object({
+  "timeframe": zod.string()
+})))
+})
+
 
 /**
  * @summary Get 3 most recently analyzed instruments
  */
 export const GetRecentInstrumentsResponse = zod.object({
-  instruments: zod.array(
-    zod.object({
-      instrument: zod.string(),
-      lastAnalyzedAt: zod.coerce.date(),
-      mode: zod.string(),
-    }),
-  ),
-});
+  "instruments": zod.array(zod.object({
+  "instrument": zod.string(),
+  "lastAnalyzedAt": zod.coerce.date(),
+  "mode": zod.string()
+}))
+})
+
 
 /**
  * @summary Get current user's analysis quota usage
  */
 export const GetAnalysisQuotaResponse = zod.object({
-  unlimited: zod
-    .boolean()
-    .describe("True for admin\/super_admin, who bypass quota"),
-  hourly: zod.object({
-    limit: zod.number().int(),
-    used: zod.number().int(),
-    remaining: zod.number().int(),
-  }),
-  daily: zod.object({
-    limit: zod.number().int(),
-    used: zod.number().int(),
-    remaining: zod.number().int(),
-  }),
-});
+  "unlimited": zod.boolean().describe('True for admin\/super_admin, who bypass quota'),
+  "hourly": zod.object({
+  "limit": zod.number().int(),
+  "used": zod.number().int(),
+  "remaining": zod.number().int()
+}),
+  "daily": zod.object({
+  "limit": zod.number().int(),
+  "used": zod.number().int(),
+  "remaining": zod.number().int()
+}),
+  "credits": zod.object({
+  "balance": zod.number().int()
+})
+})
+
 
 /**
  * @summary Get personal analytics data
@@ -2380,906 +1691,509 @@ export const GetAnalysisQuotaResponse = zod.object({
 export const getPersonalAnalyticsQueryRangeDefault = `weekly`;
 
 export const GetPersonalAnalyticsQueryParams = zod.object({
-  range: zod
-    .enum(["daily", "weekly", "monthly"])
-    .default(getPersonalAnalyticsQueryRangeDefault)
-    .describe(
-      "Time-bucket range for the chart series. `daily` returns the last 7 days, `weekly` the last 7 weeks, `monthly` the last 6 months.",
-    ),
-});
+  "range": zod.enum(['daily', 'weekly', 'monthly']).default(getPersonalAnalyticsQueryRangeDefault).describe('Time-bucket range for the chart series. `daily` returns the last 7 days, `weekly` the last 7 weeks, `monthly` the last 6 months.')
+})
 
 export const GetPersonalAnalyticsResponse = zod.object({
-  totalAllTime: zod.number().int(),
-  totalThisMonth: zod.number().int(),
-  totalThisWeek: zod.number().int(),
-  topInstruments: zod.array(
-    zod.object({
-      instrument: zod.string(),
-      count: zod.number().int(),
-    }),
-  ),
-  dominantMode: zod.string().nullish(),
-  accuracyRate: zod.number().nullish(),
-  feedbackCount: zod.number().int(),
-  weeklyData: zod.array(
-    zod.object({
-      week: zod.string(),
-      count: zod.number().int(),
-    }),
-  ),
-});
+  "totalAllTime": zod.number().int(),
+  "totalThisMonth": zod.number().int(),
+  "totalThisWeek": zod.number().int(),
+  "topInstruments": zod.array(zod.object({
+  "instrument": zod.string(),
+  "count": zod.number().int()
+})),
+  "dominantMode": zod.string().nullish(),
+  "accuracyRate": zod.number().nullish(),
+  "feedbackCount": zod.number().int(),
+  "weeklyData": zod.array(zod.object({
+  "week": zod.string(),
+  "count": zod.number().int()
+}))
+})
+
 
 /**
  * @summary Get single analysis
  */
 export const GetAnalysisParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const GetAnalysisResponse = zod.object({
-  id: zod.number().int(),
-  userId: zod.number().int(),
-  instrument: zod.string(),
-  timeframe: zod.string(),
-  userInputContext: zod.string().nullish(),
-  mode: zod.enum(["beginner", "pro"]),
-  validUntil: zod.coerce.date(),
-  marketCondition: zod.string().nullish(),
-  riskLevel: zod.string().nullish(),
-  confidenceMin: zod.number().int().nullish(),
-  confidenceMax: zod.number().int().nullish(),
-  mainScenario: zod.string().nullish(),
-  alternativeScenario: zod.string().nullish(),
-  whyReason: zod.string().nullish(),
-  failureConditions: zod.string().nullish(),
-  baseCase: zod.string().nullish(),
-  bullishScenario: zod.string().nullish(),
-  bearishScenario: zod.string().nullish(),
-  keyDriversTechnical: zod.string().nullish(),
-  keyDriversFundamental: zod.string().nullish(),
-  marketContext: zod.string().nullish(),
-  invalidationConditions: zod.string().nullish(),
-  uncertaintyNotes: zod.string().nullish(),
-  tradingBias: zod
-    .string()
-    .nullish()
-    .describe(
-      "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
-    ),
-  opportunity: zod.string().nullish(),
-  risk: zod.string().nullish(),
-  techBuyCount: zod
-    .number()
-    .int()
-    .nullish()
-    .describe(
-      "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
-    ),
-  techSellCount: zod
-    .number()
-    .int()
-    .nullish()
-    .describe(
-      "Snapshot of the technical-indicator sell tally captured at analysis time.",
-    ),
-  techNeutralCount: zod
-    .number()
-    .int()
-    .nullish()
-    .describe(
-      "Snapshot of the technical-indicator neutral tally captured at analysis time.",
-    ),
-  tradePlan: zod
-    .union([
-      zod
-        .object({
-          preferredSide: zod.enum(["buy", "sell", "wait"]),
-          buy: zod
-            .object({
-              entryZone: zod.string(),
-              stopLoss: zod.string(),
-              takeProfit1: zod.string(),
-              takeProfit2: zod.string(),
-              riskRewardRatio: zod.string(),
-              rationale: zod.string(),
-            })
-            .describe(
-              "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-            ),
-          sell: zod
-            .object({
-              entryZone: zod.string(),
-              stopLoss: zod.string(),
-              takeProfit1: zod.string(),
-              takeProfit2: zod.string(),
-              riskRewardRatio: zod.string(),
-              rationale: zod.string(),
-            })
-            .describe(
-              "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-            ),
-        })
-        .describe(
-          "Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; 'wait' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).",
-        ),
-      zod.null(),
-    ])
-    .optional()
-    .describe(
-      "Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.",
-    ),
-  fundamentalContext: zod
-    .union([
-      zod
-        .object({
-          newsItems: zod.array(
-            zod
-              .object({
-                id: zod.string(),
-                title: zod.string(),
-                summary: zod.string(),
-                source: zod
-                  .string()
-                  .describe(
-                    "Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.",
-                  ),
-                url: zod.string().nullable(),
-                publishedAt: zod.coerce.date(),
-              })
-              .describe(
-                "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
-              ),
-          ),
-          calendarEvents: zod.array(
-            zod
-              .object({
-                date: zod.string(),
-                time: zod.string().nullable(),
-                currency: zod.string(),
-                event: zod.string(),
-                impact: zod
-                  .string()
-                  .nullable()
-                  .describe(
-                    "Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.",
-                  ),
-                actual: zod.string().nullable(),
-                forecast: zod.string().nullable(),
-                previous: zod.string().nullable(),
-              })
-              .describe(
-                "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
-              ),
-          ),
-        })
-        .describe(
-          "Snapshot of fundamental inputs the AI saw at analysis time.",
-        ),
-      zod.null(),
-    ])
-    .optional()
-    .describe(
-      "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
-    ),
-  fundamentalCitations: zod
-    .union([
-      zod
-        .object({
-          newsTitles: zod
-            .array(zod.string())
-            .describe(
-              "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
-            ),
-          calendarEvents: zod
-            .array(zod.string())
-            .describe(
-              "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
-            ),
-        })
-        .describe(
-          "Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).",
-        ),
-      zod.null(),
-    ])
-    .optional()
-    .describe(
-      "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
-    ),
-  outcomeStatus: zod
-    .enum(["pending", "tp1_hit", "tp2_hit", "sl_hit", "expired", "invalidated"])
-    .optional()
-    .describe(
-      "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
-    ),
-  outcomeResolvedAt: zod.coerce
-    .date()
-    .nullish()
-    .describe(
-      "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
-    ),
-  outcomeCheckedAt: zod.coerce
-    .date()
-    .nullish()
-    .describe(
-      "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
-    ),
-  userNote: zod
-    .string()
-    .nullish()
-    .describe(
-      "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
-    ),
-  userNoteUpdatedAt: zod.coerce
-    .date()
-    .nullish()
-    .describe(
-      "When `userNote` was last saved server-side. Null when no note has been written.",
-    ),
-  hasNote: zod
-    .boolean()
-    .optional()
-    .describe(
-      "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
-    ),
-  feedback: zod
-    .union([
-      zod.object({
-        id: zod.number().int(),
-        analysisId: zod.number().int(),
-        feedbackType: zod.enum(["useful", "not_useful"]),
-        outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
-        note: zod.string().nullish(),
-        createdAt: zod.coerce.date(),
-      }),
-      zod.null(),
-    ])
-    .optional(),
-  usefulCount: zod
-    .number()
-    .int()
-    .optional()
-    .describe(
-      'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-    ),
-  notUsefulCount: zod
-    .number()
-    .int()
-    .optional()
-    .describe(
-      'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-    ),
-  createdAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "instrument": zod.string(),
+  "timeframe": zod.string(),
+  "userInputContext": zod.string().nullish(),
+  "mode": zod.enum(['beginner', 'pro']),
+  "validUntil": zod.coerce.date(),
+  "marketCondition": zod.string().nullish(),
+  "riskLevel": zod.string().nullish(),
+  "confidenceMin": zod.number().int().nullish(),
+  "confidenceMax": zod.number().int().nullish(),
+  "mainScenario": zod.string().nullish(),
+  "alternativeScenario": zod.string().nullish(),
+  "whyReason": zod.string().nullish(),
+  "failureConditions": zod.string().nullish(),
+  "baseCase": zod.string().nullish(),
+  "bullishScenario": zod.string().nullish(),
+  "bearishScenario": zod.string().nullish(),
+  "keyDriversTechnical": zod.string().nullish(),
+  "keyDriversFundamental": zod.string().nullish(),
+  "marketContext": zod.string().nullish(),
+  "invalidationConditions": zod.string().nullish(),
+  "uncertaintyNotes": zod.string().nullish(),
+  "tradingBias": zod.string().nullish().describe('Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.'),
+  "opportunity": zod.string().nullish(),
+  "risk": zod.string().nullish(),
+  "techBuyCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.'),
+  "techSellCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator sell tally captured at analysis time.'),
+  "techNeutralCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator neutral tally captured at analysis time.'),
+  "tradePlan": zod.union([zod.object({
+  "preferredSide": zod.enum(['buy', 'sell', 'wait']),
+  "buy": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.'),
+  "sell": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.')
+}).describe('Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; \'wait\' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).'),zod.null()]).optional().describe('Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.'),
+  "fundamentalContext": zod.union([zod.object({
+  "newsItems": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "source": zod.string().describe('Human-readable source label, e.g. \'Newsmaker.id\' or \'Yahoo Finance\'.'),
+  "url": zod.string().nullable(),
+  "publishedAt": zod.coerce.date()
+}).describe('A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.')),
+  "calendarEvents": zod.array(zod.object({
+  "date": zod.string(),
+  "time": zod.string().nullable(),
+  "currency": zod.string(),
+  "event": zod.string(),
+  "impact": zod.string().nullable().describe('Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.'),
+  "actual": zod.string().nullable(),
+  "forecast": zod.string().nullable(),
+  "previous": zod.string().nullable()
+}).describe('A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.'))
+}).describe('Snapshot of fundamental inputs the AI saw at analysis time.'),zod.null()]).optional().describe('Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.'),
+  "fundamentalCitations": zod.union([zod.object({
+  "newsTitles": zod.array(zod.string()).describe('News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).'),
+  "calendarEvents": zod.array(zod.string()).describe('Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).')
+}).describe('Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).'),zod.null()]).optional().describe('Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI\'s reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn\'t lean on any fundamental input.'),
+  "outcomeStatus": zod.enum(['pending', 'tp1_hit', 'tp2_hit', 'sl_hit', 'expired', 'invalidated']).optional().describe('After-the-fact resolution of the AI\'s trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.'),
+  "outcomeResolvedAt": zod.coerce.date().nullish().describe('Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.'),
+  "outcomeCheckedAt": zod.coerce.date().nullish().describe('When the background resolver last looked at this row. Null until the first resolver pass touches it.'),
+  "userNote": zod.string().nullish().describe('Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.'),
+  "userNoteUpdatedAt": zod.coerce.date().nullish().describe('When `userNote` was last saved server-side. Null when no note has been written.'),
+  "hasNote": zod.boolean().optional().describe('True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a \'journaled\' icon without loading the full note body.'),
+  "feedback": zod.union([zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int(),
+  "feedbackType": zod.enum(['useful', 'not_useful']),
+  "outcome": zod.enum(['correct', 'wrong', 'unknown']).nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]).optional(),
+  "usefulCount": zod.number().int().optional().describe('Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "notUsefulCount": zod.number().int().optional().describe('Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "createdAt": zod.coerce.date()
+})
+
 
 /**
  * Persists a plain-text journal note scoped to this analysis and the authenticated user. Sending an empty / whitespace-only string clears the note. The note is never included in any AI prompt — it is purely a private user field for the trading-journal UI on the detail page.
  * @summary Save the user's private trading-journal note for an analysis
  */
 export const SetAnalysisNoteParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const SetAnalysisNoteBody = zod.object({
-  note: zod
-    .string()
-    .describe(
-      "Plain-text note (max 5000 chars). Empty\/whitespace string clears the note.",
-    ),
-});
+  "note": zod.string().describe('Plain-text note (max 5000 chars). Empty\/whitespace string clears the note.')
+})
 
-export const SetAnalysisNoteResponse = zod
-  .object({
-    note: zod.string().nullable(),
-    updatedAt: zod.coerce.date().nullable(),
-  })
-  .describe(
-    "Response shape for PUT \/analyses\/{id}\/note — the persisted note body (null when cleared) and the server-stamped updatedAt.",
-  );
+export const SetAnalysisNoteResponse = zod.object({
+  "note": zod.string().nullable(),
+  "updatedAt": zod.coerce.date().nullable()
+}).describe('Response shape for PUT \/analyses\/{id}\/note — the persisted note body (null when cleared) and the server-stamped updatedAt.')
+
 
 /**
  * Re-fetches the news headlines and economic-calendar events for the analysis's instrument WITHOUT re-running the AI. Persists the fresh snapshot on the analyses row (the audit "Fundamental Context" card renders from this) and returns a drift report listing which of the AI's original `fundamentalCitations` no longer match anything in the fresh window. Lets the user sanity-check whether the saved AI thesis still rests on a valid fundamental base.
  * @summary Re-fetch news + economic calendar for an existing analysis (no AI re-run)
  */
 export const RefreshFundamentalsParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
-export const RefreshFundamentalsResponse = zod
-  .object({
-    fundamentalContext: zod
-      .object({
-        newsItems: zod.array(
-          zod
-            .object({
-              id: zod.string(),
-              title: zod.string(),
-              summary: zod.string(),
-              source: zod
-                .string()
-                .describe(
-                  "Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.",
-                ),
-              url: zod.string().nullable(),
-              publishedAt: zod.coerce.date(),
-            })
-            .describe(
-              "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
-            ),
-        ),
-        calendarEvents: zod.array(
-          zod
-            .object({
-              date: zod.string(),
-              time: zod.string().nullable(),
-              currency: zod.string(),
-              event: zod.string(),
-              impact: zod
-                .string()
-                .nullable()
-                .describe(
-                  "Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.",
-                ),
-              actual: zod.string().nullable(),
-              forecast: zod.string().nullable(),
-              previous: zod.string().nullable(),
-            })
-            .describe(
-              "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
-            ),
-        ),
-      })
-      .describe("Snapshot of fundamental inputs the AI saw at analysis time."),
-    refreshedAt: zod.coerce
-      .date()
-      .describe(
-        "Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the 'updated N minutes ago' banner.",
-      ),
-    drift: zod
-      .object({
-        totalCitations: zod
-          .number()
-          .int()
-          .describe(
-            "Total citations the AI emitted at analysis time (newsTitles + calendarEvents).",
-          ),
-        missingCitations: zod
-          .array(
-            zod
-              .object({
-                kind: zod.enum(["news", "calendar"]),
-                label: zod.string(),
-              })
-              .describe(
-                "A single original AI citation that no longer matches anything in the freshly-fetched news\/calendar window.",
-              ),
-          )
-          .describe(
-            "Original citations that no longer match any item in the fresh snapshot.",
-          ),
-      })
-      .describe(
-        "Summary of how many of the AI's original fundamental citations are no longer present in the freshly-fetched window.",
-      ),
-  })
-  .describe(
-    "Response from POST \/analyses\/{id}\/refresh-fundamentals — the freshly-fetched fundamental snapshot plus a drift report against the AI's original citations.",
-  );
+export const RefreshFundamentalsResponse = zod.object({
+  "fundamentalContext": zod.object({
+  "newsItems": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "source": zod.string().describe('Human-readable source label, e.g. \'Newsmaker.id\' or \'Yahoo Finance\'.'),
+  "url": zod.string().nullable(),
+  "publishedAt": zod.coerce.date()
+}).describe('A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.')),
+  "calendarEvents": zod.array(zod.object({
+  "date": zod.string(),
+  "time": zod.string().nullable(),
+  "currency": zod.string(),
+  "event": zod.string(),
+  "impact": zod.string().nullable().describe('Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.'),
+  "actual": zod.string().nullable(),
+  "forecast": zod.string().nullable(),
+  "previous": zod.string().nullable()
+}).describe('A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.'))
+}).describe('Snapshot of fundamental inputs the AI saw at analysis time.'),
+  "refreshedAt": zod.coerce.date().describe('Server-side timestamp at which the fresh snapshot was captured. Used by the UI to render the \'updated N minutes ago\' banner.'),
+  "drift": zod.object({
+  "totalCitations": zod.number().int().describe('Total citations the AI emitted at analysis time (newsTitles + calendarEvents).'),
+  "missingCitations": zod.array(zod.object({
+  "kind": zod.enum(['news', 'calendar']),
+  "label": zod.string()
+}).describe('A single original AI citation that no longer matches anything in the freshly-fetched news\/calendar window.')).describe('Original citations that no longer match any item in the fresh snapshot.')
+}).describe('Summary of how many of the AI\'s original fundamental citations are no longer present in the freshly-fetched window.')
+}).describe('Response from POST \/analyses\/{id}\/refresh-fundamentals — the freshly-fetched fundamental snapshot plus a drift report against the AI\'s original citations.')
+
 
 /**
  * Returns whether push alerts are armed on this analysis's AI-generated entry / SL / TP levels, and the per-level fire history. Drives the "Alerts: ON · N levels armed" indicator on the analysis-detail page.
  * @summary Get price-alert status for an analysis
  */
 export const GetAnalysisAlertsParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const GetAnalysisAlertsResponse = zod.object({
-  enabled: zod
-    .boolean()
-    .describe(
-      "Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.",
-    ),
-  armedCount: zod
-    .number()
-    .int()
-    .describe(
-      "Number of currently armed levels (un-triggered, un-cancelled, in-validity).",
-    ),
-  levels: zod.array(
-    zod.object({
-      level: zod.enum(["entry", "sl", "tp1", "tp2"]),
-      side: zod.enum(["buy", "sell"]),
-      price: zod
-        .string()
-        .describe("AI-generated level price, stored verbatim for precision."),
-      direction: zod
-        .enum(["above", "below"])
-        .describe(
-          "Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.\n",
-        ),
-      triggeredAt: zod.coerce.date().nullable(),
-      triggeredPrice: zod
-        .string()
-        .nullable()
-        .describe("Live price the watcher saw when it fired the alert."),
-      cancelledAt: zod.coerce.date().nullable(),
-    }),
-  ),
-});
+  "enabled": zod.boolean().describe('Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.'),
+  "armedCount": zod.number().int().describe('Number of currently armed levels (un-triggered, un-cancelled, in-validity).'),
+  "levels": zod.array(zod.object({
+  "level": zod.enum(['entry', 'sl', 'tp1', 'tp2']),
+  "side": zod.enum(['buy', 'sell']),
+  "price": zod.string().describe('AI-generated level price, stored verbatim for precision.'),
+  "direction": zod.enum(['above', 'below']).describe('Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.\n'),
+  "triggeredAt": zod.coerce.date().nullable(),
+  "triggeredPrice": zod.string().nullable().describe('Live price the watcher saw when it fired the alert.'),
+  "cancelledAt": zod.coerce.date().nullable()
+}))
+})
+
 
 /**
  * Arms one push alert per AI level on the preferred trade side. The background watcher polls live prices every ~30s and fires the first time each level is touched, deep-linking back to this analysis.
  * @summary Arm price alerts for an analysis
  */
 export const ArmAnalysisAlertsParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const ArmAnalysisAlertsResponse = zod.object({
-  enabled: zod
-    .boolean()
-    .describe(
-      "Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.",
-    ),
-  armedCount: zod
-    .number()
-    .int()
-    .describe(
-      "Number of currently armed levels (un-triggered, un-cancelled, in-validity).",
-    ),
-  levels: zod.array(
-    zod.object({
-      level: zod.enum(["entry", "sl", "tp1", "tp2"]),
-      side: zod.enum(["buy", "sell"]),
-      price: zod
-        .string()
-        .describe("AI-generated level price, stored verbatim for precision."),
-      direction: zod
-        .enum(["above", "below"])
-        .describe(
-          "Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.\n",
-        ),
-      triggeredAt: zod.coerce.date().nullable(),
-      triggeredPrice: zod
-        .string()
-        .nullable()
-        .describe("Live price the watcher saw when it fired the alert."),
-      cancelledAt: zod.coerce.date().nullable(),
-    }),
-  ),
-});
+  "enabled": zod.boolean().describe('Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.'),
+  "armedCount": zod.number().int().describe('Number of currently armed levels (un-triggered, un-cancelled, in-validity).'),
+  "levels": zod.array(zod.object({
+  "level": zod.enum(['entry', 'sl', 'tp1', 'tp2']),
+  "side": zod.enum(['buy', 'sell']),
+  "price": zod.string().describe('AI-generated level price, stored verbatim for precision.'),
+  "direction": zod.enum(['above', 'below']).describe('Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.\n'),
+  "triggeredAt": zod.coerce.date().nullable(),
+  "triggeredPrice": zod.string().nullable().describe('Live price the watcher saw when it fired the alert.'),
+  "cancelledAt": zod.coerce.date().nullable()
+}))
+})
+
 
 /**
  * @summary Cancel any un-fired price alerts for an analysis
  */
 export const CancelAnalysisAlertsParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const CancelAnalysisAlertsResponse = zod.object({
-  enabled: zod
-    .boolean()
-    .describe(
-      "Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.",
-    ),
-  armedCount: zod
-    .number()
-    .int()
-    .describe(
-      "Number of currently armed levels (un-triggered, un-cancelled, in-validity).",
-    ),
-  levels: zod.array(
-    zod.object({
-      level: zod.enum(["entry", "sl", "tp1", "tp2"]),
-      side: zod.enum(["buy", "sell"]),
-      price: zod
-        .string()
-        .describe("AI-generated level price, stored verbatim for precision."),
-      direction: zod
-        .enum(["above", "below"])
-        .describe(
-          "Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.\n",
-        ),
-      triggeredAt: zod.coerce.date().nullable(),
-      triggeredPrice: zod
-        .string()
-        .nullable()
-        .describe("Live price the watcher saw when it fired the alert."),
-      cancelledAt: zod.coerce.date().nullable(),
-    }),
-  ),
-});
+  "enabled": zod.boolean().describe('Convenience flag — true when at least one un-triggered, un-cancelled, in-validity alert exists.'),
+  "armedCount": zod.number().int().describe('Number of currently armed levels (un-triggered, un-cancelled, in-validity).'),
+  "levels": zod.array(zod.object({
+  "level": zod.enum(['entry', 'sl', 'tp1', 'tp2']),
+  "side": zod.enum(['buy', 'sell']),
+  "price": zod.string().describe('AI-generated level price, stored verbatim for precision.'),
+  "direction": zod.enum(['above', 'below']).describe('Which way price must move from the spot at arm time to fire the alert. `above` = fire when live ≥ price; `below` = fire when live ≤ price.\n'),
+  "triggeredAt": zod.coerce.date().nullable(),
+  "triggeredPrice": zod.string().nullable().describe('Live price the watcher saw when it fired the alert.'),
+  "cancelledAt": zod.coerce.date().nullable()
+}))
+})
+
 
 /**
  * @summary Submit feedback for analysis
  */
 export const SubmitFeedbackParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const SubmitFeedbackBody = zod.object({
-  feedbackType: zod.enum(["useful", "not_useful"]),
-  outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
-  note: zod.string().nullish(),
-});
+  "feedbackType": zod.enum(['useful', 'not_useful']),
+  "outcome": zod.enum(['correct', 'wrong', 'unknown']).nullish(),
+  "note": zod.string().nullish()
+})
 
 export const SubmitFeedbackResponse = zod.object({
-  id: zod.number().int(),
-  analysisId: zod.number().int(),
-  feedbackType: zod.enum(["useful", "not_useful"]),
-  outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
-  note: zod.string().nullish(),
-  createdAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "analysisId": zod.number().int(),
+  "feedbackType": zod.enum(['useful', 'not_useful']),
+  "outcome": zod.enum(['correct', 'wrong', 'unknown']).nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
 
 /**
  * @summary Get notifications for current user
  */
 export const GetNotificationsQueryParams = zod.object({
-  unreadOnly: zod.coerce.boolean().optional(),
-});
+  "unreadOnly": zod.coerce.boolean().optional()
+})
 
 export const GetNotificationsResponse = zod.object({
-  notifications: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      userId: zod.number().int().nullish(),
-      targetRole: zod.string().nullish(),
-      title: zod.string(),
-      message: zod.string(),
-      type: zod.enum(["info", "warning", "error"]),
-      readAt: zod.coerce.date().nullish(),
-      category: zod
-        .string()
-        .nullish()
-        .describe(
-          'Category slug used by the anti-annoyance\/frequency-cap engine (e.g. \"market_news\", \"security_alert\"). Informational for clients — not itself a tap-target.',
-        ),
-      actionType: zod
-        .enum(["open_notification", "open_analysis"])
-        .nullish()
-        .describe(
-          "Allowlisted tap-target. Clients should treat any value they don't recognise the same as null (no special action, just mark read) so new action types can be added without breaking older clients.",
-        ),
-      actionId: zod
-        .string()
-        .nullish()
-        .describe(
-          'The id `actionType` refers to (e.g. an analysis id for \"open_analysis\").',
-        ),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-  unreadCount: zod.number().int(),
-});
+  "notifications": zod.array(zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int().nullish(),
+  "targetRole": zod.string().nullish(),
+  "title": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['info', 'warning', 'error']),
+  "readAt": zod.coerce.date().nullish(),
+  "category": zod.string().nullish().describe('Category slug used by the anti-annoyance\/frequency-cap engine (e.g. \"market_news\", \"security_alert\"). Informational for clients — not itself a tap-target.'),
+  "actionType": zod.enum(['open_notification', 'open_analysis']).nullish().describe('Allowlisted tap-target. Clients should treat any value they don\'t recognise the same as null (no special action, just mark read) so new action types can be added without breaking older clients.'),
+  "actionId": zod.string().nullish().describe('The id `actionType` refers to (e.g. an analysis id for \"open_analysis\").'),
+  "createdAt": zod.coerce.date()
+})),
+  "unreadCount": zod.number().int()
+})
+
 
 /**
  * @summary Mark single notification as read
  */
 export const MarkNotificationReadParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const MarkNotificationReadResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Mark all notifications as read
  */
 export const MarkAllNotificationsReadResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Get the VAPID public key for Web Push subscription
  */
 export const GetPushPublicKeyResponse = zod.object({
-  publicKey: zod.string(),
-});
+  "publicKey": zod.string()
+})
+
 
 /**
  * @summary Register a Web Push subscription for the current user
  */
 export const SubscribePushBody = zod.object({
-  endpoint: zod.string().url(),
-  keys: zod.object({
-    p256dh: zod.string(),
-    auth: zod.string(),
-  }),
-});
+  "endpoint": zod.string().url(),
+  "keys": zod.object({
+  "p256dh": zod.string(),
+  "auth": zod.string()
+})
+})
 
 export const SubscribePushResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Remove a Web Push subscription for the current user
  */
 export const UnsubscribePushBody = zod.object({
-  endpoint: zod.string().url(),
-});
+  "endpoint": zod.string().url()
+})
 
 export const UnsubscribePushResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Check whether the current user has any active push subscription
  */
 export const GetPushSubscriptionStatusResponse = zod.object({
-  subscribed: zod.boolean(),
-});
+  "subscribed": zod.boolean()
+})
+
 
 /**
  * @summary Get current user's daily summary settings + today's digest
  */
 export const GetDailySummaryResponse = zod.object({
-  settings: zod.object({
-    enabled: zod.boolean(),
-    time: zod.string().describe("HH:MM 24h local time the digest should fire"),
-    timezone: zod.string().describe("IANA timezone the time is interpreted in"),
-    pushDailySummary: zod.boolean(),
-    lastSentDate: zod
-      .string()
-      .nullish()
-      .describe("YYYY-MM-DD in user's TZ; null if never sent"),
-  }),
-  today: zod
-    .object({
-      digestDate: zod.string(),
-      kind: zod.enum(["full", "quota_only"]),
-      instruments: zod.array(zod.string()),
-      summary: zod.string(),
-      createdAt: zod.coerce.date(),
-      analyses: zod.array(
-        zod.object({
-          id: zod.number().int(),
-          instrument: zod.string(),
-          timeframe: zod.string(),
-          tradingBias: zod.string().nullish(),
-          confidenceMin: zod.number().int().nullish(),
-          confidenceMax: zod.number().int().nullish(),
-          preferredSide: zod.string().nullish(),
-          mainScenario: zod.string().nullish(),
-          createdAt: zod.coerce.date(),
-        }),
-      ),
-    })
-    .nullish(),
-});
+  "settings": zod.object({
+  "enabled": zod.boolean(),
+  "time": zod.string().describe('HH:MM 24h local time the digest should fire'),
+  "timezone": zod.string().describe('IANA timezone the time is interpreted in'),
+  "pushDailySummary": zod.boolean(),
+  "lastSentDate": zod.string().nullish().describe('YYYY-MM-DD in user\'s TZ; null if never sent')
+}),
+  "today": zod.object({
+  "digestDate": zod.string(),
+  "kind": zod.enum(['full', 'quota_only']),
+  "instruments": zod.array(zod.string()),
+  "summary": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "analyses": zod.array(zod.object({
+  "id": zod.number().int(),
+  "instrument": zod.string(),
+  "timeframe": zod.string(),
+  "tradingBias": zod.string().nullish(),
+  "confidenceMin": zod.number().int().nullish(),
+  "confidenceMax": zod.number().int().nullish(),
+  "preferredSide": zod.string().nullish(),
+  "mainScenario": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+}).nullish()
+})
+
 
 /**
  * @summary Update daily summary settings (enabled, time, timezone)
  */
 export const UpdateDailySummarySettingsBody = zod.object({
-  enabled: zod.boolean().optional(),
-  time: zod.string().optional(),
-  timezone: zod.string().optional(),
-});
+  "enabled": zod.boolean().optional(),
+  "time": zod.string().optional(),
+  "timezone": zod.string().optional()
+})
 
 export const UpdateDailySummarySettingsResponse = zod.object({
-  enabled: zod.boolean(),
-  time: zod.string().describe("HH:MM 24h local time the digest should fire"),
-  timezone: zod.string().describe("IANA timezone the time is interpreted in"),
-  pushDailySummary: zod.boolean(),
-  lastSentDate: zod
-    .string()
-    .nullish()
-    .describe("YYYY-MM-DD in user's TZ; null if never sent"),
-});
+  "enabled": zod.boolean(),
+  "time": zod.string().describe('HH:MM 24h local time the digest should fire'),
+  "timezone": zod.string().describe('IANA timezone the time is interpreted in'),
+  "pushDailySummary": zod.boolean(),
+  "lastSentDate": zod.string().nullish().describe('YYYY-MM-DD in user\'s TZ; null if never sent')
+})
+
 
 /**
  * @summary Get current user's push notification preferences
  */
 export const GetPushPrefsResponse = zod.object({
-  pushExpiry: zod.boolean(),
-  pushBroadcast: zod.boolean(),
-  pushDailySummary: zod.boolean(),
-  pushMarketNews: zod.boolean(),
-  pushCalendarEvents: zod.boolean(),
-  pushPriceAnomaly: zod.boolean(),
-  pushWeeklyRecap: zod.boolean(),
-  pushSignalFlip: zod.boolean(),
-  marketOpenSessions: zod
-    .array(zod.enum(["tokyo", "london", "newyork"]))
-    .describe(
-      "FX sessions the user wants a 5-min pre-open ping for. Empty = off.",
-    ),
-  pushDormancyNudge: zod
-    .boolean()
-    .describe(
-      'Opt-in toggle for the weekly \"we miss you\" nudge after 7+ days idle.',
-    ),
-  pushOnboarding: zod
-    .boolean()
-    .describe("One-shot 24h-after-signup empty-watchlist nudge."),
-  disengageNoticeCategory: zod
-    .string()
-    .nullish()
-    .describe(
-      "When non-null, the UI should render a one-time banner explaining auto-pause.",
-    ),
-  guardrailRevenge: zod
-    .boolean()
-    .describe(
-      "Show soft warning when a loss on this instrument fired within the revenge window.",
-    ),
-  guardrailOvertrading: zod
-    .boolean()
-    .describe(
-      "Show soft warning when the user crosses the per-hour or per-day analysis count.",
-    ),
-  guardrailHighRisk: zod
-    .boolean()
-    .describe(
-      "Show soft warning when a high-impact event for the instrument prints within 30 min.",
-    ),
-  coolingOffEnabled: zod
-    .boolean()
-    .describe(
-      "Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.",
-    ),
-  pushAnalysisCompleted: zod
-    .boolean()
-    .describe("OS push when an AI analysis finishes processing."),
-  pushTpSlHit: zod
-    .boolean()
-    .describe("OS push when a tracked trade plan's TP or SL level is crossed."),
-  pushLoginAlert: zod
-    .boolean()
-    .describe(
-      "OS push on a new login. The in-app notification is always created regardless of this toggle.",
-    ),
-  nativePushEnabled: zod
-    .boolean()
-    .describe(
-      "Master switch for native (FCM) push delivery to registered mobile devices.",
-    ),
-  webPushEnabled: zod
-    .boolean()
-    .describe(
-      "Master switch for Web Push (VAPID) delivery to subscribed browsers.",
-    ),
-  quietHoursEnabled: zod
-    .boolean()
-    .describe("When false, quiet hours are disabled entirely for this user."),
-  quietHoursStart: zod
-    .string()
-    .describe("HH:MM 24h local time quiet hours begin."),
-  quietHoursEnd: zod.string().describe("HH:MM 24h local time quiet hours end."),
-  notificationTimezone: zod
-    .string()
-    .describe(
-      "IANA timezone quietHoursStart\/quietHoursEnd are interpreted in.",
-    ),
-  progressionNotificationsEnabled: zod
-    .boolean()
-    .describe("Enable personal progression notifications."),
-});
+  "pushExpiry": zod.boolean(),
+  "pushBroadcast": zod.boolean(),
+  "pushDailySummary": zod.boolean(),
+  "pushMarketNews": zod.boolean(),
+  "pushCalendarEvents": zod.boolean(),
+  "pushPriceAnomaly": zod.boolean(),
+  "pushWeeklyRecap": zod.boolean(),
+  "pushSignalFlip": zod.boolean(),
+  "marketOpenSessions": zod.array(zod.enum(['tokyo', 'london', 'newyork'])).describe('FX sessions the user wants a 5-min pre-open ping for. Empty = off.'),
+  "pushDormancyNudge": zod.boolean().describe('Opt-in toggle for the weekly \"we miss you\" nudge after 7+ days idle.'),
+  "pushOnboarding": zod.boolean().describe('One-shot 24h-after-signup empty-watchlist nudge.'),
+  "disengageNoticeCategory": zod.string().nullish().describe('When non-null, the UI should render a one-time banner explaining auto-pause.'),
+  "guardrailRevenge": zod.boolean().describe('Show soft warning when a loss on this instrument fired within the revenge window.'),
+  "guardrailOvertrading": zod.boolean().describe('Show soft warning when the user crosses the per-hour or per-day analysis count.'),
+  "guardrailHighRisk": zod.boolean().describe('Show soft warning when a high-impact event for the instrument prints within 30 min.'),
+  "coolingOffEnabled": zod.boolean().describe('Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.'),
+  "pushAnalysisCompleted": zod.boolean().describe('OS push when an AI analysis finishes processing.'),
+  "pushTpSlHit": zod.boolean().describe('OS push when a tracked trade plan\'s TP or SL level is crossed.'),
+  "pushLoginAlert": zod.boolean().describe('OS push on a new login. The in-app notification is always created regardless of this toggle.'),
+  "nativePushEnabled": zod.boolean().describe('Master switch for native (FCM) push delivery to registered mobile devices.'),
+  "webPushEnabled": zod.boolean().describe('Master switch for Web Push (VAPID) delivery to subscribed browsers.'),
+  "quietHoursEnabled": zod.boolean().describe('When false, quiet hours are disabled entirely for this user.'),
+  "quietHoursStart": zod.string().describe('HH:MM 24h local time quiet hours begin.'),
+  "quietHoursEnd": zod.string().describe('HH:MM 24h local time quiet hours end.'),
+  "notificationTimezone": zod.string().describe('IANA timezone quietHoursStart\/quietHoursEnd are interpreted in.'),
+  "progressionNotificationsEnabled": zod.boolean().describe('Enable personal progression notifications.')
+})
+
 
 /**
  * @summary Update push notification preferences
  */
 export const UpdatePushPrefsBody = zod.object({
-  pushExpiry: zod.boolean().optional(),
-  pushBroadcast: zod.boolean().optional(),
-  pushDailySummary: zod.boolean().optional(),
-  pushMarketNews: zod.boolean().optional(),
-  pushCalendarEvents: zod.boolean().optional(),
-  pushPriceAnomaly: zod.boolean().optional(),
-  pushWeeklyRecap: zod.boolean().optional(),
-  pushSignalFlip: zod.boolean().optional(),
-  marketOpenSessions: zod
-    .array(zod.enum(["tokyo", "london", "newyork"]))
-    .optional(),
-  pushDormancyNudge: zod.boolean().optional(),
-  pushOnboarding: zod.boolean().optional(),
-  dismissDisengageNotice: zod
-    .boolean()
-    .optional()
-    .describe("Pass true to clear the one-time auto-pause banner."),
-  guardrailRevenge: zod.boolean().optional(),
-  guardrailOvertrading: zod.boolean().optional(),
-  guardrailHighRisk: zod.boolean().optional(),
-  coolingOffEnabled: zod.boolean().optional(),
-  pushAnalysisCompleted: zod.boolean().optional(),
-  pushTpSlHit: zod.boolean().optional(),
-  pushLoginAlert: zod.boolean().optional(),
-  nativePushEnabled: zod.boolean().optional(),
-  webPushEnabled: zod.boolean().optional(),
-  quietHoursEnabled: zod.boolean().optional(),
-  quietHoursStart: zod.string().optional().describe("HH:MM 24h local time."),
-  quietHoursEnd: zod.string().optional().describe("HH:MM 24h local time."),
-  notificationTimezone: zod.string().optional().describe("IANA timezone."),
-  progressionNotificationsEnabled: zod.boolean().optional(),
-});
+  "pushExpiry": zod.boolean().optional(),
+  "pushBroadcast": zod.boolean().optional(),
+  "pushDailySummary": zod.boolean().optional(),
+  "pushMarketNews": zod.boolean().optional(),
+  "pushCalendarEvents": zod.boolean().optional(),
+  "pushPriceAnomaly": zod.boolean().optional(),
+  "pushWeeklyRecap": zod.boolean().optional(),
+  "pushSignalFlip": zod.boolean().optional(),
+  "marketOpenSessions": zod.array(zod.enum(['tokyo', 'london', 'newyork'])).optional(),
+  "pushDormancyNudge": zod.boolean().optional(),
+  "pushOnboarding": zod.boolean().optional(),
+  "dismissDisengageNotice": zod.boolean().optional().describe('Pass true to clear the one-time auto-pause banner.'),
+  "guardrailRevenge": zod.boolean().optional(),
+  "guardrailOvertrading": zod.boolean().optional(),
+  "guardrailHighRisk": zod.boolean().optional(),
+  "coolingOffEnabled": zod.boolean().optional(),
+  "pushAnalysisCompleted": zod.boolean().optional(),
+  "pushTpSlHit": zod.boolean().optional(),
+  "pushLoginAlert": zod.boolean().optional(),
+  "nativePushEnabled": zod.boolean().optional(),
+  "webPushEnabled": zod.boolean().optional(),
+  "quietHoursEnabled": zod.boolean().optional(),
+  "quietHoursStart": zod.string().optional().describe('HH:MM 24h local time.'),
+  "quietHoursEnd": zod.string().optional().describe('HH:MM 24h local time.'),
+  "notificationTimezone": zod.string().optional().describe('IANA timezone.'),
+  "progressionNotificationsEnabled": zod.boolean().optional()
+})
 
 export const UpdatePushPrefsResponse = zod.object({
-  pushExpiry: zod.boolean(),
-  pushBroadcast: zod.boolean(),
-  pushDailySummary: zod.boolean(),
-  pushMarketNews: zod.boolean(),
-  pushCalendarEvents: zod.boolean(),
-  pushPriceAnomaly: zod.boolean(),
-  pushWeeklyRecap: zod.boolean(),
-  pushSignalFlip: zod.boolean(),
-  marketOpenSessions: zod
-    .array(zod.enum(["tokyo", "london", "newyork"]))
-    .describe(
-      "FX sessions the user wants a 5-min pre-open ping for. Empty = off.",
-    ),
-  pushDormancyNudge: zod
-    .boolean()
-    .describe(
-      'Opt-in toggle for the weekly \"we miss you\" nudge after 7+ days idle.',
-    ),
-  pushOnboarding: zod
-    .boolean()
-    .describe("One-shot 24h-after-signup empty-watchlist nudge."),
-  disengageNoticeCategory: zod
-    .string()
-    .nullish()
-    .describe(
-      "When non-null, the UI should render a one-time banner explaining auto-pause.",
-    ),
-  guardrailRevenge: zod
-    .boolean()
-    .describe(
-      "Show soft warning when a loss on this instrument fired within the revenge window.",
-    ),
-  guardrailOvertrading: zod
-    .boolean()
-    .describe(
-      "Show soft warning when the user crosses the per-hour or per-day analysis count.",
-    ),
-  guardrailHighRisk: zod
-    .boolean()
-    .describe(
-      "Show soft warning when a high-impact event for the instrument prints within 30 min.",
-    ),
-  coolingOffEnabled: zod
-    .boolean()
-    .describe(
-      "Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.",
-    ),
-  pushAnalysisCompleted: zod
-    .boolean()
-    .describe("OS push when an AI analysis finishes processing."),
-  pushTpSlHit: zod
-    .boolean()
-    .describe("OS push when a tracked trade plan's TP or SL level is crossed."),
-  pushLoginAlert: zod
-    .boolean()
-    .describe(
-      "OS push on a new login. The in-app notification is always created regardless of this toggle.",
-    ),
-  nativePushEnabled: zod
-    .boolean()
-    .describe(
-      "Master switch for native (FCM) push delivery to registered mobile devices.",
-    ),
-  webPushEnabled: zod
-    .boolean()
-    .describe(
-      "Master switch for Web Push (VAPID) delivery to subscribed browsers.",
-    ),
-  quietHoursEnabled: zod
-    .boolean()
-    .describe("When false, quiet hours are disabled entirely for this user."),
-  quietHoursStart: zod
-    .string()
-    .describe("HH:MM 24h local time quiet hours begin."),
-  quietHoursEnd: zod.string().describe("HH:MM 24h local time quiet hours end."),
-  notificationTimezone: zod
-    .string()
-    .describe(
-      "IANA timezone quietHoursStart\/quietHoursEnd are interpreted in.",
-    ),
-  progressionNotificationsEnabled: zod
-    .boolean()
-    .describe("Enable personal progression notifications."),
-});
+  "pushExpiry": zod.boolean(),
+  "pushBroadcast": zod.boolean(),
+  "pushDailySummary": zod.boolean(),
+  "pushMarketNews": zod.boolean(),
+  "pushCalendarEvents": zod.boolean(),
+  "pushPriceAnomaly": zod.boolean(),
+  "pushWeeklyRecap": zod.boolean(),
+  "pushSignalFlip": zod.boolean(),
+  "marketOpenSessions": zod.array(zod.enum(['tokyo', 'london', 'newyork'])).describe('FX sessions the user wants a 5-min pre-open ping for. Empty = off.'),
+  "pushDormancyNudge": zod.boolean().describe('Opt-in toggle for the weekly \"we miss you\" nudge after 7+ days idle.'),
+  "pushOnboarding": zod.boolean().describe('One-shot 24h-after-signup empty-watchlist nudge.'),
+  "disengageNoticeCategory": zod.string().nullish().describe('When non-null, the UI should render a one-time banner explaining auto-pause.'),
+  "guardrailRevenge": zod.boolean().describe('Show soft warning when a loss on this instrument fired within the revenge window.'),
+  "guardrailOvertrading": zod.boolean().describe('Show soft warning when the user crosses the per-hour or per-day analysis count.'),
+  "guardrailHighRisk": zod.boolean().describe('Show soft warning when a high-impact event for the instrument prints within 30 min.'),
+  "coolingOffEnabled": zod.boolean().describe('Opt-in 30-minute countdown after a significant loss before showing the analyse button warning.'),
+  "pushAnalysisCompleted": zod.boolean().describe('OS push when an AI analysis finishes processing.'),
+  "pushTpSlHit": zod.boolean().describe('OS push when a tracked trade plan\'s TP or SL level is crossed.'),
+  "pushLoginAlert": zod.boolean().describe('OS push on a new login. The in-app notification is always created regardless of this toggle.'),
+  "nativePushEnabled": zod.boolean().describe('Master switch for native (FCM) push delivery to registered mobile devices.'),
+  "webPushEnabled": zod.boolean().describe('Master switch for Web Push (VAPID) delivery to subscribed browsers.'),
+  "quietHoursEnabled": zod.boolean().describe('When false, quiet hours are disabled entirely for this user.'),
+  "quietHoursStart": zod.string().describe('HH:MM 24h local time quiet hours begin.'),
+  "quietHoursEnd": zod.string().describe('HH:MM 24h local time quiet hours end.'),
+  "notificationTimezone": zod.string().describe('IANA timezone quietHoursStart\/quietHoursEnd are interpreted in.'),
+  "progressionNotificationsEnabled": zod.boolean().describe('Enable personal progression notifications.')
+})
+
 
 /**
  * Lets a signed-in user verify their phone actually pops up an OS-level
@@ -3289,13 +2203,9 @@ export const UpdatePushPrefsResponse = zod.object({
  * @summary Send a sample push notification to the calling user's subscribed devices
  */
 export const SendPushTestResponse = zod.object({
-  delivered: zod
-    .number()
-    .int()
-    .describe(
-      "Number of subscription endpoints the test push was dispatched to",
-    ),
-});
+  "delivered": zod.number().int().describe('Number of subscription endpoints the test push was dispatched to')
+})
+
 
 /**
  * Upserts on the globally-unique device token: if the same physical device token was previously registered under a different account, ownership transfers to the current authenticated user (the correct behavior when a device logs out and a different user logs in).
@@ -3304,17 +2214,17 @@ export const SendPushTestResponse = zod.object({
 export const registerNativePushDeviceBodyTokenMin = 20;
 export const registerNativePushDeviceBodyTokenMax = 4096;
 
+
+
 export const RegisterNativePushDeviceBody = zod.object({
-  token: zod
-    .string()
-    .min(registerNativePushDeviceBodyTokenMin)
-    .max(registerNativePushDeviceBodyTokenMax),
-  platform: zod.enum(["android", "ios"]),
-});
+  "token": zod.string().min(registerNativePushDeviceBodyTokenMin).max(registerNativePushDeviceBodyTokenMax),
+  "platform": zod.enum(['android', 'ios'])
+})
 
 export const RegisterNativePushDeviceResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Remove the caller's own native push device registration
@@ -3322,37 +2232,36 @@ export const RegisterNativePushDeviceResponse = zod.object({
 export const unregisterNativePushDeviceBodyTokenMin = 20;
 export const unregisterNativePushDeviceBodyTokenMax = 4096;
 
+
+
 export const UnregisterNativePushDeviceBody = zod.object({
-  token: zod
-    .string()
-    .min(unregisterNativePushDeviceBodyTokenMin)
-    .max(unregisterNativePushDeviceBodyTokenMax),
-});
+  "token": zod.string().min(unregisterNativePushDeviceBodyTokenMin).max(unregisterNativePushDeviceBodyTokenMax)
+})
 
 export const UnregisterNativePushDeviceResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Get admin statistics
  */
 export const GetAdminStatsResponse = zod.object({
-  totalUsersToday: zod.number().int(),
-  totalAnalysesToday: zod.number().int(),
-  totalAnalysesThisWeek: zod.number().int(),
-  totalAnalysesThisMonth: zod.number().int(),
-  totalUsers: zod.number().int(),
-  instrumentBreakdown: zod.array(
-    zod.object({
-      instrument: zod.string(),
-      count: zod.number().int(),
-    }),
-  ),
-  modeBreakdown: zod.object({
-    beginner: zod.number().int(),
-    pro: zod.number().int(),
-  }),
-});
+  "totalUsersToday": zod.number().int(),
+  "totalAnalysesToday": zod.number().int(),
+  "totalAnalysesThisWeek": zod.number().int(),
+  "totalAnalysesThisMonth": zod.number().int(),
+  "totalUsers": zod.number().int(),
+  "instrumentBreakdown": zod.array(zod.object({
+  "instrument": zod.string(),
+  "count": zod.number().int()
+})),
+  "modeBreakdown": zod.object({
+  "beginner": zod.number().int(),
+  "pro": zod.number().int()
+})
+})
+
 
 /**
  * @summary Aggregated counts of sponsor / partner outbound link clicks
@@ -3360,33 +2269,24 @@ export const GetAdminStatsResponse = zod.object({
 export const getOutboundClickStatsQueryDaysDefault = 30;
 
 export const GetOutboundClickStatsQueryParams = zod.object({
-  days: zod.coerce
-    .number()
-    .int()
-    .default(getOutboundClickStatsQueryDaysDefault)
-    .describe(
-      'Window size for the \"recent\" totals. Defaults to 30. Clamped 1..365.',
-    ),
-});
+  "days": zod.coerce.number().int().default(getOutboundClickStatsQueryDaysDefault).describe('Window size for the \"recent\" totals. Defaults to 30. Clamped 1..365.')
+})
 
 export const GetOutboundClickStatsResponse = zod.object({
-  windowDays: zod.number().int(),
-  totalAllTime: zod.number().int(),
-  totalInWindow: zod.number().int(),
-  byPlacement: zod.array(
-    zod.object({
-      placement: zod.string(),
-      target: zod.string(),
-      count: zod.number().int(),
-    }),
-  ),
-  byTarget: zod.array(
-    zod.object({
-      target: zod.string(),
-      count: zod.number().int(),
-    }),
-  ),
-});
+  "windowDays": zod.number().int(),
+  "totalAllTime": zod.number().int(),
+  "totalInWindow": zod.number().int(),
+  "byPlacement": zod.array(zod.object({
+  "placement": zod.string(),
+  "target": zod.string(),
+  "count": zod.number().int()
+})),
+  "byTarget": zod.array(zod.object({
+  "target": zod.string(),
+  "count": zod.number().int()
+}))
+})
+
 
 /**
  * @summary Feature-usage, device, browser, and country breakdown from analytics events
@@ -3394,46 +2294,33 @@ export const GetOutboundClickStatsResponse = zod.object({
 export const getAdminAnalyticsUsageQueryDaysDefault = 30;
 
 export const GetAdminAnalyticsUsageQueryParams = zod.object({
-  days: zod.coerce
-    .number()
-    .int()
-    .default(getAdminAnalyticsUsageQueryDaysDefault)
-    .describe("Window size in days. Defaults to 30. Clamped 1..365."),
-});
+  "days": zod.coerce.number().int().default(getAdminAnalyticsUsageQueryDaysDefault).describe('Window size in days. Defaults to 30. Clamped 1..365.')
+})
 
 export const GetAdminAnalyticsUsageResponse = zod.object({
-  windowDays: zod.number().int(),
-  dailyActivity: zod.array(
-    zod.object({
-      date: zod.string(),
-      count: zod.number().int(),
-    }),
-  ),
-  featureBreakdown: zod.array(
-    zod.object({
-      eventType: zod.string(),
-      count: zod.number().int(),
-    }),
-  ),
-  deviceBreakdown: zod.array(
-    zod.object({
-      deviceType: zod.string().nullable(),
-      count: zod.number().int(),
-    }),
-  ),
-  browserBreakdown: zod.array(
-    zod.object({
-      browser: zod.string().nullable(),
-      count: zod.number().int(),
-    }),
-  ),
-  countryBreakdown: zod.array(
-    zod.object({
-      country: zod.string().nullable(),
-      count: zod.number().int(),
-    }),
-  ),
-});
+  "windowDays": zod.number().int(),
+  "dailyActivity": zod.array(zod.object({
+  "date": zod.string(),
+  "count": zod.number().int()
+})),
+  "featureBreakdown": zod.array(zod.object({
+  "eventType": zod.string(),
+  "count": zod.number().int()
+})),
+  "deviceBreakdown": zod.array(zod.object({
+  "deviceType": zod.string().nullable(),
+  "count": zod.number().int()
+})),
+  "browserBreakdown": zod.array(zod.object({
+  "browser": zod.string().nullable(),
+  "count": zod.number().int()
+})),
+  "countryBreakdown": zod.array(zod.object({
+  "country": zod.string().nullable(),
+  "count": zod.number().int()
+}))
+})
+
 
 /**
  * @summary AI (OpenAI) token usage and estimated cost breakdown
@@ -3441,51 +2328,40 @@ export const GetAdminAnalyticsUsageResponse = zod.object({
 export const getAdminAnalyticsTokensQueryDaysDefault = 30;
 
 export const GetAdminAnalyticsTokensQueryParams = zod.object({
-  days: zod.coerce
-    .number()
-    .int()
-    .default(getAdminAnalyticsTokensQueryDaysDefault)
-    .describe("Window size in days. Defaults to 30. Clamped 1..365."),
-});
+  "days": zod.coerce.number().int().default(getAdminAnalyticsTokensQueryDaysDefault).describe('Window size in days. Defaults to 30. Clamped 1..365.')
+})
 
 export const GetAdminAnalyticsTokensResponse = zod.object({
-  windowDays: zod.number().int(),
-  dailyTokens: zod.array(
-    zod.object({
-      date: zod.string(),
-      totalTokens: zod.number().int(),
-      estimatedCostUsd: zod.number(),
-    }),
-  ),
-  byModel: zod.array(
-    zod.object({
-      model: zod.string(),
-      totalTokens: zod.number().int(),
-      estimatedCostUsd: zod.number(),
-      callCount: zod.number().int(),
-    }),
-  ),
-  byInstrument: zod.array(
-    zod.object({
-      instrument: zod.string().nullable(),
-      totalTokens: zod.number().int(),
-      estimatedCostUsd: zod.number(),
-    }),
-  ),
-  topUsers: zod.array(
-    zod.object({
-      userId: zod.number().int(),
-      email: zod.string(),
-      totalTokens: zod.number().int(),
-      estimatedCostUsd: zod.number(),
-    }),
-  ),
-  totals: zod.object({
-    totalTokens: zod.number().int(),
-    totalCostUsd: zod.number(),
-    totalCalls: zod.number().int(),
-  }),
-});
+  "windowDays": zod.number().int(),
+  "dailyTokens": zod.array(zod.object({
+  "date": zod.string(),
+  "totalTokens": zod.number().int(),
+  "estimatedCostUsd": zod.number()
+})),
+  "byModel": zod.array(zod.object({
+  "model": zod.string(),
+  "totalTokens": zod.number().int(),
+  "estimatedCostUsd": zod.number(),
+  "callCount": zod.number().int()
+})),
+  "byInstrument": zod.array(zod.object({
+  "instrument": zod.string().nullable(),
+  "totalTokens": zod.number().int(),
+  "estimatedCostUsd": zod.number()
+})),
+  "topUsers": zod.array(zod.object({
+  "userId": zod.number().int(),
+  "email": zod.string(),
+  "totalTokens": zod.number().int(),
+  "estimatedCostUsd": zod.number()
+})),
+  "totals": zod.object({
+  "totalTokens": zod.number().int(),
+  "totalCostUsd": zod.number(),
+  "totalCalls": zod.number().int()
+})
+})
+
 
 /**
  * Fire-and-forget telemetry. Auth is optional — most surfaces are
@@ -3495,24 +2371,13 @@ export const GetAdminAnalyticsTokensResponse = zod.object({
  * @summary Record a sponsor / partner outbound link click
  */
 export const RecordOutboundClickBody = zod.object({
-  placement: zod
-    .enum([
-      "splash",
-      "landing-header",
-      "landing-cta",
-      "landing-footer",
-      "layout-footer",
-      "profile-cta",
-      "dashboard-tiktok",
-    ])
-    .describe("Stable slug describing where the link was clicked"),
-  target: zod
-    .enum(["sg-berjangka", "tiktok"])
-    .describe("Partner the click was directed to"),
-  lang: zod.enum(["en", "id"]).optional().describe("UI language at click time"),
-});
+  "placement": zod.enum(['splash', 'landing-header', 'landing-cta', 'landing-footer', 'layout-footer', 'profile-cta', 'dashboard-tiktok']).describe('Stable slug describing where the link was clicked'),
+  "target": zod.enum(['sg-berjangka', 'tiktok']).describe('Partner the click was directed to'),
+  "lang": zod.enum(['en', 'id']).optional().describe('UI language at click time')
+})
 
-export const RecordOutboundClickResponse = zod.void();
+export const RecordOutboundClickResponse = zod.void()
+
 
 /**
  * Fire-and-forget app-usage telemetry (admin analytics dashboard).
@@ -3524,131 +2389,110 @@ export const RecordOutboundClickResponse = zod.void();
  * @summary Record a page-view or key-action analytics event
  */
 export const TrackAnalyticsEventBody = zod.object({
-  eventType: zod
-    .enum([
-      "page_view",
-      "analysis_created",
-      "trade_logged",
-      "alert_armed",
-      "feedback_submitted",
-    ])
-    .describe(
-      "Server validates against a fixed allowlist — unknown values are silently dropped, never persisted as-is",
-    ),
-  path: zod
-    .string()
-    .optional()
-    .describe("Route path at event time (mainly for page_view)"),
-  metadata: zod
-    .record(zod.string(), zod.unknown())
-    .nullish()
-    .describe(
-      "Small free-form context (e.g. {instrument, timeframe}). Capped server-side to a few KB.",
-    ),
-});
+  "eventType": zod.enum(['page_view', 'analysis_created', 'trade_logged', 'alert_armed', 'feedback_submitted']).describe('Server validates against a fixed allowlist — unknown values are silently dropped, never persisted as-is'),
+  "path": zod.string().optional().describe('Route path at event time (mainly for page_view)'),
+  "metadata": zod.record(zod.string(), zod.unknown()).nullish().describe('Small free-form context (e.g. {instrument, timeframe}). Capped server-side to a few KB.')
+})
 
-export const TrackAnalyticsEventResponse = zod.void();
+export const TrackAnalyticsEventResponse = zod.void()
+
 
 /**
  * @summary List the signed-in user's saved filter presets
  */
 export const ListFilterPresetsResponse = zod.object({
-  presets: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      name: zod.string(),
-      filters: zod
-        .object({
-          mode: zod.enum(["", "beginner", "pro"]),
-          instruments: zod.array(zod.string()),
-          timeframes: zod.array(zod.string()),
-          from: zod.string(),
-          to: zod.string(),
-          q: zod.string(),
-        })
-        .describe(
-          "Mirrors the URL-derived filter state used by the history page.",
-        ),
-      createdAt: zod.coerce.date(),
-      updatedAt: zod.coerce.date(),
-    }),
-  ),
-});
+  "presets": zod.array(zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "filters": zod.object({
+  "mode": zod.enum(['', 'beginner', 'pro']),
+  "instruments": zod.array(zod.string()),
+  "timeframes": zod.array(zod.string()),
+  "from": zod.string(),
+  "to": zod.string(),
+  "q": zod.string()
+}).describe('Mirrors the URL-derived filter state used by the history page.'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
 
 /**
  * @summary Save the current filter combination as a named preset
  */
 export const createFilterPresetBodyNameMax = 40;
 
+
+
 export const CreateFilterPresetBody = zod.object({
-  name: zod.string().min(1).max(createFilterPresetBodyNameMax),
-  filters: zod
-    .object({
-      mode: zod.enum(["", "beginner", "pro"]),
-      instruments: zod.array(zod.string()),
-      timeframes: zod.array(zod.string()),
-      from: zod.string(),
-      to: zod.string(),
-      q: zod.string(),
-    })
-    .describe("Mirrors the URL-derived filter state used by the history page."),
-});
+  "name": zod.string().min(1).max(createFilterPresetBodyNameMax),
+  "filters": zod.object({
+  "mode": zod.enum(['', 'beginner', 'pro']),
+  "instruments": zod.array(zod.string()),
+  "timeframes": zod.array(zod.string()),
+  "from": zod.string(),
+  "to": zod.string(),
+  "q": zod.string()
+}).describe('Mirrors the URL-derived filter state used by the history page.')
+})
 
 export const CreateFilterPresetResponse = zod.object({
-  id: zod.number().int(),
-  name: zod.string(),
-  filters: zod
-    .object({
-      mode: zod.enum(["", "beginner", "pro"]),
-      instruments: zod.array(zod.string()),
-      timeframes: zod.array(zod.string()),
-      from: zod.string(),
-      to: zod.string(),
-      q: zod.string(),
-    })
-    .describe("Mirrors the URL-derived filter state used by the history page."),
-  createdAt: zod.coerce.date(),
-  updatedAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "filters": zod.object({
+  "mode": zod.enum(['', 'beginner', 'pro']),
+  "instruments": zod.array(zod.string()),
+  "timeframes": zod.array(zod.string()),
+  "from": zod.string(),
+  "to": zod.string(),
+  "q": zod.string()
+}).describe('Mirrors the URL-derived filter state used by the history page.'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
 
 /**
  * @summary Rename an existing preset
  */
 export const RenameFilterPresetParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const renameFilterPresetBodyNameMax = 40;
 
+
+
 export const RenameFilterPresetBody = zod.object({
-  name: zod.string().min(1).max(renameFilterPresetBodyNameMax),
-});
+  "name": zod.string().min(1).max(renameFilterPresetBodyNameMax)
+})
 
 export const RenameFilterPresetResponse = zod.object({
-  id: zod.number().int(),
-  name: zod.string(),
-  filters: zod
-    .object({
-      mode: zod.enum(["", "beginner", "pro"]),
-      instruments: zod.array(zod.string()),
-      timeframes: zod.array(zod.string()),
-      from: zod.string(),
-      to: zod.string(),
-      q: zod.string(),
-    })
-    .describe("Mirrors the URL-derived filter state used by the history page."),
-  createdAt: zod.coerce.date(),
-  updatedAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "filters": zod.object({
+  "mode": zod.enum(['', 'beginner', 'pro']),
+  "instruments": zod.array(zod.string()),
+  "timeframes": zod.array(zod.string()),
+  "from": zod.string(),
+  "to": zod.string(),
+  "q": zod.string()
+}).describe('Mirrors the URL-derived filter state used by the history page.'),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
 
 /**
  * @summary Delete a preset
  */
 export const DeleteFilterPresetParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
-export const DeleteFilterPresetResponse = zod.void();
+export const DeleteFilterPresetResponse = zod.void()
+
 
 /**
  * @summary Get all analyses (admin only)
@@ -3657,258 +2501,107 @@ export const getAllAnalysesQueryPageDefault = 1;
 export const getAllAnalysesQueryLimitDefault = 20;
 
 export const GetAllAnalysesQueryParams = zod.object({
-  page: zod.coerce.number().int().default(getAllAnalysesQueryPageDefault),
-  limit: zod.coerce.number().int().default(getAllAnalysesQueryLimitDefault),
-});
+  "page": zod.coerce.number().int().default(getAllAnalysesQueryPageDefault),
+  "limit": zod.coerce.number().int().default(getAllAnalysesQueryLimitDefault)
+})
 
 export const GetAllAnalysesResponse = zod.object({
-  analyses: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      userId: zod.number().int(),
-      instrument: zod.string(),
-      timeframe: zod.string(),
-      userInputContext: zod.string().nullish(),
-      mode: zod.enum(["beginner", "pro"]),
-      validUntil: zod.coerce.date(),
-      marketCondition: zod.string().nullish(),
-      riskLevel: zod.string().nullish(),
-      confidenceMin: zod.number().int().nullish(),
-      confidenceMax: zod.number().int().nullish(),
-      mainScenario: zod.string().nullish(),
-      alternativeScenario: zod.string().nullish(),
-      whyReason: zod.string().nullish(),
-      failureConditions: zod.string().nullish(),
-      baseCase: zod.string().nullish(),
-      bullishScenario: zod.string().nullish(),
-      bearishScenario: zod.string().nullish(),
-      keyDriversTechnical: zod.string().nullish(),
-      keyDriversFundamental: zod.string().nullish(),
-      marketContext: zod.string().nullish(),
-      invalidationConditions: zod.string().nullish(),
-      uncertaintyNotes: zod.string().nullish(),
-      tradingBias: zod
-        .string()
-        .nullish()
-        .describe(
-          "Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.",
-        ),
-      opportunity: zod.string().nullish(),
-      risk: zod.string().nullish(),
-      techBuyCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.",
-        ),
-      techSellCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator sell tally captured at analysis time.",
-        ),
-      techNeutralCount: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Snapshot of the technical-indicator neutral tally captured at analysis time.",
-        ),
-      tradePlan: zod
-        .union([
-          zod
-            .object({
-              preferredSide: zod.enum(["buy", "sell", "wait"]),
-              buy: zod
-                .object({
-                  entryZone: zod.string(),
-                  stopLoss: zod.string(),
-                  takeProfit1: zod.string(),
-                  takeProfit2: zod.string(),
-                  riskRewardRatio: zod.string(),
-                  rationale: zod.string(),
-                })
-                .describe(
-                  "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-                ),
-              sell: zod
-                .object({
-                  entryZone: zod.string(),
-                  stopLoss: zod.string(),
-                  takeProfit1: zod.string(),
-                  takeProfit2: zod.string(),
-                  riskRewardRatio: zod.string(),
-                  rationale: zod.string(),
-                })
-                .describe(
-                  "One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. '1.0857') or descriptive placeholders (e.g. 'menunggu konfirmasi level kunci') when no anchor price is available.",
-                ),
-            })
-            .describe(
-              "Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; 'wait' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.",
-        ),
-      fundamentalContext: zod
-        .union([
-          zod
-            .object({
-              newsItems: zod.array(
-                zod
-                  .object({
-                    id: zod.string(),
-                    title: zod.string(),
-                    summary: zod.string(),
-                    source: zod
-                      .string()
-                      .describe(
-                        "Human-readable source label, e.g. 'Newsmaker.id' or 'Yahoo Finance'.",
-                      ),
-                    url: zod.string().nullable(),
-                    publishedAt: zod.coerce.date(),
-                  })
-                  .describe(
-                    "A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.",
-                  ),
-              ),
-              calendarEvents: zod.array(
-                zod
-                  .object({
-                    date: zod.string(),
-                    time: zod.string().nullable(),
-                    currency: zod.string(),
-                    event: zod.string(),
-                    impact: zod
-                      .string()
-                      .nullable()
-                      .describe(
-                        "Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.",
-                      ),
-                    actual: zod.string().nullable(),
-                    forecast: zod.string().nullable(),
-                    previous: zod.string().nullable(),
-                  })
-                  .describe(
-                    "A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.",
-                  ),
-              ),
-            })
-            .describe(
-              "Snapshot of fundamental inputs the AI saw at analysis time.",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.",
-        ),
-      fundamentalCitations: zod
-        .union([
-          zod
-            .object({
-              newsTitles: zod
-                .array(zod.string())
-                .describe(
-                  "News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).",
-                ),
-              calendarEvents: zod
-                .array(zod.string())
-                .describe(
-                  "Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).",
-                ),
-            })
-            .describe(
-              "Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).",
-            ),
-          zod.null(),
-        ])
-        .optional()
-        .describe(
-          "Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI's reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn't lean on any fundamental input.",
-        ),
-      outcomeStatus: zod
-        .enum([
-          "pending",
-          "tp1_hit",
-          "tp2_hit",
-          "sl_hit",
-          "expired",
-          "invalidated",
-        ])
-        .optional()
-        .describe(
-          "After-the-fact resolution of the AI's trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.",
-        ),
-      outcomeResolvedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.",
-        ),
-      outcomeCheckedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "When the background resolver last looked at this row. Null until the first resolver pass touches it.",
-        ),
-      userNote: zod
-        .string()
-        .nullish()
-        .describe(
-          "Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.",
-        ),
-      userNoteUpdatedAt: zod.coerce
-        .date()
-        .nullish()
-        .describe(
-          "When `userNote` was last saved server-side. Null when no note has been written.",
-        ),
-      hasNote: zod
-        .boolean()
-        .optional()
-        .describe(
-          "True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a 'journaled' icon without loading the full note body.",
-        ),
-      feedback: zod
-        .union([
-          zod.object({
-            id: zod.number().int(),
-            analysisId: zod.number().int(),
-            feedbackType: zod.enum(["useful", "not_useful"]),
-            outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
-            note: zod.string().nullish(),
-            createdAt: zod.coerce.date(),
-          }),
-          zod.null(),
-        ])
-        .optional(),
-      usefulCount: zod
-        .number()
-        .int()
-        .optional()
-        .describe(
-          'Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-        ),
-      notUsefulCount: zod
-        .number()
-        .int()
-        .optional()
-        .describe(
-          'Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.',
-        ),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-  total: zod.number().int(),
-  page: zod.number().int(),
-  limit: zod.number().int(),
-});
+  "analyses": zod.array(zod.object({
+  "id": zod.number().int(),
+  "userId": zod.number().int(),
+  "instrument": zod.string(),
+  "timeframe": zod.string(),
+  "userInputContext": zod.string().nullish(),
+  "mode": zod.enum(['beginner', 'pro']),
+  "validUntil": zod.coerce.date(),
+  "marketCondition": zod.string().nullish(),
+  "riskLevel": zod.string().nullish(),
+  "confidenceMin": zod.number().int().nullish(),
+  "confidenceMax": zod.number().int().nullish(),
+  "mainScenario": zod.string().nullish(),
+  "alternativeScenario": zod.string().nullish(),
+  "whyReason": zod.string().nullish(),
+  "failureConditions": zod.string().nullish(),
+  "baseCase": zod.string().nullish(),
+  "bullishScenario": zod.string().nullish(),
+  "bearishScenario": zod.string().nullish(),
+  "keyDriversTechnical": zod.string().nullish(),
+  "keyDriversFundamental": zod.string().nullish(),
+  "marketContext": zod.string().nullish(),
+  "invalidationConditions": zod.string().nullish(),
+  "uncertaintyNotes": zod.string().nullish(),
+  "tradingBias": zod.string().nullish().describe('Directional bias. One of: bearish_strong, bearish, neutral, bullish, bullish_strong. Legacy values (strong_sell, sell, buy, strong_buy) may exist on older rows and are normalized client-side.'),
+  "opportunity": zod.string().nullish(),
+  "risk": zod.string().nullish(),
+  "techBuyCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator buy tally captured at analysis time. Used to render the same Market Context Summary on the saved analysis page.'),
+  "techSellCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator sell tally captured at analysis time.'),
+  "techNeutralCount": zod.number().int().nullish().describe('Snapshot of the technical-indicator neutral tally captured at analysis time.'),
+  "tradePlan": zod.union([zod.object({
+  "preferredSide": zod.enum(['buy', 'sell', 'wait']),
+  "buy": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.'),
+  "sell": zod.object({
+  "entryZone": zod.string(),
+  "stopLoss": zod.string(),
+  "takeProfit1": zod.string(),
+  "takeProfit2": zod.string(),
+  "riskRewardRatio": zod.string(),
+  "rationale": zod.string()
+}).describe('One side (buy or sell) of the AI-suggested trade plan with concrete price levels. Levels are strings so the AI can return either numeric prices (e.g. \'1.0857\') or descriptive placeholders (e.g. \'menunggu konfirmasi level kunci\') when no anchor price is available.')
+}).describe('Structured trade plan with both buy and sell side levels suggested by the AI. preferredSide indicates which side aligns with the trading bias; \'wait\' means neither side is recommended yet (e.g. neutral bias or pending high-impact event).'),zod.null()]).optional().describe('Structured trade plan with concrete buy and sell entry\/SL\/TP levels generated by the AI and anchored to the latest closing price. Nullable for legacy rows or when no anchor price was available.'),
+  "fundamentalContext": zod.union([zod.object({
+  "newsItems": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "source": zod.string().describe('Human-readable source label, e.g. \'Newsmaker.id\' or \'Yahoo Finance\'.'),
+  "url": zod.string().nullable(),
+  "publishedAt": zod.coerce.date()
+}).describe('A single news headline included in the fundamental snapshot persisted on an analysis row. Captured from Newsmaker.id and Yahoo Finance RSS at analysis time.')),
+  "calendarEvents": zod.array(zod.object({
+  "date": zod.string(),
+  "time": zod.string().nullable(),
+  "currency": zod.string(),
+  "event": zod.string(),
+  "impact": zod.string().nullable().describe('Star-rating string from the upstream feed: ★, ★★ or ★★★. Null when impact is unknown.'),
+  "actual": zod.string().nullable(),
+  "forecast": zod.string().nullable(),
+  "previous": zod.string().nullable()
+}).describe('A single economic-calendar event included in the fundamental snapshot persisted on an analysis row.'))
+}).describe('Snapshot of fundamental inputs the AI saw at analysis time.'),zod.null()]).optional().describe('Snapshot of the news headlines + economic-calendar events the AI saw when this analysis was generated. Lets the saved-analysis page render the same fundamental context the model used. Nullable for legacy rows or when both upstream feeds were down.'),
+  "fundamentalCitations": zod.union([zod.object({
+  "newsTitles": zod.array(zod.string()).describe('News headlines the AI cited (matched against the snapshot in fundamentalContext.newsItems).'),
+  "calendarEvents": zod.array(zod.string()).describe('Calendar event names the AI cited (matched against the snapshot in fundamentalContext.calendarEvents).')
+}).describe('Provenance trail emitted by the AI: the news headlines + economic-calendar event names it actually leaned on while writing the narrative. Lets the UI inline-cite the cards next to the relevant sentence (task #89).'),zod.null()]).optional().describe('Which news headlines + calendar events the AI actually cited in its narrative. Drives the inline source chips next to the AI\'s reasoning blocks (whyReason \/ keyDriversFundamental \/ marketContext). Nullable for legacy rows + analyses where the AI didn\'t lean on any fundamental input.'),
+  "outcomeStatus": zod.enum(['pending', 'tp1_hit', 'tp2_hit', 'sl_hit', 'expired', 'invalidated']).optional().describe('After-the-fact resolution of the AI\'s trade plan. `pending` until the background resolver finishes scoring it; `tp1_hit`\/`tp2_hit` if price reached the corresponding take-profit; `sl_hit` if the stop-loss was touched first; `expired` if the validity window passed with no trigger touched; `invalidated` when the plan levels were unparseable or internally inconsistent.'),
+  "outcomeResolvedAt": zod.coerce.date().nullish().describe('Timestamp the trigger (SL\/TP1\/TP2) fired on, or the validity-window end for `expired`. Null while outcomeStatus is `pending`.'),
+  "outcomeCheckedAt": zod.coerce.date().nullish().describe('When the background resolver last looked at this row. Null until the first resolver pass touches it.'),
+  "userNote": zod.string().nullish().describe('Private per-analysis trading journal note written by the owning user. Only populated by the single-analysis GET; the list endpoint exposes `hasNote` instead to keep payloads small. Never fed into the AI prompt.'),
+  "userNoteUpdatedAt": zod.coerce.date().nullish().describe('When `userNote` was last saved server-side. Null when no note has been written.'),
+  "hasNote": zod.boolean().optional().describe('True when the user has written a non-empty `userNote` for this analysis. Returned by the list endpoint so the history page can show a \'journaled\' icon without loading the full note body.'),
+  "feedback": zod.union([zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int(),
+  "feedbackType": zod.enum(['useful', 'not_useful']),
+  "outcome": zod.enum(['correct', 'wrong', 'unknown']).nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]).optional(),
+  "usefulCount": zod.number().int().optional().describe('Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "notUsefulCount": zod.number().int().optional().describe('Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.'),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "limit": zod.number().int()
+})
+
 
 /**
  * @summary List user feedback rows (admin only)
@@ -3917,55 +2610,32 @@ export const getAdminFeedbackQueryPageDefault = 1;
 export const getAdminFeedbackQueryLimitDefault = 50;
 
 export const GetAdminFeedbackQueryParams = zod.object({
-  page: zod.coerce.number().int().default(getAdminFeedbackQueryPageDefault),
-  limit: zod.coerce.number().int().default(getAdminFeedbackQueryLimitDefault),
-  search: zod.coerce
-    .string()
-    .optional()
-    .describe(
-      "Free-text ILIKE filter matched against the user's email or the analysis instrument",
-    ),
-  feedbackType: zod
-    .enum(["useful", "not_useful"])
-    .optional()
-    .describe("Restrict to a single feedback reaction"),
-  from: zod
-    .date()
-    .optional()
-    .describe(
-      "Only include feedback created on or after this date (ISO 8601 date)",
-    ),
-  to: zod
-    .date()
-    .optional()
-    .describe(
-      "Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day)",
-    ),
-  analysisId: zod.coerce
-    .number()
-    .int()
-    .optional()
-    .describe("When set, only return feedback for the given analysis id."),
-});
+  "page": zod.coerce.number().int().default(getAdminFeedbackQueryPageDefault),
+  "limit": zod.coerce.number().int().default(getAdminFeedbackQueryLimitDefault),
+  "search": zod.coerce.string().optional().describe('Free-text ILIKE filter matched against the user\'s email or the analysis instrument'),
+  "feedbackType": zod.enum(['useful', 'not_useful']).optional().describe('Restrict to a single feedback reaction'),
+  "from": zod.date().optional().describe('Only include feedback created on or after this date (ISO 8601 date)'),
+  "to": zod.date().optional().describe('Only include feedback created on or before this date (ISO 8601 date, inclusive end-of-day)'),
+  "analysisId": zod.coerce.number().int().optional().describe('When set, only return feedback for the given analysis id.')
+})
 
 export const GetAdminFeedbackResponse = zod.object({
-  feedback: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      analysisId: zod.number().int(),
-      instrument: zod.string(),
-      userId: zod.number().int(),
-      userEmail: zod.string(),
-      feedbackType: zod.enum(["useful", "not_useful"]),
-      outcome: zod.enum(["correct", "wrong", "unknown"]).nullish(),
-      note: zod.string().nullish(),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-  total: zod.number().int(),
-  page: zod.number().int(),
-  limit: zod.number().int(),
-});
+  "feedback": zod.array(zod.object({
+  "id": zod.number().int(),
+  "analysisId": zod.number().int(),
+  "instrument": zod.string(),
+  "userId": zod.number().int(),
+  "userEmail": zod.string(),
+  "feedbackType": zod.enum(['useful', 'not_useful']),
+  "outcome": zod.enum(['correct', 'wrong', 'unknown']).nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "limit": zod.number().int()
+})
+
 
 /**
  * @summary Broadcast notification to selected audience
@@ -3974,31 +2644,20 @@ export const broadcastNotificationBodyTypeDefault = `info`;
 export const broadcastNotificationBodyAudienceTypeDefault = `all`;
 
 export const BroadcastNotificationBody = zod.object({
-  title: zod.string(),
-  message: zod.string(),
-  type: zod
-    .enum(["info", "warning", "error"])
-    .default(broadcastNotificationBodyTypeDefault),
-  audienceType: zod
-    .enum(["all", "role", "tag"])
-    .default(broadcastNotificationBodyAudienceTypeDefault),
-  audienceValue: zod
-    .string()
-    .nullish()
-    .describe(
-      "Role name when audienceType=role; tag name when audienceType=tag",
-    ),
-  targetRole: zod
-    .enum(["user", "admin", "super_admin"])
-    .nullish()
-    .describe("Deprecated: use audienceType=role + audienceValue instead"),
-});
+  "title": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['info', 'warning', 'error']).default(broadcastNotificationBodyTypeDefault),
+  "audienceType": zod.enum(['all', 'role', 'tag']).default(broadcastNotificationBodyAudienceTypeDefault),
+  "audienceValue": zod.string().nullish().describe('Role name when audienceType=role; tag name when audienceType=tag'),
+  "targetRole": zod.enum(['user', 'admin', 'super_admin']).nullish().describe('Deprecated: use audienceType=role + audienceValue instead')
+})
 
 export const BroadcastNotificationResponse = zod.object({
-  broadcastId: zod.number().int(),
-  recipientCount: zod.number().int(),
-  message: zod.string(),
-});
+  "broadcastId": zod.number().int(),
+  "recipientCount": zod.number().int(),
+  "message": zod.string()
+})
+
 
 /**
  * @summary Broadcast history
@@ -4007,28 +2666,27 @@ export const getBroadcastsQueryPageDefault = 1;
 export const getBroadcastsQueryLimitDefault = 20;
 
 export const GetBroadcastsQueryParams = zod.object({
-  page: zod.coerce.number().int().default(getBroadcastsQueryPageDefault),
-  limit: zod.coerce.number().int().default(getBroadcastsQueryLimitDefault),
-});
+  "page": zod.coerce.number().int().default(getBroadcastsQueryPageDefault),
+  "limit": zod.coerce.number().int().default(getBroadcastsQueryLimitDefault)
+})
 
 export const GetBroadcastsResponse = zod.object({
-  broadcasts: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      senderId: zod.number().int().nullish(),
-      senderName: zod.string().nullish(),
-      title: zod.string(),
-      message: zod.string(),
-      audienceType: zod.enum(["all", "role", "tag"]),
-      audienceValue: zod.string().nullish(),
-      recipientCount: zod.number().int(),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-  total: zod.number().int(),
-  page: zod.number().int(),
-  limit: zod.number().int(),
-});
+  "broadcasts": zod.array(zod.object({
+  "id": zod.number().int(),
+  "senderId": zod.number().int().nullish(),
+  "senderName": zod.string().nullish(),
+  "title": zod.string(),
+  "message": zod.string(),
+  "audienceType": zod.enum(['all', 'role', 'tag']),
+  "audienceValue": zod.string().nullish(),
+  "recipientCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "limit": zod.number().int()
+})
+
 
 /**
  * @summary Get all users (superadmin only)
@@ -4037,45 +2695,29 @@ export const getAllUsersQueryPageDefault = 1;
 export const getAllUsersQueryLimitDefault = 50;
 
 export const GetAllUsersQueryParams = zod.object({
-  search: zod.coerce
-    .string()
-    .optional()
-    .describe("ILIKE filter on email or display name"),
-  page: zod.coerce.number().int().default(getAllUsersQueryPageDefault),
-  limit: zod.coerce.number().int().default(getAllUsersQueryLimitDefault),
-});
+  "search": zod.coerce.string().optional().describe('ILIKE filter on email or display name'),
+  "page": zod.coerce.number().int().default(getAllUsersQueryPageDefault),
+  "limit": zod.coerce.number().int().default(getAllUsersQueryLimitDefault)
+})
 
 export const GetAllUsersResponse = zod.object({
-  users: zod.array(
-    zod.object({
-      id: zod.number().int(),
-      email: zod.string(),
-      displayName: zod.string(),
-      role: zod.enum(["user", "admin", "super_admin"]),
-      selectedMode: zod.enum(["beginner", "pro"]),
-      analysisCount: zod.number().int(),
-      tags: zod.array(zod.string()),
-      customQuotaPerHour: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Per-user analysis-quota override. Null = uses the global default.",
-        ),
-      customQuotaPerDay: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Per-user analysis-quota override. Null = uses the global default.",
-        ),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-  total: zod.number().int(),
-  page: zod.number().int(),
-  limit: zod.number().int(),
-});
+  "users": zod.array(zod.object({
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "role": zod.enum(['user', 'admin', 'super_admin']),
+  "selectedMode": zod.enum(['beginner', 'pro']),
+  "analysisCount": zod.number().int(),
+  "tags": zod.array(zod.string()),
+  "customQuotaPerHour": zod.number().int().nullish().describe('Per-user analysis-quota override. Null = uses the global default.'),
+  "customQuotaPerDay": zod.number().int().nullish().describe('Per-user analysis-quota override. Null = uses the global default.'),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "limit": zod.number().int()
+})
+
 
 /**
  * @summary Create new user (superadmin only)
@@ -4087,96 +2729,99 @@ export const createUserBodySecurityQuestionDefault = `Nama hewan peliharaan pert
 export const createUserBodySecurityAnswerDefault = `default`;
 
 export const CreateUserBody = zod.object({
-  email: zod.string().email(),
-  password: zod.string().min(createUserBodyPasswordMin),
-  displayName: zod.string(),
-  role: zod
-    .enum(["user", "admin", "super_admin"])
-    .default(createUserBodyRoleDefault),
-  securityQuestion: zod.string().default(createUserBodySecurityQuestionDefault),
-  securityAnswer: zod.string().default(createUserBodySecurityAnswerDefault),
-});
+  "email": zod.string().email(),
+  "password": zod.string().min(createUserBodyPasswordMin),
+  "displayName": zod.string(),
+  "role": zod.enum(['user', 'admin', 'super_admin']).default(createUserBodyRoleDefault),
+  "securityQuestion": zod.string().default(createUserBodySecurityQuestionDefault),
+  "securityAnswer": zod.string().default(createUserBodySecurityAnswerDefault)
+})
 
 export const CreateUserResponse = zod.object({
-  id: zod.number().int(),
-  email: zod.string(),
-  displayName: zod.string(),
-  avatarUrl: zod
-    .string()
-    .nullish()
-    .describe(
-      "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
-    ),
-  role: zod.enum(["user", "admin", "super_admin"]),
-  selectedMode: zod.enum(["beginner", "pro"]),
-  themePreference: zod.enum(["light", "dark"]),
-  securityQuestion: zod.string().optional(),
-  onboardingCompleted: zod.boolean(),
-  createdAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "avatarUrl": zod.string().nullish().describe('Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user\'s profile photo. Null if not set.'),
+  "role": zod.enum(['user', 'admin', 'super_admin']),
+  "selectedMode": zod.enum(['beginner', 'pro']),
+  "themePreference": zod.enum(['light', 'dark']),
+  "securityQuestion": zod.string().optional(),
+  "onboardingCompleted": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
 
 /**
  * @summary Delete user (superadmin only)
  */
 export const DeleteUserParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const DeleteUserResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary Reset user password (superadmin only)
  */
 export const ResetUserPasswordParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const resetUserPasswordBodyNewPasswordMin = 6;
 
+
+
 export const ResetUserPasswordBody = zod.object({
-  newPassword: zod.string().min(resetUserPasswordBodyNewPasswordMin),
-});
+  "newPassword": zod.string().min(resetUserPasswordBodyNewPasswordMin)
+})
 
 export const ResetUserPasswordResponse = zod.object({
-  message: zod.string(),
-});
+  "message": zod.string()
+})
+
 
 /**
  * @summary List all distinct tags assigned to users
  */
 export const GetAllTagsResponse = zod.object({
-  tags: zod.array(zod.string()),
-});
+  "tags": zod.array(zod.string())
+})
+
 
 /**
  * @summary Get all tags for a specific user
  */
 export const GetUserTagsParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const GetUserTagsResponse = zod.object({
-  tags: zod.array(zod.string()),
-});
+  "tags": zod.array(zod.string())
+})
+
 
 /**
  * @summary Add a tag to a user
  */
 export const AddUserTagParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const addUserTagBodyTagMax = 40;
 
+
+
 export const AddUserTagBody = zod.object({
-  tag: zod.string().min(1).max(addUserTagBodyTagMax),
-});
+  "tag": zod.string().min(1).max(addUserTagBodyTagMax)
+})
 
 export const AddUserTagResponse = zod.object({
-  tags: zod.array(zod.string()),
-});
+  "tags": zod.array(zod.string())
+})
+
 
 /**
  * Each field is either a positive integer (override for just this
@@ -4185,65 +2830,56 @@ export const AddUserTagResponse = zod.object({
  * @summary Set or clear a per-user analysis-quota override
  */
 export const UpdateUserQuotaParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const UpdateUserQuotaBody = zod.object({
-  customQuotaPerHour: zod
-    .number()
-    .int()
-    .nullable()
-    .describe("Positive integer to set an override, or null to clear it."),
-  customQuotaPerDay: zod
-    .number()
-    .int()
-    .nullable()
-    .describe("Positive integer to set an override, or null to clear it."),
-});
+  "customQuotaPerHour": zod.number().int().nullable().describe('Positive integer to set an override, or null to clear it.'),
+  "customQuotaPerDay": zod.number().int().nullable().describe('Positive integer to set an override, or null to clear it.')
+})
 
 export const UpdateUserQuotaResponse = zod.object({
-  id: zod.number().int(),
-  customQuotaPerHour: zod.number().int().nullable(),
-  customQuotaPerDay: zod.number().int().nullable(),
-});
+  "id": zod.number().int(),
+  "customQuotaPerHour": zod.number().int().nullable(),
+  "customQuotaPerDay": zod.number().int().nullable()
+})
+
 
 /**
  * @summary Remove a tag from a user
  */
 export const RemoveUserTagParams = zod.object({
-  id: zod.coerce.number().int(),
-  tag: zod.coerce.string(),
-});
+  "id": zod.coerce.number().int(),
+  "tag": zod.coerce.string()
+})
 
 export const RemoveUserTagResponse = zod.object({
-  tags: zod.array(zod.string()),
-});
+  "tags": zod.array(zod.string())
+})
+
 
 /**
  * @summary Update user role (superadmin only)
  */
 export const UpdateUserRoleParams = zod.object({
-  id: zod.coerce.number().int(),
-});
+  "id": zod.coerce.number().int()
+})
 
 export const UpdateUserRoleBody = zod.object({
-  role: zod.enum(["user", "admin", "super_admin"]),
-});
+  "role": zod.enum(['user', 'admin', 'super_admin'])
+})
 
 export const UpdateUserRoleResponse = zod.object({
-  id: zod.number().int(),
-  email: zod.string(),
-  displayName: zod.string(),
-  avatarUrl: zod
-    .string()
-    .nullish()
-    .describe(
-      "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
-    ),
-  role: zod.enum(["user", "admin", "super_admin"]),
-  selectedMode: zod.enum(["beginner", "pro"]),
-  themePreference: zod.enum(["light", "dark"]),
-  securityQuestion: zod.string().optional(),
-  onboardingCompleted: zod.boolean(),
-  createdAt: zod.coerce.date(),
-});
+  "id": zod.number().int(),
+  "email": zod.string(),
+  "displayName": zod.string(),
+  "avatarUrl": zod.string().nullish().describe('Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user\'s profile photo. Null if not set.'),
+  "role": zod.enum(['user', 'admin', 'super_admin']),
+  "selectedMode": zod.enum(['beginner', 'pro']),
+  "themePreference": zod.enum(['light', 'dark']),
+  "securityQuestion": zod.string().optional(),
+  "onboardingCompleted": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+

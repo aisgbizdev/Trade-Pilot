@@ -5,7 +5,10 @@ import {
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, getAuthContext } from "../middleware/auth";
+import { db } from "../lib/db";
+import { creditTopupRequests } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -121,20 +124,26 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
       return;
     }
 
-    // --- Protected route example (uncomment when using replit-auth) ---
-    // if (!req.isAuthenticated()) {
-    //   res.status(401).json({ error: "Unauthorized" });
-    //   return;
-    // }
-    // const canAccess = await objectStorageService.canAccessObjectEntity({
-    //   userId: req.user.id,
-    //   objectFile,
-    //   requestedPermission: ObjectPermission.READ,
-    // });
-    // if (!canAccess) {
-    //   res.status(403).json({ error: "Forbidden" });
-    //   return;
-    // }
+    // This route otherwise serves any object to any caller (object paths
+    // are non-enumerable random UUIDs — avatars and other current object
+    // types rely on that). Payment-proof screenshots are more sensitive
+    // (could show partial payment-app/bank info), so narrowly gate just
+    // those: if this path belongs to a top-up request, only its owner or
+    // an admin may read it. Every other object type is unaffected.
+    const [topupOwner] = await db
+      .select({ userId: creditTopupRequests.userId })
+      .from(creditTopupRequests)
+      .where(eq(creditTopupRequests.proofObjectPath, objectPath))
+      .limit(1);
+    if (topupOwner) {
+      const auth = await getAuthContext(req);
+      const isOwner = auth?.userId === topupOwner.userId;
+      const isAdmin = auth?.role === "admin" || auth?.role === "super_admin";
+      if (!isOwner && !isAdmin) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
 
     const response = await objectStorageService.downloadObject(objectFile);
 

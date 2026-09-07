@@ -1,4 +1,5 @@
 import { Clock, CalendarClock, Hourglass } from "lucide-react";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ const SCOPE_ICON: Record<QuotaScope, typeof Clock> = {
 export function QuotaDialog() {
   const { t } = useTranslation();
   const { open, info } = useQuotaDialogState();
+  const [, setLocation] = useLocation();
 
   if (!info) return null;
 
@@ -77,6 +79,19 @@ export function QuotaDialog() {
         )}
 
         <DialogFooter className="sm:justify-center">
+          {info.scope === "day" && (
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                hideQuotaDialog();
+                setLocation("/topup");
+              }}
+              data-testid="button-quota-dialog-topup"
+            >
+              {t.quota_dialog.topup_cta}
+            </Button>
+          )}
           <Button onClick={hideQuotaDialog} className="w-full sm:w-auto" data-testid="button-quota-dialog-ok">
             {t.quota_dialog.ok_btn}
           </Button>

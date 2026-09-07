@@ -31,6 +31,8 @@ import MirrorPage from "@/pages/mirror";
 import PerformancePage, { PerformanceMethodologyPage } from "@/pages/performance";
 import ProgressionPage from "@/pages/progression";
 import AdminProgressionPage from "@/pages/admin-progression";
+import AdminTopupsPage from "@/pages/admin-topups";
+import TopupPage from "@/pages/topup";
 import { SplashScreen } from "@/components/splash-screen";
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
@@ -147,6 +149,11 @@ function Router() {
             <MyAlertsPage />
           </ProtectedRoute>
         </Route>
+        <Route path="/topup">
+          <ProtectedRoute>
+            <TopupPage />
+          </ProtectedRoute>
+        </Route>
         <Route path="/guide">
           <ProtectedRoute>
             <GuidePage />
@@ -183,6 +190,11 @@ function Router() {
         <Route path="/admin/feedback">
           <ProtectedRoute requiredRole="admin">
             <AdminFeedbackPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/topups">
+          <ProtectedRoute requiredRole="super_admin">
+            <AdminTopupsPage />
           </ProtectedRoute>
         </Route>
         <Route component={NotFound} />

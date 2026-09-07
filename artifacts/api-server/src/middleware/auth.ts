@@ -49,6 +49,37 @@ export async function requireAuth(
   next();
 }
 
+/**
+ * Non-throwing variant of the requireAuth lookup for routes that serve a
+ * mix of public and sensitive content (e.g. GET /storage/objects/*, which
+ * is unauthenticated for most object types but needs to know the caller's
+ * identity to gate a narrow subset — see storage.ts). Returns null for any
+ * missing/invalid/expired session instead of writing a 401 response.
+ */
+export async function getAuthContext(
+  req: Request,
+): Promise<{ userId: number; role: string } | null> {
+  const token =
+    req.cookies?.["session_token"] ||
+    req.headers["authorization"]?.replace("Bearer ", "");
+  if (!token) return null;
+
+  const [session] = await db
+    .select({ userId: sessions.userId, expiresAt: sessions.expiresAt })
+    .from(sessions)
+    .where(and(eq(sessions.token, token), gt(sessions.expiresAt, new Date())))
+    .limit(1);
+  if (!session) return null;
+
+  const [user] = await db
+    .select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, session.userId))
+    .limit(1);
+
+  return { userId: session.userId, role: user?.role ?? "user" };
+}
+
 export async function requireAdmin(
   req: AuthRequest,
   res: Response,

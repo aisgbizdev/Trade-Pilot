@@ -929,6 +929,9 @@ export default function AnalyzePage() {
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQuotaQueryKey() });
       trackEvent("analysis_created", { instrument: instrumentToUse, timeframe: selectedTimeframe });
+      if (created.creditConsumed) {
+        toast({ title: t.analyze.credit_consumed_title.replace("{n}", String(created.creditBalance ?? 0)) });
+      }
       // Render the result inline right below the form instead of
       // navigating to /analyses/:id — same page, no extra hop. The
       // embedded detail view loads this same ID; it does not create
