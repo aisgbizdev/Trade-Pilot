@@ -11,10 +11,8 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
 }
 
 let RUPIAH_PER_CREDIT = parsePositiveInt(process.env["CREDIT_TOPUP_RUPIAH_PER_CREDIT"], 250);
-// Placeholder until the real GoPay QRIS image is dropped into
-// artifacts/ai-trading/public/. Swap the file (and this extension, if the
-// real asset isn't an SVG) — no code change needed beyond this constant.
-const QRIS_IMAGE_URL = "/qris-gopay.svg";
+// Real GoPay QRIS image, served statically from artifacts/ai-trading/public/.
+const QRIS_IMAGE_URL = "/qris-gopay.jpeg";
 
 export function getTopupConfig(): { rupiahPerCredit: number; qrisImageUrl: string } {
   return { rupiahPerCredit: RUPIAH_PER_CREDIT, qrisImageUrl: QRIS_IMAGE_URL };

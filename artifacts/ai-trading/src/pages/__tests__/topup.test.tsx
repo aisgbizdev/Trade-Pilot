@@ -12,7 +12,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import TopupPage from "../topup";
 import { installFetchMock, jsonResponse, makeWrapper } from "./test-helpers";
 
-const CONFIG_PAYLOAD = { rupiahPerCredit: 250, qrisImageUrl: "/qris-gopay.svg" };
+const CONFIG_PAYLOAD = { rupiahPerCredit: 250, qrisImageUrl: "/qris-gopay.jpeg" };
 
 describe("TopupPage", () => {
   it("renders the QRIS card, balance, and rate hint", async () => {
@@ -35,7 +35,7 @@ describe("TopupPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("text-credit-balance")).toHaveTextContent("12");
     });
-    expect(await screen.findByTestId("img-qris")).toHaveAttribute("src", "/qris-gopay.svg");
+    expect(await screen.findByTestId("img-qris")).toHaveAttribute("src", "/qris-gopay.jpeg");
   });
 
   it("shows a live credits preview while typing an amount and submits a top-up request", async () => {

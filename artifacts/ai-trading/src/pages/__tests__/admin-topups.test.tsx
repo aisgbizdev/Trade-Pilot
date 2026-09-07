@@ -12,7 +12,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import AdminTopupsPage from "../admin-topups";
 import { installFetchMock, jsonResponse, makeWrapper, TEST_USER } from "./test-helpers";
 
-const CONFIG_PAYLOAD = { rupiahPerCredit: 250, qrisImageUrl: "/qris-gopay.svg" };
+const CONFIG_PAYLOAD = { rupiahPerCredit: 250, qrisImageUrl: "/qris-gopay.jpeg" };
 
 const PENDING_LIST = {
   requests: [
