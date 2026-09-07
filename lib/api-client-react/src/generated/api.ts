@@ -130,6 +130,7 @@ import type {
   TopupRequest,
   TopupRequestList,
   TopupRequestWithUserList,
+  TopupSummary,
   TraderMirrorResponse,
   UpdateJournalEntryBody,
   UpdateProfileBody,
@@ -1293,6 +1294,83 @@ export const useUpdateTopupConfig = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getUpdateTopupConfigMutationOptions(options));
     }
+
+export const getGetTopupSummaryUrl = () => {
+
+
+
+
+  return `/api/admin/topups/summary`
+}
+
+/**
+ * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+ */
+export const getTopupSummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<TopupSummary> => {
+
+  return customFetch<TopupSummary>(getGetTopupSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTopupSummaryQueryKey = () => {
+    return [
+    `/api/admin/topups/summary`
+    ] as const;
+    }
+
+
+export const getGetTopupSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getTopupSummary>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTopupSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTopupSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTopupSummary>>> = ({ signal }) => getTopupSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTopupSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTopupSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getTopupSummary>>>
+export type GetTopupSummaryQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+ */
+
+export function useGetTopupSummary<TData = Awaited<ReturnType<typeof getTopupSummary>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTopupSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTopupSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetGuardrailsUrl = (params: GetGuardrailsParams,) => {
   const normalizedParams = new URLSearchParams();

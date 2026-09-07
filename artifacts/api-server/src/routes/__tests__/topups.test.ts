@@ -265,3 +265,98 @@ describe("PATCH /admin/topups/:id/status", () => {
     expect(ledgerRows).toHaveLength(1);
   });
 });
+
+describe("GET /admin/topups/summary", () => {
+  it("returns 403 for a plain user and for a plain admin", async () => {
+    const resUser = await request(app).get("/api/admin/topups/summary").set(...authHeader(alice));
+    expect(resUser.status).toBe(403);
+    const resAdmin = await request(app).get("/api/admin/topups/summary").set(...authHeader(admin));
+    expect(resAdmin.status).toBe(403);
+  });
+
+  it("sums only approved rows, grouped by user, excluding pending/rejected", async () => {
+    const bob = await createUser("user");
+
+    async function submitAndApprove(user: SeedUser, amountRupiah: number, creditsGranted: number) {
+      const created = await request(app)
+        .post("/api/topups")
+        .set(...authHeader(user))
+        .send({ amountRupiah });
+      seededRequestIds.push(created.body.id);
+      const reviewed = await request(app)
+        .patch(`/api/admin/topups/${created.body.id}/status`)
+        .set(...authHeader(superAdmin))
+        .send({ status: "approved", creditsGranted });
+      expect(reviewed.status).toBe(200);
+      return created.body.id as number;
+    }
+
+    async function submitAndReject(user: SeedUser, amountRupiah: number) {
+      const created = await request(app)
+        .post("/api/topups")
+        .set(...authHeader(user))
+        .send({ amountRupiah });
+      seededRequestIds.push(created.body.id);
+      await request(app)
+        .patch(`/api/admin/topups/${created.body.id}/status`)
+        .set(...authHeader(superAdmin))
+        .send({ status: "rejected" });
+    }
+
+    async function submitPending(user: SeedUser, amountRupiah: number) {
+      const created = await request(app)
+        .post("/api/topups")
+        .set(...authHeader(user))
+        .send({ amountRupiah });
+      seededRequestIds.push(created.body.id);
+    }
+
+    const rate = getTopupConfig().rupiahPerCredit;
+    await submitAndApprove(bob, rate * 20, 20); // Rp = rate*20, credits 20
+    await submitAndApprove(bob, rate * 10, 10); // Rp = rate*10, credits 10
+    await submitAndReject(bob, rate * 999); // must not count
+    await submitPending(bob, rate * 888); // must not count
+
+    const other = await createUser("user");
+    await submitAndApprove(other, rate * 5, 5);
+
+    const res = await request(app).get("/api/admin/topups/summary").set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+
+    const bobRow = res.body.byUser.find((r: { userId: number }) => r.userId === bob.id);
+    expect(bobRow).toMatchObject({
+      totalAmountRupiah: rate * 30,
+      totalCreditsGranted: 30,
+      requestCount: 2,
+    });
+    expect(bobRow.lastApprovedAt).not.toBeNull();
+
+    const otherRow = res.body.byUser.find((r: { userId: number }) => r.userId === other.id);
+    expect(otherRow).toMatchObject({
+      totalAmountRupiah: rate * 5,
+      totalCreditsGranted: 5,
+      requestCount: 1,
+    });
+
+    // Totals include at least this test's approved rows (other tests in this
+    // file/suite may also contribute approved rows to the shared totals, so
+    // assert a lower bound rather than exact equality).
+    expect(res.body.totalAmountRupiah).toBeGreaterThanOrEqual(rate * 35);
+    expect(res.body.totalCreditsGranted).toBeGreaterThanOrEqual(35);
+    expect(res.body.approvedRequestCount).toBeGreaterThanOrEqual(3);
+  });
+
+  it("excludes a user with only a pending or rejected request from byUser", async () => {
+    const carol = await createUser("user");
+    const created = await request(app)
+      .post("/api/topups")
+      .set(...authHeader(carol))
+      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 3 });
+    seededRequestIds.push(created.body.id);
+    // Left pending — never approved.
+
+    const res = await request(app).get("/api/admin/topups/summary").set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+    expect(res.body.byUser.some((r: { userId: number }) => r.userId === carol.id)).toBe(false);
+  });
+});

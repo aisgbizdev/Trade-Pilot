@@ -1203,6 +1203,23 @@ export interface TopupRequestWithUserList {
   limit: number;
 }
 
+export interface TopupUserSummary {
+  userId: number;
+  userEmail: string;
+  userDisplayName: string;
+  totalAmountRupiah: number;
+  totalCreditsGranted: number;
+  requestCount: number;
+  lastApprovedAt: string | null;
+}
+
+export interface TopupSummary {
+  totalAmountRupiah: number;
+  totalCreditsGranted: number;
+  approvedRequestCount: number;
+  byUser: TopupUserSummary[];
+}
+
 export type ReviewTopupRequestBodyStatus = typeof ReviewTopupRequestBodyStatus[keyof typeof ReviewTopupRequestBodyStatus];
 
 

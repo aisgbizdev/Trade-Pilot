@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, sql, sum } from "drizzle-orm";
 import { db } from "../lib/db";
 import { creditTopupRequests, users } from "@workspace/db/schema";
 import { requireAdmin, requireAuth, requireSuperAdmin, type AuthRequest } from "../middleware/auth";
@@ -119,6 +119,50 @@ router.get("/admin/topups", requireAdmin, async (req: AuthRequest, res) => {
     total: totalRow?.value ?? 0,
     page,
     limit,
+  });
+});
+
+router.get("/admin/topups/summary", requireSuperAdmin, async (_req: AuthRequest, res) => {
+  const approved = eq(creditTopupRequests.status, "approved");
+
+  const [totalsRaw] = await db
+    .select({
+      totalAmountRupiah: sum(creditTopupRequests.amountRupiah),
+      totalCreditsGranted: sum(creditTopupRequests.creditsGranted),
+      approvedCount: count(creditTopupRequests.id),
+    })
+    .from(creditTopupRequests)
+    .where(approved);
+
+  const byUserRaw = await db
+    .select({
+      userId: creditTopupRequests.userId,
+      userEmail: users.email,
+      userDisplayName: users.displayName,
+      totalAmountRupiah: sum(creditTopupRequests.amountRupiah),
+      totalCreditsGranted: sum(creditTopupRequests.creditsGranted),
+      requestCount: count(creditTopupRequests.id),
+      lastApprovedAt: sql<string | null>`max(${creditTopupRequests.reviewedAt})`,
+    })
+    .from(creditTopupRequests)
+    .innerJoin(users, eq(creditTopupRequests.userId, users.id))
+    .where(approved)
+    .groupBy(creditTopupRequests.userId, users.email, users.displayName)
+    .orderBy(desc(sum(creditTopupRequests.amountRupiah)));
+
+  res.json({
+    totalAmountRupiah: Number(totalsRaw?.totalAmountRupiah ?? 0),
+    totalCreditsGranted: Number(totalsRaw?.totalCreditsGranted ?? 0),
+    approvedRequestCount: Number(totalsRaw?.approvedCount ?? 0),
+    byUser: byUserRaw.map((r) => ({
+      userId: r.userId,
+      userEmail: r.userEmail,
+      userDisplayName: r.userDisplayName,
+      totalAmountRupiah: Number(r.totalAmountRupiah ?? 0),
+      totalCreditsGranted: Number(r.totalCreditsGranted ?? 0),
+      requestCount: Number(r.requestCount ?? 0),
+      lastApprovedAt: r.lastApprovedAt,
+    })),
   });
 });
 

@@ -313,6 +313,25 @@ export const UpdateTopupConfigResponse = zod.object({
 
 
 /**
+ * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+ */
+export const GetTopupSummaryResponse = zod.object({
+  "totalAmountRupiah": zod.number().int(),
+  "totalCreditsGranted": zod.number().int(),
+  "approvedRequestCount": zod.number().int(),
+  "byUser": zod.array(zod.object({
+  "userId": zod.number().int(),
+  "userEmail": zod.string(),
+  "userDisplayName": zod.string(),
+  "totalAmountRupiah": zod.number().int(),
+  "totalCreditsGranted": zod.number().int(),
+  "requestCount": zod.number().int(),
+  "lastApprovedAt": zod.coerce.date().nullable()
+}))
+})
+
+
+/**
  * @summary Detect active soft warnings for the requested instrument
  */
 export const GetGuardrailsQueryParams = zod.object({

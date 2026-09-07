@@ -239,6 +239,19 @@ paths:
           description: Forbidden
           content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
 
+  /admin/topups/summary:
+    get:
+      operationId: getTopupSummary
+      tags: [admin]
+      summary: Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+      responses:
+        "200":
+          description: Top-up revenue summary
+          content: { application/json: { schema: { $ref: "#/components/schemas/TopupSummary" } } }
+        "403":
+          description: Forbidden
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
   /analyses/guardrails:
     get:
       operationId: getGuardrails
@@ -4399,6 +4412,53 @@ components:
         limit:
           type: integer
       required: [requests, total, page, limit]
+
+    TopupUserSummary:
+      type: object
+      properties:
+        userId:
+          type: integer
+        userEmail:
+          type: string
+        userDisplayName:
+          type: string
+        totalAmountRupiah:
+          type: integer
+        totalCreditsGranted:
+          type: integer
+        requestCount:
+          type: integer
+        lastApprovedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - userId
+        - userEmail
+        - userDisplayName
+        - totalAmountRupiah
+        - totalCreditsGranted
+        - requestCount
+        - lastApprovedAt
+
+    TopupSummary:
+      type: object
+      properties:
+        totalAmountRupiah:
+          type: integer
+        totalCreditsGranted:
+          type: integer
+        approvedRequestCount:
+          type: integer
+        byUser:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopupUserSummary"
+      required:
+        - totalAmountRupiah
+        - totalCreditsGranted
+        - approvedRequestCount
+        - byUser
 
     ReviewTopupRequestBody:
       type: object

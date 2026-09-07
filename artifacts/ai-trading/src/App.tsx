@@ -32,6 +32,7 @@ import PerformancePage, { PerformanceMethodologyPage } from "@/pages/performance
 import ProgressionPage from "@/pages/progression";
 import AdminProgressionPage from "@/pages/admin-progression";
 import AdminTopupsPage from "@/pages/admin-topups";
+import AdminDashboardPage from "@/pages/admin-dashboard";
 import TopupPage from "@/pages/topup";
 import { SplashScreen } from "@/components/splash-screen";
 import { useEffect } from "react";
@@ -170,6 +171,11 @@ function Router() {
         <Route path="/mirror">
           <ProtectedRoute>
             <MirrorPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/dashboard">
+          <ProtectedRoute requiredRole="super_admin">
+            <AdminDashboardPage />
           </ProtectedRoute>
         </Route>
         <Route path="/admin">
