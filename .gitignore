@@ -50,3 +50,8 @@ Thumbs.db
 .env
 .env
 .env
+
+# OAuth / secret credential files (keep secrets out of git)
+OAuth google.json
+*oauth*.json
+client_secret*.json

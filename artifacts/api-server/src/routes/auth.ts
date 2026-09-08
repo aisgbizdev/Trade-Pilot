@@ -21,9 +21,16 @@ import {
   registerLimiter,
   forgotPasswordResetLimiter,
   accountDeletionLimiter,
+  googleOAuthLimiter,
 } from "../middleware/rate-limit";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
+import {
+  buildGoogleAuthUrl,
+  exchangeCodeForProfile,
+  isGoogleOAuthConfigured,
+  resolvePublicBaseUrl,
+} from "../lib/google-oauth";
 
 const router = Router();
 
@@ -176,6 +183,18 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
     return;
   }
 
+  // Google-OAuth-only account (no local password). Steer the user to the
+  // Google button instead of leaking "this email exists" via a distinct
+  // 401 — but a specific message here is a materially better UX and the
+  // email is already confirmed to exist by this branch only when the
+  // password would also have to match, so keep it explicit.
+  if (!user.passwordHash) {
+    res.status(401).json({
+      error: "Akun ini terdaftar lewat Google. Silakan login dengan Google.",
+    });
+    return;
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
     res.status(401).json({ error: "Email atau password salah" });
@@ -213,6 +232,161 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
       avatarUrl: user.avatarUrl,
     },
   });
+});
+
+// ---------------------------------------------------------------------------
+// Google OAuth 2.0 (login + registration) — server-side redirect flow.
+// See lib/google-oauth.ts for the flow overview and required env config.
+// ---------------------------------------------------------------------------
+
+const GOOGLE_STATE_COOKIE = "g_oauth_state";
+const GOOGLE_STATE_TTL_MS = 10 * 60 * 1000;
+
+function requestOrigin(req: { protocol: string; get(name: string): string | undefined }) {
+  return { protocol: req.protocol, host: req.get("host") };
+}
+
+// Start the flow: stash a CSRF `state` in a short-lived cookie and bounce
+// the browser to Google's consent screen.
+router.get("/auth/google", googleOAuthLimiter, (req, res) => {
+  if (!isGoogleOAuthConfigured()) {
+    res.status(503).json({ error: "Login Google belum dikonfigurasi." });
+    return;
+  }
+
+  const state = generateToken();
+  res.cookie(GOOGLE_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    maxAge: GOOGLE_STATE_TTL_MS,
+    path: "/api/auth/google",
+  });
+
+  const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+  res.redirect(buildGoogleAuthUrl(baseUrl, state));
+});
+
+// Google redirects back here with `?code` + `?state`. On any failure we
+// bounce to /login?error=google rather than showing a JSON blob.
+router.get("/auth/google/callback", googleOAuthLimiter, async (req, res) => {
+  const fail = (reason: string, code = "google") => {
+    res.clearCookie(GOOGLE_STATE_COOKIE, { path: "/api/auth/google" });
+    logger.warn({ reason }, "[auth] Google OAuth callback failed");
+    res.redirect(`/login?error=${code}`);
+  };
+
+  if (!isGoogleOAuthConfigured()) {
+    fail("not_configured");
+    return;
+  }
+
+  const code = typeof req.query["code"] === "string" ? req.query["code"] : null;
+  const state = typeof req.query["state"] === "string" ? req.query["state"] : null;
+  const cookieState = req.cookies?.[GOOGLE_STATE_COOKIE];
+
+  if (req.query["error"]) {
+    // User denied consent, or Google returned an error param.
+    fail(`google_error:${String(req.query["error"]).slice(0, 40)}`);
+    return;
+  }
+  if (!code || !state || !cookieState || state !== cookieState) {
+    fail("bad_state");
+    return;
+  }
+
+  let profile;
+  try {
+    const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+    profile = await exchangeCodeForProfile(baseUrl, code);
+  } catch (err) {
+    logger.warn({ err }, "[auth] Google code exchange failed");
+    fail("exchange_failed");
+    return;
+  }
+
+  if (!profile.emailVerified) {
+    fail("email_unverified", "google_unverified");
+    return;
+  }
+
+  // Upsert: match on google_id, then link by verified email, else create.
+  const resolveUser = async (): Promise<{
+    user: typeof users.$inferSelect;
+    isNewUser: boolean;
+  }> => {
+    const [byGoogleId] = await db
+      .select()
+      .from(users)
+      .where(eq(users.googleId, profile.googleId))
+      .limit(1);
+    if (byGoogleId) return { user: byGoogleId, isNewUser: false };
+
+    const [byEmail] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, profile.email))
+      .limit(1);
+    if (byEmail) {
+      const [linked] = await db
+        .update(users)
+        .set({ googleId: profile.googleId, updatedAt: new Date() })
+        .where(eq(users.id, byEmail.id))
+        .returning();
+      return { user: linked, isNewUser: false };
+    }
+
+    const displayName =
+      profile.name?.trim().slice(0, 80) || profile.email.split("@")[0];
+    const [created] = await db
+      .insert(users)
+      .values({
+        email: profile.email,
+        googleId: profile.googleId,
+        displayName,
+        selectedMode: "pro",
+      })
+      .returning();
+    return { user: created, isNewUser: true };
+  };
+
+  let user: typeof users.$inferSelect;
+  let isNewUser: boolean;
+  try {
+    ({ user, isNewUser } = await resolveUser());
+  } catch (err) {
+    // Most likely cause in a fresh setup: the `google_id` column / schema
+    // migration hasn't been applied yet. Redirect instead of dumping a
+    // stack trace to the user.
+    logger.error({ err }, "[auth] Google user upsert failed");
+    fail("upsert_failed");
+    return;
+  }
+
+  const token = generateToken();
+  // A Google sign-in is an explicit "this is my device" action — give it
+  // the long (remember-me) session like the checkbox on the login form.
+  const expiresAt = getSessionExpiry(true);
+
+  await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+
+  res.clearCookie(GOOGLE_STATE_COOKIE, { path: "/api/auth/google" });
+  res.cookie("session_token", token, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    expires: expiresAt,
+  });
+
+  if (isNewUser) {
+    void notifyAdminsUserCreated(user.displayName);
+  }
+  void notifyLoginAlert(user.id);
+
+  // Land on the dashboard — it's a ProtectedRoute (the fresh session
+  // cookie satisfies it) and it fires the onboarding modal for the
+  // brand-new accounts that skipped the register form.
+  res.redirect("/dashboard");
 });
 
 router.post("/auth/logout", requireAuth, async (req: AuthRequest, res) => {
@@ -353,6 +527,13 @@ router.patch("/auth/password", requireAuth, async (req: AuthRequest, res) => {
     .where(eq(users.id, req.userId!))
     .limit(1);
 
+  if (!user.passwordHash) {
+    res.status(400).json({
+      error: "Akun Google tidak memiliki password untuk diubah.",
+    });
+    return;
+  }
+
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) {
     res.status(401).json({ error: "Password lama salah" });
@@ -403,6 +584,14 @@ router.patch("/auth/security-question", requireAuth, async (req: AuthRequest, re
     .from(users)
     .where(eq(users.id, req.userId!))
     .limit(1);
+
+  if (!user.passwordHash) {
+    res.status(400).json({
+      error:
+        "Akun Google tidak menggunakan pertanyaan keamanan. Kelola akun lewat Google.",
+    });
+    return;
+  }
 
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) {
@@ -455,7 +644,10 @@ router.post("/auth/forgot-password/question", forgotPasswordQuestionLimiter, asy
     .limit(1);
 
   res.json({
-    securityQuestion: user ? user.securityQuestion : SECURITY_QUESTIONS[0],
+    // Fall back to a canonical question for both "no such user" and
+    // "Google account with no security question" so neither is
+    // distinguishable from a real password account.
+    securityQuestion: user?.securityQuestion ?? SECURITY_QUESTIONS[0],
     email: email.toLowerCase(),
   });
 });
@@ -495,6 +687,15 @@ router.post("/auth/forgot-password/verify", forgotPasswordVerifyLimiter, async (
     // Use the same operation (compare) and same bcrypt cost (12) as the
     // wrong-answer branch below, so an attacker rotating IPs can't tell
     // unknown-email apart from existing-email-wrong-answer by timing.
+    await bcrypt.compare(securityAnswer, DUMMY_SECURITY_ANSWER_HASH);
+    res.status(401).json({ error: INVALID_MSG });
+    return;
+  }
+
+  // Google-OAuth account: no security-answer hash to match. Keep it
+  // timing- and response-indistinguishable from the unknown-email and
+  // wrong-answer branches so it doesn't leak that the email exists.
+  if (!user.securityAnswerHash) {
     await bcrypt.compare(securityAnswer, DUMMY_SECURITY_ANSWER_HASH);
     res.status(401).json({ error: INVALID_MSG });
     return;
@@ -642,9 +843,12 @@ router.post("/auth/forgot-password/reset", forgotPasswordResetLimiter, async (re
 // new domain.
 const deleteAccountSchema = z
   .object({
+    // Optional: Google-OAuth accounts have no password. Password accounts
+    // still require it (enforced below once we know which kind this is).
     currentPassword: z
-      .string({ invalid_type_error: "Password wajib diisi" })
-      .min(1, "Password wajib diisi"),
+      .string({ invalid_type_error: "Password tidak valid" })
+      .min(1, "Password wajib diisi")
+      .optional(),
   })
   .strict();
 
@@ -675,10 +879,22 @@ router.delete(
       return;
     }
 
-    const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
-    if (!valid) {
-      res.status(401).json({ error: "Password salah" });
-      return;
+    // Password accounts must re-enter their password. Google-OAuth
+    // accounts (no passwordHash) are already proven by the session cookie
+    // that `requireAuth` validated — there's no second factor to check.
+    if (user.passwordHash) {
+      if (!parsed.data.currentPassword) {
+        res.status(400).json({ error: "Password wajib diisi" });
+        return;
+      }
+      const valid = await bcrypt.compare(
+        parsed.data.currentPassword,
+        user.passwordHash,
+      );
+      if (!valid) {
+        res.status(401).json({ error: "Password salah" });
+        return;
+      }
     }
 
     // Best-effort GCS cleanup of the user's avatar. Deliberately OUTSIDE

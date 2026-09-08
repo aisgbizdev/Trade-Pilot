@@ -18,6 +18,7 @@ import { useRegister, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
+import { GoogleSignInButton, AuthDivider } from "@/components/google-sign-in-button";
 
 const schema = z.object({
   email: z.string().email(),
@@ -78,6 +79,9 @@ export default function RegisterPage() {
             <h1 className="text-2xl font-bold text-foreground">{t.auth.create_account}</h1>
             <p className="text-sm text-muted-foreground mt-1">{t.auth.register_subtitle}</p>
           </div>
+
+          <GoogleSignInButton disabled={register.isPending} />
+          <AuthDivider />
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-testid="form-register">

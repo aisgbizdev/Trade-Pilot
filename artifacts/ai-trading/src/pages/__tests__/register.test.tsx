@@ -122,6 +122,7 @@ describe("RegisterPage: happy-path render", () => {
     expect(screen.getByTestId("select-security-question")).toBeInTheDocument();
     expect(screen.getByTestId("input-security-answer")).toBeInTheDocument();
     expect(screen.getByTestId("button-submit-register")).toBeInTheDocument();
+    expect(screen.getByTestId("button-google-signin")).toBeInTheDocument();
 
     // The consent text + the cross-link to /login render too.
     expect(screen.getByTestId("text-consent")).toBeInTheDocument();

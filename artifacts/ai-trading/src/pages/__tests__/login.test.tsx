@@ -70,6 +70,7 @@ describe("LoginPage: happy-path render", () => {
     expect(screen.getByTestId("input-password")).toBeInTheDocument();
     expect(screen.getByTestId("checkbox-remember-me")).toBeInTheDocument();
     expect(screen.getByTestId("button-submit-login")).toBeInTheDocument();
+    expect(screen.getByTestId("button-google-signin")).toBeInTheDocument();
     expect(screen.getByTestId("link-forgot-password")).toBeInTheDocument();
     expect(screen.getByTestId("link-register")).toBeInTheDocument();
 
@@ -105,6 +106,25 @@ describe("LoginPage: reset-success banner branch", () => {
     // The flag is consumed on read, so it should be cleared from
     // sessionStorage after the page mounts.
     expect(sessionStorage.getItem("password_reset_success")).toBeNull();
+  });
+});
+
+describe("LoginPage: Google OAuth callback error", () => {
+  it("strips ?error=google from the URL after surfacing it", async () => {
+    window.history.replaceState({}, "", "/login?error=google");
+    installFetchMock([loginHandler({})]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <LoginPage />
+      </Wrapper>,
+    );
+
+    await waitFor(() => {
+      expect(window.location.search).toBe("");
+    });
+    expect(screen.getByTestId("form-login")).toBeInTheDocument();
   });
 });
 

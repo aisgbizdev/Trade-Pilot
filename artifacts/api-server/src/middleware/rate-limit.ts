@@ -106,6 +106,17 @@ export const registerLimiter = buildLimiter({
     "Terlalu banyak pendaftaran dari alamat ini. Coba lagi dalam satu jam. / Too many sign-ups from this address. Try again in an hour.",
 });
 
+// Google OAuth entrypoint + callback. Per-IP — there's no email identifier
+// at redirect time. Sized to allow a few retries after a cancelled consent
+// screen while still capping automated abuse of the token-exchange path.
+export const googleOAuthLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak percobaan login Google. Coba lagi dalam beberapa menit. / Too many Google login attempts. Try again in a few minutes.",
+});
+
 // /auth/forgot-password/reset is already gated by a 64-char crypto-random token,
 // but a per-IP limiter is consistent with the rest of the reset flow and stops
 // trivial flooding of the bcrypt path on the success branch.

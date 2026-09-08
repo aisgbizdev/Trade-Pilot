@@ -141,7 +141,14 @@ export const nativePushPlatformEnum = pgEnum("native_push_platform", [
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  // Nullable: accounts created via Google OAuth have no local password
+  // (and no security question). Every password/security-question route
+  // guards for null before calling bcrypt — see routes/auth.ts.
+  passwordHash: text("password_hash"),
+  // Google account subject id ("sub" claim). Set when a user signs in
+  // with Google — either on first sign-up or when an existing email
+  // account links Google. Null for password-only accounts.
+  googleId: text("google_id").unique(),
   displayName: text("display_name").notNull(),
   avatarUrl: text("avatar_url"),
   role: roleEnum("role").notNull().default("user"),
@@ -150,8 +157,12 @@ export const users = pgTable("users", {
   onboardingCompleted: boolean("onboarding_completed")
     .notNull()
     .default(false),
-  securityQuestion: text("security_question").notNull(),
-  securityAnswerHash: text("security_answer_hash").notNull(),
+  // Nullable for the same reason as passwordHash: Google-OAuth accounts
+  // never set a security question. The forgot-password flow treats a null
+  // hash as "no match" (timing-safe) so these accounts simply can't use
+  // security-question recovery.
+  securityQuestion: text("security_question"),
+  securityAnswerHash: text("security_answer_hash"),
   pushExpiry: boolean("push_expiry").notNull().default(true),
   pushBroadcast: boolean("push_broadcast").notNull().default(true),
   // Daily-summary push (task #113). Three columns control delivery:

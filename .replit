@@ -91,6 +91,14 @@ OPENAI_MODEL = "gpt-4o"
 OPENAI_MODEL_FAST_INTRADAY = "gpt-4o-mini"
 VAPID_PUBLIC_KEY = "BCy2eUxjgQhGCK-Mti151i1Imkl2A79b9WUeb5I8huNGKZyO6VjhwgzoxW5vhR4xCZs350A82KvxxLYLb5oYaHs"
 VAPID_EMAIL = "mailto:admin@aitradingassistant.app"
+# Google OAuth (login/register). The client id is not secret — it is sent
+# to the browser during the consent redirect. GOOGLE_CLIENT_SECRET must be
+# set as a Replit Secret (prod) / in .env (local), never here.
+GOOGLE_CLIENT_ID = "929958103345-cbf424vgelrer7nkrr81l4iptsikuc1u.apps.googleusercontent.com"
+# Origin the OAuth redirect_uri is built from; must match a registered
+# redirect URI (<PUBLIC_BASE_URL>/api/auth/google/callback). Prod value —
+# local dev overrides this to http://localhost:5173 via .env.
+PUBLIC_BASE_URL = "https://tradepilot.id"
 
 [nix]
 channel = "stable-25_05"

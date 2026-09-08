@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import request from "supertest";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { inArray, like } from "drizzle-orm";
+import { eq, inArray, like } from "drizzle-orm";
 
 import app from "../../app";
 import { db } from "../../lib/db";
@@ -11,8 +11,19 @@ import {
   loginLimiter,
   registerLimiter,
   forgotPasswordResetLimiter,
+  googleOAuthLimiter,
 } from "../../middleware/rate-limit";
 import { getConfiguredReplitOrigins } from "../../app";
+import { exchangeCodeForProfile } from "../../lib/google-oauth";
+
+// Keep the real config/url helpers, stub only the network-touching
+// code-exchange so the callback tests can drive any Google profile.
+vi.mock("../../lib/google-oauth", async (importActual) => {
+  const actual =
+    await importActual<typeof import("../../lib/google-oauth")>();
+  return { ...actual, exchangeCodeForProfile: vi.fn() };
+});
+const mockExchange = vi.mocked(exchangeCodeForProfile);
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `auth-harden-${RUN_ID}`;
@@ -78,6 +89,7 @@ beforeEach(() => {
   loginLimiter.store.clear();
   registerLimiter.store.clear();
   forgotPasswordResetLimiter.store.clear();
+  googleOAuthLimiter.store.clear();
 });
 
 describe("configured Replit CORS origins", () => {
@@ -404,5 +416,179 @@ describe("auth endpoints reject malformed body types without 500", () => {
         securityAnswer: "answer",
       });
     expect(r4.status).toBe(400);
+  });
+});
+
+describe("Google OAuth login/registration", () => {
+  const ENV_KEYS = [
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "PUBLIC_BASE_URL",
+  ] as const;
+  const savedEnv: Record<string, string | undefined> = {};
+
+  beforeAll(() => {
+    for (const k of ENV_KEYS) savedEnv[k] = process.env[k];
+    process.env["GOOGLE_CLIENT_ID"] = "test-client-id.apps.googleusercontent.com";
+    process.env["GOOGLE_CLIENT_SECRET"] = "test-client-secret";
+    process.env["PUBLIC_BASE_URL"] = "http://localhost:5173";
+  });
+
+  afterAll(() => {
+    for (const k of ENV_KEYS) {
+      const v = savedEnv[k];
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+
+  beforeEach(() => {
+    mockExchange.mockReset();
+  });
+
+  function googleEmail(tag: string): string {
+    return `${EMAIL_PREFIX}-g-${tag}-${randomBytes(4).toString("hex")}@example.test`;
+  }
+
+  it("GET /auth/google returns 503 when the client id is not configured", async () => {
+    const saved = process.env["GOOGLE_CLIENT_ID"];
+    delete process.env["GOOGLE_CLIENT_ID"];
+    try {
+      const res = await request(app).get("/api/auth/google");
+      expect(res.status).toBe(503);
+    } finally {
+      process.env["GOOGLE_CLIENT_ID"] = saved;
+    }
+  });
+
+  it("GET /auth/google redirects to Google's consent screen and sets a state cookie", async () => {
+    const res = await request(app).get("/api/auth/google");
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toContain("accounts.google.com");
+    expect(res.headers["location"]).toContain(
+      encodeURIComponent("http://localhost:5173/api/auth/google/callback"),
+    );
+    const setCookie = String(res.headers["set-cookie"] ?? "");
+    expect(setCookie).toContain("g_oauth_state=");
+  });
+
+  it("callback with a mismatched state redirects to /login?error=google", async () => {
+    const res = await request(app)
+      .get("/api/auth/google/callback?code=abc&state=WRONG")
+      .set("Cookie", "g_oauth_state=RIGHT");
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toBe("/login?error=google");
+    expect(mockExchange).not.toHaveBeenCalled();
+  });
+
+  it("callback with an unverified Google email redirects to /login?error=google_unverified", async () => {
+    mockExchange.mockResolvedValue({
+      googleId: `g-${randomBytes(6).toString("hex")}`,
+      email: googleEmail("unverified"),
+      emailVerified: false,
+      name: "Unverified User",
+      picture: null,
+    });
+    const res = await request(app)
+      .get("/api/auth/google/callback?code=abc&state=S1")
+      .set("Cookie", "g_oauth_state=S1");
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toBe("/login?error=google_unverified");
+  });
+
+  it("callback for a brand-new Google user creates the account and sets a session cookie", async () => {
+    const email = googleEmail("new");
+    const googleId = `g-${randomBytes(8).toString("hex")}`;
+    mockExchange.mockResolvedValue({
+      googleId,
+      email,
+      emailVerified: true,
+      name: "New Google User",
+      picture: "https://example.test/p.png",
+    });
+
+    const res = await request(app)
+      .get("/api/auth/google/callback?code=abc&state=S2")
+      .set("Cookie", "g_oauth_state=S2");
+
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toBe("/dashboard");
+    expect(String(res.headers["set-cookie"] ?? "")).toContain("session_token=");
+
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    expect(row).toBeDefined();
+    seededIds.push(row.id);
+    expect(row.googleId).toBe(googleId);
+    expect(row.passwordHash).toBeNull();
+    expect(row.securityAnswerHash).toBeNull();
+    expect(row.displayName).toBe("New Google User");
+
+    const sess = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.userId, row.id));
+    expect(sess.length).toBeGreaterThan(0);
+  });
+
+  it("callback links Google to an existing password account with the same verified email", async () => {
+    const existing = await createUser();
+    const googleId = `g-${randomBytes(8).toString("hex")}`;
+    mockExchange.mockResolvedValue({
+      googleId,
+      email: existing.email,
+      emailVerified: true,
+      name: "Linked User",
+      picture: null,
+    });
+
+    const before = await db
+      .select({ c: users.id })
+      .from(users)
+      .where(like(users.email, `${EMAIL_PREFIX}%`));
+
+    const res = await request(app)
+      .get("/api/auth/google/callback?code=abc&state=S3")
+      .set("Cookie", "g_oauth_state=S3");
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toBe("/dashboard");
+
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, existing.id))
+      .limit(1);
+    expect(row.googleId).toBe(googleId);
+    // password + security answer are untouched on a link
+    expect(row.passwordHash).not.toBeNull();
+
+    const after = await db
+      .select({ c: users.id })
+      .from(users)
+      .where(like(users.email, `${EMAIL_PREFIX}%`));
+    expect(after.length).toBe(before.length); // no new user row
+  });
+
+  it("password login is refused for a Google-only account", async () => {
+    const email = googleEmail("nopw");
+    const [row] = await db
+      .insert(users)
+      .values({
+        email,
+        googleId: `g-${randomBytes(8).toString("hex")}`,
+        displayName: "Google Only",
+        selectedMode: "pro",
+      })
+      .returning();
+    seededIds.push(row.id);
+
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ email, password: "whatever123" });
+    expect(res.status).toBe(401);
+    expect(String(res.body.error)).toContain("Google");
   });
 });

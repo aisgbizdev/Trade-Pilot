@@ -31,6 +31,7 @@ Mobile-first PWA (React+Vite) for trading decision-support (NOT a signal generat
 
 **Features:**
 - Custom auth: register/login with httpOnly cookies, security questions, remember me (30d/24h), show/hide password
+- Google Sign-In (login + register): server-side OAuth 2.0 code flow, `GET /api/auth/google` → consent → `GET /api/auth/google/callback`. Upsert matches `users.google_id`, then links by verified email, else creates. `password_hash` / `security_question` / `security_answer_hash` are nullable for Google-only accounts (password routes guard for null). Env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (secret), `PUBLIC_BASE_URL`. Setup/deploy: `docs/GOOGLE_OAUTH_SETUP.md`.
 - Two user modes: Pemula (Beginner) and Pro
 - Dark/light mode toggle in header (useCallback-stabilized setTheme, useLayoutEffect for synchronous DOM class, inline script in index.html for FOUC prevention)
 - Dashboard with statistics cards
@@ -56,7 +57,7 @@ Mobile-first PWA (React+Vite) for trading decision-support (NOT a signal generat
 Express backend serving all APIs.
 
 **Routes:**
-- `/api/auth/*` — register, login, logout, me, forgot-password (3-step via security question), profile, change-password, change-security-question
+- `/api/auth/*` — register, login, logout, me, forgot-password (3-step via security question), profile, change-password, change-security-question, google + google/callback (OAuth 2.0)
 - `/api/analyses/*` — CRUD + summary + recent-instruments + personal-analytics + feedback
 - `/api/notifications/*` — list, mark-read, mark-all-read, count, **stream (SSE realtime push)**
 - `/api/push/*` — public-key (public), subscribe/unsubscribe/subscription-status (authenticated), **prefs (GET/PATCH per-channel toggles: pushExpiry, pushBroadcast)**

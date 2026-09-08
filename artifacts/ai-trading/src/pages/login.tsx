@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BrandLogo } from "@/components/brand-logo";
+import { GoogleSignInButton, AuthDivider } from "@/components/google-sign-in-button";
 import { useTrackEvent } from "@/hooks/use-track-event";
 
 type LoginRequestError = {
@@ -65,6 +66,30 @@ export default function LoginPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const login = useLogin();
+
+  // The Google OAuth callback redirects here with ?error=... on failure.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
+    if (err === "google" || err === "google_unverified") {
+      toast({
+        title: t.auth.login_failed,
+        description:
+          err === "google_unverified"
+            ? t.auth.google_email_unverified
+            : t.auth.google_login_failed,
+        variant: "destructive",
+      });
+      params.delete("error");
+      const qs = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${qs ? `?${qs}` : ""}`,
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const schema = z.object({
     email: z.string().min(1, t.auth.username_email_label),
@@ -133,6 +158,8 @@ export default function LoginPage() {
           </div>
         )}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
+          <GoogleSignInButton disabled={login.isPending} />
+          <AuthDivider />
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-testid="form-login">
               <FormField
