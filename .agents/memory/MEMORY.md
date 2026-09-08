@@ -20,3 +20,4 @@
 - [Deterministic API codegen](openapi-zod-version-drift.md) — pin the emitter to runtime-compatible output; require zero baseline drift and clean-build Dart generated parts.
 - [Metro image-size contract](metro-image-size-contract.md) — Metro passes asset file paths to image-size; hardened replacements must support both paths and byte buffers.
 - [Post-merge API client generation](post-merge-api-client-generation.md) — merged OpenAPI changes can leave generated clients stale because setup does not regenerate them.
+- [Publish schema drift safety](publish-schema-drift-safety.md) — if Publish offers to drop a source-defined production object, restore its structure in development; never accept a truncate prompt.
