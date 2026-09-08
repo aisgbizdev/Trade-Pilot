@@ -1,9 +1,8 @@
 /**
- * Covers the "Top Up Credits" CTA added to the quota-exceeded dialog
- * (src/components/quota-dialog.tsx) for the credit top-up feature — it
- * should render only for the daily-scope block (the wall worth an
- * upsell; the hourly cap self-resolves within the hour) and navigate to
- * /topup when clicked.
+ * Covers the "Top Up Credits" CTA on the quota-exceeded dialog
+ * (src/components/quota-dialog.tsx). A purchased credit bypasses BOTH the
+ * hourly and daily cap, so the CTA + hint show for either wall — but not
+ * for `concurrent`, which is a per-user processing lock a credit can't skip.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { act, render, screen } from "@testing-library/react";
@@ -25,7 +24,7 @@ afterEach(() => {
 });
 
 describe("QuotaDialog top-up CTA", () => {
-  it("renders the top-up CTA for a daily-scope block and navigates to /topup on click", async () => {
+  it("renders the top-up CTA + hint for a daily-scope block and navigates to /topup on click", async () => {
     render(
       <Wrapper>
         <QuotaDialog />
@@ -36,6 +35,10 @@ describe("QuotaDialog top-up CTA", () => {
       showQuotaDialog({ scope: "day", limit: 20, used: 20 });
     });
 
+    expect(
+      await screen.findByTestId("text-quota-dialog-topup-hint"),
+    ).toBeInTheDocument();
+
     const cta = await screen.findByTestId("button-quota-dialog-topup");
     act(() => {
       cta.click();
@@ -44,7 +47,7 @@ describe("QuotaDialog top-up CTA", () => {
     expect(window.location.pathname).toBe("/topup");
   });
 
-  it("does not render the top-up CTA for an hourly-scope block", async () => {
+  it("renders the top-up CTA for an hourly-scope block (a credit skips the wait)", async () => {
     render(
       <Wrapper>
         <QuotaDialog />
@@ -56,7 +59,8 @@ describe("QuotaDialog top-up CTA", () => {
     });
 
     await screen.findByTestId("dialog-quota");
-    expect(screen.queryByTestId("button-quota-dialog-topup")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-quota-dialog-topup")).toBeInTheDocument();
+    expect(screen.getByTestId("text-quota-dialog-topup-hint")).toBeInTheDocument();
   });
 
   it("does not render the top-up CTA for a concurrent-scope block", async () => {
@@ -72,5 +76,8 @@ describe("QuotaDialog top-up CTA", () => {
 
     await screen.findByTestId("dialog-quota");
     expect(screen.queryByTestId("button-quota-dialog-topup")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("text-quota-dialog-topup-hint"),
+    ).not.toBeInTheDocument();
   });
 });

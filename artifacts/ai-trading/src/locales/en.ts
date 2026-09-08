@@ -236,14 +236,15 @@ export const en = {
   },
   quota_dialog: {
     title_hour: "Hourly Limit Reached",
-    desc_hour: "You've hit your analysis limit for this hour. Try again shortly.",
+    desc_hour: "You've hit your analysis limit for this hour. Wait for the next hour, or top up credits to keep analysing now without the wait.",
     title_day: "Daily Limit Reached",
-    desc_day: "You've hit your analysis limit for today. Try again tomorrow.",
+    desc_day: "You've used your free analyses for today. Try again tomorrow, or top up credits to keep analysing today.",
     title_concurrent: "Previous Analysis Still Running",
     desc_concurrent: "Your last analysis is still being processed. Wait a few seconds and try again.",
     used_of_limit: "{used} of {limit} analyses used",
     ok_btn: "Got it",
     topup_cta: "Top Up Credits",
+    topup_hint: "1 credit = 1 analysis, usable anytime — it bypasses both the hourly and daily cap.",
   },
   analyze: {
     title: "New Analysis",

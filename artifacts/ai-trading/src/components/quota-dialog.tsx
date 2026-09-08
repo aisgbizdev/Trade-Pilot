@@ -78,8 +78,21 @@ export function QuotaDialog() {
           </div>
         )}
 
+        {/* A purchased credit bypasses BOTH the hourly and daily cap
+            (see the analyses route), so the top-up path is offered for
+            either wall — not for `concurrent`, which a credit can't
+            skip (it's a per-user processing lock). */}
+        {info.scope !== "concurrent" && (
+          <p
+            className="text-xs text-muted-foreground px-1"
+            data-testid="text-quota-dialog-topup-hint"
+          >
+            {t.quota_dialog.topup_hint}
+          </p>
+        )}
+
         <DialogFooter className="sm:justify-center">
-          {info.scope === "day" && (
+          {info.scope !== "concurrent" && (
             <Button
               variant="outline"
               className="w-full sm:w-auto"

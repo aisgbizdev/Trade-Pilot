@@ -238,14 +238,15 @@ export const id: Translations = {
   },
   quota_dialog: {
     title_hour: "Batas Analisis Per Jam Tercapai",
-    desc_hour: "Kamu sudah mencapai batas analisis untuk jam ini. Coba lagi dalam beberapa saat.",
+    desc_hour: "Kamu sudah mencapai batas analisis untuk jam ini. Tunggu sampai jam berikutnya, atau top up kredit untuk lanjut analisis sekarang tanpa menunggu.",
     title_day: "Batas Analisis Harian Tercapai",
-    desc_day: "Kamu sudah mencapai batas analisis untuk hari ini. Coba lagi besok.",
+    desc_day: "Kamu sudah mencapai batas analisis gratis untuk hari ini. Coba lagi besok, atau top up kredit untuk lanjut analisis hari ini juga.",
     title_concurrent: "Analisis Sebelumnya Masih Diproses",
     desc_concurrent: "Analisis terakhir kamu masih diproses. Tunggu beberapa detik lalu coba lagi.",
     used_of_limit: "{used} dari {limit} analisis terpakai",
     ok_btn: "Mengerti",
     topup_cta: "Top Up Kredit",
+    topup_hint: "1 kredit = 1 analisis, bisa langsung dipakai kapan pun dan menembus batas per jam maupun harian.",
   },
   analyze: {
     title: "Analisis Baru",
