@@ -10,25 +10,11 @@ import {
   Search,
   ArrowUpDown,
 } from "lucide-react";
-import { BrandLogo } from "@/components/brand-logo";
+import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackEvent } from "@/hooks/use-track-event";
@@ -377,55 +363,47 @@ function AdminDashboardContent() {
   const ActiveBody =
     SECTIONS.find((s) => s.key === activeSection)?.Body ?? OverviewSection;
 
+  // Rendered inside the app <Layout> so the main navbar stays put — the
+  // section switcher is a horizontal chip row instead of a full sidebar.
   return (
-    <SidebarProvider>
-      <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 py-1">
-            <BrandLogo className="w-6 h-6" />
-            <span className="font-bold text-sm tracking-tight">
-              <span className="gradient-text">Trade</span>
-              <span className="text-foreground"> Pilot</span>
-            </span>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>{t.admin_dashboard.nav_group_label}</SidebarGroupLabel>
-            <SidebarMenu>
-              {SECTIONS.map(({ key, icon: Icon }) => (
-                <SidebarMenuItem key={key}>
-                  <SidebarMenuButton
-                    isActive={activeSection === key}
-                    onClick={() => setActiveSection(key)}
-                    data-testid={`nav-${key}`}
-                    tooltip={NAV_LABEL[key]}
-                  >
-                    <Icon />
-                    <span>{NAV_LABEL[key]}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <Link href="/profile" className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5" data-testid="link-back-to-app">
-            {t.admin_dashboard.back_to_app}
-          </Link>
-        </SidebarFooter>
-        <SidebarRail />
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex items-center gap-2 border-b border-border p-4">
-          <SidebarTrigger data-testid="button-sidebar-trigger" />
-          <h1 className="text-lg font-bold text-foreground">{NAV_LABEL[activeSection]}</h1>
-        </header>
-        <div className="p-4" data-testid={`section-${activeSection}`}>
+    <Layout>
+      <div className="px-4 py-5 space-y-4 md:px-6">
+        <h1 className="text-xl font-bold text-foreground">{t.admin_dashboard.page_title}</h1>
+
+        <div
+          role="tablist"
+          aria-label={t.admin_dashboard.nav_group_label}
+          className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none"
+        >
+          {SECTIONS.map(({ key, icon: Icon }) => {
+            const active = activeSection === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveSection(key)}
+                data-testid={`nav-${key}`}
+                className={cn(
+                  "shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                  active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {NAV_LABEL[key]}
+              </button>
+            );
+          })}
+        </div>
+
+        <div data-testid={`section-${activeSection}`}>
           <ActiveBody />
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </Layout>
   );
 }
 
