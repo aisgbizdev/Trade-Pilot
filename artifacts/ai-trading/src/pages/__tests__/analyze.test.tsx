@@ -178,6 +178,9 @@ describe("AnalyzePage: happy-path render", () => {
 
       // Saved analyses belong exclusively to History. Analyze must not
       // render the duplicated section or request the paginated list.
+      // (The shared <Layout> does fetch `?page=1&limit=1` — just the id of
+      // the last analysis, to point the "Analisis" nav tab at it — which
+      // is not "the list", so it's excluded here.)
       expect(
         screen.queryByTestId("section-recent-analyses"),
       ).not.toBeInTheDocument();
@@ -185,7 +188,8 @@ describe("AnalyzePage: happy-path render", () => {
         calls.filter(
           (c) =>
             c.method === "GET" &&
-            /\/api\/analyses(\?|$)/.test(c.url),
+            /\/api\/analyses(\?|$)/.test(c.url) &&
+            !/[?&]limit=1(&|$)/.test(c.url),
         ),
       ).toHaveLength(0);
 

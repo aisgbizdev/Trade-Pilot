@@ -250,6 +250,7 @@ export const en = {
   },
   analyze: {
     title: "New Analysis",
+    new_analysis_btn: "New Analysis",
     mode_save_failed: "Could not save mode. Please try again.",
     select_instrument: "Select Instrument",
     favorites_section_title: "Favorites",

@@ -252,6 +252,7 @@ export const id: Translations = {
   },
   analyze: {
     title: "Analisis Baru",
+    new_analysis_btn: "Analisis Baru",
     mode_save_failed: "Mode gagal disimpan. Coba lagi.",
     select_instrument: "Pilih Instrumen",
     favorites_section_title: "Favorit",

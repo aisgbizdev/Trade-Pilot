@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle, Shield, Activity } from "lucide-react";
+import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle, Shield, Activity, Plus } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
 import { SetAlertModal } from "@/components/set-alert-modal";
 import { Textarea } from "@/components/ui/textarea";
@@ -1009,6 +1009,19 @@ export default function AnalyzePage() {
         <div className="flex flex-wrap items-center gap-2.5 mb-5">
           <h1 className="mr-auto text-lg font-bold text-foreground">{t.analyze.title}</h1>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            {resultAnalysisId != null && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 shrink-0 gap-1.5 px-3 text-xs font-semibold"
+                onClick={() => applyResultAnalysisId(null)}
+                data-testid="button-new-analysis"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                {t.analyze.new_analysis_btn}
+              </Button>
+            )}
             {progressionSummary && (
               <button
                 type="button"

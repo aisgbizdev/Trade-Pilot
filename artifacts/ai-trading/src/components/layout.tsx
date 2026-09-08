@@ -15,6 +15,7 @@ import {
   type AnalysesSummary,
 } from "@workspace/api-client-react";
 import { useEmbedMode } from "@/lib/embed-mode";
+import { useLastAnalysisNavPath, useBackToLastAnalysisPath } from "@/hooks/use-last-analysis";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -28,7 +29,7 @@ import { ContinuousTicker } from "./continuous-ticker";
 const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/guide", "/profile", "/admin/dashboard"];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
@@ -96,22 +97,42 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const unreadCount = notifications.length;
   const isMainNav = MAIN_NAV_PATHS.includes(location);
 
+  // "Analisis" tab + the header back button both point at the user's last
+  // *already generated* analysis (zero tokens to reopen) rather than a
+  // fresh New-Analysis form. Only a first-timer with no analyses lands on
+  // the blank form. See use-last-analysis.ts.
+  const analyzeNavPath = useLastAnalysisNavPath();
+  const backPath = useBackToLastAnalysisPath();
+
+  // `id` is the stable key/testid/unlock-tracking handle; `href` can be
+  // dynamic (the Analisis tab points at the last analysis, which changes).
+  // `activePrefixes` overrides the default path-prefix match for the
+  // highlighted state.
+  type NavItem = {
+    id: string;
+    href: string;
+    icon: typeof TrendingUp;
+    label: string;
+    minCount: number;
+    activePrefixes?: string[];
+  };
+
   // Embed mode: simplified 3-tab layout for broker iframe context.
   // Full mode: original tabs unchanged.
-  const EMBED_NAV = [
-    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze },
-    { href: "/history", icon: Clock, label: t.nav.history },
-    { href: "/profile", icon: User, label: t.nav.profile },
+  const EMBED_NAV: NavItem[] = [
+    { id: "analyze", href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
+    { id: "history", href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
+    { id: "profile", href: "/profile", icon: User, label: t.nav.profile, minCount: 0 },
   ];
 
-  const FULL_NAV = [
-    { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
-    { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
-    { href: "/guide", icon: BookOpen, label: t.nav.guide, minCount: 0 },
+  const FULL_NAV: NavItem[] = [
+    { id: "analyze", href: analyzeNavPath, icon: TrendingUp, label: t.nav.analyze, minCount: 0, activePrefixes: ["/analyze", "/analyses"] },
+    { id: "history", href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
+    { id: "guide", href: "/guide", icon: BookOpen, label: t.nav.guide, minCount: 0 },
     // Admin dashboard — super_admin only (the /admin/dashboard route
     // itself is also role-gated in App.tsx). Sits right after Panduan.
     ...(user?.role === "super_admin"
-      ? [{ href: "/admin/dashboard", icon: Shield, label: t.nav.admin, minCount: 0 }]
+      ? [{ id: "admin", href: "/admin/dashboard", icon: Shield, label: t.nav.admin, minCount: 0 } as NavItem]
       : []),
   ];
 
@@ -119,24 +140,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
     ? EMBED_NAV
     : FULL_NAV.filter((item) => totalAnalyses >= item.minCount);
 
-  const prevNavHrefsRef = useRef<Set<string> | null>(null);
+  const isNavItemActive = (item: NavItem) => {
+    const prefixes = item.activePrefixes ?? [item.href];
+    return prefixes.some((p) => location === p || location.startsWith(p + "/"));
+  };
+
+  const prevNavIdsRef = useRef<Set<string> | null>(null);
   const [newlyUnlocked, setNewlyUnlocked] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const currentHrefs = new Set(navItems.map((i) => i.href));
-    if (prevNavHrefsRef.current === null) {
-      prevNavHrefsRef.current = currentHrefs;
+    const currentIds = new Set(navItems.map((i) => i.id));
+    if (prevNavIdsRef.current === null) {
+      prevNavIdsRef.current = currentIds;
       return;
     }
-    const prevHrefs = prevNavHrefsRef.current;
-    prevNavHrefsRef.current = currentHrefs;
+    const prevIds = prevNavIdsRef.current;
+    prevNavIdsRef.current = currentIds;
 
     const justUnlocked: string[] = [];
-    for (const href of currentHrefs) {
-      if (!prevHrefs.has(href)) {
-        const key = `nav_celebrated_${href}`;
+    for (const id of currentIds) {
+      if (!prevIds.has(id)) {
+        const key = `nav_celebrated_${id}`;
         if (!sessionStorage.getItem(key)) {
-          justUnlocked.push(href);
+          justUnlocked.push(id);
           sessionStorage.setItem(key, "1");
         }
       }
@@ -151,10 +177,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [navItems]);
 
-  const clearUnlocked = (href: string) => {
+  const clearUnlocked = (id: string) => {
     setNewlyUnlocked((prev) => {
       const next = new Set(prev);
-      next.delete(href);
+      next.delete(id);
       return next;
     });
   };
@@ -169,7 +195,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2">
           {!isMainNav && (
             <button
-              onClick={() => window.history.back()}
+              onClick={() => setLocation(backPath)}
               className="p-1.5 rounded-xl hover:bg-muted transition-colors -ml-1 mr-0.5"
               aria-label={t.common.back}
               data-testid="button-back-header"
@@ -178,7 +204,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
           )}
           <Link
-            href="/analyze"
+            href={analyzeNavPath}
             className="flex items-center gap-2 -m-1 p-1 rounded-lg hover:bg-muted/40 transition-colors"
             data-testid="link-brand-home"
             aria-label={t.nav.analyze}
@@ -193,16 +219,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
         <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
-          {navItems.map(({ href, icon: Icon, label }) => {
-            const active = location === href || location.startsWith(href + "/");
-            const isNew = newlyUnlocked.has(href);
+          {navItems.map((item) => {
+            const { id, href, icon: Icon, label } = item;
+            const active = isNavItemActive(item);
+            const isNew = newlyUnlocked.has(id);
             return (
               <Link
-                key={href}
+                key={id}
                 href={href}
-                data-testid={`nav-desktop-${href.replace("/", "")}`}
+                data-testid={`nav-desktop-${id}`}
                 aria-current={active ? "page" : undefined}
-                onAnimationEnd={isNew ? () => clearUnlocked(href) : undefined}
+                onAnimationEnd={isNew ? () => clearUnlocked(id) : undefined}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors",
                   active
@@ -367,14 +394,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
       >
         <div className="mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] rounded-2xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-2xl shadow-black/20">
           <div className="flex items-center justify-around py-2 px-1">
-            {navItems.map(({ href, icon: Icon, label }) => {
-              const active = location === href || location.startsWith(href + "/");
-              const isNew = newlyUnlocked.has(href);
+            {navItems.map((item) => {
+              const { id, href, icon: Icon, label } = item;
+              const active = isNavItemActive(item);
+              const isNew = newlyUnlocked.has(id);
               return (
-                <Link key={href} href={href}>
+                <Link key={id} href={href}>
                   <button
-                    data-testid={`nav-${href.replace("/", "")}`}
-                    onAnimationEnd={isNew ? () => clearUnlocked(href) : undefined}
+                    data-testid={`nav-${id}`}
+                    onAnimationEnd={isNew ? () => clearUnlocked(id) : undefined}
                     className={cn(
                       "flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200",
                       active

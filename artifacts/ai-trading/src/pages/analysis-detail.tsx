@@ -23,6 +23,7 @@ import {
   Copy,
   Check,
   Activity,
+  Plus,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -2105,6 +2106,21 @@ export default function AnalysisDetailPage({
               />
             </div>
           </div>
+          {/* The "Analisis" nav tab + the header back button both land here
+              (the last analysis) so reopening costs no AI tokens. Starting a
+              brand-new one is a deliberate, explicit action — this button. */}
+          {!embedded && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 gap-1.5 self-start px-2.5 text-xs font-semibold"
+              onClick={() => setLocation("/analyze")}
+              data-testid="button-new-analysis"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              {t.analyze.new_analysis_btn}
+            </Button>
+          )}
         </div>
 
         {/* Quick timeframe switch — selecting a different timeframe

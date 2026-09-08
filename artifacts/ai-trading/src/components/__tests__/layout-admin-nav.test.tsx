@@ -48,9 +48,9 @@ describe("Layout admin nav entry", () => {
   it("shows the Admin nav link for a super_admin, pointing at /admin/dashboard", async () => {
     renderLayoutAs("super_admin");
 
-    const desktop = await screen.findByTestId("nav-desktop-admin/dashboard");
+    const desktop = await screen.findByTestId("nav-desktop-admin");
     expect(desktop).toHaveAttribute("href", "/admin/dashboard");
-    expect(screen.getByTestId("nav-admin/dashboard").closest("a")).toHaveAttribute(
+    expect(screen.getByTestId("nav-admin").closest("a")).toHaveAttribute(
       "href",
       "/admin/dashboard",
     );
@@ -69,10 +69,10 @@ describe("Layout admin nav entry", () => {
     renderLayoutAs("user");
     await screen.findByTestId("nav-desktop-guide");
     expect(
-      screen.queryByTestId("nav-desktop-admin/dashboard"),
+      screen.queryByTestId("nav-desktop-admin"),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByTestId("nav-admin/dashboard"),
+      screen.queryByTestId("nav-admin"),
     ).not.toBeInTheDocument();
   });
 
@@ -80,7 +80,7 @@ describe("Layout admin nav entry", () => {
     renderLayoutAs("admin");
     await screen.findByTestId("nav-desktop-guide");
     expect(
-      screen.queryByTestId("nav-desktop-admin/dashboard"),
+      screen.queryByTestId("nav-desktop-admin"),
     ).not.toBeInTheDocument();
   });
 });
