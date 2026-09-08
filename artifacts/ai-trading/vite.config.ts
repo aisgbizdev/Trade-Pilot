@@ -1,9 +1,42 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import { copyFileSync, existsSync } from "fs";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { VitePWA } from "vite-plugin-pwa";
+
+// SPA history fallback for static hosts.
+//
+// This is a client-side-routed SPA: a direct hit / refresh on any route
+// other than `/` (e.g. `/privacy`, `/login`, `/dashboard`) needs the host
+// to serve `index.html` so the router can take over. The api-server does
+// this itself (`app.ts`, the NODE_ENV=production block), but when a static
+// file server sits in front of it and answers non-API paths directly, that
+// fallback never runs and the user gets a raw 404.
+//
+// Emitting `index.html` under the two filenames static hosts recognise as
+// their SPA fallback covers that case without any host config:
+//   - `404.html` — GitHub Pages, Firebase Hosting, Replit static, Cloudflare Pages
+//   - `200.html` — Surge, Render static, a few others
+//
+// Runs in `closeBundle` (after VitePWA), so these copies are NOT added to
+// the service-worker precache — they only exist as server-side fallbacks.
+function spaFallbackHtml(): Plugin {
+  return {
+    name: "spa-fallback-html",
+    apply: "build",
+    enforce: "post",
+    closeBundle() {
+      const outDir = path.resolve(import.meta.dirname, "dist/public");
+      const index = path.join(outDir, "index.html");
+      if (!existsSync(index)) return;
+      for (const name of ["404.html", "200.html"]) {
+        copyFileSync(index, path.join(outDir, name));
+      }
+    },
+  };
+}
 
 // PORT and BASE_PATH are only required when actually starting a server
 // (dev/preview). For `vite build` we fall back to safe defaults so the
@@ -43,6 +76,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    spaFallbackHtml(),
     VitePWA({
       strategies: "injectManifest",
       srcDir: "src",
@@ -75,6 +109,10 @@ export default defineConfig({
         // "ServiceWorker script evaluation failed". Letting the glob
         // be the single source of truth keeps one entry per URL.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // `404.html` / `200.html` are byte-for-byte copies of `index.html`
+        // emitted only as static-host SPA fallbacks (see `spaFallbackHtml`).
+        // No need to precache a third + fourth copy of the app shell.
+        globIgnores: ["**/404.html", "**/200.html"],
       },
       // Enable the service worker in dev so push notifications and the
       // install/enable flow can be tested from the Replit preview without
