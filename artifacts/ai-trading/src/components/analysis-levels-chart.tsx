@@ -363,7 +363,11 @@ export function AnalysisLevelsChart({
     timeScale?.applyOptions?.({ barSpacing: 8, rightOffset: 10 });
   };
 
-  // Draw / refresh price lines for the trade plan whenever plan changes.
+  // Draw / refresh price lines for the trade plan whenever the plan changes
+  // — or whenever the chart/series is rebuilt. `theme` is in the dep list
+  // because a light/dark toggle tears down and recreates the series (see the
+  // chart-build effect above); without it the freshly-built series would be
+  // left with no SL / Entry / TP lines until the next plan change.
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
@@ -379,11 +383,15 @@ export function AnalysisLevelsChart({
         lineWidth: 2,
         lineStyle: lvl.lineStyle,
         axisLabelVisible: true,
+        // Keep every recommendation label (SL / Entry / TP1 / TP2) on a
+        // single, consistent black font regardless of the line color the
+        // label background inherits.
+        axisLabelTextColor: "#000000",
         title: lvl.label,
       });
       priceLinesRef.current.push(line);
     }
-  }, [displayedLevels, candles, state]);
+  }, [displayedLevels, candles, state, theme]);
 
   // Track the x-coordinate of the analysis-created cutoff so we can draw a
   // vertical marker line + badge as an HTML overlay. lightweight-charts has

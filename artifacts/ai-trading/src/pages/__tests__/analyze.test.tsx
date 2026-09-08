@@ -204,7 +204,7 @@ describe("AnalyzePage: happy-path render", () => {
       expect(
         screen.queryByText("This analysis is for decision support only, not a trading signal."),
       ).not.toBeInTheDocument();
-      expect(screen.getByTestId("text-risk-disclaimer-short")).toBeInTheDocument();
+      expect(screen.queryByTestId("text-risk-disclaimer-short")).not.toBeInTheDocument();
     },
   );
 });

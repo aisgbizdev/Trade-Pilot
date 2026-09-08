@@ -706,6 +706,10 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         livePrice,
       ));
     } catch (aiErr) {
+      logger.error(
+        { err: aiErr, userId, instrument, timeframe, mode: typedMode },
+        "[analyses] AI generation failed (privileged path)",
+      );
       void trackAiError();
       res.status(502).json({ error: "Layanan AI sedang tidak tersedia. Silakan coba lagi dalam beberapa saat." });
       return;
@@ -783,6 +787,10 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           livePrice,
         ));
       } catch (aiErr) {
+        logger.error(
+          { err: aiErr, userId, instrument, timeframe, mode: typedMode },
+          "[analyses] AI generation failed",
+        );
         return { kind: "aiError" };
       }
 

@@ -296,7 +296,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
 
         <footer className="border-t border-border/50 px-4 py-4 mt-6 text-center space-y-2">
-          <p className="text-[10px] text-muted-foreground leading-relaxed">
+          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 leading-relaxed">
             {t.landing.footer}
           </p>
           <div className="flex justify-center items-center gap-4 text-[11px]">

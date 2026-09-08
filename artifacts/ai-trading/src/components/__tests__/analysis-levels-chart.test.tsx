@@ -83,7 +83,7 @@ vi.mock("lightweight-charts", () => {
 
 // Theme provider depends on matchMedia (stubbed by setup.ts) and is
 // lightweight; importing the real one keeps the test honest.
-import { ThemeProvider } from "../theme-provider";
+import { ThemeProvider, useTheme } from "../theme-provider";
 import { createLevelAwareAutoscaleInfoProvider } from "@/lib/chart-autoscale";
 import { AnalysisLevelsChart } from "../analysis-levels-chart";
 import type { TradePlan } from "@workspace/api-client-react";
@@ -150,7 +150,34 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // The theme-toggle test drives the real ThemeProvider, which writes the
+  // choice to localStorage and stamps a class on <html>. Reset both so the
+  // next test starts from the default "system" theme.
+  try { localStorage.clear(); } catch { /* jsdom without storage */ }
+  document.documentElement.classList.remove("light", "dark");
 });
+
+// Renders the chart next to a button that flips the app theme, so a test can
+// exercise the light/dark toggle the same way a user would.
+function ThemeControlledChart(props: { tradePlan: TradePlan | null }) {
+  const { theme, setTheme } = useTheme();
+  return (
+    <>
+      <button
+        data-testid="toggle-theme"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      >
+        toggle
+      </button>
+      <AnalysisLevelsChart
+        instrument="XAU/USD"
+        timeframe="1h"
+        tradePlan={props.tradePlan}
+        height={300}
+      />
+    </>
+  );
+}
 
 describe("AnalysisLevelsChart", () => {
   it("draws all four levels for a buy plan and uses the zone midpoint for entry", async () => {
@@ -366,6 +393,44 @@ describe("level-aware chart framing", () => {
       expect(result?.priceRange?.maxValue).toBeGreaterThan(4445);
     },
   );
+
+  it("redraws the SL / Entry / TP lines after a light/dark theme toggle", async () => {
+    const plan: TradePlan = {
+      preferredSide: "sell",
+      buy: makeSide({}),
+      sell: makeSide({
+        entryZone: "4421.50",
+        stopLoss: "4445.00",
+        takeProfit1: "4400.00",
+        takeProfit2: "4380.00",
+      }),
+    };
+
+    render(
+      <ThemeProvider>
+        <ThemeControlledChart tradePlan={plan} />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("analysis-levels-chart").getAttribute("data-state"),
+      ).toBe("ready"),
+    );
+    expect(createdPriceLines).toHaveLength(4);
+
+    // A theme toggle tears down and rebuilds the chart/series. The lines
+    // must come back with it — previously they vanished until the next
+    // plan change.
+    createdPriceLines.length = 0;
+    fireEvent.click(screen.getByTestId("toggle-theme"));
+    // Generous timeout: under full-suite parallel load the rebuild +
+    // redraw can take a beat longer than waitFor's 1s default.
+    await waitFor(() => expect(createdPriceLines).toHaveLength(4), { timeout: 5000 });
+    expect(createdPriceLines.map((l) => l.title).sort()).toEqual(
+      ["SELL Entry", "SL", "TP1", "TP2"].sort(),
+    );
+  });
 
   it("keeps very close levels visible by enforcing a minimum vertical span", () => {
     const provider = createLevelAwareAutoscaleInfoProvider(

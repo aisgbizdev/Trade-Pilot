@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle, Shield, Activity } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
 import { SetAlertModal } from "@/components/set-alert-modal";
@@ -29,11 +29,8 @@ import {
   type ProgressionEvidenceSession,
 } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
-import {
-  TradingViewMiniChart,
-  type MiniChartDateRange,
-} from "@/components/tradingview-mini-chart";
-import { instrumentToTradingViewSymbol, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
+import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
+import { instrumentToTradingViewSymbol, timeframeToTradingViewInterval, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
 import { MarketSessionsBadge } from "@/components/market-sessions-badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -388,9 +385,6 @@ const SHOW_ECONOMIC_CALENDAR_SECTION = false;
 const SHOW_RELEVANT_CALENDAR_PREVIEW = false;
 const SHOW_TIMEFRAME_PICKER = false;
 
-// Narrows the mini-chart range picker to this allowlist without deleting
-// the other options above, so they're a one-line revert away.
-const VISIBLE_MINI_CHART_RANGES = new Set<MiniChartDateRange>(["1M", "3M"]);
 type CalendarImpactFilter = "-1" | "0" | "1";
 
 function readStoredCurrencies(storageKey: string): string[] | null {
@@ -827,7 +821,7 @@ export default function AnalyzePage() {
 
   const handleSafeWait = () => {
     toast({ title: t.progression.safe_wait_action, description: t.progression.safe_wait_tooltip });
-    setResultAnalysisId(null);
+    applyResultAnalysisId(null);
     if (mentalChecklistEnabled && finalInstrument && selectedTimeframe) {
       startEvidence.mutateAsync({
         data: {
@@ -861,8 +855,24 @@ export default function AnalyzePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   // Holds the just-created analysis id so its full result renders inline
-  // below the form instead of navigating to /analyses/:id.
-  const [resultAnalysisId, setResultAnalysisId] = useState<number | null>(null);
+  // below the form instead of navigating to /analyses/:id. Seeded from the
+  // URL (?result=<id>) so coming back to /analyze — e.g. the guide article's
+  // "Kembali ke analisis" back button — restores the result, not a blank form.
+  const [resultAnalysisId, setResultAnalysisId] = useState<number | null>(() => {
+    const raw = new URLSearchParams(window.location.search).get("result");
+    const n = raw ? Number(raw) : NaN;
+    return Number.isInteger(n) && n > 0 ? n : null;
+  });
+  // Setter that also mirrors the id into the URL, so the embedded result
+  // survives a navigate-away-and-back (full reload or history back).
+  const applyResultAnalysisId = useCallback((id: number | null) => {
+    setResultAnalysisId(id);
+    const params = new URLSearchParams(window.location.search);
+    if (id != null) params.set("result", String(id));
+    else params.delete("result");
+    const qs = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+  }, []);
   const resultSectionRef = useRef<HTMLDivElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -897,7 +907,6 @@ export default function AnalyzePage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isLoading, t]);
 
-  const [miniChartRange, setMiniChartRange] = useState<MiniChartDateRange>("1M");
   const [alertModalOpen, setAlertModalOpen] = useState(false);
 
   // Imperative handle exposed by AntiPatternGuardrails. When the user
@@ -936,7 +945,7 @@ export default function AnalyzePage() {
       // navigating to /analyses/:id — same page, no extra hop. The
       // embedded detail view loads this same ID; it does not create
       // another analysis.
-      setResultAnalysisId(created.id);
+      applyResultAnalysisId(created.id);
     } catch (err: unknown) {
       const apiErr = err as {
         status?: number;
@@ -1148,6 +1157,21 @@ export default function AnalyzePage() {
                 data-testid="input-custom-instrument"
               />
             </div>
+            {finalInstrument && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAlertModalOpen(true)}
+                  data-testid="button-set-alert"
+                  className="w-full text-xs gap-1.5"
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                  {t.analyze.set_alert_btn}
+                </Button>
+              </div>
+            )}
           </div>
 
           {SHOW_TIMEFRAME_PICKER && (
@@ -1225,59 +1249,15 @@ export default function AnalyzePage() {
                 <span className="text-muted-foreground">{t.analyze.current_price}:</span>
                 <LivePriceChip instrument={finalInstrument} />
               </div>
-              <div className="mt-2 flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setAlertModalOpen(true)}
-                  data-testid="button-set-alert"
-                  className="text-xs gap-1.5"
-                >
-                  <Bell className="w-3.5 h-3.5" />
-                  {t.analyze.set_alert_btn}
-                </Button>
-              </div>
-              <div className="mt-3 space-y-2" data-testid="mini-chart-section">
-                <TradingViewMiniChart
+              <div className="mt-3 overflow-hidden rounded-lg border border-border" data-testid="mini-chart-section">
+                <TradingViewAdvancedChart
                   symbol={instrumentToTradingViewSymbol(finalInstrument)}
-                  dateRange={miniChartRange}
-                  height={190}
+                  interval={timeframeToTradingViewInterval(selectedTimeframe)}
+                  height={360}
+                  hideSideToolbar
+                  opaqueBackground
+                  hideVolume
                 />
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                    {t.widgets.mini_chart_range_title}
-                  </h3>
-                  <div className="flex gap-1" role="group" aria-label={t.widgets.mini_chart_range_title}>
-                    {(["1D", "1W", "1M", "3M", "1Y"] as const)
-                      .filter((r) => VISIBLE_MINI_CHART_RANGES.has(r))
-                      .map((r) => {
-                      const labelKey = `mini_chart_range_${r.toLowerCase()}` as
-                        | "mini_chart_range_1d"
-                        | "mini_chart_range_1w"
-                        | "mini_chart_range_1m"
-                        | "mini_chart_range_3m"
-                        | "mini_chart_range_1y";
-                      return (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setMiniChartRange(r)}
-                          data-testid={`button-mini-chart-range-${r}`}
-                          aria-pressed={miniChartRange === r}
-                          className={cn(
-                            "px-2.5 py-1 text-[11px] font-medium rounded-md border transition-all",
-                            miniChartRange === r
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-muted-foreground border-border hover:border-primary/50",
-                          )}
-                        >
-                          {t.widgets[labelKey]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm mt-3">
                 <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
@@ -1358,19 +1338,12 @@ export default function AnalyzePage() {
               <AnalysisDetailPage
                 params={{ id: String(resultAnalysisId) }}
                 embedded
-                onAnalysisRefreshed={setResultAnalysisId}
+                onAnalysisRefreshed={applyResultAnalysisId}
               />
             </div>
           )}
 
           {SHOW_ECONOMIC_CALENDAR_SECTION && <EconomicCalendarSection />}
-
-          <p
-            className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 text-center leading-relaxed"
-            data-testid="text-risk-disclaimer-short"
-          >
-            {t.analyze.risk_disclaimer_short}
-          </p>
         </div>
       </div>
       <SetAlertModal

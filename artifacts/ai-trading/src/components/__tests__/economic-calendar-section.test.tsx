@@ -52,8 +52,8 @@ vi.mock("@/components/analysis-chart-section", () => ({
   AnalysisChartSection: () => null,
 }));
 
-vi.mock("@/components/tradingview-mini-chart", () => ({
-  TradingViewMiniChart: () => null,
+vi.mock("@/components/tradingview-advanced-chart", () => ({
+  TradingViewAdvancedChart: () => null,
 }));
 
 vi.mock("@/components/watchlist-star", () => ({

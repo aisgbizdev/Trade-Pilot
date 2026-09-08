@@ -9,6 +9,23 @@ interface TradingViewAdvancedChartProps {
   height?: number | string;
   onLoadFailed?: (reason: string) => void;
   loadTimeoutMs?: number;
+  /** Hide the top toolbar (interval / chart-type / indicators). Default: false. */
+  hideTopToolbar?: boolean;
+  /** Hide the left drawing toolbar. Default: false. */
+  hideSideToolbar?: boolean;
+  /** Show the built-in date-range row under the chart. Default: true. */
+  withDateRanges?: boolean;
+  /** Let the user change the symbol from inside the widget. Default: true. */
+  allowSymbolChange?: boolean;
+  /**
+   * Paint the widget with a solid, theme-matched background instead of a
+   * transparent one. Use this when the chart sits on a light surface — a
+   * transparent background lets TradingView's dark legend scrim bleed
+   * through as a black band. Default: false (transparent).
+   */
+  opaqueBackground?: boolean;
+  /** Hide the volume histogram at the bottom of the chart. Default: false. */
+  hideVolume?: boolean;
 }
 
 function toCssSize(value: number | string): string {
@@ -45,6 +62,12 @@ export function TradingViewAdvancedChart({
   height = 520,
   onLoadFailed,
   loadTimeoutMs = 8000,
+  hideTopToolbar = false,
+  hideSideToolbar = false,
+  withDateRanges = true,
+  allowSymbolChange = true,
+  opaqueBackground = false,
+  hideVolume = false,
 }: TradingViewAdvancedChartProps) {
   const { theme } = useTheme();
   const deferredTheme = useDeferredValue(theme);
@@ -58,6 +81,11 @@ export function TradingViewAdvancedChart({
 
     const colorTheme = resolveColorTheme(deferredTheme);
     const widgetLocale = lang === "id" ? "id" : "en";
+    const backgroundColor = opaqueBackground
+      ? colorTheme === "dark"
+        ? "#131722"
+        : "#ffffff"
+      : "rgba(0, 0, 0, 0)";
 
     const config = {
       autosize: true,
@@ -68,15 +96,17 @@ export function TradingViewAdvancedChart({
       style: "1",
       locale: widgetLocale,
       enable_publishing: false,
-      hide_top_toolbar: false,
+      hide_volume: hideVolume,
+      hide_top_toolbar: hideTopToolbar,
+      hide_side_toolbar: hideSideToolbar,
       hide_legend: false,
-      withdateranges: true,
-      allow_symbol_change: true,
+      withdateranges: withDateRanges,
+      allow_symbol_change: allowSymbolChange,
       save_image: false,
       details: false,
       hotlist: false,
       calendar: false,
-      backgroundColor: "rgba(0, 0, 0, 0)",
+      backgroundColor,
       support_host: "https://www.tradingview.com",
     };
 
@@ -186,6 +216,12 @@ export function TradingViewAdvancedChart({
     onLoadFailed,
     deferredTheme,
     lang,
+    hideTopToolbar,
+    hideSideToolbar,
+    withDateRanges,
+    allowSymbolChange,
+    opaqueBackground,
+    hideVolume,
   ]);
 
   return (

@@ -67,6 +67,15 @@ export default function GuidePage() {
     ? requestedCategory
     : null;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
+  // When the reader arrived from a "Pelajari" link on an analysis card, this
+  // holds the path back to that analysis session. Only accept same-origin
+  // absolute paths. Cleared once the reader navigates around inside the guide.
+  const rawReturn = new URLSearchParams(window.location.search).get("return");
+  const initialReturnTo =
+    rawReturn && rawReturn.startsWith("/") && !rawReturn.startsWith("//")
+      ? rawReturn
+      : null;
+  const [returnTo, setReturnTo] = useState<string | null>(initialReturnTo);
 
   const activeArticle = useMemo(() => {
     if (!activeArticleId) return null;
@@ -205,11 +214,22 @@ export default function GuidePage() {
     window.history[`${mode}State`](null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
   };
 
+  // Drop the one-shot `return` param from the URL once we've captured it, so
+  // it doesn't linger on refresh or leak into shared links. Browser history
+  // still has the analysis page as the previous entry for the back button.
+  useEffect(() => {
+    if (initialReturnTo) {
+      updateGuideUrl(initialArticle, initialCategory, "replace");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const openArticle = (articleId: string) => {
     const category = GUIDE_CATEGORIES.find((cat) =>
       cat.articles.some((article) => article.id === articleId),
     );
     const categoryId = category?.id ?? selectedCategory;
+    setReturnTo(null);
     updateGuideUrl(articleId, categoryId, "push");
     setActiveArticleId(articleId);
     setSelectedCategory(categoryId);
@@ -217,8 +237,21 @@ export default function GuidePage() {
   };
 
   const showGuideList = () => {
+    setReturnTo(null);
     updateGuideUrl(null, selectedCategory, "push");
     setActiveArticleId(null);
+  };
+
+  const handleArticleBack = () => {
+    if (returnTo) {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = returnTo;
+      }
+      return;
+    }
+    showGuideList();
   };
 
   const selectCategory = (categoryId: string | null) => {
@@ -329,12 +362,12 @@ export default function GuidePage() {
         ) : (
           <div className="space-y-4">
             <button
-              onClick={showGuideList}
+              onClick={handleArticleBack}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               data-testid="button-guide-back-to-list"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
-               {t.guide.back_to_guide}
+               {returnTo ? t.guide.back_to_analysis : t.guide.back_to_guide}
             </button>
             <header className="space-y-2 mb-6">
               <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-[10px] font-semibold text-primary uppercase tracking-wider">
