@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import {
   LayoutDashboard,
@@ -360,7 +360,6 @@ function AdminDashboardContent() {
   const { t } = useTranslation();
   const trackEvent = useTrackEvent();
   const [activeSection, setActiveSection] = useState<SectionKey>("overview");
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     trackEvent("page_view");
@@ -375,32 +374,8 @@ function AdminDashboardContent() {
     progression: t.admin_dashboard.nav_progression,
   };
 
-  // Keep the sidebar highlight in sync with what the reader has scrolled to.
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible?.target.id) {
-          setActiveSection(visible.target.id.replace("section-", "") as SectionKey);
-        }
-      },
-      { root, rootMargin: "-20% 0px -70% 0px" },
-    );
-    SECTIONS.forEach(({ key }) => {
-      const el = document.getElementById(`section-${key}`);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, []);
-
-  const goToSection = (key: SectionKey) => {
-    setActiveSection(key);
-    document.getElementById(`section-${key}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const ActiveBody =
+    SECTIONS.find((s) => s.key === activeSection)?.Body ?? OverviewSection;
 
   return (
     <SidebarProvider>
@@ -422,7 +397,7 @@ function AdminDashboardContent() {
                 <SidebarMenuItem key={key}>
                   <SidebarMenuButton
                     isActive={activeSection === key}
-                    onClick={() => goToSection(key)}
+                    onClick={() => setActiveSection(key)}
                     data-testid={`nav-${key}`}
                     tooltip={NAV_LABEL[key]}
                   >
@@ -444,15 +419,10 @@ function AdminDashboardContent() {
       <SidebarInset>
         <header className="flex items-center gap-2 border-b border-border p-4">
           <SidebarTrigger data-testid="button-sidebar-trigger" />
-          <h1 className="text-lg font-bold text-foreground">{t.admin_dashboard.page_title}</h1>
+          <h1 className="text-lg font-bold text-foreground">{NAV_LABEL[activeSection]}</h1>
         </header>
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-8">
-          {SECTIONS.map(({ key, Body }) => (
-            <section key={key} id={`section-${key}`} className="scroll-mt-4" data-testid={`section-${key}`}>
-              <h2 className="mb-3 text-base font-bold text-foreground">{NAV_LABEL[key]}</h2>
-              <Body />
-            </section>
-          ))}
+        <div className="p-4" data-testid={`section-${activeSection}`}>
+          <ActiveBody />
         </div>
       </SidebarInset>
     </SidebarProvider>
