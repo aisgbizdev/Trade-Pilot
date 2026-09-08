@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { TrendingUp, Clock, User, Bell, Moon, Sun, ChevronLeft, ExternalLink, BookOpen } from "lucide-react";
+import { TrendingUp, Clock, User, Bell, Moon, Sun, ChevronLeft, ExternalLink, BookOpen, Shield } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
@@ -25,7 +25,7 @@ import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "./language-toggle";
 import { ContinuousTicker } from "./continuous-ticker";
 
-const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/guide", "/profile"];
+const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/guide", "/profile", "/admin/dashboard"];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -108,6 +108,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/analyze", icon: TrendingUp, label: t.nav.analyze, minCount: 0 },
     { href: "/history", icon: Clock, label: t.nav.history, minCount: 0 },
     { href: "/guide", icon: BookOpen, label: t.nav.guide, minCount: 0 },
+    // Admin dashboard — super_admin only (the /admin/dashboard route
+    // itself is also role-gated in App.tsx). Sits right after Panduan.
+    ...(user?.role === "super_admin"
+      ? [{ href: "/admin/dashboard", icon: Shield, label: t.nav.admin, minCount: 0 }]
+      : []),
   ];
 
   const navItems = isEmbed

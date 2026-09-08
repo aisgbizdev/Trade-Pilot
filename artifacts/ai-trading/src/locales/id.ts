@@ -75,6 +75,7 @@ export const id: Translations = {
     analyze: "Analisis",
     history: "Riwayat & Performa",
     guide: "Panduan",
+    admin: "Admin",
     analytics: "Statistik",
     profile: "Profil",
   },

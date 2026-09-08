@@ -73,6 +73,7 @@ export const en = {
     analyze: "Analyze",
     history: "History & Performance",
     guide: "Guide",
+    admin: "Admin",
     analytics: "Statistics",
     profile: "Profile",
   },
