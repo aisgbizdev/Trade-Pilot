@@ -1,4 +1,4 @@
-import { Clock, CalendarClock, Hourglass } from "lucide-react";
+import { Clock, CalendarClock, Hourglass, Zap } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   Dialog,
@@ -79,36 +79,51 @@ export function QuotaDialog() {
         )}
 
         {/* A purchased credit bypasses BOTH the hourly and daily cap
-            (see the analyses route), so the top-up path is offered for
-            either wall — not for `concurrent`, which a credit can't
-            skip (it's a per-user processing lock). */}
-        {info.scope !== "concurrent" && (
-          <p
-            className="text-xs text-muted-foreground px-1"
-            data-testid="text-quota-dialog-topup-hint"
-          >
-            {t.quota_dialog.topup_hint}
-          </p>
-        )}
-
-        <DialogFooter className="sm:justify-center">
-          {info.scope !== "concurrent" && (
+            (see the analyses route), so the top-up is the primary way
+            forward for either wall — offered as the dominant action with
+            the dismiss kept as a quiet text link, not a co-equal button.
+            `concurrent` is a per-user processing lock a credit can't
+            skip, so that branch keeps a plain acknowledge button. */}
+        {info.scope !== "concurrent" ? (
+          <div className="mt-1 space-y-2.5">
             <Button
-              variant="outline"
-              className="w-full sm:w-auto"
+              size="lg"
+              className="w-full gap-2 font-semibold"
               onClick={() => {
                 hideQuotaDialog();
                 setLocation("/topup");
               }}
               data-testid="button-quota-dialog-topup"
             >
+              <Zap className="w-4 h-4" aria-hidden="true" />
               {t.quota_dialog.topup_cta}
             </Button>
-          )}
-          <Button onClick={hideQuotaDialog} className="w-full sm:w-auto" data-testid="button-quota-dialog-ok">
-            {t.quota_dialog.ok_btn}
-          </Button>
-        </DialogFooter>
+            <p
+              className="text-[11px] leading-relaxed text-muted-foreground"
+              data-testid="text-quota-dialog-topup-hint"
+            >
+              {t.quota_dialog.topup_hint}
+            </p>
+            <button
+              type="button"
+              onClick={hideQuotaDialog}
+              className="text-xs text-muted-foreground/70 underline-offset-2 hover:text-muted-foreground hover:underline"
+              data-testid="button-quota-dialog-ok"
+            >
+              {t.quota_dialog.dismiss_btn}
+            </button>
+          </div>
+        ) : (
+          <DialogFooter className="sm:justify-center">
+            <Button
+              onClick={hideQuotaDialog}
+              className="w-full sm:w-auto"
+              data-testid="button-quota-dialog-ok"
+            >
+              {t.quota_dialog.ok_btn}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

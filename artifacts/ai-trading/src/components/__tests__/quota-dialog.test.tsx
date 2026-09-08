@@ -38,6 +38,8 @@ describe("QuotaDialog top-up CTA", () => {
     expect(
       await screen.findByTestId("text-quota-dialog-topup-hint"),
     ).toBeInTheDocument();
+    // Dismiss stays available, but as a quiet text link — not a co-equal button.
+    expect(screen.getByTestId("button-quota-dialog-ok")).toBeInTheDocument();
 
     const cta = await screen.findByTestId("button-quota-dialog-topup");
     act(() => {
@@ -45,6 +47,26 @@ describe("QuotaDialog top-up CTA", () => {
     });
 
     expect(window.location.pathname).toBe("/topup");
+  });
+
+  it("still lets the user dismiss the upsell without topping up", async () => {
+    render(
+      <Wrapper>
+        <QuotaDialog />
+      </Wrapper>,
+    );
+
+    act(() => {
+      showQuotaDialog({ scope: "day", limit: 20, used: 20 });
+    });
+
+    const dismiss = await screen.findByTestId("button-quota-dialog-ok");
+    act(() => {
+      dismiss.click();
+    });
+
+    expect(window.location.pathname).toBe("/analyze");
+    expect(screen.queryByTestId("dialog-quota")).not.toBeInTheDocument();
   });
 
   it("renders the top-up CTA for an hourly-scope block (a credit skips the wait)", async () => {
