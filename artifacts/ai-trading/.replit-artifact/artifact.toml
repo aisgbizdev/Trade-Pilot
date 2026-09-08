@@ -21,29 +21,25 @@ run = "pnpm --filter @workspace/ai-trading run dev"
 PORT = "20853"
 BASE_PATH = "/"
 
-# Production: ai-trading is served as STATIC files by the workspace's
-# path-based router (no Cloud Run service needed). This gives the
-# router a real backend for "/" so root requests don't get a synthetic
-# 500. The api-server runs separately as the Cloud Run service for
-# /api. The build below produces artifacts/ai-trading/dist/public,
-# which the static server then serves at the path "/" claimed in
-# [[services]].paths.
-#
-# NOTE: publicDir is resolved from the REPO ROOT (not the artifact
-# directory), so it must include the full "artifacts/ai-trading/"
-# prefix. Confirmed by the April 30 deploy log:
-#   "static artifact publicDir does not exist, skipping
-#    error=stat /home/runner/workspace/dist/public:
-#    no such file or directory path=/ publicDir=dist/public"
-# i.e. "dist/public" was joined onto /home/runner/workspace.
+# Production runs Vite's preview server instead of the workspace static
+# file server. The static server returns a raw 404 for direct visits to
+# client-side routes such as /privacy, /login, and /terms, while Vite
+# preview provides the SPA history fallback those routes require.
+# The api-server remains a separate service for /api.
 [services.production]
-serve = "static"
-publicDir = "artifacts/ai-trading/dist/public"
 
 [services.production.build]
 args = ["pnpm", "--filter", "@workspace/ai-trading", "run", "build"]
 
 [services.production.build.env]
+NODE_ENV = "production"
+BASE_PATH = "/"
+PORT = "20853"
+
+[services.production.run]
+args = ["pnpm", "--filter", "@workspace/ai-trading", "run", "serve"]
+
+[services.production.run.env]
 NODE_ENV = "production"
 BASE_PATH = "/"
 PORT = "20853"
