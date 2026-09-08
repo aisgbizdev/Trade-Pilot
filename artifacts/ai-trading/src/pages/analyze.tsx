@@ -1254,6 +1254,7 @@ export default function AnalyzePage() {
                   symbol={instrumentToTradingViewSymbol(finalInstrument)}
                   interval={timeframeToTradingViewInterval(selectedTimeframe)}
                   height={360}
+                  hideTopToolbar
                   hideSideToolbar
                   opaqueBackground
                   hideVolume
