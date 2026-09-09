@@ -347,6 +347,9 @@ importers:
       '@workspace/instrument-taxonomy':
         specifier: workspace:*
         version: link:../../lib/instrument-taxonomy
+      '@workspace/progression-emblem':
+        specifier: workspace:*
+        version: link:../../lib/progression-emblem
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -588,6 +591,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/progression-emblem':
+        specifier: workspace:*
+        version: link:../../lib/progression-emblem
       babel-plugin-react-compiler:
         specifier: ^19.0.0-beta-e993439-20250117
         version: 19.0.0-beta-ebf51a3-20250411
@@ -923,6 +929,8 @@ importers:
   lib/image-size-safe: {}
 
   lib/instrument-taxonomy: {}
+
+  lib/progression-emblem: {}
 
   scripts:
     devDependencies:

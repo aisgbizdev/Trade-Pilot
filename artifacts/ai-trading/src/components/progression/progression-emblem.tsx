@@ -1,9 +1,11 @@
 import { useId } from "react";
 import { cn } from "@/lib/utils";
-
-type EmblemState = "active" | "completed" | "locked";
-type EmblemFamily = "badge" | "shield" | "crest";
-type EmblemSymbol = "bars" | "star" | "trophy" | "crown";
+import {
+  getProgressionEmblemTier,
+  type EmblemFamily,
+  type EmblemState,
+  type EmblemSymbol,
+} from "@workspace/progression-emblem";
 
 interface ProgressionEmblemProps {
   level: number;
@@ -12,49 +14,7 @@ interface ProgressionEmblemProps {
   className?: string;
 }
 
-interface TierStyle {
-  name: string;
-  family: EmblemFamily;
-  symbol: EmblemSymbol;
-  color1: string;
-  color2: string;
-  stroke: string;
-  detail: string;
-}
-
-const TIERS: TierStyle[] = [
-  { name: "Seedling", family: "badge", symbol: "bars", color1: "#78936f", color2: "#334a35", stroke: "#b8ceb0", detail: "#dce8d7" },
-  { name: "Observer", family: "badge", symbol: "bars", color1: "#738395", color2: "#344252", stroke: "#b7c5d2", detail: "#e2e8ee" },
-  { name: "Planner", family: "badge", symbol: "bars", color1: "#6f99b8", color2: "#294c69", stroke: "#b9dbf2", detail: "#e4f3fc" },
-  { name: "Guardian", family: "shield", symbol: "star", color1: "#a47b52", color2: "#51351f", stroke: "#dfbb8d", detail: "#f4d7b3" },
-  { name: "Navigator", family: "shield", symbol: "star", color1: "#d69b38", color2: "#745016", stroke: "#ffda87", detail: "#fff0bd" },
-  { name: "Strategist", family: "shield", symbol: "star", color1: "#946ab0", color2: "#4b2d63", stroke: "#d7b1ee", detail: "#eddafb" },
-  { name: "Sentinel", family: "crest", symbol: "star", color1: "#bd5454", color2: "#682323", stroke: "#f09a9a", detail: "#ffd0d0" },
-  { name: "Vanguard", family: "crest", symbol: "star", color1: "#278da2", color2: "#164f5b", stroke: "#7bd4e2", detail: "#c8f1f6" },
-  { name: "Steward", family: "crest", symbol: "trophy", color1: "#bbb486", color2: "#625d3d", stroke: "#fff4c3", detail: "#fff9dd" },
-  { name: "Apex", family: "crest", symbol: "crown", color1: "#303943", color2: "#080a0d", stroke: "#f5b800", detail: "#ffe17a" },
-];
-
-const MASTERY: TierStyle = {
-  name: "Mastery",
-  family: "crest",
-  symbol: "crown",
-  color1: "#b97a08",
-  color2: "#3d2106",
-  stroke: "#fff0a6",
-  detail: "#ffffff",
-};
-
-export function getProgressionTier(level: number, masteryLevel: number) {
-  const isMastery = masteryLevel > 0 || level > 100;
-  const index = Math.min(Math.max(Math.floor((Math.max(level, 1) - 1) / 10), 0), 9);
-  return {
-    index,
-    isMastery,
-    style: isMastery ? MASTERY : TIERS[index]!,
-    intraLevel: isMastery ? Math.max(masteryLevel, 1) : ((Math.max(level, 1) - 1) % 10) + 1,
-  };
-}
+export const getProgressionTier = getProgressionEmblemTier;
 
 function EmblemShape({ family, fill, stroke, strokeWidth }: {
   family: EmblemFamily;
@@ -102,8 +62,8 @@ export function ProgressionEmblem({
   className,
 }: ProgressionEmblemProps) {
   const id = useId().replace(/:/g, "");
-  const { isMastery, style, intraLevel } = getProgressionTier(level, masteryLevel);
-  const label = isMastery ? `M${Math.max(masteryLevel, 1)}` : String(level);
+  const { isMastery, style, intraLevel, label, accessibleLabelPrefix } = getProgressionTier(level, masteryLevel);
+  const [color1, color2, stroke, detail] = style.palette;
   const accessibleState = state === "active" ? "active" : state;
 
   return (
@@ -116,7 +76,7 @@ export function ProgressionEmblem({
         className,
       )}
       role="img"
-      aria-label={`${isMastery ? "Mastery" : "Level"} ${isMastery ? Math.max(masteryLevel, 1) : level}, ${style.name}, ${accessibleState}`}
+      aria-label={`${accessibleLabelPrefix}, ${accessibleState}`}
       data-tier={style.name.toLowerCase()}
       data-family={style.family}
       data-symbol={style.symbol}
@@ -125,21 +85,21 @@ export function ProgressionEmblem({
       <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
         <defs>
           <linearGradient id={`emblem-${id}`} x1="15%" y1="10%" x2="85%" y2="95%">
-            <stop offset="0%" stopColor={style.color1} />
-            <stop offset="100%" stopColor={style.color2} />
+            <stop offset="0%" stopColor={color1} />
+            <stop offset="100%" stopColor={color2} />
           </linearGradient>
         </defs>
         {state === "active" && (
-          <path d="M50 3 L93 22 L83 75 L50 98 L17 75 L7 22 Z" fill="none" stroke={style.stroke} strokeWidth="1.5" opacity="0.28" />
+          <path d="M50 3 L93 22 L83 75 L50 98 L17 75 L7 22 Z" fill="none" stroke={stroke} strokeWidth="1.5" opacity="0.28" />
         )}
         <EmblemShape
           family={style.family}
           fill={`url(#emblem-${id})`}
-          stroke={state === "locked" ? "#8a8a8a" : style.stroke}
+          stroke={state === "locked" ? "#8a8a8a" : stroke}
           strokeWidth={2 + Math.min(intraLevel, 10) * 0.12}
         />
-        <path d="M25 60 H75" stroke={style.detail} strokeWidth="1" opacity="0.22" />
-        <TierMark symbol={style.symbol} color={style.detail} detailCount={Math.ceil(intraLevel / 3)} />
+        <path d="M25 60 H75" stroke={detail} strokeWidth="1" opacity="0.22" />
+        <TierMark symbol={style.symbol} color={detail} detailCount={Math.ceil(intraLevel / 3)} />
         <text
           x="50"
           y={style.symbol === "bars" ? "62" : "66"}
@@ -150,7 +110,7 @@ export function ProgressionEmblem({
         >
           {label}
         </text>
-        <g fill={style.detail}>
+        <g fill={detail}>
           {Array.from({ length: Math.min(3, Math.ceil(intraLevel / 3)) }, (_, index) => (
             <path key={index} d={`M${44 + index * 6} 75 l2 2 l-2 2 l-2-2 Z`} opacity={0.45 + index * 0.15} />
           ))}

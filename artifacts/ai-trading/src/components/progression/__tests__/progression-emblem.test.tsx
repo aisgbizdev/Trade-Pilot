@@ -1,37 +1,43 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import {
+  PROGRESSION_EMBLEM_CASES,
+  PROGRESSION_EMBLEM_STATES,
+} from "@workspace/progression-emblem";
 import { ProgressionEmblem, getProgressionTier } from "../progression-emblem";
 
 describe("ProgressionEmblem", () => {
-  it.each([
-    { level: 1, family: "badge", symbol: "bars" },
-    { level: 30, family: "badge", symbol: "bars" },
-    { level: 31, family: "shield", symbol: "star" },
-    { level: 80, family: "crest", symbol: "star" },
-    { level: 81, family: "crest", symbol: "trophy" },
-    { level: 91, family: "crest", symbol: "crown" },
-  ])("maps level $level to a $family with $symbol", ({ level, family, symbol }) => {
-    const tier = getProgressionTier(level, 0);
+  it.each(PROGRESSION_EMBLEM_CASES)(
+    "renders $name at level $level with the shared family, symbol, label, and palette",
+    ({ level, masteryLevel, name, family, symbol, label, palette }) => {
+    const tier = getProgressionTier(level, masteryLevel);
     expect(tier.style.family).toBe(family);
     expect(tier.style.symbol).toBe(symbol);
-  });
+    expect(tier.style.palette).toEqual(palette);
+    expect(tier.label).toBe(label);
 
-  it("reserves the crown treatment for the highest tier and Mastery", () => {
-    expect(getProgressionTier(90, 0).style.symbol).toBe("trophy");
-    expect(getProgressionTier(100, 0).style.symbol).toBe("crown");
-    expect(getProgressionTier(100, 2).style.symbol).toBe("crown");
-  });
-
-  it("exposes tier, state, and accessible level without relying on a progress ring", () => {
-    const { rerender } = render(
-      <ProgressionEmblem level={47} masteryLevel={0} state="active" className="h-24 w-24" />,
+    const { unmount } = render(
+      <ProgressionEmblem level={level} masteryLevel={masteryLevel} state="active" />,
     );
-    const active = screen.getByRole("img", { name: /Level 47, Navigator, active/i });
-    expect(active).toHaveAttribute("data-family", "shield");
-    expect(active).toHaveAttribute("data-state", "active");
-    expect(active.querySelector("circle")).not.toBeInTheDocument();
+    const emblem = screen.getByRole("img", {
+      name: new RegExp(`${name}, active`, "i"),
+    });
+    expect(emblem).toHaveAttribute("data-family", family);
+    expect(emblem).toHaveAttribute("data-symbol", symbol);
+    expect(emblem).toHaveTextContent(label);
+    expect(emblem.querySelector("circle")).not.toBeInTheDocument();
+    const stops = emblem.querySelectorAll("linearGradient stop");
+    expect(stops[0]).toHaveAttribute("stop-color", palette[0]);
+    expect(stops[1]).toHaveAttribute("stop-color", palette[1]);
+    unmount();
+  });
 
-    rerender(<ProgressionEmblem level={47} masteryLevel={0} state="locked" />);
-    expect(screen.getByRole("img", { name: /locked/i })).toHaveAttribute("data-state", "locked");
+  it.each(PROGRESSION_EMBLEM_STATES)("exposes the %s state", (state) => {
+    render(
+      <ProgressionEmblem level={47} masteryLevel={0} state={state} className="h-24 w-24" />,
+    );
+    expect(screen.getByRole("img", {
+      name: new RegExp(`Level 47, Navigator, ${state}`, "i"),
+    })).toHaveAttribute("data-state", state);
   });
 });

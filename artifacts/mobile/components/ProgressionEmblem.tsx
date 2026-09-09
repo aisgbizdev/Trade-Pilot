@@ -1,23 +1,12 @@
 import { useColors } from "@/hooks/useColors";
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { StyleSheet, Text, View } from "react-native";
-
-type EmblemState = "active" | "completed" | "locked";
-type EmblemFamily = "badge" | "shield" | "crest";
-type EmblemSymbol = "bars" | "star" | "trophy" | "crown";
-
-const TIER_META: ReadonlyArray<{ name: string; family: EmblemFamily; symbol: EmblemSymbol }> = [
-  { name: "Seedling", family: "badge", symbol: "bars" },
-  { name: "Observer", family: "badge", symbol: "bars" },
-  { name: "Planner", family: "badge", symbol: "bars" },
-  { name: "Guardian", family: "shield", symbol: "star" },
-  { name: "Navigator", family: "shield", symbol: "star" },
-  { name: "Strategist", family: "shield", symbol: "star" },
-  { name: "Sentinel", family: "crest", symbol: "star" },
-  { name: "Vanguard", family: "crest", symbol: "star" },
-  { name: "Steward", family: "crest", symbol: "trophy" },
-  { name: "Apex", family: "crest", symbol: "crown" },
-];
+import {
+  getProgressionEmblemTier,
+  type EmblemFamily,
+  type EmblemState,
+  type EmblemSymbol,
+} from "@workspace/progression-emblem";
 
 function Shape({ family, fill, stroke, strokeWidth }: {
   family: EmblemFamily;
@@ -67,19 +56,17 @@ export function ProgressionEmblem({
   state?: EmblemState;
 }) {
   const colors = useColors();
-  const tierIndex = Math.min(Math.max(Math.floor((Math.max(level, 1) - 1) / 10), 0), 9);
-  const meta = TIER_META[tierIndex]!;
-  const intraLevel = ((Math.max(level, 1) - 1) % 10) + 1;
-  const mastery = masteryLevel > 0 || level > 100;
-  const label = mastery ? `M${Math.max(masteryLevel, 1)}` : String(level);
-  const palette = colors.progressionTiers[mastery ? 9 : tierIndex];
+  const { isMastery, style, intraLevel, label, accessibleLabelPrefix } =
+    getProgressionEmblemTier(level, masteryLevel);
+  const palette = style.palette;
   const opacity = state === "locked" ? 0.42 : state === "completed" ? 0.78 : 1;
 
   return (
     <View
       style={[styles.wrap, { width: size, height: size, opacity }]}
       accessibilityRole="image"
-      accessibilityLabel={`${mastery ? "Mastery" : "Level"} ${mastery ? Math.max(masteryLevel, 1) : level}, ${mastery ? "Mastery" : meta.name}, ${state}`}
+      accessibilityLabel={`${accessibleLabelPrefix}, ${state}`}
+      testID={`progression-emblem-${style.family}-${style.symbol}-${state}`}
     >
       <Svg width={size} height={size} viewBox="0 0 100 100">
         <Defs>
@@ -91,9 +78,9 @@ export function ProgressionEmblem({
         {state === "active" ? (
           <Path d="M50 3 L93 22 L83 75 L50 98 L17 75 L7 22 Z" fill="none" stroke={palette[2]} strokeWidth="1.5" opacity={0.28} />
         ) : null}
-        <Shape family={meta.family} fill="url(#emblemGradient)" stroke={state === "locked" ? colors.mutedForeground : palette[2]} strokeWidth={2 + intraLevel * 0.12} />
+        <Shape family={style.family} fill="url(#emblemGradient)" stroke={state === "locked" ? colors.mutedForeground : palette[2]} strokeWidth={2 + Math.min(intraLevel, 10) * 0.12} />
         <Path d="M25 60 H75" stroke={palette[3]} strokeWidth="1" opacity={0.22} />
-        <TierMark symbol={mastery ? "crown" : meta.symbol} color={palette[3]} detailCount={Math.ceil(intraLevel / 3)} />
+        <TierMark symbol={style.symbol} color={palette[3]} detailCount={Math.ceil(intraLevel / 3)} />
         <G fill={palette[3]}>
           {Array.from({ length: Math.min(3, Math.ceil(intraLevel / 3)) }, (_, index) => (
             <Path key={index} d={`M${44 + index * 6} 75 l2 2 l-2 2 l-2-2 Z`} opacity={0.45 + index * 0.15} />
@@ -107,8 +94,8 @@ export function ProgressionEmblem({
           styles.level,
           {
             color: palette[3],
-            top: meta.symbol === "bars" && !mastery ? "40%" : "45%",
-            fontSize: mastery ? 25 : 29,
+            top: style.symbol === "bars" && !isMastery ? "40%" : "45%",
+            fontSize: isMastery ? 25 : 29,
           },
         ]}
       >
