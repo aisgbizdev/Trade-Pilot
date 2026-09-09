@@ -166,6 +166,38 @@ describe("NotificationsPage: happy-path render", () => {
 
     // The `[expiry:N]` marker is stripped from the displayed message.
     expect(read.textContent).not.toMatch(/\[expiry:/);
+    expect(screen.getByTestId("tab-notifications-inbox")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.queryByTestId("card-notification-settings"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens Settings directly for the existing #settings profile link", async () => {
+    window.history.replaceState({}, "", "/notifications#settings");
+    installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <NotificationsPage />
+      </Wrapper>,
+    );
+
+    expect(
+      await screen.findByTestId("card-notification-settings"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("tab-notifications-settings")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByTestId("card-notification-11")).not.toBeInTheDocument();
   });
 });
 
@@ -217,6 +249,7 @@ describe("NotificationsPage: send-test push", () => {
   // the test-send mutation end-to-end.
   beforeEach(() => {
     pushHookState.current = "subscribed";
+    window.history.replaceState({}, "", "/notifications#settings");
   });
 
   afterEach(() => {
@@ -457,6 +490,7 @@ describe("NotificationsPage: user actions", () => {
       </Wrapper>,
     );
 
+    fireEvent.click(screen.getByTestId("tab-notifications-settings"));
     // Toggle the broadcast switch (false → true). Either switch would
     // exercise the same handler; broadcast starts off so the click
     // produces an unambiguous state-change attempt.
@@ -491,6 +525,7 @@ describe("NotificationsPage: user actions", () => {
       </Wrapper>,
     );
 
+    fireEvent.click(screen.getByTestId("tab-notifications-settings"));
     const expirySwitch = await screen.findByTestId("switch-pref-expiry");
     const broadcastSwitch = screen.getByTestId("switch-pref-broadcast");
 

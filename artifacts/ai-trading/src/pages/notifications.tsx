@@ -59,6 +59,11 @@ export default function NotificationsPage() {
   const { canInstall, prompt: triggerInstall } = useInstallPrompt();
   const { standalone } = useStandalone();
   const showInstallCta = canInstall && !standalone;
+  const [activeTab, setActiveTab] = useState<"inbox" | "settings">(() =>
+    typeof window !== "undefined" && window.location.hash === "#settings"
+      ? "settings"
+      : "inbox",
+  );
 
   const handleSendTest = async () => {
     setTestSending(true);
@@ -201,9 +206,8 @@ export default function NotificationsPage() {
   const isPushUnavailable = pushState === "unsupported";
   const isPushDenied = pushState === "denied";
 
-  // Re-render on any in-app navigation (wouter pushState) so we can
-  // re-read window.location.hash; also listen for back/forward and
-  // explicit hash changes from outside wouter.
+  // Keep the selected tab in sync with the existing /notifications#settings
+  // deep link used by Profile, browser history, and direct navigation.
   const [location] = useLocation();
   const [hashTick, setHashTick] = useState(0);
   useEffect(() => {
@@ -218,22 +222,18 @@ export default function NotificationsPage() {
   }, []);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.location.hash !== "#settings") return;
-    let scrolled = false;
-    const tryScroll = () => {
-      if (scrolled) return true;
-      const el = document.getElementById("notification-settings");
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        scrolled = true;
-        return true;
-      }
-      return false;
-    };
-    if (tryScroll()) return;
-    const timer = window.setTimeout(tryScroll, 150);
-    return () => window.clearTimeout(timer);
-  }, [location, hashTick, pushPrefs]);
+    setActiveTab(window.location.hash === "#settings" ? "settings" : "inbox");
+  }, [location, hashTick]);
+
+  const selectTab = (tab: "inbox" | "settings") => {
+    setActiveTab(tab);
+    if (typeof window === "undefined") return;
+    const nextUrl =
+      tab === "settings"
+        ? `${window.location.pathname}${window.location.search}#settings`
+        : `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  };
 
   return (
     <Layout>
@@ -247,7 +247,7 @@ export default function NotificationsPage() {
               </p>
             )}
           </div>
-          {unreadCount > 0 && (
+          {activeTab === "inbox" && unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
@@ -262,7 +262,52 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        <Card className="p-4 mb-5" id="notification-settings" data-testid="card-notification-settings">
+        <div
+          className="grid grid-cols-2 gap-1 rounded-xl border border-border/60 bg-muted/25 p-1 mb-5"
+          role="tablist"
+          aria-label={t.notifications.title}
+          data-testid="notification-tabs"
+        >
+          <button
+            id="tab-notifications-inbox"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "inbox"}
+            onClick={() => selectTab("inbox")}
+            className={cn(
+              "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              activeTab === "inbox"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            data-testid="tab-notifications-inbox"
+          >
+            {t.notifications.tab_inbox}
+            {unreadCount > 0 && (
+              <span className="ml-1.5 text-xs text-primary">({unreadCount})</span>
+            )}
+          </button>
+          <button
+            id="tab-notifications-settings"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "settings"}
+            onClick={() => selectTab("settings")}
+            className={cn(
+              "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              activeTab === "settings"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            data-testid="tab-notifications-settings"
+          >
+            {t.notifications.tab_settings}
+          </button>
+        </div>
+
+        {activeTab === "settings" && (
+        <div id="notification-settings" role="tabpanel" aria-labelledby="tab-notifications-settings">
+        <Card className="p-4 mb-5" data-testid="card-notification-settings">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-primary/10 mt-0.5">
               {isPushEnabled ? (
@@ -814,7 +859,11 @@ export default function NotificationsPage() {
             </div>
           </Card>
         )}
+        </div>
+        )}
 
+        {activeTab === "inbox" && (
+        <div role="tabpanel" aria-labelledby="tab-notifications-inbox">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -855,6 +904,8 @@ export default function NotificationsPage() {
               </Card>
             ))}
           </div>
+        )}
+        </div>
         )}
       </div>
     </Layout>

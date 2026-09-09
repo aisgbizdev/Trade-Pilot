@@ -669,6 +669,8 @@ export const en = {
   },
   notifications: {
     title: "Notifications",
+    tab_inbox: "Inbox",
+    tab_settings: "Settings",
     unread_count: "unread",
     mark_all_read: "Mark all as read",
     all_read_toast: "All notifications marked as read",

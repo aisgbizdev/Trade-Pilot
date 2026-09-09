@@ -671,6 +671,8 @@ export const id: Translations = {
   },
   notifications: {
     title: "Notifikasi",
+    tab_inbox: "Inbox",
+    tab_settings: "Pengaturan",
     unread_count: "belum dibaca",
     mark_all_read: "Tandai semua sudah dibaca",
     all_read_toast: "Semua notifikasi telah dibaca",
