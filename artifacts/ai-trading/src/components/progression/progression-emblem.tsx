@@ -1,121 +1,160 @@
-import { useMemo } from "react";
+import { useId } from "react";
 import { cn } from "@/lib/utils";
+
+type EmblemState = "active" | "completed" | "locked";
+type EmblemFamily = "badge" | "shield" | "crest";
+type EmblemSymbol = "bars" | "star" | "trophy" | "crown";
 
 interface ProgressionEmblemProps {
   level: number;
   masteryLevel: number;
+  state?: EmblemState;
   className?: string;
 }
 
-interface BandStyle {
+interface TierStyle {
   name: string;
+  family: EmblemFamily;
+  symbol: EmblemSymbol;
   color1: string;
   color2: string;
   stroke: string;
-  shape: "circle" | "hexagon" | "octagon" | "star" | "diamond" | "cross" | "shield" | "wings" | "crest" | "crown" | "radiant";
+  detail: string;
 }
 
-const BANDS: BandStyle[] = [
-  { name: "Seedling", color1: "#8fc286", color2: "#4a7a43", stroke: "#a6d69e", shape: "circle" },
-  { name: "Observer", color1: "#7a8a99", color2: "#4a5a6a", stroke: "#9cb0c2", shape: "hexagon" },
-  { name: "Planner", color1: "#8cabc4", color2: "#3b5c78", stroke: "#b4d3ec", shape: "octagon" },
-  { name: "Guardian", color1: "#a68865", color2: "#5c4024", stroke: "#cfa97d", shape: "shield" },
-  { name: "Navigator", color1: "#e0ad5c", color2: "#8a6121", stroke: "#fcd181", shape: "star" },
-  { name: "Strategist", color1: "#b587d1", color2: "#5e3478", stroke: "#d8a3fa", shape: "cross" },
-  { name: "Sentinel", color1: "#d66767", color2: "#7a2525", stroke: "#f28585", shape: "crest" },
-  { name: "Vanguard", color1: "#3fa3b5", color2: "#195d6b", stroke: "#6bd2e6", shape: "wings" },
-  { name: "Steward", color1: "#e0d9b4", color2: "#827a4d", stroke: "#fff8d6", shape: "diamond" },
-  { name: "Apex", color1: "#1c2833", color2: "#000000", stroke: "#f5b800", shape: "crown" },
+const TIERS: TierStyle[] = [
+  { name: "Seedling", family: "badge", symbol: "bars", color1: "#78936f", color2: "#334a35", stroke: "#b8ceb0", detail: "#dce8d7" },
+  { name: "Observer", family: "badge", symbol: "bars", color1: "#738395", color2: "#344252", stroke: "#b7c5d2", detail: "#e2e8ee" },
+  { name: "Planner", family: "badge", symbol: "bars", color1: "#6f99b8", color2: "#294c69", stroke: "#b9dbf2", detail: "#e4f3fc" },
+  { name: "Guardian", family: "shield", symbol: "star", color1: "#a47b52", color2: "#51351f", stroke: "#dfbb8d", detail: "#f4d7b3" },
+  { name: "Navigator", family: "shield", symbol: "star", color1: "#d69b38", color2: "#745016", stroke: "#ffda87", detail: "#fff0bd" },
+  { name: "Strategist", family: "shield", symbol: "star", color1: "#946ab0", color2: "#4b2d63", stroke: "#d7b1ee", detail: "#eddafb" },
+  { name: "Sentinel", family: "crest", symbol: "star", color1: "#bd5454", color2: "#682323", stroke: "#f09a9a", detail: "#ffd0d0" },
+  { name: "Vanguard", family: "crest", symbol: "star", color1: "#278da2", color2: "#164f5b", stroke: "#7bd4e2", detail: "#c8f1f6" },
+  { name: "Steward", family: "crest", symbol: "trophy", color1: "#bbb486", color2: "#625d3d", stroke: "#fff4c3", detail: "#fff9dd" },
+  { name: "Apex", family: "crest", symbol: "crown", color1: "#303943", color2: "#080a0d", stroke: "#f5b800", detail: "#ffe17a" },
 ];
 
-const MASTERY_BAND: BandStyle = {
-  name: "Mastery", color1: "#f5b800", color2: "#ff3366", stroke: "#ffffff", shape: "radiant"
+const MASTERY: TierStyle = {
+  name: "Mastery",
+  family: "crest",
+  symbol: "crown",
+  color1: "#b97a08",
+  color2: "#3d2106",
+  stroke: "#fff0a6",
+  detail: "#ffffff",
 };
 
-export function ProgressionEmblem({ level, masteryLevel, className }: ProgressionEmblemProps) {
+export function getProgressionTier(level: number, masteryLevel: number) {
   const isMastery = masteryLevel > 0 || level > 100;
-  
-  const bandIndex = isMastery ? -1 : Math.min(Math.max(Math.ceil(level / 10) - 1, 0), 9);
-  const band = isMastery ? MASTERY_BAND : BANDS[bandIndex]!;
-  
-  // Intra-band progress 1-10
-  const intraLevel = isMastery ? masteryLevel : ((level - 1) % 10) + 1;
-  const complexity = Math.ceil(intraLevel / 3); // 1 to 4 scaling of details
-
-  // Create an SVG based on the shape
-  const renderShape = () => {
-    const fillUrl = `url(#grad-${band.name})`;
-    const s = band.stroke;
-    const w = 2 + (complexity * 0.5); // Stroke width increases with intraLevel
-
-    switch (band.shape) {
-      case "circle":
-        return <circle cx="50" cy="50" r="40" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "hexagon":
-        return <polygon points="50,10 85,30 85,70 50,90 15,70 15,30" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "octagon":
-        return <polygon points="30,10 70,10 90,30 90,70 70,90 30,90 10,70 10,30" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "star":
-        return <polygon points="50,10 62,35 90,40 68,60 75,88 50,75 25,88 32,60 10,40 38,35" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "diamond":
-        return <polygon points="50,10 90,50 50,90 10,50" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "cross":
-        return <polygon points="40,10 60,10 60,40 90,40 90,60 60,60 60,90 40,90 40,60 10,60 10,40 40,40" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "shield":
-        return <path d="M 15,20 L 50,10 L 85,20 L 85,50 C 85,75 50,90 50,90 C 50,90 15,75 15,50 Z" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "wings":
-        return <path d="M 50,20 L 90,10 L 75,45 L 90,80 L 50,60 L 10,80 L 25,45 L 10,10 Z" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "crest":
-        return <path d="M 50,10 L 90,30 L 70,90 L 30,90 L 10,30 Z" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "crown":
-        return <path d="M 10,30 L 30,50 L 50,15 L 70,50 L 90,30 L 80,85 L 20,85 Z" fill={fillUrl} stroke={s} strokeWidth={w} />;
-      case "radiant":
-        return (
-          <>
-            <circle cx="50" cy="50" r="45" fill="none" stroke="#f5b800" strokeWidth="2" strokeDasharray="4 4" />
-            <polygon points="50,5 60,35 95,50 60,65 50,95 40,65 5,50 40,35" fill={fillUrl} stroke={s} strokeWidth={3} />
-            <circle cx="50" cy="50" r="20" fill="#000" stroke="#f5b800" strokeWidth="2" />
-          </>
-        );
-      default:
-        return <circle cx="50" cy="50" r="40" fill={fillUrl} stroke={s} strokeWidth={w} />;
-    }
+  const index = Math.min(Math.max(Math.floor((Math.max(level, 1) - 1) / 10), 0), 9);
+  return {
+    index,
+    isMastery,
+    style: isMastery ? MASTERY : TIERS[index]!,
+    intraLevel: isMastery ? Math.max(masteryLevel, 1) : ((Math.max(level, 1) - 1) % 10) + 1,
   };
+}
 
-  const renderDetails = () => {
-    if (complexity < 2) return null;
-    const s = band.stroke;
+function EmblemShape({ family, fill, stroke, strokeWidth }: {
+  family: EmblemFamily;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+}) {
+  if (family === "badge") {
+    return <path d="M24 11 H76 L88 27 V67 L50 91 L12 67 V27 Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />;
+  }
+  if (family === "shield") {
+    return <path d="M50 8 L87 21 V49 C87 72 70 86 50 94 C30 86 13 72 13 49 V21 Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />;
+  }
+  return <path d="M50 6 L90 24 L80 72 L50 94 L20 72 L10 24 Z" fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinejoin="round" />;
+}
+
+function TierMark({ symbol, color, detailCount }: { symbol: EmblemSymbol; color: string; detailCount: number }) {
+  if (symbol === "trophy") {
     return (
-      <g stroke={s} strokeWidth="1" opacity="0.5">
-        {complexity >= 2 && <circle cx="50" cy="50" r="30" fill="none" />}
-        {complexity >= 3 && <circle cx="50" cy="50" r="20" fill="none" strokeDasharray="2 2" />}
-        {complexity >= 4 && <path d="M 50,15 L 50,85 M 15,50 L 85,50" strokeDasharray="4 4" />}
+      <g fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M39 24 H61 V31 C61 39 56 43 50 43 C44 43 39 39 39 31 Z" />
+        <path d="M39 28 H32 C32 36 35 39 41 39 M61 28 H68 C68 36 65 39 59 39 M50 43 V48 M43 48 H57" />
       </g>
     );
-  };
+  }
+  if (symbol === "crown") {
+    return <path d="M35 39 L32 24 L42 31 L50 19 L58 31 L68 24 L65 39 Z" fill={color} opacity="0.95" />;
+  }
+  if (symbol === "star") {
+    return <path d="M50 20 L53.8 28.2 L63 29.3 L56.2 35.5 L58 44.5 L50 40 L42 44.5 L43.8 35.5 L37 29.3 L46.2 28.2 Z" fill={color} opacity="0.9" />;
+  }
+  return (
+    <g fill={color} opacity="0.9">
+      {Array.from({ length: Math.min(detailCount, 3) }, (_, index) => (
+        <rect key={index} x={42 + index * 6} y={28 - index * 3} width="4" height={10 + index * 3} rx="2" />
+      ))}
+    </g>
+  );
+}
+
+export function ProgressionEmblem({
+  level,
+  masteryLevel,
+  state = "active",
+  className,
+}: ProgressionEmblemProps) {
+  const id = useId().replace(/:/g, "");
+  const { isMastery, style, intraLevel } = getProgressionTier(level, masteryLevel);
+  const label = isMastery ? `M${Math.max(masteryLevel, 1)}` : String(level);
+  const accessibleState = state === "active" ? "active" : state;
 
   return (
-    <div className={cn("relative inline-flex items-center justify-center shrink-0", className)}>
-      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+    <div
+      className={cn(
+        "relative inline-flex shrink-0 items-center justify-center",
+        state === "locked" && "grayscale opacity-45",
+        state === "completed" && "opacity-80",
+        state === "active" && "drop-shadow-[0_8px_16px_rgba(245,184,0,0.16)]",
+        className,
+      )}
+      role="img"
+      aria-label={`${isMastery ? "Mastery" : "Level"} ${isMastery ? Math.max(masteryLevel, 1) : level}, ${style.name}, ${accessibleState}`}
+      data-tier={style.name.toLowerCase()}
+      data-family={style.family}
+      data-symbol={style.symbol}
+      data-state={state}
+    >
+      <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
         <defs>
-          <linearGradient id={`grad-${band.name}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={band.color1} />
-            <stop offset="100%" stopColor={band.color2} />
+          <linearGradient id={`emblem-${id}`} x1="15%" y1="10%" x2="85%" y2="95%">
+            <stop offset="0%" stopColor={style.color1} />
+            <stop offset="100%" stopColor={style.color2} />
           </linearGradient>
         </defs>
-        {renderShape()}
-        {renderDetails()}
-        
-        <text 
-          x="50" 
-          y="58" 
-          textAnchor="middle" 
-          fill="#ffffff" 
-          className="font-bold font-sans drop-shadow-md"
-          style={{ fontSize: isMastery ? "24px" : "32px", textShadow: "0px 2px 4px rgba(0,0,0,0.8)" }}
+        {state === "active" && (
+          <path d="M50 3 L93 22 L83 75 L50 98 L17 75 L7 22 Z" fill="none" stroke={style.stroke} strokeWidth="1.5" opacity="0.28" />
+        )}
+        <EmblemShape
+          family={style.family}
+          fill={`url(#emblem-${id})`}
+          stroke={state === "locked" ? "#8a8a8a" : style.stroke}
+          strokeWidth={2 + Math.min(intraLevel, 10) * 0.12}
+        />
+        <path d="M25 60 H75" stroke={style.detail} strokeWidth="1" opacity="0.22" />
+        <TierMark symbol={style.symbol} color={style.detail} detailCount={Math.ceil(intraLevel / 3)} />
+        <text
+          x="50"
+          y={style.symbol === "bars" ? "62" : "66"}
+          textAnchor="middle"
+          fill="#ffffff"
+          className="font-sans font-black"
+          style={{ fontSize: isMastery ? "22px" : "27px", filter: "drop-shadow(0 2px 2px rgba(0,0,0,.65))" }}
         >
-          {isMastery ? `M${masteryLevel}` : level}
+          {label}
         </text>
+        <g fill={style.detail}>
+          {Array.from({ length: Math.min(3, Math.ceil(intraLevel / 3)) }, (_, index) => (
+            <path key={index} d={`M${44 + index * 6} 75 l2 2 l-2 2 l-2-2 Z`} opacity={0.45 + index * 0.15} />
+          ))}
+        </g>
       </svg>
     </div>
   );

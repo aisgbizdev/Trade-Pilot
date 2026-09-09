@@ -1,106 +1,116 @@
 import { useColors } from "@/hooks/useColors";
-import Svg, { Circle, Path, Polygon, Rect } from "react-native-svg";
+import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { StyleSheet, Text, View } from "react-native";
 
-const FAMILY_SHAPES = [
-  "circle",
-  "hexagon",
-  "octagon",
-  "shield",
-  "star",
-  "cross",
-  "crest",
-  "wings",
-  "diamond",
-  "crown",
-] as const;
+type EmblemState = "active" | "completed" | "locked";
+type EmblemFamily = "badge" | "shield" | "crest";
+type EmblemSymbol = "bars" | "star" | "trophy" | "crown";
 
-type FamilyShape = (typeof FAMILY_SHAPES)[number];
+const TIER_META: ReadonlyArray<{ name: string; family: EmblemFamily; symbol: EmblemSymbol }> = [
+  { name: "Seedling", family: "badge", symbol: "bars" },
+  { name: "Observer", family: "badge", symbol: "bars" },
+  { name: "Planner", family: "badge", symbol: "bars" },
+  { name: "Guardian", family: "shield", symbol: "star" },
+  { name: "Navigator", family: "shield", symbol: "star" },
+  { name: "Strategist", family: "shield", symbol: "star" },
+  { name: "Sentinel", family: "crest", symbol: "star" },
+  { name: "Vanguard", family: "crest", symbol: "star" },
+  { name: "Steward", family: "crest", symbol: "trophy" },
+  { name: "Apex", family: "crest", symbol: "crown" },
+];
 
-function Shape({
-  family,
-  strokeWidth,
-  fill,
-  stroke,
-}: {
-  family: FamilyShape;
-  strokeWidth: number;
+function Shape({ family, fill, stroke, strokeWidth }: {
+  family: EmblemFamily;
   fill: string;
   stroke: string;
+  strokeWidth: number;
 }) {
   const common = { fill, stroke, strokeWidth, strokeLinejoin: "round" as const };
-  switch (family) {
-    case "circle":
-      return <Circle cx="50" cy="50" r="39" {...common} />;
-    case "hexagon":
-      return <Polygon points="50,9 86,29 86,71 50,91 14,71 14,29" {...common} />;
-    case "octagon":
-      return <Polygon points="30,9 70,9 91,30 91,70 70,91 30,91 9,70 9,30" {...common} />;
-    case "shield":
-      return <Path d="M14 20 L50 9 86 20 V50 C86 73 65 86 50 92 C35 86 14 73 14 50 Z" {...common} />;
-    case "star":
-      return <Polygon points="50,7 62,34 91,38 69,59 76,89 50,75 24,89 31,59 9,38 38,34" {...common} />;
-    case "cross":
-      return <Polygon points="38,9 62,9 62,37 91,37 91,63 62,63 62,91 38,91 38,63 9,63 9,37 38,37" {...common} />;
-    case "crest":
-      return <Path d="M50 8 L91 29 72 88 50 94 28 88 9 29 Z" {...common} />;
-    case "wings":
-      return <Path d="M50 20 L92 8 77 45 92 82 50 63 8 82 23 45 8 8 Z" {...common} />;
-    case "diamond":
-      return <Polygon points="50,7 93,50 50,93 7,50" {...common} />;
-    case "crown":
-      return <Path d="M8 27 L29 49 50 9 71 49 92 27 81 88 19 88 Z" {...common} />;
+  if (family === "badge") return <Path d="M24 11 H76 L88 27 V67 L50 91 L12 67 V27 Z" {...common} />;
+  if (family === "shield") return <Path d="M50 8 L87 21 V49 C87 72 70 86 50 94 C30 86 13 72 13 49 V21 Z" {...common} />;
+  return <Path d="M50 6 L90 24 L80 72 L50 94 L20 72 L10 24 Z" {...common} />;
+}
+
+function TierMark({ symbol, color, detailCount }: {
+  symbol: EmblemSymbol;
+  color: string;
+  detailCount: number;
+}) {
+  if (symbol === "trophy") {
+    return (
+      <G fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <Path d="M39 24 H61 V31 C61 39 56 43 50 43 C44 43 39 39 39 31 Z" />
+        <Path d="M39 28 H32 C32 36 35 39 41 39 M61 28 H68 C68 36 65 39 59 39 M50 43 V48 M43 48 H57" />
+      </G>
+    );
   }
+  if (symbol === "crown") return <Path d="M35 39 L32 24 L42 31 L50 19 L58 31 L68 24 L65 39 Z" fill={color} opacity={0.95} />;
+  if (symbol === "star") return <Path d="M50 20 L53.8 28.2 L63 29.3 L56.2 35.5 L58 44.5 L50 40 L42 44.5 L43.8 35.5 L37 29.3 L46.2 28.2 Z" fill={color} opacity={0.9} />;
+  return (
+    <G fill={color} opacity={0.9}>
+      {Array.from({ length: Math.min(detailCount, 3) }, (_, index) => (
+        <Rect key={index} x={42 + index * 6} y={28 - index * 3} width="4" height={10 + index * 3} rx="2" />
+      ))}
+    </G>
+  );
 }
 
 export function ProgressionEmblem({
   level,
   masteryLevel,
   size = 132,
+  state = "active",
 }: {
   level: number;
   masteryLevel: number;
   size?: number;
+  state?: EmblemState;
 }) {
   const colors = useColors();
-  const familyIndex = Math.min(Math.max(Math.floor((level - 1) / 10), 0), 9);
-  const intraRank = ((Math.max(level, 1) - 1) % 10) + 1;
-  const detailCount = Math.min(5, Math.ceil(intraRank / 2));
-  const label = masteryLevel > 0 ? `M${masteryLevel}` : String(level);
+  const tierIndex = Math.min(Math.max(Math.floor((Math.max(level, 1) - 1) / 10), 0), 9);
+  const meta = TIER_META[tierIndex]!;
+  const intraLevel = ((Math.max(level, 1) - 1) % 10) + 1;
+  const mastery = masteryLevel > 0 || level > 100;
+  const label = mastery ? `M${Math.max(masteryLevel, 1)}` : String(level);
+  const palette = colors.progressionTiers[mastery ? 9 : tierIndex];
+  const opacity = state === "locked" ? 0.42 : state === "completed" ? 0.78 : 1;
 
   return (
     <View
-      style={[styles.wrap, { width: size, height: size }]}
-      accessibilityLabel={`Level ${level}, evolution ${intraRank} of 10`}
+      style={[styles.wrap, { width: size, height: size, opacity }]}
+      accessibilityRole="image"
+      accessibilityLabel={`${mastery ? "Mastery" : "Level"} ${mastery ? Math.max(masteryLevel, 1) : level}, ${mastery ? "Mastery" : meta.name}, ${state}`}
     >
       <Svg width={size} height={size} viewBox="0 0 100 100">
-        <Circle cx="50" cy="50" r="47" fill={colors.muted} stroke={colors.border} strokeWidth="1" />
-        <Shape
-          family={FAMILY_SHAPES[familyIndex]}
-          fill={colors.primary}
-          stroke={colors.primaryForeground}
-          strokeWidth={2 + intraRank * 0.16}
-        />
-        {Array.from({ length: detailCount }).map((_, index) => {
-          const x = 30 + index * 10;
-          return (
-            <Circle
-              key={x}
-              cx={x}
-              cy="78"
-              r={intraRank >= 8 ? 2.2 : 1.7}
-              fill={colors.primaryForeground}
-            />
-          );
-        })}
-        {intraRank >= 5 ? (
-          <Rect x="28" y="68" width="44" height="1.5" rx=".75" fill={colors.primaryForeground} />
+        <Defs>
+          <LinearGradient id="emblemGradient" x1="15%" y1="10%" x2="85%" y2="95%">
+            <Stop offset="0%" stopColor={palette[0]} />
+            <Stop offset="100%" stopColor={palette[1]} />
+          </LinearGradient>
+        </Defs>
+        {state === "active" ? (
+          <Path d="M50 3 L93 22 L83 75 L50 98 L17 75 L7 22 Z" fill="none" stroke={palette[2]} strokeWidth="1.5" opacity={0.28} />
         ) : null}
+        <Shape family={meta.family} fill="url(#emblemGradient)" stroke={state === "locked" ? colors.mutedForeground : palette[2]} strokeWidth={2 + intraLevel * 0.12} />
+        <Path d="M25 60 H75" stroke={palette[3]} strokeWidth="1" opacity={0.22} />
+        <TierMark symbol={mastery ? "crown" : meta.symbol} color={palette[3]} detailCount={Math.ceil(intraLevel / 3)} />
+        <G fill={palette[3]}>
+          {Array.from({ length: Math.min(3, Math.ceil(intraLevel / 3)) }, (_, index) => (
+            <Path key={index} d={`M${44 + index * 6} 75 l2 2 l-2 2 l-2-2 Z`} opacity={0.45 + index * 0.15} />
+          ))}
+        </G>
       </Svg>
       <Text
         adjustsFontSizeToFit
         numberOfLines={1}
-        style={[styles.level, { color: colors.primaryForeground }]}
+        style={[
+          styles.level,
+          {
+            color: palette[3],
+            top: meta.symbol === "bars" && !mastery ? "40%" : "45%",
+            fontSize: mastery ? 25 : 29,
+          },
+        ]}
       >
         {label}
       </Text>
@@ -115,6 +125,5 @@ const styles = StyleSheet.create({
     width: "50%",
     textAlign: "center",
     fontFamily: "Inter_700Bold",
-    fontSize: 31,
   },
 });
