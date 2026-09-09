@@ -2,6 +2,11 @@ import { ProgressionEmblem } from "@/components/ProgressionEmblem";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
+import {
+  getHomeProgressionContent,
+  HOME_PROGRESSION_ROUTE,
+  HOME_PROGRESSION_TEST_ID,
+} from "@/lib/home-progression";
 import { Feather } from "@expo/vector-icons";
 import {
   type CreateAnalysisBodyTimeframe,
@@ -32,25 +37,6 @@ type Category = keyof typeof INSTRUMENTS;
 
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D"] as const;
 
-const RANK_KEYS = [
-  "seedling",
-  "observer",
-  "planner",
-  "guardian",
-  "navigator",
-  "strategist",
-  "sentinel",
-  "vanguard",
-  "steward",
-  "apex",
-] as const;
-
-type RankKey = (typeof RANK_KEYS)[number];
-
-function isRankKey(value: string): value is RankKey {
-  return (RANK_KEYS as readonly string[]).includes(value);
-}
-
 export default function AnalyzeScreen() {
   const colors = useColors();
   const { t } = useLang();
@@ -66,22 +52,12 @@ export default function AnalyzeScreen() {
   const { data: quota } = useGetAnalysisQuota();
   const progression = useGetProgressionSummary();
   const remaining = (quota as any)?.remaining as number | undefined;
-  const progressionRank = progression.data
-    ? isRankKey(progression.data.rank)
-      ? t.progression[`rank_${progression.data.rank}`]
-      : progression.data.rank
-    : null;
-  const progressionLevel = progression.data
-    ? (progression.data.masteryLevel > 0 ? t.progression.mastery : t.progression.level)
-        .replace(
-          "{n}",
-          String(
-            progression.data.masteryLevel > 0
-              ? progression.data.masteryLevel
-              : progression.data.level,
-          ),
-        )
-    : null;
+  const progressionContent = getHomeProgressionContent(
+    t.progression,
+    progression.data,
+    progression.isError,
+    t.progression.loading,
+  );
 
   const { mutate: createAnalysis, isPending } = useCreateAnalysis({
     mutation: {
@@ -280,23 +256,19 @@ export default function AnalyzeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {!progression.isError ? (
+        {progressionContent.kind !== "hidden" ? (
           <View style={s.section}>
             <Pressable
-              testID="home-progression-link"
+              testID={HOME_PROGRESSION_TEST_ID}
               accessibilityRole="button"
-              accessibilityLabel={
-                progressionRank && progressionLevel
-                  ? `${t.progression.title}: ${progressionRank}, ${progressionLevel}`
-                  : t.progression.title
-              }
-              onPress={() => router.push("/progression" as never)}
+              accessibilityLabel={progressionContent.accessibilityLabel}
+              onPress={() => router.push(HOME_PROGRESSION_ROUTE as never)}
               style={({ pressed }) => [
                 s.progressionCard,
                 { opacity: pressed ? 0.7 : 1 },
               ]}
             >
-              {progression.data ? (
+              {progressionContent.kind === "summary" && progression.data ? (
                 <>
                   <ProgressionEmblem
                     level={progression.data.level}
@@ -305,10 +277,10 @@ export default function AnalyzeScreen() {
                   />
                   <View style={s.progressionCopy}>
                     <Text style={s.progressionRank} numberOfLines={1}>
-                      {progressionRank}
+                      {progressionContent.rank}
                     </Text>
                     <Text style={s.progressionLevel} numberOfLines={1}>
-                      {progressionLevel}
+                      {progressionContent.level}
                     </Text>
                   </View>
                   <Feather
@@ -320,7 +292,11 @@ export default function AnalyzeScreen() {
               ) : (
                 <>
                   <ActivityIndicator color={colors.primary} size="small" />
-                  <Text style={s.progressionLoading}>{t.progression.loading}</Text>
+                  <Text style={s.progressionLoading}>
+                    {progressionContent.kind === "loading"
+                      ? progressionContent.label
+                      : t.progression.loading}
+                  </Text>
                 </>
               )}
             </Pressable>
