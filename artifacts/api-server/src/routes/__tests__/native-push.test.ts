@@ -7,7 +7,10 @@ import { eq, inArray, like } from "drizzle-orm";
 import app from "../../app";
 import { db } from "../../lib/db";
 import { users, sessions, nativePushDevices } from "@workspace/db/schema";
-import { nativePushRegisterLimiter } from "../../middleware/rate-limit";
+import {
+  nativePushRegisterLimiter,
+  nativePushTestLimiter,
+} from "../../middleware/rate-limit";
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `native-push-${RUN_ID}`;
@@ -72,6 +75,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   nativePushRegisterLimiter.store.clear();
+  nativePushTestLimiter.store.clear();
 });
 
 describe("POST /native-push/register", () => {
@@ -234,6 +238,53 @@ describe("DELETE /native-push/unregister", () => {
     const rows = await db.select().from(nativePushDevices).where(eq(nativePushDevices.token, token));
     expect(rows.length).toBe(1);
     expect(rows[0]!.userId).toBe(bob.id);
+  });
+});
+
+describe("POST /native-push/test", () => {
+  it("returns 404 when the caller has no registered mobile devices", async () => {
+    const fresh = await createUser();
+    const res = await request(app)
+      .post("/api/native-push/test")
+      .set(...authHeader(fresh));
+    expect(res.status).toBe(404);
+  });
+
+  it("dispatches (delivered = enabled device count) when the caller has one", async () => {
+    const u = await createUser();
+    await request(app)
+      .post("/api/native-push/register")
+      .set(...authHeader(u))
+      .send({ token: fakeToken("test-ep"), platform: "android" });
+
+    const res = await request(app)
+      .post("/api/native-push/test")
+      .set(...authHeader(u));
+    expect(res.status).toBe(200);
+    // FIREBASE_PROJECT_ID is unset in tests, so the FCM send is a no-op,
+    // but the endpoint still reports how many devices it targeted.
+    expect(res.body.delivered).toBe(1);
+  });
+
+  it("rejects the request from a token/URL in the body — it accepts neither", async () => {
+    const u = await createUser();
+    await request(app)
+      .post("/api/native-push/register")
+      .set(...authHeader(u))
+      .send({ token: fakeToken("test-strict"), platform: "android" });
+
+    // Extra body fields are simply ignored; the endpoint never reads a
+    // token or url from the request.
+    const res = await request(app)
+      .post("/api/native-push/test")
+      .set(...authHeader(u))
+      .send({ token: "attacker-token", url: "https://evil.example" });
+    expect(res.status).toBe(200);
+  });
+
+  it("requires auth", async () => {
+    const res = await request(app).post("/api/native-push/test");
+    expect(res.status).toBe(401);
   });
 });
 

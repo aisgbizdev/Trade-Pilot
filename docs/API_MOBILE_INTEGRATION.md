@@ -228,12 +228,20 @@ themePreference, onboardingCompleted, createdAt }`.
 |---|---|---|---|
 | POST | `/native-push/register` | ✅ | `{ token: <FCM device token>, platform: "android"\|"ios" }` |
 | POST | `/native-push/unregister` | ✅ | `{ token }` — on logout / token rotation |
-| GET/PATCH | `/push/prefs` | ✅ | Per-category push toggles (`pushExpiry`, `pushBroadcast`, `pushDailySummary`, `pushMarketNews`, …) |
+| POST | `/native-push/test` | ✅ | Send one sample FCM push to the caller's own registered devices → `{ delivered: <device count> }`. `404` if none registered. Goes through the real send path — a passing result is proof the FCM wiring works. Takes no body. |
+| GET/PATCH | `/push/prefs` | ✅ | Master switch `nativePushEnabled` + per-category toggles (`pushExpiry`, `pushBroadcast`, `pushDailySummary`, `pushMarketNews`, …), quiet hours, `notificationTimezone` |
 | GET/PATCH | `/me/daily-summary` | ✅ | Daily-summary digest settings (time, timezone, enabled) |
 
-Server-side FCM needs `FIREBASE_PROJECT_ID` + Application Default Credentials
-configured on the deployment; if unset, native push is silently disabled
-(in-app notification rows still land). See `artifacts/api-server/src/lib/native-push.ts`.
+`nativePushEnabled = false` suppresses the OS push entirely (the in-app
+notification row is still created). Server-side FCM needs `FIREBASE_PROJECT_ID`
++ Application Default Credentials on the deployment; if unset, native push is
+silently disabled (in-app rows still land). See
+`artifacts/api-server/src/lib/native-push.ts`.
+
+Tap-target: notifications tied to an analysis carry `data.actionType =
+"open_analysis"` + `data.actionId = "<analysisId>"` (analysis-completed,
+signal-flip, TP/SL-hit). The client must ownership-check the id before
+navigating.
 
 ### Progression (gamification)
 

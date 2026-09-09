@@ -141,6 +141,20 @@ export const pushTestLimiter = buildLimiter({
     "Terlalu banyak tes notifikasi. Coba lagi sebentar lagi. / Too many test notifications. Try again in a bit.",
 });
 
+// Per-user limiter for POST /api/native-push/test. Same budget as the Web
+// Push test — enough for a QA pass, capped so the FCM send path can't be
+// hammered. Mount after `requireAuth`.
+export const nativePushTestLimiter = buildLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  keyFn: (req) => {
+    const id = (req as Request & { userId?: number }).userId;
+    return typeof id === "number" ? `user-${id}` : clientIp(req);
+  },
+  message:
+    "Terlalu banyak tes notifikasi. Coba lagi sebentar lagi. / Too many test notifications. Try again in a bit.",
+});
+
 // Store-readiness (P2-B3): per-user limiter for native-push device
 // register/unregister. A device re-registers on every app foreground in
 // some client implementations, so the cap is generous — this only exists

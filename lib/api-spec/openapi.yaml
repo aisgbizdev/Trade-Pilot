@@ -2018,6 +2018,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /native-push/test:
+    post:
+      operationId: sendNativePushTest
+      tags: [native-push]
+      summary: Send a sample FCM push to the caller's own registered mobile devices
+      description: |
+        Native-channel equivalent of POST /push/test. Sends one sample
+        notification through the exact `sendNativePushToUser` code path
+        production uses, so a passing result is real proof the FCM HTTP v1
+        wiring works. Authenticated + per-user rate limited. Does not accept
+        a device token or a URL from the request body.
+      responses:
+        "200":
+          description: Test push dispatched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushTestResult"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Caller has no registered mobile devices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /native-push/unregister:
     delete:
       operationId: unregisterNativePushDevice

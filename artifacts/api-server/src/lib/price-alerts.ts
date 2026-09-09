@@ -386,6 +386,8 @@ async function firePushForAlert(
       title,
       message: body,
       type: level === "sl" ? "warning" : "info",
+      actionType: "open_analysis",
+      actionId: String(row.analysisId),
     },
     { title, body, url, tag },
   );

@@ -863,11 +863,19 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const completeMessage = `Analisis ${instrument} (${timeframe}, ${typedMode === "beginner" ? "Pemula" : "Pro"}) telah selesai diproses.`;
   await createNotification(
     req.userId!,
-    { title: completeTitle, message: completeMessage, type: "info" },
+    {
+      title: completeTitle,
+      message: completeMessage,
+      type: "info",
+      // Tapping the notification (in-app or native push) opens this exact
+      // analysis; the client ownership-checks the id before navigating.
+      actionType: "open_analysis",
+      actionId: String(analysis.id),
+    },
     {
       title: "Analisis Selesai ✅",
       body: `${instrument} (${timeframe}) — buka TradePilot untuk lihat hasilnya.`,
-      url: "/",
+      url: `/analyses/${analysis.id}`,
       tag: `analysis-${analysis.id}`,
     },
   );

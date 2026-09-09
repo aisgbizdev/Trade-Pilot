@@ -14,7 +14,7 @@
 // NOT committed to this repo.
 import { GoogleAuth } from "google-auth-library";
 import { db } from "./db";
-import { nativePushDevices } from "@workspace/db/schema";
+import { nativePushDevices, users } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
@@ -123,6 +123,17 @@ export async function sendNativePushToUser(
   payload: NativePushPayload,
 ): Promise<void> {
   if (!nativePushConfigured) return;
+
+  // `nativePushEnabled` is the per-user master switch for the whole FCM
+  // channel (set via PATCH /push/prefs). When it's off we suppress the OS
+  // push entirely — the in-app notification row is still created by the
+  // caller (createNotification), so nothing is lost, just no pop-up.
+  const [row] = await db
+    .select({ nativePushEnabled: users.nativePushEnabled })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!row?.nativePushEnabled) return;
 
   const devices = await db
     .select()

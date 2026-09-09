@@ -176,11 +176,13 @@ export async function maybeDispatchSignalFlip(input: {
         type: "info",
         category: CATEGORY,
         dedupeKey,
+        actionType: "open_analysis",
+        actionId: String(input.newAnalysisId),
       },
       {
         title,
         body,
-        url: `/analysis/${input.newAnalysisId}`,
+        url: `/analyses/${input.newAnalysisId}`,
         tag: `signal-flip-${input.instrument}-${input.timeframe}`,
       },
     );

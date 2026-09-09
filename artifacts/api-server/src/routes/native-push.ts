@@ -4,11 +4,15 @@
 // `lib/native-push.ts` for the actual FCM send implementation.
 import { Router } from "express";
 import { z } from "zod";
+import { eq, and, sql } from "drizzle-orm";
 import { db } from "../lib/db";
 import { nativePushDevices } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
-import { nativePushRegisterLimiter } from "../middleware/rate-limit";
+import {
+  nativePushRegisterLimiter,
+  nativePushTestLimiter,
+} from "../middleware/rate-limit";
+import { sendNativePushToUser } from "../lib/native-push";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -97,5 +101,45 @@ router.delete("/native-push/unregister", requireAuth, async (req: AuthRequest, r
 
   res.json({ message: "Perangkat berhasil dihapus" });
 });
+
+// Send a sample FCM push to the caller's own enabled devices. Mirrors
+// POST /push/test (which only covers Web Push) but for the native channel:
+// authenticated, per-user rate-limited, and it goes through the exact same
+// `sendNativePushToUser` code path production uses — so a passing test is
+// real proof the FCM HTTP v1 wiring works. It deliberately does NOT accept
+// a token or a URL from the request body.
+router.post(
+  "/native-push/test",
+  requireAuth,
+  nativePushTestLimiter,
+  async (req: AuthRequest, res) => {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(nativePushDevices)
+      .where(
+        and(
+          eq(nativePushDevices.userId, req.userId!),
+          eq(nativePushDevices.enabled, true),
+        ),
+      );
+
+    if (!count || count === 0) {
+      res.status(404).json({
+        error:
+          "Belum ada perangkat mobile yang terdaftar. / No registered mobile devices yet.",
+      });
+      return;
+    }
+
+    await sendNativePushToUser(req.userId!, {
+      title: "TradePilot.id",
+      body: "Notifikasi mobile kamu sudah aktif. / Mobile notifications are working.",
+      actionType: "open_notification",
+    });
+
+    logger.info({ userId: req.userId, devices: count }, "Native push test sent");
+    res.json({ delivered: count });
+  },
+);
 
 export default router;
