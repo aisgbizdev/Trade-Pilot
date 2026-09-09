@@ -2,7 +2,7 @@
 
 **Balasan untuk:** `BACKEND_HANDOFF_M5_NATIVE_GOOGLE_SIGN_IN.md` (tim mobile)
 **Produk:** TradePilot Mobile 1.0.2
-**Status backend:** ✅ Kode selesai & lolos test — ⏳ menunggu OAuth client Android/iOS + config deployment
+**Status backend:** ✅ Kode selesai & lolos test · ✅ OAuth client Android/iOS dibuat · ⏳ SHA-1 asli + verifikasi end-to-end
 **Branch:** `prodd-v2` · commit `2ef4931`
 **Tanggal:** 9 September 2026
 
@@ -14,13 +14,27 @@ Semua endpoint native yang diminta di handoff sudah **diimplementasikan,
 di-test lawan database asli (41 test auth lolos), dan didokumentasikan di
 OpenAPI**. Flow web (`GET /auth/google` + `/callback`) **tidak diubah**.
 
-Yang belum: **OAuth client Android & iOS** harus dibuat di Google Cloud
-Console, dan `GOOGLE_NATIVE_ALLOWED_CLIENT_IDS` di-set di deployment.
-Sebelum itu, `POST /auth/google/native` dan `POST /auth/reauth/google`
-mengembalikan **`503`** (endpoint lain tidak terpengaruh).
+**OAuth client Android & iOS sudah dibuat** di project Google Cloud
+`trade-pilot-508001`. Backend allowlist (`GOOGLE_NATIVE_ALLOWED_CLIENT_IDS`)
+berisi Android + iOS + web client id.
+
+Sisa dari sisi backend/DevOps: pasang **SHA-1 asli** di Android OAuth client
+(butuh fingerprint dari kalian — lihat §3), redeploy, jalankan migrasi DB
+prod (`reauth_tokens`), lalu verifikasi end-to-end di device.
 
 Kirim `lib/api-spec/openapi.yaml` terbaru ke tim mobile untuk regenerate
 Dart client.
+
+### OAuth client ids (publik — aman ditaruh di app)
+
+| Platform | Client ID |
+|---|---|
+| **Android** | `929958103345-pbkqoipkvjinth022lvt50822flokdmf.apps.googleusercontent.com` |
+| **iOS** | `929958103345-cieflfi7p13t6dnhqt8j0qfif9iia57g.apps.googleusercontent.com` |
+| **iOS — reversed** (URL scheme di Info.plist) | `com.googleusercontent.apps.929958103345-cieflfi7p13t6dnhqt8j0qfif9iia57g` |
+| Web / server (`serverClientId` di `google_sign_in`) | `929958103345-cbf424vgelrer7nkrr81l4iptsikuc1u.apps.googleusercontent.com` |
+
+Package name Android: `id.tradepilot.app` · Bundle ID iOS: `id.tradepilot.app`
 
 ---
 
@@ -161,42 +175,34 @@ Path password **tidak berubah** dari sebelumnya.
 
 ---
 
-## 3. Yang backend BUTUHKAN dari tim mobile
+## 3. Yang backend MASIH BUTUHKAN dari tim mobile
 
-Untuk membuat OAuth client Android & iOS di Google Cloud Console (project
-`trade-pilot-508001`), backend/DevOps butuh dari kalian:
+OAuth client Android & iOS **sudah dibuat**. Yang belum:
 
 | # | Dibutuhkan | Untuk |
 |---|---|---|
-| 1 | **SHA-1 & SHA-256** signing certificate fingerprint — **debug**, **release/upload key**, dan **Play App Signing key** (dari Play Console) | Android OAuth client (package `id.tradepilot.app`) |
-| 2 | Konfirmasi **bundle ID** iOS = `id.tradepilot.app` (atau kirim yang benar) | iOS OAuth client |
-| 3 | Konfirmasi apakah kalian pakai **`serverClientId`** di `google_sign_in` (biasanya = web client id `929958103345-…`). Kalau pakai client id lain, kirim | Menentukan `aud` yang harus di-allowlist |
-| 4 | Konfirmasi **package name** Android final = `id.tradepilot.app` | Android OAuth client |
+| 1 | **SHA-1 (dan SHA-256)** signing fingerprint — **debug**, **release/upload key**, dan **Play App Signing key**. Cara ambil: `cd android && ./gradlew signingReport`, atau Play Console → *Test and release → Setup → App signing* | Ditambahkan ke Android OAuth client — tanpa ini sign-in di device gagal (`10:` DEVELOPER_ERROR) |
+| 2 | Konfirmasi kalian pakai **`serverClientId`** di `google_sign_in` = `929958103345-cbf424vgelrer7nkrr81l4iptsikuc1u.apps.googleusercontent.com`. Kalau **tidak** pakai serverClientId, `aud` token = Android/iOS client id — sudah masuk allowlist, jadi tetap aman | Menentukan `aud` token |
+| 3 | Konfirmasi **Team ID** Apple (10 char) — opsional tapi disarankan | Ditambahkan ke iOS OAuth client |
 
-Setelah itu backend/DevOps akan:
-- membuat kedua OAuth client;
-- mengembalikan ke kalian: **client id Android**, **client id iOS**, dan
-  **reversed client id iOS** (untuk URL scheme) — plus file `GoogleService`
-  publik kalau perlu;
-- set `GOOGLE_NATIVE_ALLOWED_CLIENT_IDS=<android>,<ios>,<web>` di deployment;
-- jalankan migrasi DB prod (`reauth_tokens`).
+Team ID iOS bisa ditambahkan belakangan. App Store ID **tidak perlu** (app
+belum publish — biarkan kosong, tambah nanti tanpa rework).
 
-⚠️ Backend **tidak** akan mengirim OAuth **web client secret** — jangan
+⚠️ Backend **tidak** mengirim OAuth **web client secret** — jangan
 memasukkannya ke Flutter/APK/IPA/repo/CI.
 
 ---
 
-## 4. Yang backend kirim ke tim mobile (setelah config selesai)
+## 4. Yang backend kirim ke tim mobile
 
-1. `lib/api-spec/openapi.yaml` terbaru (operation `loginWithGoogleNative`,
-   `reauthenticateWithGoogle`; schema `GoogleNativeLoginBody`,
-   `GoogleReauthBody`, `GoogleReauthResponse`; `User.hasPassword`,
-   `DeleteAccountBody.reauthToken`).
-2. Base URL staging.
-3. Client id **Android** + **iOS** + **reversed client id iOS** (publik).
-4. Test account (email + password) untuk verifikasi flow.
-5. Contoh respons: akun baru, akun existing (link), akun Google-only, dan
-   error (invalid audience, expired, unverified email, `409` conflict, `429`).
+1. **`lib/api-spec/openapi.yaml` terbaru** (branch `prodd-v2`) — operation
+   `loginWithGoogleNative`, `reauthenticateWithGoogle`; schema
+   `GoogleNativeLoginBody`, `GoogleReauthBody`, `GoogleReauthResponse`;
+   `User.hasPassword`, `DeleteAccountBody.reauthToken`.
+2. **Dokumen ini** (`docs/M5_NATIVE_GOOGLE_SIGN_IN_BACKEND_STATUS.md`).
+3. **Client ids** (tabel di §1) — Android, iOS, reversed iOS, web/server.
+4. **Base URL staging** — _(isi setelah deploy)_.
+5. **Test account** (email + password) untuk verifikasi flow linking.
 
 ---
 
@@ -237,12 +243,14 @@ Belum dites di backend (butuh device fisik / setup mobile):
 | Endpoint native + reauth tersedia di kode | Backend | ✅ |
 | OpenAPI memuat seluruh kontrak | Backend | ✅ |
 | `User.hasPassword` konsisten di semua auth response | Backend | ✅ |
-| Backend acceptance test lulus | Backend | ✅ |
-| SHA fingerprints Android + konfirmasi bundle/package | **Mobile** | ⏳ |
-| Android/iOS OAuth client dibuat | Backend/DevOps (butuh #atas) | ⏳ |
-| `GOOGLE_NATIVE_ALLOWED_CLIENT_IDS` di-set di staging + prod | Backend/DevOps | ⏳ |
-| Migrasi DB `reauth_tokens` di prod | Backend/DevOps | ⏳ (lokal ✅) |
-| Test account + client id publik dikirim ke mobile | Backend/DevOps | ⏳ |
+| Backend acceptance test lulus (41 test) | Backend | ✅ |
+| Android + iOS OAuth client dibuat | DevOps | ✅ |
+| `GOOGLE_NATIVE_ALLOWED_CLIENT_IDS` di-set | DevOps | ⏳ |
+| Redeploy staging/prod (endpoint baru + env) | DevOps | ⏳ |
+| Migrasi DB `reauth_tokens` di prod | DevOps | ⏳ (lokal ✅) |
+| **SHA-1 asli ditambahkan ke Android OAuth client** | **Mobile → DevOps** | ⏳ |
+| Client id publik + test account + base URL dikirim ke mobile | DevOps | ⏳ |
+| Verifikasi end-to-end di device (Android + iOS fisik) | Mobile | ⏳ |
 
 Setelah semua ⏳ selesai → tim mobile boleh menambah `google_sign_in`,
 kirim ID token **hanya** ke `/auth/google/native`, simpan **hanya**
