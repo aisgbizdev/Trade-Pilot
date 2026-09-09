@@ -321,6 +321,23 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Short-lived, single-use re-authentication tokens. Issued after a fresh
+// identity proof (e.g. a fresh Google ID token) and consumed by one
+// sensitive operation. `tokenHash` is a SHA-256 of the raw token — the raw
+// value only ever exists in the issuing response and the consuming
+// request. `purpose` binds a token to one operation (e.g. "delete_account").
+export const reauthTokens = pgTable("reauth_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  purpose: text("purpose").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
   userId: integer("user_id")

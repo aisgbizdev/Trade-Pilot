@@ -22,6 +22,8 @@ import {
   forgotPasswordResetLimiter,
   accountDeletionLimiter,
   googleOAuthLimiter,
+  googleNativeLoginLimiter,
+  reauthLimiter,
 } from "../middleware/rate-limit";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
@@ -29,10 +31,41 @@ import {
   buildGoogleAuthUrl,
   exchangeCodeForProfile,
   isGoogleOAuthConfigured,
+  isNativeGoogleConfigured,
   resolvePublicBaseUrl,
+  verifyGoogleIdToken,
 } from "../lib/google-oauth";
+import {
+  resolveGoogleUser,
+  GoogleAccountConflictError,
+} from "../lib/google-account";
+import { issueReauthToken, consumeReauthToken } from "../lib/reauth";
 
 const router = Router();
+
+/**
+ * The public user shape every auth response returns. `hasPassword` lets a
+ * client tell a password account from a Google-only one (e.g. to hide the
+ * "change password" menu, or to pick the right re-auth method).
+ */
+function serializeUser(u: typeof users.$inferSelect) {
+  return {
+    id: u.id,
+    email: u.email,
+    displayName: u.displayName,
+    role: u.role,
+    selectedMode: u.selectedMode,
+    themePreference: u.themePreference,
+    onboardingCompleted: u.onboardingCompleted,
+    avatarUrl: u.avatarUrl,
+    // `hasPassword` lets a client tell a password account from a
+    // Google-only one; `createdAt` was already declared required in the
+    // OpenAPI `User` schema but never actually returned — now it is.
+    hasPassword: u.passwordHash != null,
+    createdAt:
+      u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt,
+  };
+}
 
 const SECURITY_QUESTIONS = [
   "Nama hewan peliharaan pertama kamu?",
@@ -142,19 +175,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
 
   void notifyAdminsUserCreated(user.displayName);
 
-  res.status(201).json({
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      role: user.role,
-      selectedMode: user.selectedMode,
-      themePreference: user.themePreference,
-      onboardingCompleted: user.onboardingCompleted,
-      avatarUrl: user.avatarUrl,
-    },
-  });
+  res.status(201).json({ token, user: serializeUser(user) });
 });
 
 const loginSchema = z.object({
@@ -219,19 +240,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
 
   void notifyLoginAlert(user.id);
 
-  res.json({
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      role: user.role,
-      selectedMode: user.selectedMode,
-      themePreference: user.themePreference,
-      onboardingCompleted: user.onboardingCompleted,
-      avatarUrl: user.avatarUrl,
-    },
-  });
+  res.json({ token, user: serializeUser(user) });
 });
 
 // ---------------------------------------------------------------------------
@@ -311,55 +320,16 @@ router.get("/auth/google/callback", googleOAuthLimiter, async (req, res) => {
   }
 
   // Upsert: match on google_id, then link by verified email, else create.
-  const resolveUser = async (): Promise<{
-    user: typeof users.$inferSelect;
-    isNewUser: boolean;
-  }> => {
-    const [byGoogleId] = await db
-      .select()
-      .from(users)
-      .where(eq(users.googleId, profile.googleId))
-      .limit(1);
-    if (byGoogleId) return { user: byGoogleId, isNewUser: false };
-
-    const [byEmail] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, profile.email))
-      .limit(1);
-    if (byEmail) {
-      const [linked] = await db
-        .update(users)
-        .set({ googleId: profile.googleId, updatedAt: new Date() })
-        .where(eq(users.id, byEmail.id))
-        .returning();
-      return { user: linked, isNewUser: false };
-    }
-
-    const displayName =
-      profile.name?.trim().slice(0, 80) || profile.email.split("@")[0];
-    const [created] = await db
-      .insert(users)
-      .values({
-        email: profile.email,
-        googleId: profile.googleId,
-        displayName,
-        selectedMode: "pro",
-      })
-      .returning();
-    return { user: created, isNewUser: true };
-  };
-
+  // Shared with POST /auth/google/native — see lib/google-account.ts.
   let user: typeof users.$inferSelect;
   let isNewUser: boolean;
   try {
-    ({ user, isNewUser } = await resolveUser());
+    ({ user, isNewUser } = await resolveGoogleUser(profile));
   } catch (err) {
-    // Most likely cause in a fresh setup: the `google_id` column / schema
-    // migration hasn't been applied yet. Redirect instead of dumping a
-    // stack trace to the user.
     logger.error({ err }, "[auth] Google user upsert failed");
-    fail("upsert_failed");
+    fail(
+      err instanceof GoogleAccountConflictError ? "account_conflict" : "upsert_failed",
+    );
     return;
   }
 
@@ -389,6 +359,140 @@ router.get("/auth/google/callback", googleOAuthLimiter, async (req, res) => {
   res.redirect("/dashboard");
 });
 
+// ---------------------------------------------------------------------------
+// Native Google Sign-In (mobile). The Flutter app obtains a Google ID token
+// with the native Google SDK and posts it here; the server verifies it and
+// issues a normal TradePilot session (Bearer token, no cookie needed).
+// Config: GOOGLE_NATIVE_ALLOWED_CLIENT_IDS (see lib/google-oauth.ts).
+// ---------------------------------------------------------------------------
+
+const googleNativeSchema = z
+  .object({ idToken: z.string().min(1, "idToken wajib diisi") })
+  .strict();
+
+router.post(
+  "/auth/google/native",
+  googleNativeLoginLimiter,
+  async (req, res) => {
+    if (!isNativeGoogleConfigured()) {
+      res.status(503).json({ error: "Login Google native belum dikonfigurasi." });
+      return;
+    }
+    const parsed = googleNativeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Permintaan tidak valid." });
+      return;
+    }
+
+    let profile;
+    try {
+      profile = await verifyGoogleIdToken(parsed.data.idToken);
+    } catch (err) {
+      // Never log the raw token — `err` from google-auth-library does not
+      // contain it, but keep the log minimal regardless.
+      logger.warn(
+        { reason: err instanceof Error ? err.message : "verify_failed" },
+        "[auth] Google native id_token verification failed",
+      );
+      res.status(401).json({
+        error: "Login Google tidak dapat diverifikasi. Silakan coba lagi.",
+      });
+      return;
+    }
+
+    let user: typeof users.$inferSelect;
+    let isNewUser: boolean;
+    try {
+      ({ user, isNewUser } = await resolveGoogleUser(profile));
+    } catch (err) {
+      if (err instanceof GoogleAccountConflictError) {
+        res.status(409).json({
+          error: "Email ini sudah tertaut ke akun Google lain.",
+        });
+        return;
+      }
+      logger.error({ err }, "[auth] Google native user upsert failed");
+      res.status(500).json({ error: "Terjadi kesalahan. Silakan coba lagi." });
+      return;
+    }
+
+    const token = generateToken();
+    const expiresAt = getSessionExpiry(true);
+    await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+
+    if (isNewUser) void notifyAdminsUserCreated(user.displayName);
+    void notifyLoginAlert(user.id);
+
+    res.json({ token, user: serializeUser(user) });
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Re-authentication for sensitive operations. A Google-only account proves
+// identity with a FRESH Google ID token and gets a short-lived, single-use
+// reauthToken that one sensitive endpoint (currently DELETE /auth/account)
+// will accept.
+// ---------------------------------------------------------------------------
+
+const googleReauthSchema = z
+  .object({ idToken: z.string().min(1, "idToken wajib diisi") })
+  .strict();
+
+router.post(
+  "/auth/reauth/google",
+  requireAuth,
+  reauthLimiter,
+  async (req: AuthRequest, res) => {
+    if (!isNativeGoogleConfigured()) {
+      res.status(503).json({ error: "Verifikasi Google belum dikonfigurasi." });
+      return;
+    }
+    const parsed = googleReauthSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Permintaan tidak valid." });
+      return;
+    }
+
+    const [user] = await db
+      .select({ id: users.id, email: users.email, googleId: users.googleId })
+      .from(users)
+      .where(eq(users.id, req.userId!))
+      .limit(1);
+    if (!user) {
+      res.status(404).json({ error: "User tidak ditemukan" });
+      return;
+    }
+
+    let profile;
+    try {
+      profile = await verifyGoogleIdToken(parsed.data.idToken);
+    } catch {
+      res.status(401).json({
+        error: "Verifikasi Google gagal. Silakan coba lagi.",
+      });
+      return;
+    }
+
+    // The fresh token must belong to the SAME Google identity / email as
+    // the signed-in account.
+    const sameIdentity =
+      (user.googleId != null && user.googleId === profile.googleId) ||
+      user.email.toLowerCase() === profile.email;
+    if (!sameIdentity) {
+      res.status(401).json({
+        error: "Akun Google tidak cocok dengan akun yang sedang masuk.",
+      });
+      return;
+    }
+
+    const { token, expiresAt } = await issueReauthToken(
+      user.id,
+      "delete_account",
+    );
+    res.json({ reauthToken: token, expiresAt: expiresAt.toISOString() });
+  },
+);
+
 router.post("/auth/logout", requireAuth, async (req: AuthRequest, res) => {
   const token = req.sessionToken;
   if (token) {
@@ -410,16 +514,7 @@ router.get("/auth/me", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
 
-  res.json({
-    id: user.id,
-    email: user.email,
-    displayName: user.displayName,
-    role: user.role,
-    selectedMode: user.selectedMode,
-    themePreference: user.themePreference,
-    onboardingCompleted: user.onboardingCompleted,
-    avatarUrl: user.avatarUrl,
-  });
+  res.json(serializeUser(user));
 });
 
 const profileUpdateSchema = z
@@ -487,16 +582,7 @@ router.patch("/auth/profile", requireAuth, async (req: AuthRequest, res) => {
     .where(eq(users.id, req.userId!))
     .returning();
 
-  res.json({
-    id: updated.id,
-    email: updated.email,
-    displayName: updated.displayName,
-    role: updated.role,
-    selectedMode: updated.selectedMode,
-    themePreference: updated.themePreference,
-    onboardingCompleted: updated.onboardingCompleted,
-    avatarUrl: updated.avatarUrl,
-  });
+  res.json(serializeUser(updated));
 });
 
 const changePasswordSchema = z
@@ -843,11 +929,16 @@ router.post("/auth/forgot-password/reset", forgotPasswordResetLimiter, async (re
 // new domain.
 const deleteAccountSchema = z
   .object({
-    // Optional: Google-OAuth accounts have no password. Password accounts
-    // still require it (enforced below once we know which kind this is).
+    // Which one is required depends on the account (enforced below):
+    //  - password account  -> currentPassword
+    //  - Google-only account -> reauthToken from POST /auth/reauth/google
     currentPassword: z
       .string({ invalid_type_error: "Password tidak valid" })
       .min(1, "Password wajib diisi")
+      .optional(),
+    reauthToken: z
+      .string({ invalid_type_error: "Token tidak valid" })
+      .min(1)
       .optional(),
   })
   .strict();
@@ -879,9 +970,11 @@ router.delete(
       return;
     }
 
-    // Password accounts must re-enter their password. Google-OAuth
-    // accounts (no passwordHash) are already proven by the session cookie
-    // that `requireAuth` validated — there's no second factor to check.
+    // Re-authentication proof. A live session alone is not enough to
+    // delete an account.
+    //  - password account   -> the current password
+    //  - Google-only account -> a single-use reauthToken issued by
+    //    POST /auth/reauth/google after a fresh Google ID token
     if (user.passwordHash) {
       if (!parsed.data.currentPassword) {
         res.status(400).json({ error: "Password wajib diisi" });
@@ -893,6 +986,24 @@ router.delete(
       );
       if (!valid) {
         res.status(401).json({ error: "Password salah" });
+        return;
+      }
+    } else {
+      if (!parsed.data.reauthToken) {
+        res.status(400).json({
+          error: "Verifikasi ulang diperlukan untuk menghapus akun Google.",
+        });
+        return;
+      }
+      const ok = await consumeReauthToken(
+        user.id,
+        "delete_account",
+        parsed.data.reauthToken,
+      );
+      if (!ok) {
+        res.status(401).json({
+          error: "Verifikasi ulang tidak valid atau sudah kedaluwarsa.",
+        });
         return;
       }
     }

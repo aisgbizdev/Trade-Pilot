@@ -117,6 +117,28 @@ export const googleOAuthLimiter = buildLimiter({
     "Terlalu banyak percobaan login Google. Coba lagi dalam beberapa menit. / Too many Google login attempts. Try again in a few minutes.",
 });
 
+// POST /auth/google/native — per-IP; the caller isn't authenticated yet.
+export const googleNativeLoginLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak percobaan login Google. Coba lagi dalam beberapa menit. / Too many Google login attempts. Try again in a few minutes.",
+});
+
+// POST /auth/reauth/google — per-user (mounted after requireAuth). Tighter
+// budget: a legit re-auth happens once right before a sensitive action.
+export const reauthLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyFn: (req) => {
+    const id = (req as Request & { userId?: number }).userId;
+    return typeof id === "number" ? `user-${id}` : clientIp(req);
+  },
+  message:
+    "Terlalu banyak percobaan verifikasi ulang. Coba lagi nanti. / Too many re-authentication attempts. Try again later.",
+});
+
 // /auth/forgot-password/reset is already gated by a 64-char crypto-random token,
 // but a per-IP limiter is consistent with the rest of the reset flow and stops
 // trivial flooding of the bcrypt path on the success branch.

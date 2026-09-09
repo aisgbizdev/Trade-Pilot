@@ -99,6 +99,13 @@ GOOGLE_CLIENT_ID = "929958103345-cbf424vgelrer7nkrr81l4iptsikuc1u.apps.googleuse
 # redirect URI (<PUBLIC_BASE_URL>/api/auth/google/callback). Prod value —
 # local dev overrides this to http://localhost:5173 via .env.
 PUBLIC_BASE_URL = "https://tradepilot.id"
+# Native Google Sign-In (mobile). Comma-separated allowlist of OAuth client
+# ids accepted as the `aud` of a native-app Google ID token: the Android
+# client id, the iOS client id, and (optionally) the web/server client id.
+# Client ids are NOT secret. Until this is set, POST /auth/google/native and
+# POST /auth/reauth/google return 503. Create the Android/iOS clients in the
+# Google Cloud console (package/bundle id.tradepilot.app + SHA fingerprints).
+GOOGLE_NATIVE_ALLOWED_CLIENT_IDS = ""
 
 [nix]
 channel = "stable-25_05"

@@ -83,20 +83,27 @@ setAuthTokenGetter(() => tokenFromSecureStorage);   // called before every reque
 When the getter returns a non-null string it becomes `Authorization: Bearer …`.
 See `artifacts/mobile/context/AuthContext.tsx` for the working pattern.
 
-### Google Sign-In on mobile — not supported yet
+### Google Sign-In on mobile
 
-`GET /api/auth/google` is a **server-side browser-redirect** flow built for the
-web (it 302s to Google and sets a cookie on the callback). It is **not usable
-from a native app as-is**. To add native Google sign-in you would need:
+`GET /api/auth/google` is the web browser-redirect flow (cookie-based) — **not**
+for native apps. Native apps use:
 
-- Native Google Identity Services / AppAuth to obtain a Google **ID token** on
-  the device, and
-- a new backend endpoint (e.g. `POST /api/auth/google/native`) that verifies
-  the ID token and returns `{ user, token }` — same upsert logic as the web
-  callback (`match google_id → link by verified email → create`).
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/auth/google/native` | — | `{ idToken }` (Google ID token from the device SDK) → `{ user, token }` — same `AuthResponse` as password login. Verifies signature/issuer/audience/expiry/`email_verified` server-side. `409` if the email is linked to a different Google account. `503` until `GOOGLE_NATIVE_ALLOWED_CLIENT_IDS` is configured |
+| POST | `/auth/reauth/google` | ✅ | `{ idToken }` (a **fresh** token) → `{ reauthToken, expiresAt }` — a ≤5-min, single-use token for one sensitive op. Google identity must match the signed-in account |
 
-This endpoint is **not built**. Until then, mobile users register/login with
-email + password.
+**Client rules:** send the Google ID token **only** to `/auth/google/native`;
+store **only** the returned TradePilot `token` in secure storage; never store or
+send the Google token anywhere else; never put the OAuth **client secret** in
+the app.
+
+**Account deletion** (`DELETE /auth/account`) requires a re-auth proof:
+- `user.hasPassword === true` → `{ currentPassword }`
+- Google-only account → `{ reauthToken }` from `/auth/reauth/google`
+
+Config the backend needs: `GOOGLE_NATIVE_ALLOWED_CLIENT_IDS` = the Android + iOS
+(+ web) OAuth client ids. Client ids are not secret.
 
 ---
 
@@ -341,7 +348,8 @@ pnpm --filter @workspace/api-spec run codegen      # react-query + zod
 
 | Added | What |
 |---|---|
-| Google Sign-In | `GET /api/auth/google`, `/auth/google/callback` (web redirect flow). `User.password_hash` etc. now nullable server-side; `/auth/me` shape unchanged |
+| Google Sign-In (web) | `GET /api/auth/google`, `/auth/google/callback` (web redirect flow) |
+| Google Sign-In (native) | `POST /auth/google/native`, `POST /auth/reauth/google`; `User.hasPassword` + `User.createdAt` on every auth response; `DELETE /auth/account` takes `reauthToken` for Google-only accounts |
 | Credit top-ups | `/topups/*` — manual QRIS top-up; `/analyses/quota` now includes `credits.balance`; `POST /analyses` returns `creditConsumed` |
 | Guardrails | `/analyses/guardrails*` — pre-trade behavioural warnings |
 | Trader mirror | `/mirror/insights` |
@@ -365,4 +373,6 @@ pnpm --filter @workspace/api-spec run codegen      # react-query + zod
 - [ ] Register the FCM device token via `/native-push/register` and unregister
       on logout
 - [ ] Handle `!user.onboardingCompleted` → onboarding screen
-- [ ] Email + password only for now (no native Google sign-in endpoint yet)
+- [ ] Google Sign-In: `POST /auth/google/native` with the device ID token; hide
+      the password menu when `user.hasPassword === false`; re-auth via
+      `/auth/reauth/google` before deleting a Google-only account

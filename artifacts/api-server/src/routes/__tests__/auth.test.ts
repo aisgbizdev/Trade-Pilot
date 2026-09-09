@@ -6,24 +6,40 @@ import { eq, inArray, like } from "drizzle-orm";
 
 import app from "../../app";
 import { db } from "../../lib/db";
-import { users, sessions, passwordResetTokens } from "@workspace/db/schema";
+import {
+  users,
+  sessions,
+  passwordResetTokens,
+  reauthTokens,
+} from "@workspace/db/schema";
 import {
   loginLimiter,
   registerLimiter,
   forgotPasswordResetLimiter,
   googleOAuthLimiter,
+  googleNativeLoginLimiter,
+  reauthLimiter,
+  accountDeletionLimiter,
 } from "../../middleware/rate-limit";
 import { getConfiguredReplitOrigins } from "../../app";
-import { exchangeCodeForProfile } from "../../lib/google-oauth";
+import {
+  exchangeCodeForProfile,
+  verifyGoogleIdToken,
+} from "../../lib/google-oauth";
 
-// Keep the real config/url helpers, stub only the network-touching
-// code-exchange so the callback tests can drive any Google profile.
+// Keep the real config/url helpers, stub only the network-touching Google
+// token calls so the tests can drive any Google profile.
 vi.mock("../../lib/google-oauth", async (importActual) => {
   const actual =
     await importActual<typeof import("../../lib/google-oauth")>();
-  return { ...actual, exchangeCodeForProfile: vi.fn() };
+  return {
+    ...actual,
+    exchangeCodeForProfile: vi.fn(),
+    verifyGoogleIdToken: vi.fn(),
+  };
 });
 const mockExchange = vi.mocked(exchangeCodeForProfile);
+const mockVerifyIdToken = vi.mocked(verifyGoogleIdToken);
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `auth-harden-${RUN_ID}`;
@@ -90,6 +106,9 @@ beforeEach(() => {
   registerLimiter.store.clear();
   forgotPasswordResetLimiter.store.clear();
   googleOAuthLimiter.store.clear();
+  googleNativeLoginLimiter.store.clear();
+  reauthLimiter.store.clear();
+  accountDeletionLimiter.store.clear();
 });
 
 describe("configured Replit CORS origins", () => {
@@ -424,6 +443,7 @@ describe("Google OAuth login/registration", () => {
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
     "PUBLIC_BASE_URL",
+    "GOOGLE_NATIVE_ALLOWED_CLIENT_IDS",
   ] as const;
   const savedEnv: Record<string, string | undefined> = {};
 
@@ -432,6 +452,8 @@ describe("Google OAuth login/registration", () => {
     process.env["GOOGLE_CLIENT_ID"] = "test-client-id.apps.googleusercontent.com";
     process.env["GOOGLE_CLIENT_SECRET"] = "test-client-secret";
     process.env["PUBLIC_BASE_URL"] = "http://localhost:5173";
+    process.env["GOOGLE_NATIVE_ALLOWED_CLIENT_IDS"] =
+      "android.apps.googleusercontent.com,ios.apps.googleusercontent.com";
   });
 
   afterAll(() => {
@@ -444,6 +466,7 @@ describe("Google OAuth login/registration", () => {
 
   beforeEach(() => {
     mockExchange.mockReset();
+    mockVerifyIdToken.mockReset();
   });
 
   function googleEmail(tag: string): string {
@@ -590,5 +613,283 @@ describe("Google OAuth login/registration", () => {
       .send({ email, password: "whatever123" });
     expect(res.status).toBe(401);
     expect(String(res.body.error)).toContain("Google");
+  });
+
+  // ---- Native Google Sign-In -------------------------------------------
+
+  function googleProfile(over: Partial<{ googleId: string; email: string }> = {}) {
+    return {
+      googleId: over.googleId ?? `g-${randomBytes(8).toString("hex")}`,
+      email: over.email ?? googleEmail("native"),
+      emailVerified: true as const,
+      name: "Native User",
+      picture: null,
+    };
+  }
+
+  it("POST /auth/google/native returns 503 when no native client ids are configured", async () => {
+    const saved = process.env["GOOGLE_NATIVE_ALLOWED_CLIENT_IDS"];
+    const savedWeb = process.env["GOOGLE_CLIENT_ID"];
+    delete process.env["GOOGLE_NATIVE_ALLOWED_CLIENT_IDS"];
+    delete process.env["GOOGLE_CLIENT_ID"];
+    try {
+      const res = await request(app)
+        .post("/api/auth/google/native")
+        .send({ idToken: "x" });
+      expect(res.status).toBe(503);
+    } finally {
+      process.env["GOOGLE_NATIVE_ALLOWED_CLIENT_IDS"] = saved;
+      process.env["GOOGLE_CLIENT_ID"] = savedWeb;
+    }
+  });
+
+  it("POST /auth/google/native: valid ID token creates a new account and returns {user, token}", async () => {
+    const profile = googleProfile();
+    mockVerifyIdToken.mockResolvedValue(profile);
+
+    const res = await request(app)
+      .post("/api/auth/google/native")
+      .send({ idToken: "valid-token" });
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.token).toBe("string");
+    expect(res.body.user.email).toBe(profile.email);
+    expect(res.body.user.hasPassword).toBe(false);
+    expect(typeof res.body.user.createdAt).toBe("string");
+    // The token must be a real TradePilot session, not the Google token.
+    expect(res.body.token).not.toBe("valid-token");
+
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, profile.email))
+      .limit(1);
+    seededIds.push(row.id);
+    expect(row.googleId).toBe(profile.googleId);
+    expect(row.passwordHash).toBeNull();
+
+    const sess = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.token, res.body.token));
+    expect(sess.length).toBe(1);
+  });
+
+  it("POST /auth/google/native: same google_id on a later call reuses the same account", async () => {
+    const profile = googleProfile();
+    mockVerifyIdToken.mockResolvedValue(profile);
+
+    const first = await request(app)
+      .post("/api/auth/google/native")
+      .send({ idToken: "t1" });
+    const second = await request(app)
+      .post("/api/auth/google/native")
+      .send({ idToken: "t2" });
+
+    expect(first.body.user.id).toBe(second.body.user.id);
+    seededIds.push(first.body.user.id);
+    const rows = await db
+      .select({ c: users.id })
+      .from(users)
+      .where(eq(users.email, profile.email));
+    expect(rows.length).toBe(1);
+  });
+
+  it("POST /auth/google/native: links a verified email onto an existing password account", async () => {
+    const existing = await createUser();
+    mockVerifyIdToken.mockResolvedValue(
+      googleProfile({ email: existing.email }),
+    );
+
+    const res = await request(app)
+      .post("/api/auth/google/native")
+      .send({ idToken: "link-token" });
+    expect(res.status).toBe(200);
+    expect(res.body.user.id).toBe(existing.id);
+    expect(res.body.user.hasPassword).toBe(true);
+
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, existing.id))
+      .limit(1);
+    expect(row.googleId).not.toBeNull();
+    expect(row.passwordHash).not.toBeNull();
+  });
+
+  it("POST /auth/google/native: a verified email already linked to a different google_id -> 409", async () => {
+    const email = googleEmail("conflict");
+    const [row] = await db
+      .insert(users)
+      .values({
+        email,
+        googleId: `g-original-${randomBytes(6).toString("hex")}`,
+        displayName: "Owned",
+        selectedMode: "pro",
+      })
+      .returning();
+    seededIds.push(row.id);
+
+    mockVerifyIdToken.mockResolvedValue(
+      googleProfile({ email, googleId: `g-attacker-${randomBytes(6).toString("hex")}` }),
+    );
+    const res = await request(app)
+      .post("/api/auth/google/native")
+      .send({ idToken: "attacker-token" });
+    expect(res.status).toBe(409);
+  });
+
+  it("POST /auth/google/native: a token that fails verification -> 401 (and never logs the token)", async () => {
+    mockVerifyIdToken.mockRejectedValue(new Error("Wrong recipient"));
+    const res = await request(app)
+      .post("/api/auth/google/native")
+      .send({ idToken: "bad-audience-token" });
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/google/native: unknown body fields -> 400", async () => {
+    const res = await request(app)
+      .post("/api/auth/google/native")
+      .send({ idToken: "x", email: "spoof@example.test" });
+    expect(res.status).toBe(400);
+  });
+
+  // ---- Re-authentication + Google-only account deletion ---------------
+
+  async function googleOnlyUser(): Promise<{ id: number; email: string; token: string; googleId: string }> {
+    const email = googleEmail("google-only");
+    const googleId = `g-${randomBytes(10).toString("hex")}`;
+    const [row] = await db
+      .insert(users)
+      .values({ email, googleId, displayName: "GO User", selectedMode: "pro" })
+      .returning();
+    const token = `native-sess-${randomBytes(10).toString("hex")}`;
+    await db.insert(sessions).values({
+      userId: row.id,
+      token,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+    seededIds.push(row.id);
+    return { id: row.id, email, token, googleId };
+  }
+
+  it("POST /auth/reauth/google: a fresh matching ID token returns a short-lived reauthToken", async () => {
+    const u = await googleOnlyUser();
+    mockVerifyIdToken.mockResolvedValue(
+      googleProfile({ email: u.email, googleId: u.googleId }),
+    );
+
+    const res = await request(app)
+      .post("/api/auth/reauth/google")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ idToken: "fresh-token" });
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.reauthToken).toBe("string");
+    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(new Date(res.body.expiresAt).getTime()).toBeLessThan(
+      Date.now() + 6 * 60 * 1000,
+    );
+
+    const stored = await db
+      .select()
+      .from(reauthTokens)
+      .where(eq(reauthTokens.userId, u.id));
+    expect(stored.length).toBe(1);
+    // never stored in the clear
+    expect(stored[0]!.tokenHash).not.toBe(res.body.reauthToken);
+    expect(stored[0]!.purpose).toBe("delete_account");
+  });
+
+  it("POST /auth/reauth/google: a token for a different Google identity -> 401", async () => {
+    const u = await googleOnlyUser();
+    mockVerifyIdToken.mockResolvedValue(
+      googleProfile({ email: `someone-else-${randomBytes(4).toString("hex")}@example.test` }),
+    );
+    const res = await request(app)
+      .post("/api/auth/reauth/google")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ idToken: "mismatched-token" });
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/reauth/google: requires auth", async () => {
+    const res = await request(app)
+      .post("/api/auth/reauth/google")
+      .send({ idToken: "x" });
+    expect(res.status).toBe(401);
+  });
+
+  it("DELETE /auth/account: a Google-only account cannot be deleted without a fresh reauth", async () => {
+    const u = await googleOnlyUser();
+    const res = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({});
+    expect(res.status).toBe(400);
+
+    const stillThere = await db.select().from(users).where(eq(users.id, u.id));
+    expect(stillThere.length).toBe(1);
+  });
+
+  it("DELETE /auth/account: an invalid/expired/used reauthToken -> 401", async () => {
+    const u = await googleOnlyUser();
+    const res = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ reauthToken: "not-a-real-token" });
+    expect(res.status).toBe(401);
+  });
+
+  it("DELETE /auth/account: succeeds with a valid single-use reauthToken (and the token can't be reused)", async () => {
+    const u = await googleOnlyUser();
+    mockVerifyIdToken.mockResolvedValue(
+      googleProfile({ email: u.email, googleId: u.googleId }),
+    );
+    const reauth = await request(app)
+      .post("/api/auth/reauth/google")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ idToken: "fresh" });
+    const reauthToken = reauth.body.reauthToken as string;
+
+    const del = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ reauthToken });
+    expect(del.status).toBe(200);
+
+    const gone = await db.select().from(users).where(eq(users.id, u.id));
+    expect(gone.length).toBe(0);
+    // token is single-use (and the cascade deleted it with the user anyway)
+    const leftover = await db
+      .select()
+      .from(reauthTokens)
+      .where(eq(reauthTokens.userId, u.id));
+    expect(leftover.length).toBe(0);
+  });
+
+  it("DELETE /auth/account: a password account still deletes with the right password (unchanged)", async () => {
+    const u = await createUser();
+    const res = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ currentPassword: PASSWORD });
+    expect(res.status).toBe(200);
+    const gone = await db.select().from(users).where(eq(users.id, u.id));
+    expect(gone.length).toBe(0);
+  });
+
+  it("GET /auth/me includes hasPassword", async () => {
+    const pwUser = await createUser();
+    const meP = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${pwUser.token}`);
+    expect(meP.body.hasPassword).toBe(true);
+
+    const goUser = await googleOnlyUser();
+    const meG = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${goUser.token}`);
+    expect(meG.body.hasPassword).toBe(false);
   });
 });

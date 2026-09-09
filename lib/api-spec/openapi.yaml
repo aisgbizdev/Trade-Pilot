@@ -409,6 +409,122 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/google/native:
+    post:
+      operationId: loginWithGoogleNative
+      tags: [auth]
+      summary: Exchange a native-app Google ID token for a TradePilot session
+      description: |
+        For mobile apps that obtain a Google **ID token** with the native
+        Google SDK. The server verifies the token (signature, issuer,
+        audience against the configured allowlist, expiry, verified email),
+        upserts the account (match google_id → link by verified email →
+        create), and returns a normal TradePilot Bearer session. No cookie
+        is set or required. The response never contains the Google token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleNativeLoginBody"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Missing/invalid body or unknown fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Token signature/issuer/audience invalid, expired, or email not verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email is already linked to a different Google account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema: { type: integer }
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Native Google Sign-In not configured on this deployment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/reauth/google:
+    post:
+      operationId: reauthenticateWithGoogle
+      tags: [auth]
+      summary: Prove identity with a fresh Google ID token for a sensitive operation
+      description: |
+        A live session alone is not sufficient for sensitive operations on
+        a Google-only account. The client obtains a **fresh** Google ID
+        token and posts it here; on success the server returns a short-lived
+        (≤5 min), single-use `reauthToken` bound to the user and to the
+        `delete_account` purpose. Currently consumed by DELETE /auth/account.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleReauthBody"
+      responses:
+        "200":
+          description: Re-authentication token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleReauthResponse"
+        "400":
+          description: Missing/invalid body or unknown fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated, token invalid, or the Google identity does not match the signed-in account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema: { type: integer }
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Native Google Sign-In not configured on this deployment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /auth/logout:
     post:
       operationId: logout
@@ -3410,10 +3526,14 @@ components:
         themePreference:
           type: string
           enum: [light, dark]
-        securityQuestion:
-          type: string
         onboardingCompleted:
           type: boolean
+        hasPassword:
+          type: boolean
+          description: >-
+            True when the account has a local password usable for login and
+            for re-authentication. False for Google-only accounts (use
+            POST /auth/reauth/google for sensitive operations).
         createdAt:
           type: string
           format: date-time
@@ -3425,6 +3545,7 @@ components:
         - selectedMode
         - themePreference
         - onboardingCompleted
+        - hasPassword
         - createdAt
 
     AuthResponse:
@@ -3602,11 +3723,50 @@ components:
 
     DeleteAccountBody:
       type: object
+      description: >-
+        Exactly one proof is required, matching the account type: a password
+        account sends `currentPassword`; a Google-only account sends a
+        `reauthToken` from POST /auth/reauth/google.
       properties:
         currentPassword:
           type: string
+          description: Required for password accounts (`user.hasPassword = true`).
+        reauthToken:
+          type: string
+          description: Required for Google-only accounts. Single-use, ≤5 min.
+
+    GoogleNativeLoginBody:
+      type: object
+      additionalProperties: false
+      properties:
+        idToken:
+          type: string
+          description: Google ID token from the device's native Google SDK. Never logged.
       required:
-        - currentPassword
+        - idToken
+
+    GoogleReauthBody:
+      type: object
+      additionalProperties: false
+      properties:
+        idToken:
+          type: string
+          description: A FRESH Google ID token for the same account. Never logged.
+      required:
+        - idToken
+
+    GoogleReauthResponse:
+      type: object
+      properties:
+        reauthToken:
+          type: string
+          description: Short-lived, single-use token for one sensitive operation.
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - reauthToken
+        - expiresAt
 
     ChangeSecurityQuestionBody:
       type: object

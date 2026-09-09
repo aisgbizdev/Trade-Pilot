@@ -123,7 +123,7 @@ describe("POST /api/analyses dispatches push on completion", () => {
     expect(calledUserId).toBe(alice.id);
     expect(payload).toMatchObject({
       title: "Analisis Selesai ✅",
-      url: "/",
+      url: `/analyses/${res.body.id}`,
       tag: `analysis-${res.body.id}`,
     });
     expect(payload.body).toContain(instrument);
