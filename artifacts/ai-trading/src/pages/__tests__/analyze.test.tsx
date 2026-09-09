@@ -75,6 +75,34 @@ const PROGRESSION_PAYLOAD = {
   rank: "Seedling",
 };
 
+function restoredAnalysisFixture(
+  id: number,
+  instrument: string,
+  timeframe: string,
+) {
+  return {
+    id,
+    instrument,
+    timeframe,
+    mode: "pro",
+    marketCondition: "trending_up",
+    riskLevel: "medium",
+    tradingBias: "bullish",
+    confidenceMin: 60,
+    confidenceMax: 75,
+    validUntil: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+    createdAt: new Date().toISOString(),
+    baseCase: "Price likely continues higher into resistance.",
+    bullishScenario: "A clean break above resistance extends the move.",
+    bearishScenario: "Losing the swing low flips the bias bearish.",
+    techBuyCount: 12,
+    techSellCount: 4,
+    techNeutralCount: 6,
+    feedback: null,
+    tradePlan: null,
+  };
+}
+
 function pageHandlers(opts: {
   quota?: typeof QUOTA_PAYLOAD | { unlimited: true };
   createResult?: { id: number };
@@ -772,6 +800,117 @@ describe("AnalyzePage: user actions", () => {
         (screen.getByTestId("button-submit-analysis") as HTMLButtonElement)
           .disabled,
       ).toBe(true);
+    });
+  });
+});
+
+describe("AnalyzePage: restoring an inline result", () => {
+  it("hydrates the instrument, chart, price context, and timeframe from a BRENT result", async () => {
+    const analysisId = 7701;
+    window.history.replaceState({}, "", `/analyze?result=${analysisId}`);
+    installFetchMock(
+      [
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method === "GET" && new RegExp(`/api/analyses/${analysisId}(?:\\?|$)`).test(url)) {
+            return jsonResponse(restoredAnalysisFixture(analysisId, "BRENT", "4h"));
+          }
+          return null;
+        },
+        ...pageHandlers({}),
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("embedded-analysis-result")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("button-instrument-BRENT")).toHaveClass("border-primary");
+      expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-instrument", "BRENT");
+      expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-timeframe", "4h");
+    });
+  });
+
+  it("keeps explicit instrument and timeframe URL parameters ahead of the restored record", async () => {
+    const analysisId = 7702;
+    window.history.replaceState(
+      {},
+      "",
+      `/analyze?result=${analysisId}&instrument=HSI&timeframe=1D`,
+    );
+    installFetchMock(
+      [
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method === "GET" && new RegExp(`/api/analyses/${analysisId}(?:\\?|$)`).test(url)) {
+            return jsonResponse(restoredAnalysisFixture(analysisId, "BRENT", "4h"));
+          }
+          return null;
+        },
+        ...pageHandlers({}),
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("button-instrument-HSI")).toHaveClass("border-primary");
+      expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-instrument", "HSI");
+      expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-timeframe", "1D");
+    });
+  });
+
+  it("does not overwrite an explicit user instrument choice when restore resolves late", async () => {
+    const analysisId = 7703;
+    let resolveAnalysis!: (response: Response) => void;
+    const delayedAnalysis = new Promise<Response>((resolve) => {
+      resolveAnalysis = resolve;
+    });
+    window.history.replaceState({}, "", `/analyze?result=${analysisId}`);
+    installFetchMock(
+      [
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method === "GET" && new RegExp(`/api/analyses/${analysisId}(?:\\?|$)`).test(url)) {
+            return delayedAnalysis;
+          }
+          return null;
+        },
+        ...pageHandlers({}),
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    const customInstrument = await screen.findByTestId("input-custom-instrument");
+    fireEvent.change(customInstrument, { target: { value: "NIKKEI" } });
+    expect(customInstrument).toHaveValue("NIKKEI");
+
+    await act(async () => {
+      resolveAnalysis(jsonResponse(restoredAnalysisFixture(analysisId, "BRENT", "4h")));
+    });
+
+    await waitFor(() => {
+      expect(customInstrument).toHaveValue("NIKKEI");
+      expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-instrument", "NIKKEI");
     });
   });
 });

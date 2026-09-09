@@ -13,8 +13,10 @@ import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
 import {
   useCreateAnalysis,
+  useGetAnalysis,
   useGetAnalysisQuota,
   useGetProgressionSummary,
+  getGetAnalysisQueryKey,
   getGetAnalysisQuotaQueryKey,
   useGetTimeframeRiskMap,
   getGetTimeframeRiskMapQueryKey,
@@ -804,6 +806,8 @@ export default function AnalyzePage() {
   const [selectedInstrument, setSelectedInstrument] = useState("XAU/USD");
   const [customInstrument, setCustomInstrument] = useState("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
+  const instrumentChoiceVersionRef = useRef(0);
+  const timeframeChoiceVersionRef = useRef(0);
 
   const [evidenceSession, setEvidenceSession] = useState<ProgressionEvidenceSession | null>(null);
 
@@ -922,18 +926,75 @@ export default function AnalyzePage() {
     setResultAnalysisId((cur) => (cur === next ? cur : next));
   }, [routeSearch]);
 
+  const restoreContextRef = useRef<{
+    id: number | null;
+    instrumentVersion: number;
+    timeframeVersion: number;
+    hasUrlInstrument: boolean;
+    hasUrlTimeframe: boolean;
+  }>({
+    id: null,
+    instrumentVersion: 0,
+    timeframeVersion: 0,
+    hasUrlInstrument: false,
+    hasUrlTimeframe: false,
+  });
+  if (restoreContextRef.current.id !== resultAnalysisId) {
+    const params = new URLSearchParams(routeSearch);
+    restoreContextRef.current = {
+      id: resultAnalysisId,
+      instrumentVersion: instrumentChoiceVersionRef.current,
+      timeframeVersion: timeframeChoiceVersionRef.current,
+      hasUrlInstrument: Boolean(params.get("instrument")),
+      hasUrlTimeframe: Boolean(params.get("timeframe")),
+    };
+  }
+
+  const { data: restoredAnalysis } = useGetAnalysis(resultAnalysisId ?? 0, {
+    query: {
+      enabled: resultAnalysisId != null,
+      queryKey: getGetAnalysisQueryKey(resultAnalysisId ?? 0),
+      staleTime: 30_000,
+    },
+  });
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    if (!restoredAnalysis || restoredAnalysis.id !== resultAnalysisId) return;
+    const restoreContext = restoreContextRef.current;
+    if (restoreContext.id !== resultAnalysisId) return;
+
+    if (
+      !restoreContext.hasUrlInstrument &&
+      instrumentChoiceVersionRef.current === restoreContext.instrumentVersion
+    ) {
+      setSelectedInstrument(restoredAnalysis.instrument);
+      setCustomInstrument("");
+      setOpenInstrumentCategory(categoryForInstrument(restoredAnalysis.instrument));
+    }
+    if (
+      !restoreContext.hasUrlTimeframe &&
+      timeframeChoiceVersionRef.current === restoreContext.timeframeVersion &&
+      (TIMEFRAMES as readonly string[]).includes(restoredAnalysis.timeframe)
+    ) {
+      setSelectedTimeframe(restoredAnalysis.timeframe);
+    }
+  }, [restoredAnalysis, resultAnalysisId]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(routeSearch);
     const inst = params.get("instrument");
     const tf = params.get("timeframe");
     if (inst) {
+      instrumentChoiceVersionRef.current += 1;
       setSelectedInstrument(inst);
+      setCustomInstrument("");
       setOpenInstrumentCategory(categoryForInstrument(inst));
     }
     if (tf && (TIMEFRAMES as readonly string[]).includes(tf)) {
+      timeframeChoiceVersionRef.current += 1;
       setSelectedTimeframe(tf);
     }
-  }, []);
+  }, [routeSearch]);
 
   useEffect(() => {
     if (isLoading) {
@@ -1036,6 +1097,7 @@ export default function AnalyzePage() {
   // the Analisis button — matches the "Ganti Timeframe" quick-switch below
   // the result. The very first analysis still requires the explicit button.
   const handleInstrumentClick = (inst: string) => {
+    instrumentChoiceVersionRef.current += 1;
     setSelectedInstrument(inst);
     setCustomInstrument("");
     if (resultAnalysisId != null && inst !== finalInstrument && !isLoading) {
@@ -1203,6 +1265,7 @@ export default function AnalyzePage() {
                 placeholder={t.analyze.or_type}
                 value={customInstrument}
                 onChange={(e) => {
+                  instrumentChoiceVersionRef.current += 1;
                   setCustomInstrument(e.target.value);
                   if (e.target.value) setSelectedInstrument("");
                 }}
@@ -1234,7 +1297,10 @@ export default function AnalyzePage() {
                 {TIMEFRAMES.map((tf) => (
                   <button
                     key={tf}
-                    onClick={() => setSelectedTimeframe(tf)}
+                    onClick={() => {
+                      timeframeChoiceVersionRef.current += 1;
+                      setSelectedTimeframe(tf);
+                    }}
                     data-testid={`button-timeframe-${tf}`}
                     className={cn(
                       "px-4 py-2 text-sm font-medium rounded-lg border transition-all",
