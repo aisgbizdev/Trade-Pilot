@@ -139,4 +139,76 @@ describe("GuidePage Progression", () => {
     fireEvent(window, new PopStateEvent("popstate"));
     expect(await screen.findByTestId("button-guide-back-to-list")).toBeInTheDocument();
   });
+
+  it("offers Quick Start paths and opens the History & Performance guide by deep link", async () => {
+    installFetchMock([
+      (url, init) => {
+        if (url.includes("/api/progression/evidence") && init?.method === "POST") {
+          return jsonResponse({
+            token: "mock_evidence_token",
+            source: "guide_completion",
+            subject: "history-performance",
+            minimumCompleteAt: new Date(Date.now() + 20_000).toISOString(),
+          });
+        }
+        return null;
+      },
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><GuidePage /></Wrapper>);
+
+    expect(await screen.findByTestId("guide-quick-start-analysis-workflow")).toBeInTheDocument();
+    expect(screen.getByTestId("guide-quick-start-adaptive-position-plan")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("guide-quick-start-history-performance"));
+
+    expect(window.location.search).toContain("article=history-performance");
+    expect(await screen.findByText("Using History & Performance")).toBeInTheDocument();
+    expect(screen.getByText("Summary and History tabs")).toBeInTheDocument();
+    expect(screen.getByText("Why minimum sample matters")).toBeInTheDocument();
+    expect(screen.getByText(/Other Instruments groups every other market/)).toBeInTheDocument();
+  });
+
+  it("makes Psychology & Discipline discoverable without replacing the article list", async () => {
+    installFetchMock();
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><GuidePage /></Wrapper>);
+
+    expect(await screen.findByText("Swipe to see more categories")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("guide-psychology-spotlight"));
+
+    expect(window.location.search).toContain("category=psychology");
+    expect(await screen.findByTestId("guide-article-fomo")).toBeInTheDocument();
+    expect(screen.queryByTestId("guide-article-how-ai-works")).not.toBeInTheDocument();
+  });
+
+  it("finds guide content through search and follows its related topic", async () => {
+    installFetchMock([
+      (url, init) => {
+        if (url.includes("/api/progression/evidence") && init?.method === "POST") {
+          const guideId = JSON.parse(init.body as string).guideId;
+          return jsonResponse({
+            token: `mock_${guideId}`,
+            source: "guide_completion",
+            subject: guideId,
+            minimumCompleteAt: new Date(Date.now() + 20_000).toISOString(),
+          });
+        }
+        return null;
+      },
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><GuidePage /></Wrapper>);
+
+    fireEvent.change(await screen.findByTestId("input-guide-search"), {
+      target: { value: "minimum sample" },
+    });
+    expect(await screen.findByTestId("guide-article-history-performance")).toBeInTheDocument();
+    expect(screen.queryByTestId("guide-article-how-ai-works")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("guide-article-history-performance"));
+    fireEvent.click(await screen.findByRole("button", { name: "Read the full topic" }));
+
+    expect(window.location.search).toContain("article=analysis-workflow");
+    expect(await screen.findByText("From Instrument Selection to a Usable Analysis")).toBeInTheDocument();
+  });
 });

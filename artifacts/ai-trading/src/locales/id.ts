@@ -50,6 +50,12 @@ export const id: Translations = {
   guide: {
     title: "Pusat Panduan",
     subtitle: "Pengetahuan, fitur, dan mindset.",
+    quick_start: "Quick Start",
+    quick_start_hint: "Mulai dari alur yang paling penting.",
+    browse_categories: "Geser untuk melihat kategori lain",
+    psychology_title: "Trading juga soal disiplin",
+    psychology_hint: "Pelajari cara menghadapi FOMO, revenge trading, dan keputusan impulsif.",
+    psychology_action: "Buka Psikologi & Disiplin",
     search_placeholder: "Cari panduan...",
     no_results: "Artikel tidak ditemukan.",
     back_to_guide: "Kembali ke Panduan",

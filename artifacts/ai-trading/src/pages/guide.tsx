@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, Search, BookOpen, ChevronRight, X } from "lucide-react";
+import { Brain, ChevronLeft, Search, BookOpen, ChevronRight, X, Sparkles } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { useGetProgressionCatalog } from "@workspace/api-client-react";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 const guideArticleIds = new Set(GUIDE_CATEGORIES.flatMap((category) => category.articles.map((article) => article.id)));
+const QUICK_START_IDS = ["analysis-workflow", "history-performance", "adaptive-position-plan"] as const;
 
 function isProgressionGuideId(value: string): value is ProgressionEvidenceStartInputGuideId {
   return guideArticleIds.has(value);
@@ -182,6 +183,18 @@ export default function GuidePage() {
     }).filter(Boolean) as typeof GUIDE_CATEGORIES;
   }, [searchQuery, lang, selectedCategory]);
 
+  const quickStartArticles = useMemo(
+    () =>
+      QUICK_START_IDS.flatMap((articleId) => {
+        for (const category of GUIDE_CATEGORIES) {
+          const article = category.articles.find((item) => item.id === articleId);
+          if (article) return [{ article, category }];
+        }
+        return [];
+      }),
+    [],
+  );
+
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
@@ -295,35 +308,102 @@ export default function GuidePage() {
               )}
             </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none" aria-label={t.guide.table_of_contents}>
-              <button
-                type="button"
-                onClick={() => selectCategory(null)}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  selectedCategory === null
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {lang === "id" ? "Semua" : "All"}
-              </button>
-              {GUIDE_CATEGORIES.map((category) => (
+            {!searchQuery.trim() && selectedCategory === null && (
+              <section className="space-y-2" aria-labelledby="guide-quick-start-title">
+                <div className="flex items-end justify-between gap-3 px-1">
+                  <div>
+                    <h2 id="guide-quick-start-title" className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
+                      {t.guide.quick_start}
+                    </h2>
+                    <p className="text-[11px] text-muted-foreground">{t.guide.quick_start_hint}</p>
+                  </div>
+                </div>
+                <div className="grid gap-2 md:grid-cols-3">
+                  {quickStartArticles.map(({ article, category }, index) => (
+                    <button
+                      key={article.id}
+                      type="button"
+                      onClick={() => openArticle(article.id)}
+                      className="group flex min-h-20 items-start gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/[0.03]"
+                      data-testid={`guide-quick-start-${article.id}`}
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
+                        {index + 1}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {lang === "id" ? category.title_id : category.title_en}
+                        </span>
+                        <span className="mt-0.5 block text-sm font-semibold leading-snug text-foreground">
+                          {lang === "id" ? article.title_id : article.title_en}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <div className="relative -mx-4">
+              <div className="flex gap-2 overflow-x-auto pb-1 px-4 pr-12 scrollbar-none" aria-label={t.guide.table_of_contents}>
                 <button
-                  key={category.id}
                   type="button"
-                  onClick={() => selectCategory(category.id)}
-                  className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    selectedCategory === category.id
+                  onClick={() => selectCategory(null)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    selectedCategory === null
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card text-muted-foreground hover:text-foreground"
                   }`}
-                  data-testid={`guide-category-${category.id}`}
                 >
-                  <category.icon className="w-3.5 h-3.5" />
-                  {lang === "id" ? category.title_id : category.title_en}
+                  {lang === "id" ? "Semua" : "All"}
                 </button>
-              ))}
+                {GUIDE_CATEGORIES.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => selectCategory(category.id)}
+                    className={`shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      selectedCategory === category.id
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-muted-foreground hover:text-foreground"
+                    }`}
+                    data-testid={`guide-category-${category.id}`}
+                  >
+                    <category.icon className="w-3.5 h-3.5" />
+                    {lang === "id" ? category.title_id : category.title_en}
+                  </button>
+                ))}
+              </div>
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-end bg-gradient-to-l from-background via-background/90 to-transparent pr-2 md:hidden"
+                aria-hidden="true"
+              >
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="px-4 pt-1 text-[10px] text-muted-foreground md:hidden">
+                {t.guide.browse_categories}
+              </p>
             </div>
+
+            {!searchQuery.trim() && selectedCategory === null && (
+              <button
+                type="button"
+                onClick={() => selectCategory("psychology")}
+                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card/70 p-3 text-left transition-colors hover:border-primary/40 hover:bg-card"
+                data-testid="guide-psychology-spotlight"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Brain className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-foreground">{t.guide.psychology_title}</span>
+                  <span className="block text-[11px] leading-relaxed text-muted-foreground">{t.guide.psychology_hint}</span>
+                </span>
+                <span className="hidden text-xs font-semibold text-primary sm:block">{t.guide.psychology_action}</span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </button>
+            )}
 
             {filteredCategories.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground text-sm">

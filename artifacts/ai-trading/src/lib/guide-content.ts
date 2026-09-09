@@ -77,6 +77,49 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
         keywords: ["features", "fitur", "analyze", "analisis"]
       },
       {
+        id: "history-performance",
+        title_en: "Using History & Performance",
+        title_id: "Menggunakan Riwayat & Performa",
+        content_en: [
+          { type: "h", val: "Summary and History tabs" },
+          { type: "p", val: "Summary turns your completed analysis records into an overview by instrument and timeframe. History shows the original analysis cards so you can review the exact instrument, date, timeframe, and outcome behind the numbers." },
+          { type: "h", val: "Search, filters, and presets" },
+          { type: "p", val: "Use search for a remembered instrument, note, or phrase. Open Filters to combine instruments, timeframes, dates, and outcomes. Save a useful combination as a preset when you want to repeat the same review later." },
+          { type: "h", val: "Instruments and Other Instruments" },
+          { type: "p", val: "XAU/USD, BRENT, HSI, and NIKKEI are shown as the four primary choices. Other Instruments groups every other market for filtering and performance summaries, while each History card still displays its original name, such as EUR/USD." },
+          { type: "h", val: "Reading outcomes and statistics" },
+          { type: "list", val: [
+            "TP1 Hit and TP2 Hit count as completed wins; SL Hit counts as a completed loss.",
+            "Expired means the plan ended without TP or SL being recorded. Pending or still-valid analyses are not treated as wins.",
+            "Win rate compares recorded TP outcomes with recorded TP plus SL outcomes. Completion rate also includes expired outcomes.",
+            "Open an instrument card in Summary to compare its timeframes, or open its History to inspect the underlying records."
+          ] },
+          { type: "h", val: "Why minimum sample matters" },
+          { type: "p", val: "Small samples can exaggerate a streak. When there are not enough completed records, the progress indicator shows how many more samples are needed before that breakdown is presented as meaningful." },
+          { type: "callout", val: "Use performance as a review tool, not a prediction. A strong historical percentage does not guarantee the next analysis." }
+        ],
+        content_id: [
+          { type: "h", val: "Tab Ringkasan dan Riwayat" },
+          { type: "p", val: "Ringkasan mengubah catatan analisis yang selesai menjadi gambaran performa berdasarkan instrumen dan timeframe. Riwayat menampilkan kartu analisis asli agar kamu bisa mengecek instrumen, tanggal, timeframe, dan outcome di balik angkanya." },
+          { type: "h", val: "Pencarian, filter, dan preset" },
+          { type: "p", val: "Gunakan pencarian untuk menemukan instrumen, catatan, atau frasa yang kamu ingat. Buka Filter untuk menggabungkan instrumen, timeframe, tanggal, dan outcome. Simpan kombinasi yang berguna sebagai preset jika ingin mengulang review yang sama." },
+          { type: "h", val: "Instrumen dan Instrumen Lainnya" },
+          { type: "p", val: "XAU/USD, BRENT, HSI, dan NIKKEI ditampilkan sebagai empat pilihan utama. Instrumen Lainnya menggabungkan semua market lain untuk kebutuhan filter dan ringkasan performa, tetapi setiap kartu Riwayat tetap menampilkan nama aslinya, misalnya EUR/USD." },
+          { type: "h", val: "Membaca outcome dan statistik" },
+          { type: "list", val: [
+            "TP1 Hit dan TP2 Hit dihitung sebagai win yang selesai; SL Hit dihitung sebagai loss yang selesai.",
+            "Expired berarti masa plan berakhir tanpa TP atau SL yang tercatat. Analisis Pending atau masih valid tidak dianggap win.",
+            "Win rate membandingkan outcome TP dengan total outcome TP plus SL. Completion rate juga memasukkan outcome expired.",
+            "Buka kartu instrumen di Ringkasan untuk membandingkan timeframe, atau buka Riwayatnya untuk memeriksa catatan sumber."
+          ] },
+          { type: "h", val: "Kenapa minimum sample penting" },
+          { type: "p", val: "Sample kecil bisa membuat streak terlihat berlebihan. Saat catatan yang selesai belum cukup, indikator progres menunjukkan berapa sample tambahan yang dibutuhkan sebelum breakdown dianggap lebih bermakna." },
+          { type: "callout", val: "Gunakan performa untuk review, bukan prediksi. Persentase historis yang tinggi tidak menjamin analisis berikutnya." }
+        ],
+        keywords: ["history", "riwayat", "performance", "performa", "summary", "ringkasan", "search", "pencarian", "filter", "preset", "outcome", "minimum sample", "instrumen lainnya", "other instruments", "win rate", "completion rate"],
+        relatedArticleId: "analysis-workflow"
+      },
+      {
         id: "reading-analysis",
         title_en: "Reading an Analysis Output",
         title_id: "Membaca Hasil Analisis",

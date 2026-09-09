@@ -48,6 +48,12 @@ export const en = {
   guide: {
     title: "Guide Center",
     subtitle: "Knowledge, features, and mindset.",
+    quick_start: "Quick Start",
+    quick_start_hint: "Begin with the most important workflows.",
+    browse_categories: "Swipe to see more categories",
+    psychology_title: "Trading also takes discipline",
+    psychology_hint: "Learn how to handle FOMO, revenge trading, and impulsive decisions.",
+    psychology_action: "Open Psychology & Discipline",
     search_placeholder: "Search guide...",
     no_results: "No articles found.",
     back_to_guide: "Back to Guide",
