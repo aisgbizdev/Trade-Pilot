@@ -38,6 +38,12 @@ const createdPriceLines: Array<{
   lineStyle: number;
 }> = [];
 const createdAutoscaleProviders: AutoscaleInfoProvider[] = [];
+const liveCandleUpdates: Array<{
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}> = [];
 
 vi.mock("lightweight-charts", () => {
   const CandlestickSeries = Symbol("CandlestickSeries");
@@ -46,6 +52,14 @@ vi.mock("lightweight-charts", () => {
     createChart: () => {
       const series = {
         setData: vi.fn(),
+        update: vi.fn((candle: {
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+        }) => {
+          liveCandleUpdates.push(candle);
+        }),
         createPriceLine: vi.fn((opts: {
           price: number;
           title: string;
@@ -92,6 +106,8 @@ function renderChart(props: {
   tradePlan: TradePlan | null;
   instrument?: string;
   timeframe?: string;
+  livePrice?: number | null;
+  liveUpdatedAt?: string | null;
 }) {
   return render(
     <ThemeProvider>
@@ -99,6 +115,8 @@ function renderChart(props: {
         instrument={props.instrument ?? "EUR/USD"}
         timeframe={props.timeframe ?? "1h"}
         tradePlan={props.tradePlan}
+        livePrice={props.livePrice}
+        liveUpdatedAt={props.liveUpdatedAt}
         height={300}
       />
     </ThemeProvider>,
@@ -144,6 +162,7 @@ function stubCandlesFetch() {
 beforeEach(() => {
   createdPriceLines.length = 0;
   createdAutoscaleProviders.length = 0;
+  liveCandleUpdates.length = 0;
   vi.stubGlobal("fetch", stubCandlesFetch());
 });
 
@@ -180,6 +199,38 @@ function ThemeControlledChart(props: { tradePlan: TradePlan | null }) {
 }
 
 describe("AnalysisLevelsChart", () => {
+  it("updates the active candle when a newer backend quote arrives", async () => {
+    const view = renderChart({
+      tradePlan: null,
+      instrument: "BRENT",
+      timeframe: "1h",
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("analysis-levels-chart").getAttribute("data-state"),
+      ).toBe("ready"),
+    );
+
+    view.rerender(
+      <ThemeProvider>
+        <AnalysisLevelsChart
+          instrument="BRENT"
+          timeframe="1h"
+          tradePlan={null}
+          livePrice={100.76}
+          liveUpdatedAt="2026-09-09T13:32:21.000Z"
+          height={300}
+        />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => expect(liveCandleUpdates).toHaveLength(1));
+    expect(liveCandleUpdates[0]?.close).toBe(100.76);
+    expect(liveCandleUpdates[0]?.high).toBeGreaterThanOrEqual(100.76);
+    expect(liveCandleUpdates[0]?.low).toBeLessThanOrEqual(100.76);
+  });
+
   it("draws all four levels for a buy plan and uses the zone midpoint for entry", async () => {
     const plan: TradePlan = {
       preferredSide: "buy",

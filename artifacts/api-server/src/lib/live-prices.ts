@@ -94,7 +94,10 @@ export interface LiveQuotesPayload {
   data: LiveQuote[];
 }
 
-const CACHE_TTL_MS = 15_000;
+// The active internal market charts poll every five seconds. Keep one shared
+// upstream result per process so all connected clients still collapse into at
+// most one BBJ request per five-second window.
+const CACHE_TTL_MS = 5_000;
 let cache: { data: LiveQuotesPayload; fetchedAt: number } | null = null;
 let inFlight: Promise<LiveQuotesPayload> | null = null;
 

@@ -33,8 +33,9 @@ export function useLiveQuotes() {
   return useQuery<LiveQuotesResponse>({
     queryKey: ["live-quotes"],
     queryFn: fetchLiveQuotes,
-    refetchInterval: 15_000,
-    staleTime: 10_000,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    staleTime: 4_000,
   });
 }
 

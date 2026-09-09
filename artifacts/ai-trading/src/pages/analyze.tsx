@@ -585,6 +585,26 @@ function LivePriceChip({ instrument }: { instrument: string }) {
   );
 }
 
+function BackendAlignedLiveChart({
+  instrument,
+  timeframe,
+}: {
+  instrument: string;
+  timeframe: string;
+}) {
+  const { quote } = useQuoteByInstrument(instrument);
+  return (
+    <AnalysisLevelsChart
+      instrument={instrument}
+      timeframe={timeframe}
+      tradePlan={null}
+      livePrice={quote?.price ?? null}
+      liveUpdatedAt={quote?.updatedAt ?? null}
+      height={360}
+    />
+  );
+}
+
 function RiskBadge({ category }: { category: string }) {
   const { t } = useTranslation();
   if (category === "low") {
@@ -1292,11 +1312,9 @@ export default function AnalyzePage() {
                 }
               >
                 {BACKEND_ALIGNED_CHART_INSTRUMENTS.has(finalInstrument) ? (
-                  <AnalysisLevelsChart
+                  <BackendAlignedLiveChart
                     instrument={finalInstrument}
                     timeframe={selectedTimeframe}
-                    tradePlan={null}
-                    height={360}
                   />
                 ) : (
                   <TradingViewAdvancedChart
