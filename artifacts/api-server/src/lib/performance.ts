@@ -200,6 +200,14 @@ export interface PerformanceSummary {
   byNewsActivity: GatedSegment;
 }
 
+const OFFICIAL_PERFORMANCE_INSTRUMENTS = new Set([
+  "XAU/USD",
+  "BRENT",
+  "HSI",
+  "NIKKEI",
+]);
+export const OTHER_INSTRUMENT_BUCKET_KEY = "__other__";
+
 function emptyOverall(): OverallStat {
   return {
     triggered: 0,
@@ -341,7 +349,11 @@ export async function computePerformanceSummary(
   // time — the "best session to enter" question is about when the AI
   // analysed, not when price eventually touched a level.
   const sessionSeg = segment(rows, (r) => sessionBucket(r.createdAt) as SessionKey);
-  const instrumentSeg = segment(rows, (r) => r.instrument);
+  const instrumentSeg = segment(rows, (r) =>
+    OFFICIAL_PERFORMANCE_INSTRUMENTS.has(r.instrument)
+      ? r.instrument
+      : OTHER_INSTRUMENT_BUCKET_KEY,
+  );
   const conditionSeg = segment(rows, (r) => r.marketCondition);
   // Drop `unclassified` / `unknown` from the regime segments so we
   // never publish a rate for a bucket that just means "we don't know".

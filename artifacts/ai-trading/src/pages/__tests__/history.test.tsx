@@ -87,6 +87,14 @@ function summaryHandler(): FetchHandler {
           instrument: "BRENT", total: 5, ...stats,
           byTimeframe: [{ timeframe: "4h", total: 5, ...stats }],
         },
+        {
+          instrument: "EUR/USD", total: 3, ...stats,
+          byTimeframe: [{ timeframe: "1h", total: 3, ...stats }],
+        },
+        {
+          instrument: "NASDAQ", total: 2, ...stats,
+          byTimeframe: [{ timeframe: "4h", total: 2, ...stats }],
+        },
       ],
       byTimeframe: [
         { timeframe: "1h", total: 10, ...stats },
@@ -122,6 +130,11 @@ describe("HistoryPage: instrument performance", () => {
     expect(await screen.findByText("Performance by instrument")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /BRENT.*5 sample/i }));
     expect(await screen.findByText("Performance by timeframe · BRENT")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Other Instruments.*5 sample/i }));
+    expect(await screen.findByText("Performance by timeframe · Other Instruments")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /EUR\/USD.*3 sample/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /NASDAQ.*2 sample/i })).not.toBeInTheDocument();
   });
 });
 
@@ -330,5 +343,44 @@ describe("HistoryPage: user actions", () => {
       );
       expect(filtered).toBeDefined();
     });
+  });
+
+  it("shows four core instrument choices plus one combined Other Instruments filter", async () => {
+    const { calls } = installFetchMock([
+      listHandler({ analyses: SAMPLE_ANALYSES, total: SAMPLE_ANALYSES.length }),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <HistoryPage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("card-analysis-101");
+    const filterButton = screen.getByTestId("button-toggle-filters");
+    expect(filterButton).toHaveTextContent("Filters");
+    fireEvent.click(filterButton);
+
+    expect(screen.getByTestId("filter-instrument-XAU/USD")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-instrument-BRENT")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-instrument-HSI")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-instrument-NIKKEI")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-instrument-other")).toBeInTheDocument();
+    expect(screen.queryByTestId("filter-instrument-EUR/USD")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("filter-instrument-other"));
+    await waitFor(() => {
+      const filtered = calls.find(
+        (call) =>
+          call.method === "GET" &&
+          /\/api\/analyses\?/.test(call.url) &&
+          call.url.includes("instruments=__other__"),
+      );
+      expect(filtered).toBeDefined();
+    });
+    expect(screen.getByTestId("button-toggle-filters")).toHaveTextContent("1");
+    expect(screen.getByTestId("chip-inst-other")).toHaveTextContent("Other Instruments");
+    expect(await screen.findByTestId("card-analysis-102")).toHaveTextContent("EUR/USD");
   });
 });

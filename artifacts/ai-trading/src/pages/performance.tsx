@@ -24,6 +24,7 @@ import {
 } from "@workspace/api-client-react";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { OTHER_INSTRUMENT_BUCKET_KEY } from "@/lib/instrument-groups";
 
 type WindowDays = 30 | 90;
 
@@ -127,6 +128,9 @@ type SegKind = "instrument" | "session" | "condition" | "volatility" | "news";
 
 function bucketLabel(segKind: SegKind, key: string, t: ReturnType<typeof useTranslation>["t"]): string {
   const tp = t.performance;
+  if (segKind === "instrument" && key === OTHER_INSTRUMENT_BUCKET_KEY) {
+    return tp.other_instruments;
+  }
   if (segKind === "session") {
     if (key === "asia") return tp.session_asia;
     if (key === "london") return tp.session_london;
@@ -291,6 +295,27 @@ export default function PerformancePage() {
               {tp.no_data_body
                 .replace("{need}", String(summary.minSamples.overall))
                 .replace("{have}", String(summary.overall.total))}
+            </p>
+            <div
+              className="h-2 rounded-full bg-muted overflow-hidden"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={summary.minSamples.overall}
+              aria-valuenow={Math.min(summary.overall.total, summary.minSamples.overall)}
+              data-testid="performance-sample-progress"
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-[width]"
+                style={{
+                  width: `${Math.min(100, (summary.overall.total / Math.max(1, summary.minSamples.overall)) * 100)}%`,
+                }}
+              />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground tabular-nums">
+              {tp.samples_needed
+                .replace("{remaining}", String(Math.max(0, summary.minSamples.overall - summary.overall.total)))
+                .replace("{have}", String(summary.overall.total))
+                .replace("{need}", String(summary.minSamples.overall))}
             </p>
           </Card>
         )}

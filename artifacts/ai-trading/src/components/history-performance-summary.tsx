@@ -4,6 +4,11 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
+import {
+  OTHER_INSTRUMENT_BUCKET_KEY,
+  PRIMARY_INSTRUMENTS,
+  isPrimaryInstrument,
+} from "@/lib/instrument-groups";
 
 type SummaryRange = "7" | "30" | "90" | "all";
 type OutcomeStats = {
@@ -20,8 +25,75 @@ type AnalysisHistorySummary = {
   }>;
   byTimeframe: Array<OutcomeStats & { timeframe: string }>;
 };
+type InstrumentRow = AnalysisHistorySummary["byInstrument"][number];
+type GroupedInstrumentRow = InstrumentRow & { filterInstruments: string[] };
 
 const RANGES: SummaryRange[] = ["7", "30", "90", "all"];
+
+function combineStats<T extends OutcomeStats>(rows: T[]): OutcomeStats {
+  const tally = rows.reduce(
+    (sum, row) => ({
+      total: sum.total + row.total,
+      pending: sum.pending + row.pending,
+      activeValid: sum.activeValid + row.activeValid,
+      tp1Hit: sum.tp1Hit + row.tp1Hit,
+      tp2Hit: sum.tp2Hit + row.tp2Hit,
+      slHit: sum.slHit + row.slHit,
+      expired: sum.expired + row.expired,
+      invalidated: sum.invalidated + row.invalidated,
+    }),
+    { total: 0, pending: 0, activeValid: 0, tp1Hit: 0, tp2Hit: 0, slHit: 0, expired: 0, invalidated: 0 },
+  );
+  const wins = tally.tp1Hit + tally.tp2Hit;
+  const triggered = wins + tally.slHit;
+  const scorable = triggered + tally.expired;
+  return {
+    ...tally,
+    winRate: triggered > 0 ? wins / triggered : null,
+    completionRate: scorable > 0 ? wins / scorable : null,
+  };
+}
+
+function groupInstrumentRows(rows: InstrumentRow[]): GroupedInstrumentRow[] {
+  const primary = PRIMARY_INSTRUMENTS.flatMap((instrument) => {
+    const row = rows.find((candidate) => candidate.instrument === instrument);
+    return row ? [{ ...row, filterInstruments: [instrument] }] : [];
+  });
+  const otherRows = rows.filter((row) => !isPrimaryInstrument(row.instrument));
+  if (otherRows.length === 0) return primary;
+
+  const timeframeKeys = [...new Set(otherRows.flatMap((row) => row.byTimeframe.map((item) => item.timeframe)))];
+  const byTimeframe = timeframeKeys
+    .map((timeframe) => ({
+      timeframe,
+      ...combineStats(
+        otherRows.flatMap((row) => row.byTimeframe.filter((item) => item.timeframe === timeframe)),
+      ),
+    }))
+    .sort((a, b) => b.total - a.total);
+  return [
+    ...primary,
+    {
+      instrument: OTHER_INSTRUMENT_BUCKET_KEY,
+      ...combineStats(otherRows),
+      byTimeframe,
+      filterInstruments: otherRows.map((row) => row.instrument),
+    },
+  ];
+}
+
+function OutcomeBar({ row }: { row: OutcomeStats }) {
+  const wins = row.tp1Hit + row.tp2Hit;
+  const total = wins + row.slHit + row.expired;
+  if (total === 0) return <div className="h-1.5 rounded-full bg-muted mt-3" aria-hidden="true" />;
+  return (
+    <div className="h-1.5 rounded-full bg-muted overflow-hidden flex mt-3" aria-hidden="true">
+      {wins > 0 && <span className="bg-emerald-500/80" style={{ width: `${(wins / total) * 100}%` }} />}
+      {row.slHit > 0 && <span className="bg-red-500/70" style={{ width: `${(row.slHit / total) * 100}%` }} />}
+      {row.expired > 0 && <span className="bg-muted-foreground/40" style={{ width: `${(row.expired / total) * 100}%` }} />}
+    </div>
+  );
+}
 
 export function HistoryPerformanceSummary() {
   const { t } = useTranslation();
@@ -54,7 +126,7 @@ export function HistoryPerformanceSummary() {
     Object.entries(changes).forEach(([key, value]) => value == null ? next.delete(key) : next.set(key, value));
     setLocation(`/history?${next.toString()}`, { replace: true });
   };
-  const drill = (outcome?: string, timeframe?: string, instrument?: string) => {
+  const drill = (outcome?: string, timeframe?: string, instrument?: string | string[]) => {
     const next = new URLSearchParams(search);
     next.set("view", "history");
     next.delete("outcomes");
@@ -64,10 +136,17 @@ export function HistoryPerformanceSummary() {
     if (timeframe) next.append("timeframes", timeframe);
     if (instrument) {
       next.delete("instruments");
-      next.append("instruments", instrument);
+      const selected = Array.isArray(instrument) ? instrument : [instrument];
+      selected.forEach((item) => next.append("instruments", item));
     } else if (focusedInstrument) {
       next.delete("instruments");
-      next.append("instruments", focusedInstrument);
+      const focusedFilters =
+        focusedInstrument === OTHER_INSTRUMENT_BUCKET_KEY
+          ? (summary?.byInstrument ?? [])
+              .filter((row) => !isPrimaryInstrument(row.instrument))
+              .map((row) => row.instrument)
+          : [focusedInstrument];
+      focusedFilters.forEach((item) => next.append("instruments", item));
     }
     if (range !== "all") {
       const from = new Date();
@@ -86,7 +165,7 @@ export function HistoryPerformanceSummary() {
   if (isError || !summary) return <Card className="p-4 text-sm text-destructive">{t.common.error}</Card>;
 
   const o = summary.overall;
-  const instrumentRows = summary.byInstrument ?? [];
+  const instrumentRows = groupInstrumentRows(summary.byInstrument ?? []);
   const stats = [
     { label: t.history.summary_total, value: o.total, icon: Target, outcome: undefined },
     { label: t.history.summary_valid, value: o.activeValid, icon: Clock3, outcome: "pending" },
@@ -171,7 +250,9 @@ export function HistoryPerformanceSummary() {
                     aria-pressed={selected}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <strong className="text-sm">{row.instrument}</strong>
+                       <strong className="text-sm">
+                         {row.instrument === OTHER_INSTRUMENT_BUCKET_KEY ? t.history.other_instruments : row.instrument}
+                       </strong>
                       <span className="text-xs text-muted-foreground">{row.total} sample</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2 mt-3 text-[11px]">
@@ -179,9 +260,23 @@ export function HistoryPerformanceSummary() {
                       <span>TP <strong>{row.tp1Hit + row.tp2Hit}</strong></span>
                       <span>SL <strong>{row.slHit}</strong></span>
                     </div>
+                     <OutcomeBar row={row} />
+                     {row.total < summary.minSamples && (
+                       <p className="mt-2 text-[10px] font-medium text-muted-foreground">
+                         {t.history.samples_needed
+                           .replace("{remaining}", String(Math.max(0, summary.minSamples - row.total)))
+                           .replace("{have}", String(row.total))
+                           .replace("{need}", String(summary.minSamples))}
+                       </p>
+                     )}
+                     {row.instrument === OTHER_INSTRUMENT_BUCKET_KEY && (
+                       <p className="mt-2 text-[10px] text-muted-foreground">
+                         {t.history.other_instruments_hint}
+                       </p>
+                     )}
                   </button>
                   <button
-                    onClick={() => drill(undefined, undefined, row.instrument)}
+                     onClick={() => drill(undefined, undefined, row.filterInstruments)}
                     className="mt-3 text-[11px] font-medium text-primary hover:underline"
                   >
                     {t.history.view_instrument_history}
@@ -197,7 +292,9 @@ export function HistoryPerformanceSummary() {
         <div className="p-4 border-b border-border">
           <h2 className="text-sm font-semibold">
             {t.history.timeframe_performance}
-            {selectedInstrument ? ` · ${selectedInstrument.instrument}` : ""}
+             {selectedInstrument
+               ? ` · ${selectedInstrument.instrument === OTHER_INSTRUMENT_BUCKET_KEY ? t.history.other_instruments : selectedInstrument.instrument}`
+               : ""}
           </h2>
           <p className="text-[11px] text-muted-foreground mt-1">{t.history.rate_explainer}</p>
         </div>
