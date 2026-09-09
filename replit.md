@@ -98,8 +98,8 @@ In production the workspace path-router has two backends: **api-server** runs as
 
 Production gets its own Postgres database (separate `DATABASE_URL` from dev). Two things must be in place before clicking Publish:
 
-**1. Schema push runs automatically.**
-`artifacts/api-server/.replit-artifact/artifact.toml` is wired so the production build first runs `pnpm --filter @workspace/db run push-force` against the production DB, then bundles the api-server. No manual migration step needed.
+**1. Review Replit's generated database migration.**
+Keep the development database aligned with `lib/db/src/schema/index.ts` using the dev-only schema command or the post-merge setup. Replit Publish compares development with production and applies the reviewed migration. The production build must never run `drizzle-kit push`, `push-force`, startup-time DDL, or a custom production migration script. Cancel publishing if its SQL preview contains unexpected `DROP`, `DELETE`, `TRUNCATE`, table reset, or data-overwrite operations.
 
 **2. Add these secrets yourself in the Publishing → Secrets pane:**
 - `OPENAI_API_KEY` — **required**. Without it, every `/api/analyses` request fails (no AI analysis).

@@ -14,16 +14,16 @@ run = "pnpm --filter @workspace/api-server run dev"
 
 [services.production]
 
-# Production build: push the current Drizzle schema to the production
-# database FIRST (using DATABASE_URL injected by the deployment runner),
-# then bundle the api-server. The ai-trading SPA builds itself in its
-# own [services.production.build] (it's served as a static service by
-# the workspace path-router, not by api-server).
+# Production schema changes are applied only through Replit Publish after
+# its generated migration has been reviewed. The build only bundles the API.
+# The ai-trading SPA builds itself in its own [services.production.build].
 [services.production.build]
 args = [
-  "sh",
-  "-c",
-  "pnpm --filter @workspace/db run push-force && pnpm --filter @workspace/api-server run build",
+  "pnpm",
+  "--filter",
+  "@workspace/api-server",
+  "run",
+  "build",
 ]
 
 [services.production.build.env]
