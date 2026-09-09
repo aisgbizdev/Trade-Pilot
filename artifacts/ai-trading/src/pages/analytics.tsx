@@ -104,17 +104,17 @@ export default function AnalyticsPage() {
           <p className="text-xs text-muted-foreground mt-0.5">{t.analytics.subtitle}</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {[
             { label: t.analytics.all_time, value: analytics.totalAllTime },
             { label: t.analytics.this_month, value: analytics.totalThisMonth },
             { label: t.analytics.this_week, value: analytics.totalThisWeek },
           ].map(({ label, value }) => (
-            <Card key={label} className="p-3 text-center">
-              <div className="text-2xl font-bold text-primary" data-testid={`stat-${label}`}>
+            <Card key={label} className="p-2 sm:p-3 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-primary truncate" data-testid={`stat-${label}`}>
                 {value}
               </div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
+              <div className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 break-words leading-tight">{label}</div>
             </Card>
           ))}
         </div>

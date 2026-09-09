@@ -85,20 +85,27 @@ vi.mock("@workspace/api-client-react", async (importOriginal) => {
 
 vi.mock("wouter", () => ({
   useLocation: () => ["/analyze", vi.fn()],
+  useSearch: () => "",
 }));
 
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@tanstack/react-query");
-  return {
-    ...actual,
-    useQueryClient: () => ({ invalidateQueries: vi.fn() }),
-  };
-});
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AnalyzePage from "../../pages/analyze";
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
 function Wrapper({ children }: { children: ReactNode }) {
-  return <LanguageProvider>{children}</LanguageProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>{children}</LanguageProvider>
+    </QueryClientProvider>
+  );
 }
 
 // Build an event keyed on an absolute Unix epoch (`epochMs`) so the

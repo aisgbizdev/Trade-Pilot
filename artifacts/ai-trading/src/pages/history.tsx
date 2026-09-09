@@ -477,23 +477,23 @@ export default function HistoryPage() {
   return (
     <Layout>
       <div className="px-4 py-5 md:max-w-3xl md:mx-auto">
-        <div className="mb-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-foreground">{t.history.title}</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
+        <div className="mb-5 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-foreground truncate">{t.history.title}</h1>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {total > 0 ? `${total} ${t.history.total_analyses}` : t.history.no_data_yet}
               </p>
             </div>
           </div>
-          <div className="mt-3 inline-flex rounded-xl border border-border bg-muted/40 p-1">
-            <button type="button" onClick={() => setView("summary")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium", view === "summary" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.summary_tab}</button>
-            <button type="button" onClick={() => setView("history")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium", view === "history" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.history_tab}</button>
+          <div className="mt-3 flex overflow-x-auto rounded-xl border border-border bg-muted/40 p-1 no-scrollbar shrink-0">
+            <button type="button" onClick={() => setView("summary")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap flex-1 text-center", view === "summary" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.summary_tab}</button>
+            <button type="button" onClick={() => setView("history")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap flex-1 text-center", view === "history" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.history_tab}</button>
           </div>
           {view === "summary" && <div className="mt-4"><HistoryPerformanceSummary /></div>}
 
           {view === "history" && <>
-          <div className="mt-3 flex items-stretch rounded-xl border border-border bg-background shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
+          <div className="mt-3 flex items-stretch rounded-xl border border-border bg-background shadow-sm focus-within:ring-2 focus-within:ring-primary/30 w-full max-w-full">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
               <input
@@ -504,7 +504,7 @@ export default function HistoryPage() {
                 maxLength={MAX_SEARCH_LEN}
                 placeholder={t.history.search_placeholder ?? "Search notes, instrument, AI reasoning…"}
                 data-testid="input-history-search"
-                className="h-10 w-full pl-9 pr-8 text-xs rounded-l-xl bg-transparent text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+                className="h-10 w-full pl-9 pr-8 text-xs rounded-l-xl bg-transparent text-foreground placeholder:text-muted-foreground/70 focus:outline-none min-w-0"
               />
               {searchDraft && (
                 <button
@@ -524,14 +524,14 @@ export default function HistoryPage() {
               data-testid="button-toggle-filters"
               aria-expanded={showFilters}
               className={cn(
-                "min-h-10 px-3 border-l border-border rounded-r-xl inline-flex items-center gap-1.5 text-xs font-semibold transition-colors",
+                "min-h-10 px-2 sm:px-3 border-l border-border rounded-r-xl inline-flex items-center gap-1 sm:gap-1.5 text-xs font-semibold transition-colors shrink-0",
                 showFilters || hasActiveFilters
                   ? "bg-primary/10 text-primary"
                   : "text-foreground hover:bg-muted",
               )}
             >
-              <Filter className="w-3.5 h-3.5" />
-              <span>{t.history.filters}</span>
+              <Filter className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xxs:inline">{t.history.filters}</span>
               {activeFilterCount > 0 && (
                 <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] inline-flex items-center justify-center tabular-nums">
                   {activeFilterCount}
@@ -670,7 +670,7 @@ export default function HistoryPage() {
               <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
                 <p className="text-xs font-semibold text-foreground">{t.history.choose_instruments}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5 mb-2.5">{t.history.choose_instruments_hint}</p>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-5 gap-2">
                   {PRIMARY_INSTRUMENTS.map((inst) => {
                     const active = filters.instruments.includes(inst);
                     return (

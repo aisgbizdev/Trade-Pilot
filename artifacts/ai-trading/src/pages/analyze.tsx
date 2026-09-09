@@ -219,7 +219,7 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
                 <span className="text-sm leading-none mt-0.5" aria-hidden="true">
                   {CURRENCY_FLAGS[evt.currency] ?? "🌐"}
                 </span>
-                <span className="flex-1 min-w-0">
+                <span className="flex-1 min-w-0 break-words">
                   <span className="text-foreground font-medium">{evt.event}</span>
                   {evt.forecast && (
                     <span className="text-muted-foreground"> · {t.widgets.calendar_forecast}: <span className="text-foreground">{evt.forecast}</span></span>
@@ -361,7 +361,7 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
                   : t.analyze.pre_trade_warning_explainer_btn}
               </button>
               {explainerOpen && (
-                <div id={explainerPanelId} className="mt-1.5 rounded-md bg-amber-500/[0.06] border border-amber-500/30 p-2 space-y-1 text-[11px] leading-snug text-amber-900 dark:text-amber-100">
+                <div id={explainerPanelId} className="mt-1.5 rounded-md bg-amber-500/[0.06] border border-amber-500/30 p-2 space-y-1 text-[11px] leading-snug text-amber-900 dark:text-amber-100 break-words">
                   {dict ? (
                     <>
                       <p className="font-semibold">{dict.headline}</p>
@@ -456,7 +456,7 @@ function EconomicCalendarSection() {
     <Card className="p-3 space-y-2" data-testid="card-economic-calendar">
       <div className="flex items-center gap-1.5 min-w-0">
         <Newspaper className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="text-xs font-bold text-foreground truncate">
             {t.analyze.economic_calendar_section_title}
           </h3>
@@ -690,7 +690,7 @@ function TimeframeRiskMapSection({
         ) : data ? (
           <div className="space-y-3">
             <div className={cn(
-              "p-3 rounded-lg border flex flex-col gap-1",
+              "p-3 rounded-lg border flex flex-col gap-1 min-w-0",
               data.overall.state === "wait"
                 ? "bg-amber-500/10 border-amber-500/20"
                 : "bg-muted/40 border-border",
@@ -718,25 +718,25 @@ function TimeframeRiskMapSection({
                     key={tf.timeframe}
                     data-testid={`risk-map-tf-${tf.timeframe}`}
                     className={cn(
-                      "p-3 rounded-lg border flex flex-col gap-2 transition-colors",
+                      "p-3 rounded-lg border flex flex-col gap-2 transition-colors min-w-0",
                       isSelected
                         ? "border-primary bg-primary/5"
                         : "border-border bg-card hover:bg-muted/30"
                     )}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs uppercase w-8 tracking-wider">{tf.timeframe}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-xs uppercase w-8 tracking-wider shrink-0">{tf.timeframe}</span>
                         {!isUnavailable && <RiskBadge category={tf.riskCategory} />}
                         {!isUnavailable && (
-                          <span className="text-[10px] font-semibold tabular-nums text-foreground">
+                          <span className="text-[10px] font-semibold tabular-nums text-foreground shrink-0">
                             {tf.riskScore}/100
                           </span>
                         )}
                       </div>
                       {!isUnavailable && (
-                        <div className="flex gap-1.5 items-center text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">
-                          <span className="bg-muted px-1.5 py-0.5 rounded" data-testid={`quality-${tf.timeframe}`}>
+                        <div className="flex flex-wrap gap-1.5 items-center text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">
+                          <span className="bg-muted px-1.5 py-0.5 rounded truncate max-w-full" data-testid={`quality-${tf.timeframe}`}>
                             {t.risk_map.quality}: {t.risk_map[`quality_${tf.dataQuality}` as keyof typeof t.risk_map] ?? tf.dataQuality}
                           </span>
                           <span className="bg-muted px-1.5 py-0.5 rounded" data-testid={`confidence-${tf.timeframe}`}>
@@ -1178,14 +1178,14 @@ export default function AnalyzePage() {
 
         <div className="space-y-5">
           <div
-            className="grid gap-4 min-[520px]:grid-cols-[132px_minmax(0,1fr)] min-[520px]:items-start"
+            className="grid gap-4 sm:grid-cols-[132px_minmax(0,1fr)] sm:items-start"
             data-testid="instrument-chart-layout"
           >
           <div className="min-w-0">
              <h2 className="mb-3 text-sm font-semibold text-foreground">{t.analyze.select_instrument}</h2>
             {VISIBLE_INSTRUMENT_CATEGORIES.length > 1 ? (
               <>
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="flex sm:grid sm:grid-cols-3 overflow-x-auto no-scrollbar gap-2 mb-3 pb-1 -mx-1 px-1">
                   {VISIBLE_INSTRUMENT_CATEGORIES.map((tab) => {
                     const isOpen = openInstrumentCategory === tab;
                     return (
@@ -1197,7 +1197,7 @@ export default function AnalyzePage() {
                       aria-expanded={isOpen}
                       aria-controls={isOpen ? "instrument-options" : undefined}
                       className={cn(
-                        "flex items-center justify-center gap-1 py-2 text-sm font-medium rounded-lg border transition-all",
+                        "flex shrink-0 items-center justify-center gap-1 px-3 sm:px-0 py-2 text-sm font-medium rounded-lg border transition-all",
                         isOpen
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-background text-muted-foreground border-border hover:border-primary/50"
@@ -1214,7 +1214,7 @@ export default function AnalyzePage() {
                   })}
                 </div>
                 {openInstrumentCategory && (
-                  <div id="instrument-options" className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-1" data-testid="instrument-options">
+                  <div id="instrument-options" className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] sm:grid-cols-1 gap-2" data-testid="instrument-options">
                     {instrumentsForTab(openInstrumentCategory).map((inst) => (
                       <button
                         key={inst}
@@ -1240,7 +1240,7 @@ export default function AnalyzePage() {
               // just be a single button that always opens the same list —
               // skip it and show the instruments directly. Restores itself
               // automatically once a second category has visible items.
-              <div className="grid grid-cols-2 gap-2 mb-3 min-[520px]:grid-cols-1" data-testid="instrument-options">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2 mb-3 sm:grid-cols-1" data-testid="instrument-options">
                 {instrumentsForTab(VISIBLE_INSTRUMENT_CATEGORIES[0]).map((inst) => (
                   <button
                     key={inst}

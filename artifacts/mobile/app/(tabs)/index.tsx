@@ -26,6 +26,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getTabContentBottomPadding } from "@/constants/layout";
 
 const INSTRUMENTS = {
   futures: ["XAU/USD", "XAG/USD", "US30", "NAS100", "US500", "OIL/USD", "GC=F"],
@@ -93,23 +94,35 @@ export default function AnalyzeScreen() {
     },
     header: {
       paddingHorizontal: 20,
-      paddingTop: 16,
+      paddingTop: Platform.OS === "web" ? 16 : insets.top + 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
-      flexDirection: "row",
-      alignItems: "flex-end",
-      justifyContent: "space-between",
     },
-    title: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.foreground },
+    headerInner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+      gap: 16,
+      minHeight: 32,
+    },
+    title: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.foreground, flexShrink: 1 },
     modeBadge: {
       backgroundColor: colors.primary + "1a",
       borderRadius: 8,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      marginBottom: 4,
+      flexShrink: 0,
     },
     modeText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.primary },
+    content: {
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+    },
     section: { paddingHorizontal: 16, marginTop: 20 },
     progressionCard: {
       minHeight: 68,
@@ -122,7 +135,7 @@ export default function AnalyzeScreen() {
       borderColor: colors.border,
       backgroundColor: colors.card,
     },
-    progressionCopy: { flex: 1, minWidth: 0, marginLeft: 10 },
+    progressionCopy: { flex: 1, minWidth: 0, marginLeft: 10, marginRight: 8 },
     progressionRank: {
       color: colors.foreground,
       fontFamily: "Inter_600SemiBold",
@@ -149,10 +162,12 @@ export default function AnalyzeScreen() {
       letterSpacing: 0.7,
       marginBottom: 10,
     },
-    catRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
+    catRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
     catBtn: {
       flex: 1,
+      minWidth: "30%",
       paddingVertical: 9,
+      paddingHorizontal: 4,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: colors.border,
@@ -160,7 +175,7 @@ export default function AnalyzeScreen() {
       backgroundColor: colors.card,
     },
     catBtnActive: { borderColor: colors.primary, backgroundColor: colors.primary + "14" },
-    catText: { fontSize: 13, fontFamily: "Inter_500Medium", color: colors.mutedForeground },
+    catText: { fontSize: 13, fontFamily: "Inter_500Medium", color: colors.mutedForeground, textAlign: "center" },
     catTextActive: { color: colors.primary, fontFamily: "Inter_600SemiBold" },
     instrumentGrid: {
       flexDirection: "row",
@@ -208,7 +223,7 @@ export default function AnalyzeScreen() {
     submitContainer: {
       paddingHorizontal: 16,
       paddingTop: 24,
-      paddingBottom: insets.bottom + (Platform.OS === "web" ? 100 : 12),
+      paddingBottom: getTabContentBottomPadding(Platform.OS, insets.bottom),
     },
     quotaText: {
       textAlign: "center",
@@ -242,21 +257,24 @@ export default function AnalyzeScreen() {
   return (
     <View style={s.root}>
       <View style={s.header}>
-        <Text style={s.title}>{t.analyze.title}</Text>
-        {user ? (
-          <View style={s.modeBadge}>
-            <Text style={s.modeText}>
-              {user.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
-            </Text>
-          </View>
-        ) : null}
+        <View style={s.headerInner}>
+          <Text style={s.title} numberOfLines={1}>{t.analyze.title}</Text>
+          {user ? (
+            <View style={s.modeBadge}>
+              <Text style={s.modeText}>
+                {user.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {progressionContent.kind !== "hidden" ? (
+        <View style={s.content}>
+          {progressionContent.kind !== "hidden" ? (
           <View style={s.section}>
             <Pressable
               testID={HOME_PROGRESSION_TEST_ID}
@@ -377,6 +395,7 @@ export default function AnalyzeScreen() {
               <Text style={s.submitText}>{t.analyze.submit}</Text>
             )}
           </Pressable>
+        </View>
         </View>
       </ScrollView>
     </View>

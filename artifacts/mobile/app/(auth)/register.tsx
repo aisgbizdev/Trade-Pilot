@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useAuth, type AuthUser } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
@@ -7,10 +8,8 @@ import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -79,10 +78,21 @@ export default function RegisterScreen() {
     gradient: { position: "absolute", top: 0, left: 0, right: 0, height: 280 },
     scroll: {
       flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
       paddingTop: insets.top + (Platform.OS === "web" ? 67 : 0),
       paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 0),
     },
-    inner: { paddingHorizontal: 28, paddingVertical: 32 },
+    inner: {
+      flexGrow: 1,
+      justifyContent: "center",
+      paddingHorizontal: 28,
+      paddingVertical: 32,
+      width: "100%",
+      maxWidth: 400,
+      alignSelf: "center",
+    },
     logo: {
       fontSize: 30,
       fontFamily: "Inter_700Bold",
@@ -184,16 +194,13 @@ export default function RegisterScreen() {
         style={s.gradient}
         pointerEvents="none"
       />
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollViewCompat
         style={s.scroll}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        contentContainerStyle={[s.scrollContent, s.inner]}
+        bottomOffset={20}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={s.inner}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={s.logo}>{t.auth.welcome}</Text>
+        <Text style={s.logo}>{t.auth.welcome}</Text>
           <Text style={s.tagline}>{t.auth.tagline}</Text>
 
           <Text style={s.label}>{t.auth.display_name}</Text>
@@ -269,8 +276,7 @@ export default function RegisterScreen() {
               {t.auth.sign_in}
             </Link>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollViewCompat>
     </View>
   );
 }

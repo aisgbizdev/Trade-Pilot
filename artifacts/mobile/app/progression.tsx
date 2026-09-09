@@ -99,10 +99,17 @@ export default function ProgressionScreen() {
     header: {
       height: 62,
       paddingHorizontal: 12,
-      flexDirection: "row",
-      alignItems: "center",
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
+    },
+    headerInner: {
+      flexDirection: "row",
+      alignItems: "center",
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+      height: "100%",
+      gap: 8,
     },
     back: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
     headerCopy: { flex: 1, minWidth: 0 },
@@ -115,7 +122,7 @@ export default function ProgressionScreen() {
       marginHorizontal: 16,
       marginTop: 14,
     },
-    privateText: { flex: 1, color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 12 },
+    privateText: { flex: 1, minWidth: 0, color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 12 },
     content: {
       width: "100%",
       maxWidth: 720,
@@ -140,13 +147,14 @@ export default function ProgressionScreen() {
     nextText: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 11 },
     track: { height: 8, width: "100%", borderRadius: 4, backgroundColor: colors.muted, overflow: "hidden", marginTop: 7 },
     fill: { height: "100%", borderRadius: 4, backgroundColor: colors.primary },
-    streakRow: { flexDirection: "row", width: "100%", gap: 10, marginTop: 16 },
-    streak: { flex: 1, backgroundColor: colors.muted, borderRadius: colors.radius, padding: 12 },
+    streakRow: { flexDirection: "row", width: "100%", gap: 10, marginTop: 16, flexWrap: "wrap" },
+    streak: { flex: 1, minWidth: 120, backgroundColor: colors.muted, borderRadius: colors.radius, padding: 12 },
     streakLabel: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 10 },
     streakValue: { color: colors.foreground, fontFamily: "Inter_700Bold", fontSize: 19, marginTop: 3 },
-    tabs: { flexDirection: "row", gap: 7 },
+    tabs: { flexDirection: "row", gap: 7, flexWrap: "wrap" },
     tab: {
       flex: 1,
+      minWidth: 80,
       minHeight: 44,
       alignItems: "center",
       justifyContent: "center",
@@ -175,7 +183,7 @@ export default function ProgressionScreen() {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
-    rowCopy: { flex: 1, minWidth: 0 },
+    rowCopy: { flex: 1, minWidth: 0, marginRight: 8 },
     rowTitle: { color: colors.foreground, fontFamily: "Inter_600SemiBold", fontSize: 14 },
     rowDetail: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16, marginTop: 2 },
     status: { color: colors.primary, fontFamily: "Inter_500Medium", fontSize: 10, marginTop: 4 },
@@ -192,19 +200,21 @@ export default function ProgressionScreen() {
 
   const header = (
     <View style={styles.header}>
-      <Pressable
-        testID="progression-back"
-        accessibilityRole="button"
-        accessibilityLabel={t.common.back}
-        hitSlop={8}
-        style={({ pressed }) => [styles.back, { opacity: pressed ? 0.5 : 1 }]}
-        onPress={() => router.back()}
-      >
-        <Feather name="arrow-left" size={22} color={colors.foreground} />
-      </Pressable>
-      <View style={styles.headerCopy}>
-        <Text style={styles.title} numberOfLines={1}>{t.progression.title}</Text>
-        <Text style={styles.subtitle} numberOfLines={1}>{t.progression.subtitle}</Text>
+      <View style={styles.headerInner}>
+        <Pressable
+          testID="progression-back"
+          accessibilityRole="button"
+          accessibilityLabel={t.common.back}
+          hitSlop={8}
+          style={({ pressed }) => [styles.back, { opacity: pressed ? 0.5 : 1 }]}
+          onPress={() => router.back()}
+        >
+          <Feather name="arrow-left" size={22} color={colors.foreground} />
+        </Pressable>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title} numberOfLines={1}>{t.progression.title}</Text>
+          <Text style={styles.subtitle} numberOfLines={1}>{t.progression.subtitle}</Text>
+        </View>
       </View>
     </View>
   );

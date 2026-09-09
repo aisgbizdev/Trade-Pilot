@@ -191,12 +191,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col max-w-lg md:max-w-4xl lg:max-w-6xl mx-auto relative">
-      <header className="sticky top-0 z-40 pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50">
-        <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-40 pl-[calc(env(safe-area-inset-left,0px)+0.75rem)] sm:pl-[calc(env(safe-area-inset-left,0px)+1rem)] pr-[calc(env(safe-area-inset-right,0px)+0.75rem)] sm:pr-[calc(env(safe-area-inset-right,0px)+1rem)] pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-2.5 sm:pb-3 flex items-center justify-between backdrop-blur-xl bg-background/80 border-b border-border/50 gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
           {!isMainNav && (
             <button
               onClick={() => setLocation(backPath)}
-              className="p-1.5 rounded-xl hover:bg-muted transition-colors -ml-1 mr-0.5"
+              className="p-1 sm:p-1.5 rounded-xl hover:bg-muted transition-colors -ml-1 sm:-ml-1 mr-0 shrink-0"
               aria-label={t.common.back}
               data-testid="button-back-header"
             >
@@ -205,20 +205,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
           <Link
             href={analyzeNavPath}
-            className="flex items-center gap-2 -m-1 p-1 rounded-lg hover:bg-muted/40 transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 -m-1 p-1 rounded-lg hover:bg-muted/40 transition-colors shrink-0 min-w-0"
             data-testid="link-brand-home"
             aria-label={t.nav.analyze}
           >
-            <BrandLogo className="w-8 h-8" />
-            <div className="flex flex-col">
-              <span className="font-bold text-[13px] leading-none tracking-tight">
+            <BrandLogo className="w-6 h-6 sm:w-8 sm:h-8 shrink-0" />
+            <div className="flex flex-col shrink-0 min-w-0">
+              <span className="font-bold text-[12px] sm:text-[13px] leading-none tracking-tight truncate">
                 <span className="gradient-text">TradePilot</span>
                 <span className="text-foreground">.id</span>
               </span>
             </div>
           </Link>
         </div>
-        <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
+        <nav className="hidden lg:flex items-center gap-1 overflow-x-auto" aria-label="Primary">
           {navItems.map((item) => {
             const { id, href, icon: Icon, label } = item;
             const active = isNavItemActive(item);
@@ -244,18 +244,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           {isEmbed && (
             <a
               href={window.location.origin + (import.meta.env.BASE_URL || "/")}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1 text-[11px] text-muted-foreground hover:text-amber-400 transition-colors px-2 py-1 rounded-lg hover:bg-muted mr-1"
+              className="hidden sm:flex items-center gap-1 text-[11px] text-muted-foreground hover:text-amber-400 transition-colors px-2 py-1 rounded-lg hover:bg-muted mr-1 shrink-0"
               data-testid="link-embed-full-version"
               aria-label={t.common.embed_full_version}
             >
-              <ExternalLink className="w-3 h-3" />
-              {t.common.embed_full_version}
+              <ExternalLink className="w-3 h-3 shrink-0" />
+              <span className="truncate">{t.common.embed_full_version}</span>
             </a>
           )}
           <LanguageToggle />
@@ -269,7 +269,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 updateProfile.mutate({ data: { themePreference: next } });
               }
             }}
-            className="p-2 rounded-xl hover:bg-muted transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl hover:bg-muted transition-colors shrink-0"
           >
             {theme === "dark"
               ? <Sun className="w-4 h-4 text-amber-400" />
@@ -282,7 +282,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               data-testid="link-header-profile"
               aria-label={t.nav.profile}
               className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-full text-[12px] font-semibold transition-colors overflow-hidden",
+                "flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 ml-0.5 rounded-full text-[11px] sm:text-[12px] font-semibold transition-colors overflow-hidden shrink-0",
                 profileActive
                   ? "bg-primary/15 text-primary ring-2 ring-primary/40"
                   : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground"
@@ -305,12 +305,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link
               href="/notifications"
               data-testid="button-notifications"
-              className="relative p-2 rounded-xl hover:bg-muted transition-colors"
+              className="relative p-1.5 sm:p-2 rounded-xl hover:bg-muted transition-colors shrink-0"
               aria-label="Notifications"
             >
               <Bell className="w-4 h-4 text-muted-foreground" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-lg shadow-amber-500/40">
+                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[8px] sm:text-[9px] rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center font-bold shadow-lg shadow-amber-500/40">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -327,11 +327,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       >
         {children}
 
-        <footer className="border-t border-border/50 px-4 py-4 mt-6 text-center space-y-2">
-          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 leading-relaxed">
+        <footer className="border-t border-border/50 px-3 sm:px-4 py-4 mt-6 text-center space-y-2">
+          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 leading-relaxed max-w-[280px] sm:max-w-none mx-auto">
             {t.landing.footer}
           </p>
-          <div className="flex justify-center items-center gap-4 text-[11px]">
+          <div className="flex flex-wrap justify-center items-center gap-x-2.5 sm:gap-x-4 gap-y-1.5 text-[10px] sm:text-[11px]">
             <Link
               href="/privacy"
               className="text-muted-foreground hover:text-foreground"
@@ -388,37 +388,38 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <nav
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-40 lg:hidden"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg md:max-w-4xl z-40 lg:hidden"
         data-testid="mobile-bottom-nav"
         aria-label="Mobile navigation"
       >
-        <div className="mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] rounded-2xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-2xl shadow-black/20">
-          <div className="flex items-center justify-around py-2 px-1">
+        <div className="mx-2 sm:mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] rounded-2xl bg-background/90 backdrop-blur-xl border border-border/60 shadow-2xl shadow-black/20">
+          <div className="flex items-center justify-around py-1.5 sm:py-2 px-0.5 sm:px-1">
             {navItems.map((item) => {
               const { id, href, icon: Icon, label } = item;
               const active = isNavItemActive(item);
               const isNew = newlyUnlocked.has(id);
               return (
-                <Link key={id} href={href}>
-                  <button
-                    data-testid={`nav-${id}`}
-                    onAnimationEnd={isNew ? () => clearUnlocked(id) : undefined}
-                    className={cn(
-                      "flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200",
-                      active
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground",
-                      isNew && "nav-unlock-pulse"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                      active ? "bg-primary/10 dark:bg-primary/20" : ""
-                    )}>
-                      <Icon className={cn("w-4.5 h-4.5", active && "stroke-[2.5]")} style={{ width: '18px', height: '18px' }} />
-                    </div>
-                    <span className={cn("text-[9px] font-medium", active && "font-semibold")}>{label}</span>
-                  </button>
+                <Link
+                  key={id}
+                  href={href}
+                  data-testid={`nav-${id}`}
+                  aria-current={active ? "page" : undefined}
+                  onAnimationEnd={isNew ? () => clearUnlocked(id) : undefined}
+                  className={cn(
+                    "flex flex-1 flex-col items-center gap-0.5 sm:gap-1 px-0.5 sm:px-3 py-1 sm:py-1.5 rounded-xl transition-all duration-200 min-w-0",
+                    active
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                    isNew && "nav-unlock-pulse"
+                  )}
+                >
+                  <div className={cn(
+                    "w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all",
+                    active ? "bg-primary/10 dark:bg-primary/20" : ""
+                  )}>
+                    <Icon className={cn("w-4 sm:w-4.5 h-4 sm:h-4.5", active && "stroke-[2.5]")} />
+                  </div>
+                  <span className={cn("text-[8px] sm:text-[9px] font-medium tracking-tight truncate w-full text-center px-0.5", active && "font-semibold")}>{label}</span>
                 </Link>
               );
             })}
