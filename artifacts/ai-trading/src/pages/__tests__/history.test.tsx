@@ -135,6 +135,9 @@ describe("HistoryPage: instrument performance", () => {
     expect(screen.getByTestId("instrument-performance-grid")).toHaveClass("sm:grid-cols-2");
     expect(screen.getByTestId("instrument-performance-grid")).not.toHaveClass("lg:grid-cols-3");
     expect(screen.queryByTestId("button-show-all-instruments")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /XAU\/USD.*10 sample/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /BRENT.*5 sample/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Performance by timeframe · XAU/USD")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /BRENT.*5 sample/i }));
     expect(await screen.findByText("Performance by timeframe · BRENT")).toBeInTheDocument();
 

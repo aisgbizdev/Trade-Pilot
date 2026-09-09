@@ -175,7 +175,9 @@ export function HistoryPerformanceSummary() {
     { label: "TP2", value: o.tp2Hit, icon: CheckCircle2, outcome: "tp2_hit" },
     { label: t.history.summary_invalid, value: o.invalidated, icon: AlertTriangle, outcome: "invalidated" },
   ];
-  const selectedInstrument = instrumentRows.find((row) => row.instrument === focusedInstrument);
+  const selectedInstrument = instrumentRows.find(
+    (row) => row.instrument === (focusedInstrument ?? "XAU/USD"),
+  );
   const timeframeRows = selectedInstrument?.byTimeframe ?? summary.byTimeframe;
   const qualified = timeframeRows.filter((row) => row.total >= summary.minSamples);
   const best = [...qualified].filter((r) => r.winRate != null).sort((a, b) => (b.winRate ?? 0) - (a.winRate ?? 0))[0];
@@ -242,7 +244,7 @@ export function HistoryPerformanceSummary() {
             data-testid="instrument-performance-grid"
           >
             {instrumentRows.map((row) => {
-              const selected = focusedInstrument === row.instrument;
+              const selected = selectedInstrument?.instrument === row.instrument;
               return (
                 <div
                   key={row.instrument}
