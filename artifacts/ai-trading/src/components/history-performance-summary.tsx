@@ -220,10 +220,11 @@ export function HistoryPerformanceSummary() {
               <h2 className="text-sm font-semibold">{t.history.instrument_performance}</h2>
               <p className="text-[11px] text-muted-foreground mt-1">{t.history.instrument_performance_hint}</p>
             </div>
-            {focusedInstrument && (
+            {(focusedInstrument || instruments.length > 0) && (
               <button
                 className="text-xs text-primary hover:underline shrink-0"
-                onClick={() => update({ focusInstrument: null })}
+                onClick={() => update({ focusInstrument: null, instruments: null })}
+                data-testid="button-show-all-instruments"
               >
                 {t.history.show_all_instruments}
               </button>
@@ -233,7 +234,13 @@ export function HistoryPerformanceSummary() {
         {instrumentRows.length === 0 ? (
           <p className="p-6 text-center text-xs text-muted-foreground">{t.history.no_data_yet}</p>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            className={cn(
+              "grid sm:grid-cols-2",
+              instrumentRows.length !== 4 && "lg:grid-cols-3",
+            )}
+            data-testid="instrument-performance-grid"
+          >
             {instrumentRows.map((row) => {
               const selected = focusedInstrument === row.instrument;
               return (

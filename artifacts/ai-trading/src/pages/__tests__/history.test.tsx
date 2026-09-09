@@ -88,6 +88,10 @@ function summaryHandler(): FetchHandler {
           byTimeframe: [{ timeframe: "4h", total: 5, ...stats }],
         },
         {
+          instrument: "HSI", total: 2, ...stats,
+          byTimeframe: [{ timeframe: "1h", total: 2, ...stats }],
+        },
+        {
           instrument: "EUR/USD", total: 3, ...stats,
           byTimeframe: [{ timeframe: "1h", total: 3, ...stats }],
         },
@@ -128,6 +132,9 @@ describe("HistoryPage: instrument performance", () => {
     );
 
     expect(await screen.findByText("Performance by instrument")).toBeInTheDocument();
+    expect(screen.getByTestId("instrument-performance-grid")).toHaveClass("sm:grid-cols-2");
+    expect(screen.getByTestId("instrument-performance-grid")).not.toHaveClass("lg:grid-cols-3");
+    expect(screen.queryByTestId("button-show-all-instruments")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /BRENT.*5 sample/i }));
     expect(await screen.findByText("Performance by timeframe · BRENT")).toBeInTheDocument();
 
@@ -135,6 +142,26 @@ describe("HistoryPage: instrument performance", () => {
     expect(await screen.findByText("Performance by timeframe · Other Instruments")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /EUR\/USD.*3 sample/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /NASDAQ.*2 sample/i })).not.toBeInTheDocument();
+  });
+
+  it("shows Show all for an instrument filter and clears that filter", async () => {
+    window.history.replaceState({}, "", "/history?instruments=HSI");
+    installFetchMock([summaryHandler()]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <HistoryPage />
+      </Wrapper>,
+    );
+
+    const showAll = await screen.findByTestId("button-show-all-instruments");
+    fireEvent.click(showAll);
+
+    await waitFor(() => {
+      expect(new URLSearchParams(window.location.search).has("instruments")).toBe(false);
+    });
+    expect(new URLSearchParams(window.location.search).has("focusInstrument")).toBe(false);
   });
 });
 
