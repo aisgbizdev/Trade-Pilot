@@ -22,4 +22,4 @@
 - [Post-merge API client generation](post-merge-api-client-generation.md) — merged OpenAPI changes can leave generated clients stale because setup does not regenerate them.
 - [Publish schema drift safety](publish-schema-drift-safety.md) — if Publish offers to drop a source-defined production object, restore its structure in development; never accept a truncate prompt.
 - [Replit static SPA deep links](replit-static-spa-deep-links.md) — static artifact hosting may raw-404 client routes despite emitted 404/200 files; use a process server with history fallback for direct URLs.
-- [Deployment image size](deployment-image-size.md) — Playwright traces/videos can exceed Replit's 8 GiB image limit; exclude test outputs, caches, local dependencies, and Git history from publish context.
+- [Deployment image size](deployment-image-size.md) — Playwright traces/videos can exceed Replit's 8 GiB limit; exclude test outputs/caches, but retain node_modules because runtime packaging depends on them.

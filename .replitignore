@@ -4,11 +4,6 @@
 # No need to store the pnpm store twice.
 .local
 
-# Dependencies are installed during the deployment build. Keeping workspace
-# copies would duplicate them in the final image.
-node_modules/
-**/node_modules/
-
 # Development caches and test artifacts are not needed at runtime. In
 # particular, Playwright videos and traces can grow by several gigabytes.
 .cache/
