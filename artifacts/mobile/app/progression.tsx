@@ -1,4 +1,5 @@
 import { ProgressionEmblem } from "@/components/ProgressionEmblem";
+import { AchievementBadge } from "@/components/AchievementBadge";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
 import { Feather } from "@expo/vector-icons";
@@ -174,20 +175,6 @@ export default function ProgressionScreen() {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
-    badgeIcon: {
-      width: 42,
-      height: 42,
-      borderTopLeftRadius: 10,
-      borderTopRightRadius: 10,
-      borderBottomLeftRadius: 18,
-      borderBottomRightRadius: 18,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: colors.muted,
-    },
-    badgeIconUnlocked: { backgroundColor: colors.secondary, borderColor: colors.primary },
     rowCopy: { flex: 1, minWidth: 0 },
     rowTitle: { color: colors.foreground, fontFamily: "Inter_600SemiBold", fontSize: 14 },
     rowDetail: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16, marginTop: 2 },
@@ -278,9 +265,7 @@ export default function ProgressionScreen() {
     const copy = t.progression.badges[key];
     return (
       <View key={key} style={styles.row} testID={`progression-badge-${key}`}>
-        <View style={[styles.badgeIcon, isUnlocked && styles.badgeIconUnlocked]}>
-          <Feather name={isUnlocked ? "award" : "lock"} size={19} color={isUnlocked ? colors.primary : colors.mutedForeground} />
-        </View>
+        <AchievementBadge achievementKey={key} unlocked={isUnlocked} size="sm" />
         <View style={styles.rowCopy}>
           <Text style={styles.rowTitle}>{copy.name}</Text>
           <Text style={styles.rowDetail}>{copy.requirement}</Text>

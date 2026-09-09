@@ -2,6 +2,40 @@ export type EmblemState = "active" | "completed" | "locked";
 export type EmblemFamily = "badge" | "shield" | "crest";
 export type EmblemSymbol = "bars" | "star" | "trophy" | "crown";
 export type EmblemPalette = readonly [string, string, string, string];
+export type AchievementBadgeFamily =
+  | "journal"
+  | "evaluation"
+  | "checklist"
+  | "guide"
+  | "wait"
+  | "consistency"
+  | "level"
+  | "mastery";
+export type AchievementBadgeSymbol =
+  | "compass"
+  | "crosshair"
+  | "shield"
+  | "book-open"
+  | "anchor"
+  | "zap"
+  | "chevron-up"
+  | "award";
+export type AchievementBadgeShape =
+  | "medallion"
+  | "square"
+  | "shield"
+  | "squircle"
+  | "octagon"
+  | "diamond"
+  | "pentagon"
+  | "hexagon";
+
+export interface AchievementBadgeStyle {
+  readonly family: AchievementBadgeFamily;
+  readonly symbol: AchievementBadgeSymbol;
+  readonly shape: AchievementBadgeShape;
+  readonly accent: string;
+}
 
 export interface ProgressionEmblemStyle {
   readonly name: string;
@@ -61,3 +95,36 @@ export const PROGRESSION_EMBLEM_CASES = [
 ] as const;
 
 export const PROGRESSION_EMBLEM_STATES: readonly EmblemState[] = ["active", "completed", "locked"];
+
+export const ACHIEVEMENT_BADGE_STYLES: Readonly<Record<AchievementBadgeFamily, AchievementBadgeStyle>> = {
+  journal: { family: "journal", symbol: "compass", shape: "medallion", accent: "#3b82f6" },
+  evaluation: { family: "evaluation", symbol: "crosshair", shape: "square", accent: "#10b981" },
+  checklist: { family: "checklist", symbol: "shield", shape: "shield", accent: "#94a3b8" },
+  guide: { family: "guide", symbol: "book-open", shape: "squircle", accent: "#06b6d4" },
+  wait: { family: "wait", symbol: "anchor", shape: "octagon", accent: "#f59e0b" },
+  consistency: { family: "consistency", symbol: "zap", shape: "diamond", accent: "#eab308" },
+  level: { family: "level", symbol: "chevron-up", shape: "pentagon", accent: "#d6a52d" },
+  mastery: { family: "mastery", symbol: "award", shape: "hexagon", accent: "#a855f7" },
+};
+
+export function getAchievementBadgeStyle(key: string): AchievementBadgeStyle {
+  if (key === "first_reflection" || key.startsWith("journal_")) return ACHIEVEMENT_BADGE_STYLES.journal;
+  if (key.startsWith("evaluation_")) return ACHIEVEMENT_BADGE_STYLES.evaluation;
+  if (key.startsWith("checklist_")) return ACHIEVEMENT_BADGE_STYLES.checklist;
+  if (key.startsWith("guide_")) return ACHIEVEMENT_BADGE_STYLES.guide;
+  if (key.startsWith("wait_")) return ACHIEVEMENT_BADGE_STYLES.wait;
+  if (key.startsWith("streak_") || key === "consistent_1000") return ACHIEVEMENT_BADGE_STYLES.consistency;
+  if (key.startsWith("mastery_")) return ACHIEVEMENT_BADGE_STYLES.mastery;
+  return ACHIEVEMENT_BADGE_STYLES.level;
+}
+
+export const ACHIEVEMENT_BADGE_CASES = [
+  { key: "first_reflection", family: "journal", symbol: "compass", shape: "medallion" },
+  { key: "evaluation_10", family: "evaluation", symbol: "crosshair", shape: "square" },
+  { key: "checklist_10", family: "checklist", symbol: "shield", shape: "shield" },
+  { key: "guide_5", family: "guide", symbol: "book-open", shape: "squircle" },
+  { key: "wait_10", family: "wait", symbol: "anchor", shape: "octagon" },
+  { key: "streak_30", family: "consistency", symbol: "zap", shape: "diamond" },
+  { key: "level_50", family: "level", symbol: "chevron-up", shape: "pentagon" },
+  { key: "mastery_1", family: "mastery", symbol: "award", shape: "hexagon" },
+] as const;
