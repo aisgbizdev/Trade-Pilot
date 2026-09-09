@@ -13,7 +13,10 @@ import {
   type FundamentalSnapshot,
   type AnalysisTokenUsage,
 } from "../lib/openai";
-import { OTHER_INSTRUMENT_BUCKET_KEY } from "../lib/performance";
+import {
+  OTHER_INSTRUMENT_BUCKET_KEY,
+  PRIMARY_INSTRUMENTS,
+} from "@workspace/instrument-taxonomy";
 import { estimateCostUsd } from "../lib/model-pricing";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
 import { getLivePriceFor } from "../lib/live-prices";
@@ -175,10 +178,10 @@ router.get("/analyses/history-summary", requireAuth, async (req: AuthRequest, re
   if (includeOtherInstruments && exactInstruments.length > 0) {
     conditions.push(or(
       inArray(analyses.instrument, exactInstruments),
-      notInArray(analyses.instrument, ["XAU/USD", "BRENT", "HSI", "NIKKEI"]),
+      notInArray(analyses.instrument, [...PRIMARY_INSTRUMENTS]),
     )!);
   } else if (includeOtherInstruments) {
-    conditions.push(notInArray(analyses.instrument, ["XAU/USD", "BRENT", "HSI", "NIKKEI"]));
+    conditions.push(notInArray(analyses.instrument, [...PRIMARY_INSTRUMENTS]));
   } else if (exactInstruments.length) {
     conditions.push(inArray(analyses.instrument, exactInstruments));
   }
@@ -1007,10 +1010,10 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
   if (includeOtherInstruments && exactFilterInstruments.length > 0) {
     conditions.push(or(
       inArray(analyses.instrument, exactFilterInstruments),
-      notInArray(analyses.instrument, ["XAU/USD", "BRENT", "HSI", "NIKKEI"]),
+      notInArray(analyses.instrument, [...PRIMARY_INSTRUMENTS]),
     )!);
   } else if (includeOtherInstruments) {
-    conditions.push(notInArray(analyses.instrument, ["XAU/USD", "BRENT", "HSI", "NIKKEI"]));
+    conditions.push(notInArray(analyses.instrument, [...PRIMARY_INSTRUMENTS]));
   } else if (exactFilterInstruments.length > 0) {
     conditions.push(inArray(analyses.instrument, exactFilterInstruments));
   } else if (filterInstrument) {

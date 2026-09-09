@@ -1,9 +1,14 @@
-export const PRIMARY_INSTRUMENTS = [
-  "XAU/USD",
-  "BRENT",
-  "HSI",
-  "NIKKEI",
-] as const;
+import {
+  PRIMARY_INSTRUMENTS,
+  OTHER_INSTRUMENT_BUCKET_KEY,
+  isPrimaryInstrument,
+} from "@workspace/instrument-taxonomy";
+
+export {
+  PRIMARY_INSTRUMENTS,
+  OTHER_INSTRUMENT_BUCKET_KEY,
+  isPrimaryInstrument,
+};
 
 export const OTHER_INSTRUMENTS = [
   "XAG/USD",
@@ -22,9 +27,3 @@ export const ALL_HISTORY_INSTRUMENTS = [
   ...PRIMARY_INSTRUMENTS,
   ...OTHER_INSTRUMENTS,
 ] as const;
-
-export const OTHER_INSTRUMENT_BUCKET_KEY = "__other__";
-
-export function isPrimaryInstrument(instrument: string): boolean {
-  return (PRIMARY_INSTRUMENTS as readonly string[]).includes(instrument);
-}

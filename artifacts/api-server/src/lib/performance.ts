@@ -20,6 +20,10 @@
 
 import { db } from "./db";
 import { analyses, type FundamentalContextShape } from "@workspace/db/schema";
+import {
+  OTHER_INSTRUMENT_BUCKET_KEY,
+  isPrimaryInstrument,
+} from "@workspace/instrument-taxonomy";
 import { and, gte, isNotNull, inArray, sql } from "drizzle-orm";
 import { sessionBucket, type SessionKey } from "./trader-mirror";
 
@@ -200,13 +204,7 @@ export interface PerformanceSummary {
   byNewsActivity: GatedSegment;
 }
 
-const OFFICIAL_PERFORMANCE_INSTRUMENTS = new Set([
-  "XAU/USD",
-  "BRENT",
-  "HSI",
-  "NIKKEI",
-]);
-export const OTHER_INSTRUMENT_BUCKET_KEY = "__other__";
+export { OTHER_INSTRUMENT_BUCKET_KEY } from "@workspace/instrument-taxonomy";
 
 function emptyOverall(): OverallStat {
   return {
@@ -350,7 +348,7 @@ export async function computePerformanceSummary(
   // analysed, not when price eventually touched a level.
   const sessionSeg = segment(rows, (r) => sessionBucket(r.createdAt) as SessionKey);
   const instrumentSeg = segment(rows, (r) =>
-    OFFICIAL_PERFORMANCE_INSTRUMENTS.has(r.instrument)
+    isPrimaryInstrument(r.instrument)
       ? r.instrument
       : OTHER_INSTRUMENT_BUCKET_KEY,
   );

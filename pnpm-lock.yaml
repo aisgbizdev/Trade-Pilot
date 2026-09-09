@@ -344,6 +344,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/instrument-taxonomy':
+        specifier: workspace:*
+        version: link:../../lib/instrument-taxonomy
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -455,6 +458,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/instrument-taxonomy':
+        specifier: workspace:*
+        version: link:../../lib/instrument-taxonomy
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -909,6 +915,8 @@ importers:
         version: 0.31.9
 
   lib/image-size-safe: {}
+
+  lib/instrument-taxonomy: {}
 
   scripts:
     devDependencies:

@@ -13,6 +13,7 @@ import {
   classifyNewsActivity,
 } from "../performance";
 import type { FundamentalContextShape } from "@workspace/db/schema";
+import { PRIMARY_INSTRUMENTS } from "@workspace/instrument-taxonomy";
 
 const RUN_ID = randomBytes(4).toString("hex");
 const seededUserIds: number[] = [];
@@ -84,6 +85,11 @@ afterAll(async () => {
 });
 
 describe("computePerformanceSummary", () => {
+  it("uses the shared primary-instrument taxonomy and Other Instruments token", () => {
+    expect(PRIMARY_INSTRUMENTS).toEqual(["XAU/USD", "BRENT", "HSI", "NIKKEI"]);
+    expect(OTHER_INSTRUMENT_BUCKET_KEY).toBe("__other__");
+  });
+
   it("returns an empty, fully-gated payload when no resolved analyses exist in the window", async () => {
     // Far-future `now` puts the 30d cutoff well past every real or
     // leftover analysis in the dev DB, so the window is provably empty
