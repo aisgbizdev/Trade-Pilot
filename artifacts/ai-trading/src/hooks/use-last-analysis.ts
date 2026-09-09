@@ -28,19 +28,22 @@ export function useLastAnalysisId(): { id: number | null; isLoading: boolean } {
 }
 
 /**
- * Where the "Analisis" nav tab should point: the last analysis's detail
- * page, or the blank form when the user has never run one.
+ * Where the "Analisis" nav tab should point: the analyze page showing the
+ * last analysis's result inline (`/analyze?result=<id>` — zero tokens to
+ * reopen), or the blank form when the user has never run one. It stays on
+ * the Analisis page rather than jumping to the standalone detail view.
  */
 export function useLastAnalysisNavPath(): string {
   const { id } = useLastAnalysisId();
-  return id != null ? `/analyses/${id}` : "/analyze";
+  return id != null ? `/analyze?result=${id}` : "/analyze";
 }
 
 /**
- * Where a generic "back" should land: the last analysis, else the
- * dashboard (never the token-spending blank form).
+ * Where a generic "back" should land: the analyze page with the last
+ * analysis in view, else the dashboard (never the token-spending blank
+ * form).
  */
 export function useBackToLastAnalysisPath(): string {
   const { id } = useLastAnalysisId();
-  return id != null ? `/analyses/${id}` : "/dashboard";
+  return id != null ? `/analyze?result=${id}` : "/dashboard";
 }

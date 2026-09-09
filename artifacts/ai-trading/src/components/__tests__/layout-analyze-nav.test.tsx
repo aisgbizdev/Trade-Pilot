@@ -55,14 +55,13 @@ function renderLayoutAt(path: string, latest: { id: number } | null) {
 }
 
 describe("Layout — Analisis nav / back go to the last analysis", () => {
-  it("points the Analisis tab at /analyses/<lastId> when the user has analyses", async () => {
+  it("points the Analisis tab at /analyze?result=<lastId> when the user has analyses", async () => {
     renderLayoutAt("/journal", { id: 42 });
 
     await waitFor(() =>
-      expect(screen.getByTestId("nav-desktop-analyze")).toHaveAttribute("href", "/analyses/42"),
+      expect(screen.getByTestId("nav-desktop-analyze")).toHaveAttribute("href", "/analyze?result=42"),
     );
-    expect(screen.getByTestId("nav-analyze").closest("a")).toHaveAttribute("href", "/analyses/42");
-    // still highlighted as the active tab on /analyze* and /analyses*
+    expect(screen.getByTestId("nav-analyze").closest("a")).toHaveAttribute("href", "/analyze?result=42");
   });
 
   it("falls back to /analyze when the user has no analyses yet", async () => {
@@ -73,17 +72,18 @@ describe("Layout — Analisis nav / back go to the last analysis", () => {
     );
   });
 
-  it("header back button navigates to the last analysis", async () => {
+  it("header back button navigates to the analyze page with the last analysis", async () => {
     renderLayoutAt("/notifications", { id: 42 });
 
     const back = await screen.findByTestId("button-back-header");
     await waitFor(() =>
-      expect(screen.getByTestId("nav-desktop-analyze")).toHaveAttribute("href", "/analyses/42"),
+      expect(screen.getByTestId("nav-desktop-analyze")).toHaveAttribute("href", "/analyze?result=42"),
     );
     await act(async () => {
       fireEvent.click(back);
     });
-    expect(window.location.pathname).toBe("/analyses/42");
+    expect(window.location.pathname).toBe("/analyze");
+    expect(window.location.search).toBe("?result=42");
   });
 
   it("header back button falls back to /dashboard with no analyses", async () => {

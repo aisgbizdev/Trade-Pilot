@@ -419,11 +419,11 @@ export default function HistoryPage() {
 
   return (
     <Layout>
-      <div className="px-4 py-5">
-        <div className="mb-4">
+      <div className="px-4 py-5 md:max-w-3xl md:mx-auto">
+        <div className="mb-5">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-foreground">{t.history.title}</h1>
+              <h1 className="text-lg font-bold text-foreground">{t.history.title}</h1>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {total > 0 ? `${total} ${t.history.total_analyses}` : t.history.no_data_yet}
               </p>

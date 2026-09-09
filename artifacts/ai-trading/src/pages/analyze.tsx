@@ -28,7 +28,7 @@ import {
   type UserSelectedMode,
   type ProgressionEvidenceSession,
 } from "@workspace/api-client-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
 import { instrumentToTradingViewSymbol, timeframeToTradingViewInterval, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
 import { MarketSessionsBadge } from "@/components/market-sessions-badge";
@@ -881,6 +881,18 @@ export default function AnalyzePage() {
       resultSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [resultAnalysisId]);
+
+  // React to `?result=<id>` changing while this page is already mounted —
+  // the nav "Analisis" tab points at /analyze?result=<lastId>, and wouter
+  // doesn't remount the page for a same-path navigation. The useState
+  // initializer above only covers a fresh mount.
+  const routeSearch = useSearch();
+  useEffect(() => {
+    const raw = new URLSearchParams(routeSearch).get("result");
+    const n = raw ? Number(raw) : NaN;
+    const next = Number.isInteger(n) && n > 0 ? n : null;
+    setResultAnalysisId((cur) => (cur === next ? cur : next));
+  }, [routeSearch]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
