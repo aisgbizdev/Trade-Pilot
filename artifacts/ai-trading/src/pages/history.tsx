@@ -326,6 +326,16 @@ export default function HistoryPage() {
   const analyses = listData?.analyses ?? [];
   const total = listData?.total ?? 0;
   const hasMore = page * limit < total;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const rangeStart = total === 0 ? 0 : (page - 1) * limit + 1;
+  const rangeEnd = Math.min(page * limit, total);
+  const pageStatus = t.history.page_status
+    .replace("{page}", String(page))
+    .replace("{pages}", String(totalPages));
+  const rangeStatus = t.history.range_status
+    .replace("{start}", String(rangeStart))
+    .replace("{end}", String(rangeEnd))
+    .replace("{total}", String(total));
 
   const updateFilters = (next: FilterState) => {
     apply(next, 1);
@@ -826,27 +836,42 @@ export default function HistoryPage() {
               );
             })}
 
-            <div className="flex gap-2 pt-2 md:col-span-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                disabled={page === 1}
-                onClick={() => apply(filters, Math.max(1, page - 1))}
-                data-testid="button-prev-page"
+            <div className="flex flex-col gap-2 pt-2 md:col-span-2 sm:flex-row sm:items-center">
+              <div
+                className="text-center sm:text-left sm:min-w-[9rem]"
+                aria-live="polite"
+                data-testid="history-pagination-status"
               >
-                {t.history.prev}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                disabled={!hasMore}
-                onClick={() => apply(filters, page + 1)}
-                data-testid="button-next-page"
-              >
-                {t.history.next}
-              </Button>
+                <p className="text-xs font-medium text-foreground">{pageStatus}</p>
+                <p
+                  className="text-[10px] text-muted-foreground"
+                  data-testid="history-pagination-range"
+                >
+                  {rangeStatus}
+                </p>
+              </div>
+              <div className="flex flex-1 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={page === 1}
+                  onClick={() => apply(filters, Math.max(1, page - 1))}
+                  data-testid="button-prev-page"
+                >
+                  {t.history.prev}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={!hasMore}
+                  onClick={() => apply(filters, page + 1)}
+                  data-testid="button-next-page"
+                >
+                  {t.history.next}
+                </Button>
+              </div>
             </div>
           </div>
         )}

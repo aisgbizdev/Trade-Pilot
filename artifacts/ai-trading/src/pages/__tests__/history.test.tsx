@@ -162,6 +162,12 @@ describe("HistoryPage: happy-path render", () => {
     expect(
       (screen.getByTestId("button-next-page") as HTMLButtonElement).disabled,
     ).toBe(true);
+    expect(screen.getByTestId("history-pagination-status")).toHaveTextContent(
+      "Page 1 of 1",
+    );
+    expect(screen.getByTestId("history-pagination-range")).toHaveTextContent(
+      "Showing 1–2 of 2",
+    );
   });
 });
 
@@ -187,6 +193,38 @@ describe("HistoryPage: pagination size", () => {
       (screen.getByTestId("button-prev-page") as HTMLButtonElement).disabled,
     ).toBe(true);
   });
+
+  it.each([
+    { page: 2, total: 12, expectedPage: "Page 2 of 3", expectedRange: "Showing 6–10 of 12", nextDisabled: false },
+    { page: 3, total: 12, expectedPage: "Page 3 of 3", expectedRange: "Showing 11–12 of 12", nextDisabled: true },
+  ])(
+    "shows the correct page and result range on page $page",
+    async ({ page, total, expectedPage, expectedRange, nextDisabled }) => {
+      window.history.replaceState({}, "", `/history?view=history&page=${page}`);
+      installFetchMock([listHandler({ analyses: SAMPLE_ANALYSES, total })]);
+      const { Wrapper } = makeWrapper();
+
+      render(
+        <Wrapper>
+          <HistoryPage />
+        </Wrapper>,
+      );
+
+      await screen.findByTestId("card-analysis-101");
+      expect(screen.getByTestId("history-pagination-status")).toHaveTextContent(
+        expectedPage,
+      );
+      expect(screen.getByTestId("history-pagination-range")).toHaveTextContent(
+        expectedRange,
+      );
+      expect(
+        (screen.getByTestId("button-prev-page") as HTMLButtonElement).disabled,
+      ).toBe(false);
+      expect(
+        (screen.getByTestId("button-next-page") as HTMLButtonElement).disabled,
+      ).toBe(nextDisabled);
+    },
+  );
 });
 
 describe("HistoryPage: loading + empty branches", () => {
@@ -219,6 +257,9 @@ describe("HistoryPage: loading + empty branches", () => {
     expect(
       await screen.findByTestId("button-start-analysis"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("history-pagination-status"),
+    ).not.toBeInTheDocument();
     // Without active filters the alternate "clear filters" CTA should not
     // appear.
     expect(

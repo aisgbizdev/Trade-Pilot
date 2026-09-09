@@ -480,6 +480,8 @@ export const en = {
     expired: "Expired",
     prev: "Previous",
     next: "Next",
+    page_status: "Page {page} of {pages}",
+    range_status: "Showing {start}–{end} of {total}",
     analyze_again: "Re-analyze",
     analyzing_again: "Analyzing…",
     has_note: "You journaled this trade",

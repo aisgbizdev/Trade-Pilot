@@ -482,6 +482,8 @@ export const id: Translations = {
     expired: "Kadaluarsa",
     prev: "Sebelumnya",
     next: "Selanjutnya",
+    page_status: "Halaman {page} dari {pages}",
+    range_status: "Menampilkan {start}–{end} dari {total}",
     analyze_again: "Analisa Ulang",
     analyzing_again: "Menganalisis…",
     has_note: "Trade ini sudah kamu jurnalkan",
