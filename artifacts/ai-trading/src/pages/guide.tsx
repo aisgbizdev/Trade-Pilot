@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Brain, ChevronLeft, Search, BookOpen, ChevronRight, X, Sparkles } from "lucide-react";
+import { Brain, CheckCircle2, ChevronLeft, Search, BookOpen, ChevronRight, X, Sparkles } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { useGetProgressionCatalog } from "@workspace/api-client-react";
 import { Card } from "@/components/ui/card";
@@ -89,6 +89,7 @@ export default function GuidePage() {
 
 
   const queryClient = useQueryClient();
+  const { data: progressionCatalog } = useGetProgressionCatalog();
   const startEvidence = useStartProgressionEvidence();
   const recordActivity = useRecordProgressionActivity();
   const { toast } = useToast();
@@ -96,6 +97,13 @@ export default function GuidePage() {
 
   const [completedGuides, setCompletedGuides] = useState<Set<string>>(new Set());
   const isAlreadyCompleted = completedGuides.has(activeArticleId || "");
+
+  useEffect(() => {
+    if (!progressionCatalog?.completedGuideIds) return;
+    setCompletedGuides((previous) =>
+      new Set([...previous, ...progressionCatalog.completedGuideIds]),
+    );
+  }, [progressionCatalog?.completedGuideIds]);
 
   const [evidenceSession, setEvidenceSession] = useState<ProgressionEvidenceSession | null>(null);
 
@@ -129,6 +137,7 @@ export default function GuidePage() {
         }
       });
       if (res.awarded) {
+        setCompletedGuides(prev => new Set([...prev, activeArticleId!]));
         queryClient.invalidateQueries({ queryKey: getGetProgressionSummaryQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetProgressionCatalogQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetProgressionHistoryQueryKey() });
@@ -339,6 +348,15 @@ export default function GuidePage() {
                           {lang === "id" ? article.title_id : article.title_en}
                         </span>
                       </span>
+                      {completedGuides.has(article.id) && (
+                        <span
+                          className="ml-auto inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                          data-testid={`guide-quick-start-completed-${article.id}`}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span className="sr-only sm:not-sr-only">{t.guide.completed}</span>
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -429,7 +447,19 @@ export default function GuidePage() {
                             <span className="text-sm font-medium text-foreground">
                               {lang === "id" ? art.title_id : art.title_en}
                             </span>
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                            <span className="flex shrink-0 items-center gap-2">
+                              {completedGuides.has(art.id) && (
+                                <span
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                                  data-testid={`guide-article-completed-${art.id}`}
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                  <span className="hidden sm:inline">{t.guide.completed}</span>
+                                  <span className="sr-only sm:hidden">{t.guide.completed}</span>
+                                </span>
+                              )}
+                              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                            </span>
                           </div>
                         </Card>
                       ))}

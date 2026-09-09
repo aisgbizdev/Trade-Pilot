@@ -56,6 +56,7 @@ export const en = {
     psychology_action: "Open Psychology & Discipline",
     search_placeholder: "Search guide...",
     no_results: "No articles found.",
+    completed: "Completed",
     back_to_guide: "Back to Guide",
     back_to_analysis: "Back to analysis",
     table_of_contents: "Categories",

@@ -10,6 +10,34 @@ import { ACHIEVEMENTS, awardProgression, checklistCycleSubject, levelForXp, rank
 const router = Router();
 export const GUIDE_IDS = ["how-ai-works","feature-map","reading-analysis","validity-confidence","adaptive-plan","personal-progression","analysis-workflow","bias-confidence-validity","levels-chart","timeframe-risk-map","technical-fundamental","standard-plan","adaptive-position-plan","account-rules","terms"] as const;
 const CHECKLIST_ITEMS = ["risk_acknowledged","invalidation_reviewed","timeframe_checked","no_revenge_trade"] as const;
+
+type GuideLedgerRow = {
+  id: number;
+  source: string;
+  sourceEventId: string;
+  xp: number;
+  correctionOfLedgerId: number | null;
+};
+
+export function completedGuideIdsFromLedger(ledger: GuideLedgerRow[]): string[] {
+  const revoked = new Set(
+    ledger
+      .filter((row) => row.xp < 0 && row.correctionOfLedgerId != null)
+      .map((row) => row.correctionOfLedgerId),
+  );
+  const completed = new Set(
+    ledger
+      .filter((row) =>
+        row.source === "guide_completion" &&
+        row.xp > 0 &&
+        !revoked.has(row.id) &&
+        row.sourceEventId.startsWith("guide:")
+      )
+      .map((row) => row.sourceEventId.slice("guide:".length)),
+  );
+  return GUIDE_IDS.filter((guideId) => completed.has(guideId));
+}
+
 export const startEvidenceSchema = z.object({
   source: z.enum(["pre_analysis_checklist", "guide_completion"]),
   guideId: z.enum(GUIDE_IDS).optional(),
@@ -29,13 +57,14 @@ router.get("/progression/summary", requireAuth, async (req: AuthRequest, res): P
 router.get("/progression/catalog", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const unlocked = await db.select({ key: progressionAchievements.key, unlockedAt: progressionAchievements.unlockedAt }).from(progressionAchievements).where(eq(progressionAchievements.userId, req.userId!));
   const map = new Map(unlocked.map((x) => [x.key, x.unlockedAt]));
-  const ledger = await db.select({ id: xpLedger.id, source: xpLedger.source, xp: xpLedger.xp, correctionOfLedgerId: xpLedger.correctionOfLedgerId }).from(xpLedger).where(eq(xpLedger.userId, req.userId!));
+  const ledger = await db.select({ id: xpLedger.id, source: xpLedger.source, sourceEventId: xpLedger.sourceEventId, xp: xpLedger.xp, correctionOfLedgerId: xpLedger.correctionOfLedgerId }).from(xpLedger).where(eq(xpLedger.userId, req.userId!));
   const revoked = new Set(ledger.filter((x) => x.xp < 0 && x.correctionOfLedgerId != null).map((x) => x.correctionOfLedgerId));
   const count = (source: string) => ledger.filter((x) => x.source === source && x.xp > 0 && !revoked.has(x.id)).length;
+  const completedGuideIds = completedGuideIdsFromLedger(ledger);
   const [profile] = await db.select().from(progressionProfiles).where(eq(progressionProfiles.userId, req.userId!)).limit(1);
   const p = profile ?? { level: 1, masteryLevel: 0, currentStreak: 0, totalXp: 0 };
   const eligible = (key: string) => key === "first_reflection" ? count("quality_journal") >= 1 : key.startsWith("journal_") ? count("quality_journal") >= Number(key.split("_")[1]) : key.startsWith("evaluation_") ? count("analysis_evaluation") >= Number(key.split("_")[1]) : key.startsWith("checklist_") ? count("pre_analysis_checklist") >= Number(key.split("_")[1]) : key.startsWith("guide_") ? count("guide_completion") >= Number(key.split("_")[1]) : key.startsWith("wait_") ? count("risk_warning_wait") >= Number(key.split("_")[1]) : key.startsWith("streak_") ? p.currentStreak >= Number(key.split("_")[1]) : key.startsWith("level_") ? p.level >= Number(key.split("_")[1]) : key === "mastery_1" ? p.masteryLevel >= 1 : p.totalXp >= 1000;
-  res.json({ achievements: ACHIEVEMENTS.map((key) => ({ key, unlocked: map.has(key) && eligible(key), unlockedAt: map.has(key) && eligible(key) ? map.get(key)?.toISOString() ?? null : null })) });
+  res.json({ achievements: ACHIEVEMENTS.map((key) => ({ key, unlocked: map.has(key) && eligible(key), unlockedAt: map.has(key) && eligible(key) ? map.get(key)?.toISOString() ?? null : null })), completedGuideIds });
 });
 
 router.get("/progression/history", requireAuth, async (req: AuthRequest, res): Promise<void> => {

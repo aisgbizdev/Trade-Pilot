@@ -58,6 +58,7 @@ export const id: Translations = {
     psychology_action: "Buka Psikologi & Disiplin",
     search_placeholder: "Cari panduan...",
     no_results: "Artikel tidak ditemukan.",
+    completed: "Selesai",
     back_to_guide: "Kembali ke Panduan",
     back_to_analysis: "Kembali ke analisis",
     table_of_contents: "Kategori",

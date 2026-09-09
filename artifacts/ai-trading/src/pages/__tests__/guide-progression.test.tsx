@@ -66,6 +66,29 @@ describe("GuidePage Progression", () => {
 
     await waitFor(() => expect(progressionCalled).toBe(true));
     expect(progressionBody.token).toBe("mock_evidence_token");
+    fireEvent.click(screen.getByTestId("button-guide-back-to-list"));
+    expect(await screen.findByTestId("guide-article-completed-how-ai-works")).toBeInTheDocument();
+  });
+
+  it("shows completed articles from the progression catalog after reload", async () => {
+    installFetchMock([
+      (url, init) => {
+        if (url.includes("/api/progression/catalog") && (!init?.method || init.method === "GET")) {
+          return jsonResponse({
+            achievements: [],
+            completedGuideIds: ["how-ai-works", "analysis-workflow"],
+          });
+        }
+        return null;
+      },
+    ]);
+
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><GuidePage /></Wrapper>);
+
+    expect(await screen.findByTestId("guide-article-completed-how-ai-works")).toBeInTheDocument();
+    expect(screen.getByTestId("guide-quick-start-completed-analysis-workflow")).toBeInTheDocument();
+    expect(screen.queryByTestId("guide-article-completed-feature-map")).not.toBeInTheDocument();
   });
 
   it.each(["personal-progression", "timeframe-risk-map"] as const)(
