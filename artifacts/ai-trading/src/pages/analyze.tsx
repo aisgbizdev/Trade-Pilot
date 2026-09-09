@@ -1100,7 +1100,9 @@ export default function AnalyzePage() {
     instrumentChoiceVersionRef.current += 1;
     setSelectedInstrument(inst);
     setCustomInstrument("");
-    if (resultAnalysisId != null && inst !== finalInstrument && !isLoading) {
+    const isRestoredResultReady =
+      resultAnalysisId != null && restoredAnalysis?.id === resultAnalysisId;
+    if (isRestoredResultReady && inst !== finalInstrument && !isLoading) {
       void handleSubmit(inst);
     }
   };

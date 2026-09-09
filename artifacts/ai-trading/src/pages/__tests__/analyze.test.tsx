@@ -913,6 +913,54 @@ describe("AnalyzePage: restoring an inline result", () => {
       expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-instrument", "NIKKEI");
     });
   });
+
+  it("does not create a new analysis when an instrument is picked while the restored result is loading", async () => {
+    const analysisId = 7704;
+    let resolveAnalysis!: (response: Response) => void;
+    const delayedAnalysis = new Promise<Response>((resolve) => {
+      resolveAnalysis = resolve;
+    });
+    let createCount = 0;
+    window.history.replaceState({}, "", `/analyze?result=${analysisId}`);
+    installFetchMock(
+      [
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method === "GET" && new RegExp(`/api/analyses/${analysisId}(?:\\?|$)`).test(url)) {
+            return delayedAnalysis;
+          }
+          if (method === "POST" && /\/api\/analyses(\?|$)/.test(url)) {
+            createCount += 1;
+          }
+          return null;
+        },
+        ...pageHandlers({}),
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    const brentButton = await screen.findByTestId("button-instrument-BRENT");
+    fireEvent.click(brentButton);
+
+    expect(brentButton).toHaveClass("border-primary");
+    expect(createCount).toBe(0);
+
+    await act(async () => {
+      resolveAnalysis(jsonResponse(restoredAnalysisFixture(analysisId, "XAU/USD", "1h")));
+    });
+
+    await waitFor(() => {
+      expect(brentButton).toHaveClass("border-primary");
+      expect(createCount).toBe(0);
+    });
+  });
 });
 
 // Risk-map interaction moved to AnalysisDetailPage beside the timeframe pills.
