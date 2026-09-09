@@ -28,6 +28,8 @@ const STATUS_BADGE: Record<TopupRequestStatus, "secondary" | "default" | "destru
   rejected: "destructive",
 };
 
+const PRESET_AMOUNTS = [5000, 10000, 15000, 20000] as const;
+
 export default function TopupPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -42,6 +44,7 @@ export default function TopupPage() {
     { query: { queryKey: getGetMyTopupRequestsQueryKey({ page: 1, limit: 20 }) } },
   );
 
+  const [step, setStep] = useState<"amount" | "pay">("amount");
   const [amount, setAmount] = useState("");
   const [referenceNote, setReferenceNote] = useState("");
   const [proofObjectPath, setProofObjectPath] = useState<string | null>(null);
@@ -75,6 +78,14 @@ export default function TopupPage() {
     }
   };
 
+  const handleContinue = () => {
+    if (creditsPreview < 1) {
+      toast({ title: t.topup.amount_too_small, variant: "destructive" });
+      return;
+    }
+    setStep("pay");
+  };
+
   const handleSubmit = async () => {
     if (creditsPreview < 1) {
       toast({ title: t.topup.amount_too_small, variant: "destructive" });
@@ -93,6 +104,7 @@ export default function TopupPage() {
       setReferenceNote("");
       setProofObjectPath(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setStep("amount");
       toast({ title: t.topup.submit_success_title });
     } catch (err: unknown) {
       toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.topup.submit_error_title, variant: "destructive" });
@@ -118,86 +130,139 @@ export default function TopupPage() {
           </div>
         </Card>
 
-        <Card className="p-5 shadow-sm space-y-3" data-testid="card-qris">
-          <h3 className="text-sm font-semibold text-foreground">{t.topup.qris_card_title}</h3>
-          {config?.qrisImageUrl && (
-            <img
-              src={config.qrisImageUrl}
-              alt="QRIS"
-              className="w-full max-w-xs mx-auto rounded-lg border border-border"
-              data-testid="img-qris"
-            />
-          )}
-          <p className="text-xs text-muted-foreground text-center">
-            {t.topup.rate_hint.replace("{rate}", rupiahPerCredit.toLocaleString("id-ID"))}
-          </p>
-        </Card>
-
-        <Card className="p-5 shadow-sm space-y-3" data-testid="card-topup-form">
-          <div>
-            <Input
-              type="number"
-              min={1}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={t.topup.amount_placeholder}
-              data-testid="input-topup-amount"
-            />
+        {step === "amount" ? (
+          <Card className="p-5 shadow-sm space-y-3" data-testid="card-topup-form">
+            <h3 className="text-sm font-semibold text-foreground">{t.topup.amount_step_title}</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {PRESET_AMOUNTS.map((preset) => {
+                const selected = amountNumber === preset;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setAmount(String(preset))}
+                    className={
+                      "rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors " +
+                      (selected
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border text-muted-foreground hover:border-primary/50")
+                    }
+                    data-testid={`button-preset-${preset}`}
+                  >
+                    Rp{preset.toLocaleString("id-ID")}
+                  </button>
+                );
+              })}
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                {t.topup.custom_amount_label}
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder={t.topup.amount_placeholder}
+                data-testid="input-topup-amount"
+              />
+            </div>
             {amountNumber > 0 && (
-              <p className="text-xs text-muted-foreground mt-1" data-testid="text-credits-preview">
+              <p className="text-xs text-muted-foreground" data-testid="text-credits-preview">
                 {t.topup.amount_credits_preview.replace("{n}", String(creditsPreview))}
               </p>
             )}
-          </div>
-          <Input
-            value={referenceNote}
-            onChange={(e) => setReferenceNote(e.target.value)}
-            placeholder={t.topup.reference_note_placeholder}
-            data-testid="input-reference-note"
-          />
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={handleProofChange}
-              data-testid="input-proof-file"
-            />
+            <p className="text-xs text-muted-foreground">
+              {t.topup.rate_hint.replace("{rate}", rupiahPerCredit.toLocaleString("id-ID"))}
+            </p>
             <Button
-              type="button"
-              variant="outline"
               className="w-full"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingProof}
-              data-testid="button-upload-proof"
+              onClick={handleContinue}
+              data-testid="button-continue-topup"
             >
-              {isUploadingProof ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <Upload className="w-4 h-4 mr-2" />
-              )}
-              {isUploadingProof ? t.topup.uploading_proof : t.topup.upload_proof_button}
+              {t.topup.continue_button}
             </Button>
-            {proofObjectPath && (
+          </Card>
+        ) : (
+          <Card className="p-5 shadow-sm space-y-3" data-testid="card-qris">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-foreground">{t.topup.qris_card_title}</h3>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setStep("amount")}
+                data-testid="button-change-amount"
+              >
+                {t.topup.change_amount}
+              </button>
+            </div>
+            <p className="text-sm font-medium text-foreground" data-testid="text-pay-summary">
+              {t.topup.pay_summary
+                .replace("{amount}", amountNumber.toLocaleString("id-ID"))
+                .replace("{n}", String(creditsPreview))}
+            </p>
+            {config?.qrisImageUrl && (
               <img
-                src={avatarSrc(proofObjectPath) ?? undefined}
-                alt="Bukti pembayaran"
-                className="mt-2 h-20 w-20 object-cover rounded border border-border"
-                data-testid="img-proof-preview"
+                src={config.qrisImageUrl}
+                alt="QRIS"
+                className="w-full max-w-xs mx-auto rounded-lg border border-border"
+                data-testid="img-qris"
               />
             )}
-          </div>
-          <Button
-            className="w-full"
-            onClick={handleSubmit}
-            disabled={createTopup.isPending || isUploadingProof}
-            data-testid="button-submit-topup"
-          >
-            {createTopup.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-            {t.topup.submit_button}
-          </Button>
-        </Card>
+            <p className="text-xs text-muted-foreground text-center">
+              {t.topup.rate_hint.replace("{rate}", rupiahPerCredit.toLocaleString("id-ID"))}
+            </p>
+            <p className="text-xs text-muted-foreground">{t.topup.pay_hint}</p>
+            <Input
+              value={referenceNote}
+              onChange={(e) => setReferenceNote(e.target.value)}
+              placeholder={t.topup.reference_note_placeholder}
+              data-testid="input-reference-note"
+            />
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleProofChange}
+                data-testid="input-proof-file"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingProof}
+                data-testid="button-upload-proof"
+              >
+                {isUploadingProof ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                {isUploadingProof ? t.topup.uploading_proof : t.topup.upload_proof_button}
+              </Button>
+              {proofObjectPath && (
+                <img
+                  src={avatarSrc(proofObjectPath) ?? undefined}
+                  alt="Bukti pembayaran"
+                  className="mt-2 h-20 w-20 object-cover rounded border border-border"
+                  data-testid="img-proof-preview"
+                />
+              )}
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleSubmit}
+              disabled={createTopup.isPending || isUploadingProof}
+              data-testid="button-submit-topup"
+            >
+              {createTopup.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {t.topup.submit_button}
+            </Button>
+          </Card>
+        )}
 
         <div>
           <h3 className="text-sm font-semibold text-foreground mb-2">{t.topup.history_title}</h3>
