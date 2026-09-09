@@ -439,11 +439,14 @@ export default function GuidePage() {
                       {cat.articles.map(art => (
                         <Card
                           key={art.id}
-                          className="hover:border-primary/50 transition-colors cursor-pointer"
-                          onClick={() => openArticle(art.id)}
-                          data-testid={`guide-article-${art.id}`}
+                          className="transition-colors hover:border-primary/50 focus-within:border-primary/50"
                         >
-                          <div className="p-3 flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => openArticle(art.id)}
+                            className="flex w-full items-center justify-between rounded-xl p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            data-testid={`guide-article-${art.id}`}
+                          >
                             <span className="text-sm font-medium text-foreground">
                               {lang === "id" ? art.title_id : art.title_en}
                             </span>
@@ -460,7 +463,7 @@ export default function GuidePage() {
                               )}
                               <ChevronRight className="w-4 h-4 text-muted-foreground" />
                             </span>
-                          </div>
+                          </button>
                         </Card>
                       ))}
                     </div>

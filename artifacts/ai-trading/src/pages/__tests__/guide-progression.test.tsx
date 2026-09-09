@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import GuidePage from "../guide";
 import { installFetchMock, jsonResponse, makeWrapper } from "./test-helpers";
@@ -161,6 +162,38 @@ describe("GuidePage Progression", () => {
     );
     fireEvent(window, new PopStateEvent("popstate"));
     expect(await screen.findByTestId("button-guide-back-to-list")).toBeInTheDocument();
+  });
+
+  it("opens article cards with Enter and Space", async () => {
+    installFetchMock([
+      (url, init) => {
+        if (url.includes("/api/progression/evidence") && init?.method === "POST") {
+          const guideId = JSON.parse(init.body as string).guideId;
+          return jsonResponse({
+            token: `mock_${guideId}`,
+            source: "guide_completion",
+            subject: guideId,
+            minimumCompleteAt: new Date(Date.now() + 20_000).toISOString(),
+          });
+        }
+        return null;
+      },
+    ]);
+    const user = userEvent.setup();
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><GuidePage /></Wrapper>);
+
+    const firstArticle = await screen.findByTestId("guide-article-how-ai-works");
+    expect(firstArticle.tagName).toBe("BUTTON");
+    firstArticle.focus();
+    await user.keyboard("{Enter}");
+    expect(window.location.search).toContain("article=how-ai-works");
+
+    await user.click(screen.getByTestId("button-guide-back-to-list"));
+    const secondArticle = await screen.findByTestId("guide-article-feature-map");
+    secondArticle.focus();
+    await user.keyboard("[Space]");
+    expect(window.location.search).toContain("article=feature-map");
   });
 
   it("offers Quick Start paths and opens the History & Performance guide by deep link", async () => {
