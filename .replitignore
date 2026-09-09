@@ -4,6 +4,20 @@
 # No need to store the pnpm store twice.
 .local
 
+# Dependencies are installed during the deployment build. Keeping workspace
+# copies would duplicate them in the final image.
+node_modules/
+**/node_modules/
+
+# Development caches and test artifacts are not needed at runtime. In
+# particular, Playwright videos and traces can grow by several gigabytes.
+.cache/
+tests/e2e/test-results/
+.run-logs/
+
+# Deployment does not need repository history.
+.git/
+
 # This is a legacy workspace snapshot of the canonical root project. Keeping it
 # in the publish context duplicates artifacts, manifests, dependencies, and
 # service ports, which makes the Repl layer much larger and can stall Bundle.
