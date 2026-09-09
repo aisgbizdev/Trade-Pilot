@@ -49,6 +49,7 @@ import { MarketContextSummary } from "@/components/market-context-summary";
 import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { SignalSpeedometer } from "@/components/signal-speedometer";
+import { LivePriceTicker } from "@/components/live-price-ticker";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
 import type { IndicatorTimeframe } from "@/hooks/use-technical-indicators";
 import {
@@ -2155,17 +2156,20 @@ export default function AnalysisDetailPage({
               </button>
             ))}
             {isAdaptivePositionInstrument(analysis.instrument) && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 shrink-0 gap-1.5 px-2.5 text-xs font-semibold text-primary"
-                onClick={() => setRiskMapOpen(true)}
-                disabled={isRefreshing}
-                data-testid="button-detail-risk-map"
-              >
-                <Activity className="h-3.5 w-3.5" aria-hidden="true" />
-                {t.risk_map.btn_compare}
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 shrink-0 gap-1.5 px-2.5 text-xs font-semibold text-primary"
+                  onClick={() => setRiskMapOpen(true)}
+                  disabled={isRefreshing}
+                  data-testid="button-detail-risk-map"
+                >
+                  <Activity className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t.risk_map.btn_compare}
+                </Button>
+                <LivePriceTicker instrument={analysis.instrument} className="shrink-0 ml-auto" />
+              </>
             )}
           </div>
           {quickTimeframeStatus === "error" && (

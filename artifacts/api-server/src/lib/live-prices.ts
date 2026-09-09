@@ -244,14 +244,22 @@ async function fetchLive(): Promise<LiveQuotesPayload> {
 }
 
 /**
- * Fetch the live-quotes payload, sharing a 15s in-memory cache across
- * the HTTP route and the price-alerts watcher. Concurrent callers that
- * hit during a cache miss collapse onto the same in-flight upstream
- * request (so a burst doesn't fan out into N upstream calls).
+ * Fetch the live-quotes payload, sharing an in-memory cache across the
+ * HTTP route and the price-alerts watcher. Concurrent callers that hit
+ * during a cache miss collapse onto the same in-flight upstream request
+ * (so a burst doesn't fan out into N upstream calls).
+ *
+ * `maxAgeMs` lets a caller accept a fresher-than-default read: the
+ * default (15s) is what the watcher and the standard `/quotes/live`
+ * route use; the "fast" streaming route passes a few seconds so the UI
+ * ticker refreshes closer to real time. A fresh fetch still repopulates
+ * the shared cache, so a fast read also benefits the slower callers.
  */
-export async function getLiveQuotes(): Promise<LiveQuotesPayload> {
+export async function getLiveQuotes(
+  maxAgeMs: number = CACHE_TTL_MS,
+): Promise<LiveQuotesPayload> {
   const now = Date.now();
-  if (cache && now - cache.fetchedAt < CACHE_TTL_MS) {
+  if (cache && now - cache.fetchedAt < maxAgeMs) {
     return cache.data;
   }
   if (inFlight) return inFlight;
