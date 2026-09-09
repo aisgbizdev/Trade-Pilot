@@ -24,6 +24,22 @@ import {
   type FetchHandler,
 } from "./test-helpers";
 
+vi.mock("@/components/analysis-levels-chart", () => ({
+  AnalysisLevelsChart: ({
+    instrument,
+    timeframe,
+  }: {
+    instrument: string;
+    timeframe: string;
+  }) => (
+    <div
+      data-testid="analysis-levels-chart"
+      data-instrument={instrument}
+      data-timeframe={timeframe}
+    />
+  ),
+}));
+
 const QUOTA_PAYLOAD = {
   unlimited: false,
   hourly: { remaining: 4, limit: 5 },
@@ -155,6 +171,27 @@ describe("AnalyzePage: happy-path render", () => {
       expect(screen.getByTestId("button-instrument-BRENT")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveClass("border-primary");
       expect(screen.getByTestId("mini-chart-section")).toBeInTheDocument();
+      expect(screen.getByTestId("mini-chart-section")).toHaveAttribute(
+        "data-chart-source",
+        "tradingview",
+      );
+      expect(screen.getByTestId("tradingview-advanced-chart")).toHaveAttribute(
+        "data-symbol",
+        "OANDA:XAUUSD",
+      );
+
+      fireEvent.click(screen.getByTestId("button-instrument-BRENT"));
+      expect(screen.getByTestId("mini-chart-section")).toHaveAttribute(
+        "data-chart-source",
+        "analysis-backend",
+      );
+      expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute(
+        "data-instrument",
+        "BRENT",
+      );
+      expect(
+        screen.queryByTestId("tradingview-advanced-chart"),
+      ).not.toBeInTheDocument();
 
       // Forex symbols are not yet rendered.
       expect(

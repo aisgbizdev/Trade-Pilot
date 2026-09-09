@@ -30,6 +30,7 @@ import {
 } from "@workspace/api-client-react";
 import { useLocation, useSearch } from "wouter";
 import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
+import { AnalysisLevelsChart } from "@/components/analysis-levels-chart";
 import { instrumentToTradingViewSymbol, timeframeToTradingViewInterval, instrumentToCurrencies, currenciesToCountryFilter } from "@/lib/tradingview-symbols";
 import { MarketSessionsBadge } from "@/components/market-sessions-badge";
 import { useQueryClient } from "@tanstack/react-query";
@@ -100,6 +101,13 @@ const ADVANCED_ANALYSIS_INSTRUMENTS = new Set<GetTimeframeRiskMapInstrument>([
   "HSI",
   "NIKKEI",
 ]);
+
+// These instruments use broker-specific TradingView CFDs whose prices can
+// diverge materially from the canonical backend quotes used by the analysis.
+// Render the backend candle chart instead so the visible market context and
+// the AI input stay on the same price basis. XAU/USD deliberately remains on
+// TradingView because its OANDA chart is already the approved experience.
+const BACKEND_ALIGNED_CHART_INSTRUMENTS = new Set(["BRENT", "HSI", "NIKKEI"]);
 
 function isAdvancedAnalysisInstrument(
   instrument: string,
@@ -1274,16 +1282,33 @@ export default function AnalyzePage() {
                 <span className="text-muted-foreground">{t.analyze.current_price}:</span>
                 <LivePriceChip instrument={finalInstrument} />
               </div>
-              <div className="mt-3 overflow-hidden rounded-lg border border-border" data-testid="mini-chart-section">
-                <TradingViewAdvancedChart
-                  symbol={instrumentToTradingViewSymbol(finalInstrument)}
-                  interval={timeframeToTradingViewInterval(selectedTimeframe)}
-                  height={360}
-                  hideTopToolbar
-                  hideSideToolbar
-                  opaqueBackground
-                  hideVolume
-                />
+              <div
+                className="mt-3 overflow-hidden rounded-lg border border-border"
+                data-testid="mini-chart-section"
+                data-chart-source={
+                  BACKEND_ALIGNED_CHART_INSTRUMENTS.has(finalInstrument)
+                    ? "analysis-backend"
+                    : "tradingview"
+                }
+              >
+                {BACKEND_ALIGNED_CHART_INSTRUMENTS.has(finalInstrument) ? (
+                  <AnalysisLevelsChart
+                    instrument={finalInstrument}
+                    timeframe={selectedTimeframe}
+                    tradePlan={null}
+                    height={360}
+                  />
+                ) : (
+                  <TradingViewAdvancedChart
+                    symbol={instrumentToTradingViewSymbol(finalInstrument)}
+                    interval={timeframeToTradingViewInterval(selectedTimeframe)}
+                    height={360}
+                    hideTopToolbar
+                    hideSideToolbar
+                    opaqueBackground
+                    hideVolume
+                  />
+                )}
               </div>
               <div className="flex items-center justify-between gap-3 text-sm mt-3">
                 <span className="text-muted-foreground">{t.analyze.timeframe_label}:</span>
