@@ -779,6 +779,10 @@ export const en = {
   },
   widgets: {
     news_title: "Market News",
+    ticker_pause: "Pause ticker",
+    ticker_resume: "Resume ticker",
+    ticker_hide: "Hide ticker",
+    ticker_show: "Show ticker",
     loading_news: "Loading news...",
     news_error: "Unable to load news",
     calendar_title: "Economic Calendar",

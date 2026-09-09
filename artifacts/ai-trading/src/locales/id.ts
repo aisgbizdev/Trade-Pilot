@@ -781,6 +781,10 @@ export const id: Translations = {
   },
   widgets: {
     news_title: "Berita Pasar",
+    ticker_pause: "Jeda ticker",
+    ticker_resume: "Lanjutkan ticker",
+    ticker_hide: "Sembunyikan ticker",
+    ticker_show: "Tampilkan ticker",
     loading_news: "Memuat berita...",
     news_error: "Tidak dapat memuat berita",
     calendar_title: "Kalender Ekonomi",
