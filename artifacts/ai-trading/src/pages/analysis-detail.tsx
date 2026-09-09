@@ -95,6 +95,7 @@ import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
 import { prioritizeNewsSources } from "@/lib/news-source-priority";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
+import { useLiveQuoteSnapshotByInstrument } from "@/hooks/use-live-quotes";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -1872,6 +1873,7 @@ export default function AnalysisDetailPage({
 
   type AnalysisWithFeedback = Analysis & { feedback?: Feedback | null };
   const analysis = data as AnalysisWithFeedback | undefined;
+  const liveQuoteSnapshot = useLiveQuoteSnapshotByInstrument(analysis?.instrument ?? "");
 
   const existingFeedback = analysis?.feedback;
 
@@ -2348,6 +2350,8 @@ export default function AnalysisDetailPage({
              timeframe={analysis.timeframe}
              tradePlan={tradePlan}
              analysisCreatedAt={analysis.createdAt}
+              liveQuote={liveQuoteSnapshot.quote}
+              liveQuoteReceivedAt={liveQuoteSnapshot.dataUpdatedAt}
            />
            {tradePlan && <TradePlanCard plan={tradePlan} timeframe={analysis.timeframe} t={t} />}
          </div>

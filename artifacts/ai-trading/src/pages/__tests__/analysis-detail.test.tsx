@@ -399,6 +399,53 @@ describe("AnalysisDetailPage: happy-path render", () => {
     );
     expect(screen.getByTestId("card-trade-plan")).not.toHaveTextContent(/\bn\/a\b/i);
   });
+
+  it("passes the existing live-quote cache snapshot to both chart headers without starting a quote request", async () => {
+    const { calls } = installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper, queryClient } = makeWrapper();
+    queryClient.setQueryData(["live-quotes"], {
+      status: "success",
+      updatedAt: new Date(NOW).toISOString(),
+      serverTime: "08:00:00",
+      data: [{
+        instrument: "XAU/USD",
+        symbol: "XUL10",
+        price: 2345.67,
+        buy: 2345.8,
+        sell: 2345.5,
+        spread: 0.3,
+        high: 2350,
+        low: 2320,
+        open: 2330,
+        changePercent: "+0.42%",
+        direction: "up",
+        serverTime: "08:00:00",
+        updatedAt: new Date(NOW).toISOString(),
+      }],
+    });
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage
+          params={{ id: String(ANALYSIS_ID) }}
+          embedded
+        />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("chart-live-quote-price")).toHaveTextContent("2345.67");
+    fireEvent.click(screen.getByTestId("button-open-full-chart"));
+    expect(screen.getAllByTestId("chart-live-quote-price")).toHaveLength(2);
+    expect(calls.filter((call) => call.url.includes("/api/quotes/live"))).toHaveLength(0);
+  });
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {
@@ -424,7 +471,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     await screen.findByTestId("text-instrument"); // Wait for load
-    expect(screen.getByText("PLATINUM")).toBeInTheDocument();
+    expect(screen.getByTestId("text-instrument")).toHaveTextContent("PLATINUM");
     
     // AdaptivePositionPlan should NOT be mounted
     expect(screen.queryByTestId("card-adaptive-position-plan")).not.toBeInTheDocument();
