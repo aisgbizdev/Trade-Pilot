@@ -7,7 +7,10 @@
 # Development caches and test artifacts are not needed at runtime. In
 # particular, Playwright videos and traces can grow by several gigabytes.
 .cache/
-tests/e2e/test-results/
+**/.expo/
+**/coverage/
+**/playwright-report/
+**/test-results/
 .run-logs/
 
 # Deployment does not need repository history.
