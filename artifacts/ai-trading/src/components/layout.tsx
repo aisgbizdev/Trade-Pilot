@@ -103,6 +103,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // the blank form. See use-last-analysis.ts.
   const analyzeNavPath = useLastAnalysisNavPath();
   const backPath = useBackToLastAnalysisPath();
+  // Exception: from a standalone analysis detail page (`/analyses/:id`,
+  // reached by tapping a row in Riwayat) "back" returns to Riwayat — the
+  // list the user came from — instead of the last analysis.
+  const headerBackPath = /^\/analyses\/\d+/.test(location) ? "/history" : backPath;
 
   // `id` is the stable key/testid/unlock-tracking handle; `href` can be
   // dynamic (the Analisis tab points at the last analysis, which changes).
@@ -195,7 +199,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2">
           {!isMainNav && (
             <button
-              onClick={() => setLocation(backPath)}
+              onClick={() => setLocation(headerBackPath)}
               className="p-1.5 rounded-xl hover:bg-muted transition-colors -ml-1 mr-0.5"
               aria-label={t.common.back}
               data-testid="button-back-header"

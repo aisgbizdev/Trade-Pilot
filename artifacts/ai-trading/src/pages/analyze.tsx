@@ -13,6 +13,8 @@ import { showQuotaDialog, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { Layout } from "@/components/layout";
 import {
   useCreateAnalysis,
+  useGetAnalysis,
+  getGetAnalysisQueryKey,
   useGetAnalysisQuota,
   useGetProgressionSummary,
   getGetAnalysisQuotaQueryKey,
@@ -893,6 +895,40 @@ export default function AnalyzePage() {
     const next = Number.isInteger(n) && n > 0 ? n : null;
     setResultAnalysisId((cur) => (cur === next ? cur : next));
   }, [routeSearch]);
+
+  // When the page is showing a past analysis (?result=<id>), mirror that
+  // analysis's instrument + timeframe into the picker/chart above so the
+  // chart matches the result shown below it. Guarded by a ref so it runs
+  // once per distinct result id and never fights a manual instrument
+  // change (which would trigger a re-analysis). Clearing the result
+  // ("+ Analisis Baru") intentionally keeps the instrument as-is.
+  const { data: resultAnalysis } = useGetAnalysis(resultAnalysisId ?? 0, {
+    query: {
+      enabled: resultAnalysisId != null,
+      queryKey: getGetAnalysisQueryKey(resultAnalysisId ?? 0),
+    },
+  });
+  const syncedResultRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (resultAnalysisId == null) {
+      syncedResultRef.current = null;
+      return;
+    }
+    if (!resultAnalysis || resultAnalysis.id !== resultAnalysisId) return;
+    if (syncedResultRef.current === resultAnalysisId) return;
+    syncedResultRef.current = resultAnalysisId;
+    const inst = resultAnalysis.instrument;
+    if (VISIBLE_INSTRUMENTS.has(inst)) {
+      setSelectedInstrument(inst);
+      setCustomInstrument("");
+      setOpenInstrumentCategory(categoryForInstrument(inst));
+    } else {
+      setCustomInstrument(inst);
+    }
+    if ((TIMEFRAMES as readonly string[]).includes(resultAnalysis.timeframe)) {
+      setSelectedTimeframe(resultAnalysis.timeframe);
+    }
+  }, [resultAnalysisId, resultAnalysis]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
