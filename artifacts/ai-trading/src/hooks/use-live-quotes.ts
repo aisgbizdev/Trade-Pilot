@@ -16,17 +16,15 @@ export interface LiveQuote {
   updatedAt: string;
 }
 
-interface LiveQuotesResponse {
+export interface LiveQuotesResponse {
   status: string;
   updatedAt: string;
   serverTime: string;
   data: LiveQuote[];
 }
 
-async function fetchLiveQuotes(fast = false): Promise<LiveQuotesResponse> {
-  const res = await fetch(`/api/quotes/live${fast ? "?fast=1" : ""}`, {
-    credentials: "include",
-  });
+async function fetchLiveQuotes(): Promise<LiveQuotesResponse> {
+  const res = await fetch("/api/quotes/live", { credentials: "include" });
   if (!res.ok) throw new Error("Gagal memuat harga live");
   return res.json();
 }
@@ -34,41 +32,15 @@ async function fetchLiveQuotes(fast = false): Promise<LiveQuotesResponse> {
 export function useLiveQuotes() {
   return useQuery<LiveQuotesResponse>({
     queryKey: ["live-quotes"],
-    queryFn: () => fetchLiveQuotes(false),
-    refetchInterval: 15_000,
-    staleTime: 10_000,
-  });
-}
-
-/**
- * Near-real-time variant for a small inline running-price ticker. Polls
- * every few seconds and hits `/api/quotes/live?fast=1`, which serves a
- * ~3s-fresh read instead of the shared 15s cache. Separate query key so
- * it never disturbs the standard `useLiveQuotes` consumers.
- */
-export function useLiveQuotesStream(enabled = true) {
-  return useQuery<LiveQuotesResponse>({
-    queryKey: ["live-quotes", "stream"],
-    queryFn: () => fetchLiveQuotes(true),
-    refetchInterval: 3_000,
-    staleTime: 0,
-    enabled,
+    queryFn: fetchLiveQuotes,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    staleTime: 4_000,
   });
 }
 
 export function useQuoteByInstrument(instrument: string) {
   const { data, ...rest } = useLiveQuotes();
-  const quote = data?.data.find(
-    (q) => q.instrument.toLowerCase() === instrument.toLowerCase()
-  );
-  return { quote, ...rest };
-}
-
-export function useStreamingQuoteByInstrument(
-  instrument: string,
-  enabled = true,
-) {
-  const { data, ...rest } = useLiveQuotesStream(enabled);
   const quote = data?.data.find(
     (q) => q.instrument.toLowerCase() === instrument.toLowerCase()
   );

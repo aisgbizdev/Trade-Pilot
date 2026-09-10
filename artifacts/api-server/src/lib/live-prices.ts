@@ -94,7 +94,10 @@ export interface LiveQuotesPayload {
   data: LiveQuote[];
 }
 
-const CACHE_TTL_MS = 15_000;
+// The active internal market charts poll every five seconds. Keep one shared
+// upstream result per process so all connected clients still collapse into at
+// most one BBJ request per five-second window.
+const CACHE_TTL_MS = 5_000;
 let cache: { data: LiveQuotesPayload; fetchedAt: number } | null = null;
 let inFlight: Promise<LiveQuotesPayload> | null = null;
 
@@ -244,22 +247,14 @@ async function fetchLive(): Promise<LiveQuotesPayload> {
 }
 
 /**
- * Fetch the live-quotes payload, sharing an in-memory cache across the
- * HTTP route and the price-alerts watcher. Concurrent callers that hit
- * during a cache miss collapse onto the same in-flight upstream request
- * (so a burst doesn't fan out into N upstream calls).
- *
- * `maxAgeMs` lets a caller accept a fresher-than-default read: the
- * default (15s) is what the watcher and the standard `/quotes/live`
- * route use; the "fast" streaming route passes a few seconds so the UI
- * ticker refreshes closer to real time. A fresh fetch still repopulates
- * the shared cache, so a fast read also benefits the slower callers.
+ * Fetch the live-quotes payload, sharing a 5s in-memory cache across
+ * the HTTP route and the price-alerts watcher. Concurrent callers that
+ * hit during a cache miss collapse onto the same in-flight upstream
+ * request (so a burst doesn't fan out into N upstream calls).
  */
-export async function getLiveQuotes(
-  maxAgeMs: number = CACHE_TTL_MS,
-): Promise<LiveQuotesPayload> {
+export async function getLiveQuotes(): Promise<LiveQuotesPayload> {
   const now = Date.now();
-  if (cache && now - cache.fetchedAt < maxAgeMs) {
+  if (cache && now - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.data;
   }
   if (inFlight) return inFlight;

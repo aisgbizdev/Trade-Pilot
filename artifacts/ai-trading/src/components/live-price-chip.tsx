@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { useStreamingQuoteByInstrument } from "@/hooks/use-live-quotes";
+import { useQuoteByInstrument } from "@/hooks/use-live-quotes";
 
 /**
  * Compact near-real-time "running price" pill for a single instrument.
- * Polls /api/quotes/live?fast=1 every ~3s (see useLiveQuotesStream) so the
- * number actually moves, and flashes green/red on each tick that changes
- * the price. Renders nothing until the first quote arrives — the feed
- * covers XAU/USD, BRENT, HSI, NIKKEI, the same set the Compare Risk
- * button is shown for.
+ * Rides the shared /api/quotes/live poll (5s) so the number moves, and
+ * flashes green/red on each tick that changes the price. Renders nothing
+ * until the first quote arrives — the feed covers XAU/USD, BRENT, HSI,
+ * NIKKEI, the same set the Compare Risk button is shown for.
  */
 function formatLivePrice(price: number, instrument: string): string {
   if (instrument === "XAU/USD" || instrument === "BRENT" || instrument === "XAG/USD") {
@@ -23,15 +22,13 @@ function formatLivePrice(price: number, instrument: string): string {
 export function LivePriceChip({
   instrument,
   className,
-  enabled = true,
   showLabel = false,
 }: {
   instrument: string;
   className?: string;
-  enabled?: boolean;
   showLabel?: boolean;
 }) {
-  const { quote } = useStreamingQuoteByInstrument(instrument, enabled);
+  const { quote } = useQuoteByInstrument(instrument);
   const price = quote?.price ?? null;
 
   // Flash direction for the most recent tick (green up / red down),
