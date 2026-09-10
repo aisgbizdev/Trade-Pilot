@@ -3,6 +3,16 @@
 
 # No need to store the pnpm store twice.
 .local
+.cache
+
+# Generated browser-test output can contain multi-gigabyte videos, traces, and
+# screenshots. It is never needed by the production runtime.
+tests/e2e/test-results
+
+# User-provided debugging attachments and local screenshots are workspace
+# inputs/outputs, not production runtime assets.
+attached_assets
+screenshots
 
 # This is a legacy workspace snapshot of the canonical root project. Keeping it
 # in the publish context duplicates artifacts, manifests, dependencies, and
