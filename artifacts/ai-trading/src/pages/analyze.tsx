@@ -1317,6 +1317,7 @@ export default function AnalyzePage() {
                   height={360}
                   hideTopToolbar
                   hideSideToolbar
+                  withDateRanges={false}
                   opaqueBackground
                   hideVolume
                 />
