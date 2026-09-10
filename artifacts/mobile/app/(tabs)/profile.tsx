@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getTabContentBottomPadding } from "@/constants/layout";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -52,12 +53,22 @@ export default function ProfileScreen() {
     scroll: { flex: 1 },
     header: {
       paddingHorizontal: 20,
-      paddingTop: 16,
+      paddingTop: Platform.OS === "web" ? 16 : insets.top + 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
+    headerInner: {
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+    },
     title: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.foreground },
+    content: {
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+    },
     section: { marginTop: 24, paddingHorizontal: 16 },
     card: {
       backgroundColor: colors.card,
@@ -84,6 +95,7 @@ export default function ProfileScreen() {
       alignItems: "center",
       gap: 14,
       padding: 16,
+      flexWrap: "wrap",
     },
     userName: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.foreground },
     userEmail: { fontSize: 13, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2 },
@@ -93,14 +105,15 @@ export default function ProfileScreen() {
       justifyContent: "space-between",
       paddingHorizontal: 16,
       paddingVertical: 14,
+      gap: 16,
     },
     rowBorder: {
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
     },
-    rowLabel: { fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground },
+    rowLabel: { fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground, flexShrink: 1 },
     rowValue: { fontSize: 14, fontFamily: "Inter_500Medium", color: colors.mutedForeground },
-    toggleRow: { flexDirection: "row", gap: 6 },
+    toggleRow: { flexDirection: "row", gap: 6, flexShrink: 0, flexWrap: "wrap" },
     toggleBtn: {
       paddingHorizontal: 10,
       paddingVertical: 5,
@@ -130,7 +143,7 @@ export default function ProfileScreen() {
       borderRadius: 8,
     },
     modeBadgeText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.primary },
-    progressionCopy: { flex: 1, marginLeft: 12 },
+    progressionCopy: { flex: 1, minWidth: 0, marginLeft: 12, marginRight: 8 },
     progressionTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.foreground },
     progressionDetail: { marginTop: 3, fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground },
   });
@@ -147,14 +160,19 @@ export default function ProfileScreen() {
   return (
     <View style={s.root}>
       <View style={s.header}>
-        <Text style={s.title}>{t.profile.title}</Text>
+        <View style={s.headerInner}>
+          <Text style={s.title}>{t.profile.title}</Text>
+        </View>
       </View>
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        contentContainerStyle={{
+          paddingBottom: getTabContentBottomPadding(Platform.OS, insets.bottom),
+        }}
         showsVerticalScrollIndicator={false}
       >
+        <View style={s.content}>
         {user ? (
           <View style={s.section}>
             <View style={s.card}>
@@ -248,6 +266,7 @@ export default function ProfileScreen() {
               </>
             )}
           </Pressable>
+        </View>
         </View>
       </ScrollView>
     </View>

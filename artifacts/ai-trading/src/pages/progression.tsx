@@ -12,7 +12,8 @@ import {
 } from "@workspace/api-client-react";
 import { useTranslation, type Translations } from "@/lib/i18n";
 import { ProgressionEmblem } from "@/components/progression/progression-emblem";
-import { Loader2, ArrowLeft, Trophy, Calendar, Zap, Star, Shield, Lock, Unlock, History, Activity, BookOpen } from "lucide-react";
+import { AchievementBadge } from "@/components/progression/achievement-badge";
+import { Loader2, ArrowLeft, Trophy, Calendar, Zap, Lock, Unlock, History, Activity } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { format } from "date-fns";
 import { enUS, id } from "date-fns/locale";
@@ -28,15 +29,6 @@ const CATALOG_KEYS = [
   "mastery_1",
   "consistent_1000"
 ];
-
-function getAchievementIcon(key: string) {
-  if (key.startsWith("checklist") || key.startsWith("evaluation")) return Shield;
-  if (key.startsWith("wait")) return Activity;
-  if (key.startsWith("guide")) return BookOpen;
-  if (key.startsWith("journal") || key === "first_reflection") return Star;
-  if (key.startsWith("streak") || key === "consistent_1000") return Calendar;
-  return Trophy;
-}
 
 function getRankName(slug: string, t: Translations): string {
   const normalized = slug.toLowerCase().replace(/_\d+$/, ""); // e.g. iron_1 -> iron
@@ -195,18 +187,13 @@ export default function ProgressionPage() {
                 
                 <div className="space-y-3">
                   {catalog?.achievements.filter(a => a.unlocked).slice(0, 3).map(achievement => {
-                    const icon = getAchievementIcon(achievement.key);
                     const titleKey = `catalog_${achievement.key}` as keyof typeof t.progression;
                     const descKey = `catalog_${achievement.key}_desc` as keyof typeof t.progression;
                     const title = t.progression[titleKey] || achievement.key;
                     const desc = t.progression[descKey] || "";
-                    const IconComponent = icon;
-
                     return (
                       <div key={achievement.key} className="flex gap-3 items-center p-2 rounded-lg bg-muted/30 border border-border/50">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                          <IconComponent className="w-5 h-5 text-primary" />
-                        </div>
+                        <AchievementBadge achievementKey={achievement.key} unlocked size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-foreground truncate">{title}</p>
                           <p className="text-xs text-muted-foreground truncate">{desc}</p>
@@ -263,21 +250,16 @@ export default function ProgressionPage() {
               {CATALOG_KEYS.map(key => {
                 const achievement = catalog?.achievements.find(a => a.key === key);
                 const unlocked = achievement?.unlocked;
-                const icon = getAchievementIcon(key);
                 const titleKey = `catalog_${key}` as keyof typeof t.progression;
                 const descKey = `catalog_${key}_desc` as keyof typeof t.progression;
                 const title = t.progression[titleKey] || key;
                 const desc = t.progression[descKey] || "";
-                const IconComponent = icon;
-
                 return (
                   <Card 
                     key={key} 
                     className={`p-4 flex gap-3 ${unlocked ? "border-primary/30 bg-primary/[0.02]" : "opacity-70 bg-muted/30"}`}
                   >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${unlocked ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
-                      {unlocked ? <IconComponent className="w-6 h-6" /> : <Lock className="w-5 h-5" />}
-                    </div>
+                    <AchievementBadge achievementKey={key} unlocked={Boolean(unlocked)} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-foreground">{title}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{desc}</p>

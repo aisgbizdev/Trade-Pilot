@@ -87,6 +87,18 @@ function summaryHandler(): FetchHandler {
           instrument: "BRENT", total: 5, ...stats,
           byTimeframe: [{ timeframe: "4h", total: 5, ...stats }],
         },
+        {
+          instrument: "HSI", total: 2, ...stats,
+          byTimeframe: [{ timeframe: "1h", total: 2, ...stats }],
+        },
+        {
+          instrument: "EUR/USD", total: 3, ...stats,
+          byTimeframe: [{ timeframe: "1h", total: 3, ...stats }],
+        },
+        {
+          instrument: "NASDAQ", total: 2, ...stats,
+          byTimeframe: [{ timeframe: "4h", total: 2, ...stats }],
+        },
       ],
       byTimeframe: [
         { timeframe: "1h", total: 10, ...stats },
@@ -120,8 +132,39 @@ describe("HistoryPage: instrument performance", () => {
     );
 
     expect(await screen.findByText("Performance by instrument")).toBeInTheDocument();
+    expect(screen.getByTestId("instrument-performance-grid")).toHaveClass("sm:grid-cols-2");
+    expect(screen.getByTestId("instrument-performance-grid")).not.toHaveClass("lg:grid-cols-3");
+    expect(screen.queryByTestId("button-show-all-instruments")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /XAU\/USD.*10 sample/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /BRENT.*5 sample/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Performance by timeframe · XAU/USD")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /BRENT.*5 sample/i }));
     expect(await screen.findByText("Performance by timeframe · BRENT")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Other Instruments.*5 sample/i }));
+    expect(await screen.findByText("Performance by timeframe · Other Instruments")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /EUR\/USD.*3 sample/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /NASDAQ.*2 sample/i })).not.toBeInTheDocument();
+  });
+
+  it("shows Show all for an instrument filter and clears that filter", async () => {
+    window.history.replaceState({}, "", "/history?instruments=HSI");
+    installFetchMock([summaryHandler()]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <HistoryPage />
+      </Wrapper>,
+    );
+
+    const showAll = await screen.findByTestId("button-show-all-instruments");
+    fireEvent.click(showAll);
+
+    await waitFor(() => {
+      expect(new URLSearchParams(window.location.search).has("instruments")).toBe(false);
+    });
+    expect(new URLSearchParams(window.location.search).has("focusInstrument")).toBe(false);
   });
 });
 
@@ -162,6 +205,12 @@ describe("HistoryPage: happy-path render", () => {
     expect(
       (screen.getByTestId("button-next-page") as HTMLButtonElement).disabled,
     ).toBe(true);
+    expect(screen.getByTestId("history-pagination-status")).toHaveTextContent(
+      "Page 1 of 1",
+    );
+    expect(screen.getByTestId("history-pagination-range")).toHaveTextContent(
+      "Showing 1–2 of 2",
+    );
   });
 });
 
@@ -187,6 +236,38 @@ describe("HistoryPage: pagination size", () => {
       (screen.getByTestId("button-prev-page") as HTMLButtonElement).disabled,
     ).toBe(true);
   });
+
+  it.each([
+    { page: 2, total: 12, expectedPage: "Page 2 of 3", expectedRange: "Showing 6–10 of 12", nextDisabled: false },
+    { page: 3, total: 12, expectedPage: "Page 3 of 3", expectedRange: "Showing 11–12 of 12", nextDisabled: true },
+  ])(
+    "shows the correct page and result range on page $page",
+    async ({ page, total, expectedPage, expectedRange, nextDisabled }) => {
+      window.history.replaceState({}, "", `/history?view=history&page=${page}`);
+      installFetchMock([listHandler({ analyses: SAMPLE_ANALYSES, total })]);
+      const { Wrapper } = makeWrapper();
+
+      render(
+        <Wrapper>
+          <HistoryPage />
+        </Wrapper>,
+      );
+
+      await screen.findByTestId("card-analysis-101");
+      expect(screen.getByTestId("history-pagination-status")).toHaveTextContent(
+        expectedPage,
+      );
+      expect(screen.getByTestId("history-pagination-range")).toHaveTextContent(
+        expectedRange,
+      );
+      expect(
+        (screen.getByTestId("button-prev-page") as HTMLButtonElement).disabled,
+      ).toBe(false);
+      expect(
+        (screen.getByTestId("button-next-page") as HTMLButtonElement).disabled,
+      ).toBe(nextDisabled);
+    },
+  );
 });
 
 describe("HistoryPage: loading + empty branches", () => {
@@ -219,6 +300,9 @@ describe("HistoryPage: loading + empty branches", () => {
     expect(
       await screen.findByTestId("button-start-analysis"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("history-pagination-status"),
+    ).not.toBeInTheDocument();
     // Without active filters the alternate "clear filters" CTA should not
     // appear.
     expect(
@@ -289,5 +373,44 @@ describe("HistoryPage: user actions", () => {
       );
       expect(filtered).toBeDefined();
     });
+  });
+
+  it("shows four core instrument choices plus one combined Other Instruments filter", async () => {
+    const { calls } = installFetchMock([
+      listHandler({ analyses: SAMPLE_ANALYSES, total: SAMPLE_ANALYSES.length }),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <HistoryPage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("card-analysis-101");
+    const filterButton = screen.getByTestId("button-toggle-filters");
+    expect(filterButton).toHaveTextContent("Filters");
+    fireEvent.click(filterButton);
+
+    expect(screen.getByTestId("filter-instrument-XAU/USD")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-instrument-BRENT")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-instrument-HSI")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-instrument-NIKKEI")).toBeInTheDocument();
+    expect(screen.getByTestId("filter-instrument-other")).toBeInTheDocument();
+    expect(screen.queryByTestId("filter-instrument-EUR/USD")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("filter-instrument-other"));
+    await waitFor(() => {
+      const filtered = calls.find(
+        (call) =>
+          call.method === "GET" &&
+          /\/api\/analyses\?/.test(call.url) &&
+          call.url.includes("instruments=__other__"),
+      );
+      expect(filtered).toBeDefined();
+    });
+    expect(screen.getByTestId("button-toggle-filters")).toHaveTextContent("1");
+    expect(screen.getByTestId("chip-inst-other")).toHaveTextContent("Other Instruments");
+    expect(await screen.findByTestId("card-analysis-102")).toHaveTextContent("EUR/USD");
   });
 });

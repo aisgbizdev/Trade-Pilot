@@ -41,6 +41,8 @@ export interface ProgressionAchievement {
 
 export interface ProgressionCatalog {
   achievements: ProgressionAchievement[];
+  /** Guide article IDs with a valid, non-revoked completion award. */
+  completedGuideIds: string[];
 }
 
 export interface ProgressionLedgerEntry {

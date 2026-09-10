@@ -158,6 +158,19 @@ describe("GET /analyses/history-summary filters", () => {
       }),
     ]);
   });
+
+  it("treats the Other Instruments token as every non-core instrument", async () => {
+    const res = await request(app)
+      .get("/api/analyses/history-summary?range=all&instruments=__other__")
+      .set(...authHeader(alice));
+
+    expect(res.status).toBe(200);
+    expect(res.body.overall.total).toBe(8);
+    expect(res.body.byInstrument.map((row: { instrument: string }) => row.instrument)).toEqual([
+      `${INSTRUMENT_PREFIX}-A`,
+      `${INSTRUMENT_PREFIX}-B`,
+    ]);
+  });
 });
 
 describe("GET /analyses ownership", () => {
@@ -180,6 +193,17 @@ describe("GET /analyses ownership", () => {
       .set(...authHeader(alice));
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(5);
+  });
+
+  it("returns original instrument names when filtering Other Instruments", async () => {
+    const res = await request(app)
+      .get("/api/analyses?instruments=__other__&limit=100")
+      .set(...authHeader(alice));
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(8);
+    expect(res.body.analyses.every((row: { instrument: string }) =>
+      row.instrument.startsWith(INSTRUMENT_PREFIX),
+    )).toBe(true);
   });
 
   it("filters by mode", async () => {

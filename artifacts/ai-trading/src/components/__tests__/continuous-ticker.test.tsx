@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { ContinuousTicker } from "../continuous-ticker";
 import { LanguageProvider } from "@/lib/i18n";
@@ -41,6 +41,7 @@ function article(overrides: Partial<NewsArticle>): NewsArticle {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   mockedLiveQuotes.mockReturnValue({ data: { data: [] } } as ReturnType<typeof useLiveQuotes>);
   mockedTickerNews.mockReturnValue({
     data: {
@@ -86,5 +87,41 @@ describe("ContinuousTicker", () => {
     renderTicker();
 
     expect(screen.queryByTestId("ticker-breaking-news-badge")).not.toBeInTheDocument();
+  });
+
+  it("pauses and resumes the marquee without removing its content", () => {
+    renderTicker();
+
+    const track = screen.getByTestId("continuous-ticker-track");
+    const pauseButton = screen.getByTestId("button-ticker-pause");
+    fireEvent.click(pauseButton);
+
+    expect(track).toHaveStyle({ animationPlayState: "paused" });
+    expect(pauseButton).toHaveAttribute("aria-pressed", "true");
+    expect(pauseButton).toHaveAccessibleName("Resume ticker");
+    expect(localStorage.getItem("tradepilot_ticker_paused")).toBe("true");
+    expect(screen.getAllByTestId("ticker-news-item-newsmaker-1")).toHaveLength(2);
+
+    fireEvent.click(pauseButton);
+    expect(track).toHaveStyle({ animationPlayState: "running" });
+    expect(localStorage.getItem("tradepilot_ticker_paused")).toBe("false");
+  });
+
+  it("persists hidden state and keeps a keyboard-accessible show control", () => {
+    const first = renderTicker();
+    fireEvent.click(screen.getByTestId("button-ticker-hide"));
+
+    expect(screen.queryByTestId("continuous-ticker")).not.toBeInTheDocument();
+    expect(screen.getByTestId("continuous-ticker-hidden")).toBeInTheDocument();
+    expect(localStorage.getItem("tradepilot_ticker_hidden")).toBe("true");
+
+    first.unmount();
+    renderTicker();
+    const showButton = screen.getByTestId("button-ticker-show");
+    expect(showButton).toHaveAccessibleName("Show ticker");
+
+    fireEvent.click(showButton);
+    expect(screen.getByTestId("continuous-ticker")).toBeInTheDocument();
+    expect(localStorage.getItem("tradepilot_ticker_hidden")).toBe("false");
   });
 });

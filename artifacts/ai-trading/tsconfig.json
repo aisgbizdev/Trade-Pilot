@@ -24,6 +24,12 @@
   "references": [
     {
       "path": "../../lib/api-client-react"
+    },
+    {
+      "path": "../../lib/instrument-taxonomy"
+    },
+    {
+      "path": "../../lib/progression-emblem"
     }
   ]
 }

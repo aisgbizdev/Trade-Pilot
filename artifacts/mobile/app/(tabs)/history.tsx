@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getTabContentBottomPadding } from "@/constants/layout";
 
 type AnalysisItem = {
   id: number;
@@ -80,8 +81,8 @@ function AnalysisRow({ item, onPress, colors, t }: {
         borderBottomColor: colors.border,
       })}
     >
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+      <View style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
           <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.foreground }}>
             {item.instrument}
           </Text>
@@ -129,10 +130,15 @@ export default function HistoryScreen() {
     },
     header: {
       paddingHorizontal: 20,
-      paddingTop: 16,
+      paddingTop: Platform.OS === "web" ? 16 : insets.top + 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
+    },
+    headerInner: {
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
     },
     title: {
       fontSize: 28,
@@ -149,7 +155,9 @@ export default function HistoryScreen() {
   return (
     <View style={s.root}>
       <View style={s.header}>
-        <Text style={s.title}>{t.history.title}</Text>
+        <View style={s.headerInner}>
+          <Text style={s.title}>{t.history.title}</Text>
+        </View>
       </View>
 
       {isLoading ? (
@@ -184,7 +192,12 @@ export default function HistoryScreen() {
               colors={[colors.primary]}
             />
           }
-          contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+          contentContainerStyle={{
+            paddingBottom: getTabContentBottomPadding(Platform.OS, insets.bottom),
+            width: "100%",
+            maxWidth: 720,
+            alignSelf: "center",
+          }}
         />
       )}
     </View>

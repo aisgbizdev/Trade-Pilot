@@ -62,6 +62,8 @@ describe("Layout — Analisis nav / back go to the last analysis", () => {
       expect(screen.getByTestId("nav-desktop-analyze")).toHaveAttribute("href", "/analyze?result=42"),
     );
     expect(screen.getByTestId("nav-analyze").closest("a")).toHaveAttribute("href", "/analyze?result=42");
+    expect(screen.getByTestId("nav-analyze").tagName).toBe("A");
+    expect(screen.getByTestId("nav-analyze").querySelector("button")).toBeNull();
   });
 
   it("falls back to /analyze when the user has no analyses yet", async () => {

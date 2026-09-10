@@ -2,6 +2,11 @@ import { ProgressionEmblem } from "@/components/ProgressionEmblem";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
+import {
+  getHomeProgressionContent,
+  HOME_PROGRESSION_ROUTE,
+  HOME_PROGRESSION_TEST_ID,
+} from "@/lib/home-progression";
 import { Feather } from "@expo/vector-icons";
 import {
   type CreateAnalysisBodyTimeframe,
@@ -21,6 +26,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getTabContentBottomPadding } from "@/constants/layout";
 
 const INSTRUMENTS = {
   futures: ["XAU/USD", "XAG/USD", "US30", "NAS100", "US500", "OIL/USD", "GC=F"],
@@ -31,25 +37,6 @@ const INSTRUMENTS = {
 type Category = keyof typeof INSTRUMENTS;
 
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D"] as const;
-
-const RANK_KEYS = [
-  "seedling",
-  "observer",
-  "planner",
-  "guardian",
-  "navigator",
-  "strategist",
-  "sentinel",
-  "vanguard",
-  "steward",
-  "apex",
-] as const;
-
-type RankKey = (typeof RANK_KEYS)[number];
-
-function isRankKey(value: string): value is RankKey {
-  return (RANK_KEYS as readonly string[]).includes(value);
-}
 
 export default function AnalyzeScreen() {
   const colors = useColors();
@@ -66,22 +53,12 @@ export default function AnalyzeScreen() {
   const { data: quota } = useGetAnalysisQuota();
   const progression = useGetProgressionSummary();
   const remaining = (quota as any)?.remaining as number | undefined;
-  const progressionRank = progression.data
-    ? isRankKey(progression.data.rank)
-      ? t.progression[`rank_${progression.data.rank}`]
-      : progression.data.rank
-    : null;
-  const progressionLevel = progression.data
-    ? (progression.data.masteryLevel > 0 ? t.progression.mastery : t.progression.level)
-        .replace(
-          "{n}",
-          String(
-            progression.data.masteryLevel > 0
-              ? progression.data.masteryLevel
-              : progression.data.level,
-          ),
-        )
-    : null;
+  const progressionContent = getHomeProgressionContent(
+    t.progression,
+    progression.data,
+    progression.isError,
+    t.progression.loading,
+  );
 
   const { mutate: createAnalysis, isPending } = useCreateAnalysis({
     mutation: {
@@ -117,23 +94,35 @@ export default function AnalyzeScreen() {
     },
     header: {
       paddingHorizontal: 20,
-      paddingTop: 16,
+      paddingTop: Platform.OS === "web" ? 16 : insets.top + 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
-      flexDirection: "row",
-      alignItems: "flex-end",
-      justifyContent: "space-between",
     },
-    title: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.foreground },
+    headerInner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+      gap: 16,
+      minHeight: 32,
+    },
+    title: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.foreground, flexShrink: 1 },
     modeBadge: {
       backgroundColor: colors.primary + "1a",
       borderRadius: 8,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      marginBottom: 4,
+      flexShrink: 0,
     },
     modeText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.primary },
+    content: {
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+    },
     section: { paddingHorizontal: 16, marginTop: 20 },
     progressionCard: {
       minHeight: 68,
@@ -146,7 +135,7 @@ export default function AnalyzeScreen() {
       borderColor: colors.border,
       backgroundColor: colors.card,
     },
-    progressionCopy: { flex: 1, minWidth: 0, marginLeft: 10 },
+    progressionCopy: { flex: 1, minWidth: 0, marginLeft: 10, marginRight: 8 },
     progressionRank: {
       color: colors.foreground,
       fontFamily: "Inter_600SemiBold",
@@ -173,10 +162,12 @@ export default function AnalyzeScreen() {
       letterSpacing: 0.7,
       marginBottom: 10,
     },
-    catRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
+    catRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
     catBtn: {
       flex: 1,
+      minWidth: "30%",
       paddingVertical: 9,
+      paddingHorizontal: 4,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: colors.border,
@@ -184,7 +175,7 @@ export default function AnalyzeScreen() {
       backgroundColor: colors.card,
     },
     catBtnActive: { borderColor: colors.primary, backgroundColor: colors.primary + "14" },
-    catText: { fontSize: 13, fontFamily: "Inter_500Medium", color: colors.mutedForeground },
+    catText: { fontSize: 13, fontFamily: "Inter_500Medium", color: colors.mutedForeground, textAlign: "center" },
     catTextActive: { color: colors.primary, fontFamily: "Inter_600SemiBold" },
     instrumentGrid: {
       flexDirection: "row",
@@ -232,7 +223,7 @@ export default function AnalyzeScreen() {
     submitContainer: {
       paddingHorizontal: 16,
       paddingTop: 24,
-      paddingBottom: insets.bottom + (Platform.OS === "web" ? 100 : 12),
+      paddingBottom: getTabContentBottomPadding(Platform.OS, insets.bottom),
     },
     quotaText: {
       textAlign: "center",
@@ -266,37 +257,36 @@ export default function AnalyzeScreen() {
   return (
     <View style={s.root}>
       <View style={s.header}>
-        <Text style={s.title}>{t.analyze.title}</Text>
-        {user ? (
-          <View style={s.modeBadge}>
-            <Text style={s.modeText}>
-              {user.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
-            </Text>
-          </View>
-        ) : null}
+        <View style={s.headerInner}>
+          <Text style={s.title} numberOfLines={1}>{t.analyze.title}</Text>
+          {user ? (
+            <View style={s.modeBadge}>
+              <Text style={s.modeText}>
+                {user.selectedMode === "beginner" ? t.common.beginner : t.common.pro}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {!progression.isError ? (
+        <View style={s.content}>
+          {progressionContent.kind !== "hidden" ? (
           <View style={s.section}>
             <Pressable
-              testID="home-progression-link"
+              testID={HOME_PROGRESSION_TEST_ID}
               accessibilityRole="button"
-              accessibilityLabel={
-                progressionRank && progressionLevel
-                  ? `${t.progression.title}: ${progressionRank}, ${progressionLevel}`
-                  : t.progression.title
-              }
-              onPress={() => router.push("/progression" as never)}
+              accessibilityLabel={progressionContent.accessibilityLabel}
+              onPress={() => router.push(HOME_PROGRESSION_ROUTE as never)}
               style={({ pressed }) => [
                 s.progressionCard,
                 { opacity: pressed ? 0.7 : 1 },
               ]}
             >
-              {progression.data ? (
+              {progressionContent.kind === "summary" && progression.data ? (
                 <>
                   <ProgressionEmblem
                     level={progression.data.level}
@@ -305,10 +295,10 @@ export default function AnalyzeScreen() {
                   />
                   <View style={s.progressionCopy}>
                     <Text style={s.progressionRank} numberOfLines={1}>
-                      {progressionRank}
+                      {progressionContent.rank}
                     </Text>
                     <Text style={s.progressionLevel} numberOfLines={1}>
-                      {progressionLevel}
+                      {progressionContent.level}
                     </Text>
                   </View>
                   <Feather
@@ -320,7 +310,11 @@ export default function AnalyzeScreen() {
               ) : (
                 <>
                   <ActivityIndicator color={colors.primary} size="small" />
-                  <Text style={s.progressionLoading}>{t.progression.loading}</Text>
+                  <Text style={s.progressionLoading}>
+                    {progressionContent.kind === "loading"
+                      ? progressionContent.label
+                      : t.progression.loading}
+                  </Text>
                 </>
               )}
             </Pressable>
@@ -401,6 +395,7 @@ export default function AnalyzeScreen() {
               <Text style={s.submitText}>{t.analyze.submit}</Text>
             )}
           </Pressable>
+        </View>
         </View>
       </ScrollView>
     </View>

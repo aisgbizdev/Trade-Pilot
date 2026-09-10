@@ -49,6 +49,8 @@ interface AnalysisLevelsChartProps {
   analysisCreatedAt?: string | Date | null;
   height?: number | string;
   onLoadFailed?: (reason: string) => void;
+  livePrice?: number | null;
+  liveUpdatedAt?: string | null;
 }
 
 // Parse a possibly-zone price string like "1.0850" or "1.0850-1.0857" or
@@ -210,6 +212,8 @@ export function AnalysisLevelsChart({
   analysisCreatedAt = null,
   height = 280,
   onLoadFailed,
+  livePrice = null,
+  liveUpdatedAt = null,
 }: AnalysisLevelsChartProps) {
   const { theme } = useTheme();
   const { lang } = useTranslation();
@@ -217,6 +221,7 @@ export function AnalysisLevelsChart({
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
+  const liveCandleRef = useRef<Candle | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [candles, setCandles] = useState<Candle[] | null>(null);
@@ -278,6 +283,7 @@ export function AnalysisLevelsChart({
           .map(normalizeCandle)
           .filter((candle): candle is Candle => candle != null);
         if (list.length === 0) throw new Error("empty");
+        liveCandleRef.current = list.at(-1) ?? null;
         setCandles(list);
         setState("ready");
       })
@@ -292,6 +298,70 @@ export function AnalysisLevelsChart({
       cancelled = true;
     };
   }, [instrument, timeframe, onLoadFailed]);
+
+  // Keep the active candle moving with the canonical backend quote without
+  // rebuilding the chart (which would reset the user's zoom/pan position).
+  // Historical bars still come from /historical/candles; this only advances
+  // OHLC for the newest visible bucket between historical refreshes.
+  useEffect(() => {
+    const series = seriesRef.current;
+    const previous = liveCandleRef.current;
+    if (
+      !series ||
+      state !== "ready" ||
+      !previous ||
+      typeof livePrice !== "number" ||
+      !Number.isFinite(livePrice) ||
+      livePrice <= 0 ||
+      !liveUpdatedAt
+    ) {
+      return;
+    }
+
+    const durationMs: Record<string, number> = {
+      "1m": 60_000,
+      "5m": 5 * 60_000,
+      "15m": 15 * 60_000,
+      "30m": 30 * 60_000,
+      "1h": 60 * 60_000,
+      "4h": 4 * 60 * 60_000,
+      "1D": 24 * 60 * 60_000,
+      "1W": 7 * 24 * 60 * 60_000,
+    };
+    const bucketDuration = durationMs[timeframe];
+    if (!bucketDuration) return;
+
+    const previousMs = new Date(previous.date).getTime();
+    if (!Number.isFinite(previousMs)) return;
+    const nowMs = Date.now();
+    const currentBucketMs = Math.floor(nowMs / bucketDuration) * bucketDuration;
+    const previousBucketMs =
+      Math.floor(previousMs / bucketDuration) * bucketDuration;
+    const startsNewBucket = currentBucketMs > previousBucketMs;
+    const next: Candle = startsNewBucket
+      ? {
+          date: new Date(currentBucketMs).toISOString(),
+          open: livePrice,
+          high: livePrice,
+          low: livePrice,
+          close: livePrice,
+        }
+      : {
+          ...previous,
+          high: Math.max(previous.high, livePrice),
+          low: Math.min(previous.low, livePrice),
+          close: livePrice,
+        };
+
+    liveCandleRef.current = next;
+    series.update({
+      time: Math.floor(new Date(next.date).getTime() / 1000) as UTCTimestamp,
+      open: next.open,
+      high: next.high,
+      low: next.low,
+      close: next.close,
+    });
+  }, [livePrice, liveUpdatedAt, state, timeframe]);
 
   // Build/refresh chart when candles, theme, or cutoff change.
   useEffect(() => {

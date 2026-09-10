@@ -46,7 +46,8 @@ export const GetProgressionCatalogResponse = zod.object({
   "key": zod.string(),
   "unlocked": zod.boolean(),
   "unlockedAt": zod.coerce.date().nullable()
-}))
+})),
+  "completedGuideIds": zod.array(zod.string()).describe('Guide article IDs with a valid, non-revoked completion award.')
 })
 
 

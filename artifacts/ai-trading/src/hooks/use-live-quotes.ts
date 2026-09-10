@@ -46,3 +46,20 @@ export function useQuoteByInstrument(instrument: string) {
   );
   return { quote, ...rest };
 }
+
+/**
+ * Observe the quote cache without owning a fetch or polling interval.
+ * Layout's ContinuousTicker (or the Analyze page) remains the sole live
+ * quote poller; detail views can consume the same changing snapshot.
+ */
+export function useLiveQuoteSnapshotByInstrument(instrument: string) {
+  const { data, dataUpdatedAt, isError } = useQuery<LiveQuotesResponse>({
+    queryKey: ["live-quotes"],
+    queryFn: fetchLiveQuotes,
+    enabled: false,
+  });
+  const quote = data?.data.find(
+    (item) => item.instrument.toLowerCase() === instrument.toLowerCase(),
+  );
+  return { quote, dataUpdatedAt, isError };
+}

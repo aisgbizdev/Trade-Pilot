@@ -14,6 +14,18 @@ tests/e2e/test-results
 attached_assets
 screenshots
 
+# Development caches and test artifacts are not needed at runtime. In
+# particular, Playwright videos and traces can grow by several gigabytes.
+.cache/
+**/.expo/
+**/coverage/
+**/playwright-report/
+**/test-results/
+.run-logs/
+
+# Deployment does not need repository history.
+.git/
+
 # This is a legacy workspace snapshot of the canonical root project. Keeping it
 # in the publish context duplicates artifacts, manifests, dependencies, and
 # service ports, which makes the Repl layer much larger and can stall Bundle.

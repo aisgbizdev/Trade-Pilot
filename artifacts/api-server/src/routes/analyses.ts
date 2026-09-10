@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../lib/db";
 import { analyses, feedback, users, aiTokenUsage } from "@workspace/db/schema";
-import { eq, and, or, desc, count, sql, gte, lte, ilike, inArray } from "drizzle-orm";
+import { eq, and, or, desc, count, sql, gte, lte, ilike, inArray, notInArray } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import {
   generateAnalysis,
@@ -13,6 +13,10 @@ import {
   type FundamentalSnapshot,
   type AnalysisTokenUsage,
 } from "../lib/openai";
+import {
+  OTHER_INSTRUMENT_BUCKET_KEY,
+  PRIMARY_INSTRUMENTS,
+} from "@workspace/instrument-taxonomy";
 import { estimateCostUsd } from "../lib/model-pricing";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
 import { getLivePriceFor } from "../lib/live-prices";
@@ -164,12 +168,23 @@ router.get("/analyses/history-summary", requireAuth, async (req: AuthRequest, re
       .filter(Boolean)
       .slice(0, 50);
   const instruments = [...new Set(toValues(req.query["instruments"]))];
+  const includeOtherInstruments = instruments.includes(OTHER_INSTRUMENT_BUCKET_KEY);
+  const exactInstruments = instruments.filter((item) => item !== OTHER_INSTRUMENT_BUCKET_KEY);
   const timeframes = [...new Set(toValues(req.query["timeframes"]))];
   const conditions = [eq(analyses.userId, req.userId!)];
   if (rangeDays != null) {
     conditions.push(sql`${analyses.createdAt} >= now() - (${rangeDays} * interval '1 day')`);
   }
-  if (instruments.length) conditions.push(inArray(analyses.instrument, instruments));
+  if (includeOtherInstruments && exactInstruments.length > 0) {
+    conditions.push(or(
+      inArray(analyses.instrument, exactInstruments),
+      notInArray(analyses.instrument, [...PRIMARY_INSTRUMENTS]),
+    )!);
+  } else if (includeOtherInstruments) {
+    conditions.push(notInArray(analyses.instrument, [...PRIMARY_INSTRUMENTS]));
+  } else if (exactInstruments.length) {
+    conditions.push(inArray(analyses.instrument, exactInstruments));
+  }
   if (timeframes.length) conditions.push(inArray(analyses.timeframe, timeframes));
 
   const rows = await db
@@ -962,6 +977,10 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
     return out;
   };
   const filterInstruments = toArray(req.query["instruments"]);
+  const includeOtherInstruments = filterInstruments.includes(OTHER_INSTRUMENT_BUCKET_KEY);
+  const exactFilterInstruments = filterInstruments.filter(
+    (item) => item !== OTHER_INSTRUMENT_BUCKET_KEY,
+  );
   const filterTimeframes = toArray(req.query["timeframes"]);
   const filterOutcomes = toArray(req.query["outcomes"]).filter((value) =>
     ["pending", "tp1_hit", "tp2_hit", "sl_hit", "expired", "invalidated"].includes(value),
@@ -988,8 +1007,15 @@ router.get("/analyses", requireAuth, async (req: AuthRequest, res) => {
   }
   // Multi-select instruments wins over the legacy single `instrument`
   // param; the UI sends one or the other, never both.
-  if (filterInstruments.length > 0) {
-    conditions.push(inArray(analyses.instrument, filterInstruments));
+  if (includeOtherInstruments && exactFilterInstruments.length > 0) {
+    conditions.push(or(
+      inArray(analyses.instrument, exactFilterInstruments),
+      notInArray(analyses.instrument, [...PRIMARY_INSTRUMENTS]),
+    )!);
+  } else if (includeOtherInstruments) {
+    conditions.push(notInArray(analyses.instrument, [...PRIMARY_INSTRUMENTS]));
+  } else if (exactFilterInstruments.length > 0) {
+    conditions.push(inArray(analyses.instrument, exactFilterInstruments));
   } else if (filterInstrument) {
     conditions.push(ilike(analyses.instrument, `%${filterInstrument}%`));
   }

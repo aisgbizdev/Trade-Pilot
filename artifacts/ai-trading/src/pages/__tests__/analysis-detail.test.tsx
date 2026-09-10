@@ -399,6 +399,53 @@ describe("AnalysisDetailPage: happy-path render", () => {
     );
     expect(screen.getByTestId("card-trade-plan")).not.toHaveTextContent(/\bn\/a\b/i);
   });
+
+  it("passes the existing live-quote cache snapshot to both chart headers without starting a quote request", async () => {
+    const { calls } = installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
+        },
+      }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper, queryClient } = makeWrapper();
+    queryClient.setQueryData(["live-quotes"], {
+      status: "success",
+      updatedAt: new Date(NOW).toISOString(),
+      serverTime: "08:00:00",
+      data: [{
+        instrument: "XAU/USD",
+        symbol: "XUL10",
+        price: 2345.67,
+        buy: 2345.8,
+        sell: 2345.5,
+        spread: 0.3,
+        high: 2350,
+        low: 2320,
+        open: 2330,
+        changePercent: "+0.42%",
+        direction: "up",
+        serverTime: "08:00:00",
+        updatedAt: new Date(NOW).toISOString(),
+      }],
+    });
+
+    render(
+      <Wrapper>
+        <AnalysisDetailPage
+          params={{ id: String(ANALYSIS_ID) }}
+          embedded
+        />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("chart-live-quote-price")).toHaveTextContent("2345.67");
+    fireEvent.click(screen.getByTestId("button-open-full-chart"));
+    expect(screen.getAllByTestId("chart-live-quote-price")).toHaveLength(2);
+    expect(calls.filter((call) => call.url.includes("/api/quotes/live"))).toHaveLength(0);
+  });
 });
 
 describe("AnalysisDetailPage: situation-aware position recommendation", () => {
@@ -424,7 +471,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     await screen.findByTestId("text-instrument"); // Wait for load
-    expect(screen.getByText("PLATINUM")).toBeInTheDocument();
+    expect(screen.getByTestId("text-instrument")).toHaveTextContent("PLATINUM");
     
     // AdaptivePositionPlan should NOT be mounted
     expect(screen.queryByTestId("card-adaptive-position-plan")).not.toBeInTheDocument();
@@ -465,6 +512,16 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
   });
 
   it("defaults to Mini, supports all account tiers, and keeps separate Buy and Sell ladders", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const execCommand = vi.fn(() => false);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    Object.defineProperty(document, "execCommand", {
+      configurable: true,
+      value: execCommand,
+    });
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -566,6 +623,20 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-direction-buy")).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByTestId("adaptive-plan-sell")).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByTestId("button-copy-adaptive-plan"));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const buyCopy = String(writeText.mock.calls[0]?.[0]);
+    expect(buyCopy).toContain("Instrument: XAU/USD");
+    expect(buyCopy).toContain("Direction: BUY");
+    expect(buyCopy).toMatch(/1\. .+ · .+ lot/);
+    expect(buyCopy).toContain("SL:");
+    expect(buyCopy).toContain("TP1:");
+    expect(buyCopy).toContain("TP2:");
+    expect(buyCopy).toContain("Risk context:");
+    expect(buyCopy).toContain("This is not an automated order.");
+    expect(buyCopy).not.toContain("Not included");
+    expect(await screen.findByTestId("adaptive-copy-status")).toHaveTextContent("Copied");
+
     fireEvent.click(screen.getByTestId("adaptive-direction-sell"));
     const sellPlan = screen.getByTestId("adaptive-plan-sell");
     expect(screen.getByTestId("adaptive-direction-sell")).toHaveAttribute("aria-pressed", "true");
@@ -576,6 +647,17 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-tp-profit-sell-1")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect(screen.getByTestId("adaptive-tp-profit-sell-2")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect((screen.getByTestId("adaptive-risk-details") as HTMLDetailsElement).open).toBe(false);
+
+    fireEvent.click(screen.getByTestId("button-copy-adaptive-plan"));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    const sellCopy = String(writeText.mock.calls[1]?.[0]);
+    expect(sellCopy).toContain("Direction: SELL");
+    expect(sellCopy).not.toEqual(buyCopy);
+
+    writeText.mockRejectedValueOnce(new Error("permission denied"));
+    fireEvent.click(screen.getByTestId("button-copy-adaptive-plan"));
+    expect(await screen.findByTestId("adaptive-copy-status")).toHaveTextContent("Copy failed");
+    expect(execCommand).toHaveBeenCalledWith("copy");
 
     const storedKey = `trade-pilot:adaptive-plan:v19:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(storedKey)).not.toBeNull());

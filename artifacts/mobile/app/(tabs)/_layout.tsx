@@ -15,6 +15,8 @@ import {
   View,
   useColorScheme,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CLASSIC_TAB_BAR_HEIGHT } from "@/constants/layout";
 
 function NativeTabLayout() {
   return (
@@ -42,6 +44,7 @@ function ClassicTabLayout() {
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -55,7 +58,7 @@ function ClassicTabLayout() {
           borderTopWidth: isWeb ? StyleSheet.hairlineWidth : 0,
           borderTopColor: colors.border,
           elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
+          height: isWeb ? 84 : CLASSIC_TAB_BAR_HEIGHT + insets.bottom,
         },
         tabBarBackground: () =>
           isIOS ? (
@@ -72,7 +75,7 @@ function ClassicTabLayout() {
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
           fontSize: 10,
-          marginBottom: isWeb ? 8 : 2,
+          marginBottom: isWeb ? 8 : (insets.bottom > 0 ? 0 : 4),
         },
       }}
     >

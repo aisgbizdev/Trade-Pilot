@@ -20,6 +20,10 @@
 
 import { db } from "./db";
 import { analyses, type FundamentalContextShape } from "@workspace/db/schema";
+import {
+  OTHER_INSTRUMENT_BUCKET_KEY,
+  isPrimaryInstrument,
+} from "@workspace/instrument-taxonomy";
 import { and, gte, isNotNull, inArray, sql } from "drizzle-orm";
 import { sessionBucket, type SessionKey } from "./trader-mirror";
 
@@ -200,6 +204,8 @@ export interface PerformanceSummary {
   byNewsActivity: GatedSegment;
 }
 
+export { OTHER_INSTRUMENT_BUCKET_KEY } from "@workspace/instrument-taxonomy";
+
 function emptyOverall(): OverallStat {
   return {
     triggered: 0,
@@ -341,7 +347,11 @@ export async function computePerformanceSummary(
   // time — the "best session to enter" question is about when the AI
   // analysed, not when price eventually touched a level.
   const sessionSeg = segment(rows, (r) => sessionBucket(r.createdAt) as SessionKey);
-  const instrumentSeg = segment(rows, (r) => r.instrument);
+  const instrumentSeg = segment(rows, (r) =>
+    isPrimaryInstrument(r.instrument)
+      ? r.instrument
+      : OTHER_INSTRUMENT_BUCKET_KEY,
+  );
   const conditionSeg = segment(rows, (r) => r.marketCondition);
   // Drop `unclassified` / `unknown` from the regime segments so we
   // never publish a rate for a bucket that just means "we don't know".

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Calculator, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, Check, Copy, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -204,6 +204,72 @@ function rejectedReason(reason: AdaptiveLayerRejectReason, copy: AdaptiveCopy): 
     case "day_margin": return copy.adaptive_rejected_margin;
     case "loss_ceiling": return copy.adaptive_rejected_loss;
     case "tier_limit": return copy.adaptive_rejected_tier;
+  }
+}
+
+export function buildAdaptivePlanCopyText({
+  instrument,
+  plan,
+  summary,
+  lang,
+  copy,
+}: {
+  instrument: string;
+  plan: AdaptiveSidePositionPlan;
+  summary: AdaptiveRecommendationSummary;
+  lang: "en" | "id";
+  copy: AdaptiveCopy;
+}): string {
+  const lines = [
+    copy.adaptive_copy_title,
+    `${copy.adaptive_copy_instrument}: ${instrument}`,
+    `${copy.adaptive_copy_direction}: ${plan.side.toUpperCase()}`,
+    `${copy.adaptive_risk_style_title}: ${riskStyleLabel(summary.riskStyle, copy)}`,
+    "",
+    `${copy.adaptive_layer_plan_title}:`,
+    ...plan.ladder.map(
+      (level) =>
+        `${level.level + 1}. ${formatNumber(level.price, lang, 4)} · ${formatNumber(level.lot, lang)} ${copy.adaptive_lot}`,
+    ),
+    `SL: ${formatNumber(plan.stopLoss, lang, 4)}`,
+    ...(plan.takeProfit1 != null
+      ? [`TP1: ${formatNumber(plan.takeProfit1, lang, 4)}`]
+      : []),
+    ...(plan.takeProfit2 != null
+      ? [`TP2: ${formatNumber(plan.takeProfit2, lang, 4)}`]
+      : []),
+    `${copy.adaptive_snapshot_total_lots}: ${formatNumber(plan.totalLots, lang)} ${copy.adaptive_lot}`,
+    "",
+    `${copy.adaptive_copy_risk_context}:`,
+    `${copy.adaptive_margin_required}: ${formatMoney(plan.marginRequired, lang)}`,
+    `${copy.adaptive_cycle_loss}: ${formatMoney(plan.estimatedCycleLoss, lang)}`,
+    `${copy.adaptive_usable_risk_budget}: ${formatMoney(summary.usableRiskBudget, lang)}`,
+    copy.adaptive_copy_manual_context,
+  ];
+  return lines.join("\n");
+}
+
+async function writeClipboardText(text: string): Promise<void> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // Fall through to the browser-compatible selection fallback.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    if (!document.execCommand("copy")) throw new Error("Copy unavailable");
+  } finally {
+    textarea.remove();
   }
 }
 
@@ -515,13 +581,21 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
   const [activeSide, setActiveSide] = useState<"buy" | "sell">("buy");
+  const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
+  const copyResetTimerRef = useRef<number | null>(null);
   const restoredStateKeyRef = useRef<string | null>(null);
   useEffect(() => {
     restoredStateKeyRef.current = null;
     setForm(DEFAULT_FORM);
     setRecommendation(null);
     setActiveSide("buy");
+    setCopyStatus("idle");
   }, [analysisId]);
+  useEffect(() => () => {
+    if (copyResetTimerRef.current !== null) {
+      window.clearTimeout(copyResetTimerRef.current);
+    }
+  }, []);
   const [chartCandidateState, setChartCandidateState] = useState<{
     status: "loading" | "ready" | "error";
     prices: { buy: number[]; sell: number[] };
@@ -672,6 +746,30 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       recommendation.result.sell ??
       null
     : null;
+  const copyPrimaryPlan = async () => {
+    if (!primaryPlan || !selected || !recommendation?.result.valid) return;
+    if (copyResetTimerRef.current !== null) {
+      window.clearTimeout(copyResetTimerRef.current);
+    }
+    try {
+      await writeClipboardText(
+        buildAdaptivePlanCopyText({
+          instrument,
+          plan: primaryPlan,
+          summary: selected,
+          lang,
+          copy,
+        }),
+      );
+      setCopyStatus("success");
+    } catch {
+      setCopyStatus("error");
+    }
+    copyResetTimerRef.current = window.setTimeout(
+      () => setCopyStatus("idle"),
+      2500,
+    );
+  };
 
   return (
     <Card className="overflow-hidden" data-testid="card-adaptive-position-plan">
@@ -863,7 +961,34 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
            </div>
          )}
         {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
-          <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
+           <div className="flex flex-wrap items-center justify-between gap-2">
+             <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
+             <div className="flex items-center gap-2">
+               {copyStatus !== "idle" && (
+                 <span
+                   className={`text-[10px] font-medium ${copyStatus === "success" ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}`}
+                   role="status"
+                   data-testid="adaptive-copy-status"
+                 >
+                   {copyStatus === "success" ? copy.adaptive_copy_success : copy.adaptive_copy_failed}
+                 </span>
+               )}
+               <Button
+                 type="button"
+                 size="sm"
+                 variant="outline"
+                 onClick={copyPrimaryPlan}
+                 data-testid="button-copy-adaptive-plan"
+               >
+                 {copyStatus === "success" ? (
+                   <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                 ) : (
+                   <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                 )}
+                 {copyStatus === "success" ? copy.adaptive_copy_success : copy.adaptive_copy}
+               </Button>
+             </div>
+           </div>
            {primaryPlan && <PlanSide plan={primaryPlan} lang={lang} copy={copy} decision={recommendation.decision} summary={selected} />}
           <details className="rounded-md border border-border p-3" data-testid="adaptive-risk-details">
             <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</summary>

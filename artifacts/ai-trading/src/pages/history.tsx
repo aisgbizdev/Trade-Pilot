@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { Clock, TrendingUp, Loader2, Filter, X, RefreshCw, StickyNote, Search, Bookmark, Pencil, Trash2 } from "lucide-react";
+import { Check, Clock, TrendingUp, Loader2, Filter, X, RefreshCw, StickyNote, Search, Bookmark, Pencil, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,15 +26,19 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 import { HistoryPerformanceSummary } from "@/components/history-performance-summary";
-
-const ALL_INSTRUMENTS = [
-  "XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY",
-  "AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR",
-];
+import {
+  ALL_HISTORY_INSTRUMENTS,
+  OTHER_INSTRUMENTS,
+  OTHER_INSTRUMENT_BUCKET_KEY,
+  PRIMARY_INSTRUMENTS,
+} from "@/lib/instrument-groups";
 
 const ALL_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"];
 
-const ALL_INSTRUMENTS_SET = new Set(ALL_INSTRUMENTS);
+const ALL_INSTRUMENTS_SET = new Set<string>([
+  ...ALL_HISTORY_INSTRUMENTS,
+  OTHER_INSTRUMENT_BUCKET_KEY,
+]);
 const ALL_TIMEFRAMES_SET = new Set(ALL_TIMEFRAMES);
 
 // Filter state lives in the URL so the view is shareable / bookmarkable.
@@ -208,6 +212,21 @@ export default function HistoryPage() {
     filters.to !== "" ||
     filters.q !== "" ||
     filters.outcomes.length > 0;
+  const selectedOtherInstruments = filters.instruments.filter((instrument) =>
+    instrument === OTHER_INSTRUMENT_BUCKET_KEY ||
+    (OTHER_INSTRUMENTS as readonly string[]).includes(instrument),
+  );
+  const hasOtherInstrumentFilter = selectedOtherInstruments.length > 0;
+  const activeFilterCount =
+    filters.instruments.filter((instrument) =>
+      (PRIMARY_INSTRUMENTS as readonly string[]).includes(instrument),
+    ).length +
+    (hasOtherInstrumentFilter ? 1 : 0) +
+    filters.timeframes.length +
+    filters.outcomes.length +
+    Number(Boolean(filters.from)) +
+    Number(Boolean(filters.to)) +
+    Number(Boolean(filters.q));
 
   // Debounce the search input: while the user is still typing, the URL
   // (and thus the request) is unchanged. The committed value flows into
@@ -326,6 +345,16 @@ export default function HistoryPage() {
   const analyses = listData?.analyses ?? [];
   const total = listData?.total ?? 0;
   const hasMore = page * limit < total;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const rangeStart = total === 0 ? 0 : (page - 1) * limit + 1;
+  const rangeEnd = Math.min(page * limit, total);
+  const pageStatus = t.history.page_status
+    .replace("{page}", String(page))
+    .replace("{pages}", String(totalPages));
+  const rangeStatus = t.history.range_status
+    .replace("{start}", String(rangeStart))
+    .replace("{end}", String(rangeEnd))
+    .replace("{total}", String(total));
 
   const updateFilters = (next: FilterState) => {
     apply(next, 1);
@@ -338,6 +367,19 @@ export default function HistoryPage() {
       instruments: exists
         ? filters.instruments.filter((i) => i !== inst)
         : [...filters.instruments, inst],
+    });
+  };
+  const toggleOtherInstruments = () => {
+    const withoutOthers = filters.instruments.filter(
+      (instrument) =>
+        instrument !== OTHER_INSTRUMENT_BUCKET_KEY &&
+        !(OTHER_INSTRUMENTS as readonly string[]).includes(instrument),
+    );
+    updateFilters({
+      ...filters,
+      instruments: hasOtherInstrumentFilter
+        ? withoutOthers
+        : [...withoutOthers, OTHER_INSTRUMENT_BUCKET_KEY],
     });
   };
 
@@ -359,7 +401,9 @@ export default function HistoryPage() {
   // so the user can tap × on a single instrument without nuking the rest.
   type Chip = { key: string; label: string; remove: () => void };
   const activeChips: Chip[] = [];
-  for (const inst of filters.instruments) {
+  for (const inst of filters.instruments.filter((instrument) =>
+    (PRIMARY_INSTRUMENTS as readonly string[]).includes(instrument),
+  )) {
     activeChips.push({
       key: `inst-${inst}`,
       label: inst,
@@ -367,6 +411,19 @@ export default function HistoryPage() {
         updateFilters({
           ...filters,
           instruments: filters.instruments.filter((i) => i !== inst),
+        }),
+    });
+  }
+  if (hasOtherInstrumentFilter) {
+    activeChips.push({
+      key: "inst-other",
+      label: t.history.other_instruments,
+      remove: () =>
+        updateFilters({
+          ...filters,
+          instruments: filters.instruments.filter(
+            (instrument) => !(OTHER_INSTRUMENTS as readonly string[]).includes(instrument),
+          ).filter((instrument) => instrument !== OTHER_INSTRUMENT_BUCKET_KEY),
         }),
     });
   }
@@ -420,60 +477,67 @@ export default function HistoryPage() {
   return (
     <Layout>
       <div className="px-4 py-5 md:max-w-3xl md:mx-auto">
-        <div className="mb-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-foreground">{t.history.title}</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
+        <div className="mb-5 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-foreground truncate">{t.history.title}</h1>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {total > 0 ? `${total} ${t.history.total_analyses}` : t.history.no_data_yet}
               </p>
             </div>
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              data-testid="button-toggle-filters"
-              className={cn(
-                "p-2 rounded-xl transition-colors relative",
-                showFilters || hasActiveFilters
-                  ? "bg-primary/10 text-primary"
-                  : "hover:bg-muted text-muted-foreground"
-              )}
-            >
-              <Filter className="w-4 h-4" />
-              {hasActiveFilters && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
-              )}
-            </button>
           </div>
-          <div className="mt-3 inline-flex rounded-xl border border-border bg-muted/40 p-1">
-            <button type="button" onClick={() => setView("summary")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium", view === "summary" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.summary_tab}</button>
-            <button type="button" onClick={() => setView("history")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium", view === "history" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.history_tab}</button>
+          <div className="mt-3 flex overflow-x-auto rounded-xl border border-border bg-muted/40 p-1 no-scrollbar shrink-0">
+            <button type="button" onClick={() => setView("summary")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap flex-1 text-center", view === "summary" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.summary_tab}</button>
+            <button type="button" onClick={() => setView("history")} className={cn("px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap flex-1 text-center", view === "history" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground")}>{t.history.history_tab}</button>
           </div>
           {view === "summary" && <div className="mt-4"><HistoryPerformanceSummary /></div>}
 
           {view === "history" && <>
-          <div className="mt-3 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-            <input
-              type="search"
-              inputMode="search"
-              value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value.slice(0, MAX_SEARCH_LEN))}
-              maxLength={MAX_SEARCH_LEN}
-              placeholder={t.history.search_placeholder ?? "Search notes, instrument, AI reasoning…"}
-              data-testid="input-history-search"
-              className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-            {searchDraft && (
-              <button
-                type="button"
-                onClick={() => setSearchDraft("")}
-                aria-label={t.common.clear_filters ?? "Clear"}
-                data-testid="button-clear-search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted text-muted-foreground"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
+          <div className="mt-3 flex items-stretch rounded-xl border border-border bg-background shadow-sm focus-within:ring-2 focus-within:ring-primary/30 w-full max-w-full">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="search"
+                inputMode="search"
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value.slice(0, MAX_SEARCH_LEN))}
+                maxLength={MAX_SEARCH_LEN}
+                placeholder={t.history.search_placeholder ?? "Search notes, instrument, AI reasoning…"}
+                data-testid="input-history-search"
+                className="h-10 w-full pl-9 pr-8 text-xs rounded-l-xl bg-transparent text-foreground placeholder:text-muted-foreground/70 focus:outline-none min-w-0"
+              />
+              {searchDraft && (
+                <button
+                  type="button"
+                  onClick={() => setSearchDraft("")}
+                  aria-label={t.common.clear_filters ?? "Clear"}
+                  data-testid="button-clear-search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted text-muted-foreground"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((value) => !value)}
+              data-testid="button-toggle-filters"
+              aria-expanded={showFilters}
+              className={cn(
+                "min-h-10 px-2 sm:px-3 border-l border-border rounded-r-xl inline-flex items-center gap-1 sm:gap-1.5 text-xs font-semibold transition-colors shrink-0",
+                showFilters || hasActiveFilters
+                  ? "bg-primary/10 text-primary"
+                  : "text-foreground hover:bg-muted",
+              )}
+            >
+              <Filter className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xxs:inline">{t.history.filters}</span>
+              {activeFilterCount > 0 && (
+                <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] inline-flex items-center justify-center tabular-nums">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {(presets.length > 0 || hasActiveFilters) && (
@@ -603,10 +667,11 @@ export default function HistoryPage() {
                   })}
                 </div>
               </div>
-              <div>
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{t.analyze.select_instrument}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {ALL_INSTRUMENTS.map((inst) => {
+              <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
+                <p className="text-xs font-semibold text-foreground">{t.history.choose_instruments}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 mb-2.5">{t.history.choose_instruments_hint}</p>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-5 gap-2">
+                  {PRIMARY_INSTRUMENTS.map((inst) => {
                     const active = filters.instruments.includes(inst);
                     return (
                       <button
@@ -615,16 +680,32 @@ export default function HistoryPage() {
                         data-testid={`filter-instrument-${inst}`}
                         aria-pressed={active}
                         className={cn(
-                          "px-2.5 py-1 text-xs font-medium rounded-lg border transition-all",
+                          "min-h-10 px-2.5 py-2 text-xs font-semibold rounded-lg border transition-all inline-flex items-center justify-center gap-1.5",
                           active
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background border-border text-foreground hover:border-primary/60"
                         )}
                       >
+                        {active && <Check className="w-3.5 h-3.5" aria-hidden="true" />}
                         {inst}
                       </button>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={toggleOtherInstruments}
+                    data-testid="filter-instrument-other"
+                    aria-pressed={hasOtherInstrumentFilter}
+                    className={cn(
+                      "min-h-10 px-2.5 py-2 text-xs font-semibold rounded-lg border transition-all inline-flex items-center justify-center gap-1.5",
+                      hasOtherInstrumentFilter
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-background border-border text-foreground hover:border-primary/60",
+                    )}
+                  >
+                    {hasOtherInstrumentFilter && <Check className="w-3.5 h-3.5" aria-hidden="true" />}
+                    {t.history.other_instruments}
+                  </button>
                 </div>
               </div>
               <div>
@@ -826,27 +907,42 @@ export default function HistoryPage() {
               );
             })}
 
-            <div className="flex gap-2 pt-2 md:col-span-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                disabled={page === 1}
-                onClick={() => apply(filters, Math.max(1, page - 1))}
-                data-testid="button-prev-page"
+            <div className="flex flex-col gap-2 pt-2 md:col-span-2 sm:flex-row sm:items-center">
+              <div
+                className="text-center sm:text-left sm:min-w-[9rem]"
+                aria-live="polite"
+                data-testid="history-pagination-status"
               >
-                {t.history.prev}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                disabled={!hasMore}
-                onClick={() => apply(filters, page + 1)}
-                data-testid="button-next-page"
-              >
-                {t.history.next}
-              </Button>
+                <p className="text-xs font-medium text-foreground">{pageStatus}</p>
+                <p
+                  className="text-[10px] text-muted-foreground"
+                  data-testid="history-pagination-range"
+                >
+                  {rangeStatus}
+                </p>
+              </div>
+              <div className="flex flex-1 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={page === 1}
+                  onClick={() => apply(filters, Math.max(1, page - 1))}
+                  data-testid="button-prev-page"
+                >
+                  {t.history.prev}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={!hasMore}
+                  onClick={() => apply(filters, page + 1)}
+                  data-testid="button-next-page"
+                >
+                  {t.history.next}
+                </Button>
+              </div>
             </div>
           </div>
         )}

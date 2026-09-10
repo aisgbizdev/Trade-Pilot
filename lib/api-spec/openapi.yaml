@@ -2923,9 +2923,13 @@ components:
         unlockedAt: { type: ["string", "null"], format: date-time }
     ProgressionCatalog:
       type: object
-      required: [achievements]
+      required: [achievements, completedGuideIds]
       properties:
         achievements: { type: array, items: { $ref: "#/components/schemas/ProgressionAchievement" } }
+        completedGuideIds:
+          type: array
+          items: { type: string }
+          description: Guide article IDs with a valid, non-revoked completion award.
     ProgressionLedgerEntry:
       type: object
       required: [id, source, xp, dayBucket, ruleVersion, createdAt]

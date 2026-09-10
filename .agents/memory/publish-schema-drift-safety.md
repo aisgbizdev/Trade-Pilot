@@ -14,3 +14,9 @@ Never accept a Drizzle prompt that offers to truncate a populated table merely t
 **Why:** Non-interactive schema push can stop at this prompt, and choosing truncation would destroy unrelated development data.
 
 **How to apply:** Select the non-truncating option only after checking compatibility. If the CLI cannot safely accept input, apply only the verified additive DDL to development and verify exact schema parity afterward.
+
+In a non-interactive shell, `drizzle-kit push --strict` can print a confirmation menu and still exit successfully without applying anything.
+
+**Why:** Exit code zero only means schema introspection reached the prompt; it does not prove the development schema changed.
+
+**How to apply:** After any strict push, inspect the development schema directly and rerun strict push until it explicitly reports `No changes detected`.

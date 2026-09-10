@@ -8,10 +8,12 @@ import { users, analyses } from "@workspace/db/schema";
 import {
   computePerformanceSummary,
   MIN_SAMPLE,
+  OTHER_INSTRUMENT_BUCKET_KEY,
   classifyVolatilityRegime,
   classifyNewsActivity,
 } from "../performance";
 import type { FundamentalContextShape } from "@workspace/db/schema";
+import { PRIMARY_INSTRUMENTS } from "@workspace/instrument-taxonomy";
 
 const RUN_ID = randomBytes(4).toString("hex");
 const seededUserIds: number[] = [];
@@ -83,6 +85,11 @@ afterAll(async () => {
 });
 
 describe("computePerformanceSummary", () => {
+  it("uses the shared primary-instrument taxonomy and Other Instruments token", () => {
+    expect(PRIMARY_INSTRUMENTS).toEqual(["XAU/USD", "BRENT", "HSI", "NIKKEI"]);
+    expect(OTHER_INSTRUMENT_BUCKET_KEY).toBe("__other__");
+  });
+
   it("returns an empty, fully-gated payload when no resolved analyses exist in the window", async () => {
     // Far-future `now` puts the 30d cutoff well past every real or
     // leftover analysis in the dev DB, so the window is provably empty
@@ -100,7 +107,7 @@ describe("computePerformanceSummary", () => {
   });
 
   it("counts tp1_hit/tp2_hit as wins, sl_hit as loss, expired as no-fill; ignores pending and invalidated", async () => {
-    const now = new Date("2026-05-15T12:00:00Z");
+    const now = new Date("2099-02-15T12:00:00Z");
     const userId = await createUser();
     // 20 resolved rows = clears MIN_SAMPLE.overall and MIN_SAMPLE.bucket (10)
     // for a single instrument: 12 wins, 6 losses, 2 expired
@@ -121,9 +128,7 @@ describe("computePerformanceSummary", () => {
     await seedAnalysis({ userId, instrument: "PERF_A", outcome: "invalidated", hoursAgo: 50, now });
 
     const summary = await computePerformanceSummary(30, { now });
-    // Only the PERF_A counts (others are noise; some user from prior tests may
-    // leak in only via this same userId, which we just created). Filter to be safe.
-    const bucket = summary.byInstrument.buckets.find((b) => b.key === "PERF_A");
+    const bucket = summary.byInstrument.buckets.find((b) => b.key === OTHER_INSTRUMENT_BUCKET_KEY);
     expect(bucket).toBeDefined();
     expect(bucket!.wins).toBe(12);
     expect(bucket!.losses).toBe(6);
@@ -134,8 +139,8 @@ describe("computePerformanceSummary", () => {
     expect(bucket!.hitRate).toBeCloseTo(12 / 20, 5);
   });
 
-  it("gates a segment when no bucket clears MIN_SAMPLE.bucket but overall threshold is met across many small buckets", async () => {
-    const now = new Date("2026-06-01T12:00:00Z");
+  it("combines thin non-core instruments before applying the bucket sample gate", async () => {
+    const now = new Date("2099-05-15T12:00:00Z");
     const userId = await createUser();
     // 20 resolved rows spread across 20 *distinct* instruments — overall
     // threshold met, but every instrument bucket has only 1 row.
@@ -149,10 +154,11 @@ describe("computePerformanceSummary", () => {
       });
     }
     const summary = await computePerformanceSummary(30, { now });
-    // None of our 1-row THIN_* instruments should appear as qualified
-    // buckets, regardless of what other rows exist in the shared dev DB.
-    const ours = summary.byInstrument.buckets.filter((b) => b.key.startsWith("THIN_"));
-    expect(ours).toHaveLength(0);
+    const other = summary.byInstrument.buckets.find((b) => b.key === OTHER_INSTRUMENT_BUCKET_KEY);
+    expect(other).toBeDefined();
+    expect(other!.wins).toBe(10);
+    expect(other!.losses).toBe(10);
+    expect(other!.total).toBe(20);
     expect(MIN_SAMPLE.bucket).toBe(10);
     expect(summary.byInstrument.need).toBe(MIN_SAMPLE.bucket);
   });

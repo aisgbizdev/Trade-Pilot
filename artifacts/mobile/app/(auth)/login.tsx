@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useAuth, type AuthUser } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
@@ -7,7 +8,6 @@ import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -54,10 +54,21 @@ export default function LoginScreen() {
     gradient: { position: "absolute", top: 0, left: 0, right: 0, height: 320 },
     scroll: {
       flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
       paddingTop: insets.top + (Platform.OS === "web" ? 67 : 0),
       paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 0),
     },
-    inner: { flex: 1, justifyContent: "center", paddingHorizontal: 28 },
+    inner: {
+      flexGrow: 1,
+      justifyContent: "center",
+      paddingHorizontal: 28,
+      paddingVertical: 32,
+      width: "100%",
+      maxWidth: 400,
+      alignSelf: "center",
+    },
     logo: {
       fontSize: 36,
       fontFamily: "Inter_700Bold",
@@ -140,9 +151,10 @@ export default function LoginScreen() {
         style={s.gradient}
         pointerEvents="none"
       />
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollViewCompat
         style={s.scroll}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        contentContainerStyle={s.scrollContent}
+        bottomOffset={20}
       >
         <View style={s.inner}>
           <Text style={s.logo}>{t.auth.welcome}</Text>
@@ -199,7 +211,7 @@ export default function LoginScreen() {
             </Link>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollViewCompat>
     </View>
   );
 }

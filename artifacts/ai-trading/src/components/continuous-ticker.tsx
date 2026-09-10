@@ -1,5 +1,19 @@
-import { cloneElement, isValidElement, type ReactElement } from "react";
-import { ArrowDown, ArrowUp, Newspaper } from "lucide-react";
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useState,
+  type ReactElement,
+} from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Eye,
+  EyeOff,
+  Newspaper,
+  Pause,
+  Play,
+} from "lucide-react";
 import { useLiveQuotes, type LiveQuote } from "@/hooks/use-live-quotes";
 import { useTickerNews, type NewsArticle } from "@/hooks/use-news";
 import { useTranslation } from "@/lib/i18n";
@@ -8,6 +22,18 @@ const FALLBACK_INSTRUMENTS = [
   "XAU/USD", "EUR/USD", "GBP/USD", "USD/JPY", "BRENT",
   "XAG/USD", "NASDAQ", "DJIA", "DXY", "USD/IDR",
 ];
+
+const TICKER_PAUSED_KEY = "tradepilot_ticker_paused";
+const TICKER_HIDDEN_KEY = "tradepilot_ticker_hidden";
+
+function readPreference(key: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(key) === "true";
+  } catch {
+    return false;
+  }
+}
 
 // News category dots — used purely for visual differentiation between
 // rss feeds in the marquee. Avoid red/emerald (they read as Buy/Sell)
@@ -130,6 +156,28 @@ export function ContinuousTicker({ newsLimit = 3 }: { newsLimit?: number }) {
   const { t } = useTranslation();
   const { data: liveQuotesData } = useLiveQuotes();
   const { data: newsData } = useTickerNews(newsLimit);
+  const [isPaused, setIsPaused] = useState(() =>
+    readPreference(TICKER_PAUSED_KEY),
+  );
+  const [isHidden, setIsHidden] = useState(() =>
+    readPreference(TICKER_HIDDEN_KEY),
+  );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(TICKER_PAUSED_KEY, String(isPaused));
+    } catch {
+      // The control still works for this session when storage is unavailable.
+    }
+  }, [isPaused]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(TICKER_HIDDEN_KEY, String(isHidden));
+    } catch {
+      // The control still works for this session when storage is unavailable.
+    }
+  }, [isHidden]);
 
   const liveQuotes = liveQuotesData?.data ?? [];
   const articles = newsData?.articles ?? [];
@@ -159,19 +207,71 @@ export function ContinuousTicker({ newsLimit = 3 }: { newsLimit?: number }) {
     items.push(<Separator key="sep-2" />);
   }
 
+  if (isHidden) {
+    return (
+      <section
+        className="bg-slate-950 border-b border-white/10 flex justify-end px-[calc(env(safe-area-inset-right,0px)+0.5rem)] py-1"
+        data-testid="continuous-ticker-hidden"
+        aria-label={t.widgets.news_title}
+      >
+        <button
+          type="button"
+          onClick={() => setIsHidden(false)}
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+          aria-label={t.widgets.ticker_show}
+          data-testid="button-ticker-show"
+        >
+          <Eye className="h-3 w-3" aria-hidden="true" />
+          {t.widgets.ticker_show}
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section
-      className="bg-slate-950 overflow-hidden py-2 border-b border-white/10 pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]"
+      className="relative bg-slate-950 overflow-hidden py-2 border-b border-white/10 pl-[env(safe-area-inset-left,0px)] pr-[calc(env(safe-area-inset-right,0px)+5.5rem)]"
       data-testid="continuous-ticker"
       aria-label={t.widgets.news_title}
     >
-      <div className="flex gap-6 ticker-scroll-mixed whitespace-nowrap w-max items-center">
+      <div
+        className="flex gap-6 ticker-scroll-mixed whitespace-nowrap w-max items-center"
+        style={{ animationPlayState: isPaused ? "paused" : "running" }}
+        data-testid="continuous-ticker-track"
+      >
         {items}
         {items.map((item, idx) =>
           isValidElement(item)
             ? cloneElement(item as ReactElement, { key: `dup-${idx}` })
             : item,
         )}
+      </div>
+      <div className="absolute inset-y-0 right-0 flex items-center gap-0.5 bg-gradient-to-l from-slate-950 via-slate-950 to-slate-950/70 pl-5 pr-[calc(env(safe-area-inset-right,0px)+0.5rem)]">
+        <button
+          type="button"
+          onClick={() => setIsPaused((value) => !value)}
+          className="rounded-md p-1.5 text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+          aria-label={
+            isPaused ? t.widgets.ticker_resume : t.widgets.ticker_pause
+          }
+          aria-pressed={isPaused}
+          data-testid="button-ticker-pause"
+        >
+          {isPaused ? (
+            <Play className="h-3.5 w-3.5" aria-hidden="true" />
+          ) : (
+            <Pause className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsHidden(true)}
+          className="rounded-md p-1.5 text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+          aria-label={t.widgets.ticker_hide}
+          data-testid="button-ticker-hide"
+        >
+          <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
       </div>
     </section>
   );

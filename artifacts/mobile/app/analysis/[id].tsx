@@ -114,10 +114,10 @@ function TradePlanCard({ side, data, label, colors, t }: {
         .map(({ key, val }) => (
           <View
             key={key}
-            style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}
+            style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 6, gap: 8 }}
           >
-            <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>{key}</Text>
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.foreground }}>{val}</Text>
+            <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.mutedForeground, flexShrink: 1 }}>{key}</Text>
+            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.foreground, flex: 1, textAlign: "right", minWidth: 100 }}>{val}</Text>
           </View>
         ))}
       {data.rationale ? (
@@ -163,13 +163,18 @@ export default function AnalysisDetailScreen() {
       paddingBottom: Platform.OS === "web" ? 34 : 0,
     },
     headerBar: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    headerInner: {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 12,
       paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-      gap: 4,
+      gap: 12,
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
     },
     backBtn: { padding: 8 },
     headerTitle: {
@@ -195,6 +200,7 @@ export default function AnalysisDetailScreen() {
     biasRow: {
       flexDirection: "row",
       alignItems: "center",
+      flexWrap: "wrap",
       gap: 10,
       marginHorizontal: 16,
       marginVertical: 12,
@@ -218,16 +224,18 @@ export default function AnalysisDetailScreen() {
           { paddingTop: insets.top > 0 ? insets.top : (Platform.OS === "web" ? 0 : 12) },
         ]}
       >
-        <Pressable style={s.backBtn} onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle} numberOfLines={1}>
-            {analysis?.instrument ?? "—"} · {analysis?.timeframe ?? "—"}
-          </Text>
-          <Text style={s.headerSub}>
-            {analysis?.mode ? (analysis.mode === "beginner" ? t.common.beginner : t.common.pro) : ""}
-          </Text>
+        <View style={s.headerInner}>
+          <Pressable style={s.backBtn} onPress={() => router.back()}>
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerTitle} numberOfLines={1}>
+              {analysis?.instrument ?? "—"} · {analysis?.timeframe ?? "—"}
+            </Text>
+            <Text style={s.headerSub}>
+              {analysis?.mode ? (analysis.mode === "beginner" ? t.common.beginner : t.common.pro) : ""}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -245,7 +253,13 @@ export default function AnalysisDetailScreen() {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 32, paddingTop: 8 }}
+          contentContainerStyle={{
+            paddingBottom: insets.bottom + 32,
+            paddingTop: 8,
+            width: "100%",
+            maxWidth: 720,
+            alignSelf: "center",
+          }}
           showsVerticalScrollIndicator={false}
         >
           <View style={s.biasRow}>

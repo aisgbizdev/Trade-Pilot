@@ -96,6 +96,7 @@ import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
 import { prioritizeNewsSources } from "@/lib/news-source-priority";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
+import { useLiveQuoteSnapshotByInstrument } from "@/hooks/use-live-quotes";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -168,18 +169,18 @@ function TimeframeRiskDialog({
                 <div
                   key={tf.timeframe}
                   className={cn(
-                    "rounded-lg border p-3",
+                    "rounded-lg border p-3 min-w-0",
                     selected ? "border-primary bg-primary/5" : "border-border",
                   )}
                   data-testid={`detail-risk-map-${tf.timeframe}`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{tf.timeframe}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold shrink-0">{tf.timeframe}</span>
                         {!unavailable && (
                           <span className={cn(
-                            "rounded px-1.5 py-0.5 text-[10px] font-bold",
+                            "rounded px-1.5 py-0.5 text-[10px] font-bold shrink-0",
                             tf.riskCategory === "low" && "bg-green-500/10 text-green-600",
                             tf.riskCategory === "moderate" && "bg-amber-500/10 text-amber-600",
                             tf.riskCategory === "high" && "bg-red-500/10 text-red-600",
@@ -188,7 +189,7 @@ function TimeframeRiskDialog({
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
+                      <p className="mt-1 text-[11px] text-muted-foreground break-words">
                         {unavailable
                           ? t.risk_map.category_unavailable
                           : `${tf.riskScore}/100 · ${t.risk_map[`recommendation_${tf.recommendation}` as keyof typeof t.risk_map]}`}
@@ -201,7 +202,7 @@ function TimeframeRiskDialog({
                         disabled={selected}
                         onClick={() => onConfirm(tf.timeframe)}
                         data-testid={`button-risk-analyze-${tf.timeframe}`}
-                        className="shrink-0 text-xs"
+                        className="shrink-0 text-xs w-full sm:w-auto"
                       >
                         {selected
                           ? t.risk_map.action_selected
@@ -1873,6 +1874,7 @@ export default function AnalysisDetailPage({
 
   type AnalysisWithFeedback = Analysis & { feedback?: Feedback | null };
   const analysis = data as AnalysisWithFeedback | undefined;
+  const liveQuoteSnapshot = useLiveQuoteSnapshotByInstrument(analysis?.instrument ?? "");
 
   const existingFeedback = analysis?.feedback;
 
@@ -2356,6 +2358,8 @@ export default function AnalysisDetailPage({
              timeframe={analysis.timeframe}
              tradePlan={tradePlan}
              analysisCreatedAt={analysis.createdAt}
+              liveQuote={liveQuoteSnapshot.quote}
+              liveQuoteReceivedAt={liveQuoteSnapshot.dataUpdatedAt}
            />
            {tradePlan && <TradePlanCard plan={tradePlan} timeframe={analysis.timeframe} t={t} />}
          </div>
