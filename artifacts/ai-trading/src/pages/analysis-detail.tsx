@@ -49,7 +49,7 @@ import { MarketContextSummary } from "@/components/market-context-summary";
 import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { SignalSpeedometer } from "@/components/signal-speedometer";
-import { LivePriceTicker } from "@/components/live-price-ticker";
+import { LivePriceChip } from "@/components/live-price-chip";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
 import type { IndicatorTimeframe } from "@/hooks/use-technical-indicators";
 import {
@@ -2168,7 +2168,11 @@ export default function AnalysisDetailPage({
                   <Activity className="h-3.5 w-3.5" aria-hidden="true" />
                   {t.risk_map.btn_compare}
                 </Button>
-                <LivePriceTicker instrument={analysis.instrument} className="shrink-0 ml-auto" />
+                <LivePriceChip
+                  instrument={analysis.instrument}
+                  showLabel
+                  className="ml-auto h-8"
+                />
               </>
             )}
           </div>

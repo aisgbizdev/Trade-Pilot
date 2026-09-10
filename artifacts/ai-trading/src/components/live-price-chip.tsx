@@ -24,10 +24,12 @@ export function LivePriceChip({
   instrument,
   className,
   enabled = true,
+  showLabel = false,
 }: {
   instrument: string;
   className?: string;
   enabled?: boolean;
+  showLabel?: boolean;
 }) {
   const { quote } = useStreamingQuoteByInstrument(instrument, enabled);
   const price = quote?.price ?? null;
@@ -76,6 +78,9 @@ export function LivePriceChip({
         )}
         aria-hidden="true"
       />
+      {showLabel && (
+        <span className="text-muted-foreground font-medium">{instrument}</span>
+      )}
       <span>{formatLivePrice(price, instrument)}</span>
       <span className="opacity-80">{quote.changePercent}</span>
     </span>
