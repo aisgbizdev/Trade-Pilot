@@ -250,20 +250,21 @@ describe("POST /native-push/test", () => {
     expect(res.status).toBe(404);
   });
 
-  it("dispatches (delivered = enabled device count) when the caller has one", async () => {
+  it("returns 503 (not a fake success) when Firebase isn't configured on the server", async () => {
     const u = await createUser();
     await request(app)
       .post("/api/native-push/register")
       .set(...authHeader(u))
       .send({ token: fakeToken("test-ep"), platform: "android" });
 
+    // FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY are unset in tests, so
+    // the channel is genuinely unconfigured. The endpoint must say so
+    // (503) rather than reporting devices-targeted as if that meant
+    // anything was delivered.
     const res = await request(app)
       .post("/api/native-push/test")
       .set(...authHeader(u));
-    expect(res.status).toBe(200);
-    // FIREBASE_PROJECT_ID is unset in tests, so the FCM send is a no-op,
-    // but the endpoint still reports how many devices it targeted.
-    expect(res.body.delivered).toBe(1);
+    expect(res.status).toBe(503);
   });
 
   it("rejects the request from a token/URL in the body — it accepts neither", async () => {
@@ -274,12 +275,14 @@ describe("POST /native-push/test", () => {
       .send({ token: fakeToken("test-strict"), platform: "android" });
 
     // Extra body fields are simply ignored; the endpoint never reads a
-    // token or url from the request.
+    // token or url from the request. It still reaches the "not
+    // configured" 503 (Firebase is unset in tests) rather than ever
+    // acting on the attacker-supplied token/url.
     const res = await request(app)
       .post("/api/native-push/test")
       .set(...authHeader(u))
       .send({ token: "attacker-token", url: "https://evil.example" });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
   });
 
   it("requires auth", async () => {

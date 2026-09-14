@@ -12,7 +12,7 @@ import {
   nativePushRegisterLimiter,
   nativePushTestLimiter,
 } from "../middleware/rate-limit";
-import { sendNativePushToUser } from "../lib/native-push";
+import { sendNativePushToUser, nativePushConfigured } from "../lib/native-push";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -131,14 +131,35 @@ router.post(
       return;
     }
 
-    await sendNativePushToUser(req.userId!, {
+    if (!nativePushConfigured) {
+      res.status(503).json({
+        error: "Firebase belum dikonfigurasi di server. / Firebase is not configured on the server.",
+      });
+      return;
+    }
+
+    const results = await sendNativePushToUser(req.userId!, {
       title: "TradePilot.id",
       body: "Notifikasi mobile kamu sudah aktif. / Mobile notifications are working.",
       actionType: "open_notification",
     });
+    const accepted = results.filter((r) => r.ok).length;
+    const failures = results.filter((r): r is Extract<typeof r, { ok: false }> => !r.ok);
 
-    logger.info({ userId: req.userId, devices: count }, "Native push test sent");
-    res.json({ delivered: count });
+    logger.info(
+      { userId: req.userId, targeted: results.length, accepted },
+      "Native push test sent",
+    );
+
+    // A resolved promise here used to be reported as success regardless of
+    // what FCM actually did with it — `delivered` was just the device
+    // count queried above, so a client could see 200 with zero pushes
+    // ever reaching a device. Report what was actually accepted instead.
+    res.status(accepted > 0 ? 200 : 502).json({
+      targeted: results.length,
+      accepted,
+      failures: failures.map((f) => f.reason),
+    });
   },
 );
 

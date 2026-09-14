@@ -23,19 +23,37 @@ const FCM_SEND_TIMEOUT_MS = 8_000;
 const ANDROID_CHANNEL_ID = "trade_pilot_alerts";
 
 const projectId = process.env["FIREBASE_PROJECT_ID"] || "";
-const nativePushConfigured = Boolean(projectId);
+const clientEmail = process.env["FIREBASE_CLIENT_EMAIL"] || "";
+// The secret store hands us the PEM's newlines as the two literal
+// characters "\" and "n" — undo that before handing the key to
+// google-auth-library, or it fails to parse as a valid private key.
+const privateKey = (process.env["FIREBASE_PRIVATE_KEY"] || "").replace(/\\n/g, "\n");
+
+// Replit Secrets (and most PaaS secret stores) are strings, not files, so
+// ADC's GOOGLE_APPLICATION_CREDENTIALS file-path convention has nothing to
+// find in this deployment — the service-account key must be supplied
+// directly via these three vars instead. Checking only FIREBASE_PROJECT_ID
+// (as this used to) reported the channel as "configured" even when there
+// was no credential GoogleAuth could actually authenticate with, which is
+// why sends failed silently in production despite the boot log looking
+// clean.
+export const nativePushConfigured = Boolean(projectId && clientEmail && privateKey);
 
 if (!nativePushConfigured) {
   logger.warn(
-    "FIREBASE_PROJECT_ID is missing. Native push (FCM) notifications are disabled. " +
-      "Set it (and configure Application Default Credentials) to enable delivery.",
+    "Native push (FCM) disabled — FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/" +
+      "FIREBASE_PRIVATE_KEY incomplete. Set all three (from the Firebase " +
+      "service-account JSON) to enable delivery.",
   );
 }
 
-// `GoogleAuth` caches/refreshes the ADC token internally — one instance is
-// reused across every send rather than re-discovering credentials per call.
+// `GoogleAuth` caches/refreshes the OAuth2 token internally — one instance
+// is reused across every send rather than re-authenticating per call.
 const auth = nativePushConfigured
-  ? new GoogleAuth({ scopes: [FCM_SCOPE] })
+  ? new GoogleAuth({
+      scopes: [FCM_SCOPE],
+      credentials: { client_email: clientEmail, private_key: privateKey },
+    })
   : null;
 
 export interface NativePushPayload {
@@ -54,12 +72,21 @@ function tokenSuffix(token: string): string {
   return token.length > 8 ? token.slice(-8) : token;
 }
 
+export type SendOutcome =
+  | { ok: true }
+  | { ok: false; reason: "unregistered" | "auth" | "invalid" | "network"; status?: number };
+
+interface FcmErrorDetail {
+  ["@type"]?: string;
+  errorCode?: string;
+}
+
 async function sendToDevice(
   token: string,
   platform: string,
   payload: NativePushPayload,
-): Promise<void> {
-  if (!auth) return;
+): Promise<SendOutcome> {
+  if (!auth) return { ok: false, reason: "auth" };
 
   const data: Record<string, string> = {};
   if (payload.actionType) data["actionType"] = payload.actionType;
@@ -82,47 +109,63 @@ async function sendToDevice(
     },
   };
 
-  const client = await auth.getClient();
   try {
+    const client = await auth.getClient();
     await client.request({
       url: `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
       method: "POST",
       data: message,
       timeout: FCM_SEND_TIMEOUT_MS,
     });
+    return { ok: true };
   } catch (err: unknown) {
-    const status = (err as { response?: { status?: number; data?: unknown } }).response?.status;
-    // FCM reports an unregistered/invalid token via 404 (NOT_FOUND) or a
-    // 400 UNREGISTERED error detail — either way the device is gone for
-    // good, so we clean it up the same way `webpush.ts` retires dead Web
-    // Push subscriptions on 410/404.
-    if (status === 404 || status === 400) {
+    const response = (err as { response?: { status?: number; data?: unknown } }).response;
+    const status = response?.status;
+    const errorCode = (
+      response?.data as { error?: { details?: FcmErrorDetail[] } } | undefined
+    )?.error?.details?.find((d) => d["@type"]?.endsWith("FcmError"))?.errorCode;
+
+    // FCM reports an unregistered/uninstalled app via 404 (NOT_FOUND) or an
+    // UNREGISTERED error detail in the response body — either way the
+    // device is gone for good, so we clean it up the same way `webpush.ts`
+    // retires dead Web Push subscriptions on 410/404. A bare 400 is NOT
+    // reliably "this token is dead" — FCM also returns 400 for a malformed
+    // request or a misconfigured project, and deleting on every 400 would
+    // wipe out every valid token a user has the moment the server itself
+    // is misconfigured. Only delete on a confirmed unregistered signal.
+    if (status === 404 || errorCode === "UNREGISTERED") {
       await db.delete(nativePushDevices).where(eq(nativePushDevices.token, token));
       logger.info(
         { tokenSuffix: tokenSuffix(token), platform },
         "Removed invalid native push device token",
       );
-      return;
+      return { ok: false, reason: "unregistered", status };
     }
     logger.warn(
-      { status, tokenSuffix: tokenSuffix(token), platform },
+      { status, errorCode, tokenSuffix: tokenSuffix(token), platform },
       "Failed to send native push notification",
     );
+    if (status === 401 || status === 403) return { ok: false, reason: "auth", status };
+    if (status == null) return { ok: false, reason: "network" };
+    return { ok: false, reason: "invalid", status };
   }
 }
 
 /**
- * Send to every enabled device the user has registered. Best-effort and
- * silent on individual device failures (handled per-device above) — never
- * throws, so a caller doing `void sendNativePushToUser(...).catch(...)`
- * only ever observes a rejection for a truly unexpected error (e.g. the DB
- * query itself failing), matching `sendPushToUser`'s contract.
+ * Send to every enabled device the user has registered. Individual device
+ * failures never throw (captured per-device as a SendOutcome above) — only
+ * a truly unexpected error (e.g. the DB query itself failing) rejects, so
+ * a caller doing `void sendNativePushToUser(...).catch(...)` keeps working
+ * unchanged. Callers that need to know whether anything actually got
+ * delivered (e.g. the /native-push/test endpoint) can inspect the
+ * resolved outcomes instead of trusting that a resolved promise means
+ * success.
  */
 export async function sendNativePushToUser(
   userId: number,
   payload: NativePushPayload,
-): Promise<void> {
-  if (!nativePushConfigured) return;
+): Promise<SendOutcome[]> {
+  if (!nativePushConfigured) return [];
 
   // `nativePushEnabled` is the per-user master switch for the whole FCM
   // channel (set via PATCH /push/prefs). When it's off we suppress the OS
@@ -133,7 +176,7 @@ export async function sendNativePushToUser(
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  if (!row?.nativePushEnabled) return;
+  if (!row?.nativePushEnabled) return [];
 
   const devices = await db
     .select()
@@ -141,9 +184,11 @@ export async function sendNativePushToUser(
     .where(eq(nativePushDevices.userId, userId));
 
   const enabled = devices.filter((d) => d.enabled);
+  const results: SendOutcome[] = [];
   for (const device of enabled) {
-    await sendToDevice(device.token, device.platform, payload);
+    results.push(await sendToDevice(device.token, device.platform, payload));
   }
+  return results;
 }
 
 export async function sendNativePushToUsers(

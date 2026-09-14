@@ -263,13 +263,21 @@ timezone/date-window-sensitive assertions in `watchlist-alerts.test.ts`,
    should now pass in full (modulo the two pre-existing flaky timezone
    tests noted above, unrelated to this work).
 2. **Configure Firebase Cloud Messaging**:
-   - Set `FIREBASE_PROJECT_ID=trade-pilot-newsmaker23` in the server
-     environment.
-   - Set up Application Default Credentials for that environment (e.g. a
-     service account attached to the Cloud Run/Replit deployment, or
-     `GOOGLE_APPLICATION_CREDENTIALS` pointing at a service-account JSON
-     file **outside this repo** for local testing — never commit that
-     file).
+   - Replit Secrets (and most PaaS secret stores) are strings, not files,
+     so the `GOOGLE_APPLICATION_CREDENTIALS`-file / ADC convention doesn't
+     work here — there's nowhere for it to point. Instead, generate a
+     service-account key (Firebase Console → Project Settings → Service
+     accounts → Generate new private key) and set its three fields
+     directly as env vars:
+     - `FIREBASE_PROJECT_ID=trade-pilot-newsmaker23`
+     - `FIREBASE_CLIENT_EMAIL=<client_email from the JSON>`
+     - `FIREBASE_PRIVATE_KEY=<private_key from the JSON>` (keep the
+       `\n` escapes as-is when pasting into a single-line secret value —
+       `lib/native-push.ts` un-escapes them before use)
+   - All three must be set — `lib/native-push.ts` treats the channel as
+     configured only when every one of them is present, and logs a boot
+     warning naming whichever is missing.
+   - Never commit the downloaded service-account JSON to this repo.
    - In the Firebase Console: Project Settings → Cloud Messaging → Apple
      app configuration → upload the APNs Authentication Key (`.p8` file +
      Key ID + Team ID) so iOS push actually delivers.
