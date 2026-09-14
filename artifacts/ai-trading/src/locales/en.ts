@@ -1246,7 +1246,7 @@ export const en = {
     chart_section_title: "Price Chart",
     chart_open_full: "Open full chart",
     chart_unavailable: "Chart unavailable. Your browser or network may be blocking TradingView. You can still review the analysis below.",
-    chart_quote_updated: "Updated {time}",
+    chart_quote_updated: "Updated {time} WIB",
     chart_quote_stale: "Quote delayed",
     chart_quote_unavailable: "Live price unavailable",
     chart_quote_up: "Price up",

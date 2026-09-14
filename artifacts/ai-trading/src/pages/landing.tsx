@@ -16,6 +16,7 @@ import { useTrackEvent } from "@/hooks/use-track-event";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "@/components/language-toggle";
+import { LiveClock } from "@/components/live-clock";
 import { ContinuousTicker } from "@/components/continuous-ticker";
 import { LandingProductPreview } from "@/components/landing-product-preview";
 import { LandingFaq } from "@/components/landing-faq";
@@ -82,6 +83,7 @@ export default function LandingPage() {
               )}
             </div>
             <div className="flex items-center gap-1.5 md:gap-3">
+              <LiveClock className="hidden sm:inline-flex text-white/50" />
               <LanguageToggle />
               <Link href="/login">
                 <button className="text-xs font-medium text-white/70 hover:text-white px-3 py-2 rounded-lg transition-colors" data-testid="link-login">

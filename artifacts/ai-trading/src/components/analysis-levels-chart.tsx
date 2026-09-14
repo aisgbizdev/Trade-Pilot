@@ -3,10 +3,12 @@ import {
   createChart,
   CandlestickSeries,
   LineStyle,
+  TickMarkType,
   type IChartApi,
   type ISeriesApi,
   type CandlestickData,
   type IPriceLine,
+  type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useTheme } from "@/components/theme-provider";
@@ -20,6 +22,41 @@ interface Candle {
   high: number;
   low: number;
   close: number;
+}
+
+const PAD2 = (n: number) => String(n).padStart(2, "0");
+
+// lightweight-charts formats its default tick marks and crosshair label
+// using the *UTC* getters on the Date it builds from each point's epoch
+// seconds — every other timestamp in this app (analysis "Dianalisis"/
+// "Diperbarui" copy) renders in the browser's local time instead. Left
+// alone, the axis and the surrounding UI silently disagree by the local
+// UTC offset (e.g. 7h for WIB), which reads as the chart being "behind".
+// These two formatters make the chart use local time too, so it lines up
+// with everything else on the page.
+function formatLocalTickMark(time: Time, tickMarkType: TickMarkType): string {
+  const date = new Date((time as UTCTimestamp) * 1000);
+  switch (tickMarkType) {
+    case TickMarkType.Year:
+      return String(date.getFullYear());
+    case TickMarkType.Month:
+      return `${PAD2(date.getMonth() + 1)}/${date.getFullYear()}`;
+    case TickMarkType.DayOfMonth:
+      return `${PAD2(date.getDate())}/${PAD2(date.getMonth() + 1)}`;
+    case TickMarkType.TimeWithSeconds:
+      return `${PAD2(date.getHours())}:${PAD2(date.getMinutes())}:${PAD2(date.getSeconds())}`;
+    case TickMarkType.Time:
+    default:
+      return `${PAD2(date.getHours())}:${PAD2(date.getMinutes())}`;
+  }
+}
+
+function formatLocalCrosshairTime(time: Time): string {
+  const date = new Date((time as UTCTimestamp) * 1000);
+  return (
+    `${PAD2(date.getDate())}/${PAD2(date.getMonth() + 1)}/${date.getFullYear()} ` +
+    `${PAD2(date.getHours())}:${PAD2(date.getMinutes())}`
+  );
 }
 
 function normalizeCandle(raw: unknown): Candle | null {
@@ -389,6 +426,10 @@ export function AnalysisLevelsChart({
         borderColor: isDark ? "#334155" : "#e2e8f0",
         timeVisible: true,
         secondsVisible: false,
+        tickMarkFormatter: formatLocalTickMark,
+      },
+      localization: {
+        timeFormatter: formatLocalCrosshairTime,
       },
       crosshair: { mode: 0 },
       handleScale: {

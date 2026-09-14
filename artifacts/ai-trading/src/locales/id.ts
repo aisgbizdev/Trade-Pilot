@@ -1226,7 +1226,7 @@ export const id: Translations = {
     chart_section_title: "Grafik Harga",
     chart_open_full: "Lihat chart lengkap",
     chart_unavailable: "Chart tidak bisa dimuat. Browser atau jaringan kamu mungkin memblokir TradingView. Analisa di bawah tetap bisa dibaca.",
-    chart_quote_updated: "Diperbarui {time}",
+    chart_quote_updated: "Diperbarui {time} WIB",
     chart_quote_stale: "Quote terlambat",
     chart_quote_unavailable: "Harga live belum tersedia",
     chart_quote_up: "Harga naik",

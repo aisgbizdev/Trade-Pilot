@@ -24,6 +24,7 @@ import { useTrackEvent } from "@/hooks/use-track-event";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "./language-toggle";
+import { LiveClock } from "./live-clock";
 import { ContinuousTicker } from "./continuous-ticker";
 
 const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/guide", "/profile", "/admin/dashboard"];
@@ -262,6 +263,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="truncate">{t.common.embed_full_version}</span>
             </a>
           )}
+          <LiveClock className="hidden md:inline-flex text-muted-foreground mr-1" />
           <LanguageToggle />
           <button
             data-testid="button-theme-toggle"
