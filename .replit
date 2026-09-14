@@ -100,6 +100,7 @@ GOOGLE_CLIENT_ID = "929958103345-cbf424vgelrer7nkrr81l4iptsikuc1u.apps.googleuse
 # local dev overrides this to http://localhost:5173 via .env.
 PUBLIC_BASE_URL = "https://tradepilot.id"
 GOOGLE_NATIVE_ALLOWED_CLIENT_IDS = "929958103345-pbkqoipkvjinth022lvt50822flokdmf.apps.googleusercontent.com,929958103345-cieflfi7p13t6dnhqt8j0qfif9iia57g.apps.googleusercontent.com,929958103345-cbf424vgelrer7nkrr81l4iptsikuc1u.apps.googleusercontent.com"
+FIREBASE_PROJECT_ID = "trade-pilot-newsmaker23"
 
 [nix]
 channel = "stable-25_05"
