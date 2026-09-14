@@ -101,6 +101,16 @@ GOOGLE_CLIENT_ID = "929958103345-cbf424vgelrer7nkrr81l4iptsikuc1u.apps.googleuse
 PUBLIC_BASE_URL = "https://tradepilot.id"
 GOOGLE_NATIVE_ALLOWED_CLIENT_IDS = "929958103345-pbkqoipkvjinth022lvt50822flokdmf.apps.googleusercontent.com,929958103345-cieflfi7p13t6dnhqt8j0qfif9iia57g.apps.googleusercontent.com,929958103345-cbf424vgelrer7nkrr81l4iptsikuc1u.apps.googleusercontent.com"
 FIREBASE_PROJECT_ID = "trade-pilot-newsmaker23"
+FIREBASE_TYPE = "service_account"
+FIREBASE_PRIVATE_KEY_ID = "24a76881ba4490ecfdb6110341dbf20d03c8343f"
+FIREBASE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDf9QmouveCNSoO\nUqmqqi0PMKo7UMkGKSTdMxbeigqP9tnNJXnrEAMMcu0tz9SGx5/fEh9Va4W4wwy3\n8DkJMMJUrGsQ+j1EyRXZUVyJc4IRjDkjZfakLRIs8hq9Kjrxd+qXe1Cb7oNvTUTb\nR9fAIIqBtlBMe7WkSFTgNVKvvMsT7Oe8XmTxv8DzQ+P1jgjyW0J50QDUVRAlq7tx\nTmnhPx1DCHQJ8IUcR+sHuVn7qt/6HGZDAd18SUTEdIPqXrl0fn+JMXXdWNOODZXr\n1KUDNUCg3MJFiO7IGYJBVqS9rmA+Hhx1uNWRSm7z4+yxzuphMguCxQIgRHDujTa5\n5TR8aZHHAgMBAAECggEAQzBC4RWSesRTZS+kijh6wzNg5uGyJYCDeD9DDamRSKaQ\nqiyjmoNXvszd3iAbTQInsuc/ckOLPyZ5MtfFbL3tlzSQ/GtupSvEu8lefzghnf0Z\nCUcmSxPgf450uiqou1e0EBUlVlqkoOgoD7dKgW/hzc9x4Lg+gtZWbFti/qkfrc6V\nr2awXAys62uDoMITYoBu02wBG8z/szUGCgkKXaHrfJXbxQ5gstVlnDB1XonahbdB\npjVOyI7BTsxEYzoKpc93lKe0UE2dwEQ8vPUi5L9lfmLKqKoaw8OSdMNRNQ+bM/v5\nxLqsEuZ32ddbUsYb5joVpiWQKsOrI3A9cUFGyfs9aQKBgQD/knWzt7bmV5r4Po6Q\nnKcGDnBNPBufT9szmaLnzWklQEEvcI/Kms4Ax4VckRcmTQxxq//LbARQWouWahJQ\n+IDakHmyLNKVy2sEmZ2QH3WALkfMYvK3bwx3y73pRguip4scBe8vFUPomI2BJ1DD\nHnAxthX2TW4WS1p+6irhMOVAiQKBgQDgVQcNahD3Tb8vWiP4hpxl4NEyd7e2WSlB\nNnNg6zpjCB5m9FloY9qIjs5g0FkOAg/rCjZ/R7j8zf1usiQwmlOm4ksEyOfrWxw3\nh7et4Wh5GvUkMU+e5OD6IKDt0z/cRqjND+gOMoFjZkqgxD0vm+UXjwQ8AE583dzr\n/ZotcQCLzwKBgBFRgmpYQ6ueOiEiVBTWmLbfWZrSPOjxx1/axGBC2iItFX26efP3\nw4fn/VCFgHUW+YXmauIFAtHTIOxjabRU8p5c9fIt+WMvMqRQKI4wo4y5FiJyfhIS\nE1020DqzhWxTQCj4+flNzpk/ZS9gU6e1M1MbDKfxHUmjd5FsGtXBs3dJAoGAY3jQ\ne75Ab6hl0hViRd1KlFIv8PTs3UqD5IrEdoFXjnoXIQfQbV15lXvdP0ijdHatoEcT\nCzU+bbrZWbBcI8EKvsExCpobXF02Edl4NP3yWWD+umGzMH3E1KSLN2mos4ARcXxQ\nJZt3jB/bj5X0m5vA5cVg10o7g1rNj0cQin3FBDkCgYAg1DoDeEotwJEtP2ueM6fx\nl2RWdRMYzH7duJmMMKmzs/WRGk2AdXJJ+EaB70fGDGtCVvNs+WwrvtRE5ClXkgsW\ngdnu67XCWbZUcQdsWvTTL5Apl17Y232/2fehD5uBOSWamVa72+iPQkWGHlzQ0N16\n6N9qJBiw7FPU3yVYZ4AstA==\n-----END PRIVATE KEY-----\n'
+FIREBASE_CLIENT_EMAIL = "firebase-adminsdk-fbsvc@trade-pilot-newsmaker23.iam.gserviceaccount.com"
+FIREBASE_CLIENT_ID = "103364585069863090084"
+FIREBASE_AUTH_URI = "https://accounts.google.com/o/oauth2/auth"
+FIREBASE_TOKEN_URI = "https://oauth2.googleapis.com/token"
+FIREBASE_AUTH_PROVIDER_X509_CERT_URL = "https://www.googleapis.com/oauth2/v1/certs"
+FIREBASE_AUTH_X509_CERT_URL = "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40trade-pilot-newsmaker23.iam.gserviceaccount.com"
+FIREBASE_UNIVERSE_DOMAIN = "googleapis.com"
 
 [nix]
 channel = "stable-25_05"
