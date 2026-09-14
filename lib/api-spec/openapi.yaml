@@ -4559,7 +4559,11 @@ components:
           type: string
         proofObjectPath:
           type: string
-      required: [amountRupiah]
+          minLength: 1
+          description: >-
+            Object path of the uploaded transfer-proof image. Required —
+            admin review has no other way to verify a manual transfer.
+      required: [amountRupiah, proofObjectPath]
 
     TopupRequestStatus:
       type: string

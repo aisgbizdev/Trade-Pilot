@@ -91,12 +91,16 @@ export default function TopupPage() {
       toast({ title: t.topup.amount_too_small, variant: "destructive" });
       return;
     }
+    if (!proofObjectPath) {
+      toast({ title: t.topup.proof_required_error, variant: "destructive" });
+      return;
+    }
     try {
       await createTopup.mutateAsync({
         data: {
           amountRupiah: amountNumber,
           paymentReferenceNote: referenceNote.trim() || undefined,
-          proofObjectPath: proofObjectPath ?? undefined,
+          proofObjectPath,
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetMyTopupRequestsQueryKey() });
@@ -243,6 +247,9 @@ export default function TopupPage() {
                 )}
                 {isUploadingProof ? t.topup.uploading_proof : t.topup.upload_proof_button}
               </Button>
+              <p className="text-[11px] text-muted-foreground mt-1" data-testid="text-proof-required-hint">
+                {t.topup.proof_required_hint}
+              </p>
               {proofObjectPath && (
                 <img
                   src={avatarSrc(proofObjectPath) ?? undefined}
@@ -255,7 +262,7 @@ export default function TopupPage() {
             <Button
               className="w-full"
               onClick={handleSubmit}
-              disabled={createTopup.isPending || isUploadingProof}
+              disabled={createTopup.isPending || isUploadingProof || !proofObjectPath}
               data-testid="button-submit-topup"
             >
               {createTopup.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}

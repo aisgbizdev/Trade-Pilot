@@ -59,6 +59,15 @@ describe("TopupPage", () => {
         (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
         (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
         (url, init) => {
+          if (url.includes("/api/storage/uploads/request-url") && (init?.method ?? "GET").toUpperCase() === "POST") {
+            return jsonResponse({ uploadURL: "https://upload.test/put", objectPath: "objects/proof.png" });
+          }
+          if (url === "https://upload.test/put") {
+            return new Response(null, { status: 200 });
+          }
+          return null;
+        },
+        (url, init) => {
           if (url.includes("/api/topups") && !url.includes("mine") && (init?.method ?? "GET").toUpperCase() === "POST") {
             created = JSON.parse(init!.body as string);
             return jsonResponse(
@@ -69,7 +78,7 @@ describe("TopupPage", () => {
                 creditsRequested: 20,
                 conversionRateSnapshot: 250,
                 paymentReferenceNote: null,
-                proofObjectPath: null,
+                proofObjectPath: "objects/proof.png",
                 status: "pending",
                 reviewedByUserId: null,
                 reviewedAt: null,
@@ -102,13 +111,62 @@ describe("TopupPage", () => {
       fireEvent.click(screen.getByTestId("button-continue-topup"));
     });
 
+    // The submit button stays disabled until a proof file is uploaded.
+    expect(await screen.findByTestId("button-submit-topup")).toBeDisabled();
+
+    const proofFile = new File(["fake-bytes"], "proof.png", { type: "image/png" });
     await act(async () => {
-      fireEvent.click(await screen.findByTestId("button-submit-topup"));
+      fireEvent.change(screen.getByTestId("input-proof-file"), { target: { files: [proofFile] } });
+    });
+    await screen.findByTestId("img-proof-preview");
+    expect(screen.getByTestId("button-submit-topup")).not.toBeDisabled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-submit-topup"));
     });
 
     await waitFor(() => {
-      expect(created).toMatchObject({ amountRupiah: 5000 });
+      expect(created).toMatchObject({ amountRupiah: 5000, proofObjectPath: "objects/proof.png" });
     });
+  });
+
+  it("keeps the submit button disabled — and never posts — without a proof upload", async () => {
+    let posted = false;
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+        (url, init) => {
+          if (url.includes("/api/topups") && !url.includes("mine") && (init?.method ?? "GET").toUpperCase() === "POST") {
+            posted = true;
+            return jsonResponse({}, 201);
+          }
+          return null;
+        },
+      ],
+      { strict: false },
+    );
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-preset-5000"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-continue-topup"));
+    });
+
+    const submitButton = await screen.findByTestId("button-submit-topup");
+    expect(submitButton).toBeDisabled();
+
+    fireEvent.click(submitButton);
+    expect(posted).toBe(false);
   });
 
   it("offers preset amounts plus a free-text field for another amount", async () => {

@@ -26,6 +26,10 @@ interface SeedUser {
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `topups-test-${RUN_ID}`;
+// proofObjectPath is mandatory on every real POST /topups now — a fixed
+// stand-in object path is all these tests need (nothing here exercises
+// the actual file upload/storage path).
+const PROOF_PATH = `objects/topups-test-${RUN_ID}-proof.jpg`;
 
 const seededUserIds: number[] = [];
 const seededRequestIds: number[] = [];
@@ -115,8 +119,26 @@ describe("POST /topups", () => {
     const res = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah: 1 });
+      .send({ amountRupiah: 1, proofObjectPath: PROOF_PATH });
     expect(res.status).toBe(400);
+  });
+
+  it("rejects a request with no payment proof", async () => {
+    const res = await request(app)
+      .post("/api/topups")
+      .set(...authHeader(alice))
+      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 5 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/bukti transfer/i);
+  });
+
+  it("rejects a request with a blank payment proof", async () => {
+    const res = await request(app)
+      .post("/api/topups")
+      .set(...authHeader(alice))
+      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 5, proofObjectPath: "   " });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/bukti transfer/i);
   });
 
   it("creates a pending request with the correct computed credits", async () => {
@@ -125,11 +147,12 @@ describe("POST /topups", () => {
     const res = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah, paymentReferenceNote: `note-${RUN_ID}` });
+      .send({ amountRupiah, paymentReferenceNote: `note-${RUN_ID}`, proofObjectPath: PROOF_PATH });
     expect(res.status).toBe(201);
     expect(res.body.status).toBe("pending");
     expect(res.body.creditsRequested).toBe(20);
     expect(res.body.conversionRateSnapshot).toBe(rupiahPerCredit);
+    expect(res.body.proofObjectPath).toBe(PROOF_PATH);
     seededRequestIds.push(res.body.id);
   });
 });
@@ -170,7 +193,7 @@ describe("PATCH /admin/topups/:id/status", () => {
     const created = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 5 });
+      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 5, proofObjectPath: PROOF_PATH });
     seededRequestIds.push(created.body.id);
 
     const res = await request(app)
@@ -184,7 +207,7 @@ describe("PATCH /admin/topups/:id/status", () => {
     const created = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 7 });
+      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 7, proofObjectPath: PROOF_PATH });
     seededRequestIds.push(created.body.id);
 
     const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
@@ -221,7 +244,7 @@ describe("PATCH /admin/topups/:id/status", () => {
     const created = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 3 });
+      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 3, proofObjectPath: PROOF_PATH });
     seededRequestIds.push(created.body.id);
 
     const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
@@ -242,7 +265,7 @@ describe("PATCH /admin/topups/:id/status", () => {
     const created = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 4 });
+      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 4, proofObjectPath: PROOF_PATH });
     seededRequestIds.push(created.body.id);
 
     const [resA, resB] = await Promise.all([
@@ -281,7 +304,7 @@ describe("GET /admin/topups/summary", () => {
       const created = await request(app)
         .post("/api/topups")
         .set(...authHeader(user))
-        .send({ amountRupiah });
+        .send({ amountRupiah, proofObjectPath: PROOF_PATH });
       seededRequestIds.push(created.body.id);
       const reviewed = await request(app)
         .patch(`/api/admin/topups/${created.body.id}/status`)
@@ -295,7 +318,7 @@ describe("GET /admin/topups/summary", () => {
       const created = await request(app)
         .post("/api/topups")
         .set(...authHeader(user))
-        .send({ amountRupiah });
+        .send({ amountRupiah, proofObjectPath: PROOF_PATH });
       seededRequestIds.push(created.body.id);
       await request(app)
         .patch(`/api/admin/topups/${created.body.id}/status`)
@@ -307,7 +330,7 @@ describe("GET /admin/topups/summary", () => {
       const created = await request(app)
         .post("/api/topups")
         .set(...authHeader(user))
-        .send({ amountRupiah });
+        .send({ amountRupiah, proofObjectPath: PROOF_PATH });
       seededRequestIds.push(created.body.id);
     }
 
@@ -351,7 +374,7 @@ describe("GET /admin/topups/summary", () => {
     const created = await request(app)
       .post("/api/topups")
       .set(...authHeader(carol))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 3 });
+      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 3, proofObjectPath: PROOF_PATH });
     seededRequestIds.push(created.body.id);
     // Left pending — never approved.
 

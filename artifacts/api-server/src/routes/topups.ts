@@ -56,6 +56,16 @@ router.post("/topups", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
   const { amountRupiah, paymentReferenceNote, proofObjectPath } = parsed.data;
+  // Mandatory: admin review has no other way to verify a manual transfer
+  // actually happened. Enforced here rather than relying solely on the
+  // generated zod schema (openapi.yaml already marks the field required —
+  // see CreateTopupRequestBody — but lib/api-zod is regenerated
+  // separately and this guard must hold regardless of when that next
+  // happens).
+  if (!proofObjectPath || !proofObjectPath.trim()) {
+    res.status(400).json({ error: "Bukti transfer wajib diupload" });
+    return;
+  }
   const { rupiahPerCredit } = getTopupConfig();
   const creditsRequested = Math.floor(amountRupiah / rupiahPerCredit);
   if (creditsRequested < 1) {
@@ -72,7 +82,7 @@ router.post("/topups", requireAuth, async (req: AuthRequest, res) => {
       creditsRequested,
       conversionRateSnapshot: rupiahPerCredit,
       paymentReferenceNote: paymentReferenceNote ?? null,
-      proofObjectPath: proofObjectPath ?? null,
+      proofObjectPath,
     })
     .returning();
   res.status(201).json(serializeTopupRequest(inserted));
