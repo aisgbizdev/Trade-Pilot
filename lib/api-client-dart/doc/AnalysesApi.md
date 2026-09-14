@@ -115,7 +115,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **createAnalysis**
-> Analysis createAnalysis(createAnalysisBody)
+> CreateAnalysisResult createAnalysis(createAnalysisBody)
 
 Create new analysis (triggers AI)
 
@@ -142,7 +142,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**Analysis**](Analysis.md)
+[**CreateAnalysisResult**](CreateAnalysisResult.md)
 
 ### Authorization
 

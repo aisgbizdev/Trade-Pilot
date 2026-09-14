@@ -7,7 +7,9 @@ part of 'serializers.dart';
 // **************************************************************************
 
 Serializers _$serializers = (Serializers().toBuilder()
+      ..add($Analysis.serializer)
       ..add($AnalysisHistoryOutcomeStats.serializer)
+      ..add($TopupRequest.serializer)
       ..add(AddUserTagBody.serializer)
       ..add(AddWatchlistBody.serializer)
       ..add(AdminFeedbackList.serializer)
@@ -23,7 +25,6 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AlertStatus.serializer)
       ..add(AnalysesList.serializer)
       ..add(AnalysesSummary.serializer)
-      ..add(Analysis.serializer)
       ..add(AnalysisHistoryInstrumentStats.serializer)
       ..add(AnalysisHistorySummary.serializer)
       ..add(AnalysisHistorySummaryRangeEnum.serializer)
@@ -33,6 +34,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AnalysisOutcomeStatusEnum.serializer)
       ..add(AnalysisOutcomesSummary.serializer)
       ..add(AnalysisQuota.serializer)
+      ..add(AnalysisQuotaCredits.serializer)
       ..add(AnalysisQuotaHourly.serializer)
       ..add(AnalyticsEventBody.serializer)
       ..add(AnalyticsEventBodyEventTypeEnum.serializer)
@@ -62,16 +64,19 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(CreateAnalysisBody.serializer)
       ..add(CreateAnalysisBodyModeEnum.serializer)
       ..add(CreateAnalysisBodyTimeframeEnum.serializer)
+      ..add(CreateAnalysisResult.serializer)
       ..add(CreateFilterPresetBody.serializer)
       ..add(CreateJournalEntryBody.serializer)
       ..add(CreateJournalEntryBodyEntryPrice.serializer)
       ..add(CreateJournalEntryBodyOutcomeEnum.serializer)
       ..add(CreateJournalEntryBodySideEnum.serializer)
+      ..add(CreateTopupRequestBody.serializer)
       ..add(CreateUserBody.serializer)
       ..add(CreateUserBodyRoleEnum.serializer)
       ..add(CreateUserPriceAlertBody.serializer)
       ..add(CreateUserPriceAlertBodyLangEnum.serializer)
       ..add(CreateUserPriceAlertBodyTriggerDirectionEnum.serializer)
+      ..add(CreditBalance.serializer)
       ..add(DailySummaryAnalysis.serializer)
       ..add(DailySummaryResponse.serializer)
       ..add(DailySummarySettings.serializer)
@@ -103,6 +108,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(FundamentalDriftCitationKindEnum.serializer)
       ..add(FundamentalNewsItem.serializer)
       ..add(GetGuardrails200Response.serializer)
+      ..add(GoogleNativeLoginBody.serializer)
+      ..add(GoogleReauthBody.serializer)
+      ..add(GoogleReauthResponse.serializer)
       ..add(HealthStatus.serializer)
       ..add(JournalEntry.serializer)
       ..add(JournalEntryList.serializer)
@@ -119,6 +127,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(MirrorGroupStat.serializer)
       ..add(NativePushRegisterBody.serializer)
       ..add(NativePushRegisterBodyPlatformEnum.serializer)
+      ..add(NativePushTestResult.serializer)
+      ..add(NativePushTestResultFailuresEnum.serializer)
       ..add(NativePushUnregisterBody.serializer)
       ..add(Notification.serializer)
       ..add(NotificationActionTypeEnum.serializer)
@@ -178,6 +188,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ResetPasswordBody.serializer)
       ..add(ResetTokenResponse.serializer)
       ..add(ResetUserPasswordBody.serializer)
+      ..add(ReviewTopupRequestBody.serializer)
+      ..add(ReviewTopupRequestBodyStatusEnum.serializer)
       ..add(SecurityQuestionResponse.serializer)
       ..add(SetAnalysisNoteRequest.serializer)
       ..add(StandardTradingRuleAccount.serializer)
@@ -200,6 +212,13 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(TimeframeRiskRiskCategoryEnum.serializer)
       ..add(TimeframeRiskStatusEnum.serializer)
       ..add(TimeframeRiskTimeframeEnum.serializer)
+      ..add(TopupConfig.serializer)
+      ..add(TopupRequestList.serializer)
+      ..add(TopupRequestStatus.serializer)
+      ..add(TopupRequestWithUser.serializer)
+      ..add(TopupRequestWithUserList.serializer)
+      ..add(TopupSummary.serializer)
+      ..add(TopupUserSummary.serializer)
       ..add(TradePlan.serializer)
       ..add(TradePlanPreferredSideEnum.serializer)
       ..add(TradeSide.serializer)
@@ -213,6 +232,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(UpdateProfileBodyLangEnum.serializer)
       ..add(UpdateProfileBodySelectedModeEnum.serializer)
       ..add(UpdateProfileBodyThemePreferenceEnum.serializer)
+      ..add(UpdateTopupConfigBody.serializer)
       ..add(UpdateUserQuotaBody.serializer)
       ..add(UpdateUserRoleBody.serializer)
       ..add(UpdateUserRoleBodyRoleEnum.serializer)
@@ -334,6 +354,10 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(JournalEntry)]),
           () => ListBuilder<JournalEntry>())
       ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(NativePushTestResultFailuresEnum)]),
+          () => ListBuilder<NativePushTestResultFailuresEnum>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(Notification)]),
           () => ListBuilder<Notification>())
       ..addBuilderFactory(
@@ -363,6 +387,9 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(ProgressionAchievement)]),
           () => ListBuilder<ProgressionAchievement>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(ProgressionAuditEntry)]),
@@ -418,6 +445,16 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(TimeframeRisk)]),
           () => ListBuilder<TimeframeRisk>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(TopupRequest)]),
+          () => ListBuilder<TopupRequest>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(TopupRequestWithUser)]),
+          () => ListBuilder<TopupRequestWithUser>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(TopupUserSummary)]),
+          () => ListBuilder<TopupUserSummary>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(TraderMirrorHighlight)]),

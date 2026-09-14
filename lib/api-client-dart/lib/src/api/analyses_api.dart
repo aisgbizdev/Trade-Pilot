@@ -19,6 +19,7 @@ import 'package:trade_pilot_api_client/src/model/analysis_note_response.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_outcomes_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_quota.dart';
 import 'package:trade_pilot_api_client/src/model/create_analysis_body.dart';
+import 'package:trade_pilot_api_client/src/model/create_analysis_result.dart';
 import 'package:trade_pilot_api_client/src/model/date.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/feedback.dart';
@@ -203,9 +204,9 @@ class AnalysesApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [Analysis] as data
+  /// Returns a [Future] containing a [Response] with a [CreateAnalysisResult] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<Analysis>> createAnalysis({ 
+  Future<Response<CreateAnalysisResult>> createAnalysis({ 
     required CreateAnalysisBody createAnalysisBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -255,14 +256,14 @@ class AnalysesApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    Analysis? _responseData;
+    CreateAnalysisResult? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(Analysis),
-      ) as Analysis;
+        specifiedType: const FullType(CreateAnalysisResult),
+      ) as CreateAnalysisResult;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -274,7 +275,7 @@ class AnalysesApi {
       );
     }
 
-    return Response<Analysis>(
+    return Response<CreateAnalysisResult>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

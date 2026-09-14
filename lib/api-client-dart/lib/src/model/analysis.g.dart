@@ -139,7 +139,137 @@ class _$AnalysisOutcomeStatusEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
-class _$Analysis extends Analysis {
+abstract class AnalysisBuilder {
+  void replace(Analysis other);
+  void update(void Function(AnalysisBuilder) updates);
+  int? get id;
+  set id(int? id);
+
+  int? get userId;
+  set userId(int? userId);
+
+  String? get instrument;
+  set instrument(String? instrument);
+
+  String? get timeframe;
+  set timeframe(String? timeframe);
+
+  String? get userInputContext;
+  set userInputContext(String? userInputContext);
+
+  AnalysisModeEnum? get mode;
+  set mode(AnalysisModeEnum? mode);
+
+  DateTime? get validUntil;
+  set validUntil(DateTime? validUntil);
+
+  String? get marketCondition;
+  set marketCondition(String? marketCondition);
+
+  String? get riskLevel;
+  set riskLevel(String? riskLevel);
+
+  int? get confidenceMin;
+  set confidenceMin(int? confidenceMin);
+
+  int? get confidenceMax;
+  set confidenceMax(int? confidenceMax);
+
+  String? get mainScenario;
+  set mainScenario(String? mainScenario);
+
+  String? get alternativeScenario;
+  set alternativeScenario(String? alternativeScenario);
+
+  String? get whyReason;
+  set whyReason(String? whyReason);
+
+  String? get failureConditions;
+  set failureConditions(String? failureConditions);
+
+  String? get baseCase;
+  set baseCase(String? baseCase);
+
+  String? get bullishScenario;
+  set bullishScenario(String? bullishScenario);
+
+  String? get bearishScenario;
+  set bearishScenario(String? bearishScenario);
+
+  String? get keyDriversTechnical;
+  set keyDriversTechnical(String? keyDriversTechnical);
+
+  String? get keyDriversFundamental;
+  set keyDriversFundamental(String? keyDriversFundamental);
+
+  String? get marketContext;
+  set marketContext(String? marketContext);
+
+  String? get invalidationConditions;
+  set invalidationConditions(String? invalidationConditions);
+
+  String? get uncertaintyNotes;
+  set uncertaintyNotes(String? uncertaintyNotes);
+
+  String? get tradingBias;
+  set tradingBias(String? tradingBias);
+
+  String? get opportunity;
+  set opportunity(String? opportunity);
+
+  String? get risk;
+  set risk(String? risk);
+
+  int? get techBuyCount;
+  set techBuyCount(int? techBuyCount);
+
+  int? get techSellCount;
+  set techSellCount(int? techSellCount);
+
+  int? get techNeutralCount;
+  set techNeutralCount(int? techNeutralCount);
+
+  TradePlanBuilder get tradePlan;
+  set tradePlan(TradePlanBuilder? tradePlan);
+
+  FundamentalContextBuilder get fundamentalContext;
+  set fundamentalContext(FundamentalContextBuilder? fundamentalContext);
+
+  FundamentalCitationsBuilder get fundamentalCitations;
+  set fundamentalCitations(FundamentalCitationsBuilder? fundamentalCitations);
+
+  AnalysisOutcomeStatusEnum? get outcomeStatus;
+  set outcomeStatus(AnalysisOutcomeStatusEnum? outcomeStatus);
+
+  DateTime? get outcomeResolvedAt;
+  set outcomeResolvedAt(DateTime? outcomeResolvedAt);
+
+  DateTime? get outcomeCheckedAt;
+  set outcomeCheckedAt(DateTime? outcomeCheckedAt);
+
+  String? get userNote;
+  set userNote(String? userNote);
+
+  DateTime? get userNoteUpdatedAt;
+  set userNoteUpdatedAt(DateTime? userNoteUpdatedAt);
+
+  bool? get hasNote;
+  set hasNote(bool? hasNote);
+
+  FeedbackBuilder get feedback;
+  set feedback(FeedbackBuilder? feedback);
+
+  int? get usefulCount;
+  set usefulCount(int? usefulCount);
+
+  int? get notUsefulCount;
+  set notUsefulCount(int? notUsefulCount);
+
+  DateTime? get createdAt;
+  set createdAt(DateTime? createdAt);
+}
+
+class _$$Analysis extends $Analysis {
   @override
   final int id;
   @override
@@ -225,10 +355,10 @@ class _$Analysis extends Analysis {
   @override
   final DateTime createdAt;
 
-  factory _$Analysis([void Function(AnalysisBuilder)? updates]) =>
-      (AnalysisBuilder()..update(updates))._build();
+  factory _$$Analysis([void Function($AnalysisBuilder)? updates]) =>
+      ($AnalysisBuilder()..update(updates))._build();
 
-  _$Analysis._(
+  _$$Analysis._(
       {required this.id,
       required this.userId,
       required this.instrument,
@@ -273,16 +403,16 @@ class _$Analysis extends Analysis {
       required this.createdAt})
       : super._();
   @override
-  Analysis rebuild(void Function(AnalysisBuilder) updates) =>
+  $Analysis rebuild(void Function($AnalysisBuilder) updates) =>
       (toBuilder()..update(updates)).build();
 
   @override
-  AnalysisBuilder toBuilder() => AnalysisBuilder()..replace(this);
+  $AnalysisBuilder toBuilder() => $AnalysisBuilder()..replace(this);
 
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is Analysis &&
+    return other is $Analysis &&
         id == other.id &&
         userId == other.userId &&
         instrument == other.instrument &&
@@ -378,7 +508,7 @@ class _$Analysis extends Analysis {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'Analysis')
+    return (newBuiltValueToStringHelper(r'$Analysis')
           ..add('id', id)
           ..add('userId', userId)
           ..add('instrument', instrument)
@@ -425,206 +555,218 @@ class _$Analysis extends Analysis {
   }
 }
 
-class AnalysisBuilder implements Builder<Analysis, AnalysisBuilder> {
-  _$Analysis? _$v;
+class $AnalysisBuilder
+    implements Builder<$Analysis, $AnalysisBuilder>, AnalysisBuilder {
+  _$$Analysis? _$v;
 
   int? _id;
   int? get id => _$this._id;
-  set id(int? id) => _$this._id = id;
+  set id(covariant int? id) => _$this._id = id;
 
   int? _userId;
   int? get userId => _$this._userId;
-  set userId(int? userId) => _$this._userId = userId;
+  set userId(covariant int? userId) => _$this._userId = userId;
 
   String? _instrument;
   String? get instrument => _$this._instrument;
-  set instrument(String? instrument) => _$this._instrument = instrument;
+  set instrument(covariant String? instrument) =>
+      _$this._instrument = instrument;
 
   String? _timeframe;
   String? get timeframe => _$this._timeframe;
-  set timeframe(String? timeframe) => _$this._timeframe = timeframe;
+  set timeframe(covariant String? timeframe) => _$this._timeframe = timeframe;
 
   String? _userInputContext;
   String? get userInputContext => _$this._userInputContext;
-  set userInputContext(String? userInputContext) =>
+  set userInputContext(covariant String? userInputContext) =>
       _$this._userInputContext = userInputContext;
 
   AnalysisModeEnum? _mode;
   AnalysisModeEnum? get mode => _$this._mode;
-  set mode(AnalysisModeEnum? mode) => _$this._mode = mode;
+  set mode(covariant AnalysisModeEnum? mode) => _$this._mode = mode;
 
   DateTime? _validUntil;
   DateTime? get validUntil => _$this._validUntil;
-  set validUntil(DateTime? validUntil) => _$this._validUntil = validUntil;
+  set validUntil(covariant DateTime? validUntil) =>
+      _$this._validUntil = validUntil;
 
   String? _marketCondition;
   String? get marketCondition => _$this._marketCondition;
-  set marketCondition(String? marketCondition) =>
+  set marketCondition(covariant String? marketCondition) =>
       _$this._marketCondition = marketCondition;
 
   String? _riskLevel;
   String? get riskLevel => _$this._riskLevel;
-  set riskLevel(String? riskLevel) => _$this._riskLevel = riskLevel;
+  set riskLevel(covariant String? riskLevel) => _$this._riskLevel = riskLevel;
 
   int? _confidenceMin;
   int? get confidenceMin => _$this._confidenceMin;
-  set confidenceMin(int? confidenceMin) =>
+  set confidenceMin(covariant int? confidenceMin) =>
       _$this._confidenceMin = confidenceMin;
 
   int? _confidenceMax;
   int? get confidenceMax => _$this._confidenceMax;
-  set confidenceMax(int? confidenceMax) =>
+  set confidenceMax(covariant int? confidenceMax) =>
       _$this._confidenceMax = confidenceMax;
 
   String? _mainScenario;
   String? get mainScenario => _$this._mainScenario;
-  set mainScenario(String? mainScenario) => _$this._mainScenario = mainScenario;
+  set mainScenario(covariant String? mainScenario) =>
+      _$this._mainScenario = mainScenario;
 
   String? _alternativeScenario;
   String? get alternativeScenario => _$this._alternativeScenario;
-  set alternativeScenario(String? alternativeScenario) =>
+  set alternativeScenario(covariant String? alternativeScenario) =>
       _$this._alternativeScenario = alternativeScenario;
 
   String? _whyReason;
   String? get whyReason => _$this._whyReason;
-  set whyReason(String? whyReason) => _$this._whyReason = whyReason;
+  set whyReason(covariant String? whyReason) => _$this._whyReason = whyReason;
 
   String? _failureConditions;
   String? get failureConditions => _$this._failureConditions;
-  set failureConditions(String? failureConditions) =>
+  set failureConditions(covariant String? failureConditions) =>
       _$this._failureConditions = failureConditions;
 
   String? _baseCase;
   String? get baseCase => _$this._baseCase;
-  set baseCase(String? baseCase) => _$this._baseCase = baseCase;
+  set baseCase(covariant String? baseCase) => _$this._baseCase = baseCase;
 
   String? _bullishScenario;
   String? get bullishScenario => _$this._bullishScenario;
-  set bullishScenario(String? bullishScenario) =>
+  set bullishScenario(covariant String? bullishScenario) =>
       _$this._bullishScenario = bullishScenario;
 
   String? _bearishScenario;
   String? get bearishScenario => _$this._bearishScenario;
-  set bearishScenario(String? bearishScenario) =>
+  set bearishScenario(covariant String? bearishScenario) =>
       _$this._bearishScenario = bearishScenario;
 
   String? _keyDriversTechnical;
   String? get keyDriversTechnical => _$this._keyDriversTechnical;
-  set keyDriversTechnical(String? keyDriversTechnical) =>
+  set keyDriversTechnical(covariant String? keyDriversTechnical) =>
       _$this._keyDriversTechnical = keyDriversTechnical;
 
   String? _keyDriversFundamental;
   String? get keyDriversFundamental => _$this._keyDriversFundamental;
-  set keyDriversFundamental(String? keyDriversFundamental) =>
+  set keyDriversFundamental(covariant String? keyDriversFundamental) =>
       _$this._keyDriversFundamental = keyDriversFundamental;
 
   String? _marketContext;
   String? get marketContext => _$this._marketContext;
-  set marketContext(String? marketContext) =>
+  set marketContext(covariant String? marketContext) =>
       _$this._marketContext = marketContext;
 
   String? _invalidationConditions;
   String? get invalidationConditions => _$this._invalidationConditions;
-  set invalidationConditions(String? invalidationConditions) =>
+  set invalidationConditions(covariant String? invalidationConditions) =>
       _$this._invalidationConditions = invalidationConditions;
 
   String? _uncertaintyNotes;
   String? get uncertaintyNotes => _$this._uncertaintyNotes;
-  set uncertaintyNotes(String? uncertaintyNotes) =>
+  set uncertaintyNotes(covariant String? uncertaintyNotes) =>
       _$this._uncertaintyNotes = uncertaintyNotes;
 
   String? _tradingBias;
   String? get tradingBias => _$this._tradingBias;
-  set tradingBias(String? tradingBias) => _$this._tradingBias = tradingBias;
+  set tradingBias(covariant String? tradingBias) =>
+      _$this._tradingBias = tradingBias;
 
   String? _opportunity;
   String? get opportunity => _$this._opportunity;
-  set opportunity(String? opportunity) => _$this._opportunity = opportunity;
+  set opportunity(covariant String? opportunity) =>
+      _$this._opportunity = opportunity;
 
   String? _risk;
   String? get risk => _$this._risk;
-  set risk(String? risk) => _$this._risk = risk;
+  set risk(covariant String? risk) => _$this._risk = risk;
 
   int? _techBuyCount;
   int? get techBuyCount => _$this._techBuyCount;
-  set techBuyCount(int? techBuyCount) => _$this._techBuyCount = techBuyCount;
+  set techBuyCount(covariant int? techBuyCount) =>
+      _$this._techBuyCount = techBuyCount;
 
   int? _techSellCount;
   int? get techSellCount => _$this._techSellCount;
-  set techSellCount(int? techSellCount) =>
+  set techSellCount(covariant int? techSellCount) =>
       _$this._techSellCount = techSellCount;
 
   int? _techNeutralCount;
   int? get techNeutralCount => _$this._techNeutralCount;
-  set techNeutralCount(int? techNeutralCount) =>
+  set techNeutralCount(covariant int? techNeutralCount) =>
       _$this._techNeutralCount = techNeutralCount;
 
   TradePlanBuilder? _tradePlan;
   TradePlanBuilder get tradePlan => _$this._tradePlan ??= TradePlanBuilder();
-  set tradePlan(TradePlanBuilder? tradePlan) => _$this._tradePlan = tradePlan;
+  set tradePlan(covariant TradePlanBuilder? tradePlan) =>
+      _$this._tradePlan = tradePlan;
 
   FundamentalContextBuilder? _fundamentalContext;
   FundamentalContextBuilder get fundamentalContext =>
       _$this._fundamentalContext ??= FundamentalContextBuilder();
-  set fundamentalContext(FundamentalContextBuilder? fundamentalContext) =>
+  set fundamentalContext(
+          covariant FundamentalContextBuilder? fundamentalContext) =>
       _$this._fundamentalContext = fundamentalContext;
 
   FundamentalCitationsBuilder? _fundamentalCitations;
   FundamentalCitationsBuilder get fundamentalCitations =>
       _$this._fundamentalCitations ??= FundamentalCitationsBuilder();
-  set fundamentalCitations(FundamentalCitationsBuilder? fundamentalCitations) =>
+  set fundamentalCitations(
+          covariant FundamentalCitationsBuilder? fundamentalCitations) =>
       _$this._fundamentalCitations = fundamentalCitations;
 
   AnalysisOutcomeStatusEnum? _outcomeStatus;
   AnalysisOutcomeStatusEnum? get outcomeStatus => _$this._outcomeStatus;
-  set outcomeStatus(AnalysisOutcomeStatusEnum? outcomeStatus) =>
+  set outcomeStatus(covariant AnalysisOutcomeStatusEnum? outcomeStatus) =>
       _$this._outcomeStatus = outcomeStatus;
 
   DateTime? _outcomeResolvedAt;
   DateTime? get outcomeResolvedAt => _$this._outcomeResolvedAt;
-  set outcomeResolvedAt(DateTime? outcomeResolvedAt) =>
+  set outcomeResolvedAt(covariant DateTime? outcomeResolvedAt) =>
       _$this._outcomeResolvedAt = outcomeResolvedAt;
 
   DateTime? _outcomeCheckedAt;
   DateTime? get outcomeCheckedAt => _$this._outcomeCheckedAt;
-  set outcomeCheckedAt(DateTime? outcomeCheckedAt) =>
+  set outcomeCheckedAt(covariant DateTime? outcomeCheckedAt) =>
       _$this._outcomeCheckedAt = outcomeCheckedAt;
 
   String? _userNote;
   String? get userNote => _$this._userNote;
-  set userNote(String? userNote) => _$this._userNote = userNote;
+  set userNote(covariant String? userNote) => _$this._userNote = userNote;
 
   DateTime? _userNoteUpdatedAt;
   DateTime? get userNoteUpdatedAt => _$this._userNoteUpdatedAt;
-  set userNoteUpdatedAt(DateTime? userNoteUpdatedAt) =>
+  set userNoteUpdatedAt(covariant DateTime? userNoteUpdatedAt) =>
       _$this._userNoteUpdatedAt = userNoteUpdatedAt;
 
   bool? _hasNote;
   bool? get hasNote => _$this._hasNote;
-  set hasNote(bool? hasNote) => _$this._hasNote = hasNote;
+  set hasNote(covariant bool? hasNote) => _$this._hasNote = hasNote;
 
   FeedbackBuilder? _feedback;
   FeedbackBuilder get feedback => _$this._feedback ??= FeedbackBuilder();
-  set feedback(FeedbackBuilder? feedback) => _$this._feedback = feedback;
+  set feedback(covariant FeedbackBuilder? feedback) =>
+      _$this._feedback = feedback;
 
   int? _usefulCount;
   int? get usefulCount => _$this._usefulCount;
-  set usefulCount(int? usefulCount) => _$this._usefulCount = usefulCount;
+  set usefulCount(covariant int? usefulCount) =>
+      _$this._usefulCount = usefulCount;
 
   int? _notUsefulCount;
   int? get notUsefulCount => _$this._notUsefulCount;
-  set notUsefulCount(int? notUsefulCount) =>
+  set notUsefulCount(covariant int? notUsefulCount) =>
       _$this._notUsefulCount = notUsefulCount;
 
   DateTime? _createdAt;
   DateTime? get createdAt => _$this._createdAt;
-  set createdAt(DateTime? createdAt) => _$this._createdAt = createdAt;
+  set createdAt(covariant DateTime? createdAt) => _$this._createdAt = createdAt;
 
-  AnalysisBuilder() {
-    Analysis._defaults(this);
+  $AnalysisBuilder() {
+    $Analysis._defaults(this);
   }
 
-  AnalysisBuilder get _$this {
+  $AnalysisBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
       _id = $v.id;
@@ -675,35 +817,35 @@ class AnalysisBuilder implements Builder<Analysis, AnalysisBuilder> {
   }
 
   @override
-  void replace(Analysis other) {
-    _$v = other as _$Analysis;
+  void replace(covariant $Analysis other) {
+    _$v = other as _$$Analysis;
   }
 
   @override
-  void update(void Function(AnalysisBuilder)? updates) {
+  void update(void Function($AnalysisBuilder)? updates) {
     if (updates != null) updates(this);
   }
 
   @override
-  Analysis build() => _build();
+  $Analysis build() => _build();
 
-  _$Analysis _build() {
-    _$Analysis _$result;
+  _$$Analysis _build() {
+    _$$Analysis _$result;
     try {
       _$result = _$v ??
-          _$Analysis._(
-            id: BuiltValueNullFieldError.checkNotNull(id, r'Analysis', 'id'),
+          _$$Analysis._(
+            id: BuiltValueNullFieldError.checkNotNull(id, r'$Analysis', 'id'),
             userId: BuiltValueNullFieldError.checkNotNull(
-                userId, r'Analysis', 'userId'),
+                userId, r'$Analysis', 'userId'),
             instrument: BuiltValueNullFieldError.checkNotNull(
-                instrument, r'Analysis', 'instrument'),
+                instrument, r'$Analysis', 'instrument'),
             timeframe: BuiltValueNullFieldError.checkNotNull(
-                timeframe, r'Analysis', 'timeframe'),
+                timeframe, r'$Analysis', 'timeframe'),
             userInputContext: userInputContext,
             mode: BuiltValueNullFieldError.checkNotNull(
-                mode, r'Analysis', 'mode'),
+                mode, r'$Analysis', 'mode'),
             validUntil: BuiltValueNullFieldError.checkNotNull(
-                validUntil, r'Analysis', 'validUntil'),
+                validUntil, r'$Analysis', 'validUntil'),
             marketCondition: marketCondition,
             riskLevel: riskLevel,
             confidenceMin: confidenceMin,
@@ -739,7 +881,7 @@ class AnalysisBuilder implements Builder<Analysis, AnalysisBuilder> {
             usefulCount: usefulCount,
             notUsefulCount: notUsefulCount,
             createdAt: BuiltValueNullFieldError.checkNotNull(
-                createdAt, r'Analysis', 'createdAt'),
+                createdAt, r'$Analysis', 'createdAt'),
           );
     } catch (_) {
       late String _$failedField;
@@ -755,7 +897,7 @@ class AnalysisBuilder implements Builder<Analysis, AnalysisBuilder> {
         _feedback?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'Analysis', _$failedField, e.toString());
+            r'$Analysis', _$failedField, e.toString());
       }
       rethrow;
     }

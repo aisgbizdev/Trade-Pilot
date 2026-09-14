@@ -15,7 +15,9 @@ Method | HTTP request | Description
 [**getForgotPasswordQuestion**](AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [**getMe**](AuthApi.md#getme) | **GET** /auth/me | Get current user
 [**login**](AuthApi.md#login) | **POST** /auth/login | Login user
+[**loginWithGoogleNative**](AuthApi.md#loginwithgooglenative) | **POST** /auth/google/native | Exchange a native-app Google ID token for a TradePilot session
 [**logout**](AuthApi.md#logout) | **POST** /auth/logout | Logout user
+[**reauthenticateWithGoogle**](AuthApi.md#reauthenticatewithgoogle) | **POST** /auth/reauth/google | Prove identity with a fresh Google ID token for a sensitive operation
 [**register**](AuthApi.md#register) | **POST** /auth/register | Register new user
 [**resetPassword**](AuthApi.md#resetpassword) | **POST** /auth/forgot-password/reset | Reset password with token
 [**updateProfile**](AuthApi.md#updateprofile) | **PATCH** /auth/profile | Update user profile
@@ -266,6 +268,49 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **loginWithGoogleNative**
+> AuthResponse loginWithGoogleNative(googleNativeLoginBody)
+
+Exchange a native-app Google ID token for a TradePilot session
+
+For mobile apps that obtain a Google **ID token** with the native Google SDK. The server verifies the token (signature, issuer, audience against the configured allowlist, expiry, verified email), upserts the account (match google_id → link by verified email → create), and returns a normal TradePilot Bearer session. No cookie is set or required. The response never contains the Google token. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAuthApi();
+final GoogleNativeLoginBody googleNativeLoginBody = ; // GoogleNativeLoginBody | 
+
+try {
+    final response = api.loginWithGoogleNative(googleNativeLoginBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->loginWithGoogleNative: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **googleNativeLoginBody** | [**GoogleNativeLoginBody**](GoogleNativeLoginBody.md)|  | 
+
+### Return type
+
+[**AuthResponse**](AuthResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **logout**
 > MessageResponse logout()
 
@@ -299,6 +344,53 @@ No authorization required
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **reauthenticateWithGoogle**
+> GoogleReauthResponse reauthenticateWithGoogle(googleReauthBody)
+
+Prove identity with a fresh Google ID token for a sensitive operation
+
+A live session alone is not sufficient for sensitive operations on a Google-only account. The client obtains a **fresh** Google ID token and posts it here; on success the server returns a short-lived (≤5 min), single-use `reauthToken` bound to the user and to the `delete_account` purpose. Currently consumed by DELETE /auth/account. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+// TODO Configure API key authorization: sessionCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKeyPrefix = 'Bearer';
+
+final api = TradePilotApiClient().getAuthApi();
+final GoogleReauthBody googleReauthBody = ; // GoogleReauthBody | 
+
+try {
+    final response = api.reauthenticateWithGoogle(googleReauthBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->reauthenticateWithGoogle: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **googleReauthBody** | [**GoogleReauthBody**](GoogleReauthBody.md)|  | 
+
+### Return type
+
+[**GoogleReauthResponse**](GoogleReauthResponse.md)
+
+### Authorization
+
+[sessionCookie](../README.md#sessionCookie), [bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

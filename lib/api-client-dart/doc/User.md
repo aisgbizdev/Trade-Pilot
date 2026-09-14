@@ -15,8 +15,8 @@ Name | Type | Description | Notes
 **role** | **String** |  | 
 **selectedMode** | **String** |  | 
 **themePreference** | **String** |  | 
-**securityQuestion** | **String** |  | [optional] 
 **onboardingCompleted** | **bool** |  | 
+**hasPassword** | **bool** | True when the account has a local password usable for login and for re-authentication. False for Google-only accounts (use POST /auth/reauth/google for sensitive operations). | 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

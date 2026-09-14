@@ -73,7 +73,11 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**getAllAnalyses**](doc/AdminApi.md#getallanalyses) | **GET** /admin/analyses | Get all analyses (admin only)
 [*AdminApi*](doc/AdminApi.md) | [**getBroadcasts**](doc/AdminApi.md#getbroadcasts) | **GET** /admin/broadcasts | Broadcast history
 [*AdminApi*](doc/AdminApi.md) | [**getOutboundClickStats**](doc/AdminApi.md#getoutboundclickstats) | **GET** /admin/outbound-clicks/stats | Aggregated counts of sponsor / partner outbound link clicks
+[*AdminApi*](doc/AdminApi.md) | [**getPendingTopupRequests**](doc/AdminApi.md#getpendingtopuprequests) | **GET** /admin/topups | List top-up requests for admin review
 [*AdminApi*](doc/AdminApi.md) | [**getProgressionAudit**](doc/AdminApi.md#getprogressionaudit) | **GET** /admin/progression/audit | Read-only progression ledger audit; never a leaderboard
+[*AdminApi*](doc/AdminApi.md) | [**getTopupSummary**](doc/AdminApi.md#gettopupsummary) | **GET** /admin/topups/summary | Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+[*AdminApi*](doc/AdminApi.md) | [**reviewCreditTopupRequest**](doc/AdminApi.md#reviewcredittopuprequest) | **PATCH** /admin/topups/{id}/status | Approve or reject a top-up request, crediting the user&#39;s balance on approval
+[*AdminApi*](doc/AdminApi.md) | [**updateTopupConfig**](doc/AdminApi.md#updatetopupconfig) | **PATCH** /admin/topups/config | Set the Rupiah-to-credit conversion rate
 [*AnalysesApi*](doc/AnalysesApi.md) | [**armAnalysisAlerts**](doc/AnalysesApi.md#armanalysisalerts) | **POST** /analyses/{id}/alerts | Arm price alerts for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**cancelAnalysisAlerts**](doc/AnalysesApi.md#cancelanalysisalerts) | **DELETE** /analyses/{id}/alerts | Cancel any un-fired price alerts for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**createAnalysis**](doc/AnalysesApi.md#createanalysis) | **POST** /analyses | Create new analysis (triggers AI)
@@ -99,7 +103,9 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**getForgotPasswordQuestion**](doc/AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /auth/me | Get current user
 [*AuthApi*](doc/AuthApi.md) | [**login**](doc/AuthApi.md#login) | **POST** /auth/login | Login user
+[*AuthApi*](doc/AuthApi.md) | [**loginWithGoogleNative**](doc/AuthApi.md#loginwithgooglenative) | **POST** /auth/google/native | Exchange a native-app Google ID token for a TradePilot session
 [*AuthApi*](doc/AuthApi.md) | [**logout**](doc/AuthApi.md#logout) | **POST** /auth/logout | Logout user
+[*AuthApi*](doc/AuthApi.md) | [**reauthenticateWithGoogle**](doc/AuthApi.md#reauthenticatewithgoogle) | **POST** /auth/reauth/google | Prove identity with a fresh Google ID token for a sensitive operation
 [*AuthApi*](doc/AuthApi.md) | [**register**](doc/AuthApi.md#register) | **POST** /auth/register | Register new user
 [*AuthApi*](doc/AuthApi.md) | [**resetPassword**](doc/AuthApi.md#resetpassword) | **POST** /auth/forgot-password/reset | Reset password with token
 [*AuthApi*](doc/AuthApi.md) | [**updateProfile**](doc/AuthApi.md#updateprofile) | **PATCH** /auth/profile | Update user profile
@@ -114,6 +120,7 @@ Class | Method | HTTP request | Description
 [*FilterPresetsApi*](doc/FilterPresetsApi.md) | [**renameFilterPreset**](doc/FilterPresetsApi.md#renamefilterpreset) | **PATCH** /filter-presets/{id} | Rename an existing preset
 [*HealthApi*](doc/HealthApi.md) | [**healthCheck**](doc/HealthApi.md#healthcheck) | **GET** /healthz | Health check
 [*NativePushApi*](doc/NativePushApi.md) | [**registerNativePushDevice**](doc/NativePushApi.md#registernativepushdevice) | **POST** /native-push/register | Register (or transfer ownership of) a native push device token
+[*NativePushApi*](doc/NativePushApi.md) | [**sendNativePushTest**](doc/NativePushApi.md#sendnativepushtest) | **POST** /native-push/test | Send a sample FCM push to the caller&#39;s own registered mobile devices
 [*NativePushApi*](doc/NativePushApi.md) | [**unregisterNativePushDevice**](doc/NativePushApi.md#unregisternativepushdevice) | **DELETE** /native-push/unregister | Remove the caller&#39;s own native push device registration
 [*NotificationsApi*](doc/NotificationsApi.md) | [**getNotifications**](doc/NotificationsApi.md#getnotifications) | **GET** /notifications | Get notifications for current user
 [*NotificationsApi*](doc/NotificationsApi.md) | [**markAllNotificationsRead**](doc/NotificationsApi.md#markallnotificationsread) | **PATCH** /notifications/read-all | Mark all notifications as read
@@ -143,6 +150,10 @@ Class | Method | HTTP request | Description
 [*SuperadminApi*](doc/SuperadminApi.md) | [**resetUserPassword**](doc/SuperadminApi.md#resetuserpassword) | **PATCH** /superadmin/users/{id}/password | Reset user password (superadmin only)
 [*SuperadminApi*](doc/SuperadminApi.md) | [**updateUserQuota**](doc/SuperadminApi.md#updateuserquota) | **PATCH** /superadmin/users/{id}/quota | Set or clear a per-user analysis-quota override
 [*SuperadminApi*](doc/SuperadminApi.md) | [**updateUserRole**](doc/SuperadminApi.md#updateuserrole) | **PATCH** /superadmin/users/{id}/role | Update user role (superadmin only)
+[*TopupsApi*](doc/TopupsApi.md) | [**createTopupRequest**](doc/TopupsApi.md#createtopuprequest) | **POST** /topups | Submit a manual top-up request for admin review
+[*TopupsApi*](doc/TopupsApi.md) | [**getCreditBalance**](doc/TopupsApi.md#getcreditbalance) | **GET** /topups/balance | Get the authenticated user&#39;s analysis credit balance
+[*TopupsApi*](doc/TopupsApi.md) | [**getMyTopupRequests**](doc/TopupsApi.md#getmytopuprequests) | **GET** /topups/mine | List the authenticated user&#39;s own top-up request history
+[*TopupsApi*](doc/TopupsApi.md) | [**getTopupConfig**](doc/TopupsApi.md#gettopupconfig) | **GET** /topups/config | Get the current Rupiah-to-credit conversion rate and QRIS image URL
 [*TradeJournalApi*](doc/TradeJournalApi.md) | [**createJournalEntry**](doc/TradeJournalApi.md#createjournalentry) | **POST** /journal | Log a new manual trade-journal entry (optionally linked to an analysis)
 [*TradeJournalApi*](doc/TradeJournalApi.md) | [**deleteJournalEntry**](doc/TradeJournalApi.md#deletejournalentry) | **DELETE** /journal/{id} | Delete a journal entry
 [*TradeJournalApi*](doc/TradeJournalApi.md) | [**getJournalEntryForAnalysis**](doc/TradeJournalApi.md#getjournalentryforanalysis) | **GET** /journal/for-analysis/{analysisId} | Get the journal entry linked to a specific analysis
@@ -180,6 +191,7 @@ Class | Method | HTTP request | Description
  - [AnalysisNoteResponse](doc/AnalysisNoteResponse.md)
  - [AnalysisOutcomesSummary](doc/AnalysisOutcomesSummary.md)
  - [AnalysisQuota](doc/AnalysisQuota.md)
+ - [AnalysisQuotaCredits](doc/AnalysisQuotaCredits.md)
  - [AnalysisQuotaHourly](doc/AnalysisQuotaHourly.md)
  - [AnalyticsEventBody](doc/AnalyticsEventBody.md)
  - [AnalyticsTokenStats](doc/AnalyticsTokenStats.md)
@@ -202,11 +214,14 @@ Class | Method | HTTP request | Description
  - [ChangePasswordBody](doc/ChangePasswordBody.md)
  - [ChangeSecurityQuestionBody](doc/ChangeSecurityQuestionBody.md)
  - [CreateAnalysisBody](doc/CreateAnalysisBody.md)
+ - [CreateAnalysisResult](doc/CreateAnalysisResult.md)
  - [CreateFilterPresetBody](doc/CreateFilterPresetBody.md)
  - [CreateJournalEntryBody](doc/CreateJournalEntryBody.md)
  - [CreateJournalEntryBodyEntryPrice](doc/CreateJournalEntryBodyEntryPrice.md)
+ - [CreateTopupRequestBody](doc/CreateTopupRequestBody.md)
  - [CreateUserBody](doc/CreateUserBody.md)
  - [CreateUserPriceAlertBody](doc/CreateUserPriceAlertBody.md)
+ - [CreditBalance](doc/CreditBalance.md)
  - [DailySummaryAnalysis](doc/DailySummaryAnalysis.md)
  - [DailySummaryResponse](doc/DailySummaryResponse.md)
  - [DailySummarySettings](doc/DailySummarySettings.md)
@@ -229,6 +244,9 @@ Class | Method | HTTP request | Description
  - [FundamentalDriftCitation](doc/FundamentalDriftCitation.md)
  - [FundamentalNewsItem](doc/FundamentalNewsItem.md)
  - [GetGuardrails200Response](doc/GetGuardrails200Response.md)
+ - [GoogleNativeLoginBody](doc/GoogleNativeLoginBody.md)
+ - [GoogleReauthBody](doc/GoogleReauthBody.md)
+ - [GoogleReauthResponse](doc/GoogleReauthResponse.md)
  - [HealthStatus](doc/HealthStatus.md)
  - [JournalEntry](doc/JournalEntry.md)
  - [JournalEntryList](doc/JournalEntryList.md)
@@ -241,6 +259,7 @@ Class | Method | HTTP request | Description
  - [MirrorGatedInsight](doc/MirrorGatedInsight.md)
  - [MirrorGroupStat](doc/MirrorGroupStat.md)
  - [NativePushRegisterBody](doc/NativePushRegisterBody.md)
+ - [NativePushTestResult](doc/NativePushTestResult.md)
  - [NativePushUnregisterBody](doc/NativePushUnregisterBody.md)
  - [Notification](doc/Notification.md)
  - [NotificationsList](doc/NotificationsList.md)
@@ -288,6 +307,7 @@ Class | Method | HTTP request | Description
  - [ResetPasswordBody](doc/ResetPasswordBody.md)
  - [ResetTokenResponse](doc/ResetTokenResponse.md)
  - [ResetUserPasswordBody](doc/ResetUserPasswordBody.md)
+ - [ReviewTopupRequestBody](doc/ReviewTopupRequestBody.md)
  - [SecurityQuestionResponse](doc/SecurityQuestionResponse.md)
  - [SetAnalysisNoteRequest](doc/SetAnalysisNoteRequest.md)
  - [StandardTradingRuleAccount](doc/StandardTradingRuleAccount.md)
@@ -301,6 +321,14 @@ Class | Method | HTTP request | Description
  - [TimeframeRiskMap](doc/TimeframeRiskMap.md)
  - [TimeframeRiskMapOverall](doc/TimeframeRiskMapOverall.md)
  - [TimeframeRiskMetrics](doc/TimeframeRiskMetrics.md)
+ - [TopupConfig](doc/TopupConfig.md)
+ - [TopupRequest](doc/TopupRequest.md)
+ - [TopupRequestList](doc/TopupRequestList.md)
+ - [TopupRequestStatus](doc/TopupRequestStatus.md)
+ - [TopupRequestWithUser](doc/TopupRequestWithUser.md)
+ - [TopupRequestWithUserList](doc/TopupRequestWithUserList.md)
+ - [TopupSummary](doc/TopupSummary.md)
+ - [TopupUserSummary](doc/TopupUserSummary.md)
  - [TradePlan](doc/TradePlan.md)
  - [TradeSide](doc/TradeSide.md)
  - [TraderMirrorHighlight](doc/TraderMirrorHighlight.md)
@@ -308,6 +336,7 @@ Class | Method | HTTP request | Description
  - [TraderMirrorResponse](doc/TraderMirrorResponse.md)
  - [UpdateJournalEntryBody](doc/UpdateJournalEntryBody.md)
  - [UpdateProfileBody](doc/UpdateProfileBody.md)
+ - [UpdateTopupConfigBody](doc/UpdateTopupConfigBody.md)
  - [UpdateUserQuotaBody](doc/UpdateUserQuotaBody.md)
  - [UpdateUserRoleBody](doc/UpdateUserRoleBody.md)
  - [UploadUrlRequest](doc/UploadUrlRequest.md)

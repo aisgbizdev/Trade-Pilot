@@ -2144,14 +2144,16 @@ paths:
         notification through the exact `sendNativePushToUser` code path
         production uses, so a passing result is real proof the FCM HTTP v1
         wiring works. Authenticated + per-user rate limited. Does not accept
-        a device token or a URL from the request body.
+        a device token or a URL from the request body. Unlike /push/test,
+        the outcome reflects FCM's per-message acceptance — see
+        NativePushTestResult.
       responses:
         "200":
-          description: Test push dispatched
+          description: At least one test push was accepted by FCM
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PushTestResult"
+                $ref: "#/components/schemas/NativePushTestResult"
         "401":
           description: Not authenticated
           content:
@@ -2166,6 +2168,18 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
           description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: FCM rejected every targeted device token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NativePushTestResult"
+        "503":
+          description: Native push provider is not configured
           content:
             application/json:
               schema:
@@ -3332,6 +3346,36 @@ components:
           description: Number of subscription endpoints the test push was dispatched to
       required:
         - delivered
+
+    NativePushTestResult:
+      type: object
+      description: >-
+        Result of submitting a native push test to FCM. accepted confirms
+        provider acceptance only; it is not proof that an OS notification was
+        displayed on a device.
+      properties:
+        targeted:
+          type: integer
+          minimum: 0
+          description: Number of registered mobile device tokens targeted
+        accepted:
+          type: integer
+          minimum: 0
+          description: Number of messages accepted by FCM
+        failures:
+          type: array
+          description: Failure category for each message not accepted by FCM
+          items:
+            type: string
+            enum:
+              - unregistered
+              - auth
+              - invalid
+              - network
+      required:
+        - targeted
+        - accepted
+        - failures
 
     PushPrefsUpdate:
       type: object

@@ -8,14 +8,20 @@ import 'package:built_value/serializer.dart';
 
 part 'delete_account_body.g.dart';
 
-/// DeleteAccountBody
+/// Exactly one proof is required, matching the account type: a password account sends `currentPassword`; a Google-only account sends a `reauthToken` from POST /auth/reauth/google.
 ///
 /// Properties:
-/// * [currentPassword] 
+/// * [currentPassword] - Required for password accounts (`user.hasPassword = true`).
+/// * [reauthToken] - Required for Google-only accounts. Single-use, ≤5 min.
 @BuiltValue()
 abstract class DeleteAccountBody implements Built<DeleteAccountBody, DeleteAccountBodyBuilder> {
+  /// Required for password accounts (`user.hasPassword = true`).
   @BuiltValueField(wireName: r'currentPassword')
-  String get currentPassword;
+  String? get currentPassword;
+
+  /// Required for Google-only accounts. Single-use, ≤5 min.
+  @BuiltValueField(wireName: r'reauthToken')
+  String? get reauthToken;
 
   DeleteAccountBody._();
 
@@ -40,11 +46,20 @@ class _$DeleteAccountBodySerializer implements PrimitiveSerializer<DeleteAccount
     DeleteAccountBody object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'currentPassword';
-    yield serializers.serialize(
-      object.currentPassword,
-      specifiedType: const FullType(String),
-    );
+    if (object.currentPassword != null) {
+      yield r'currentPassword';
+      yield serializers.serialize(
+        object.currentPassword,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.reauthToken != null) {
+      yield r'reauthToken';
+      yield serializers.serialize(
+        object.reauthToken,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -71,9 +86,18 @@ class _$DeleteAccountBodySerializer implements PrimitiveSerializer<DeleteAccount
         case r'currentPassword':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.currentPassword = valueDes;
+          break;
+        case r'reauthToken':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.reauthToken = valueDes;
           break;
         default:
           unhandled.add(key);

@@ -183,9 +183,9 @@ class _$User extends User {
   @override
   final UserThemePreferenceEnum themePreference;
   @override
-  final String? securityQuestion;
-  @override
   final bool onboardingCompleted;
+  @override
+  final bool hasPassword;
   @override
   final DateTime createdAt;
 
@@ -200,8 +200,8 @@ class _$User extends User {
       required this.role,
       required this.selectedMode,
       required this.themePreference,
-      this.securityQuestion,
       required this.onboardingCompleted,
+      required this.hasPassword,
       required this.createdAt})
       : super._();
   @override
@@ -222,8 +222,8 @@ class _$User extends User {
         role == other.role &&
         selectedMode == other.selectedMode &&
         themePreference == other.themePreference &&
-        securityQuestion == other.securityQuestion &&
         onboardingCompleted == other.onboardingCompleted &&
+        hasPassword == other.hasPassword &&
         createdAt == other.createdAt;
   }
 
@@ -237,8 +237,8 @@ class _$User extends User {
     _$hash = $jc(_$hash, role.hashCode);
     _$hash = $jc(_$hash, selectedMode.hashCode);
     _$hash = $jc(_$hash, themePreference.hashCode);
-    _$hash = $jc(_$hash, securityQuestion.hashCode);
     _$hash = $jc(_$hash, onboardingCompleted.hashCode);
+    _$hash = $jc(_$hash, hasPassword.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -254,8 +254,8 @@ class _$User extends User {
           ..add('role', role)
           ..add('selectedMode', selectedMode)
           ..add('themePreference', themePreference)
-          ..add('securityQuestion', securityQuestion)
           ..add('onboardingCompleted', onboardingCompleted)
+          ..add('hasPassword', hasPassword)
           ..add('createdAt', createdAt))
         .toString();
   }
@@ -294,15 +294,14 @@ class UserBuilder implements Builder<User, UserBuilder> {
   set themePreference(UserThemePreferenceEnum? themePreference) =>
       _$this._themePreference = themePreference;
 
-  String? _securityQuestion;
-  String? get securityQuestion => _$this._securityQuestion;
-  set securityQuestion(String? securityQuestion) =>
-      _$this._securityQuestion = securityQuestion;
-
   bool? _onboardingCompleted;
   bool? get onboardingCompleted => _$this._onboardingCompleted;
   set onboardingCompleted(bool? onboardingCompleted) =>
       _$this._onboardingCompleted = onboardingCompleted;
+
+  bool? _hasPassword;
+  bool? get hasPassword => _$this._hasPassword;
+  set hasPassword(bool? hasPassword) => _$this._hasPassword = hasPassword;
 
   DateTime? _createdAt;
   DateTime? get createdAt => _$this._createdAt;
@@ -322,8 +321,8 @@ class UserBuilder implements Builder<User, UserBuilder> {
       _role = $v.role;
       _selectedMode = $v.selectedMode;
       _themePreference = $v.themePreference;
-      _securityQuestion = $v.securityQuestion;
       _onboardingCompleted = $v.onboardingCompleted;
+      _hasPassword = $v.hasPassword;
       _createdAt = $v.createdAt;
       _$v = null;
     }
@@ -356,9 +355,10 @@ class UserBuilder implements Builder<User, UserBuilder> {
               selectedMode, r'User', 'selectedMode'),
           themePreference: BuiltValueNullFieldError.checkNotNull(
               themePreference, r'User', 'themePreference'),
-          securityQuestion: securityQuestion,
           onboardingCompleted: BuiltValueNullFieldError.checkNotNull(
               onboardingCompleted, r'User', 'onboardingCompleted'),
+          hasPassword: BuiltValueNullFieldError.checkNotNull(
+              hasPassword, r'User', 'hasPassword'),
           createdAt: BuiltValueNullFieldError.checkNotNull(
               createdAt, r'User', 'createdAt'),
         );

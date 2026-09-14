@@ -5,13 +5,15 @@
 // error" structure, so the two channels stay easy to reason about side by
 // side.
 //
-// Auth: `google-auth-library`'s `GoogleAuth` + Application Default
-// Credentials (ADC) — NOT the Firebase Admin SDK (not a dependency here,
-// and not needed just to call the plain HTTP v1 REST endpoint with an
-// OAuth2 bearer token). In production this means a service-account
-// attached to the runtime environment; for local development, point
-// `GOOGLE_APPLICATION_CREDENTIALS` at a service-account JSON file that is
-// NOT committed to this repo.
+// Auth: `google-auth-library`'s `GoogleAuth` — NOT the Firebase Admin SDK
+// (not a dependency here, and not needed just to call the plain HTTP v1
+// REST endpoint with an OAuth2 bearer token). Credentials are supplied
+// explicitly via FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL /
+// FIREBASE_PRIVATE_KEY (see below) rather than Application Default
+// Credentials — ADC's GOOGLE_APPLICATION_CREDENTIALS convention expects a
+// file path, and this deployment's secret store only hands out strings.
+// The downloaded service-account JSON itself must never be committed to
+// this repo.
 import { GoogleAuth } from "google-auth-library";
 import { db } from "./db";
 import { nativePushDevices, users } from "@workspace/db/schema";

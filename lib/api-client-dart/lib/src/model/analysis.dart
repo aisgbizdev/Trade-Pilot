@@ -58,8 +58,8 @@ part 'analysis.g.dart';
 /// * [usefulCount] - Number of \"useful\" feedback rows for this analysis. Only populated by admin endpoints.
 /// * [notUsefulCount] - Number of \"not_useful\" feedback rows for this analysis. Only populated by admin endpoints.
 /// * [createdAt] 
-@BuiltValue()
-abstract class Analysis implements Built<Analysis, AnalysisBuilder> {
+@BuiltValue(instantiable: false)
+abstract class Analysis  {
   @BuiltValueField(wireName: r'id')
   int get id;
 
@@ -203,20 +203,13 @@ abstract class Analysis implements Built<Analysis, AnalysisBuilder> {
   @BuiltValueField(wireName: r'createdAt')
   DateTime get createdAt;
 
-  Analysis._();
-
-  factory Analysis([void updates(AnalysisBuilder b)]) = _$Analysis;
-
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(AnalysisBuilder b) => b;
-
   @BuiltValueSerializer(custom: true)
   static Serializer<Analysis> get serializer => _$AnalysisSerializer();
 }
 
 class _$AnalysisSerializer implements PrimitiveSerializer<Analysis> {
   @override
-  final Iterable<Type> types = const [Analysis, _$Analysis];
+  final Iterable<Type> types = const [Analysis];
 
   @override
   final String wireName = r'Analysis';
@@ -515,6 +508,46 @@ class _$AnalysisSerializer implements PrimitiveSerializer<Analysis> {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
+
+  @override
+  Analysis deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return serializers.deserialize(serialized, specifiedType: FullType($Analysis)) as $Analysis;
+  }
+}
+
+/// a concrete implementation of [Analysis], since [Analysis] is not instantiable
+@BuiltValue(instantiable: true)
+abstract class $Analysis implements Analysis, Built<$Analysis, $AnalysisBuilder> {
+  $Analysis._();
+
+  factory $Analysis([void Function($AnalysisBuilder)? updates]) = _$$Analysis;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults($AnalysisBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<$Analysis> get serializer => _$$AnalysisSerializer();
+}
+
+class _$$AnalysisSerializer implements PrimitiveSerializer<$Analysis> {
+  @override
+  final Iterable<Type> types = const [$Analysis, _$$Analysis];
+
+  @override
+  final String wireName = r'$Analysis';
+
+  @override
+  Object serialize(
+    Serializers serializers,
+    $Analysis object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return serializers.serialize(object, specifiedType: FullType(Analysis))!;
   }
 
   void _deserializeProperties(
@@ -867,12 +900,12 @@ class _$AnalysisSerializer implements PrimitiveSerializer<Analysis> {
   }
 
   @override
-  Analysis deserialize(
+  $Analysis deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = AnalysisBuilder();
+    final result = $AnalysisBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

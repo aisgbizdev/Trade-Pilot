@@ -13,12 +13,17 @@ class _$AnalysisQuota extends AnalysisQuota {
   final AnalysisQuotaHourly hourly;
   @override
   final AnalysisQuotaHourly daily;
+  @override
+  final AnalysisQuotaCredits credits;
 
   factory _$AnalysisQuota([void Function(AnalysisQuotaBuilder)? updates]) =>
       (AnalysisQuotaBuilder()..update(updates))._build();
 
   _$AnalysisQuota._(
-      {required this.unlimited, required this.hourly, required this.daily})
+      {required this.unlimited,
+      required this.hourly,
+      required this.daily,
+      required this.credits})
       : super._();
   @override
   AnalysisQuota rebuild(void Function(AnalysisQuotaBuilder) updates) =>
@@ -33,7 +38,8 @@ class _$AnalysisQuota extends AnalysisQuota {
     return other is AnalysisQuota &&
         unlimited == other.unlimited &&
         hourly == other.hourly &&
-        daily == other.daily;
+        daily == other.daily &&
+        credits == other.credits;
   }
 
   @override
@@ -42,6 +48,7 @@ class _$AnalysisQuota extends AnalysisQuota {
     _$hash = $jc(_$hash, unlimited.hashCode);
     _$hash = $jc(_$hash, hourly.hashCode);
     _$hash = $jc(_$hash, daily.hashCode);
+    _$hash = $jc(_$hash, credits.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -51,7 +58,8 @@ class _$AnalysisQuota extends AnalysisQuota {
     return (newBuiltValueToStringHelper(r'AnalysisQuota')
           ..add('unlimited', unlimited)
           ..add('hourly', hourly)
-          ..add('daily', daily))
+          ..add('daily', daily)
+          ..add('credits', credits))
         .toString();
   }
 }
@@ -74,6 +82,12 @@ class AnalysisQuotaBuilder
       _$this._daily ??= AnalysisQuotaHourlyBuilder();
   set daily(AnalysisQuotaHourlyBuilder? daily) => _$this._daily = daily;
 
+  AnalysisQuotaCreditsBuilder? _credits;
+  AnalysisQuotaCreditsBuilder get credits =>
+      _$this._credits ??= AnalysisQuotaCreditsBuilder();
+  set credits(AnalysisQuotaCreditsBuilder? credits) =>
+      _$this._credits = credits;
+
   AnalysisQuotaBuilder() {
     AnalysisQuota._defaults(this);
   }
@@ -84,6 +98,7 @@ class AnalysisQuotaBuilder
       _unlimited = $v.unlimited;
       _hourly = $v.hourly.toBuilder();
       _daily = $v.daily.toBuilder();
+      _credits = $v.credits.toBuilder();
       _$v = null;
     }
     return this;
@@ -111,6 +126,7 @@ class AnalysisQuotaBuilder
                 unlimited, r'AnalysisQuota', 'unlimited'),
             hourly: hourly.build(),
             daily: daily.build(),
+            credits: credits.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -119,6 +135,8 @@ class AnalysisQuotaBuilder
         hourly.build();
         _$failedField = 'daily';
         daily.build();
+        _$failedField = 'credits';
+        credits.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'AnalysisQuota', _$failedField, e.toString());

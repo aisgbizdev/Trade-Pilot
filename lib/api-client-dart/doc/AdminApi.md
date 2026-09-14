@@ -18,7 +18,11 @@ Method | HTTP request | Description
 [**getAllAnalyses**](AdminApi.md#getallanalyses) | **GET** /admin/analyses | Get all analyses (admin only)
 [**getBroadcasts**](AdminApi.md#getbroadcasts) | **GET** /admin/broadcasts | Broadcast history
 [**getOutboundClickStats**](AdminApi.md#getoutboundclickstats) | **GET** /admin/outbound-clicks/stats | Aggregated counts of sponsor / partner outbound link clicks
+[**getPendingTopupRequests**](AdminApi.md#getpendingtopuprequests) | **GET** /admin/topups | List top-up requests for admin review
 [**getProgressionAudit**](AdminApi.md#getprogressionaudit) | **GET** /admin/progression/audit | Read-only progression ledger audit; never a leaderboard
+[**getTopupSummary**](AdminApi.md#gettopupsummary) | **GET** /admin/topups/summary | Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+[**reviewCreditTopupRequest**](AdminApi.md#reviewcredittopuprequest) | **PATCH** /admin/topups/{id}/status | Approve or reject a top-up request, crediting the user&#39;s balance on approval
+[**updateTopupConfig**](AdminApi.md#updatetopupconfig) | **PATCH** /admin/topups/config | Set the Rupiah-to-credit conversion rate
 
 
 # **backfillProgression**
@@ -398,6 +402,51 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getPendingTopupRequests**
+> TopupRequestWithUserList getPendingTopupRequests(status, page, limit)
+
+List top-up requests for admin review
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+final String status = status_example; // String | Filter by review status; defaults to pending
+final int page = 56; // int | 
+final int limit = 56; // int | 
+
+try {
+    final response = api.getPendingTopupRequests(status, page, limit);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->getPendingTopupRequests: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **status** | **String**| Filter by review status; defaults to pending | [optional] [default to 'pending']
+ **page** | **int**|  | [optional] [default to 1]
+ **limit** | **int**|  | [optional] [default to 20]
+
+### Return type
+
+[**TopupRequestWithUserList**](TopupRequestWithUserList.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getProgressionAudit**
 > ProgressionAudit getProgressionAudit(userId)
 
@@ -435,6 +484,127 @@ No authorization required
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getTopupSummary**
+> TopupSummary getTopupSummary()
+
+Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+
+try {
+    final response = api.getTopupSummary();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->getTopupSummary: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**TopupSummary**](TopupSummary.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **reviewCreditTopupRequest**
+> TopupRequest reviewCreditTopupRequest(id, reviewTopupRequestBody)
+
+Approve or reject a top-up request, crediting the user's balance on approval
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+final int id = 56; // int | 
+final ReviewTopupRequestBody reviewTopupRequestBody = ; // ReviewTopupRequestBody | 
+
+try {
+    final response = api.reviewCreditTopupRequest(id, reviewTopupRequestBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->reviewCreditTopupRequest: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **int**|  | 
+ **reviewTopupRequestBody** | [**ReviewTopupRequestBody**](ReviewTopupRequestBody.md)|  | 
+
+### Return type
+
+[**TopupRequest**](TopupRequest.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateTopupConfig**
+> TopupConfig updateTopupConfig(updateTopupConfigBody)
+
+Set the Rupiah-to-credit conversion rate
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+final UpdateTopupConfigBody updateTopupConfigBody = ; // UpdateTopupConfigBody | 
+
+try {
+    final response = api.updateTopupConfig(updateTopupConfigBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->updateTopupConfig: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **updateTopupConfigBody** | [**UpdateTopupConfigBody**](UpdateTopupConfigBody.md)|  | 
+
+### Return type
+
+[**TopupConfig**](TopupConfig.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

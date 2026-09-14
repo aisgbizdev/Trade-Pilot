@@ -23,6 +23,7 @@ import 'package:trade_pilot_api_client/src/api/progression_api.dart';
 import 'package:trade_pilot_api_client/src/api/push_api.dart';
 import 'package:trade_pilot_api_client/src/api/storage_api.dart';
 import 'package:trade_pilot_api_client/src/api/superadmin_api.dart';
+import 'package:trade_pilot_api_client/src/api/topups_api.dart';
 import 'package:trade_pilot_api_client/src/api/trade_journal_api.dart';
 import 'package:trade_pilot_api_client/src/api/trader_mirror_api.dart';
 import 'package:trade_pilot_api_client/src/api/trading_rules_api.dart';
@@ -205,6 +206,12 @@ class TradePilotApiClient {
   /// by doing that all interceptors will not be executed
   SuperadminApi getSuperadminApi() {
     return SuperadminApi(dio, serializers);
+  }
+
+  /// Get TopupsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  TopupsApi getTopupsApi() {
+    return TopupsApi(dio, serializers);
   }
 
   /// Get TradeJournalApi instance, base route and serializer can be overridden by a given but be careful,

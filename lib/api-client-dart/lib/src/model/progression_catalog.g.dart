@@ -9,12 +9,16 @@ part of 'progression_catalog.dart';
 class _$ProgressionCatalog extends ProgressionCatalog {
   @override
   final BuiltList<ProgressionAchievement> achievements;
+  @override
+  final BuiltList<String> completedGuideIds;
 
   factory _$ProgressionCatalog(
           [void Function(ProgressionCatalogBuilder)? updates]) =>
       (ProgressionCatalogBuilder()..update(updates))._build();
 
-  _$ProgressionCatalog._({required this.achievements}) : super._();
+  _$ProgressionCatalog._(
+      {required this.achievements, required this.completedGuideIds})
+      : super._();
   @override
   ProgressionCatalog rebuild(
           void Function(ProgressionCatalogBuilder) updates) =>
@@ -27,13 +31,16 @@ class _$ProgressionCatalog extends ProgressionCatalog {
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is ProgressionCatalog && achievements == other.achievements;
+    return other is ProgressionCatalog &&
+        achievements == other.achievements &&
+        completedGuideIds == other.completedGuideIds;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, achievements.hashCode);
+    _$hash = $jc(_$hash, completedGuideIds.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -41,7 +48,8 @@ class _$ProgressionCatalog extends ProgressionCatalog {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ProgressionCatalog')
-          ..add('achievements', achievements))
+          ..add('achievements', achievements)
+          ..add('completedGuideIds', completedGuideIds))
         .toString();
   }
 }
@@ -56,6 +64,12 @@ class ProgressionCatalogBuilder
   set achievements(ListBuilder<ProgressionAchievement>? achievements) =>
       _$this._achievements = achievements;
 
+  ListBuilder<String>? _completedGuideIds;
+  ListBuilder<String> get completedGuideIds =>
+      _$this._completedGuideIds ??= ListBuilder<String>();
+  set completedGuideIds(ListBuilder<String>? completedGuideIds) =>
+      _$this._completedGuideIds = completedGuideIds;
+
   ProgressionCatalogBuilder() {
     ProgressionCatalog._defaults(this);
   }
@@ -64,6 +78,7 @@ class ProgressionCatalogBuilder
     final $v = _$v;
     if ($v != null) {
       _achievements = $v.achievements.toBuilder();
+      _completedGuideIds = $v.completedGuideIds.toBuilder();
       _$v = null;
     }
     return this;
@@ -88,12 +103,15 @@ class ProgressionCatalogBuilder
       _$result = _$v ??
           _$ProgressionCatalog._(
             achievements: achievements.build(),
+            completedGuideIds: completedGuideIds.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'achievements';
         achievements.build();
+        _$failedField = 'completedGuideIds';
+        completedGuideIds.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ProgressionCatalog', _$failedField, e.toString());

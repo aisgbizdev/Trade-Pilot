@@ -8,13 +8,15 @@ part of 'delete_account_body.dart';
 
 class _$DeleteAccountBody extends DeleteAccountBody {
   @override
-  final String currentPassword;
+  final String? currentPassword;
+  @override
+  final String? reauthToken;
 
   factory _$DeleteAccountBody(
           [void Function(DeleteAccountBodyBuilder)? updates]) =>
       (DeleteAccountBodyBuilder()..update(updates))._build();
 
-  _$DeleteAccountBody._({required this.currentPassword}) : super._();
+  _$DeleteAccountBody._({this.currentPassword, this.reauthToken}) : super._();
   @override
   DeleteAccountBody rebuild(void Function(DeleteAccountBodyBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -27,13 +29,15 @@ class _$DeleteAccountBody extends DeleteAccountBody {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is DeleteAccountBody &&
-        currentPassword == other.currentPassword;
+        currentPassword == other.currentPassword &&
+        reauthToken == other.reauthToken;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, currentPassword.hashCode);
+    _$hash = $jc(_$hash, reauthToken.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -41,7 +45,8 @@ class _$DeleteAccountBody extends DeleteAccountBody {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'DeleteAccountBody')
-          ..add('currentPassword', currentPassword))
+          ..add('currentPassword', currentPassword)
+          ..add('reauthToken', reauthToken))
         .toString();
   }
 }
@@ -55,6 +60,10 @@ class DeleteAccountBodyBuilder
   set currentPassword(String? currentPassword) =>
       _$this._currentPassword = currentPassword;
 
+  String? _reauthToken;
+  String? get reauthToken => _$this._reauthToken;
+  set reauthToken(String? reauthToken) => _$this._reauthToken = reauthToken;
+
   DeleteAccountBodyBuilder() {
     DeleteAccountBody._defaults(this);
   }
@@ -63,6 +72,7 @@ class DeleteAccountBodyBuilder
     final $v = _$v;
     if ($v != null) {
       _currentPassword = $v.currentPassword;
+      _reauthToken = $v.reauthToken;
       _$v = null;
     }
     return this;
@@ -84,8 +94,8 @@ class DeleteAccountBodyBuilder
   _$DeleteAccountBody _build() {
     final _$result = _$v ??
         _$DeleteAccountBody._(
-          currentPassword: BuiltValueNullFieldError.checkNotNull(
-              currentPassword, r'DeleteAccountBody', 'currentPassword'),
+          currentPassword: currentPassword,
+          reauthToken: reauthToken,
         );
     replace(_$result);
     return _$result;

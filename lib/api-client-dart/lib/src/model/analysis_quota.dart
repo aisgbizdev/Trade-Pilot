@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:trade_pilot_api_client/src/model/analysis_quota_credits.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_quota_hourly.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -15,6 +16,7 @@ part 'analysis_quota.g.dart';
 /// * [unlimited] - True for admin/super_admin, who bypass quota
 /// * [hourly] 
 /// * [daily] 
+/// * [credits] 
 @BuiltValue()
 abstract class AnalysisQuota implements Built<AnalysisQuota, AnalysisQuotaBuilder> {
   /// True for admin/super_admin, who bypass quota
@@ -26,6 +28,9 @@ abstract class AnalysisQuota implements Built<AnalysisQuota, AnalysisQuotaBuilde
 
   @BuiltValueField(wireName: r'daily')
   AnalysisQuotaHourly get daily;
+
+  @BuiltValueField(wireName: r'credits')
+  AnalysisQuotaCredits get credits;
 
   AnalysisQuota._();
 
@@ -64,6 +69,11 @@ class _$AnalysisQuotaSerializer implements PrimitiveSerializer<AnalysisQuota> {
     yield serializers.serialize(
       object.daily,
       specifiedType: const FullType(AnalysisQuotaHourly),
+    );
+    yield r'credits';
+    yield serializers.serialize(
+      object.credits,
+      specifiedType: const FullType(AnalysisQuotaCredits),
     );
   }
 
@@ -108,6 +118,13 @@ class _$AnalysisQuotaSerializer implements PrimitiveSerializer<AnalysisQuota> {
             specifiedType: const FullType(AnalysisQuotaHourly),
           ) as AnalysisQuotaHourly;
           result.daily.replace(valueDes);
+          break;
+        case r'credits':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AnalysisQuotaCredits),
+          ) as AnalysisQuotaCredits;
+          result.credits.replace(valueDes);
           break;
         default:
           unhandled.add(key);

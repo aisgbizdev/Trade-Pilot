@@ -14,6 +14,9 @@ import 'package:trade_pilot_api_client/src/model/change_security_question_body.d
 import 'package:trade_pilot_api_client/src/model/delete_account_body.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/forgot_password_question_body.dart';
+import 'package:trade_pilot_api_client/src/model/google_native_login_body.dart';
+import 'package:trade_pilot_api_client/src/model/google_reauth_body.dart';
+import 'package:trade_pilot_api_client/src/model/google_reauth_response.dart';
 import 'package:trade_pilot_api_client/src/model/login_body.dart';
 import 'package:trade_pilot_api_client/src/model/message_response.dart';
 import 'package:trade_pilot_api_client/src/model/register_body.dart';
@@ -580,6 +583,101 @@ class AuthApi {
     );
   }
 
+  /// Exchange a native-app Google ID token for a TradePilot session
+  /// For mobile apps that obtain a Google **ID token** with the native Google SDK. The server verifies the token (signature, issuer, audience against the configured allowlist, expiry, verified email), upserts the account (match google_id → link by verified email → create), and returns a normal TradePilot Bearer session. No cookie is set or required. The response never contains the Google token. 
+  ///
+  /// Parameters:
+  /// * [googleNativeLoginBody] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AuthResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AuthResponse>> loginWithGoogleNative({ 
+    required GoogleNativeLoginBody googleNativeLoginBody,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/google/native';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(GoogleNativeLoginBody);
+      _bodyData = _serializers.serialize(googleNativeLoginBody, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AuthResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AuthResponse),
+      ) as AuthResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AuthResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// Logout user
   /// 
   ///
@@ -642,6 +740,112 @@ class AuthApi {
     }
 
     return Response<MessageResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Prove identity with a fresh Google ID token for a sensitive operation
+  /// A live session alone is not sufficient for sensitive operations on a Google-only account. The client obtains a **fresh** Google ID token and posts it here; on success the server returns a short-lived (≤5 min), single-use &#x60;reauthToken&#x60; bound to the user and to the &#x60;delete_account&#x60; purpose. Currently consumed by DELETE /auth/account. 
+  ///
+  /// Parameters:
+  /// * [googleReauthBody] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [GoogleReauthResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<GoogleReauthResponse>> reauthenticateWithGoogle({ 
+    required GoogleReauthBody googleReauthBody,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/reauth/google';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'sessionCookie',
+            'keyName': 'session_token',
+            'where': '',
+          },{
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(GoogleReauthBody);
+      _bodyData = _serializers.serialize(googleReauthBody, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    GoogleReauthResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(GoogleReauthResponse),
+      ) as GoogleReauthResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<GoogleReauthResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
