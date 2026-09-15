@@ -8,8 +8,8 @@ generated Flutter SDK) to the TradePilot backend.
 mechanics, conventions, gotchas, and a curated endpoint catalog. When they
 disagree, the spec wins.
 
-Last updated: 2026-09-08 (includes Google Sign-In, credit top-ups, unified
-admin dashboard).
+Last updated: 2026-09-15 (web dropped manual sign-up — Google-only now;
+`/native-push/test` response shape corrected).
 
 ---
 
@@ -104,6 +104,15 @@ the app.
 
 Config the backend needs: `GOOGLE_NATIVE_ALLOWED_CLIENT_IDS` = the Android + iOS
 (+ web) OAuth client ids. Client ids are not secret.
+
+**Heads up — web dropped manual sign-up.** The web app's `/register` page no
+longer has the email/password/security-question form; new web accounts are
+Google-only now (Google already guarantees a verified email, which the
+security question never did). `POST /auth/register` itself is unchanged and
+still works — this was a frontend-only decision, not a backend contract
+change — but flagging it in case mobile wants to follow suit for the same
+reason. Existing password accounts (web or mobile) are unaffected and keep
+logging in via `POST /auth/login`.
 
 ---
 
@@ -235,7 +244,7 @@ themePreference, onboardingCompleted, createdAt }`.
 |---|---|---|---|
 | POST | `/native-push/register` | ✅ | `{ token: <FCM device token>, platform: "android"\|"ios" }` |
 | POST | `/native-push/unregister` | ✅ | `{ token }` — on logout / token rotation |
-| POST | `/native-push/test` | ✅ | Send one sample FCM push to the caller's own registered devices → `{ delivered: <device count> }`. `404` if none registered. Goes through the real send path — a passing result is proof the FCM wiring works. Takes no body. |
+| POST | `/native-push/test` | ✅ | Send one sample FCM push to the caller's own registered devices → `{ targeted, accepted, failures[] }` (`accepted` is how many FCM actually accepted, not how many devices exist). `200` if `accepted > 0`, `502` if every device was rejected, `404` if none registered, `503` if Firebase isn't configured server-side. Goes through the real send path — a `200` is real proof the FCM wiring works. Takes no body. |
 | GET/PATCH | `/push/prefs` | ✅ | Master switch `nativePushEnabled` + per-category toggles (`pushExpiry`, `pushBroadcast`, `pushDailySummary`, `pushMarketNews`, …), quiet hours, `notificationTimezone` |
 | GET/PATCH | `/me/daily-summary` | ✅ | Daily-summary digest settings (time, timezone, enabled) |
 
