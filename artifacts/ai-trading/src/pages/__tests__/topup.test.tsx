@@ -51,6 +51,53 @@ describe("TopupPage", () => {
     expect(await screen.findByTestId("img-qris")).toHaveAttribute("src", "/qris-gopay.jpeg");
   });
 
+  it("shows a floating WhatsApp shortcut and a proof-required notice on reaching step 2", async () => {
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+      ],
+      { strict: false },
+    );
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    // Visible regardless of step.
+    const fab = await screen.findByTestId("button-whatsapp-fab");
+    expect(fab).toHaveAttribute("href", expect.stringContaining("https://wa.me/6282310384866?text="));
+
+    // No notice yet on step 1.
+    expect(screen.queryByTestId("dialog-proof-required-notice")).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-preset-5000"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-continue-topup"));
+    });
+
+    // Reaching step 2 pops the mandatory-proof notice, with its own
+    // WhatsApp link, until acknowledged.
+    expect(await screen.findByTestId("dialog-proof-required-notice")).toBeInTheDocument();
+    expect(screen.getByTestId("link-whatsapp-support-dialog")).toHaveAttribute(
+      "href",
+      expect.stringContaining("https://wa.me/6282310384866?text="),
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-proof-notice-ack"));
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId("dialog-proof-required-notice")).not.toBeInTheDocument();
+    });
+  });
+
   it("shows a live credits preview for a preset amount and submits a top-up request", async () => {
     let created: unknown = null;
     installFetchMock(
