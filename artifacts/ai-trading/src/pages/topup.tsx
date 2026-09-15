@@ -103,7 +103,10 @@ export default function TopupPage() {
           proofObjectPath,
         },
       });
+      // Auto-approved on submit now (see routes/topups.ts) — the balance
+      // changes immediately, so refresh it alongside the history list.
       queryClient.invalidateQueries({ queryKey: getGetMyTopupRequestsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetCreditBalanceQueryKey() });
       setAmount("");
       setReferenceNote("");
       setProofObjectPath(null);

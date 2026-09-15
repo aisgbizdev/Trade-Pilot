@@ -65,6 +65,27 @@ function authHeader(u: SeedUser): [string, string] {
   return ["Authorization", `Bearer ${u.token}`];
 }
 
+// POST /topups auto-approves every request now (see routes/topups.ts), so
+// there's no longer a way to reach a "pending" row through the public API
+// — insert one directly to exercise the admin review endpoints, which
+// still matter for whatever a future rollback / manual review flow needs.
+async function insertPendingTopup(user: SeedUser, amountRupiah: number): Promise<number> {
+  const { rupiahPerCredit } = getTopupConfig();
+  const [row] = await db
+    .insert(creditTopupRequests)
+    .values({
+      userId: user.id,
+      amountRupiah,
+      creditsRequested: Math.floor(amountRupiah / rupiahPerCredit),
+      conversionRateSnapshot: rupiahPerCredit,
+      proofObjectPath: PROOF_PATH,
+      status: "pending",
+    })
+    .returning({ id: creditTopupRequests.id });
+  seededRequestIds.push(row!.id);
+  return row!.id;
+}
+
 let alice: SeedUser;
 let admin: SeedUser;
 let superAdmin: SeedUser;
@@ -141,19 +162,37 @@ describe("POST /topups", () => {
     expect(res.body.error).toMatch(/bukti transfer/i);
   });
 
-  it("creates a pending request with the correct computed credits", async () => {
+  it("auto-approves on submit, credits the balance immediately, and notifies the user", async () => {
     const { rupiahPerCredit } = getTopupConfig();
     const amountRupiah = rupiahPerCredit * 20;
+    const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
+
     const res = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
       .send({ amountRupiah, paymentReferenceNote: `note-${RUN_ID}`, proofObjectPath: PROOF_PATH });
     expect(res.status).toBe(201);
-    expect(res.body.status).toBe("pending");
+    expect(res.body.status).toBe("approved");
     expect(res.body.creditsRequested).toBe(20);
+    expect(res.body.creditsGranted).toBe(20);
     expect(res.body.conversionRateSnapshot).toBe(rupiahPerCredit);
     expect(res.body.proofObjectPath).toBe(PROOF_PATH);
     seededRequestIds.push(res.body.id);
+
+    const after = await request(app).get("/api/topups/balance").set(...authHeader(alice));
+    expect(after.body.balance).toBe(before.body.balance + 20);
+
+    const ledgerRows = await db
+      .select()
+      .from(creditLedger)
+      .where(eq(creditLedger.topupRequestId, res.body.id));
+    expect(ledgerRows).toHaveLength(1);
+    expect(ledgerRows[0]!.amount).toBe(20);
+
+    // Fresh test users default to users.lang = "en", so the notification is
+    // sent in English, not Indonesian.
+    const notif = await db.select().from(notifications).where(eq(notifications.userId, alice.id));
+    expect(notif.some((n) => n.title === "Top-up approved")).toBe(true);
   });
 });
 
@@ -177,44 +216,42 @@ describe("GET /admin/topups", () => {
   });
 
   it("lists pending requests with the requester's email/name for an admin", async () => {
+    const pendingId = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 6);
     const res = await request(app)
       .get("/api/admin/topups")
       .set(...authHeader(admin))
       .query({ status: "pending" });
     expect(res.status).toBe(200);
-    const mine = res.body.requests.find((r: { userId: number }) => r.userId === alice.id);
+    const mine = res.body.requests.find((r: { id: number }) => r.id === pendingId);
     expect(mine).toBeDefined();
     expect(mine.userEmail).toBe(alice.email);
   });
 });
 
+// POST /topups no longer produces a "pending" row to review (it
+// auto-approves — see above), but the admin review endpoints themselves
+// are unchanged and still need to work correctly against whatever pending
+// rows exist (e.g. from before this rollout, or a future rollback) —
+// seed those directly rather than through the API.
 describe("PATCH /admin/topups/:id/status", () => {
   it("returns 403 for a plain admin (approval requires super_admin)", async () => {
-    const created = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 5, proofObjectPath: PROOF_PATH });
-    seededRequestIds.push(created.body.id);
+    const id = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 5);
 
     const res = await request(app)
-      .patch(`/api/admin/topups/${created.body.id}/status`)
+      .patch(`/api/admin/topups/${id}/status`)
       .set(...authHeader(admin))
       .send({ status: "approved" });
     expect(res.status).toBe(403);
   });
 
   it("approves a request, credits the balance, and notifies the user", async () => {
-    const created = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 7, proofObjectPath: PROOF_PATH });
-    seededRequestIds.push(created.body.id);
+    const id = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 7);
 
     const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
     const balanceBefore = before.body.balance as number;
 
     const res = await request(app)
-      .patch(`/api/admin/topups/${created.body.id}/status`)
+      .patch(`/api/admin/topups/${id}/status`)
       .set(...authHeader(superAdmin))
       .send({ status: "approved" });
     expect(res.status).toBe(200);
@@ -224,10 +261,7 @@ describe("PATCH /admin/topups/:id/status", () => {
     const after = await request(app).get("/api/topups/balance").set(...authHeader(alice));
     expect(after.body.balance).toBe(balanceBefore + 7);
 
-    const ledgerRows = await db
-      .select()
-      .from(creditLedger)
-      .where(eq(creditLedger.topupRequestId, created.body.id));
+    const ledgerRows = await db.select().from(creditLedger).where(eq(creditLedger.topupRequestId, id));
     expect(ledgerRows).toHaveLength(1);
     expect(ledgerRows[0]!.amount).toBe(7);
 
@@ -241,16 +275,12 @@ describe("PATCH /admin/topups/:id/status", () => {
   });
 
   it("rejects a request without touching the credit balance", async () => {
-    const created = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 3, proofObjectPath: PROOF_PATH });
-    seededRequestIds.push(created.body.id);
+    const id = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 3);
 
     const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
 
     const res = await request(app)
-      .patch(`/api/admin/topups/${created.body.id}/status`)
+      .patch(`/api/admin/topups/${id}/status`)
       .set(...authHeader(superAdmin))
       .send({ status: "rejected", reviewNote: "bukti tidak jelas" });
     expect(res.status).toBe(200);
@@ -262,29 +292,22 @@ describe("PATCH /admin/topups/:id/status", () => {
   });
 
   it("only lets one of two concurrent reviews win; the other gets 409", async () => {
-    const created = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 4, proofObjectPath: PROOF_PATH });
-    seededRequestIds.push(created.body.id);
+    const id = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 4);
 
     const [resA, resB] = await Promise.all([
       request(app)
-        .patch(`/api/admin/topups/${created.body.id}/status`)
+        .patch(`/api/admin/topups/${id}/status`)
         .set(...authHeader(superAdmin))
         .send({ status: "approved" }),
       request(app)
-        .patch(`/api/admin/topups/${created.body.id}/status`)
+        .patch(`/api/admin/topups/${id}/status`)
         .set(...authHeader(superAdmin))
         .send({ status: "approved" }),
     ]);
     const statuses = [resA.status, resB.status].sort();
     expect(statuses).toEqual([200, 409]);
 
-    const ledgerRows = await db
-      .select()
-      .from(creditLedger)
-      .where(eq(creditLedger.topupRequestId, created.body.id));
+    const ledgerRows = await db.select().from(creditLedger).where(eq(creditLedger.topupRequestId, id));
     expect(ledgerRows).toHaveLength(1);
   });
 });
@@ -300,38 +323,34 @@ describe("GET /admin/topups/summary", () => {
   it("sums only approved rows, grouped by user, excluding pending/rejected", async () => {
     const bob = await createUser("user");
 
+    // POST /topups now auto-approves, so "submit" alone gets the request
+    // into the "approved" state with creditsGranted == creditsRequested —
+    // there is no separate admin-approval step to call anymore.
     async function submitAndApprove(user: SeedUser, amountRupiah: number, creditsGranted: number) {
       const created = await request(app)
         .post("/api/topups")
         .set(...authHeader(user))
         .send({ amountRupiah, proofObjectPath: PROOF_PATH });
+      expect(created.status).toBe(201);
+      expect(created.body.status).toBe("approved");
+      expect(created.body.creditsGranted).toBe(creditsGranted);
       seededRequestIds.push(created.body.id);
-      const reviewed = await request(app)
-        .patch(`/api/admin/topups/${created.body.id}/status`)
-        .set(...authHeader(superAdmin))
-        .send({ status: "approved", creditsGranted });
-      expect(reviewed.status).toBe(200);
       return created.body.id as number;
     }
 
+    // Rejected/pending rows can no longer be produced through the public
+    // API (see above) — seed a pending row directly, then (for "reject")
+    // drive it through the real admin endpoint.
     async function submitAndReject(user: SeedUser, amountRupiah: number) {
-      const created = await request(app)
-        .post("/api/topups")
-        .set(...authHeader(user))
-        .send({ amountRupiah, proofObjectPath: PROOF_PATH });
-      seededRequestIds.push(created.body.id);
+      const id = await insertPendingTopup(user, amountRupiah);
       await request(app)
-        .patch(`/api/admin/topups/${created.body.id}/status`)
+        .patch(`/api/admin/topups/${id}/status`)
         .set(...authHeader(superAdmin))
         .send({ status: "rejected" });
     }
 
     async function submitPending(user: SeedUser, amountRupiah: number) {
-      const created = await request(app)
-        .post("/api/topups")
-        .set(...authHeader(user))
-        .send({ amountRupiah, proofObjectPath: PROOF_PATH });
-      seededRequestIds.push(created.body.id);
+      await insertPendingTopup(user, amountRupiah);
     }
 
     const rate = getTopupConfig().rupiahPerCredit;
@@ -371,11 +390,7 @@ describe("GET /admin/topups/summary", () => {
 
   it("excludes a user with only a pending or rejected request from byUser", async () => {
     const carol = await createUser("user");
-    const created = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(carol))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 3, proofObjectPath: PROOF_PATH });
-    seededRequestIds.push(created.body.id);
+    await insertPendingTopup(carol, getTopupConfig().rupiahPerCredit * 3);
     // Left pending — never approved.
 
     const res = await request(app).get("/api/admin/topups/summary").set(...authHeader(superAdmin));

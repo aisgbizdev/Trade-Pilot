@@ -23,6 +23,19 @@ const router = Router();
 
 type TopupRequestRow = typeof creditTopupRequests.$inferSelect;
 
+async function notifyTopupApproved(userId: number, amountRupiah: number, creditsGranted: number): Promise<void> {
+  const [target] = await db.select({ lang: users.lang }).from(users).where(eq(users.id, userId)).limit(1);
+  const isId = (target?.lang ?? "id") === "id";
+  await createNotification(userId, {
+    title: isId ? "Top-up disetujui" : "Top-up approved",
+    message: isId
+      ? `Top-up Rp${amountRupiah.toLocaleString("id-ID")} telah disetujui. ${creditsGranted} kredit ditambahkan ke saldo Anda.`
+      : `Your Rp${amountRupiah.toLocaleString("id-ID")} top-up was approved. ${creditsGranted} credits were added to your balance.`,
+    type: "info",
+    category: "topup",
+  });
+}
+
 function serializeTopupRequest(row: TopupRequestRow) {
   return {
     id: row.id,
@@ -74,18 +87,50 @@ router.post("/topups", requireAuth, async (req: AuthRequest, res) => {
     });
     return;
   }
-  const [inserted] = await db
-    .insert(creditTopupRequests)
-    .values({
-      userId: req.userId!,
-      amountRupiah,
-      creditsRequested,
-      conversionRateSnapshot: rupiahPerCredit,
-      paymentReferenceNote: paymentReferenceNote ?? null,
-      proofObjectPath,
-    })
-    .returning();
-  res.status(201).json(serializeTopupRequest(inserted));
+
+  const userId = req.userId!;
+  // TEMPORARY (explicit, time-boxed product decision — see chat): every
+  // request that reaches here already has a proof upload, and we credit
+  // immediately instead of waiting for admin review. This trades away
+  // the actual verification proof-upload was added for — an uploaded
+  // image is NOT checked against the real transfer in any way, so this
+  // is a known fraud surface (any image, any amount, instant credits).
+  // Revisit before wider rollout: verify the proof (vision-model amount
+  // match, or a real payment gateway) before auto-crediting, or at least
+  // cap it to small preset amounts with a per-user rate limit.
+  const row = await db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(creditTopupRequests)
+      .values({
+        userId,
+        amountRupiah,
+        creditsRequested,
+        conversionRateSnapshot: rupiahPerCredit,
+        paymentReferenceNote: paymentReferenceNote ?? null,
+        proofObjectPath,
+        status: "approved",
+        reviewedAt: new Date(),
+      })
+      .returning();
+    // Same shared credit-balance lock the manual-approval path and
+    // analysis credit consumption use, so this can never race either.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${CREDIT_BALANCE_LOCK_NAMESPACE}::int, ${userId}::int)`);
+    await tx
+      .update(creditTopupRequests)
+      .set({ creditsGranted: creditsRequested })
+      .where(eq(creditTopupRequests.id, inserted!.id));
+    await applyCreditLedgerEntry(tx, {
+      userId,
+      amount: creditsRequested,
+      source: "topup_approval",
+      sourceEventId: `topup:${inserted!.id}`,
+      topupRequestId: inserted!.id,
+    });
+    return { ...inserted!, creditsGranted: creditsRequested };
+  });
+
+  await notifyTopupApproved(userId, amountRupiah, creditsRequested);
+  res.status(201).json(serializeTopupRequest(row));
 });
 
 router.get("/topups/mine", requireAuth, async (req: AuthRequest, res) => {
@@ -234,18 +279,11 @@ router.patch("/admin/topups/:id/status", requireSuperAdmin, async (req: AuthRequ
   }
 
   const row = outcome.row;
-  const [target] = await db.select({ lang: users.lang }).from(users).where(eq(users.id, row.userId)).limit(1);
-  const isId = (target?.lang ?? "id") === "id";
   if (row.status === "approved") {
-    await createNotification(row.userId, {
-      title: isId ? "Top-up disetujui" : "Top-up approved",
-      message: isId
-        ? `Top-up Rp${row.amountRupiah.toLocaleString("id-ID")} telah disetujui. ${row.creditsGranted} kredit ditambahkan ke saldo Anda.`
-        : `Your Rp${row.amountRupiah.toLocaleString("id-ID")} top-up was approved. ${row.creditsGranted} credits were added to your balance.`,
-      type: "info",
-      category: "topup",
-    });
+    await notifyTopupApproved(row.userId, row.amountRupiah, row.creditsGranted!);
   } else {
+    const [target] = await db.select({ lang: users.lang }).from(users).where(eq(users.id, row.userId)).limit(1);
+    const isId = (target?.lang ?? "id") === "id";
     await createNotification(row.userId, {
       title: isId ? "Top-up ditolak" : "Top-up rejected",
       message: row.reviewNote

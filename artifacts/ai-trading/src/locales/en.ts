@@ -1709,7 +1709,7 @@ export const en = {
     proof_invalid_type: "Unsupported file type",
     proof_upload_failed: "Failed to upload payment proof",
     submit_button: "Submit Transfer Proof",
-    submit_success_title: "Top-up request submitted, awaiting admin review",
+    submit_success_title: "Top-up successful! Credits were added to your balance.",
     submit_error_title: "Failed to submit top-up request",
     history_title: "Top-up History",
     history_empty: "No top-up history yet",

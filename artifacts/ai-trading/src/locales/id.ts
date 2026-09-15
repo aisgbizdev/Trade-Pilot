@@ -1711,7 +1711,7 @@ export const id: Translations = {
     proof_invalid_type: "Tipe file tidak didukung",
     proof_upload_failed: "Gagal mengunggah bukti bayar",
     submit_button: "Kirim Bukti Transfer",
-    submit_success_title: "Permintaan top up terkirim, menunggu review admin",
+    submit_success_title: "Top up berhasil! Kredit langsung ditambahkan ke saldo kamu.",
     submit_error_title: "Gagal mengirim permintaan top up",
     history_title: "Riwayat Top Up",
     history_empty: "Belum ada riwayat top up",
