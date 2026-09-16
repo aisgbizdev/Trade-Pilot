@@ -28,6 +28,7 @@ import {
   useGetAdminFeedback,
   getGetAdminFeedbackQueryKey,
   type TopupUserSummary,
+  type TopupMonthSummary,
   type UserWithStats,
   type AdminFeedbackRow,
 } from "@workspace/api-client-react";
@@ -189,7 +190,72 @@ function TopupsSummarySection() {
           </table>
         </div>
       )}
+
+      <TopupsMonthlyReport byMonth={data?.byMonth ?? []} totalAmountRupiah={data?.totalAmountRupiah ?? 0} />
     </div>
+  );
+}
+
+// "Laporan Bulanan" — approved top-up revenue/credits grouped by calendar
+// month (WIB), newest first, from the same GET /admin/topups/summary
+// response the per-user table above already uses. A month's share of the
+// all-time total is shown alongside the raw numbers so an admin can spot a
+// month that's unusually large/small at a glance without doing the math.
+function monthLabel(monthKey: string, locale: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  if (!year || !month) return monthKey;
+  return new Date(year, month - 1, 1).toLocaleDateString(locale, { year: "numeric", month: "long" });
+}
+
+function TopupsMonthlyReport({
+  byMonth,
+  totalAmountRupiah,
+}: {
+  byMonth: TopupMonthSummary[];
+  totalAmountRupiah: number;
+}) {
+  const { t, lang } = useTranslation();
+  const dateLocale = lang === "id" ? "id-ID" : "en-US";
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">{t.admin_dashboard.topups_monthly_title}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{t.admin_dashboard.topups_monthly_subtitle}</p>
+      </div>
+
+      {byMonth.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-6">{t.admin_dashboard.topups_monthly_empty}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted-foreground border-b border-border">
+                <th className="py-2 pr-2 font-medium">{t.admin_dashboard.topups_monthly_col_month}</th>
+                <th className="py-2 pr-2 font-medium">{t.admin_dashboard.topups_monthly_col_amount}</th>
+                <th className="py-2 pr-2 font-medium">{t.admin_dashboard.topups_monthly_col_credits}</th>
+                <th className="py-2 pr-2 font-medium">{t.admin_dashboard.topups_monthly_col_requests}</th>
+                <th className="py-2 pr-2 font-medium">{t.admin_dashboard.topups_monthly_col_share}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byMonth.map((row) => {
+                const share = totalAmountRupiah > 0 ? (row.totalAmountRupiah / totalAmountRupiah) * 100 : 0;
+                return (
+                  <tr key={row.month} className="border-b border-border/50" data-testid={`row-topup-month-${row.month}`}>
+                    <td className="py-2 pr-2 font-medium text-foreground capitalize">{monthLabel(row.month, dateLocale)}</td>
+                    <td className="py-2 pr-2 tabular-nums">Rp{row.totalAmountRupiah.toLocaleString("id-ID")}</td>
+                    <td className="py-2 pr-2 tabular-nums">{row.totalCreditsGranted}</td>
+                    <td className="py-2 pr-2 tabular-nums">{row.requestCount}</td>
+                    <td className="py-2 pr-2 text-xs text-muted-foreground tabular-nums">{share.toFixed(1)}%</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }
 

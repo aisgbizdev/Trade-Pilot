@@ -1492,7 +1492,7 @@ export const getGetTopupSummaryUrl = () => {
 };
 
 /**
- * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+ * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user and by calendar month
  */
 export const getTopupSummary = async (
   options?: Parameters<typeof customFetch>[1],
@@ -1539,7 +1539,7 @@ export type GetTopupSummaryQueryResult = NonNullable<
 export type GetTopupSummaryQueryError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+ * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user and by calendar month
  */
 
 export function useGetTopupSummary<

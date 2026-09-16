@@ -205,6 +205,26 @@ router.get("/admin/topups/summary", requireSuperAdmin, async (_req: AuthRequest,
     .groupBy(creditTopupRequests.userId, users.email, users.displayName)
     .orderBy(desc(sum(creditTopupRequests.amountRupiah)));
 
+  // Monthly report (laporan bulanan): same "approved" rows, grouped by the
+  // calendar month they were approved in (not requested/created in — a
+  // top-up's revenue belongs to the month it actually landed). WIB
+  // (Asia/Jakarta, UTC+7) is used for the month boundary since that's the
+  // product's primary user base and how every other admin timestamp in
+  // this dashboard already reads; `reviewed_at` is stored as a plain
+  // timestamp (no tz) so this is an explicit offset shift, not a real
+  // timezone conversion.
+  const byMonthRaw = await db
+    .select({
+      month: sql<string>`to_char(${creditTopupRequests.reviewedAt} + interval '7 hours', 'YYYY-MM')`,
+      totalAmountRupiah: sum(creditTopupRequests.amountRupiah),
+      totalCreditsGranted: sum(creditTopupRequests.creditsGranted),
+      requestCount: count(creditTopupRequests.id),
+    })
+    .from(creditTopupRequests)
+    .where(approved)
+    .groupBy(sql`to_char(${creditTopupRequests.reviewedAt} + interval '7 hours', 'YYYY-MM')`)
+    .orderBy(desc(sql`to_char(${creditTopupRequests.reviewedAt} + interval '7 hours', 'YYYY-MM')`));
+
   res.json({
     totalAmountRupiah: Number(totalsRaw?.totalAmountRupiah ?? 0),
     totalCreditsGranted: Number(totalsRaw?.totalCreditsGranted ?? 0),
@@ -217,6 +237,12 @@ router.get("/admin/topups/summary", requireSuperAdmin, async (_req: AuthRequest,
       totalCreditsGranted: Number(r.totalCreditsGranted ?? 0),
       requestCount: Number(r.requestCount ?? 0),
       lastApprovedAt: r.lastApprovedAt,
+    })),
+    byMonth: byMonthRaw.map((r) => ({
+      month: r.month,
+      totalAmountRupiah: Number(r.totalAmountRupiah ?? 0),
+      totalCreditsGranted: Number(r.totalCreditsGranted ?? 0),
+      requestCount: Number(r.requestCount ?? 0),
     })),
   });
 });

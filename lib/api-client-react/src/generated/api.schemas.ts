@@ -1321,11 +1321,21 @@ export interface TopupUserSummary {
   lastApprovedAt: string | null;
 }
 
+export interface TopupMonthSummary {
+  /** Calendar month (Asia/Jakarta) the top-up was approved in, as YYYY-MM. */
+  month: string;
+  totalAmountRupiah: number;
+  totalCreditsGranted: number;
+  requestCount: number;
+}
+
 export interface TopupSummary {
   totalAmountRupiah: number;
   totalCreditsGranted: number;
   approvedRequestCount: number;
   byUser: TopupUserSummary[];
+  /** Approved-top-up totals grouped by calendar month, newest first. */
+  byMonth: TopupMonthSummary[];
 }
 
 export type ReviewTopupRequestBodyStatus =

@@ -358,7 +358,7 @@ export const UpdateTopupConfigResponse = zod.object({
 });
 
 /**
- * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+ * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user and by calendar month
  */
 export const GetTopupSummaryResponse = zod.object({
   totalAmountRupiah: zod.number().int(),
@@ -375,6 +375,22 @@ export const GetTopupSummaryResponse = zod.object({
       lastApprovedAt: zod.coerce.date().nullable(),
     }),
   ),
+  byMonth: zod
+    .array(
+      zod.object({
+        month: zod
+          .string()
+          .describe(
+            "Calendar month (Asia\/Jakarta) the top-up was approved in, as YYYY-MM.",
+          ),
+        totalAmountRupiah: zod.number().int(),
+        totalCreditsGranted: zod.number().int(),
+        requestCount: zod.number().int(),
+      }),
+    )
+    .describe(
+      "Approved-top-up totals grouped by calendar month, newest first.",
+    ),
 });
 
 /**

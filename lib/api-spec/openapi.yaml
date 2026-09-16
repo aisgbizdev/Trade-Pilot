@@ -243,7 +243,7 @@ paths:
     get:
       operationId: getTopupSummary
       tags: [admin]
-      summary: Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+      summary: Aggregate revenue/credits summary across all approved top-up requests, grouped by user and by calendar month
       responses:
         "200":
           description: Top-up revenue summary
@@ -4896,6 +4896,25 @@ components:
         - requestCount
         - lastApprovedAt
 
+    TopupMonthSummary:
+      type: object
+      properties:
+        month:
+          type: string
+          description: Calendar month (Asia/Jakarta) the top-up was approved in, as YYYY-MM.
+          example: "2026-09"
+        totalAmountRupiah:
+          type: integer
+        totalCreditsGranted:
+          type: integer
+        requestCount:
+          type: integer
+      required:
+        - month
+        - totalAmountRupiah
+        - totalCreditsGranted
+        - requestCount
+
     TopupSummary:
       type: object
       properties:
@@ -4909,11 +4928,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TopupUserSummary"
+        byMonth:
+          type: array
+          description: Approved-top-up totals grouped by calendar month, newest first.
+          items:
+            $ref: "#/components/schemas/TopupMonthSummary"
       required:
         - totalAmountRupiah
         - totalCreditsGranted
         - approvedRequestCount
         - byUser
+        - byMonth
 
     ReviewTopupRequestBody:
       type: object

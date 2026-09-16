@@ -386,6 +386,17 @@ describe("GET /admin/topups/summary", () => {
     expect(res.body.totalAmountRupiah).toBeGreaterThanOrEqual(rate * 35);
     expect(res.body.totalCreditsGranted).toBeGreaterThanOrEqual(35);
     expect(res.body.approvedRequestCount).toBeGreaterThanOrEqual(3);
+
+    // byMonth: every approval above just happened, so they all land in the
+    // current WIB (UTC+7) calendar month's bucket — same lower-bound
+    // reasoning as the totals above (other tests share this bucket too).
+    const shifted = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const monthKey = `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
+    const monthRow = res.body.byMonth.find((r: { month: string }) => r.month === monthKey);
+    expect(monthRow).toBeTruthy();
+    expect(monthRow.totalAmountRupiah).toBeGreaterThanOrEqual(rate * 35);
+    expect(monthRow.totalCreditsGranted).toBeGreaterThanOrEqual(35);
+    expect(monthRow.requestCount).toBeGreaterThanOrEqual(3);
   });
 
   it("excludes a user with only a pending or rejected request from byUser", async () => {
