@@ -36,7 +36,7 @@
 // token-endpoint response body.
 
 import { createHash } from "node:crypto";
-import { createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT } from "jose";
+import { createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT, type JWTVerifyGetKey } from "jose";
 
 export const APPLE_ISSUER = "https://appleid.apple.com";
 const APPLE_JWKS_URL = new URL("https://appleid.apple.com/auth/keys");
@@ -91,8 +91,8 @@ function sha256Hex(raw: string): string {
 // bad `kid`s can't hammer Apple), or after `cacheMaxAge` elapses — this is
 // the "cache with TTL + refresh on unknown kid" behavior required for
 // verifying against a rotating key set.
-let appleJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
-function getAppleJwks(): ReturnType<typeof createRemoteJWKSet> {
+let appleJwks: JWTVerifyGetKey | null = null;
+function getAppleJwks(): JWTVerifyGetKey {
   if (!appleJwks) {
     appleJwks = createRemoteJWKSet(APPLE_JWKS_URL, {
       cooldownDuration: 30_000,
@@ -102,6 +102,18 @@ function getAppleJwks(): ReturnType<typeof createRemoteJWKSet> {
   return appleJwks;
 }
 
+// Test-only seam: jose's Node runtime fetches the remote JWKS with
+// node:https directly (not the global `fetch`), so a unit test can't
+// intercept it the usual way. Swapping the resolver here lets a test
+// exercise the *real* verifyAppleIdentityToken end-to-end against a
+// synthetic RSA key (via jose's createLocalJWKSet) instead of either
+// hitting the network or duplicating the verification logic in the test.
+// Never called from production code. Passing `null` restores the lazy
+// singleton above.
+export function __setAppleJwksForTesting(resolver: JWTVerifyGetKey | null): void {
+  appleJwks = resolver;
+}
+
 /**
  * Verify a Sign in with Apple **identity token** obtained by the native app
  * and return the normalized profile. Throws on any failure — callers turn
@@ -109,7 +121,9 @@ function getAppleJwks(): ReturnType<typeof createRemoteJWKSet> {
  * account/email enumeration oracle.
  *
  * Validates (never trusts the request body for any of this):
- *  - signature against Apple's live JWKS, algorithm pinned to ES256;
+ *  - signature against Apple's live JWKS, algorithm pinned to RS256
+ *    (what Apple actually signs identity tokens with — every key at
+ *    https://appleid.apple.com/auth/keys is RSA/RS256);
  *  - issuer is exactly https://appleid.apple.com;
  *  - audience is in the configured allowlist;
  *  - exp not passed, iat within a bounded age, both with a small clock-skew
@@ -133,7 +147,13 @@ export async function verifyAppleIdentityToken(
   const { payload } = await jwtVerify(identityToken, getAppleJwks(), {
     issuer: APPLE_ISSUER,
     audience: audiences,
-    algorithms: ["ES256"],
+    // Apple signs the identity token itself with RS256 — every key at
+    // https://appleid.apple.com/auth/keys is `"kty": "RSA"` /
+    // `"alg": "RS256"`. Do not confuse this with buildAppleClientSecret()
+    // below: that's a *different* JWT — one we sign ourselves with our
+    // own EC private key (the `.p8` file) for the authorization-code
+    // exchange — and it correctly stays ES256.
+    algorithms: ["RS256"],
     clockTolerance: 60,
     maxTokenAge: "10m",
   });
