@@ -12,7 +12,7 @@ class _$CreateTopupRequestBody extends CreateTopupRequestBody {
   @override
   final String? paymentReferenceNote;
   @override
-  final String? proofObjectPath;
+  final String proofObjectPath;
 
   factory _$CreateTopupRequestBody(
           [void Function(CreateTopupRequestBodyBuilder)? updates]) =>
@@ -21,7 +21,7 @@ class _$CreateTopupRequestBody extends CreateTopupRequestBody {
   _$CreateTopupRequestBody._(
       {required this.amountRupiah,
       this.paymentReferenceNote,
-      this.proofObjectPath})
+      required this.proofObjectPath})
       : super._();
   @override
   CreateTopupRequestBody rebuild(
@@ -113,7 +113,8 @@ class CreateTopupRequestBodyBuilder
           amountRupiah: BuiltValueNullFieldError.checkNotNull(
               amountRupiah, r'CreateTopupRequestBody', 'amountRupiah'),
           paymentReferenceNote: paymentReferenceNote,
-          proofObjectPath: proofObjectPath,
+          proofObjectPath: BuiltValueNullFieldError.checkNotNull(
+              proofObjectPath, r'CreateTopupRequestBody', 'proofObjectPath'),
         );
     replace(_$result);
     return _$result;

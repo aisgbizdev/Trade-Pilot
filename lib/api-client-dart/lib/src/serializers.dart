@@ -47,6 +47,9 @@ import 'package:trade_pilot_api_client/src/model/analytics_usage_stats_country_b
 import 'package:trade_pilot_api_client/src/model/analytics_usage_stats_daily_activity_inner.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_usage_stats_device_breakdown_inner.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_usage_stats_feature_breakdown_inner.dart';
+import 'package:trade_pilot_api_client/src/model/apple_native_login_body.dart';
+import 'package:trade_pilot_api_client/src/model/apple_reauth_body.dart';
+import 'package:trade_pilot_api_client/src/model/apple_reauth_response.dart';
 import 'package:trade_pilot_api_client/src/model/auth_response.dart';
 import 'package:trade_pilot_api_client/src/model/broadcast.dart';
 import 'package:trade_pilot_api_client/src/model/broadcast_notification_body.dart';
@@ -228,6 +231,9 @@ part 'serializers.g.dart';
   AnalyticsUsageStatsDailyActivityInner,
   AnalyticsUsageStatsDeviceBreakdownInner,
   AnalyticsUsageStatsFeatureBreakdownInner,
+  AppleNativeLoginBody,
+  AppleReauthBody,
+  AppleReauthResponse,
   AuthResponse,
   Broadcast,
   BroadcastNotificationBody,

@@ -126,8 +126,20 @@ export const googleNativeLoginLimiter = buildLimiter({
     "Terlalu banyak percobaan login Google. Coba lagi dalam beberapa menit. / Too many Google login attempts. Try again in a few minutes.",
 });
 
-// POST /auth/reauth/google — per-user (mounted after requireAuth). Tighter
-// budget: a legit re-auth happens once right before a sensitive action.
+// POST /auth/apple/native — per-IP; same budget as its Google counterpart.
+export const appleNativeLoginLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak percobaan login Apple. Coba lagi dalam beberapa menit. / Too many Apple login attempts. Try again in a few minutes.",
+});
+
+// POST /auth/reauth/google and POST /auth/reauth/apple — per-user (mounted
+// after requireAuth). Tighter budget: a legit re-auth happens once right
+// before a sensitive action. Shared across both providers rather than
+// duplicated per-provider, matching how DELETE /auth/account already
+// handles either provider's reauthToken through one code path.
 export const reauthLimiter = buildLimiter({
   windowMs: 15 * 60 * 1000,
   max: 10,

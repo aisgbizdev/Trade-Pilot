@@ -18,6 +18,7 @@ import {
   forgotPasswordResetLimiter,
   googleOAuthLimiter,
   googleNativeLoginLimiter,
+  appleNativeLoginLimiter,
   reauthLimiter,
   accountDeletionLimiter,
 } from "../../middleware/rate-limit";
@@ -26,6 +27,10 @@ import {
   exchangeCodeForProfile,
   verifyGoogleIdToken,
 } from "../../lib/google-oauth";
+import {
+  verifyAppleIdentityToken,
+  exchangeAppleAuthorizationCode,
+} from "../../lib/apple-oauth";
 
 // Keep the real config/url helpers, stub only the network-touching Google
 // token calls so the tests can drive any Google profile.
@@ -40,6 +45,21 @@ vi.mock("../../lib/google-oauth", async (importActual) => {
 });
 const mockExchange = vi.mocked(exchangeCodeForProfile);
 const mockVerifyIdToken = vi.mocked(verifyGoogleIdToken);
+
+// Same pattern for Apple: keep isNativeAppleConfigured/nativeAppleAudiences
+// real (driven by env vars in the describe block below), stub only the
+// two calls that touch Apple's network (JWKS verification + the
+// authorization-code exchange).
+vi.mock("../../lib/apple-oauth", async (importActual) => {
+  const actual = await importActual<typeof import("../../lib/apple-oauth")>();
+  return {
+    ...actual,
+    verifyAppleIdentityToken: vi.fn(),
+    exchangeAppleAuthorizationCode: vi.fn(),
+  };
+});
+const mockVerifyAppleToken = vi.mocked(verifyAppleIdentityToken);
+const mockExchangeAppleCode = vi.mocked(exchangeAppleAuthorizationCode);
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `auth-harden-${RUN_ID}`;
@@ -107,6 +127,7 @@ beforeEach(() => {
   forgotPasswordResetLimiter.store.clear();
   googleOAuthLimiter.store.clear();
   googleNativeLoginLimiter.store.clear();
+  appleNativeLoginLimiter.store.clear();
   reauthLimiter.store.clear();
   accountDeletionLimiter.store.clear();
 });
@@ -891,5 +912,462 @@ describe("Google OAuth login/registration", () => {
       .get("/api/auth/me")
       .set("Authorization", `Bearer ${goUser.token}`);
     expect(meG.body.hasPassword).toBe(false);
+  });
+});
+
+describe("Sign in with Apple (native)", () => {
+  const ENV_KEYS = [
+    "APPLE_TEAM_ID",
+    "APPLE_KEY_ID",
+    "APPLE_PRIVATE_KEY",
+    "APPLE_ALLOWED_CLIENT_IDS",
+    "APPLE_NATIVE_CLIENT_ID",
+  ] as const;
+  const savedEnv: Record<string, string | undefined> = {};
+
+  beforeAll(() => {
+    for (const k of ENV_KEYS) savedEnv[k] = process.env[k];
+    process.env["APPLE_TEAM_ID"] = "TESTTEAMID1";
+    process.env["APPLE_KEY_ID"] = "TESTKEYID12";
+    // Never a real key — verifyAppleIdentityToken/exchangeAppleAuthorizationCode
+    // are both mocked in this suite, so this value is never actually used to
+    // sign anything. It only needs to be non-empty for isNativeAppleConfigured().
+    process.env["APPLE_PRIVATE_KEY"] = "test-not-a-real-key";
+    process.env["APPLE_ALLOWED_CLIENT_IDS"] = "id.tradepilot.app";
+    delete process.env["APPLE_NATIVE_CLIENT_ID"];
+  });
+
+  afterAll(() => {
+    for (const k of ENV_KEYS) {
+      const v = savedEnv[k];
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+
+  beforeEach(() => {
+    mockVerifyAppleToken.mockReset();
+    mockExchangeAppleCode.mockReset();
+    mockExchangeAppleCode.mockResolvedValue(undefined);
+  });
+
+  function appleEmail(tag: string): string {
+    return `${EMAIL_PREFIX}-a-${tag}-${randomBytes(4).toString("hex")}@example.test`;
+  }
+
+  function appleProfile(
+    over: Partial<{ appleId: string; email: string | null; emailVerified: boolean }> = {},
+  ) {
+    const email = over.email === undefined ? appleEmail("native") : over.email;
+    return {
+      appleId: over.appleId ?? `a-${randomBytes(8).toString("hex")}`,
+      email,
+      emailVerified: email ? (over.emailVerified ?? true) : false,
+      audience: "id.tradepilot.app",
+    };
+  }
+
+  const VALID_NATIVE_BODY = {
+    identityToken: "identity-token",
+    authorizationCode: "auth-code",
+    nonce: "raw-nonce",
+  };
+
+  it("POST /auth/apple/native returns 503 when Apple config is incomplete", async () => {
+    const saved = process.env["APPLE_PRIVATE_KEY"];
+    delete process.env["APPLE_PRIVATE_KEY"];
+    try {
+      const res = await request(app)
+        .post("/api/auth/apple/native")
+        .send(VALID_NATIVE_BODY);
+      expect(res.status).toBe(503);
+    } finally {
+      process.env["APPLE_PRIVATE_KEY"] = saved;
+    }
+  });
+
+  it("POST /auth/apple/native: valid token creates a new Apple account and returns {user, token}", async () => {
+    const profile = appleProfile();
+    mockVerifyAppleToken.mockResolvedValue(profile);
+
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.token).toBe("string");
+    expect(res.body.user.email).toBe(profile.email);
+    expect(res.body.user.hasPassword).toBe(false);
+    expect(typeof res.body.user.createdAt).toBe("string");
+    // The token must be a real TradePilot session, not the Apple token.
+    expect(res.body.token).not.toBe(VALID_NATIVE_BODY.identityToken);
+    // Never echoes back anything Apple-specific.
+    expect(res.body.identityToken).toBeUndefined();
+    expect(res.body.authorizationCode).toBeUndefined();
+
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, profile.email!))
+      .limit(1);
+    seededIds.push(row.id);
+    expect(row.appleId).toBe(profile.appleId);
+    expect(row.passwordHash).toBeNull();
+
+    expect(mockExchangeAppleCode).toHaveBeenCalledWith(
+      VALID_NATIVE_BODY.authorizationCode,
+      profile.audience,
+    );
+
+    const sess = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.token, res.body.token));
+    expect(sess.length).toBe(1);
+  });
+
+  it("POST /auth/apple/native: same sub on a later call reuses the same account", async () => {
+    const profile = appleProfile();
+    mockVerifyAppleToken.mockResolvedValue(profile);
+
+    const first = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    const second = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+
+    expect(first.body.user.id).toBe(second.body.user.id);
+    seededIds.push(first.body.user.id);
+    const rows = await db
+      .select({ c: users.id })
+      .from(users)
+      .where(eq(users.email, profile.email!));
+    expect(rows.length).toBe(1);
+  });
+
+  it("POST /auth/apple/native: a later login with no name/email still succeeds on sub alone", async () => {
+    const profile = appleProfile();
+    mockVerifyAppleToken.mockResolvedValue(profile);
+    const first = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    seededIds.push(first.body.user.id);
+
+    // Apple only guarantees email/name on the first authorization — a
+    // returning sign-in can omit both, but `sub` (appleId) is stable.
+    mockVerifyAppleToken.mockResolvedValue(
+      appleProfile({ appleId: profile.appleId, email: null }),
+    );
+    const second = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+
+    expect(second.status).toBe(200);
+    expect(second.body.user.id).toBe(first.body.user.id);
+    expect(second.body.user.email).toBe(profile.email);
+  });
+
+  it("POST /auth/apple/native: links a verified email onto an existing password account", async () => {
+    const existing = await createUser();
+    mockVerifyAppleToken.mockResolvedValue(
+      appleProfile({ email: existing.email }),
+    );
+
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(200);
+    expect(res.body.user.id).toBe(existing.id);
+    expect(res.body.user.hasPassword).toBe(true);
+
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, existing.id))
+      .limit(1);
+    expect(row.appleId).not.toBeNull();
+    expect(row.passwordHash).not.toBeNull();
+  });
+
+  it("POST /auth/apple/native: a verified email already linked to a different Apple sub -> 409", async () => {
+    const email = appleEmail("conflict");
+    const [row] = await db
+      .insert(users)
+      .values({
+        email,
+        appleId: `a-original-${randomBytes(6).toString("hex")}`,
+        displayName: "Owned",
+        selectedMode: "pro",
+      })
+      .returning();
+    seededIds.push(row.id);
+
+    mockVerifyAppleToken.mockResolvedValue(
+      appleProfile({ email, appleId: `a-attacker-${randomBytes(6).toString("hex")}` }),
+    );
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(409);
+
+    // The original account must not have been taken over.
+    const [unchanged] = await db.select().from(users).where(eq(users.id, row.id));
+    expect(unchanged!.appleId).toBe(row.appleId);
+  });
+
+  it("POST /auth/apple/native: parallel first-time requests for the same sub create exactly one account", async () => {
+    const profile = appleProfile();
+    mockVerifyAppleToken.mockResolvedValue(profile);
+
+    const [first, second] = await Promise.all([
+      request(app).post("/api/auth/apple/native").send(VALID_NATIVE_BODY),
+      request(app).post("/api/auth/apple/native").send(VALID_NATIVE_BODY),
+    ]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(first.body.user.id).toBe(second.body.user.id);
+
+    const rows = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, profile.email!));
+    expect(rows.length).toBe(1);
+    seededIds.push(rows[0]!.id);
+  });
+
+  it("POST /auth/apple/native: identity token that fails verification -> 401 (and never logs it)", async () => {
+    mockVerifyAppleToken.mockRejectedValue(new Error("signature verification failed"));
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/apple/native: wrong issuer -> 401", async () => {
+    mockVerifyAppleToken.mockRejectedValue(new Error("unexpected \"iss\" claim value"));
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/apple/native: wrong audience -> 401", async () => {
+    mockVerifyAppleToken.mockRejectedValue(new Error("unexpected \"aud\" claim value"));
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/apple/native: expired token -> 401", async () => {
+    mockVerifyAppleToken.mockRejectedValue(new Error('"exp" claim timestamp check failed'));
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/apple/native: wrong nonce -> 401", async () => {
+    mockVerifyAppleToken.mockRejectedValue(new Error("Apple identity token nonce mismatch"));
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/apple/native: missing nonce field -> 400 (schema rejects before verification runs)", async () => {
+    const { nonce: _omit, ...rest } = VALID_NATIVE_BODY;
+    void _omit;
+    const res = await request(app).post("/api/auth/apple/native").send(rest);
+    expect(res.status).toBe(400);
+    expect(mockVerifyAppleToken).not.toHaveBeenCalled();
+  });
+
+  it("POST /auth/apple/native: invalid/reused authorization code -> 401", async () => {
+    mockVerifyAppleToken.mockResolvedValue(appleProfile());
+    mockExchangeAppleCode.mockRejectedValue(new Error("Apple token endpoint returned 400"));
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/apple/native: email present but email_verified=false -> 401 (rejected during verification)", async () => {
+    mockVerifyAppleToken.mockRejectedValue(new Error("Apple account email is not verified"));
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/apple/native: unknown body fields -> 400", async () => {
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send({ ...VALID_NATIVE_BODY, email: "spoof@example.test" });
+    expect(res.status).toBe(400);
+    expect(mockVerifyAppleToken).not.toHaveBeenCalled();
+  });
+
+  it("POST /auth/apple/native: givenName/familyName only seed the display name on a brand-new account", async () => {
+    const profile = appleProfile();
+    mockVerifyAppleToken.mockResolvedValue(profile);
+
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send({ ...VALID_NATIVE_BODY, givenName: "  Ada  ", familyName: "Lovelace" });
+    expect(res.status).toBe(200);
+    expect(res.body.user.displayName).toBe("Ada Lovelace");
+    seededIds.push(res.body.user.id);
+
+    // A later login with a different (or missing) name must NOT overwrite
+    // the display name the account already has.
+    mockVerifyAppleToken.mockResolvedValue(
+      appleProfile({ appleId: profile.appleId, email: null }),
+    );
+    const again = await request(app)
+      .post("/api/auth/apple/native")
+      .send({ ...VALID_NATIVE_BODY, givenName: "Someone", familyName: "Else" });
+    expect(again.status).toBe(200);
+    expect(again.body.user.displayName).toBe("Ada Lovelace");
+  });
+
+  it("POST /auth/apple/native: rate limit yields 429 with Retry-After", async () => {
+    const profile = appleProfile();
+    mockVerifyAppleToken.mockResolvedValue(profile);
+    let last: request.Response | undefined;
+    for (let i = 0; i < 21; i++) {
+      last = await request(app).post("/api/auth/apple/native").send(VALID_NATIVE_BODY);
+    }
+    expect(last!.status).toBe(429);
+    expect(last!.headers["retry-after"]).toBeDefined();
+    const [row] = await db.select({ id: users.id }).from(users).where(eq(users.email, profile.email!));
+    if (row) seededIds.push(row.id);
+  });
+
+  // ---- Re-authentication + Apple-only account deletion --------------------
+
+  async function appleOnlyUser(): Promise<{ id: number; email: string; token: string; appleId: string }> {
+    const email = appleEmail("apple-only");
+    const appleId = `a-${randomBytes(10).toString("hex")}`;
+    const [row] = await db
+      .insert(users)
+      .values({ email, appleId, displayName: "AO User", selectedMode: "pro" })
+      .returning();
+    const token = `native-apple-sess-${randomBytes(10).toString("hex")}`;
+    await db.insert(sessions).values({
+      userId: row.id,
+      token,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+    seededIds.push(row.id);
+    return { id: row.id, email, token, appleId };
+  }
+
+  it("POST /auth/reauth/apple: a fresh matching identity token returns a short-lived reauthToken", async () => {
+    const u = await appleOnlyUser();
+    mockVerifyAppleToken.mockResolvedValue(
+      appleProfile({ email: u.email, appleId: u.appleId }),
+    );
+
+    const res = await request(app)
+      .post("/api/auth/reauth/apple")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send(VALID_NATIVE_BODY);
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.reauthToken).toBe("string");
+    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(new Date(res.body.expiresAt).getTime()).toBeLessThan(
+      Date.now() + 6 * 60 * 1000,
+    );
+
+    const stored = await db
+      .select()
+      .from(reauthTokens)
+      .where(eq(reauthTokens.userId, u.id));
+    expect(stored.length).toBe(1);
+    expect(stored[0]!.tokenHash).not.toBe(res.body.reauthToken);
+    expect(stored[0]!.purpose).toBe("delete_account");
+  });
+
+  it("POST /auth/reauth/apple: a token for a different Apple identity -> 401", async () => {
+    const u = await appleOnlyUser();
+    mockVerifyAppleToken.mockResolvedValue(
+      appleProfile({ appleId: `a-someone-else-${randomBytes(4).toString("hex")}` }),
+    );
+    const res = await request(app)
+      .post("/api/auth/reauth/apple")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /auth/reauth/apple: a Google-only account's reauth token cannot be reused here / this route requires auth", async () => {
+    const res = await request(app)
+      .post("/api/auth/reauth/apple")
+      .send(VALID_NATIVE_BODY);
+    expect(res.status).toBe(401);
+  });
+
+  it("DELETE /auth/account: an Apple-only account cannot be deleted without a fresh reauth", async () => {
+    const u = await appleOnlyUser();
+    const res = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({});
+    expect(res.status).toBe(400);
+
+    const stillThere = await db.select().from(users).where(eq(users.id, u.id));
+    expect(stillThere.length).toBe(1);
+  });
+
+  it("DELETE /auth/account: succeeds with a valid single-use Apple reauthToken (and it can't be reused, and apple_id is gone with the row)", async () => {
+    const u = await appleOnlyUser();
+    mockVerifyAppleToken.mockResolvedValue(
+      appleProfile({ email: u.email, appleId: u.appleId }),
+    );
+    const reauth = await request(app)
+      .post("/api/auth/reauth/apple")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send(VALID_NATIVE_BODY);
+    const reauthToken = reauth.body.reauthToken as string;
+
+    const del = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ reauthToken });
+    expect(del.status).toBe(200);
+
+    const gone = await db.select().from(users).where(eq(users.id, u.id));
+    expect(gone.length).toBe(0);
+    const leftover = await db
+      .select()
+      .from(reauthTokens)
+      .where(eq(reauthTokens.userId, u.id));
+    expect(leftover.length).toBe(0);
+
+    // Reusing the same (already-consumed) reauthToken must fail even for a
+    // brand-new account — it's tied to the deleted user's id.
+    const reuse = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ reauthToken });
+    expect(reuse.status).toBe(401);
+  });
+
+  it("no Apple credential (token, nonce, authorization code, or private key) ever appears in a response body", async () => {
+    const profile = appleProfile();
+    mockVerifyAppleToken.mockResolvedValue(profile);
+    const res = await request(app)
+      .post("/api/auth/apple/native")
+      .send(VALID_NATIVE_BODY);
+    seededIds.push(res.body.user.id);
+    const serialized = JSON.stringify(res.body);
+    expect(serialized).not.toContain(VALID_NATIVE_BODY.identityToken);
+    expect(serialized).not.toContain(VALID_NATIVE_BODY.authorizationCode);
+    expect(serialized).not.toContain(VALID_NATIVE_BODY.nonce);
+    expect(serialized).not.toContain(process.env["APPLE_PRIVATE_KEY"]!);
   });
 });

@@ -149,6 +149,11 @@ export const users = pgTable("users", {
   // with Google — either on first sign-up or when an existing email
   // account links Google. Null for password-only accounts.
   googleId: text("google_id").unique(),
+  // Apple account subject id ("sub" claim of a verified Sign in with Apple
+  // identity token). Same shape/rules as googleId: set on first Apple
+  // sign-in or when an existing email account links Apple; null otherwise.
+  // See lib/apple-account.ts for the account-linking rules.
+  appleId: text("apple_id").unique(),
   displayName: text("display_name").notNull(),
   avatarUrl: text("avatar_url"),
   role: roleEnum("role").notNull().default("user"),

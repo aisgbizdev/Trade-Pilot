@@ -23,6 +23,7 @@ import {
   accountDeletionLimiter,
   googleOAuthLimiter,
   googleNativeLoginLimiter,
+  appleNativeLoginLimiter,
   reauthLimiter,
 } from "../middleware/rate-limit";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
@@ -39,6 +40,16 @@ import {
   resolveGoogleUser,
   GoogleAccountConflictError,
 } from "../lib/google-account";
+import {
+  isNativeAppleConfigured,
+  verifyAppleIdentityToken,
+  exchangeAppleAuthorizationCode,
+} from "../lib/apple-oauth";
+import {
+  resolveAppleUser,
+  AppleAccountConflictError,
+  AppleAccountUnavailableError,
+} from "../lib/apple-account";
 import { issueReauthToken, consumeReauthToken } from "../lib/reauth";
 
 const router = Router();
@@ -493,6 +504,206 @@ router.post(
   },
 );
 
+// ---------------------------------------------------------------------------
+// Native Sign in with Apple (mobile). The app runs Apple's own
+// authorization UI and posts the resulting identity token + authorization
+// code here, along with the raw nonce it generated (Apple only ever sees
+// the SHA-256 hash of it — see lib/apple-oauth.ts). Verification, account
+// linking, session issuance, and error shape all mirror
+// POST /auth/google/native above; see lib/apple-oauth.ts and
+// lib/apple-account.ts for the Apple-specific rules.
+// Config: APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY,
+// APPLE_ALLOWED_CLIENT_IDS (see lib/apple-oauth.ts).
+// ---------------------------------------------------------------------------
+
+// A trimmed, control-character-stripped, length-capped optional name part.
+// Apple only ever sends givenName/familyName on the very first
+// authorization for a given app — used solely as a display-name candidate
+// when creating a brand-new account (see lib/apple-account.ts).
+function stripControlCharacters(value: string): string {
+  return Array.from(value)
+    .filter((ch) => {
+      const code = ch.codePointAt(0) ?? 0;
+      return code > 0x1f && code !== 0x7f;
+    })
+    .join("");
+}
+
+const appleNamePart = z
+  .string()
+  .trim()
+  .max(100, "Nama terlalu panjang")
+  .transform(stripControlCharacters)
+  .optional();
+
+const appleNativeSchema = z
+  .object({
+    identityToken: z.string().min(1, "identityToken wajib diisi").max(8000),
+    authorizationCode: z.string().min(1, "authorizationCode wajib diisi").max(2048),
+    nonce: z.string().min(1, "nonce wajib diisi").max(512),
+    givenName: appleNamePart,
+    familyName: appleNamePart,
+  })
+  .strict();
+
+router.post(
+  "/auth/apple/native",
+  appleNativeLoginLimiter,
+  async (req, res) => {
+    if (!isNativeAppleConfigured()) {
+      res.status(503).json({ error: "Login Apple native belum dikonfigurasi." });
+      return;
+    }
+    const parsed = appleNativeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Permintaan tidak valid." });
+      return;
+    }
+
+    let profile;
+    try {
+      profile = await verifyAppleIdentityToken(parsed.data.identityToken, parsed.data.nonce);
+    } catch (err) {
+      // Never log the raw token/nonce/code — `err` here is our own thrown
+      // Error with a short reason string, never the credential itself.
+      logger.warn(
+        { reason: err instanceof Error ? err.message : "verify_failed" },
+        "[auth] Apple native identity token verification failed",
+      );
+      res.status(401).json({
+        error: "Login Apple tidak dapat diverifikasi. Silakan coba lagi.",
+      });
+      return;
+    }
+
+    try {
+      await exchangeAppleAuthorizationCode(parsed.data.authorizationCode, profile.audience);
+    } catch (err) {
+      logger.warn(
+        { reason: err instanceof Error ? err.message : "exchange_failed" },
+        "[auth] Apple authorization code exchange failed",
+      );
+      res.status(401).json({
+        error: "Login Apple tidak dapat diverifikasi. Silakan coba lagi.",
+      });
+      return;
+    }
+
+    let user: typeof users.$inferSelect;
+    let isNewUser: boolean;
+    try {
+      ({ user, isNewUser } = await resolveAppleUser(profile, {
+        givenName: parsed.data.givenName ?? null,
+        familyName: parsed.data.familyName ?? null,
+      }));
+    } catch (err) {
+      if (err instanceof AppleAccountConflictError) {
+        res.status(409).json({
+          error: "Email ini sudah tertaut ke akun Apple lain.",
+        });
+        return;
+      }
+      if (err instanceof AppleAccountUnavailableError) {
+        res.status(401).json({
+          error: "Login Apple tidak dapat diverifikasi. Silakan coba lagi.",
+        });
+        return;
+      }
+      logger.error({ err }, "[auth] Apple native user upsert failed");
+      res.status(500).json({ error: "Terjadi kesalahan. Silakan coba lagi." });
+      return;
+    }
+
+    const token = generateToken();
+    const expiresAt = getSessionExpiry(true);
+    await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+
+    if (isNewUser) void notifyAdminsUserCreated(user.displayName);
+    void notifyLoginAlert(user.id);
+
+    res.json({ token, user: serializeUser(user) });
+  },
+);
+
+// Re-authentication for sensitive operations on an Apple-only account —
+// same purpose and same consumer (DELETE /auth/account) as
+// POST /auth/reauth/google above, just proven with a fresh Apple identity
+// token + authorization code instead of a fresh Google ID token. The two
+// providers share the same `reauthLimiter` and the same underlying
+// reauth_tokens table/purpose; a token this issues can only ever be
+// consumed by the same userId it was issued to, so a Google reauth token
+// can't authenticate an Apple account's deletion or vice versa.
+const appleReauthSchema = z
+  .object({
+    identityToken: z.string().min(1, "identityToken wajib diisi").max(8000),
+    authorizationCode: z.string().min(1, "authorizationCode wajib diisi").max(2048),
+    nonce: z.string().min(1, "nonce wajib diisi").max(512),
+  })
+  .strict();
+
+router.post(
+  "/auth/reauth/apple",
+  requireAuth,
+  reauthLimiter,
+  async (req: AuthRequest, res) => {
+    if (!isNativeAppleConfigured()) {
+      res.status(503).json({ error: "Verifikasi Apple belum dikonfigurasi." });
+      return;
+    }
+    const parsed = appleReauthSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Permintaan tidak valid." });
+      return;
+    }
+
+    const [user] = await db
+      .select({ id: users.id, appleId: users.appleId })
+      .from(users)
+      .where(eq(users.id, req.userId!))
+      .limit(1);
+    if (!user) {
+      res.status(404).json({ error: "User tidak ditemukan" });
+      return;
+    }
+
+    let profile;
+    try {
+      profile = await verifyAppleIdentityToken(parsed.data.identityToken, parsed.data.nonce);
+    } catch {
+      res.status(401).json({
+        error: "Verifikasi Apple gagal. Silakan coba lagi.",
+      });
+      return;
+    }
+
+    try {
+      await exchangeAppleAuthorizationCode(parsed.data.authorizationCode, profile.audience);
+    } catch {
+      res.status(401).json({
+        error: "Verifikasi Apple gagal. Silakan coba lagi.",
+      });
+      return;
+    }
+
+    // The fresh token must belong to the SAME Apple identity as the
+    // signed-in account — unlike Google, never fall back to matching by
+    // email here: an account with no apple_id yet has nothing to reauth
+    // *as* Apple in the first place.
+    if (!user.appleId || user.appleId !== profile.appleId) {
+      res.status(401).json({
+        error: "Akun Apple tidak cocok dengan akun yang sedang masuk.",
+      });
+      return;
+    }
+
+    const { token, expiresAt } = await issueReauthToken(
+      user.id,
+      "delete_account",
+    );
+    res.json({ reauthToken: token, expiresAt: expiresAt.toISOString() });
+  },
+);
+
 router.post("/auth/logout", requireAuth, async (req: AuthRequest, res) => {
   const token = req.sessionToken;
   if (token) {
@@ -927,11 +1138,25 @@ router.post("/auth/forgot-password/reset", forgotPasswordResetLimiter, async (re
 // operation (register/login/logout/profile/password/security-question)
 // already lives in this file, and this is one more of the same kind, not a
 // new domain.
+// Apple-only accounts reuse this same `reauthToken` branch: it's issued by
+// POST /auth/reauth/apple (same purpose, same table, same consumeReauthToken
+// call below) exactly like a Google-only account's token from
+// POST /auth/reauth/google. Apple credential revocation
+// (POST https://appleid.apple.com/auth/revoke) is intentionally NOT called
+// here: it requires a stored Apple refresh token, and this codebase has no
+// encrypted-at-rest secret storage to hold one safely yet (see
+// lib/apple-oauth.ts's exchangeAppleAuthorizationCode, which deliberately
+// discards the refresh_token Apple returns rather than persist it in
+// plaintext). The user's own `apple_id` column is deleted along with the
+// rest of the row below — there is no separate Apple identity/credential
+// row left behind. Revocation should be added once encrypted secret
+// storage exists; see the deployment notes for this blocker.
 const deleteAccountSchema = z
   .object({
     // Which one is required depends on the account (enforced below):
-    //  - password account  -> currentPassword
-    //  - Google-only account -> reauthToken from POST /auth/reauth/google
+    //  - password account       -> currentPassword
+    //  - Google/Apple-only account -> reauthToken from
+    //    POST /auth/reauth/google or POST /auth/reauth/apple
     currentPassword: z
       .string({ invalid_type_error: "Password tidak valid" })
       .min(1, "Password wajib diisi")
@@ -973,8 +1198,9 @@ router.delete(
     // Re-authentication proof. A live session alone is not enough to
     // delete an account.
     //  - password account   -> the current password
-    //  - Google-only account -> a single-use reauthToken issued by
-    //    POST /auth/reauth/google after a fresh Google ID token
+    //  - Google/Apple-only account -> a single-use reauthToken issued by
+    //    POST /auth/reauth/google or POST /auth/reauth/apple after a
+    //    fresh Google ID token / Apple identity token + authorization code
     if (user.passwordHash) {
       if (!parsed.data.currentPassword) {
         res.status(400).json({ error: "Password wajib diisi" });

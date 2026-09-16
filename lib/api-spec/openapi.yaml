@@ -525,6 +525,146 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/apple/native:
+    post:
+      operationId: loginWithAppleNative
+      tags: [auth]
+      summary: Exchange a native Sign in with Apple identity token for a TradePilot session
+      description: |
+        For mobile apps that obtain an **identity token** + **authorization
+        code** with Apple's native Sign in with Apple SDK. The client
+        generates a random raw nonce, sends its SHA-256 hash to Apple, and
+        posts the raw nonce here alongside the identity token.
+
+        The server verifies the identity token's signature against Apple's
+        published JWKS (never a bare decode), its issuer, audience (against
+        `APPLE_ALLOWED_CLIENT_IDS`), expiry, and that the token's `nonce`
+        claim equals SHA-256(raw nonce) — then independently exchanges the
+        authorization code with Apple's own token endpoint as a second,
+        server-to-server proof that it is genuine, unexpired, and unused.
+        It then upserts the account (match apple_id → link by verified
+        email → create) and returns a normal TradePilot Bearer session. No
+        cookie is set or required. The response never contains the Apple
+        identity token, authorization code, or any Apple token-endpoint
+        credential.
+
+        `givenName`/`familyName` are only ever used as a display-name
+        candidate when creating a brand-new account — Apple only sends them
+        on the very first authorization for this app, and a later login
+        succeeds on `sub` alone even with no name or email in the token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppleNativeLoginBody"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Missing/invalid body or unknown fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: >-
+            Identity token signature/issuer/audience/nonce invalid or
+            expired, email present but not verified, or the authorization
+            code could not be exchanged (invalid, expired, or already used)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email is already linked to a different Apple account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema: { type: integer }
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Native Sign in with Apple not configured on this deployment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/reauth/apple:
+    post:
+      operationId: reauthenticateWithApple
+      tags: [auth]
+      summary: Prove identity with a fresh Apple identity token for a sensitive operation
+      description: |
+        A live session alone is not sufficient for sensitive operations on
+        an Apple-only account. The client repeats the native Sign in with
+        Apple flow to obtain a **fresh** identity token + authorization
+        code + raw nonce and posts them here; on success the server returns
+        a short-lived (≤5 min), single-use `reauthToken` bound to the user
+        and to the `delete_account` purpose — the same token shape and the
+        same consumer (DELETE /auth/account) as POST /auth/reauth/google.
+        The Apple `sub` in the fresh token must match the signed-in
+        account's stored `apple_id`.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppleReauthBody"
+      responses:
+        "200":
+          description: Re-authentication token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppleReauthResponse"
+        "400":
+          description: Missing/invalid body or unknown fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: >-
+            Not authenticated, token/code invalid, or the Apple identity
+            does not match the signed-in account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema: { type: integer }
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Native Sign in with Apple not configured on this deployment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /auth/logout:
     post:
       operationId: logout
@@ -3580,8 +3720,9 @@ components:
           type: boolean
           description: >-
             True when the account has a local password usable for login and
-            for re-authentication. False for Google-only accounts (use
-            POST /auth/reauth/google for sensitive operations).
+            for re-authentication. False for Google-only or Apple-only
+            accounts (use POST /auth/reauth/google or
+            POST /auth/reauth/apple for sensitive operations).
         createdAt:
           type: string
           format: date-time
@@ -3804,6 +3945,71 @@ components:
         - idToken
 
     GoogleReauthResponse:
+      type: object
+      properties:
+        reauthToken:
+          type: string
+          description: Short-lived, single-use token for one sensitive operation.
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - reauthToken
+        - expiresAt
+
+    AppleNativeLoginBody:
+      type: object
+      additionalProperties: false
+      properties:
+        identityToken:
+          type: string
+          maxLength: 8000
+          description: Apple identity token (JWT) from the device's native Sign in with Apple SDK. Never logged.
+        authorizationCode:
+          type: string
+          maxLength: 2048
+          description: Apple authorization code from the same native sign-in. Never logged.
+        nonce:
+          type: string
+          maxLength: 512
+          description: >-
+            The RAW nonce the client generated before sending its SHA-256
+            hash to Apple. Never logged.
+        givenName:
+          type: string
+          maxLength: 100
+          description: Optional, only present on the first authorization. Used only as a display-name candidate when creating a brand-new account.
+        familyName:
+          type: string
+          maxLength: 100
+          description: Optional, only present on the first authorization. Used only as a display-name candidate when creating a brand-new account.
+      required:
+        - identityToken
+        - authorizationCode
+        - nonce
+
+    AppleReauthBody:
+      type: object
+      additionalProperties: false
+      properties:
+        identityToken:
+          type: string
+          maxLength: 8000
+          description: A FRESH Apple identity token for the same account. Never logged.
+        authorizationCode:
+          type: string
+          maxLength: 2048
+          description: A FRESH Apple authorization code from the same sign-in. Never logged.
+        nonce:
+          type: string
+          maxLength: 512
+          description: The RAW nonce used for this fresh sign-in. Never logged.
+      required:
+        - identityToken
+        - authorizationCode
+        - nonce
+
+    AppleReauthResponse:
       type: object
       properties:
         reauthToken:

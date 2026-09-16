@@ -103,8 +103,10 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**getForgotPasswordQuestion**](doc/AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /auth/me | Get current user
 [*AuthApi*](doc/AuthApi.md) | [**login**](doc/AuthApi.md#login) | **POST** /auth/login | Login user
+[*AuthApi*](doc/AuthApi.md) | [**loginWithAppleNative**](doc/AuthApi.md#loginwithapplenative) | **POST** /auth/apple/native | Exchange a native Sign in with Apple identity token for a TradePilot session
 [*AuthApi*](doc/AuthApi.md) | [**loginWithGoogleNative**](doc/AuthApi.md#loginwithgooglenative) | **POST** /auth/google/native | Exchange a native-app Google ID token for a TradePilot session
 [*AuthApi*](doc/AuthApi.md) | [**logout**](doc/AuthApi.md#logout) | **POST** /auth/logout | Logout user
+[*AuthApi*](doc/AuthApi.md) | [**reauthenticateWithApple**](doc/AuthApi.md#reauthenticatewithapple) | **POST** /auth/reauth/apple | Prove identity with a fresh Apple identity token for a sensitive operation
 [*AuthApi*](doc/AuthApi.md) | [**reauthenticateWithGoogle**](doc/AuthApi.md#reauthenticatewithgoogle) | **POST** /auth/reauth/google | Prove identity with a fresh Google ID token for a sensitive operation
 [*AuthApi*](doc/AuthApi.md) | [**register**](doc/AuthApi.md#register) | **POST** /auth/register | Register new user
 [*AuthApi*](doc/AuthApi.md) | [**resetPassword**](doc/AuthApi.md#resetpassword) | **POST** /auth/forgot-password/reset | Reset password with token
@@ -206,6 +208,9 @@ Class | Method | HTTP request | Description
  - [AnalyticsUsageStatsDailyActivityInner](doc/AnalyticsUsageStatsDailyActivityInner.md)
  - [AnalyticsUsageStatsDeviceBreakdownInner](doc/AnalyticsUsageStatsDeviceBreakdownInner.md)
  - [AnalyticsUsageStatsFeatureBreakdownInner](doc/AnalyticsUsageStatsFeatureBreakdownInner.md)
+ - [AppleNativeLoginBody](doc/AppleNativeLoginBody.md)
+ - [AppleReauthBody](doc/AppleReauthBody.md)
+ - [AppleReauthResponse](doc/AppleReauthResponse.md)
  - [AuthResponse](doc/AuthResponse.md)
  - [Broadcast](doc/Broadcast.md)
  - [BroadcastNotificationBody](doc/BroadcastNotificationBody.md)

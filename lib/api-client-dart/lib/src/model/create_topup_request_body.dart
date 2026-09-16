@@ -13,7 +13,7 @@ part 'create_topup_request_body.g.dart';
 /// Properties:
 /// * [amountRupiah] 
 /// * [paymentReferenceNote] 
-/// * [proofObjectPath] 
+/// * [proofObjectPath] - Object path of the uploaded transfer-proof image. Required — admin review has no other way to verify a manual transfer.
 @BuiltValue()
 abstract class CreateTopupRequestBody implements Built<CreateTopupRequestBody, CreateTopupRequestBodyBuilder> {
   @BuiltValueField(wireName: r'amountRupiah')
@@ -22,8 +22,9 @@ abstract class CreateTopupRequestBody implements Built<CreateTopupRequestBody, C
   @BuiltValueField(wireName: r'paymentReferenceNote')
   String? get paymentReferenceNote;
 
+  /// Object path of the uploaded transfer-proof image. Required — admin review has no other way to verify a manual transfer.
   @BuiltValueField(wireName: r'proofObjectPath')
-  String? get proofObjectPath;
+  String get proofObjectPath;
 
   CreateTopupRequestBody._();
 
@@ -60,13 +61,11 @@ class _$CreateTopupRequestBodySerializer implements PrimitiveSerializer<CreateTo
         specifiedType: const FullType(String),
       );
     }
-    if (object.proofObjectPath != null) {
-      yield r'proofObjectPath';
-      yield serializers.serialize(
-        object.proofObjectPath,
-        specifiedType: const FullType(String),
-      );
-    }
+    yield r'proofObjectPath';
+    yield serializers.serialize(
+      object.proofObjectPath,
+      specifiedType: const FullType(String),
+    );
   }
 
   @override
@@ -108,9 +107,8 @@ class _$CreateTopupRequestBodySerializer implements PrimitiveSerializer<CreateTo
         case r'proofObjectPath':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
+            specifiedType: const FullType(String),
+          ) as String;
           result.proofObjectPath = valueDes;
           break;
         default:

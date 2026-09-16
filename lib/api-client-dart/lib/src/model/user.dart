@@ -20,7 +20,7 @@ part 'user.g.dart';
 /// * [selectedMode] 
 /// * [themePreference] 
 /// * [onboardingCompleted] 
-/// * [hasPassword] - True when the account has a local password usable for login and for re-authentication. False for Google-only accounts (use POST /auth/reauth/google for sensitive operations).
+/// * [hasPassword] - True when the account has a local password usable for login and for re-authentication. False for Google-only or Apple-only accounts (use POST /auth/reauth/google or POST /auth/reauth/apple for sensitive operations).
 /// * [createdAt] 
 @BuiltValue()
 abstract class User implements Built<User, UserBuilder> {
@@ -52,7 +52,7 @@ abstract class User implements Built<User, UserBuilder> {
   @BuiltValueField(wireName: r'onboardingCompleted')
   bool get onboardingCompleted;
 
-  /// True when the account has a local password usable for login and for re-authentication. False for Google-only accounts (use POST /auth/reauth/google for sensitive operations).
+  /// True when the account has a local password usable for login and for re-authentication. False for Google-only or Apple-only accounts (use POST /auth/reauth/google or POST /auth/reauth/apple for sensitive operations).
   @BuiltValueField(wireName: r'hasPassword')
   bool get hasPassword;
 

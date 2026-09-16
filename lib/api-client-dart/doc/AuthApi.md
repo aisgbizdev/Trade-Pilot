@@ -15,8 +15,10 @@ Method | HTTP request | Description
 [**getForgotPasswordQuestion**](AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [**getMe**](AuthApi.md#getme) | **GET** /auth/me | Get current user
 [**login**](AuthApi.md#login) | **POST** /auth/login | Login user
+[**loginWithAppleNative**](AuthApi.md#loginwithapplenative) | **POST** /auth/apple/native | Exchange a native Sign in with Apple identity token for a TradePilot session
 [**loginWithGoogleNative**](AuthApi.md#loginwithgooglenative) | **POST** /auth/google/native | Exchange a native-app Google ID token for a TradePilot session
 [**logout**](AuthApi.md#logout) | **POST** /auth/logout | Logout user
+[**reauthenticateWithApple**](AuthApi.md#reauthenticatewithapple) | **POST** /auth/reauth/apple | Prove identity with a fresh Apple identity token for a sensitive operation
 [**reauthenticateWithGoogle**](AuthApi.md#reauthenticatewithgoogle) | **POST** /auth/reauth/google | Prove identity with a fresh Google ID token for a sensitive operation
 [**register**](AuthApi.md#register) | **POST** /auth/register | Register new user
 [**resetPassword**](AuthApi.md#resetpassword) | **POST** /auth/forgot-password/reset | Reset password with token
@@ -268,6 +270,49 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **loginWithAppleNative**
+> AuthResponse loginWithAppleNative(appleNativeLoginBody)
+
+Exchange a native Sign in with Apple identity token for a TradePilot session
+
+For mobile apps that obtain an **identity token** + **authorization code** with Apple's native Sign in with Apple SDK. The client generates a random raw nonce, sends its SHA-256 hash to Apple, and posts the raw nonce here alongside the identity token.  The server verifies the identity token's signature against Apple's published JWKS (never a bare decode), its issuer, audience (against `APPLE_ALLOWED_CLIENT_IDS`), expiry, and that the token's `nonce` claim equals SHA-256(raw nonce) — then independently exchanges the authorization code with Apple's own token endpoint as a second, server-to-server proof that it is genuine, unexpired, and unused. It then upserts the account (match apple_id → link by verified email → create) and returns a normal TradePilot Bearer session. No cookie is set or required. The response never contains the Apple identity token, authorization code, or any Apple token-endpoint credential.  `givenName`/`familyName` are only ever used as a display-name candidate when creating a brand-new account — Apple only sends them on the very first authorization for this app, and a later login succeeds on `sub` alone even with no name or email in the token. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAuthApi();
+final AppleNativeLoginBody appleNativeLoginBody = ; // AppleNativeLoginBody | 
+
+try {
+    final response = api.loginWithAppleNative(appleNativeLoginBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->loginWithAppleNative: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appleNativeLoginBody** | [**AppleNativeLoginBody**](AppleNativeLoginBody.md)|  | 
+
+### Return type
+
+[**AuthResponse**](AuthResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **loginWithGoogleNative**
 > AuthResponse loginWithGoogleNative(googleNativeLoginBody)
 
@@ -344,6 +389,53 @@ No authorization required
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **reauthenticateWithApple**
+> AppleReauthResponse reauthenticateWithApple(appleReauthBody)
+
+Prove identity with a fresh Apple identity token for a sensitive operation
+
+A live session alone is not sufficient for sensitive operations on an Apple-only account. The client repeats the native Sign in with Apple flow to obtain a **fresh** identity token + authorization code + raw nonce and posts them here; on success the server returns a short-lived (≤5 min), single-use `reauthToken` bound to the user and to the `delete_account` purpose — the same token shape and the same consumer (DELETE /auth/account) as POST /auth/reauth/google. The Apple `sub` in the fresh token must match the signed-in account's stored `apple_id`. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+// TODO Configure API key authorization: sessionCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKeyPrefix = 'Bearer';
+
+final api = TradePilotApiClient().getAuthApi();
+final AppleReauthBody appleReauthBody = ; // AppleReauthBody | 
+
+try {
+    final response = api.reauthenticateWithApple(appleReauthBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->reauthenticateWithApple: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appleReauthBody** | [**AppleReauthBody**](AppleReauthBody.md)|  | 
+
+### Return type
+
+[**AppleReauthResponse**](AppleReauthResponse.md)
+
+### Authorization
+
+[sessionCookie](../README.md#sessionCookie), [bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
