@@ -8,6 +8,7 @@ out-tsc
 .expo
 .expo-shared
 .env
+.replit
 # dependencies
 node_modules
 
