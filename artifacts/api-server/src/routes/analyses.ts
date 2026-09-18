@@ -47,7 +47,13 @@ import { detectGuardrailSignals, GUARDRAIL_KINDS, type GuardrailKind } from "../
 import { guardrailEvents } from "@workspace/db/schema";
 import { z } from "zod";
 import { awardProgression, revokeProgressionEvidence, riskWaitSourceEventId } from "../lib/progression";
-import { applyCreditLedgerEntry, CREDIT_BALANCE_LOCK_NAMESPACE, getCreditBalanceForUser } from "../lib/credits";
+import {
+  applyCreditLedgerEntry,
+  consumeFreeTimeframeSwitch,
+  CREDIT_BALANCE_LOCK_NAMESPACE,
+  getCreditBalanceForUser,
+  isEligibleForFreeTimeframeSwitch,
+} from "../lib/credits";
 
 let aiErrorCount = 0;
 let aiErrorWindowStart = Date.now();
@@ -568,7 +574,12 @@ type QuotaOutcome =
   | { kind: "aiError" };
 
 router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
-  const { instrument, timeframe, mode, userInputContext } = req.body;
+  // isTimeframeSwitch: an internal-only hint (not part of the public
+  // OpenAPI contract) set by the "Ganti Timeframe" quick-switch on the
+  // frontend. It never changes hourly/daily quota behavior — it only
+  // makes this request eligible for the free-timeframe-switch credit
+  // bonus (see isEligibleForFreeTimeframeSwitch in lib/credits.ts).
+  const { instrument, timeframe, mode, userInputContext, isTimeframeSwitch } = req.body;
 
   if (!instrument || !timeframe || !mode) {
     res.status(400).json({ error: "Instrumen, timeframe, dan mode wajib diisi" });
@@ -778,14 +789,19 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       // successful, inserted analysis. Deducting up front would charge
       // the user for analyses that fail at the AI step.
       let willConsumeCredit = false;
+      let usingFreeTimeframeSwitch = false;
       if (hourlyCount >= perHour || dailyCount >= perDay) {
-        const balance = await getCreditBalanceForUser(userId);
-        if (balance <= 0) {
-          // Unchanged existing behavior: no credits, block exactly as before.
-          if (hourlyCount >= perHour) return { kind: "hour", used: hourlyCount, limit: perHour };
-          return { kind: "day", used: dailyCount, limit: perDay };
+        if (isTimeframeSwitch === true && (await isEligibleForFreeTimeframeSwitch(tx, userId))) {
+          usingFreeTimeframeSwitch = true;
+        } else {
+          const balance = await getCreditBalanceForUser(userId);
+          if (balance <= 0) {
+            // Unchanged existing behavior: no credits, block exactly as before.
+            if (hourlyCount >= perHour) return { kind: "hour", used: hourlyCount, limit: perHour };
+            return { kind: "day", used: dailyCount, limit: perDay };
+          }
+          willConsumeCredit = true;
         }
-        willConsumeCredit = true;
       }
 
       let aiResult: AIResult;
@@ -840,6 +856,8 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           sourceEventId: `analysis:${analysis.id}`,
           analysisId: analysis.id,
         });
+      } else if (usingFreeTimeframeSwitch) {
+        await consumeFreeTimeframeSwitch(tx, userId);
       }
       return { kind: "ok", analysis, creditConsumed: willConsumeCredit, creditBalance: creditBalanceAfter };
     });

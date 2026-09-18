@@ -301,6 +301,14 @@ export const users = pgTable("users", {
   quietHoursEnd: text("quiet_hours_end").notNull().default("07:00"),
   notificationTimezone: text("notification_timezone").notNull().default("Asia/Jakarta"),
   progressionNotificationsEnabled: boolean("progression_notifications_enabled").notNull().default(true),
+  // Lifetime counter for the "free timeframe switch" perk: once a user has
+  // ever had a topup approved (credit_ledger source "topup_approval"), the
+  // first FREE_TIMEFRAME_SWITCH_LIMIT (20) timeframe-switch re-analyses
+  // skip credit consumption even after the free hourly/daily quota is
+  // exhausted. Enforced entirely server-side in POST /analyses — never
+  // exposed to the client as a visible counter/badge. See
+  // `lib/timeframe-switch-bonus.ts`.
+  freeTimeframeSwitchesUsed: integer("free_timeframe_switches_used").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

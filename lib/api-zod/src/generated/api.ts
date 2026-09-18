@@ -1828,6 +1828,12 @@ export const CreateAnalysisBody = zod.object({
   timeframe: zod.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"]),
   userInputContext: zod.string().optional(),
   mode: zod.enum(["beginner", "pro"]),
+  isTimeframeSwitch: zod
+    .boolean()
+    .optional()
+    .describe(
+      'Internal hint set only by the \"Ganti Timeframe\" quick-switch — marks this request as eligible for the free-timeframe-switch credit bonus once the free hourly\/daily quota is exhausted. Never affects quota itself; omit for a fresh\/manual analysis.',
+    ),
 });
 
 export const CreateAnalysisResponse = zod
