@@ -42,10 +42,17 @@ const privateKey = (process.env["FIREBASE_PRIVATE_KEY"] || "").replace(/\\n/g, "
 export const nativePushConfigured = Boolean(projectId && clientEmail && privateKey);
 
 if (!nativePushConfigured) {
+  // Named per-variable so a deploy log alone tells you exactly which
+  // Secret is missing — never the values themselves, just presence.
+  const missing = [
+    !projectId && "FIREBASE_PROJECT_ID",
+    !clientEmail && "FIREBASE_CLIENT_EMAIL",
+    !privateKey && "FIREBASE_PRIVATE_KEY",
+  ].filter((v): v is string => Boolean(v));
   logger.warn(
-    "Native push (FCM) disabled — FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/" +
-      "FIREBASE_PRIVATE_KEY incomplete. Set all three (from the Firebase " +
-      "service-account JSON) to enable delivery.",
+    { missing },
+    "Native push (FCM) disabled — missing required env var(s). Set all three " +
+      "(from the Firebase service-account JSON) as production Secrets to enable delivery.",
   );
 }
 
