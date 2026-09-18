@@ -11,11 +11,12 @@ part 'create_topup_request_body.g.dart';
 /// CreateTopupRequestBody
 ///
 /// Properties:
-/// * [amountRupiah] 
+/// * [amountRupiah] - Must match the amountRupiah of one of the packages from GET /topups/config exactly.
 /// * [paymentReferenceNote] 
 /// * [proofObjectPath] - Object path of the uploaded transfer-proof image. Required — admin review has no other way to verify a manual transfer.
 @BuiltValue()
 abstract class CreateTopupRequestBody implements Built<CreateTopupRequestBody, CreateTopupRequestBodyBuilder> {
+  /// Must match the amountRupiah of one of the packages from GET /topups/config exactly.
   @BuiltValueField(wireName: r'amountRupiah')
   int get amountRupiah;
 

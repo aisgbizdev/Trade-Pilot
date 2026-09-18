@@ -131,7 +131,7 @@ paths:
     get:
       operationId: getTopupConfig
       tags: [topups]
-      summary: Get the current Rupiah-to-credit conversion rate and QRIS image URL
+      summary: Get the fixed top-up packages and QRIS image URL
       responses:
         "200":
           description: Top-up configuration
@@ -220,25 +220,6 @@ paths:
         "409":
           description: Request already reviewed
           content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
-  /admin/topups/config:
-    patch:
-      operationId: updateTopupConfig
-      tags: [admin]
-      summary: Set the Rupiah-to-credit conversion rate
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateTopupConfigBody" } } }
-      responses:
-        "200":
-          description: Updated top-up configuration
-          content: { application/json: { schema: { $ref: "#/components/schemas/TopupConfig" } } }
-        "400":
-          description: Invalid rate
-          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
-        "403":
-          description: Forbidden
-          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
-
   /admin/topups/summary:
     get:
       operationId: getTopupSummary
@@ -4739,14 +4720,27 @@ components:
           required: [balance]
       required: [unlimited, hourly, daily, credits]
 
+    TopupPackageOption:
+      type: object
+      description: One fixed top-up package (see lib/credits.ts) — bigger packages give a better effective per-credit rate.
+      properties:
+        amountRupiah:
+          type: integer
+        credits:
+          type: integer
+      required: [amountRupiah, credits]
+
     TopupConfig:
       type: object
       properties:
-        rupiahPerCredit:
-          type: integer
+        packages:
+          type: array
+          description: The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly.
+          items:
+            $ref: "#/components/schemas/TopupPackageOption"
         qrisImageUrl:
           type: string
-      required: [rupiahPerCredit, qrisImageUrl]
+      required: [packages, qrisImageUrl]
 
     CreditBalance:
       type: object
@@ -4761,6 +4755,7 @@ components:
         amountRupiah:
           type: integer
           minimum: 1
+          description: Must match the amountRupiah of one of the packages from GET /topups/config exactly.
         paymentReferenceNote:
           type: string
         proofObjectPath:
@@ -4951,14 +4946,6 @@ components:
         reviewNote:
           type: string
       required: [status]
-
-    UpdateTopupConfigBody:
-      type: object
-      properties:
-        rupiahPerCredit:
-          type: integer
-          minimum: 1
-      required: [rupiahPerCredit]
 
     PersonalAnalytics:
       type: object

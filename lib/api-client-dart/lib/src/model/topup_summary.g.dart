@@ -15,6 +15,8 @@ class _$TopupSummary extends TopupSummary {
   final int approvedRequestCount;
   @override
   final BuiltList<TopupUserSummary> byUser;
+  @override
+  final BuiltList<TopupMonthSummary> byMonth;
 
   factory _$TopupSummary([void Function(TopupSummaryBuilder)? updates]) =>
       (TopupSummaryBuilder()..update(updates))._build();
@@ -23,7 +25,8 @@ class _$TopupSummary extends TopupSummary {
       {required this.totalAmountRupiah,
       required this.totalCreditsGranted,
       required this.approvedRequestCount,
-      required this.byUser})
+      required this.byUser,
+      required this.byMonth})
       : super._();
   @override
   TopupSummary rebuild(void Function(TopupSummaryBuilder) updates) =>
@@ -39,7 +42,8 @@ class _$TopupSummary extends TopupSummary {
         totalAmountRupiah == other.totalAmountRupiah &&
         totalCreditsGranted == other.totalCreditsGranted &&
         approvedRequestCount == other.approvedRequestCount &&
-        byUser == other.byUser;
+        byUser == other.byUser &&
+        byMonth == other.byMonth;
   }
 
   @override
@@ -49,6 +53,7 @@ class _$TopupSummary extends TopupSummary {
     _$hash = $jc(_$hash, totalCreditsGranted.hashCode);
     _$hash = $jc(_$hash, approvedRequestCount.hashCode);
     _$hash = $jc(_$hash, byUser.hashCode);
+    _$hash = $jc(_$hash, byMonth.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -59,7 +64,8 @@ class _$TopupSummary extends TopupSummary {
           ..add('totalAmountRupiah', totalAmountRupiah)
           ..add('totalCreditsGranted', totalCreditsGranted)
           ..add('approvedRequestCount', approvedRequestCount)
-          ..add('byUser', byUser))
+          ..add('byUser', byUser)
+          ..add('byMonth', byMonth))
         .toString();
   }
 }
@@ -88,6 +94,12 @@ class TopupSummaryBuilder
       _$this._byUser ??= ListBuilder<TopupUserSummary>();
   set byUser(ListBuilder<TopupUserSummary>? byUser) => _$this._byUser = byUser;
 
+  ListBuilder<TopupMonthSummary>? _byMonth;
+  ListBuilder<TopupMonthSummary> get byMonth =>
+      _$this._byMonth ??= ListBuilder<TopupMonthSummary>();
+  set byMonth(ListBuilder<TopupMonthSummary>? byMonth) =>
+      _$this._byMonth = byMonth;
+
   TopupSummaryBuilder() {
     TopupSummary._defaults(this);
   }
@@ -99,6 +111,7 @@ class TopupSummaryBuilder
       _totalCreditsGranted = $v.totalCreditsGranted;
       _approvedRequestCount = $v.approvedRequestCount;
       _byUser = $v.byUser.toBuilder();
+      _byMonth = $v.byMonth.toBuilder();
       _$v = null;
     }
     return this;
@@ -129,12 +142,15 @@ class TopupSummaryBuilder
             approvedRequestCount: BuiltValueNullFieldError.checkNotNull(
                 approvedRequestCount, r'TopupSummary', 'approvedRequestCount'),
             byUser: byUser.build(),
+            byMonth: byMonth.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'byUser';
         byUser.build();
+        _$failedField = 'byMonth';
+        byMonth.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'TopupSummary', _$failedField, e.toString());

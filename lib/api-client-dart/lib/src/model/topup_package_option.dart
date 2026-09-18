@@ -3,66 +3,63 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:trade_pilot_api_client/src/model/topup_package_option.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'topup_config.g.dart';
+part 'topup_package_option.g.dart';
 
-/// TopupConfig
+/// One fixed top-up package (see lib/credits.ts) — bigger packages give a better effective per-credit rate.
 ///
 /// Properties:
-/// * [packages] - The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly.
-/// * [qrisImageUrl] 
+/// * [amountRupiah] 
+/// * [credits] 
 @BuiltValue()
-abstract class TopupConfig implements Built<TopupConfig, TopupConfigBuilder> {
-  /// The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly.
-  @BuiltValueField(wireName: r'packages')
-  BuiltList<TopupPackageOption> get packages;
+abstract class TopupPackageOption implements Built<TopupPackageOption, TopupPackageOptionBuilder> {
+  @BuiltValueField(wireName: r'amountRupiah')
+  int get amountRupiah;
 
-  @BuiltValueField(wireName: r'qrisImageUrl')
-  String get qrisImageUrl;
+  @BuiltValueField(wireName: r'credits')
+  int get credits;
 
-  TopupConfig._();
+  TopupPackageOption._();
 
-  factory TopupConfig([void updates(TopupConfigBuilder b)]) = _$TopupConfig;
+  factory TopupPackageOption([void updates(TopupPackageOptionBuilder b)]) = _$TopupPackageOption;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(TopupConfigBuilder b) => b;
+  static void _defaults(TopupPackageOptionBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<TopupConfig> get serializer => _$TopupConfigSerializer();
+  static Serializer<TopupPackageOption> get serializer => _$TopupPackageOptionSerializer();
 }
 
-class _$TopupConfigSerializer implements PrimitiveSerializer<TopupConfig> {
+class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackageOption> {
   @override
-  final Iterable<Type> types = const [TopupConfig, _$TopupConfig];
+  final Iterable<Type> types = const [TopupPackageOption, _$TopupPackageOption];
 
   @override
-  final String wireName = r'TopupConfig';
+  final String wireName = r'TopupPackageOption';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    TopupConfig object, {
+    TopupPackageOption object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'packages';
+    yield r'amountRupiah';
     yield serializers.serialize(
-      object.packages,
-      specifiedType: const FullType(BuiltList, [FullType(TopupPackageOption)]),
+      object.amountRupiah,
+      specifiedType: const FullType(int),
     );
-    yield r'qrisImageUrl';
+    yield r'credits';
     yield serializers.serialize(
-      object.qrisImageUrl,
-      specifiedType: const FullType(String),
+      object.credits,
+      specifiedType: const FullType(int),
     );
   }
 
   @override
   Object serialize(
     Serializers serializers,
-    TopupConfig object, {
+    TopupPackageOption object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -73,26 +70,26 @@ class _$TopupConfigSerializer implements PrimitiveSerializer<TopupConfig> {
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required TopupConfigBuilder result,
+    required TopupPackageOptionBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'packages':
+        case r'amountRupiah':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(TopupPackageOption)]),
-          ) as BuiltList<TopupPackageOption>;
-          result.packages.replace(valueDes);
+            specifiedType: const FullType(int),
+          ) as int;
+          result.amountRupiah = valueDes;
           break;
-        case r'qrisImageUrl':
+        case r'credits':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.qrisImageUrl = valueDes;
+            specifiedType: const FullType(int),
+          ) as int;
+          result.credits = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -103,12 +100,12 @@ class _$TopupConfigSerializer implements PrimitiveSerializer<TopupConfig> {
   }
 
   @override
-  TopupConfig deserialize(
+  TopupPackageOption deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = TopupConfigBuilder();
+    final result = TopupPackageOptionBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

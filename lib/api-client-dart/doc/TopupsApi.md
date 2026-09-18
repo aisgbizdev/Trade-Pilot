@@ -12,7 +12,7 @@ Method | HTTP request | Description
 [**createTopupRequest**](TopupsApi.md#createtopuprequest) | **POST** /topups | Submit a manual top-up request for admin review
 [**getCreditBalance**](TopupsApi.md#getcreditbalance) | **GET** /topups/balance | Get the authenticated user&#39;s analysis credit balance
 [**getMyTopupRequests**](TopupsApi.md#getmytopuprequests) | **GET** /topups/mine | List the authenticated user&#39;s own top-up request history
-[**getTopupConfig**](TopupsApi.md#gettopupconfig) | **GET** /topups/config | Get the current Rupiah-to-credit conversion rate and QRIS image URL
+[**getTopupConfig**](TopupsApi.md#gettopupconfig) | **GET** /topups/config | Get the fixed top-up packages and QRIS image URL
 
 
 # **createTopupRequest**
@@ -139,7 +139,7 @@ No authorization required
 # **getTopupConfig**
 > TopupConfig getTopupConfig()
 
-Get the current Rupiah-to-credit conversion rate and QRIS image URL
+Get the fixed top-up packages and QRIS image URL
 
 ### Example
 ```dart

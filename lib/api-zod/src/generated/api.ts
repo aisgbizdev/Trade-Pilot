@@ -184,10 +184,23 @@ export const BackfillProgressionResponse = zod.object({
 });
 
 /**
- * @summary Get the current Rupiah-to-credit conversion rate and QRIS image URL
+ * @summary Get the fixed top-up packages and QRIS image URL
  */
 export const GetTopupConfigResponse = zod.object({
-  rupiahPerCredit: zod.number().int(),
+  packages: zod
+    .array(
+      zod
+        .object({
+          amountRupiah: zod.number().int(),
+          credits: zod.number().int(),
+        })
+        .describe(
+          "One fixed top-up package (see lib\/credits.ts) — bigger packages give a better effective per-credit rate.",
+        ),
+    )
+    .describe(
+      "The fixed set of purchasable packages. POST \/topups only accepts an amountRupiah matching one of these exactly.",
+    ),
   qrisImageUrl: zod.string(),
 });
 
@@ -203,7 +216,13 @@ export const GetCreditBalanceResponse = zod.object({
  */
 
 export const CreateTopupRequestBody = zod.object({
-  amountRupiah: zod.number().int().min(1),
+  amountRupiah: zod
+    .number()
+    .int()
+    .min(1)
+    .describe(
+      "Must match the amountRupiah of one of the packages from GET \/topups\/config exactly.",
+    ),
   paymentReferenceNote: zod.string().optional(),
   proofObjectPath: zod
     .string()
@@ -342,19 +361,6 @@ export const ReviewCreditTopupRequestResponse = zod.object({
   reviewNote: zod.string().nullable(),
   creditsGranted: zod.number().int().nullable(),
   createdAt: zod.coerce.date(),
-});
-
-/**
- * @summary Set the Rupiah-to-credit conversion rate
- */
-
-export const UpdateTopupConfigBody = zod.object({
-  rupiahPerCredit: zod.number().int().min(1),
-});
-
-export const UpdateTopupConfigResponse = zod.object({
-  rupiahPerCredit: zod.number().int(),
-  qrisImageUrl: zod.string(),
 });
 
 /**

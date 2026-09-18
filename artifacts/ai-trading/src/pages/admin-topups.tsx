@@ -23,9 +23,6 @@ import {
   useGetPendingTopupRequests,
   getGetPendingTopupRequestsQueryKey,
   useReviewCreditTopupRequest,
-  useGetTopupConfig,
-  useUpdateTopupConfig,
-  getGetTopupConfigQueryKey,
   type TopupRequestWithUser,
   type TopupRequestStatus,
 } from "@workspace/api-client-react";
@@ -38,62 +35,6 @@ const STATUS_BADGE: Record<TopupRequestStatus, "secondary" | "default" | "destru
 };
 
 const PAGE_SIZE = 20;
-
-function TopupRateEditor() {
-  const { t } = useTranslation();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { data } = useGetTopupConfig({ query: { queryKey: getGetTopupConfigQueryKey() } });
-  const [rate, setRate] = useState("");
-  const updateConfig = useUpdateTopupConfig();
-
-  const currentRate = data?.rupiahPerCredit;
-
-  const handleSave = async () => {
-    const parsed = Number(rate);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      toast({ title: t.admin.topups_rate_invalid, variant: "destructive" });
-      return;
-    }
-    try {
-      await updateConfig.mutateAsync({ data: { rupiahPerCredit: Math.floor(parsed) } });
-      queryClient.invalidateQueries({ queryKey: getGetTopupConfigQueryKey() });
-      setRate("");
-      toast({ title: t.admin.topups_rate_save_success });
-    } catch (err: unknown) {
-      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.topups_review_error, variant: "destructive" });
-    }
-  };
-
-  return (
-    <Card className="p-4 space-y-2" data-testid="card-topup-rate">
-      <h3 className="text-sm font-semibold text-foreground">{t.admin.topups_rate_label}</h3>
-      <p className="text-xs text-muted-foreground">
-        {currentRate != null ? `Rp${currentRate.toLocaleString("id-ID")} = 1 kredit` : "…"}
-      </p>
-      <div className="flex gap-2">
-        <Input
-          type="number"
-          min={1}
-          value={rate}
-          onChange={(e) => setRate(e.target.value)}
-          placeholder={String(currentRate ?? "")}
-          className="h-9 text-sm"
-          data-testid="input-topup-rate"
-        />
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={updateConfig.isPending || !rate}
-          data-testid="button-save-topup-rate"
-        >
-          {updateConfig.isPending && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
-          {t.admin.topups_rate_save_button}
-        </Button>
-      </div>
-    </Card>
-  );
-}
 
 function AdminTopupsContent() {
   const [, setLocation] = useLocation();
@@ -159,8 +100,6 @@ function AdminTopupsContent() {
           </button>
           <h1 className="text-xl font-bold text-foreground">{t.admin.topups_page_title}</h1>
         </div>
-
-        <TopupRateEditor />
 
         <div className="flex gap-1.5">
           {(["pending", "approved", "rejected"] as const).map((s) => (

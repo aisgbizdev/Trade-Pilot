@@ -26,6 +26,7 @@ import {
   useGetMyTopupRequests,
   getGetMyTopupRequestsQueryKey,
   type TopupRequestStatus,
+  type TopupPackageOption,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -34,8 +35,6 @@ const STATUS_BADGE: Record<TopupRequestStatus, "secondary" | "default" | "destru
   approved: "default",
   rejected: "destructive",
 };
-
-const PRESET_AMOUNTS = [5000, 10000, 15000, 20000] as const;
 
 // Fast-track support contact for payment issues — international format
 // (62 + local number without the leading 0), used to build a wa.me
@@ -72,7 +71,7 @@ export default function TopupPage() {
   );
 
   const [step, setStep] = useState<"amount" | "pay">("amount");
-  const [amount, setAmount] = useState("");
+  const [selectedPackage, setSelectedPackage] = useState<TopupPackageOption | null>(null);
   const [referenceNote, setReferenceNote] = useState("");
   const [proofObjectPath, setProofObjectPath] = useState<string | null>(null);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
@@ -80,9 +79,9 @@ export default function TopupPage() {
 
   const createTopup = useCreateTopupRequest();
 
-  const rupiahPerCredit = config?.rupiahPerCredit ?? 0;
-  const amountNumber = Number(amount) || 0;
-  const creditsPreview = rupiahPerCredit > 0 ? Math.floor(amountNumber / rupiahPerCredit) : 0;
+  const packages = config?.packages ?? [];
+  const amountNumber = selectedPackage?.amountRupiah ?? 0;
+  const creditsPreview = selectedPackage?.credits ?? 0;
 
   const handleProofChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -107,7 +106,7 @@ export default function TopupPage() {
   };
 
   const handleContinue = () => {
-    if (creditsPreview < 1) {
+    if (!selectedPackage) {
       toast({ title: t.topup.amount_too_small, variant: "destructive" });
       return;
     }
@@ -116,7 +115,7 @@ export default function TopupPage() {
   };
 
   const handleSubmit = async () => {
-    if (creditsPreview < 1) {
+    if (!selectedPackage) {
       toast({ title: t.topup.amount_too_small, variant: "destructive" });
       return;
     }
@@ -127,7 +126,7 @@ export default function TopupPage() {
     try {
       await createTopup.mutateAsync({
         data: {
-          amountRupiah: amountNumber,
+          amountRupiah: selectedPackage.amountRupiah,
           paymentReferenceNote: referenceNote.trim() || undefined,
           proofObjectPath,
         },
@@ -136,7 +135,7 @@ export default function TopupPage() {
       // changes immediately, so refresh it alongside the history list.
       queryClient.invalidateQueries({ queryKey: getGetMyTopupRequestsQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetCreditBalanceQueryKey() });
-      setAmount("");
+      setSelectedPackage(null);
       setReferenceNote("");
       setProofObjectPath(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -170,47 +169,37 @@ export default function TopupPage() {
           <Card className="p-5 shadow-sm space-y-3" data-testid="card-topup-form">
             <h3 className="text-sm font-semibold text-foreground">{t.topup.amount_step_title}</h3>
             <div className="grid grid-cols-2 gap-2">
-              {PRESET_AMOUNTS.map((preset) => {
-                const selected = amountNumber === preset;
+              {packages.map((pkg) => {
+                const selected = selectedPackage?.amountRupiah === pkg.amountRupiah;
                 return (
                   <button
-                    key={preset}
+                    key={pkg.amountRupiah}
                     type="button"
-                    onClick={() => setAmount(String(preset))}
+                    onClick={() => setSelectedPackage(pkg)}
                     className={
-                      "rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors " +
+                      "rounded-lg border px-3 py-2.5 text-center transition-colors " +
                       (selected
                         ? "border-primary bg-primary/10 text-foreground"
                         : "border-border text-muted-foreground hover:border-primary/50")
                     }
-                    data-testid={`button-preset-${preset}`}
+                    data-testid={`button-preset-${pkg.amountRupiah}`}
                   >
-                    Rp{preset.toLocaleString("id-ID")}
+                    <span className="block text-sm font-medium">Rp{pkg.amountRupiah.toLocaleString("id-ID")}</span>
+                    <span
+                      className="block text-[11px] opacity-80 mt-0.5"
+                      data-testid={`text-preset-credits-${pkg.amountRupiah}`}
+                    >
+                      {t.topup.amount_credits_preview.replace("{n}", String(pkg.credits))}
+                    </span>
                   </button>
                 );
               })}
             </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">
-                {t.topup.custom_amount_label}
-              </label>
-              <Input
-                type="number"
-                min={1}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder={t.topup.amount_placeholder}
-                data-testid="input-topup-amount"
-              />
-            </div>
-            {amountNumber > 0 && (
+            {selectedPackage && (
               <p className="text-xs text-muted-foreground" data-testid="text-credits-preview">
                 {t.topup.amount_credits_preview.replace("{n}", String(creditsPreview))}
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              {t.topup.rate_hint.replace("{rate}", rupiahPerCredit.toLocaleString("id-ID"))}
-            </p>
             <Button
               className="w-full"
               onClick={handleContinue}
@@ -245,9 +234,6 @@ export default function TopupPage() {
                 data-testid="img-qris"
               />
             )}
-            <p className="text-xs text-muted-foreground text-center">
-              {t.topup.rate_hint.replace("{rate}", rupiahPerCredit.toLocaleString("id-ID"))}
-            </p>
             <p className="text-xs text-muted-foreground">{t.topup.pay_hint}</p>
             <Input
               value={referenceNote}

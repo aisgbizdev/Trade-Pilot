@@ -167,6 +167,8 @@ doc/TimeframeRiskMap.md
 doc/TimeframeRiskMapOverall.md
 doc/TimeframeRiskMetrics.md
 doc/TopupConfig.md
+doc/TopupMonthSummary.md
+doc/TopupPackageOption.md
 doc/TopupRequest.md
 doc/TopupRequestList.md
 doc/TopupRequestStatus.md
@@ -185,7 +187,6 @@ doc/TraderMirrorResponse.md
 doc/TradingRulesApi.md
 doc/UpdateJournalEntryBody.md
 doc/UpdateProfileBody.md
-doc/UpdateTopupConfigBody.md
 doc/UpdateUserQuotaBody.md
 doc/UpdateUserRoleBody.md
 doc/UploadUrlRequest.md
@@ -382,6 +383,8 @@ lib/src/model/timeframe_risk_map.dart
 lib/src/model/timeframe_risk_map_overall.dart
 lib/src/model/timeframe_risk_metrics.dart
 lib/src/model/topup_config.dart
+lib/src/model/topup_month_summary.dart
+lib/src/model/topup_package_option.dart
 lib/src/model/topup_request.dart
 lib/src/model/topup_request_list.dart
 lib/src/model/topup_request_status.dart
@@ -396,7 +399,6 @@ lib/src/model/trader_mirror_insights.dart
 lib/src/model/trader_mirror_response.dart
 lib/src/model/update_journal_entry_body.dart
 lib/src/model/update_profile_body.dart
-lib/src/model/update_topup_config_body.dart
 lib/src/model/update_user_quota_body.dart
 lib/src/model/update_user_role_body.dart
 lib/src/model/upload_url_request.dart
@@ -413,6 +415,5 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/apple_native_login_body_test.dart
-test/apple_reauth_body_test.dart
-test/apple_reauth_response_test.dart
+test/topup_month_summary_test.dart
+test/topup_package_option_test.dart

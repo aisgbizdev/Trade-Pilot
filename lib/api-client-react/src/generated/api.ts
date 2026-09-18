@@ -138,7 +138,6 @@ import type {
   TraderMirrorResponse,
   UpdateJournalEntryBody,
   UpdateProfileBody,
-  UpdateTopupConfigBody,
   UpdateUserQuotaBody,
   UpdateUserRoleBody,
   UploadUrlRequest,
@@ -830,7 +829,7 @@ export const getGetTopupConfigUrl = () => {
 };
 
 /**
- * @summary Get the current Rupiah-to-credit conversion rate and QRIS image URL
+ * @summary Get the fixed top-up packages and QRIS image URL
  */
 export const getTopupConfig = async (
   options?: Parameters<typeof customFetch>[1],
@@ -877,7 +876,7 @@ export type GetTopupConfigQueryResult = NonNullable<
 export type GetTopupConfigQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get the current Rupiah-to-credit conversion rate and QRIS image URL
+ * @summary Get the fixed top-up packages and QRIS image URL
  */
 
 export function useGetTopupConfig<
@@ -1382,109 +1381,6 @@ export const useReviewCreditTopupRequest = <
   TContext
 > => {
   return useMutation(getReviewCreditTopupRequestMutationOptions(options));
-};
-
-export const getUpdateTopupConfigUrl = () => {
-  return `/api/admin/topups/config`;
-};
-
-/**
- * @summary Set the Rupiah-to-credit conversion rate
- */
-export const updateTopupConfig = async (
-  updateTopupConfigBody: UpdateTopupConfigBody,
-  options?: Parameters<typeof customFetch>[1],
-): Promise<TopupConfig> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
-  };
-  return customFetch<TopupConfig>(getUpdateTopupConfigUrl(), {
-    ...options,
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
-    body: JSON.stringify(updateTopupConfigBody),
-  });
-};
-
-export const getUpdateTopupConfigMutationKey = () =>
-  ["updateTopupConfig"] as const;
-
-export const getUpdateTopupConfigMutationOptions = <
-  TError = ErrorType<ErrorResponse>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updateTopupConfig>>,
-    TError,
-    UpdateTopupConfigMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof updateTopupConfig>>,
-  TError,
-  UpdateTopupConfigMutationVariables,
-  TContext
-> => {
-  const mutationKey = getUpdateTopupConfigMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof updateTopupConfig>>,
-    UpdateTopupConfigMutationVariables
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return updateTopupConfig(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type UpdateTopupConfigMutationResult = NonNullable<
-  Awaited<ReturnType<typeof updateTopupConfig>>
->;
-export type UpdateTopupConfigMutationBody = BodyType<UpdateTopupConfigBody>;
-export type UpdateTopupConfigMutationError = ErrorType<ErrorResponse>;
-export type UpdateTopupConfigMutationVariables = {
-  data: BodyType<UpdateTopupConfigBody>;
-};
-
-/**
- * @summary Set the Rupiah-to-credit conversion rate
- */
-export const useUpdateTopupConfig = <
-  TError = ErrorType<ErrorResponse>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updateTopupConfig>>,
-    TError,
-    UpdateTopupConfigMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof updateTopupConfig>>,
-  TError,
-  UpdateTopupConfigMutationVariables,
-  TContext
-> => {
-  return useMutation(getUpdateTopupConfigMutationOptions(options));
 };
 
 export const getGetTopupSummaryUrl = () => {

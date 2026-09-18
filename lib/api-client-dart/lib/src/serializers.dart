@@ -166,6 +166,8 @@ import 'package:trade_pilot_api_client/src/model/timeframe_risk_map.dart';
 import 'package:trade_pilot_api_client/src/model/timeframe_risk_map_overall.dart';
 import 'package:trade_pilot_api_client/src/model/timeframe_risk_metrics.dart';
 import 'package:trade_pilot_api_client/src/model/topup_config.dart';
+import 'package:trade_pilot_api_client/src/model/topup_month_summary.dart';
+import 'package:trade_pilot_api_client/src/model/topup_package_option.dart';
 import 'package:trade_pilot_api_client/src/model/topup_request.dart';
 import 'package:trade_pilot_api_client/src/model/topup_request_list.dart';
 import 'package:trade_pilot_api_client/src/model/topup_request_status.dart';
@@ -180,7 +182,6 @@ import 'package:trade_pilot_api_client/src/model/trader_mirror_insights.dart';
 import 'package:trade_pilot_api_client/src/model/trader_mirror_response.dart';
 import 'package:trade_pilot_api_client/src/model/update_journal_entry_body.dart';
 import 'package:trade_pilot_api_client/src/model/update_profile_body.dart';
-import 'package:trade_pilot_api_client/src/model/update_topup_config_body.dart';
 import 'package:trade_pilot_api_client/src/model/update_user_quota_body.dart';
 import 'package:trade_pilot_api_client/src/model/update_user_role_body.dart';
 import 'package:trade_pilot_api_client/src/model/upload_url_request.dart';
@@ -350,6 +351,8 @@ part 'serializers.g.dart';
   TimeframeRiskMapOverall,
   TimeframeRiskMetrics,
   TopupConfig,
+  TopupMonthSummary,
+  TopupPackageOption,
   TopupRequest,$TopupRequest,
   TopupRequestList,
   TopupRequestStatus,
@@ -364,7 +367,6 @@ part 'serializers.g.dart';
   TraderMirrorResponse,
   UpdateJournalEntryBody,
   UpdateProfileBody,
-  UpdateTopupConfigBody,
   UpdateUserQuotaBody,
   UpdateUserRoleBody,
   UploadUrlRequest,
@@ -397,6 +399,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<StandardTradingRuleInstrument>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TopupMonthSummary)]),
+        () => ListBuilder<TopupMonthSummary>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsUsageStatsDeviceBreakdownInner)]),
         () => ListBuilder<AnalyticsUsageStatsDeviceBreakdownInner>(),
       )
@@ -427,6 +433,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsUsageStatsFeatureBreakdownInner)]),
         () => ListBuilder<AnalyticsUsageStatsFeatureBreakdownInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TopupPackageOption)]),
+        () => ListBuilder<TopupPackageOption>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PerformanceBucket)]),

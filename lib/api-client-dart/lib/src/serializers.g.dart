@@ -216,6 +216,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(TimeframeRiskStatusEnum.serializer)
       ..add(TimeframeRiskTimeframeEnum.serializer)
       ..add(TopupConfig.serializer)
+      ..add(TopupMonthSummary.serializer)
+      ..add(TopupPackageOption.serializer)
       ..add(TopupRequestList.serializer)
       ..add(TopupRequestStatus.serializer)
       ..add(TopupRequestWithUser.serializer)
@@ -235,7 +237,6 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(UpdateProfileBodyLangEnum.serializer)
       ..add(UpdateProfileBodySelectedModeEnum.serializer)
       ..add(UpdateProfileBodyThemePreferenceEnum.serializer)
-      ..add(UpdateTopupConfigBody.serializer)
       ..add(UpdateUserQuotaBody.serializer)
       ..add(UpdateUserRoleBody.serializer)
       ..add(UpdateUserRoleBodyRoleEnum.serializer)
@@ -449,6 +450,9 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(TimeframeRisk)]),
           () => ListBuilder<TimeframeRisk>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(TopupPackageOption)]),
+          () => ListBuilder<TopupPackageOption>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(TopupRequest)]),
           () => ListBuilder<TopupRequest>())
       ..addBuilderFactory(
@@ -458,6 +462,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(TopupUserSummary)]),
           () => ListBuilder<TopupUserSummary>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(TopupMonthSummary)]),
+          () => ListBuilder<TopupMonthSummary>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(TraderMirrorHighlight)]),

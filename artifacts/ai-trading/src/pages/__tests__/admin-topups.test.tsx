@@ -12,8 +12,6 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import AdminTopupsPage from "../admin-topups";
 import { installFetchMock, jsonResponse, makeWrapper, TEST_USER } from "./test-helpers";
 
-const CONFIG_PAYLOAD = { rupiahPerCredit: 250, qrisImageUrl: "/qris-gopay.jpeg" };
-
 const PENDING_LIST = {
   requests: [
     {
@@ -63,7 +61,6 @@ describe("AdminTopupsPage", () => {
     installFetchMock(
       [
         asRole("super_admin"),
-        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
         (url) => (url.includes("/api/admin/topups") ? jsonResponse(PENDING_LIST) : null),
       ],
       { strict: false },
@@ -83,7 +80,6 @@ describe("AdminTopupsPage", () => {
     installFetchMock(
       [
         asRole("super_admin"),
-        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
         (url, init) => {
           const method = (init?.method ?? "GET").toUpperCase();
           if (method === "GET" && url.includes("/api/admin/topups?")) return jsonResponse(PENDING_LIST);

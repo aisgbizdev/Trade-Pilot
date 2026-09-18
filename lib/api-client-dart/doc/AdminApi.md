@@ -20,9 +20,8 @@ Method | HTTP request | Description
 [**getOutboundClickStats**](AdminApi.md#getoutboundclickstats) | **GET** /admin/outbound-clicks/stats | Aggregated counts of sponsor / partner outbound link clicks
 [**getPendingTopupRequests**](AdminApi.md#getpendingtopuprequests) | **GET** /admin/topups | List top-up requests for admin review
 [**getProgressionAudit**](AdminApi.md#getprogressionaudit) | **GET** /admin/progression/audit | Read-only progression ledger audit; never a leaderboard
-[**getTopupSummary**](AdminApi.md#gettopupsummary) | **GET** /admin/topups/summary | Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+[**getTopupSummary**](AdminApi.md#gettopupsummary) | **GET** /admin/topups/summary | Aggregate revenue/credits summary across all approved top-up requests, grouped by user and by calendar month
 [**reviewCreditTopupRequest**](AdminApi.md#reviewcredittopuprequest) | **PATCH** /admin/topups/{id}/status | Approve or reject a top-up request, crediting the user&#39;s balance on approval
-[**updateTopupConfig**](AdminApi.md#updatetopupconfig) | **PATCH** /admin/topups/config | Set the Rupiah-to-credit conversion rate
 
 
 # **backfillProgression**
@@ -491,7 +490,7 @@ No authorization required
 # **getTopupSummary**
 > TopupSummary getTopupSummary()
 
-Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+Aggregate revenue/credits summary across all approved top-up requests, grouped by user and by calendar month
 
 ### Example
 ```dart
@@ -556,47 +555,6 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**TopupRequest**](TopupRequest.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **updateTopupConfig**
-> TopupConfig updateTopupConfig(updateTopupConfigBody)
-
-Set the Rupiah-to-credit conversion rate
-
-### Example
-```dart
-import 'package:trade_pilot_api_client/api.dart';
-
-final api = TradePilotApiClient().getAdminApi();
-final UpdateTopupConfigBody updateTopupConfigBody = ; // UpdateTopupConfigBody | 
-
-try {
-    final response = api.updateTopupConfig(updateTopupConfigBody);
-    print(response);
-} on DioException catch (e) {
-    print('Exception when calling AdminApi->updateTopupConfig: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **updateTopupConfigBody** | [**UpdateTopupConfigBody**](UpdateTopupConfigBody.md)|  | 
-
-### Return type
-
-[**TopupConfig**](TopupConfig.md)
 
 ### Authorization
 

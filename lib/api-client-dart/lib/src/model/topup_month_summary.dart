@@ -3,63 +3,61 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:trade_pilot_api_client/src/model/topup_month_summary.dart';
-import 'package:trade_pilot_api_client/src/model/topup_user_summary.dart';
-import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'topup_summary.g.dart';
+part 'topup_month_summary.g.dart';
 
-/// TopupSummary
+/// TopupMonthSummary
 ///
 /// Properties:
+/// * [month] - Calendar month (Asia/Jakarta) the top-up was approved in, as YYYY-MM.
 /// * [totalAmountRupiah] 
 /// * [totalCreditsGranted] 
-/// * [approvedRequestCount] 
-/// * [byUser] 
-/// * [byMonth] - Approved-top-up totals grouped by calendar month, newest first.
+/// * [requestCount] 
 @BuiltValue()
-abstract class TopupSummary implements Built<TopupSummary, TopupSummaryBuilder> {
+abstract class TopupMonthSummary implements Built<TopupMonthSummary, TopupMonthSummaryBuilder> {
+  /// Calendar month (Asia/Jakarta) the top-up was approved in, as YYYY-MM.
+  @BuiltValueField(wireName: r'month')
+  String get month;
+
   @BuiltValueField(wireName: r'totalAmountRupiah')
   int get totalAmountRupiah;
 
   @BuiltValueField(wireName: r'totalCreditsGranted')
   int get totalCreditsGranted;
 
-  @BuiltValueField(wireName: r'approvedRequestCount')
-  int get approvedRequestCount;
+  @BuiltValueField(wireName: r'requestCount')
+  int get requestCount;
 
-  @BuiltValueField(wireName: r'byUser')
-  BuiltList<TopupUserSummary> get byUser;
+  TopupMonthSummary._();
 
-  /// Approved-top-up totals grouped by calendar month, newest first.
-  @BuiltValueField(wireName: r'byMonth')
-  BuiltList<TopupMonthSummary> get byMonth;
-
-  TopupSummary._();
-
-  factory TopupSummary([void updates(TopupSummaryBuilder b)]) = _$TopupSummary;
+  factory TopupMonthSummary([void updates(TopupMonthSummaryBuilder b)]) = _$TopupMonthSummary;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(TopupSummaryBuilder b) => b;
+  static void _defaults(TopupMonthSummaryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<TopupSummary> get serializer => _$TopupSummarySerializer();
+  static Serializer<TopupMonthSummary> get serializer => _$TopupMonthSummarySerializer();
 }
 
-class _$TopupSummarySerializer implements PrimitiveSerializer<TopupSummary> {
+class _$TopupMonthSummarySerializer implements PrimitiveSerializer<TopupMonthSummary> {
   @override
-  final Iterable<Type> types = const [TopupSummary, _$TopupSummary];
+  final Iterable<Type> types = const [TopupMonthSummary, _$TopupMonthSummary];
 
   @override
-  final String wireName = r'TopupSummary';
+  final String wireName = r'TopupMonthSummary';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    TopupSummary object, {
+    TopupMonthSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    yield r'month';
+    yield serializers.serialize(
+      object.month,
+      specifiedType: const FullType(String),
+    );
     yield r'totalAmountRupiah';
     yield serializers.serialize(
       object.totalAmountRupiah,
@@ -70,27 +68,17 @@ class _$TopupSummarySerializer implements PrimitiveSerializer<TopupSummary> {
       object.totalCreditsGranted,
       specifiedType: const FullType(int),
     );
-    yield r'approvedRequestCount';
+    yield r'requestCount';
     yield serializers.serialize(
-      object.approvedRequestCount,
+      object.requestCount,
       specifiedType: const FullType(int),
-    );
-    yield r'byUser';
-    yield serializers.serialize(
-      object.byUser,
-      specifiedType: const FullType(BuiltList, [FullType(TopupUserSummary)]),
-    );
-    yield r'byMonth';
-    yield serializers.serialize(
-      object.byMonth,
-      specifiedType: const FullType(BuiltList, [FullType(TopupMonthSummary)]),
     );
   }
 
   @override
   Object serialize(
     Serializers serializers,
-    TopupSummary object, {
+    TopupMonthSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -101,13 +89,20 @@ class _$TopupSummarySerializer implements PrimitiveSerializer<TopupSummary> {
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required TopupSummaryBuilder result,
+    required TopupMonthSummaryBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'month':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.month = valueDes;
+          break;
         case r'totalAmountRupiah':
           final valueDes = serializers.deserialize(
             value,
@@ -122,26 +117,12 @@ class _$TopupSummarySerializer implements PrimitiveSerializer<TopupSummary> {
           ) as int;
           result.totalCreditsGranted = valueDes;
           break;
-        case r'approvedRequestCount':
+        case r'requestCount':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(int),
           ) as int;
-          result.approvedRequestCount = valueDes;
-          break;
-        case r'byUser':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(TopupUserSummary)]),
-          ) as BuiltList<TopupUserSummary>;
-          result.byUser.replace(valueDes);
-          break;
-        case r'byMonth':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(TopupMonthSummary)]),
-          ) as BuiltList<TopupMonthSummary>;
-          result.byMonth.replace(valueDes);
+          result.requestCount = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -152,12 +133,12 @@ class _$TopupSummarySerializer implements PrimitiveSerializer<TopupSummary> {
   }
 
   @override
-  TopupSummary deserialize(
+  TopupMonthSummary deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = TopupSummaryBuilder();
+    final result = TopupMonthSummaryBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

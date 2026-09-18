@@ -1247,8 +1247,17 @@ export interface AnalysisQuota {
   credits: AnalysisQuotaCredits;
 }
 
+/**
+ * One fixed top-up package (see lib/credits.ts) — bigger packages give a better effective per-credit rate.
+ */
+export interface TopupPackageOption {
+  amountRupiah: number;
+  credits: number;
+}
+
 export interface TopupConfig {
-  rupiahPerCredit: number;
+  /** The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly. */
+  packages: TopupPackageOption[];
   qrisImageUrl: string;
 }
 
@@ -1257,7 +1266,10 @@ export interface CreditBalance {
 }
 
 export interface CreateTopupRequestBody {
-  /** @minimum 1 */
+  /**
+   * Must match the amountRupiah of one of the packages from GET /topups/config exactly.
+   * @minimum 1
+   */
   amountRupiah: number;
   paymentReferenceNote?: string;
   /**
@@ -1350,11 +1362,6 @@ export interface ReviewTopupRequestBody {
   status: ReviewTopupRequestBodyStatus;
   creditsGranted?: number;
   reviewNote?: string;
-}
-
-export interface UpdateTopupConfigBody {
-  /** @minimum 1 */
-  rupiahPerCredit: number;
 }
 
 export type PersonalAnalyticsTopInstrumentsItem = {

@@ -1,4 +1,4 @@
-# trade_pilot_api_client.model.TopupSummary
+# trade_pilot_api_client.model.TopupMonthSummary
 
 ## Load the model package
 ```dart
@@ -8,11 +8,10 @@ import 'package:trade_pilot_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**month** | **String** | Calendar month (Asia/Jakarta) the top-up was approved in, as YYYY-MM. | 
 **totalAmountRupiah** | **int** |  | 
 **totalCreditsGranted** | **int** |  | 
-**approvedRequestCount** | **int** |  | 
-**byUser** | [**BuiltList&lt;TopupUserSummary&gt;**](TopupUserSummary.md) |  | 
-**byMonth** | [**BuiltList&lt;TopupMonthSummary&gt;**](TopupMonthSummary.md) | Approved-top-up totals grouped by calendar month, newest first. | 
+**requestCount** | **int** |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

@@ -14,7 +14,13 @@ import {
   creditLedger,
   creditBalances,
 } from "@workspace/db/schema";
-import { getTopupConfig } from "../../lib/credits";
+import { getTopupPackages } from "../../lib/credits";
+
+// The four fixed packages (see lib/credits.ts) — tests that go through the
+// real POST /topups endpoint must use one of these exact amounts now;
+// there is no free-text amount or flat rate to compute an arbitrary valid
+// one from anymore.
+const [PKG_5K, PKG_20K, PKG_40K] = getTopupPackages();
 
 type Role = "user" | "admin" | "super_admin";
 
@@ -69,15 +75,23 @@ function authHeader(u: SeedUser): [string, string] {
 // there's no longer a way to reach a "pending" row through the public API
 // — insert one directly to exercise the admin review endpoints, which
 // still matter for whatever a future rollback / manual review flow needs.
-async function insertPendingTopup(user: SeedUser, amountRupiah: number): Promise<number> {
-  const { rupiahPerCredit } = getTopupConfig();
+// Bypasses the fixed-package validation POST /topups enforces (this
+// writes straight to the DB), so `amountRupiah`/`creditsRequested` don't
+// need to match a real package — these rows exist purely to drive the
+// admin-review endpoints, most of which don't care about the exact
+// numbers.
+async function insertPendingTopup(
+  user: SeedUser,
+  amountRupiah: number,
+  creditsRequested: number,
+): Promise<number> {
   const [row] = await db
     .insert(creditTopupRequests)
     .values({
       userId: user.id,
       amountRupiah,
-      creditsRequested: Math.floor(amountRupiah / rupiahPerCredit),
-      conversionRateSnapshot: rupiahPerCredit,
+      creditsRequested,
+      conversionRateSnapshot: Math.round(amountRupiah / creditsRequested),
       proofObjectPath: PROOF_PATH,
       status: "pending",
     })
@@ -114,10 +128,10 @@ afterAll(async () => {
 });
 
 describe("GET /topups/config", () => {
-  it("returns the current rate and QRIS image url", async () => {
+  it("returns the fixed packages and QRIS image url", async () => {
     const res = await request(app).get("/api/topups/config").set(...authHeader(alice));
     expect(res.status).toBe(200);
-    expect(res.body.rupiahPerCredit).toBe(getTopupConfig().rupiahPerCredit);
+    expect(res.body.packages).toEqual(getTopupPackages());
     expect(typeof res.body.qrisImageUrl).toBe("string");
   });
 });
@@ -136,19 +150,20 @@ describe("POST /topups", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rejects an amount too small to buy even 1 credit", async () => {
+  it("rejects an amount that doesn't match a fixed package", async () => {
     const res = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
       .send({ amountRupiah: 1, proofObjectPath: PROOF_PATH });
     expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/nominal tidak valid/i);
   });
 
   it("rejects a request with no payment proof", async () => {
     const res = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 5 });
+      .send({ amountRupiah: PKG_5K.amountRupiah });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/bukti transfer/i);
   });
@@ -157,37 +172,39 @@ describe("POST /topups", () => {
     const res = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah: getTopupConfig().rupiahPerCredit * 5, proofObjectPath: "   " });
+      .send({ amountRupiah: PKG_5K.amountRupiah, proofObjectPath: "   " });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/bukti transfer/i);
   });
 
   it("auto-approves on submit, credits the balance immediately, and notifies the user", async () => {
-    const { rupiahPerCredit } = getTopupConfig();
-    const amountRupiah = rupiahPerCredit * 20;
     const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
 
     const res = await request(app)
       .post("/api/topups")
       .set(...authHeader(alice))
-      .send({ amountRupiah, paymentReferenceNote: `note-${RUN_ID}`, proofObjectPath: PROOF_PATH });
+      .send({
+        amountRupiah: PKG_20K.amountRupiah,
+        paymentReferenceNote: `note-${RUN_ID}`,
+        proofObjectPath: PROOF_PATH,
+      });
     expect(res.status).toBe(201);
     expect(res.body.status).toBe("approved");
-    expect(res.body.creditsRequested).toBe(20);
-    expect(res.body.creditsGranted).toBe(20);
-    expect(res.body.conversionRateSnapshot).toBe(rupiahPerCredit);
+    expect(res.body.creditsRequested).toBe(PKG_20K.credits);
+    expect(res.body.creditsGranted).toBe(PKG_20K.credits);
+    expect(res.body.conversionRateSnapshot).toBe(Math.round(PKG_20K.amountRupiah / PKG_20K.credits));
     expect(res.body.proofObjectPath).toBe(PROOF_PATH);
     seededRequestIds.push(res.body.id);
 
     const after = await request(app).get("/api/topups/balance").set(...authHeader(alice));
-    expect(after.body.balance).toBe(before.body.balance + 20);
+    expect(after.body.balance).toBe(before.body.balance + PKG_20K.credits);
 
     const ledgerRows = await db
       .select()
       .from(creditLedger)
       .where(eq(creditLedger.topupRequestId, res.body.id));
     expect(ledgerRows).toHaveLength(1);
-    expect(ledgerRows[0]!.amount).toBe(20);
+    expect(ledgerRows[0]!.amount).toBe(PKG_20K.credits);
 
     // Fresh test users default to users.lang = "en", so the notification is
     // sent in English, not Indonesian.
@@ -216,7 +233,7 @@ describe("GET /admin/topups", () => {
   });
 
   it("lists pending requests with the requester's email/name for an admin", async () => {
-    const pendingId = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 6);
+    const pendingId = await insertPendingTopup(alice, 30_000, 90);
     const res = await request(app)
       .get("/api/admin/topups")
       .set(...authHeader(admin))
@@ -235,7 +252,7 @@ describe("GET /admin/topups", () => {
 // seed those directly rather than through the API.
 describe("PATCH /admin/topups/:id/status", () => {
   it("returns 403 for a plain admin (approval requires super_admin)", async () => {
-    const id = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 5);
+    const id = await insertPendingTopup(alice, 25_000, 5);
 
     const res = await request(app)
       .patch(`/api/admin/topups/${id}/status`)
@@ -245,7 +262,7 @@ describe("PATCH /admin/topups/:id/status", () => {
   });
 
   it("approves a request, credits the balance, and notifies the user", async () => {
-    const id = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 7);
+    const id = await insertPendingTopup(alice, 1_750, 7);
 
     const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
     const balanceBefore = before.body.balance as number;
@@ -275,7 +292,7 @@ describe("PATCH /admin/topups/:id/status", () => {
   });
 
   it("rejects a request without touching the credit balance", async () => {
-    const id = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 3);
+    const id = await insertPendingTopup(alice, 750, 3);
 
     const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
 
@@ -292,7 +309,7 @@ describe("PATCH /admin/topups/:id/status", () => {
   });
 
   it("only lets one of two concurrent reviews win; the other gets 409", async () => {
-    const id = await insertPendingTopup(alice, getTopupConfig().rupiahPerCredit * 4);
+    const id = await insertPendingTopup(alice, 1_000, 4);
 
     const [resA, resB] = await Promise.all([
       request(app)
@@ -340,51 +357,57 @@ describe("GET /admin/topups/summary", () => {
 
     // Rejected/pending rows can no longer be produced through the public
     // API (see above) — seed a pending row directly, then (for "reject")
-    // drive it through the real admin endpoint.
-    async function submitAndReject(user: SeedUser, amountRupiah: number) {
-      const id = await insertPendingTopup(user, amountRupiah);
+    // drive it through the real admin endpoint. Arbitrary amounts here —
+    // insertPendingTopup bypasses the fixed-package validation.
+    async function submitAndReject(user: SeedUser, amountRupiah: number, creditsRequested: number) {
+      const id = await insertPendingTopup(user, amountRupiah, creditsRequested);
       await request(app)
         .patch(`/api/admin/topups/${id}/status`)
         .set(...authHeader(superAdmin))
         .send({ status: "rejected" });
     }
 
-    async function submitPending(user: SeedUser, amountRupiah: number) {
-      await insertPendingTopup(user, amountRupiah);
+    async function submitPending(user: SeedUser, amountRupiah: number, creditsRequested: number) {
+      await insertPendingTopup(user, amountRupiah, creditsRequested);
     }
 
-    const rate = getTopupConfig().rupiahPerCredit;
-    await submitAndApprove(bob, rate * 20, 20); // Rp = rate*20, credits 20
-    await submitAndApprove(bob, rate * 10, 10); // Rp = rate*10, credits 10
-    await submitAndReject(bob, rate * 999); // must not count
-    await submitPending(bob, rate * 888); // must not count
+    // bob buys the two smaller packages; `other` buys the third. Real
+    // POST /topups calls, so these must be exact package amounts.
+    await submitAndApprove(bob, PKG_5K.amountRupiah, PKG_5K.credits);
+    await submitAndApprove(bob, PKG_20K.amountRupiah, PKG_20K.credits);
+    await submitAndReject(bob, 999_000, 999); // must not count
+    await submitPending(bob, 888_000, 888); // must not count
 
     const other = await createUser("user");
-    await submitAndApprove(other, rate * 5, 5);
+    await submitAndApprove(other, PKG_40K.amountRupiah, PKG_40K.credits);
 
     const res = await request(app).get("/api/admin/topups/summary").set(...authHeader(superAdmin));
     expect(res.status).toBe(200);
 
+    const bobTotalAmount = PKG_5K.amountRupiah + PKG_20K.amountRupiah;
+    const bobTotalCredits = PKG_5K.credits + PKG_20K.credits;
     const bobRow = res.body.byUser.find((r: { userId: number }) => r.userId === bob.id);
     expect(bobRow).toMatchObject({
-      totalAmountRupiah: rate * 30,
-      totalCreditsGranted: 30,
+      totalAmountRupiah: bobTotalAmount,
+      totalCreditsGranted: bobTotalCredits,
       requestCount: 2,
     });
     expect(bobRow.lastApprovedAt).not.toBeNull();
 
     const otherRow = res.body.byUser.find((r: { userId: number }) => r.userId === other.id);
     expect(otherRow).toMatchObject({
-      totalAmountRupiah: rate * 5,
-      totalCreditsGranted: 5,
+      totalAmountRupiah: PKG_40K.amountRupiah,
+      totalCreditsGranted: PKG_40K.credits,
       requestCount: 1,
     });
 
     // Totals include at least this test's approved rows (other tests in this
     // file/suite may also contribute approved rows to the shared totals, so
     // assert a lower bound rather than exact equality).
-    expect(res.body.totalAmountRupiah).toBeGreaterThanOrEqual(rate * 35);
-    expect(res.body.totalCreditsGranted).toBeGreaterThanOrEqual(35);
+    const minTotalAmount = bobTotalAmount + PKG_40K.amountRupiah;
+    const minTotalCredits = bobTotalCredits + PKG_40K.credits;
+    expect(res.body.totalAmountRupiah).toBeGreaterThanOrEqual(minTotalAmount);
+    expect(res.body.totalCreditsGranted).toBeGreaterThanOrEqual(minTotalCredits);
     expect(res.body.approvedRequestCount).toBeGreaterThanOrEqual(3);
 
     // byMonth: every approval above just happened, so they all land in the
@@ -394,14 +417,14 @@ describe("GET /admin/topups/summary", () => {
     const monthKey = `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
     const monthRow = res.body.byMonth.find((r: { month: string }) => r.month === monthKey);
     expect(monthRow).toBeTruthy();
-    expect(monthRow.totalAmountRupiah).toBeGreaterThanOrEqual(rate * 35);
-    expect(monthRow.totalCreditsGranted).toBeGreaterThanOrEqual(35);
+    expect(monthRow.totalAmountRupiah).toBeGreaterThanOrEqual(minTotalAmount);
+    expect(monthRow.totalCreditsGranted).toBeGreaterThanOrEqual(minTotalCredits);
     expect(monthRow.requestCount).toBeGreaterThanOrEqual(3);
   });
 
   it("excludes a user with only a pending or rejected request from byUser", async () => {
     const carol = await createUser("user");
-    await insertPendingTopup(carol, getTopupConfig().rupiahPerCredit * 3);
+    await insertPendingTopup(carol, 750, 3);
     // Left pending — never approved.
 
     const res = await request(app).get("/api/admin/topups/summary").set(...authHeader(superAdmin));

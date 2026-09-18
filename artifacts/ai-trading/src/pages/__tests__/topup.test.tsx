@@ -1,10 +1,10 @@
 /**
  * Component test for the credit top-up page (src/pages/topup.tsx).
  *
- * Covers the 2-step wizard: step 1 picks an amount — a preset chip or a
- * free-text field (QRIS hidden) — and step 2 reveals the QRIS image +
- * conversion-rate copy from GET /api/topups/config, the balance card,
- * the live "≈ N credits" preview, submitting a top-up request, and the
+ * Covers the 2-step wizard: step 1 picks one of the four fixed packages
+ * from GET /api/topups/config (QRIS hidden) — there is no free-text
+ * amount — and step 2 reveals the QRIS image, the balance card, the
+ * selected package's credit count, submitting a top-up request, and the
  * history list rendering past requests with a status badge.
  */
 import { describe, expect, it } from "vitest";
@@ -13,7 +13,15 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import TopupPage from "../topup";
 import { installFetchMock, jsonResponse, makeWrapper } from "./test-helpers";
 
-const CONFIG_PAYLOAD = { rupiahPerCredit: 250, qrisImageUrl: "/qris-gopay.jpeg" };
+const CONFIG_PAYLOAD = {
+  packages: [
+    { amountRupiah: 5000, credits: 15 },
+    { amountRupiah: 20000, credits: 70 },
+    { amountRupiah: 40000, credits: 150 },
+    { amountRupiah: 80000, credits: 320 },
+  ],
+  qrisImageUrl: "/qris-gopay.jpeg",
+};
 
 describe("TopupPage", () => {
   it("hides the QRIS until an amount is submitted, then reveals it on step 2", async () => {
@@ -122,15 +130,15 @@ describe("TopupPage", () => {
                 id: 1,
                 userId: 1,
                 amountRupiah: 5000,
-                creditsRequested: 20,
-                conversionRateSnapshot: 250,
+                creditsRequested: 15,
+                conversionRateSnapshot: 333,
                 paymentReferenceNote: null,
                 proofObjectPath: "objects/proof.png",
                 status: "approved",
                 reviewedByUserId: null,
                 reviewedAt: new Date().toISOString(),
                 reviewNote: null,
-                creditsGranted: 20,
+                creditsGranted: 15,
                 createdAt: new Date().toISOString(),
               },
               201,
@@ -152,7 +160,7 @@ describe("TopupPage", () => {
     await act(async () => {
       fireEvent.click(await screen.findByTestId("button-preset-5000"));
     });
-    expect(await screen.findByTestId("text-credits-preview")).toHaveTextContent("20");
+    expect(await screen.findByTestId("text-credits-preview")).toHaveTextContent("15");
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-continue-topup"));
@@ -216,7 +224,7 @@ describe("TopupPage", () => {
     expect(posted).toBe(false);
   });
 
-  it("offers preset amounts plus a free-text field for another amount", async () => {
+  it("offers exactly the four fixed packages, each showing its own credit count, and no free-text amount field", async () => {
     installFetchMock(
       [
         (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
@@ -233,14 +241,15 @@ describe("TopupPage", () => {
       </Wrapper>,
     );
 
-    for (const preset of [5000, 10000, 15000, 20000]) {
-      expect(await screen.findByTestId(`button-preset-${preset}`)).toBeInTheDocument();
+    for (const pkg of CONFIG_PAYLOAD.packages) {
+      expect(await screen.findByTestId(`button-preset-${pkg.amountRupiah}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`text-preset-credits-${pkg.amountRupiah}`)).toHaveTextContent(
+        String(pkg.credits),
+      );
     }
 
-    await act(async () => {
-      fireEvent.change(await screen.findByTestId("input-topup-amount"), { target: { value: "50000" } });
-    });
-    expect(await screen.findByTestId("text-credits-preview")).toHaveTextContent("200");
+    // No custom/free-text amount input anymore — only the fixed packages.
+    expect(screen.queryByTestId("input-topup-amount")).not.toBeInTheDocument();
   });
 
   it("renders past requests with a status badge in the history list", async () => {

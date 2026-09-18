@@ -275,7 +275,7 @@ class TopupsApi {
     );
   }
 
-  /// Get the current Rupiah-to-credit conversion rate and QRIS image URL
+  /// Get the fixed top-up packages and QRIS image URL
   /// 
   ///
   /// Parameters:

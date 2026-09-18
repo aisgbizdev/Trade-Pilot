@@ -75,9 +75,8 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**getOutboundClickStats**](doc/AdminApi.md#getoutboundclickstats) | **GET** /admin/outbound-clicks/stats | Aggregated counts of sponsor / partner outbound link clicks
 [*AdminApi*](doc/AdminApi.md) | [**getPendingTopupRequests**](doc/AdminApi.md#getpendingtopuprequests) | **GET** /admin/topups | List top-up requests for admin review
 [*AdminApi*](doc/AdminApi.md) | [**getProgressionAudit**](doc/AdminApi.md#getprogressionaudit) | **GET** /admin/progression/audit | Read-only progression ledger audit; never a leaderboard
-[*AdminApi*](doc/AdminApi.md) | [**getTopupSummary**](doc/AdminApi.md#gettopupsummary) | **GET** /admin/topups/summary | Aggregate revenue/credits summary across all approved top-up requests, grouped by user
+[*AdminApi*](doc/AdminApi.md) | [**getTopupSummary**](doc/AdminApi.md#gettopupsummary) | **GET** /admin/topups/summary | Aggregate revenue/credits summary across all approved top-up requests, grouped by user and by calendar month
 [*AdminApi*](doc/AdminApi.md) | [**reviewCreditTopupRequest**](doc/AdminApi.md#reviewcredittopuprequest) | **PATCH** /admin/topups/{id}/status | Approve or reject a top-up request, crediting the user&#39;s balance on approval
-[*AdminApi*](doc/AdminApi.md) | [**updateTopupConfig**](doc/AdminApi.md#updatetopupconfig) | **PATCH** /admin/topups/config | Set the Rupiah-to-credit conversion rate
 [*AnalysesApi*](doc/AnalysesApi.md) | [**armAnalysisAlerts**](doc/AnalysesApi.md#armanalysisalerts) | **POST** /analyses/{id}/alerts | Arm price alerts for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**cancelAnalysisAlerts**](doc/AnalysesApi.md#cancelanalysisalerts) | **DELETE** /analyses/{id}/alerts | Cancel any un-fired price alerts for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**createAnalysis**](doc/AnalysesApi.md#createanalysis) | **POST** /analyses | Create new analysis (triggers AI)
@@ -155,7 +154,7 @@ Class | Method | HTTP request | Description
 [*TopupsApi*](doc/TopupsApi.md) | [**createTopupRequest**](doc/TopupsApi.md#createtopuprequest) | **POST** /topups | Submit a manual top-up request for admin review
 [*TopupsApi*](doc/TopupsApi.md) | [**getCreditBalance**](doc/TopupsApi.md#getcreditbalance) | **GET** /topups/balance | Get the authenticated user&#39;s analysis credit balance
 [*TopupsApi*](doc/TopupsApi.md) | [**getMyTopupRequests**](doc/TopupsApi.md#getmytopuprequests) | **GET** /topups/mine | List the authenticated user&#39;s own top-up request history
-[*TopupsApi*](doc/TopupsApi.md) | [**getTopupConfig**](doc/TopupsApi.md#gettopupconfig) | **GET** /topups/config | Get the current Rupiah-to-credit conversion rate and QRIS image URL
+[*TopupsApi*](doc/TopupsApi.md) | [**getTopupConfig**](doc/TopupsApi.md#gettopupconfig) | **GET** /topups/config | Get the fixed top-up packages and QRIS image URL
 [*TradeJournalApi*](doc/TradeJournalApi.md) | [**createJournalEntry**](doc/TradeJournalApi.md#createjournalentry) | **POST** /journal | Log a new manual trade-journal entry (optionally linked to an analysis)
 [*TradeJournalApi*](doc/TradeJournalApi.md) | [**deleteJournalEntry**](doc/TradeJournalApi.md#deletejournalentry) | **DELETE** /journal/{id} | Delete a journal entry
 [*TradeJournalApi*](doc/TradeJournalApi.md) | [**getJournalEntryForAnalysis**](doc/TradeJournalApi.md#getjournalentryforanalysis) | **GET** /journal/for-analysis/{analysisId} | Get the journal entry linked to a specific analysis
@@ -327,6 +326,8 @@ Class | Method | HTTP request | Description
  - [TimeframeRiskMapOverall](doc/TimeframeRiskMapOverall.md)
  - [TimeframeRiskMetrics](doc/TimeframeRiskMetrics.md)
  - [TopupConfig](doc/TopupConfig.md)
+ - [TopupMonthSummary](doc/TopupMonthSummary.md)
+ - [TopupPackageOption](doc/TopupPackageOption.md)
  - [TopupRequest](doc/TopupRequest.md)
  - [TopupRequestList](doc/TopupRequestList.md)
  - [TopupRequestStatus](doc/TopupRequestStatus.md)
@@ -341,7 +342,6 @@ Class | Method | HTTP request | Description
  - [TraderMirrorResponse](doc/TraderMirrorResponse.md)
  - [UpdateJournalEntryBody](doc/UpdateJournalEntryBody.md)
  - [UpdateProfileBody](doc/UpdateProfileBody.md)
- - [UpdateTopupConfigBody](doc/UpdateTopupConfigBody.md)
  - [UpdateUserQuotaBody](doc/UpdateUserQuotaBody.md)
  - [UpdateUserRoleBody](doc/UpdateUserRoleBody.md)
  - [UploadUrlRequest](doc/UploadUrlRequest.md)

@@ -7,16 +7,15 @@ import { createNotification } from "../lib/create-notification";
 import {
   applyCreditLedgerEntry,
   CREDIT_BALANCE_LOCK_NAMESPACE,
+  findTopupPackage,
   getCreditBalanceForUser,
   getTopupConfig,
-  setRupiahPerCredit,
 } from "../lib/credits";
 import {
   CreateTopupRequestBody,
   GetMyTopupRequestsQueryParams,
   GetPendingTopupRequestsQueryParams,
   ReviewCreditTopupRequestBody,
-  UpdateTopupConfigBody,
 } from "@workspace/api-zod";
 
 const router = Router();
@@ -63,30 +62,41 @@ router.get("/topups/balance", requireAuth, async (req: AuthRequest, res) => {
 });
 
 router.post("/topups", requireAuth, async (req: AuthRequest, res) => {
+  // Checked ahead of the full schema parse so a missing/blank proof gets
+  // this specific message whether the field is omitted entirely (which
+  // the generated zod schema also rejects, just with an opaque "invalid
+  // body" error) or present-but-blank. Enforced here rather than relying
+  // solely on the generated zod schema (openapi.yaml already marks the
+  // field required — see CreateTopupRequestBody — but lib/api-zod is
+  // regenerated separately and this guard must hold regardless of when
+  // that next happens).
+  const rawProof = (req.body as { proofObjectPath?: unknown } | undefined)?.proofObjectPath;
+  if (typeof rawProof !== "string" || !rawProof.trim()) {
+    res.status(400).json({ error: "Bukti transfer wajib diupload" });
+    return;
+  }
+
   const parsed = CreateTopupRequestBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Data top-up tidak valid" });
     return;
   }
   const { amountRupiah, paymentReferenceNote, proofObjectPath } = parsed.data;
-  // Mandatory: admin review has no other way to verify a manual transfer
-  // actually happened. Enforced here rather than relying solely on the
-  // generated zod schema (openapi.yaml already marks the field required —
-  // see CreateTopupRequestBody — but lib/api-zod is regenerated
-  // separately and this guard must hold regardless of when that next
-  // happens).
-  if (!proofObjectPath || !proofObjectPath.trim()) {
-    res.status(400).json({ error: "Bukti transfer wajib diupload" });
-    return;
-  }
-  const { rupiahPerCredit } = getTopupConfig();
-  const creditsRequested = Math.floor(amountRupiah / rupiahPerCredit);
-  if (creditsRequested < 1) {
+  // Fixed bonus-tiered packages (see lib/credits.ts) — the amount must
+  // match one of them exactly. There is no free-text amount and no
+  // per-rupiah rate to fall back to.
+  const pkg = findTopupPackage(amountRupiah);
+  if (!pkg) {
     res.status(400).json({
-      error: `Nominal terlalu kecil. Minimal Rp${rupiahPerCredit.toLocaleString("id-ID")} untuk 1 kredit.`,
+      error: "Nominal tidak valid. Pilih salah satu paket top-up yang tersedia.",
     });
     return;
   }
+  const creditsRequested = pkg.credits;
+  // Recorded for audit/history purposes only (what this specific package's
+  // effective per-credit price was at the time) — no longer a globally
+  // adjustable rate.
+  const conversionRateSnapshot = Math.round(pkg.amountRupiah / pkg.credits);
 
   const userId = req.userId!;
   // TEMPORARY (explicit, time-boxed product decision — see chat): every
@@ -105,7 +115,7 @@ router.post("/topups", requireAuth, async (req: AuthRequest, res) => {
         userId,
         amountRupiah,
         creditsRequested,
-        conversionRateSnapshot: rupiahPerCredit,
+        conversionRateSnapshot,
         paymentReferenceNote: paymentReferenceNote ?? null,
         proofObjectPath,
         status: "approved",
@@ -323,16 +333,6 @@ router.patch("/admin/topups/:id/status", requireSuperAdmin, async (req: AuthRequ
   }
 
   res.json(serializeTopupRequest(row));
-});
-
-router.patch("/admin/topups/config", requireSuperAdmin, async (req: AuthRequest, res) => {
-  const parsed = UpdateTopupConfigBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Rate tidak valid" });
-    return;
-  }
-  setRupiahPerCredit(parsed.data.rupiahPerCredit);
-  res.json(getTopupConfig());
 });
 
 export default router;

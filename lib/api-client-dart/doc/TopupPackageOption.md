@@ -1,4 +1,4 @@
-# trade_pilot_api_client.model.TopupConfig
+# trade_pilot_api_client.model.TopupPackageOption
 
 ## Load the model package
 ```dart
@@ -8,8 +8,8 @@ import 'package:trade_pilot_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**packages** | [**BuiltList&lt;TopupPackageOption&gt;**](TopupPackageOption.md) | The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly. | 
-**qrisImageUrl** | **String** |  | 
+**amountRupiah** | **int** |  | 
+**credits** | **int** |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

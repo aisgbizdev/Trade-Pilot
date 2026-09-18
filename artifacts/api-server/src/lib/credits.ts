@@ -4,22 +4,43 @@ import { creditBalances, creditLedger } from "@workspace/db/schema";
 
 type Tx = Parameters<Parameters<DB["transaction"]>[0]>[0];
 
-function parsePositiveInt(value: string | undefined, fallback: number): number {
-  if (!value) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+export interface TopupPackage {
+  amountRupiah: number;
+  credits: number;
 }
 
-let RUPIAH_PER_CREDIT = parsePositiveInt(process.env["CREDIT_TOPUP_RUPIAH_PER_CREDIT"], 250);
+// Fixed bonus-tiered top-up packages (product decision — replaces the old
+// flat Rp-per-credit rate, which gave every nominal the same per-credit
+// price). A bigger top-up buys credits at a better effective rate:
+//   Rp5.000 -> 15 credits   (Rp333/credit)
+//   Rp20.000 -> 70 credits  (Rp286/credit)
+//   Rp40.000 -> 150 credits (Rp267/credit)
+//   Rp80.000 -> 320 credits (Rp250/credit)
+// POST /topups only accepts an amount that matches one of these exactly —
+// there is no free-text/custom amount and no longer a runtime-adjustable
+// rate (see the removed PATCH /admin/topups/config and TopupRateEditor).
+const TOPUP_PACKAGES: readonly TopupPackage[] = [
+  { amountRupiah: 5_000, credits: 15 },
+  { amountRupiah: 20_000, credits: 70 },
+  { amountRupiah: 40_000, credits: 150 },
+  { amountRupiah: 80_000, credits: 320 },
+];
+
 // Real GoPay QRIS image, served statically from artifacts/ai-trading/public/.
 const QRIS_IMAGE_URL = "/qris-gopay.jpeg";
 
-export function getTopupConfig(): { rupiahPerCredit: number; qrisImageUrl: string } {
-  return { rupiahPerCredit: RUPIAH_PER_CREDIT, qrisImageUrl: QRIS_IMAGE_URL };
+export function getTopupPackages(): readonly TopupPackage[] {
+  return TOPUP_PACKAGES;
 }
 
-export function setRupiahPerCredit(rate: number): void {
-  RUPIAH_PER_CREDIT = parsePositiveInt(String(rate), RUPIAH_PER_CREDIT);
+/** The package matching this exact rupiah amount, or null if it's not one
+ *  of the fixed packages. */
+export function findTopupPackage(amountRupiah: number): TopupPackage | null {
+  return TOPUP_PACKAGES.find((p) => p.amountRupiah === amountRupiah) ?? null;
+}
+
+export function getTopupConfig(): { packages: readonly TopupPackage[]; qrisImageUrl: string } {
+  return { packages: TOPUP_PACKAGES, qrisImageUrl: QRIS_IMAGE_URL };
 }
 
 export async function getCreditBalanceForUser(userId: number): Promise<number> {
