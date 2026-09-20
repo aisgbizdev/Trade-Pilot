@@ -1,5 +1,4 @@
 import { Clock, CalendarClock, Hourglass, Zap } from "lucide-react";
-import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { hideQuotaDialog, useQuotaDialogState, type QuotaScope } from "@/hooks/use-quota-dialog";
+import { showTopupDialog } from "@/hooks/use-topup-dialog";
 
 const SCOPE_ICON: Record<QuotaScope, typeof Clock> = {
   hour: Clock,
@@ -27,7 +27,6 @@ const SCOPE_ICON: Record<QuotaScope, typeof Clock> = {
 export function QuotaDialog() {
   const { t } = useTranslation();
   const { open, info } = useQuotaDialogState();
-  const [, setLocation] = useLocation();
 
   if (!info) return null;
 
@@ -83,7 +82,9 @@ export function QuotaDialog() {
             forward for either wall — offered as the dominant action with
             the dismiss kept as a quiet text link, not a co-equal button.
             `concurrent` is a per-user processing lock a credit can't
-            skip, so that branch keeps a plain acknowledge button. */}
+            skip, so that branch keeps a plain acknowledge button. Opens
+            the top-up popup in place (see TopupDialog) instead of
+            navigating to /topup, so the user never leaves this page. */}
         {info.scope !== "concurrent" ? (
           <div className="mt-1 space-y-2.5">
             <Button
@@ -91,7 +92,7 @@ export function QuotaDialog() {
               className="w-full gap-2 font-semibold"
               onClick={() => {
                 hideQuotaDialog();
-                setLocation("/topup");
+                showTopupDialog();
               }}
               data-testid="button-quota-dialog-topup"
             >

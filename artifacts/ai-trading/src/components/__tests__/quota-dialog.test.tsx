@@ -3,6 +3,9 @@
  * (src/components/quota-dialog.tsx). A purchased credit bypasses BOTH the
  * hourly and daily cap, so the CTA + hint show for either wall — but not
  * for `concurrent`, which is a per-user processing lock a credit can't skip.
+ * The CTA opens the top-up popup (TopupDialog) in place instead of
+ * navigating to /topup — see topup-dialog.test.tsx for that dialog's own
+ * behavior.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { act, render, screen } from "@testing-library/react";
@@ -10,6 +13,7 @@ import type { ReactNode } from "react";
 
 import { QuotaDialog } from "../quota-dialog";
 import { showQuotaDialog, hideQuotaDialog } from "@/hooks/use-quota-dialog";
+import { useTopupDialogState, hideTopupDialog } from "@/hooks/use-topup-dialog";
 import { LanguageProvider } from "@/lib/i18n";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -19,15 +23,22 @@ function Wrapper({ children }: { children: ReactNode }) {
 afterEach(() => {
   act(() => {
     hideQuotaDialog();
+    hideTopupDialog();
   });
   window.history.replaceState({}, "", "/analyze");
 });
 
 describe("QuotaDialog top-up CTA", () => {
-  it("renders the top-up CTA + hint for a daily-scope block and navigates to /topup on click", async () => {
+  it("renders the top-up CTA + hint for a daily-scope block and opens the top-up popup on click, without navigating", async () => {
+    function Probe() {
+      const { open } = useTopupDialogState();
+      return <span data-testid="probe-topup-dialog-open">{String(open)}</span>;
+    }
+
     render(
       <Wrapper>
         <QuotaDialog />
+        <Probe />
       </Wrapper>,
     );
 
@@ -40,13 +51,17 @@ describe("QuotaDialog top-up CTA", () => {
     ).toBeInTheDocument();
     // Dismiss stays available, but as a quiet text link — not a co-equal button.
     expect(screen.getByTestId("button-quota-dialog-ok")).toBeInTheDocument();
+    expect(screen.getByTestId("probe-topup-dialog-open")).toHaveTextContent("false");
 
+    const pathnameBeforeClick = window.location.pathname;
     const cta = await screen.findByTestId("button-quota-dialog-topup");
     act(() => {
       cta.click();
     });
 
-    expect(window.location.pathname).toBe("/topup");
+    expect(window.location.pathname).toBe(pathnameBeforeClick);
+    expect(screen.queryByTestId("dialog-quota")).not.toBeInTheDocument();
+    expect(screen.getByTestId("probe-topup-dialog-open")).toHaveTextContent("true");
   });
 
   it("still lets the user dismiss the upsell without topping up", async () => {
