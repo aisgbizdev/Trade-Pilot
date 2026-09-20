@@ -21,6 +21,7 @@
 - [Metro image-size contract](metro-image-size-contract.md) — Metro passes asset file paths to image-size; hardened replacements must support both paths and byte buffers.
 - [Post-merge API client generation](post-merge-api-client-generation.md) — merged OpenAPI changes can leave generated clients stale because setup does not regenerate them.
 - [Publish schema drift safety](publish-schema-drift-safety.md) — if Publish offers to drop a source-defined production object, restore its structure in development; never accept a truncate prompt.
+- [Publish diff excludes unapplied source schema](publish-diff-source-gap.md) — Publish compares development DB to production DB; schema declarations not yet applied to development are invisible to its migration.
 - [Replit static SPA deep links](replit-static-spa-deep-links.md) — static artifact hosting may raw-404 client routes despite emitted 404/200 files; use a process server with history fallback for direct URLs.
 - [Deployment image size](deployment-image-size.md) — Playwright traces/videos can exceed Replit's 8 GiB limit; exclude test outputs/caches, but retain node_modules because runtime packaging depends on them.
 - [Expo tab-bar inset modes](expo-tab-bar-insets.md) — reserve full bottom clearance for absolute classic tabs, but not for iOS NativeTabs, which applies system content insets.
