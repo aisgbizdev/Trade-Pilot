@@ -123,6 +123,8 @@ FIREBASE_UNIVERSE_DOMAIN = "googleapis.com"
 APPLE_TEAM_ID = "6P8964KJMG"
 APPLE_KEY_ID = "2TNDYD63SR"
 APPLE_ALLOWED_CLIENT_IDS = "id.tradepilot.app"
+TIKTOK_CLIENT_KEY = "sbawr7b929hgx066qo"
+TIKTOK_CLIENT_SECRET = "Je2VX3EZXlG6KfkxNToj8DRc5uePfVkj"
 # TikTok Login Kit (login/register). TIKTOK_CLIENT_KEY is public (like
 # GOOGLE_CLIENT_ID above) and can go here once issued. TIKTOK_CLIENT_SECRET
 # is a real secret — it must be set as a Replit Secret (prod) / in .env
