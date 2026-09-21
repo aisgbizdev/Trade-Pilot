@@ -161,6 +161,8 @@ import 'package:trade_pilot_api_client/src/model/standard_trading_rule_text.dart
 import 'package:trade_pilot_api_client/src/model/standard_trading_rules.dart';
 import 'package:trade_pilot_api_client/src/model/standard_trading_rules_fixed_rate.dart';
 import 'package:trade_pilot_api_client/src/model/tags_list.dart';
+import 'package:trade_pilot_api_client/src/model/tiktok_complete_signup_body.dart';
+import 'package:trade_pilot_api_client/src/model/tiktok_pending_signup_response.dart';
 import 'package:trade_pilot_api_client/src/model/timeframe_risk.dart';
 import 'package:trade_pilot_api_client/src/model/timeframe_risk_map.dart';
 import 'package:trade_pilot_api_client/src/model/timeframe_risk_map_overall.dart';
@@ -346,6 +348,8 @@ part 'serializers.g.dart';
   StandardTradingRules,
   StandardTradingRulesFixedRate,
   TagsList,
+  TiktokCompleteSignupBody,
+  TiktokPendingSignupResponse,
   TimeframeRisk,
   TimeframeRiskMap,
   TimeframeRiskMapOverall,

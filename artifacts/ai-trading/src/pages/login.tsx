@@ -16,6 +16,7 @@ import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BrandLogo } from "@/components/brand-logo";
 import { GoogleSignInButton, AuthDivider } from "@/components/google-sign-in-button";
+import { TiktokSignInButton } from "@/components/tiktok-sign-in-button";
 import { useTrackEvent } from "@/hooks/use-track-event";
 
 type LoginRequestError = {
@@ -67,17 +68,19 @@ export default function LoginPage() {
   const queryClient = useQueryClient();
   const login = useLogin();
 
-  // The Google OAuth callback redirects here with ?error=... on failure.
+  // The Google/TikTok OAuth callbacks redirect here with ?error=... on failure.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const err = params.get("error");
-    if (err === "google" || err === "google_unverified") {
+    if (err === "google" || err === "google_unverified" || err === "tiktok") {
       toast({
         title: t.auth.login_failed,
         description:
           err === "google_unverified"
             ? t.auth.google_email_unverified
-            : t.auth.google_login_failed,
+            : err === "tiktok"
+              ? t.auth.tiktok_login_failed
+              : t.auth.google_login_failed,
         variant: "destructive",
       });
       params.delete("error");
@@ -158,7 +161,10 @@ export default function LoginPage() {
           </div>
         )}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
-          <GoogleSignInButton disabled={login.isPending} />
+          <div className="space-y-2.5">
+            <GoogleSignInButton disabled={login.isPending} />
+            <TiktokSignInButton disabled={login.isPending} />
+          </div>
           <AuthDivider />
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-testid="form-login">

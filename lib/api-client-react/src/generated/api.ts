@@ -129,6 +129,8 @@ import type {
   SetAnalysisNoteBody,
   StandardTradingRules,
   TagsList,
+  TiktokCompleteSignupBody,
+  TiktokPendingSignupResponse,
   TimeframeRiskMap,
   TopupConfig,
   TopupRequest,
@@ -2549,6 +2551,203 @@ export const useReauthenticateWithApple = <
   TContext
 > => {
   return useMutation(getReauthenticateWithAppleMutationOptions(options));
+};
+
+export const getGetTiktokPendingSignupUrl = () => {
+  return `/api/auth/tiktok/pending-signup`;
+};
+
+/**
+ * After GET /auth/tiktok/callback finds a brand-new TikTok sign-in
+ * (no existing `tiktok_id` match), it stashes the verified profile
+ * server-side and redirects the browser to the "finish signup" page
+ * with a short-lived httpOnly cookie. That page calls this endpoint
+ * (cookie sent automatically) to show a friendly "Hi, {name}" before
+ * asking for an email — the `tiktok_id` itself is never returned to
+ * the client.
+ * @summary Look up the TikTok profile pending a complete-signup email
+ */
+export const getTiktokPendingSignup = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<TiktokPendingSignupResponse> => {
+  return customFetch<TiktokPendingSignupResponse>(
+    getGetTiktokPendingSignupUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetTiktokPendingSignupQueryKey = () => {
+  return [`/api/auth/tiktok/pending-signup`] as const;
+};
+
+export const getGetTiktokPendingSignupQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTiktokPendingSignup>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTiktokPendingSignup>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTiktokPendingSignupQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTiktokPendingSignup>>
+  > = ({ signal }) => getTiktokPendingSignup({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTiktokPendingSignup>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTiktokPendingSignupQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTiktokPendingSignup>>
+>;
+export type GetTiktokPendingSignupQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Look up the TikTok profile pending a complete-signup email
+ */
+
+export function useGetTiktokPendingSignup<
+  TData = Awaited<ReturnType<typeof getTiktokPendingSignup>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTiktokPendingSignup>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTiktokPendingSignupQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCompleteTiktokSignupUrl = () => {
+  return `/api/auth/tiktok/complete-signup`;
+};
+
+/**
+ * TikTok's Login Kit never returns an email, so a brand-new sign-in
+ * (see GET /auth/tiktok/callback) can't create the account directly.
+ * This endpoint reads the pending TikTok profile from its httpOnly
+ * cookie (never a request field a client could forge), creates the
+ * account with the supplied email plus the captured TikTok
+ * `display_name`/`avatar_url`, and returns a normal TradePilot
+ * Bearer session.
+ * @summary Finish a brand-new TikTok sign-in by supplying an email
+ */
+export const completeTiktokSignup = async (
+  tiktokCompleteSignupBody: TiktokCompleteSignupBody,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AuthResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<AuthResponse>(getCompleteTiktokSignupUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(tiktokCompleteSignupBody),
+  });
+};
+
+export const getCompleteTiktokSignupMutationKey = () =>
+  ["completeTiktokSignup"] as const;
+
+export const getCompleteTiktokSignupMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeTiktokSignup>>,
+    TError,
+    CompleteTiktokSignupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeTiktokSignup>>,
+  TError,
+  CompleteTiktokSignupMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCompleteTiktokSignupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeTiktokSignup>>,
+    CompleteTiktokSignupMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return completeTiktokSignup(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteTiktokSignupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeTiktokSignup>>
+>;
+export type CompleteTiktokSignupMutationBody =
+  BodyType<TiktokCompleteSignupBody>;
+export type CompleteTiktokSignupMutationError = ErrorType<ErrorResponse>;
+export type CompleteTiktokSignupMutationVariables = {
+  data: BodyType<TiktokCompleteSignupBody>;
+};
+
+/**
+ * @summary Finish a brand-new TikTok sign-in by supplying an email
+ */
+export const useCompleteTiktokSignup = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeTiktokSignup>>,
+    TError,
+    CompleteTiktokSignupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof completeTiktokSignup>>,
+  TError,
+  CompleteTiktokSignupMutationVariables,
+  TContext
+> => {
+  return useMutation(getCompleteTiktokSignupMutationOptions(options));
 };
 
 export const getLogoutUrl = () => {

@@ -15,6 +15,7 @@ import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
+import TiktokCompleteSignupPage from "@/pages/tiktok-complete-signup";
 import AnalyzePage from "@/pages/analyze";
 import AnalysisDetailPage from "@/pages/analysis-detail";
 import HistoryPage from "@/pages/history";
@@ -84,6 +85,7 @@ function Router() {
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={RegisterPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/auth/tiktok/complete-signup" component={TiktokCompleteSignupPage} />
         <Route path="/privacy">
           <LegalPage kind="privacy" />
         </Route>

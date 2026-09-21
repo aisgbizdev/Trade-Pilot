@@ -705,6 +705,15 @@ export interface AppleReauthResponse {
   expiresAt: string;
 }
 
+export interface TiktokPendingSignupResponse {
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface TiktokCompleteSignupBody {
+  email: string;
+}
+
 export interface ChangeSecurityQuestionBody {
   currentPassword: string;
   securityQuestion: string;

@@ -154,6 +154,18 @@ export const users = pgTable("users", {
   // sign-in or when an existing email account links Apple; null otherwise.
   // See lib/apple-account.ts for the account-linking rules.
   appleId: text("apple_id").unique(),
+  // TikTok account open_id. Unlike Google/Apple, TikTok's Login Kit never
+  // returns an email — so a TikTok sign-in can never auto-link to an
+  // existing account by email the way Google/Apple do. A brand-new TikTok
+  // login always goes through the pendingTiktokSignups flow (collect a
+  // real email first) before a user row is created. See
+  // lib/tiktok-account.ts.
+  tiktokId: text("tiktok_id").unique(),
+  // Captured from TikTok's user.info.basic scope at sign-in time — this is
+  // the actual product goal of TikTok login (building a base of users'
+  // TikTok identities), independent of auth. Refreshed on every login.
+  tiktokDisplayName: text("tiktok_display_name"),
+  tiktokAvatarUrl: text("tiktok_avatar_url"),
   displayName: text("display_name").notNull(),
   avatarUrl: text("avatar_url"),
   role: roleEnum("role").notNull().default("user"),
@@ -346,6 +358,27 @@ export const reauthTokens = pgTable("reauth_tokens", {
     .references(() => users.id, { onDelete: "cascade" }),
   tokenHash: text("token_hash").notNull().unique(),
   purpose: text("purpose").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Holds a verified TikTok profile between GET /auth/tiktok/callback and
+// POST /auth/tiktok/complete-signup for a brand-new TikTok sign-in (no
+// existing tiktok_id match). TikTok's Login Kit never returns an email, so
+// the user row can't be created yet at callback time — the raw token is
+// set in a short-lived httpOnly cookie (never in a URL) and this row is
+// the server-side source of truth for the profile it names; a client can't
+// forge which tiktok_id gets attached to the account it creates. Same
+// shape/rationale as reauthTokens (hashed token, single-use via
+// `usedAt`), but for an anonymous pre-account flow instead of an
+// already-known user.
+export const pendingTiktokSignups = pgTable("pending_tiktok_signups", {
+  id: serial("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  tiktokId: text("tiktok_id").notNull(),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
   expiresAt: timestamp("expires_at").notNull(),
   usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

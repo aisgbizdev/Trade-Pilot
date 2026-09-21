@@ -11,9 +11,11 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**changePassword**](AuthApi.md#changepassword) | **PATCH** /auth/password | Change own password
 [**changeSecurityQuestion**](AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
+[**completeTiktokSignup**](AuthApi.md#completetiktoksignup) | **POST** /auth/tiktok/complete-signup | Finish a brand-new TikTok sign-in by supplying an email
 [**deleteAccount**](AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
 [**getForgotPasswordQuestion**](AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [**getMe**](AuthApi.md#getme) | **GET** /auth/me | Get current user
+[**getTiktokPendingSignup**](AuthApi.md#gettiktokpendingsignup) | **GET** /auth/tiktok/pending-signup | Look up the TikTok profile pending a complete-signup email
 [**login**](AuthApi.md#login) | **POST** /auth/login | Login user
 [**loginWithAppleNative**](AuthApi.md#loginwithapplenative) | **POST** /auth/apple/native | Exchange a native Sign in with Apple identity token for a TradePilot session
 [**loginWithGoogleNative**](AuthApi.md#loginwithgooglenative) | **POST** /auth/google/native | Exchange a native-app Google ID token for a TradePilot session
@@ -96,6 +98,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**MessageResponse**](MessageResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **completeTiktokSignup**
+> AuthResponse completeTiktokSignup(tiktokCompleteSignupBody)
+
+Finish a brand-new TikTok sign-in by supplying an email
+
+TikTok's Login Kit never returns an email, so a brand-new sign-in (see GET /auth/tiktok/callback) can't create the account directly. This endpoint reads the pending TikTok profile from its httpOnly cookie (never a request field a client could forge), creates the account with the supplied email plus the captured TikTok `display_name`/`avatar_url`, and returns a normal TradePilot Bearer session. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAuthApi();
+final TiktokCompleteSignupBody tiktokCompleteSignupBody = ; // TiktokCompleteSignupBody | 
+
+try {
+    final response = api.completeTiktokSignup(tiktokCompleteSignupBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->completeTiktokSignup: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **tiktokCompleteSignupBody** | [**TiktokCompleteSignupBody**](TiktokCompleteSignupBody.md)|  | 
+
+### Return type
+
+[**AuthResponse**](AuthResponse.md)
 
 ### Authorization
 
@@ -217,6 +262,45 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**User**](User.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getTiktokPendingSignup**
+> TiktokPendingSignupResponse getTiktokPendingSignup()
+
+Look up the TikTok profile pending a complete-signup email
+
+After GET /auth/tiktok/callback finds a brand-new TikTok sign-in (no existing `tiktok_id` match), it stashes the verified profile server-side and redirects the browser to the \"finish signup\" page with a short-lived httpOnly cookie. That page calls this endpoint (cookie sent automatically) to show a friendly \"Hi, {name}\" before asking for an email — the `tiktok_id` itself is never returned to the client. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAuthApi();
+
+try {
+    final response = api.getTiktokPendingSignup();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->getTiktokPendingSignup: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**TiktokPendingSignupResponse**](TiktokPendingSignupResponse.md)
 
 ### Authorization
 

@@ -178,6 +178,8 @@ export 'package:trade_pilot_api_client/src/model/standard_trading_rule_text.dart
 export 'package:trade_pilot_api_client/src/model/standard_trading_rules.dart';
 export 'package:trade_pilot_api_client/src/model/standard_trading_rules_fixed_rate.dart';
 export 'package:trade_pilot_api_client/src/model/tags_list.dart';
+export 'package:trade_pilot_api_client/src/model/tiktok_complete_signup_body.dart';
+export 'package:trade_pilot_api_client/src/model/tiktok_pending_signup_response.dart';
 export 'package:trade_pilot_api_client/src/model/timeframe_risk.dart';
 export 'package:trade_pilot_api_client/src/model/timeframe_risk_map.dart';
 export 'package:trade_pilot_api_client/src/model/timeframe_risk_map_overall.dart';

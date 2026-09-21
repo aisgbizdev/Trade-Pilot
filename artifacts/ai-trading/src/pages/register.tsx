@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
+import { TiktokSignInButton } from "@/components/tiktok-sign-in-button";
 
 // Same three value props the landing page's hero leads with — reused here
 // (smaller, theme-aware) so the space below the sign-up card carries the
@@ -46,7 +47,10 @@ export default function RegisterPage() {
 
       <div className="flex-1 flex flex-col px-6 py-8 -mt-4">
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
-          <GoogleSignInButton />
+          <div className="space-y-2.5">
+            <GoogleSignInButton />
+            <TiktokSignInButton />
+          </div>
 
           <p
             className="text-[11px] text-muted-foreground text-center leading-relaxed mt-4"

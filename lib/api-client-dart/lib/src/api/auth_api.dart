@@ -26,6 +26,8 @@ import 'package:trade_pilot_api_client/src/model/register_body.dart';
 import 'package:trade_pilot_api_client/src/model/reset_password_body.dart';
 import 'package:trade_pilot_api_client/src/model/reset_token_response.dart';
 import 'package:trade_pilot_api_client/src/model/security_question_response.dart';
+import 'package:trade_pilot_api_client/src/model/tiktok_complete_signup_body.dart';
+import 'package:trade_pilot_api_client/src/model/tiktok_pending_signup_response.dart';
 import 'package:trade_pilot_api_client/src/model/update_profile_body.dart';
 import 'package:trade_pilot_api_client/src/model/user.dart';
 import 'package:trade_pilot_api_client/src/model/verify_security_answer_body.dart';
@@ -217,6 +219,101 @@ class AuthApi {
     }
 
     return Response<MessageResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Finish a brand-new TikTok sign-in by supplying an email
+  /// TikTok&#39;s Login Kit never returns an email, so a brand-new sign-in (see GET /auth/tiktok/callback) can&#39;t create the account directly. This endpoint reads the pending TikTok profile from its httpOnly cookie (never a request field a client could forge), creates the account with the supplied email plus the captured TikTok &#x60;display_name&#x60;/&#x60;avatar_url&#x60;, and returns a normal TradePilot Bearer session. 
+  ///
+  /// Parameters:
+  /// * [tiktokCompleteSignupBody] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AuthResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AuthResponse>> completeTiktokSignup({ 
+    required TiktokCompleteSignupBody tiktokCompleteSignupBody,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/tiktok/complete-signup';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(TiktokCompleteSignupBody);
+      _bodyData = _serializers.serialize(tiktokCompleteSignupBody, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AuthResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AuthResponse),
+      ) as AuthResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AuthResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -480,6 +577,79 @@ class AuthApi {
     }
 
     return Response<User>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Look up the TikTok profile pending a complete-signup email
+  /// After GET /auth/tiktok/callback finds a brand-new TikTok sign-in (no existing &#x60;tiktok_id&#x60; match), it stashes the verified profile server-side and redirects the browser to the \&quot;finish signup\&quot; page with a short-lived httpOnly cookie. That page calls this endpoint (cookie sent automatically) to show a friendly \&quot;Hi, {name}\&quot; before asking for an email — the &#x60;tiktok_id&#x60; itself is never returned to the client. 
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [TiktokPendingSignupResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<TiktokPendingSignupResponse>> getTiktokPendingSignup({ 
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/tiktok/pending-signup';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    TiktokPendingSignupResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(TiktokPendingSignupResponse),
+      ) as TiktokPendingSignupResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<TiktokPendingSignupResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

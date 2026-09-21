@@ -646,6 +646,84 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/tiktok/pending-signup:
+    get:
+      operationId: getTiktokPendingSignup
+      tags: [auth]
+      summary: Look up the TikTok profile pending a complete-signup email
+      description: |
+        After GET /auth/tiktok/callback finds a brand-new TikTok sign-in
+        (no existing `tiktok_id` match), it stashes the verified profile
+        server-side and redirects the browser to the "finish signup" page
+        with a short-lived httpOnly cookie. That page calls this endpoint
+        (cookie sent automatically) to show a friendly "Hi, {name}" before
+        asking for an email — the `tiktok_id` itself is never returned to
+        the client.
+      responses:
+        "200":
+          description: Pending TikTok profile found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TiktokPendingSignupResponse"
+        "404":
+          description: No pending TikTok signup cookie, or it expired/was already used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/tiktok/complete-signup:
+    post:
+      operationId: completeTiktokSignup
+      tags: [auth]
+      summary: Finish a brand-new TikTok sign-in by supplying an email
+      description: |
+        TikTok's Login Kit never returns an email, so a brand-new sign-in
+        (see GET /auth/tiktok/callback) can't create the account directly.
+        This endpoint reads the pending TikTok profile from its httpOnly
+        cookie (never a request field a client could forge), creates the
+        account with the supplied email plus the captured TikTok
+        `display_name`/`avatar_url`, and returns a normal TradePilot
+        Bearer session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TiktokCompleteSignupBody"
+      responses:
+        "201":
+          description: Account created and signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: >-
+            Missing/invalid email, or no pending TikTok signup cookie
+            (expired or already used)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email is already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema: { type: integer }
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /auth/logout:
     post:
       operationId: logout
@@ -4002,6 +4080,25 @@ components:
       required:
         - reauthToken
         - expiresAt
+
+    TiktokPendingSignupResponse:
+      type: object
+      properties:
+        displayName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+
+    TiktokCompleteSignupBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
 
     ChangeSecurityQuestionBody:
       type: object

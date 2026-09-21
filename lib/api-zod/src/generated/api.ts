@@ -820,6 +820,66 @@ export const ReauthenticateWithAppleResponse = zod.object({
 });
 
 /**
+ * After GET /auth/tiktok/callback finds a brand-new TikTok sign-in
+ * (no existing `tiktok_id` match), it stashes the verified profile
+ * server-side and redirects the browser to the "finish signup" page
+ * with a short-lived httpOnly cookie. That page calls this endpoint
+ * (cookie sent automatically) to show a friendly "Hi, {name}" before
+ * asking for an email — the `tiktok_id` itself is never returned to
+ * the client.
+ * @summary Look up the TikTok profile pending a complete-signup email
+ */
+export const GetTiktokPendingSignupResponse = zod.object({
+  displayName: zod.string().nullish(),
+  avatarUrl: zod.string().nullish(),
+});
+
+/**
+ * TikTok's Login Kit never returns an email, so a brand-new sign-in
+ * (see GET /auth/tiktok/callback) can't create the account directly.
+ * This endpoint reads the pending TikTok profile from its httpOnly
+ * cookie (never a request field a client could forge), creates the
+ * account with the supplied email plus the captured TikTok
+ * `display_name`/`avatar_url`, and returns a normal TradePilot
+ * Bearer session.
+ * @summary Finish a brand-new TikTok sign-in by supplying an email
+ */
+export const CompleteTiktokSignupBody = zod.object({
+  email: zod.string().email(),
+});
+
+export const CompleteTiktokSignupResponse = zod.object({
+  user: zod.object({
+    id: zod.number().int(),
+    email: zod.string(),
+    displayName: zod.string(),
+    avatarUrl: zod
+      .string()
+      .nullish()
+      .describe(
+        "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
+      ),
+    role: zod.enum(["user", "admin", "super_admin"]),
+    selectedMode: zod.enum(["beginner", "pro"]),
+    themePreference: zod.enum(["light", "dark"]),
+    onboardingCompleted: zod.boolean(),
+    hasPassword: zod
+      .boolean()
+      .describe(
+        "True when the account has a local password usable for login and for re-authentication. False for Google-only or Apple-only accounts (use POST \/auth\/reauth\/google or POST \/auth\/reauth\/apple for sensitive operations).",
+      ),
+    createdAt: zod.coerce.date(),
+  }),
+  message: zod.string().optional(),
+  token: zod
+    .string()
+    .optional()
+    .describe(
+      "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
+    ),
+});
+
+/**
  * @summary Logout user
  */
 export const LogoutResponse = zod.object({

@@ -98,9 +98,11 @@ Class | Method | HTTP request | Description
 [*AnalysesApi*](doc/AnalysesApi.md) | [**waitGuardrail**](doc/AnalysesApi.md#waitguardrail) | **POST** /analyses/guardrails/{id}/wait | Record an explicit decision to wait
 [*AuthApi*](doc/AuthApi.md) | [**changePassword**](doc/AuthApi.md#changepassword) | **PATCH** /auth/password | Change own password
 [*AuthApi*](doc/AuthApi.md) | [**changeSecurityQuestion**](doc/AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
+[*AuthApi*](doc/AuthApi.md) | [**completeTiktokSignup**](doc/AuthApi.md#completetiktoksignup) | **POST** /auth/tiktok/complete-signup | Finish a brand-new TikTok sign-in by supplying an email
 [*AuthApi*](doc/AuthApi.md) | [**deleteAccount**](doc/AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
 [*AuthApi*](doc/AuthApi.md) | [**getForgotPasswordQuestion**](doc/AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /auth/me | Get current user
+[*AuthApi*](doc/AuthApi.md) | [**getTiktokPendingSignup**](doc/AuthApi.md#gettiktokpendingsignup) | **GET** /auth/tiktok/pending-signup | Look up the TikTok profile pending a complete-signup email
 [*AuthApi*](doc/AuthApi.md) | [**login**](doc/AuthApi.md#login) | **POST** /auth/login | Login user
 [*AuthApi*](doc/AuthApi.md) | [**loginWithAppleNative**](doc/AuthApi.md#loginwithapplenative) | **POST** /auth/apple/native | Exchange a native Sign in with Apple identity token for a TradePilot session
 [*AuthApi*](doc/AuthApi.md) | [**loginWithGoogleNative**](doc/AuthApi.md#loginwithgooglenative) | **POST** /auth/google/native | Exchange a native-app Google ID token for a TradePilot session
@@ -321,6 +323,8 @@ Class | Method | HTTP request | Description
  - [StandardTradingRules](doc/StandardTradingRules.md)
  - [StandardTradingRulesFixedRate](doc/StandardTradingRulesFixedRate.md)
  - [TagsList](doc/TagsList.md)
+ - [TiktokCompleteSignupBody](doc/TiktokCompleteSignupBody.md)
+ - [TiktokPendingSignupResponse](doc/TiktokPendingSignupResponse.md)
  - [TimeframeRisk](doc/TimeframeRisk.md)
  - [TimeframeRiskMap](doc/TimeframeRiskMap.md)
  - [TimeframeRiskMapOverall](doc/TimeframeRiskMapOverall.md)

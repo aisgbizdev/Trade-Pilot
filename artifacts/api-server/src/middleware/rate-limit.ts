@@ -135,6 +135,25 @@ export const appleNativeLoginLimiter = buildLimiter({
     "Terlalu banyak percobaan login Apple. Coba lagi dalam beberapa menit. / Too many Apple login attempts. Try again in a few minutes.",
 });
 
+// TikTok OAuth entrypoint + callback — per-IP, same budget as Google's.
+export const tiktokOAuthLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak percobaan login TikTok. Coba lagi dalam beberapa menit. / Too many TikTok login attempts. Try again in a few minutes.",
+});
+
+// POST /auth/tiktok/complete-signup — per-IP; caller isn't authenticated
+// yet (this is what actually creates the account).
+export const tiktokCompleteSignupLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak percobaan. Coba lagi dalam beberapa menit. / Too many attempts. Try again in a few minutes.",
+});
+
 // POST /auth/reauth/google and POST /auth/reauth/apple — per-user (mounted
 // after requireAuth). Tighter budget: a legit re-auth happens once right
 // before a sensitive action. Shared across both providers rather than

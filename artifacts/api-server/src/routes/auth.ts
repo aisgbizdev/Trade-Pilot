@@ -24,6 +24,8 @@ import {
   googleOAuthLimiter,
   googleNativeLoginLimiter,
   appleNativeLoginLimiter,
+  tiktokOAuthLimiter,
+  tiktokCompleteSignupLimiter,
   reauthLimiter,
 } from "../middleware/rate-limit";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
@@ -51,6 +53,14 @@ import {
   AppleAccountUnavailableError,
 } from "../lib/apple-account";
 import { issueReauthToken, consumeReauthToken } from "../lib/reauth";
+import {
+  buildTiktokAuthUrl,
+  exchangeCodeForTiktokProfile,
+  generateCodeVerifier,
+  isTiktokOAuthConfigured,
+} from "../lib/tiktok-oauth";
+import { findUserByTiktokId, createUserFromTiktokSignup, TiktokEmailTakenError } from "../lib/tiktok-account";
+import { issuePendingTiktokSignup, peekPendingTiktokSignup, consumePendingTiktokSignup } from "../lib/pending-tiktok-signup";
 
 const router = Router();
 
@@ -369,6 +379,204 @@ router.get("/auth/google/callback", googleOAuthLimiter, async (req, res) => {
   // brand-new accounts that skipped the register form.
   res.redirect("/dashboard");
 });
+
+// ---------------------------------------------------------------------------
+// TikTok Login Kit (login + registration) — server-side redirect flow.
+// See lib/tiktok-oauth.ts for the flow overview and required env config.
+//
+// TikTok never returns an email, so — unlike Google/Apple — a brand-new
+// sign-in can't create the user row directly at callback time. It instead
+// issues a pendingTiktokSignups token (short-lived httpOnly cookie) and
+// bounces to /auth/tiktok/complete-signup, which collects a real email
+// before the account is actually created.
+// ---------------------------------------------------------------------------
+
+const TIKTOK_STATE_COOKIE = "tt_oauth_state";
+const TIKTOK_VERIFIER_COOKIE = "tt_oauth_verifier";
+const TIKTOK_PENDING_COOKIE = "tt_pending_signup";
+const TIKTOK_STATE_TTL_MS = 10 * 60 * 1000;
+const TIKTOK_PENDING_TTL_MS = 15 * 60 * 1000;
+
+router.get("/auth/tiktok", tiktokOAuthLimiter, (req, res) => {
+  if (!isTiktokOAuthConfigured()) {
+    res.status(503).json({ error: "Login TikTok belum dikonfigurasi." });
+    return;
+  }
+
+  const state = generateToken();
+  const codeVerifier = generateCodeVerifier();
+  const cookieOpts = {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax" as const,
+    maxAge: TIKTOK_STATE_TTL_MS,
+    path: "/api/auth/tiktok",
+  };
+  res.cookie(TIKTOK_STATE_COOKIE, state, cookieOpts);
+  res.cookie(TIKTOK_VERIFIER_COOKIE, codeVerifier, cookieOpts);
+
+  const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+  res.redirect(buildTiktokAuthUrl(baseUrl, state, codeVerifier));
+});
+
+// TikTok redirects back here with `?code` + `?state`. On any failure we
+// bounce to /login?error=tiktok rather than showing a JSON blob.
+router.get("/auth/tiktok/callback", tiktokOAuthLimiter, async (req, res) => {
+  const clearOAuthCookies = () => {
+    res.clearCookie(TIKTOK_STATE_COOKIE, { path: "/api/auth/tiktok" });
+    res.clearCookie(TIKTOK_VERIFIER_COOKIE, { path: "/api/auth/tiktok" });
+  };
+  const fail = (reason: string, code = "tiktok") => {
+    clearOAuthCookies();
+    logger.warn({ reason }, "[auth] TikTok OAuth callback failed");
+    res.redirect(`/login?error=${code}`);
+  };
+
+  if (!isTiktokOAuthConfigured()) {
+    fail("not_configured");
+    return;
+  }
+
+  const code = typeof req.query["code"] === "string" ? req.query["code"] : null;
+  const state = typeof req.query["state"] === "string" ? req.query["state"] : null;
+  const cookieState = req.cookies?.[TIKTOK_STATE_COOKIE];
+  const codeVerifier = req.cookies?.[TIKTOK_VERIFIER_COOKIE];
+
+  if (req.query["error"]) {
+    fail(`tiktok_error:${String(req.query["error"]).slice(0, 40)}`);
+    return;
+  }
+  if (!code || !state || !cookieState || state !== cookieState || !codeVerifier) {
+    fail("bad_state");
+    return;
+  }
+
+  let profile;
+  try {
+    const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+    profile = await exchangeCodeForTiktokProfile(baseUrl, code, codeVerifier);
+  } catch (err) {
+    logger.warn({ err }, "[auth] TikTok code exchange failed");
+    fail("exchange_failed");
+    return;
+  }
+
+  clearOAuthCookies();
+
+  // Returning user: tiktok_id already belongs to an account -> log them in
+  // directly, same session shape as the Google callback.
+  const existingUser = await findUserByTiktokId(profile.tiktokId);
+  if (existingUser) {
+    const token = generateToken();
+    const expiresAt = getSessionExpiry(true);
+    await db.insert(sessions).values({ userId: existingUser.id, token, expiresAt });
+    // Keep the captured TikTok profile fresh (display name/avatar can
+    // change on TikTok's side between logins) — this data is the actual
+    // product goal of this feature, independent of auth.
+    await db
+      .update(users)
+      .set({ tiktokDisplayName: profile.displayName, tiktokAvatarUrl: profile.avatarUrl, updatedAt: new Date() })
+      .where(eq(users.id, existingUser.id));
+    res.cookie("session_token", token, {
+      httpOnly: true,
+      secure: process.env["NODE_ENV"] === "production",
+      sameSite: "lax",
+      expires: expiresAt,
+    });
+    void notifyLoginAlert(existingUser.id);
+    res.redirect("/dashboard");
+    return;
+  }
+
+  // Brand-new TikTok sign-in: no email to create the account with yet.
+  // Stash the verified profile server-side and ask the browser to finish
+  // signup with a real email.
+  const { token: pendingToken } = await issuePendingTiktokSignup(profile);
+  res.cookie(TIKTOK_PENDING_COOKIE, pendingToken, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    maxAge: TIKTOK_PENDING_TTL_MS,
+    path: "/api/auth/tiktok",
+  });
+  res.redirect("/auth/tiktok/complete-signup");
+});
+
+// The frontend's "finish signup" page reads the pending TikTok profile
+// (display name only — never the tiktok_id itself) to show a friendly
+// "Hi, {name}" before asking for an email. The pending token stays in its
+// httpOnly cookie throughout; it's never exposed to page JS as a value the
+// client could tamper with.
+router.get("/auth/tiktok/pending-signup", tiktokOAuthLimiter, async (req, res) => {
+  const pendingToken = req.cookies?.[TIKTOK_PENDING_COOKIE];
+  const profile = pendingToken ? await peekPendingTiktokSignup(pendingToken) : null;
+  if (!profile) {
+    res.status(404).json({ error: "Sesi pendaftaran TikTok tidak ditemukan atau sudah kedaluwarsa." });
+    return;
+  }
+  res.json({ displayName: profile.displayName, avatarUrl: profile.avatarUrl });
+});
+
+const tiktokCompleteSignupSchema = z
+  .object({ email: z.string().trim().email("Email tidak valid") })
+  .strict();
+
+router.post(
+  "/auth/tiktok/complete-signup",
+  tiktokCompleteSignupLimiter,
+  async (req, res) => {
+    const pendingToken = req.cookies?.[TIKTOK_PENDING_COOKIE];
+    if (!pendingToken) {
+      res.status(400).json({ error: "Sesi pendaftaran TikTok tidak ditemukan atau sudah kedaluwarsa." });
+      return;
+    }
+    const parsed = tiktokCompleteSignupSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Email tidak valid" });
+      return;
+    }
+
+    let user: typeof users.$inferSelect;
+    try {
+      user = await db.transaction(async (tx) => {
+        const profile = await consumePendingTiktokSignup(tx, pendingToken);
+        if (!profile) {
+          throw new Error("PENDING_SIGNUP_EXPIRED");
+        }
+        return createUserFromTiktokSignup(tx, profile, parsed.data.email);
+      });
+    } catch (err) {
+      if (err instanceof TiktokEmailTakenError) {
+        res.status(409).json({ error: "Email sudah terdaftar" });
+        return;
+      }
+      if (err instanceof Error && err.message === "PENDING_SIGNUP_EXPIRED") {
+        res.status(400).json({ error: "Sesi pendaftaran TikTok tidak ditemukan atau sudah kedaluwarsa." });
+        return;
+      }
+      logger.error({ err }, "[auth] TikTok complete-signup failed");
+      res.status(500).json({ error: "Gagal menyelesaikan pendaftaran TikTok" });
+      return;
+    }
+
+    res.clearCookie(TIKTOK_PENDING_COOKIE, { path: "/api/auth/tiktok" });
+
+    const token = generateToken();
+    const expiresAt = getSessionExpiry(true);
+    await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+    res.cookie("session_token", token, {
+      httpOnly: true,
+      secure: process.env["NODE_ENV"] === "production",
+      sameSite: "lax",
+      expires: expiresAt,
+    });
+
+    void notifyAdminsUserCreated(user.displayName);
+    void notifyLoginAlert(user.id);
+
+    res.status(201).json({ token, user: serializeUser(user) });
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Native Google Sign-In (mobile). The Flutter app obtains a Google ID token
