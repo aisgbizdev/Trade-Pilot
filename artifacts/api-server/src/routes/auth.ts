@@ -14,6 +14,7 @@ import {
 import { eq, and, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { createSingleSession } from "../lib/session";
 import {
   forgotPasswordQuestionLimiter,
   forgotPasswordVerifyLimiter,
@@ -191,11 +192,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
   const token = generateToken();
   const expiresAt = getSessionExpiry(rememberMe ?? false);
 
-  await db.insert(sessions).values({
-    userId: user.id,
-    token,
-    expiresAt,
-  });
+  await createSingleSession(user.id, token, expiresAt);
 
   res.cookie("session_token", token, {
     httpOnly: true,
@@ -256,11 +253,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   const token = generateToken();
   const expiresAt = getSessionExpiry(rememberMe ?? false);
 
-  await db.insert(sessions).values({
-    userId: user.id,
-    token,
-    expiresAt,
-  });
+  await createSingleSession(user.id, token, expiresAt);
 
   res.cookie("session_token", token, {
     httpOnly: true,
@@ -369,7 +362,7 @@ router.get("/auth/google/callback", googleOAuthLimiter, async (req, res) => {
   // the long (remember-me) session like the checkbox on the login form.
   const expiresAt = getSessionExpiry(true);
 
-  await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+  await createSingleSession(user.id, token, expiresAt);
 
   res.clearCookie(GOOGLE_STATE_COOKIE, { path: "/api/auth/google" });
   res.cookie("session_token", token, {
@@ -480,7 +473,7 @@ router.get("/auth/facebook/callback", facebookOAuthLimiter, async (req, res) => 
   const token = generateToken();
   const expiresAt = getSessionExpiry(true);
 
-  await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+  await createSingleSession(user.id, token, expiresAt);
 
   res.clearCookie(FACEBOOK_STATE_COOKIE, { path: "/api/auth/facebook" });
   res.cookie("session_token", token, {
@@ -587,7 +580,7 @@ router.get("/auth/tiktok/callback", tiktokOAuthLimiter, async (req, res) => {
   if (existingUser) {
     const token = generateToken();
     const expiresAt = getSessionExpiry(true);
-    await db.insert(sessions).values({ userId: existingUser.id, token, expiresAt });
+    await createSingleSession(existingUser.id, token, expiresAt);
     // Keep the captured TikTok profile fresh (display name/avatar can
     // change on TikTok's side between logins) — this data is the actual
     // product goal of this feature, independent of auth.
@@ -681,7 +674,7 @@ router.post(
 
     const token = generateToken();
     const expiresAt = getSessionExpiry(true);
-    await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+    await createSingleSession(user.id, token, expiresAt);
     res.cookie("session_token", token, {
       httpOnly: true,
       secure: process.env["NODE_ENV"] === "production",
@@ -755,7 +748,7 @@ router.post(
 
     const token = generateToken();
     const expiresAt = getSessionExpiry(true);
-    await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+    await createSingleSession(user.id, token, expiresAt);
 
     if (isNewUser) void notifyAdminsUserCreated(user.displayName);
     void notifyLoginAlert(user.id);
@@ -942,7 +935,7 @@ router.post(
 
     const token = generateToken();
     const expiresAt = getSessionExpiry(true);
-    await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+    await createSingleSession(user.id, token, expiresAt);
 
     if (isNewUser) void notifyAdminsUserCreated(user.displayName);
     void notifyLoginAlert(user.id);
