@@ -1290,6 +1290,23 @@ export default function AnalyzePage() {
                 </Button>
               </div>
             )}
+            {resultAnalysisId == null && (
+              <div className="mt-3">
+                <Button
+                  className="h-12 w-full px-8 text-base font-bold"
+                  onClick={() => handleSubmit()}
+                  disabled={isLoading || !finalInstrument || !selectedTimeframe}
+                  data-testid="button-submit-analysis"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
+                    </div>
+                  ) : t.analyze.submit_btn}
+                </Button>
+              </div>
+            )}
           </div>
 
           {SHOW_TIMEFRAME_PICKER && (
@@ -1431,24 +1448,6 @@ export default function AnalyzePage() {
 
 
           {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist onComplete={handleChecklistComplete} />}
-
-          {resultAnalysisId == null && (
-            <div className="flex justify-center">
-              <Button
-                className="h-12 min-w-40 max-w-full px-8 text-base"
-                onClick={() => handleSubmit()}
-                disabled={isLoading || !finalInstrument || !selectedTimeframe}
-                data-testid="button-submit-analysis"
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
-                  </div>
-                ) : t.analyze.submit_btn}
-              </Button>
-            </div>
-          )}
 
           {/* Once a result already exists, picking a different instrument
               re-analyzes without the submit button (it's hidden above) —
