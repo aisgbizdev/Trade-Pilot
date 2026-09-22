@@ -4,7 +4,7 @@ import { outboundClicks, analyticsEvents, sessions, users } from "@workspace/db/
 import { eq, and, gt } from "drizzle-orm";
 import { RecordOutboundClickBody, TrackAnalyticsEventBody } from "@workspace/api-zod";
 import { trackEventLimiter } from "../middleware/rate-limit";
-import { parseUserAgent, lookupCountry } from "../lib/request-meta";
+import { parseUserAgent, lookupCountry, resolveClientIpForGeo } from "../lib/request-meta";
 
 const router: IRouter = Router();
 
@@ -87,7 +87,7 @@ router.post("/events/track", trackEventLimiter, async (req, res) => {
   const userId = await resolveUserId(req);
   const ua = req.headers["user-agent"] ?? "";
   const { deviceType, browser, os } = parseUserAgent(ua);
-  const country = await lookupCountry(req.ip);
+  const country = await lookupCountry(resolveClientIpForGeo(req));
 
   try {
     await db.insert(analyticsEvents).values({

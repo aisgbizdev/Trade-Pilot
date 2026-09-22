@@ -51,3 +51,26 @@ export async function lookupCountry(ip: string | undefined): Promise<string | nu
     return null;
   }
 }
+
+// `req.ip` depends on Express's `trust proxy` hop count (app.ts sets 1)
+// matching the real number of reverse-proxy hops in front of the app. If
+// the deployment platform actually sits behind more hops than that
+// (common on managed platforms — an edge load balancer plus an internal
+// routing layer), `req.ip` resolves to an intermediate proxy's IP instead
+// of the real client's, which is typically a private address geoip-lite
+// can never resolve — every event then gets bucketed as "unknown"
+// country. For this best-effort analytics lookup only (never for rate
+// limiting or any security decision), read the leftmost address in
+// `X-Forwarded-For` directly instead — that's the original client
+// regardless of how many hops sit between it and this process. Safe to
+// trust here because a spoofed value only ever produces a wrong country
+// label, not a security bypass.
+export function resolveClientIpForGeo(req: {
+  headers: Record<string, string | string[] | undefined>;
+  ip?: string;
+}): string | undefined {
+  const xff = req.headers["x-forwarded-for"];
+  const raw = Array.isArray(xff) ? xff[0] : xff;
+  const first = raw?.split(",")[0]?.trim();
+  return first || req.ip;
+}
