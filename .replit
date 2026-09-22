@@ -131,6 +131,8 @@ APPLE_ALLOWED_CLIENT_IDS = "id.tradepilot.app"
 # (Sandbox app → regenerate Client Secret) and do not paste the new one
 # here even temporarily; use the Secrets panel instead.
 TIKTOK_CLIENT_KEY = "sbawr7b929hgx066qo"
+FACEBOOK_APP_ID = "1064686263283744"
+FACEBOOK_APP_SECRET = "7eb27cc4858687b2a6cc1be9e0a56aa2"
 # Facebook Login (login/register). FACEBOOK_APP_ID is public (like
 # GOOGLE_CLIENT_ID above) and can go here once issued. FACEBOOK_APP_SECRET
 # is a real secret — it must be set as a Replit Secret (prod) / in .env
