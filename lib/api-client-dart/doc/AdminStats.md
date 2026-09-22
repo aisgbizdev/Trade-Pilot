@@ -9,6 +9,7 @@ import 'package:trade_pilot_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **totalUsersToday** | **int** |  | 
+**totalUsersActiveToday** | **int** | Distinct users who created at least one analysis today — a real usage signal, not just \"has a valid session cookie\". | 
 **totalAnalysesToday** | **int** |  | 
 **totalAnalysesThisWeek** | **int** |  | 
 **totalAnalysesThisMonth** | **int** |  | 

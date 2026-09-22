@@ -1108,6 +1108,7 @@ function AdminContent() {
               {[
                 { key: "total-users", label: t.admin.stats_total_users, value: stats?.totalUsers ?? 0 },
                 { key: "users-today", label: t.admin.stats_users_today, value: stats?.totalUsersToday ?? 0 },
+                { key: "users-active-today", label: t.admin.stats_users_active_today, value: stats?.totalUsersActiveToday ?? 0 },
                 { key: "analyses-today", label: t.admin.stats_analyses_today, value: stats?.totalAnalysesToday ?? 0 },
                 { key: "this-week", label: t.admin.stats_this_week, value: stats?.totalAnalysesThisWeek ?? 0 },
                 { key: "this-month", label: t.admin.stats_this_month, value: stats?.totalAnalysesThisMonth ?? 0 },

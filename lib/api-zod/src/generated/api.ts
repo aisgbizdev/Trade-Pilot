@@ -3917,6 +3917,12 @@ export const UnregisterNativePushDeviceResponse = zod.object({
  */
 export const GetAdminStatsResponse = zod.object({
   totalUsersToday: zod.number().int(),
+  totalUsersActiveToday: zod
+    .number()
+    .int()
+    .describe(
+      'Distinct users who created at least one analysis today — a real usage signal, not just \"has a valid session cookie\".',
+    ),
   totalAnalysesToday: zod.number().int(),
   totalAnalysesThisWeek: zod.number().int(),
   totalAnalysesThisMonth: zod.number().int(),

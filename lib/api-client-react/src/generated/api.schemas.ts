@@ -1691,6 +1691,8 @@ export type AdminStatsModeBreakdown = {
 
 export interface AdminStats {
   totalUsersToday: number;
+  /** Distinct users who created at least one analysis today — a real usage signal, not just "has a valid session cookie". */
+  totalUsersActiveToday: number;
   totalAnalysesToday: number;
   totalAnalysesThisWeek: number;
   totalAnalysesThisMonth: number;

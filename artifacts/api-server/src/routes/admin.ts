@@ -82,6 +82,13 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
     .select({ count: count(users.id) })
     .from(users)
     .where(sql`${users.createdAt} >= ${todayStart}`);
+  // "Active" = created at least one analysis today — a real usage signal,
+  // not just "has a valid session cookie" (sessions can stay valid for
+  // weeks under "remember me" without the user actually doing anything).
+  const [usersActiveTodayResult] = await db
+    .select({ count: sql<number>`count(distinct ${analyses.userId})` })
+    .from(analyses)
+    .where(sql`${analyses.createdAt} >= ${todayStart}`);
 
   const instrumentBreakdown = await db
     .select({
@@ -109,6 +116,7 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
 
   res.json({
     totalUsersToday: Number(usersTodayResult.count),
+    totalUsersActiveToday: Number(usersActiveTodayResult.count),
     totalAnalysesToday: Number(todayResult.count),
     totalAnalysesThisWeek: Number(weekResult.count),
     totalAnalysesThisMonth: Number(monthResult.count),

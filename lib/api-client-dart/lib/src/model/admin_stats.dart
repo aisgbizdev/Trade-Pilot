@@ -15,6 +15,7 @@ part 'admin_stats.g.dart';
 ///
 /// Properties:
 /// * [totalUsersToday] 
+/// * [totalUsersActiveToday] - Distinct users who created at least one analysis today — a real usage signal, not just \"has a valid session cookie\".
 /// * [totalAnalysesToday] 
 /// * [totalAnalysesThisWeek] 
 /// * [totalAnalysesThisMonth] 
@@ -25,6 +26,10 @@ part 'admin_stats.g.dart';
 abstract class AdminStats implements Built<AdminStats, AdminStatsBuilder> {
   @BuiltValueField(wireName: r'totalUsersToday')
   int get totalUsersToday;
+
+  /// Distinct users who created at least one analysis today — a real usage signal, not just \"has a valid session cookie\".
+  @BuiltValueField(wireName: r'totalUsersActiveToday')
+  int get totalUsersActiveToday;
 
   @BuiltValueField(wireName: r'totalAnalysesToday')
   int get totalAnalysesToday;
@@ -70,6 +75,11 @@ class _$AdminStatsSerializer implements PrimitiveSerializer<AdminStats> {
     yield r'totalUsersToday';
     yield serializers.serialize(
       object.totalUsersToday,
+      specifiedType: const FullType(int),
+    );
+    yield r'totalUsersActiveToday';
+    yield serializers.serialize(
+      object.totalUsersActiveToday,
       specifiedType: const FullType(int),
     );
     yield r'totalAnalysesToday';
@@ -131,6 +141,13 @@ class _$AdminStatsSerializer implements PrimitiveSerializer<AdminStats> {
             specifiedType: const FullType(int),
           ) as int;
           result.totalUsersToday = valueDes;
+          break;
+        case r'totalUsersActiveToday':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.totalUsersActiveToday = valueDes;
           break;
         case r'totalAnalysesToday':
           final valueDes = serializers.deserialize(

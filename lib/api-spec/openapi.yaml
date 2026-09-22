@@ -5494,6 +5494,11 @@ components:
       properties:
         totalUsersToday:
           type: integer
+        totalUsersActiveToday:
+          type: integer
+          description: >-
+            Distinct users who created at least one analysis today — a real
+            usage signal, not just "has a valid session cookie".
         totalAnalysesToday:
           type: integer
         totalAnalysesThisWeek:
@@ -5526,6 +5531,7 @@ components:
             - pro
       required:
         - totalUsersToday
+        - totalUsersActiveToday
         - totalAnalysesToday
         - totalAnalysesThisWeek
         - totalAnalysesThisMonth
