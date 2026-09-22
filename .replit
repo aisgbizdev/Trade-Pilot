@@ -123,14 +123,20 @@ FIREBASE_UNIVERSE_DOMAIN = "googleapis.com"
 APPLE_TEAM_ID = "6P8964KJMG"
 APPLE_KEY_ID = "2TNDYD63SR"
 APPLE_ALLOWED_CLIENT_IDS = "id.tradepilot.app"
-TIKTOK_CLIENT_KEY = "sbawr7b929hgx066qo"
-TIKTOK_CLIENT_SECRET = "Je2VX3EZXlG6KfkxNToj8DRc5uePfVkj"
 # TikTok Login Kit (login/register). TIKTOK_CLIENT_KEY is public (like
-# GOOGLE_CLIENT_ID above) and can go here once issued. TIKTOK_CLIENT_SECRET
+# GOOGLE_CLIENT_ID above) — safe to keep here. TIKTOK_CLIENT_SECRET is a
+# real secret — it must be set ONLY as a Replit Secret (prod) / in .env
+# (local), NEVER in this file. A real TIKTOK_CLIENT_SECRET has already
+# been committed here — rotate it in the TikTok for Developers portal
+# (Sandbox app → regenerate Client Secret) and do not paste the new one
+# here even temporarily; use the Secrets panel instead.
+TIKTOK_CLIENT_KEY = "sbawr7b929hgx066qo"
+# Facebook Login (login/register). FACEBOOK_APP_ID is public (like
+# GOOGLE_CLIENT_ID above) and can go here once issued. FACEBOOK_APP_SECRET
 # is a real secret — it must be set as a Replit Secret (prod) / in .env
-# (local), NEVER in this file. Not set yet; POST/GET /auth/tiktok returns
+# (local), NEVER in this file. Not set yet; GET /auth/facebook returns
 # 503 until both are configured.
-# TIKTOK_CLIENT_KEY = ""
+# FACEBOOK_APP_ID = ""
 
 [nix]
 channel = "stable-25_05"
