@@ -16,6 +16,7 @@ import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BrandLogo } from "@/components/brand-logo";
 import { GoogleSignInButton, AuthDivider } from "@/components/google-sign-in-button";
+import { FacebookSignInButton } from "@/components/facebook-sign-in-button";
 import { TiktokSignInButton } from "@/components/tiktok-sign-in-button";
 import { useTrackEvent } from "@/hooks/use-track-event";
 
@@ -68,19 +69,30 @@ export default function LoginPage() {
   const queryClient = useQueryClient();
   const login = useLogin();
 
-  // The Google/TikTok OAuth callbacks redirect here with ?error=... on failure.
+  // The Google/Facebook/TikTok OAuth callbacks redirect here with
+  // ?error=... on failure.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const err = params.get("error");
-    if (err === "google" || err === "google_unverified" || err === "tiktok") {
+    if (
+      err === "google" ||
+      err === "google_unverified" ||
+      err === "facebook" ||
+      err === "facebook_no_email" ||
+      err === "tiktok"
+    ) {
       toast({
         title: t.auth.login_failed,
         description:
           err === "google_unverified"
             ? t.auth.google_email_unverified
-            : err === "tiktok"
-              ? t.auth.tiktok_login_failed
-              : t.auth.google_login_failed,
+            : err === "facebook_no_email"
+              ? t.auth.facebook_no_email
+              : err === "facebook"
+                ? t.auth.facebook_login_failed
+                : err === "tiktok"
+                  ? t.auth.tiktok_login_failed
+                  : t.auth.google_login_failed,
         variant: "destructive",
       });
       params.delete("error");
@@ -163,6 +175,7 @@ export default function LoginPage() {
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
           <div className="space-y-2.5">
             <GoogleSignInButton disabled={login.isPending} />
+            <FacebookSignInButton disabled={login.isPending} />
             <TiktokSignInButton disabled={login.isPending} />
           </div>
           <AuthDivider />

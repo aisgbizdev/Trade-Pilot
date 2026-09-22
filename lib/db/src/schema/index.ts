@@ -154,6 +154,11 @@ export const users = pgTable("users", {
   // sign-in or when an existing email account links Apple; null otherwise.
   // See lib/apple-account.ts for the account-linking rules.
   appleId: text("apple_id").unique(),
+  // Facebook account id (Graph API `id`). Same shape/rules as googleId —
+  // Facebook's `email` permission returns a Facebook-confirmed address
+  // for the account, so this links by email exactly like Google/Apple.
+  // See lib/facebook-account.ts.
+  facebookId: text("facebook_id").unique(),
   // TikTok account open_id. Unlike Google/Apple, TikTok's Login Kit never
   // returns an email — so a TikTok sign-in can never auto-link to an
   // existing account by email the way Google/Apple do. A brand-new TikTok

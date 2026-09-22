@@ -24,6 +24,7 @@ import {
   googleOAuthLimiter,
   googleNativeLoginLimiter,
   appleNativeLoginLimiter,
+  facebookOAuthLimiter,
   tiktokOAuthLimiter,
   tiktokCompleteSignupLimiter,
   reauthLimiter,
@@ -53,6 +54,15 @@ import {
   AppleAccountUnavailableError,
 } from "../lib/apple-account";
 import { issueReauthToken, consumeReauthToken } from "../lib/reauth";
+import {
+  buildFacebookAuthUrl,
+  exchangeCodeForFacebookProfile,
+  isFacebookOAuthConfigured,
+} from "../lib/facebook-oauth";
+import {
+  resolveFacebookUser,
+  FacebookAccountConflictError,
+} from "../lib/facebook-account";
 import {
   buildTiktokAuthUrl,
   exchangeCodeForTiktokProfile,
@@ -377,6 +387,114 @@ router.get("/auth/google/callback", googleOAuthLimiter, async (req, res) => {
   // Land on the dashboard — it's a ProtectedRoute (the fresh session
   // cookie satisfies it) and it fires the onboarding modal for the
   // brand-new accounts that skipped the register form.
+  res.redirect("/dashboard");
+});
+
+// ---------------------------------------------------------------------------
+// Facebook Login (login + registration) — server-side redirect flow.
+// See lib/facebook-oauth.ts for the flow overview and required env config.
+// Mirrors the Google block above exactly (Facebook's `email` permission
+// returns a Facebook-confirmed address, so account linking works the same
+// way) — the one difference is a rare account with no email on file at
+// all, handled as a plain login failure rather than TikTok's pending-
+// signup detour.
+// ---------------------------------------------------------------------------
+
+const FACEBOOK_STATE_COOKIE = "fb_oauth_state";
+const FACEBOOK_STATE_TTL_MS = 10 * 60 * 1000;
+
+router.get("/auth/facebook", facebookOAuthLimiter, (req, res) => {
+  if (!isFacebookOAuthConfigured()) {
+    res.status(503).json({ error: "Login Facebook belum dikonfigurasi." });
+    return;
+  }
+
+  const state = generateToken();
+  res.cookie(FACEBOOK_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    maxAge: FACEBOOK_STATE_TTL_MS,
+    path: "/api/auth/facebook",
+  });
+
+  const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+  res.redirect(buildFacebookAuthUrl(baseUrl, state));
+});
+
+// Facebook redirects back here with `?code` + `?state`. On any failure we
+// bounce to /login?error=facebook rather than showing a JSON blob.
+router.get("/auth/facebook/callback", facebookOAuthLimiter, async (req, res) => {
+  const fail = (reason: string, code = "facebook") => {
+    res.clearCookie(FACEBOOK_STATE_COOKIE, { path: "/api/auth/facebook" });
+    logger.warn({ reason }, "[auth] Facebook OAuth callback failed");
+    res.redirect(`/login?error=${code}`);
+  };
+
+  if (!isFacebookOAuthConfigured()) {
+    fail("not_configured");
+    return;
+  }
+
+  const code = typeof req.query["code"] === "string" ? req.query["code"] : null;
+  const state = typeof req.query["state"] === "string" ? req.query["state"] : null;
+  const cookieState = req.cookies?.[FACEBOOK_STATE_COOKIE];
+
+  if (req.query["error"]) {
+    fail(`facebook_error:${String(req.query["error"]).slice(0, 40)}`);
+    return;
+  }
+  if (!code || !state || !cookieState || state !== cookieState) {
+    fail("bad_state");
+    return;
+  }
+
+  let profile;
+  try {
+    const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+    profile = await exchangeCodeForFacebookProfile(baseUrl, code);
+  } catch (err) {
+    logger.warn({ err }, "[auth] Facebook code exchange failed");
+    fail("exchange_failed");
+    return;
+  }
+
+  if (!profile.email) {
+    fail("no_email", "facebook_no_email");
+    return;
+  }
+
+  // Upsert: match on facebook_id, then link by email, else create.
+  let user: typeof users.$inferSelect;
+  let isNewUser: boolean;
+  try {
+    ({ user, isNewUser } = await resolveFacebookUser({ ...profile, email: profile.email }));
+  } catch (err) {
+    logger.error({ err }, "[auth] Facebook user upsert failed");
+    fail(
+      err instanceof FacebookAccountConflictError ? "account_conflict" : "upsert_failed",
+    );
+    return;
+  }
+
+  const token = generateToken();
+  const expiresAt = getSessionExpiry(true);
+
+  await db.insert(sessions).values({ userId: user.id, token, expiresAt });
+
+  res.clearCookie(FACEBOOK_STATE_COOKIE, { path: "/api/auth/facebook" });
+  res.cookie("session_token", token, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    expires: expiresAt,
+  });
+
+  if (isNewUser) {
+    void notifyAdminsUserCreated(user.displayName);
+  }
+  void notifyLoginAlert(user.id);
+
   res.redirect("/dashboard");
 });
 

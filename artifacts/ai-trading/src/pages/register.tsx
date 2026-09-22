@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
+import { FacebookSignInButton } from "@/components/facebook-sign-in-button";
 import { TiktokSignInButton } from "@/components/tiktok-sign-in-button";
 
 // Same three value props the landing page's hero leads with — reused here
@@ -49,6 +50,7 @@ export default function RegisterPage() {
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
           <div className="space-y-2.5">
             <GoogleSignInButton />
+            <FacebookSignInButton />
             <TiktokSignInButton />
           </div>
 

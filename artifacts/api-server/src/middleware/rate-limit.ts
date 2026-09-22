@@ -135,6 +135,15 @@ export const appleNativeLoginLimiter = buildLimiter({
     "Terlalu banyak percobaan login Apple. Coba lagi dalam beberapa menit. / Too many Apple login attempts. Try again in a few minutes.",
 });
 
+// Facebook OAuth entrypoint + callback — per-IP, same budget as Google's.
+export const facebookOAuthLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak percobaan login Facebook. Coba lagi dalam beberapa menit. / Too many Facebook login attempts. Try again in a few minutes.",
+});
+
 // TikTok OAuth entrypoint + callback — per-IP, same budget as Google's.
 export const tiktokOAuthLimiter = buildLimiter({
   windowMs: 15 * 60 * 1000,
