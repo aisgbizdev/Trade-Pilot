@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**backfillProgression**](AdminApi.md#backfillprogression) | **POST** /admin/progression/backfill | Safely backfill only unequivocal historical progression evidence
 [**broadcastNotification**](AdminApi.md#broadcastnotification) | **POST** /admin/notifications | Broadcast notification to selected audience
+[**createManualTopup**](AdminApi.md#createmanualtopup) | **POST** /admin/topups/manual | Directly grant credits to a user, bypassing the normal request/proof-upload flow
 [**getAdminAnalyticsTokens**](AdminApi.md#getadminanalyticstokens) | **GET** /admin/analytics/tokens | AI (OpenAI) token usage and estimated cost breakdown
 [**getAdminAnalyticsUsage**](AdminApi.md#getadminanalyticsusage) | **GET** /admin/analytics/usage | Feature-usage, device, browser, and country breakdown from analytics events
 [**getAdminFeedback**](AdminApi.md#getadminfeedback) | **GET** /admin/feedback | List user feedback rows (admin only)
@@ -90,6 +91,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**BroadcastSendResult**](BroadcastSendResult.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createManualTopup**
+> TopupRequest createManualTopup(manualTopupBody)
+
+Directly grant credits to a user, bypassing the normal request/proof-upload flow
+
+For support cases where a user paid but couldn't complete the normal top-up flow (e.g. proof upload failed, or the transfer was confirmed outside the app). Creates an already-approved top-up request row (no proof) and credits the user's balance immediately. The `note` is required and stored as the request's review note for the audit trail.
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+final ManualTopupBody manualTopupBody = ; // ManualTopupBody | 
+
+try {
+    final response = api.createManualTopup(manualTopupBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->createManualTopup: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **manualTopupBody** | [**ManualTopupBody**](ManualTopupBody.md)|  | 
+
+### Return type
+
+[**TopupRequest**](TopupRequest.md)
 
 ### Authorization
 

@@ -220,6 +220,31 @@ paths:
         "409":
           description: Request already reviewed
           content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /admin/topups/manual:
+    post:
+      operationId: createManualTopup
+      tags: [admin]
+      summary: Directly grant credits to a user, bypassing the normal request/proof-upload flow
+      description: >-
+        For support cases where a user paid but couldn't complete the
+        normal top-up flow (e.g. proof upload failed, or the transfer was
+        confirmed outside the app). Creates an already-approved top-up
+        request row (no proof) and credits the user's balance
+        immediately. The `note` is required and stored as the request's
+        review note for the audit trail.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ManualTopupBody" } } }
+      responses:
+        "201":
+          description: Credits granted
+          content: { application/json: { schema: { $ref: "#/components/schemas/TopupRequest" } } }
+        "400":
+          description: Invalid body or unknown user
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: Forbidden
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
   /admin/topups/summary:
     get:
       operationId: getTopupSummary
@@ -4870,6 +4895,29 @@ components:
             admin review has no other way to verify a manual transfer.
       required: [amountRupiah, proofObjectPath]
 
+    ManualTopupBody:
+      type: object
+      properties:
+        userId:
+          type: integer
+        amountRupiah:
+          type: integer
+          minimum: 1
+          description: >-
+            Not constrained to the fixed packages — admins can grant any
+            amount/credits pair to resolve a top-up support case (e.g. a
+            payment confirmed outside the app after proof upload failed).
+        credits:
+          type: integer
+          minimum: 1
+        note:
+          type: string
+          minLength: 1
+          description: >-
+            Required audit trail — this bypasses the normal proof-upload
+            verification entirely, so the reason must be recorded.
+      required: [userId, amountRupiah, credits, note]
+
     TopupRequestStatus:
       type: string
       enum: [pending, approved, rejected]
@@ -5785,6 +5833,9 @@ components:
           enum: [beginner, pro]
         analysisCount:
           type: integer
+        creditBalance:
+          type: integer
+          description: Current purchased-credit balance (sum of credit_ledger for this user).
         tags:
           type: array
           items:
@@ -5807,6 +5858,7 @@ components:
         - role
         - selectedMode
         - analysisCount
+        - creditBalance
         - tags
         - createdAt
 

@@ -11,6 +11,7 @@ import {
   sessions,
   notifications,
 } from "@workspace/db/schema";
+import { applyCreditLedgerEntry } from "../../lib/credits";
 
 type Role = "user" | "admin" | "super_admin";
 
@@ -386,6 +387,32 @@ describe("GET /superadmin/users search and pagination", () => {
     expect(res.status).toBe(200);
     expect(res.body.page).toBe(1);
     expect(res.body.limit).toBe(50);
+  });
+
+  it("reports each user's real credit balance, and 0 for a user with none", async () => {
+    await db.transaction(async (tx) => {
+      await applyCreditLedgerEntry(tx, {
+        userId: searchByEmail.id,
+        amount: 42,
+        source: "test_seed",
+        sourceEventId: `sa-users-credit-${RUN_ID}`,
+      });
+    });
+
+    const res = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: `needle-email-${RUN_ID}` })
+      .set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+    const found = res.body.users.find((u: { id: number }) => u.id === searchByEmail.id);
+    expect(found.creditBalance).toBe(42);
+
+    const res2 = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: `Needle Display ${RUN_ID}` })
+      .set(...authHeader(superAdmin));
+    const foundNoCredit = res2.body.users.find((u: { id: number }) => u.id === searchByName.id);
+    expect(foundNoCredit.creditBalance).toBe(0);
   });
 });
 

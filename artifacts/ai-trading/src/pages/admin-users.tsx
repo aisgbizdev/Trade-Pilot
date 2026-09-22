@@ -245,6 +245,9 @@ function AdminUsersContent() {
                           )}`
                         : ""}
                     </p>
+                    <p className="text-[10px] font-medium text-primary mt-0.5" data-testid={`text-credit-balance-${u.id}`}>
+                      {t.admin.users_credit_balance_label}: {(u as { creditBalance?: number }).creditBalance ?? 0}
+                    </p>
                   </div>
                   <div className="flex gap-1.5 ml-2">
                     <button

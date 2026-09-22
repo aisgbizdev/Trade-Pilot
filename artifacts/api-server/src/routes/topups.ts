@@ -12,6 +12,7 @@ import {
   getTopupConfig,
 } from "../lib/credits";
 import {
+  CreateManualTopupBody,
   CreateTopupRequestBody,
   GetMyTopupRequestsQueryParams,
   GetPendingTopupRequestsQueryParams,
@@ -333,6 +334,64 @@ router.patch("/admin/topups/:id/status", requireSuperAdmin, async (req: AuthRequ
   }
 
   res.json(serializeTopupRequest(row));
+});
+
+// Support-case escape hatch: grant credits directly when a user paid but
+// couldn't complete the normal request/proof-upload flow (upload failure,
+// transfer confirmed outside the app, etc.). Bypasses proof verification
+// entirely — `note` is required so there's always an audit trail for why.
+// Amount/credits are NOT constrained to the fixed packages (see
+// lib/credits.ts) since this is a manual correction, not a self-service
+// purchase.
+router.post("/admin/topups/manual", requireSuperAdmin, async (req: AuthRequest, res) => {
+  const parsed = CreateManualTopupBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Data top-up manual tidak valid" });
+    return;
+  }
+  const { userId, amountRupiah, credits, note } = parsed.data;
+
+  const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!targetUser) {
+    res.status(400).json({ error: "User tidak ditemukan" });
+    return;
+  }
+
+  const row = await db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(creditTopupRequests)
+      .values({
+        userId,
+        amountRupiah,
+        creditsRequested: credits,
+        conversionRateSnapshot: Math.round(amountRupiah / credits),
+        proofObjectPath: null,
+        status: "approved",
+        reviewedByUserId: req.userId!,
+        reviewedAt: new Date(),
+        reviewNote: note,
+      })
+      .returning();
+    // Same shared credit-balance lock every other credit mutation uses
+    // (analysis consumption, self-service approval) so this can never
+    // race either into a lost update.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${CREDIT_BALANCE_LOCK_NAMESPACE}::int, ${userId}::int)`);
+    await tx
+      .update(creditTopupRequests)
+      .set({ creditsGranted: credits })
+      .where(eq(creditTopupRequests.id, inserted!.id));
+    await applyCreditLedgerEntry(tx, {
+      userId,
+      amount: credits,
+      source: "topup_approval",
+      sourceEventId: `topup:${inserted!.id}`,
+      topupRequestId: inserted!.id,
+    });
+    return { ...inserted!, creditsGranted: credits };
+  });
+
+  await notifyTopupApproved(userId, amountRupiah, credits);
+  res.status(201).json(serializeTopupRequest(row));
 });
 
 export default router;

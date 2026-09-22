@@ -329,6 +329,81 @@ describe("PATCH /admin/topups/:id/status", () => {
   });
 });
 
+describe("POST /admin/topups/manual", () => {
+  it("returns 403 for a plain admin (super_admin only)", async () => {
+    const res = await request(app)
+      .post("/api/admin/topups/manual")
+      .set(...authHeader(admin))
+      .send({ userId: alice.id, amountRupiah: 20_000, credits: 70, note: "test" });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects a missing note with 400", async () => {
+    const res = await request(app)
+      .post("/api/admin/topups/manual")
+      .set(...authHeader(superAdmin))
+      .send({ userId: alice.id, amountRupiah: 20_000, credits: 70 });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects an unknown userId with 400", async () => {
+    const res = await request(app)
+      .post("/api/admin/topups/manual")
+      .set(...authHeader(superAdmin))
+      .send({ userId: 999_999_999, amountRupiah: 20_000, credits: 70, note: "test" });
+    expect(res.status).toBe(400);
+  });
+
+  it("grants credits immediately, records an already-approved request with no proof, and notifies the user", async () => {
+    const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
+    const balanceBefore = before.body.balance as number;
+
+    const res = await request(app)
+      .post("/api/admin/topups/manual")
+      .set(...authHeader(superAdmin))
+      .send({
+        userId: alice.id,
+        amountRupiah: 20_000,
+        credits: 70,
+        note: "Confirmed via WhatsApp, proof upload failed",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe("approved");
+    expect(res.body.creditsGranted).toBe(70);
+    expect(res.body.proofObjectPath).toBeNull();
+    expect(res.body.reviewNote).toBe("Confirmed via WhatsApp, proof upload failed");
+    seededRequestIds.push(res.body.id);
+
+    const after = await request(app).get("/api/topups/balance").set(...authHeader(alice));
+    expect(after.body.balance).toBe(balanceBefore + 70);
+
+    const ledgerRows = await db
+      .select()
+      .from(creditLedger)
+      .where(eq(creditLedger.topupRequestId, res.body.id));
+    expect(ledgerRows).toHaveLength(1);
+    expect(ledgerRows[0]!.amount).toBe(70);
+    expect(ledgerRows[0]!.source).toBe("topup_approval");
+
+    const notif = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, alice.id));
+    expect(notif.some((n) => n.title === "Top-up approved")).toBe(true);
+  });
+
+  it("is not constrained to the fixed self-service packages — any amount/credits pair works", async () => {
+    const res = await request(app)
+      .post("/api/admin/topups/manual")
+      .set(...authHeader(superAdmin))
+      .send({ userId: alice.id, amountRupiah: 12_345, credits: 99, note: "one-off support correction" });
+    expect(res.status).toBe(201);
+    expect(res.body.amountRupiah).toBe(12_345);
+    expect(res.body.creditsGranted).toBe(99);
+    seededRequestIds.push(res.body.id);
+  });
+});
+
 describe("GET /admin/topups/summary", () => {
   it("returns 403 for a plain user and for a plain admin", async () => {
     const resUser = await request(app).get("/api/admin/topups/summary").set(...authHeader(alice));

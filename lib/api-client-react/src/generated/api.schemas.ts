@@ -1290,6 +1290,22 @@ export interface CreateTopupRequestBody {
   proofObjectPath: string;
 }
 
+export interface ManualTopupBody {
+  userId: number;
+  /**
+   * Not constrained to the fixed packages — admins can grant any amount/credits pair to resolve a top-up support case (e.g. a payment confirmed outside the app after proof upload failed).
+   * @minimum 1
+   */
+  amountRupiah: number;
+  /** @minimum 1 */
+  credits: number;
+  /**
+   * Required audit trail — this bypasses the normal proof-upload verification entirely, so the reason must be recorded.
+   * @minLength 1
+   */
+  note: string;
+}
+
 export type TopupRequestStatus =
   (typeof TopupRequestStatus)[keyof typeof TopupRequestStatus];
 
@@ -1894,6 +1910,8 @@ export interface UserWithStats {
   role: UserWithStatsRole;
   selectedMode: UserWithStatsSelectedMode;
   analysisCount: number;
+  /** Current purchased-credit balance (sum of credit_ledger for this user). */
+  creditBalance: number;
   tags: string[];
   /** Per-user analysis-quota override. Null = uses the global default. */
   customQuotaPerHour?: number | null;

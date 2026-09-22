@@ -308,6 +308,7 @@ function UsersSection() {
                 <th className="py-2 pr-2 font-medium">{t.admin_dashboard.users_col_user}</th>
                 <th className="py-2 pr-2 font-medium">{t.admin_dashboard.users_col_role}</th>
                 <th className="py-2 pr-2 font-medium text-right">{t.admin_dashboard.users_col_analyses}</th>
+                <th className="py-2 pr-2 font-medium text-right">{t.admin_dashboard.users_col_credit}</th>
                 <th className="py-2 pr-2 font-medium">{t.admin_dashboard.users_col_joined}</th>
               </tr>
             </thead>
@@ -324,6 +325,9 @@ function UsersSection() {
                     </Badge>
                   </td>
                   <td className="py-2 pr-2 text-right tabular-nums">{u.analysisCount}</td>
+                  <td className="py-2 pr-2 text-right tabular-nums font-medium text-primary" data-testid={`text-credit-balance-${u.id}`}>
+                    {u.creditBalance}
+                  </td>
                   <td className="py-2 pr-2 text-xs text-muted-foreground">
                     {new Date(u.createdAt).toLocaleDateString(dateLocale)}
                   </td>

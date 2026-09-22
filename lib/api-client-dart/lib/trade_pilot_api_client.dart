@@ -116,6 +116,7 @@ export 'package:trade_pilot_api_client/src/model/journal_sentiment.dart';
 export 'package:trade_pilot_api_client/src/model/journal_stats.dart';
 export 'package:trade_pilot_api_client/src/model/journal_stats_totals.dart';
 export 'package:trade_pilot_api_client/src/model/login_body.dart';
+export 'package:trade_pilot_api_client/src/model/manual_topup_body.dart';
 export 'package:trade_pilot_api_client/src/model/message_response.dart';
 export 'package:trade_pilot_api_client/src/model/mirror_gated_insight.dart';
 export 'package:trade_pilot_api_client/src/model/mirror_group_stat.dart';

@@ -99,6 +99,7 @@ import 'package:trade_pilot_api_client/src/model/journal_sentiment.dart';
 import 'package:trade_pilot_api_client/src/model/journal_stats.dart';
 import 'package:trade_pilot_api_client/src/model/journal_stats_totals.dart';
 import 'package:trade_pilot_api_client/src/model/login_body.dart';
+import 'package:trade_pilot_api_client/src/model/manual_topup_body.dart';
 import 'package:trade_pilot_api_client/src/model/message_response.dart';
 import 'package:trade_pilot_api_client/src/model/mirror_gated_insight.dart';
 import 'package:trade_pilot_api_client/src/model/mirror_group_stat.dart';
@@ -286,6 +287,7 @@ part 'serializers.g.dart';
   JournalStats,
   JournalStatsTotals,
   LoginBody,
+  ManualTopupBody,
   MessageResponse,
   MirrorGatedInsight,
   MirrorGroupStat,

@@ -116,4 +116,130 @@ describe("AdminTopupsPage", () => {
       expect(patchBody).toMatchObject({ status: "approved", creditsGranted: 7 });
     });
   });
+
+  it("grants a manual top-up to a searched user", async () => {
+    let postedBody: unknown = null;
+    installFetchMock(
+      [
+        asRole("super_admin"),
+        (url, init) => {
+          const method = (init?.method ?? "GET").toUpperCase();
+          if (method === "GET" && url.includes("/api/admin/topups?")) {
+            return jsonResponse({ requests: [], total: 0, page: 1, limit: 20 });
+          }
+          return null;
+        },
+        (url) => {
+          if (url.includes("/api/superadmin/users") && url.includes("search=bud")) {
+            return jsonResponse({
+              users: [
+                {
+                  id: 42,
+                  email: "budi@example.test",
+                  displayName: "Budi Santoso",
+                  role: "user",
+                  selectedMode: "pro",
+                  onboardingCompleted: true,
+                  createdAt: new Date().toISOString(),
+                  analysisCount: 3,
+                  tags: [],
+                },
+              ],
+              total: 1,
+              page: 1,
+              limit: 5,
+            });
+          }
+          return null;
+        },
+        (url, init) => {
+          if (url.includes("/api/admin/topups/manual") && (init?.method ?? "").toUpperCase() === "POST") {
+            postedBody = JSON.parse(init!.body as string);
+            return jsonResponse(
+              {
+                id: 99,
+                userId: 42,
+                amountRupiah: 20000,
+                creditsRequested: 70,
+                conversionRateSnapshot: 286,
+                paymentReferenceNote: null,
+                proofObjectPath: null,
+                status: "approved",
+                reviewedByUserId: 1,
+                reviewedAt: new Date().toISOString(),
+                reviewNote: "Confirmed via WA",
+                creditsGranted: 70,
+                createdAt: new Date().toISOString(),
+              },
+              201,
+            );
+          }
+          return null;
+        },
+      ],
+      { strict: false },
+    );
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <AdminTopupsPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-open-manual-topup"));
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId("input-manual-user-search"), { target: { value: "bud" } });
+    });
+
+    const userOption = await screen.findByTestId("button-manual-user-42");
+    await act(async () => {
+      fireEvent.click(userOption);
+    });
+    expect(screen.getByTestId("text-manual-selected-user")).toHaveTextContent("Budi Santoso");
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId("input-manual-amount"), { target: { value: "20000" } });
+      fireEvent.change(screen.getByTestId("input-manual-credits"), { target: { value: "70" } });
+      fireEvent.change(screen.getByTestId("input-manual-note"), { target: { value: "Confirmed via WA" } });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-manual-submit"));
+    });
+
+    await waitFor(() => {
+      expect(postedBody).toEqual({ userId: 42, amountRupiah: 20000, credits: 70, note: "Confirmed via WA" });
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId("dialog-manual-topup")).not.toBeInTheDocument();
+    });
+  });
+
+  it("keeps the manual submit button disabled without a required note", async () => {
+    installFetchMock(
+      [
+        asRole("super_admin"),
+        (url) => (url.includes("/api/admin/topups?") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+      ],
+      { strict: false },
+    );
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <AdminTopupsPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-open-manual-topup"));
+    });
+
+    const submit = await screen.findByTestId("button-manual-submit");
+    expect(submit).toBeDisabled();
+  });
 });

@@ -10,6 +10,7 @@ import {
   outboundClicks,
   analyticsEvents,
   aiTokenUsage,
+  creditBalances,
 } from "@workspace/db/schema";
 import { eq, and, count, sum, desc, sql, ilike, or, inArray, gte, lte } from "drizzle-orm";
 import {
@@ -705,15 +706,20 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
       analysisCount: count(analyses.id),
       customQuotaPerHour: users.customQuotaPerHour,
       customQuotaPerDay: users.customQuotaPerDay,
+      creditBalance: sql<number>`coalesce(max(${creditBalances.balance}), 0)`,
     })
     .from(users)
     .leftJoin(analyses, eq(analyses.userId, users.id))
+    .leftJoin(creditBalances, eq(creditBalances.userId, users.id))
     .groupBy(users.id)
     .orderBy(desc(users.createdAt))
     .limit(limit)
     .offset(offset);
 
-  const rows = await (searchClause ? baseQuery.where(searchClause) : baseQuery);
+  const rows = (await (searchClause ? baseQuery.where(searchClause) : baseQuery)).map((r) => ({
+    ...r,
+    creditBalance: Number(r.creditBalance),
+  }));
 
   // Fetch tags for the returned users in a single query, then group in memory.
   const userIds = rows.map((r) => r.id);

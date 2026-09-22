@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Loader2, Wallet, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Wallet, Check, X, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,12 @@ import {
   useGetPendingTopupRequests,
   getGetPendingTopupRequestsQueryKey,
   useReviewCreditTopupRequest,
+  useGetAllUsers,
+  getGetAllUsersQueryKey,
+  useCreateManualTopup,
   type TopupRequestWithUser,
   type TopupRequestStatus,
+  type UsersList,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -35,6 +39,194 @@ const STATUS_BADGE: Record<TopupRequestStatus, "secondary" | "default" | "destru
 };
 
 const PAGE_SIZE = 20;
+
+interface SelectableUser {
+  id: number;
+  email: string;
+  displayName: string;
+}
+
+// Support-case escape hatch: grant credits directly to a user who paid but
+// couldn't complete the normal request/proof-upload flow. Deliberately
+// separate dialog from the review one above — this creates a brand-new,
+// already-approved request rather than reviewing an existing one.
+function ManualTopupDialog({
+  open,
+  onOpenChange,
+  onGranted,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onGranted: () => void;
+}) {
+  const { toast } = useToast();
+  const { t } = useTranslation();
+
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<SelectableUser | null>(null);
+  const [amountRupiah, setAmountRupiah] = useState("");
+  const [credits, setCredits] = useState("");
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput), 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const reset = () => {
+    setSearchInput("");
+    setSearch("");
+    setSelectedUser(null);
+    setAmountRupiah("");
+    setCredits("");
+    setNote("");
+  };
+
+  const userSearchParams = { search: search.trim() || undefined, page: 1, limit: 5 };
+  const { data: userSearchData } = useGetAllUsers(userSearchParams, {
+    query: {
+      queryKey: getGetAllUsersQueryKey(userSearchParams),
+      enabled: open && !selectedUser && search.trim().length > 0,
+    },
+  });
+  const matchedUsers = (userSearchData as UsersList | undefined)?.users ?? [];
+
+  const createManualTopup = useCreateManualTopup();
+
+  const handleSubmit = async () => {
+    if (!selectedUser) return;
+    if (!note.trim()) {
+      toast({ title: t.admin.topups_manual_note_required, variant: "destructive" });
+      return;
+    }
+    const amountNum = Number(amountRupiah);
+    const creditsNum = Number(credits);
+    if (!amountNum || amountNum <= 0 || !creditsNum || creditsNum <= 0) return;
+
+    try {
+      await createManualTopup.mutateAsync({
+        data: { userId: selectedUser.id, amountRupiah: amountNum, credits: creditsNum, note: note.trim() },
+      });
+      toast({ title: t.admin.topups_manual_success });
+      reset();
+      onOpenChange(false);
+      onGranted();
+    } catch (err: unknown) {
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.topups_manual_error, variant: "destructive" });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) reset(); onOpenChange(next); }}>
+      <DialogContent className="max-w-sm" data-testid="dialog-manual-topup">
+        <DialogHeader>
+          <DialogTitle>{t.admin.topups_manual_dialog_title}</DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground -mt-2">{t.admin.topups_manual_dialog_subtitle}</p>
+        <div className="space-y-3">
+          {selectedUser ? (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-border p-2.5">
+              <div className="min-w-0">
+                <p className="text-[10px] text-muted-foreground">{t.admin.topups_manual_selected_user}</p>
+                <p className="text-sm font-medium text-foreground truncate" data-testid="text-manual-selected-user">
+                  {selectedUser.displayName} · {selectedUser.email}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedUser(null)}
+                data-testid="button-manual-change-user"
+              >
+                {t.admin.topups_manual_change_user}
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t.admin.topups_manual_search_placeholder}
+                data-testid="input-manual-user-search"
+              />
+              {search.trim().length > 0 && (
+                <div className="mt-1.5 max-h-40 overflow-y-auto space-y-1">
+                  {matchedUsers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2">{t.admin.topups_manual_search_empty}</p>
+                  ) : (
+                    matchedUsers.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => setSelectedUser({ id: u.id, email: u.email, displayName: u.displayName })}
+                        className="w-full text-left px-2.5 py-2 rounded-lg border border-border hover:border-primary/50 hover:bg-muted transition-colors"
+                        data-testid={`button-manual-user-${u.id}`}
+                      >
+                        <p className="text-sm font-medium text-foreground truncate">{u.displayName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground">{t.admin.topups_manual_amount_label}</label>
+              <Input
+                type="number"
+                min={1}
+                value={amountRupiah}
+                onChange={(e) => setAmountRupiah(e.target.value)}
+                data-testid="input-manual-amount"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">{t.admin.topups_manual_credits_label}</label>
+              <Input
+                type="number"
+                min={1}
+                value={credits}
+                onChange={(e) => setCredits(e.target.value)}
+                data-testid="input-manual-credits"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground">{t.admin.topups_manual_note_label}</label>
+            <Textarea
+              placeholder={t.admin.topups_manual_note_placeholder}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              data-testid="input-manual-note"
+            />
+          </div>
+
+          <Button
+            className="w-full"
+            onClick={handleSubmit}
+            disabled={
+              createManualTopup.isPending ||
+              !selectedUser ||
+              !note.trim() ||
+              !(Number(amountRupiah) > 0) ||
+              !(Number(credits) > 0)
+            }
+            data-testid="button-manual-submit"
+          >
+            {createManualTopup.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            {t.admin.topups_manual_submit_button}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function AdminTopupsContent() {
   const [, setLocation] = useLocation();
@@ -49,6 +241,7 @@ function AdminTopupsContent() {
   const [reviewDecision, setReviewDecision] = useState<"approved" | "rejected">("approved");
   const [creditsGranted, setCreditsGranted] = useState("");
   const [reviewNote, setReviewNote] = useState("");
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
 
   const queryParams = { status: statusFilter, page, limit: PAGE_SIZE };
   const { data, isLoading } = useGetPendingTopupRequests(
@@ -98,7 +291,17 @@ function AdminTopupsContent() {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold text-foreground">{t.admin.topups_page_title}</h1>
+          <h1 className="mr-auto text-xl font-bold text-foreground">{t.admin.topups_page_title}</h1>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => setManualDialogOpen(true)}
+            data-testid="button-open-manual-topup"
+          >
+            <UserPlus className="w-4 h-4" />
+            {t.admin.topups_manual_button}
+          </Button>
         </div>
 
         <div className="flex gap-1.5">
@@ -259,6 +462,12 @@ function AdminTopupsContent() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <ManualTopupDialog
+          open={manualDialogOpen}
+          onOpenChange={setManualDialogOpen}
+          onGranted={() => queryClient.invalidateQueries({ queryKey: getGetPendingTopupRequestsQueryKey() })}
+        />
       </div>
     </Layout>
   );

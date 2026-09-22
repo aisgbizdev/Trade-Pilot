@@ -18,6 +18,7 @@ part 'user_with_stats.g.dart';
 /// * [role] 
 /// * [selectedMode] 
 /// * [analysisCount] 
+/// * [creditBalance] - Current purchased-credit balance (sum of credit_ledger for this user).
 /// * [tags] 
 /// * [customQuotaPerHour] - Per-user analysis-quota override. Null = uses the global default.
 /// * [customQuotaPerDay] - Per-user analysis-quota override. Null = uses the global default.
@@ -43,6 +44,10 @@ abstract class UserWithStats implements Built<UserWithStats, UserWithStatsBuilde
 
   @BuiltValueField(wireName: r'analysisCount')
   int get analysisCount;
+
+  /// Current purchased-credit balance (sum of credit_ledger for this user).
+  @BuiltValueField(wireName: r'creditBalance')
+  int get creditBalance;
 
   @BuiltValueField(wireName: r'tags')
   BuiltList<String> get tags;
@@ -109,6 +114,11 @@ class _$UserWithStatsSerializer implements PrimitiveSerializer<UserWithStats> {
     yield r'analysisCount';
     yield serializers.serialize(
       object.analysisCount,
+      specifiedType: const FullType(int),
+    );
+    yield r'creditBalance';
+    yield serializers.serialize(
+      object.creditBalance,
       specifiedType: const FullType(int),
     );
     yield r'tags';
@@ -199,6 +209,13 @@ class _$UserWithStatsSerializer implements PrimitiveSerializer<UserWithStats> {
             specifiedType: const FullType(int),
           ) as int;
           result.analysisCount = valueDes;
+          break;
+        case r'creditBalance':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.creditBalance = valueDes;
           break;
         case r'tags':
           final valueDes = serializers.deserialize(

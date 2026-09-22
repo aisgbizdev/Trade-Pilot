@@ -90,6 +90,7 @@ import type {
   ListAnalysesParams,
   ListJournalEntriesParams,
   LoginBody,
+  ManualTopupBody,
   MessageResponse,
   NativePushRegisterBody,
   NativePushTestResult,
@@ -1383,6 +1384,110 @@ export const useReviewCreditTopupRequest = <
   TContext
 > => {
   return useMutation(getReviewCreditTopupRequestMutationOptions(options));
+};
+
+export const getCreateManualTopupUrl = () => {
+  return `/api/admin/topups/manual`;
+};
+
+/**
+ * For support cases where a user paid but couldn't complete the normal top-up flow (e.g. proof upload failed, or the transfer was confirmed outside the app). Creates an already-approved top-up request row (no proof) and credits the user's balance immediately. The `note` is required and stored as the request's review note for the audit trail.
+ * @summary Directly grant credits to a user, bypassing the normal request/proof-upload flow
+ */
+export const createManualTopup = async (
+  manualTopupBody: ManualTopupBody,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<TopupRequest> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<TopupRequest>(getCreateManualTopupUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(manualTopupBody),
+  });
+};
+
+export const getCreateManualTopupMutationKey = () =>
+  ["createManualTopup"] as const;
+
+export const getCreateManualTopupMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createManualTopup>>,
+    TError,
+    CreateManualTopupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createManualTopup>>,
+  TError,
+  CreateManualTopupMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateManualTopupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createManualTopup>>,
+    CreateManualTopupMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createManualTopup(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateManualTopupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createManualTopup>>
+>;
+export type CreateManualTopupMutationBody = BodyType<ManualTopupBody>;
+export type CreateManualTopupMutationError = ErrorType<ErrorResponse>;
+export type CreateManualTopupMutationVariables = {
+  data: BodyType<ManualTopupBody>;
+};
+
+/**
+ * @summary Directly grant credits to a user, bypassing the normal request/proof-upload flow
+ */
+export const useCreateManualTopup = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createManualTopup>>,
+    TError,
+    CreateManualTopupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createManualTopup>>,
+  TError,
+  CreateManualTopupMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateManualTopupMutationOptions(options));
 };
 
 export const getGetTopupSummaryUrl = () => {

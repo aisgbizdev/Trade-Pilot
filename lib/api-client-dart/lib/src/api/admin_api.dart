@@ -19,6 +19,7 @@ import 'package:trade_pilot_api_client/src/model/broadcast_send_result.dart';
 import 'package:trade_pilot_api_client/src/model/broadcasts_list.dart';
 import 'package:trade_pilot_api_client/src/model/date.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
+import 'package:trade_pilot_api_client/src/model/manual_topup_body.dart';
 import 'package:trade_pilot_api_client/src/model/outbound_click_stats.dart';
 import 'package:trade_pilot_api_client/src/model/progression_audit.dart';
 import 'package:trade_pilot_api_client/src/model/progression_backfill_result.dart';
@@ -192,6 +193,101 @@ class AdminApi {
     }
 
     return Response<BroadcastSendResult>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Directly grant credits to a user, bypassing the normal request/proof-upload flow
+  /// For support cases where a user paid but couldn&#39;t complete the normal top-up flow (e.g. proof upload failed, or the transfer was confirmed outside the app). Creates an already-approved top-up request row (no proof) and credits the user&#39;s balance immediately. The &#x60;note&#x60; is required and stored as the request&#39;s review note for the audit trail.
+  ///
+  /// Parameters:
+  /// * [manualTopupBody] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [TopupRequest] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<TopupRequest>> createManualTopup({ 
+    required ManualTopupBody manualTopupBody,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/topups/manual';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ManualTopupBody);
+      _bodyData = _serializers.serialize(manualTopupBody, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    TopupRequest? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(TopupRequest),
+      ) as TopupRequest;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<TopupRequest>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

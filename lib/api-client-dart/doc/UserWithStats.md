@@ -14,6 +14,7 @@ Name | Type | Description | Notes
 **role** | **String** |  | 
 **selectedMode** | **String** |  | 
 **analysisCount** | **int** |  | 
+**creditBalance** | **int** | Current purchased-credit balance (sum of credit_ledger for this user). | 
 **tags** | **BuiltList&lt;String&gt;** |  | 
 **customQuotaPerHour** | **int** | Per-user analysis-quota override. Null = uses the global default. | [optional] 
 **customQuotaPerDay** | **int** | Per-user analysis-quota override. Null = uses the global default. | [optional] 

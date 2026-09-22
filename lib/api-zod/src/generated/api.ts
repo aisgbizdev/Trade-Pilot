@@ -364,6 +364,45 @@ export const ReviewCreditTopupRequestResponse = zod.object({
 });
 
 /**
+ * For support cases where a user paid but couldn't complete the normal top-up flow (e.g. proof upload failed, or the transfer was confirmed outside the app). Creates an already-approved top-up request row (no proof) and credits the user's balance immediately. The `note` is required and stored as the request's review note for the audit trail.
+ * @summary Directly grant credits to a user, bypassing the normal request/proof-upload flow
+ */
+
+export const CreateManualTopupBody = zod.object({
+  userId: zod.number().int(),
+  amountRupiah: zod
+    .number()
+    .int()
+    .min(1)
+    .describe(
+      "Not constrained to the fixed packages — admins can grant any amount\/credits pair to resolve a top-up support case (e.g. a payment confirmed outside the app after proof upload failed).",
+    ),
+  credits: zod.number().int().min(1),
+  note: zod
+    .string()
+    .min(1)
+    .describe(
+      "Required audit trail — this bypasses the normal proof-upload verification entirely, so the reason must be recorded.",
+    ),
+});
+
+export const CreateManualTopupResponse = zod.object({
+  id: zod.number().int(),
+  userId: zod.number().int(),
+  amountRupiah: zod.number().int(),
+  creditsRequested: zod.number().int(),
+  conversionRateSnapshot: zod.number().int(),
+  paymentReferenceNote: zod.string().nullable(),
+  proofObjectPath: zod.string().nullable(),
+  status: zod.enum(["pending", "approved", "rejected"]),
+  reviewedByUserId: zod.number().int().nullable(),
+  reviewedAt: zod.coerce.date().nullable(),
+  reviewNote: zod.string().nullable(),
+  creditsGranted: zod.number().int().nullable(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
  * @summary Aggregate revenue/credits summary across all approved top-up requests, grouped by user and by calendar month
  */
 export const GetTopupSummaryResponse = zod.object({
@@ -4639,6 +4678,12 @@ export const GetAllUsersResponse = zod.object({
       role: zod.enum(["user", "admin", "super_admin"]),
       selectedMode: zod.enum(["beginner", "pro"]),
       analysisCount: zod.number().int(),
+      creditBalance: zod
+        .number()
+        .int()
+        .describe(
+          "Current purchased-credit balance (sum of credit_ledger for this user).",
+        ),
       tags: zod.array(zod.string()),
       customQuotaPerHour: zod
         .number()
