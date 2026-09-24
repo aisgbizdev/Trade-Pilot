@@ -137,6 +137,7 @@ function indicatorsCacheKey(instrument: string, timeframe: IndicatorTimeframe): 
 export function clearIndicatorsCache(): void {
   indicatorsCache.clear();
   dailyCache = null;
+  candlesCache.clear();
 }
 
 // Aggregate daily candles into ISO-week (Mon–Sun) candles. Each weekly bar uses
@@ -554,27 +555,88 @@ export async function getIndicators(
   return indicators;
 }
 
-// Public candle fetcher used by the /historical/candles endpoint (chart
-// overlay). Returns raw OHLC bars suitable for client-side rendering;
-// indicator math intentionally lives in `getIndicators`. Returns null when
-// the instrument has no upstream coverage for the requested timeframe.
+export type CandleSnapshot = {
+  candles: Candle[];
+  sourceFetchedAt: string;
+  sourceMaxAgeMs: number;
+  isStale: boolean;
+  staleReason: "source_age" | "feed_unavailable" | null;
+};
+
+class EmptyCandleFeedError extends Error {}
+
+type CachedCandles = { candles: Candle[]; sourceFetchedAt: number };
+const candlesCache = new Map<string, CachedCandles>();
+
+// The daily feed is shared for one hour. Its age limit must reflect that
+// upstream cache, not the shorter indicators computation cache.
+function candleSourceMaxAge(timeframe: IndicatorTimeframe): number {
+  return isIntradayTimeframe(timeframe) ? INDICATORS_CACHE_TTL_MS[timeframe] : DAILY_CACHE_TTL;
+}
+
+async function candleSnapshot(
+  cached: CachedCandles,
+  maxAge: number,
+  feedUnavailable = false,
+  instrument: string,
+): Promise<CandleSnapshot> {
+  const isOld = Date.now() - cached.sourceFetchedAt >= maxAge;
+  return {
+    // The OHLC source snapshot and the live spot price are independent.
+    // Re-anchor at read time so cached bars don't freeze the displayed level.
+    candles: await anchorCandlesToLivePrice(instrument, cached.candles),
+    sourceFetchedAt: new Date(cached.sourceFetchedAt).toISOString(),
+    sourceMaxAgeMs: maxAge,
+    isStale: feedUnavailable || isOld,
+    staleReason: feedUnavailable ? "feed_unavailable" : isOld ? "source_age" : null,
+  };
+}
+
+// The timestamp records a successful upstream retrieval, never a cache read
+// or the separate live-price anchor. On failure a bounded cached snapshot can
+// still be displayed, but it is explicitly marked stale for Adaptive.
+export async function getCandleSnapshot(
+  instrument: string,
+  timeframe: IndicatorTimeframe,
+): Promise<CandleSnapshot | null> {
+  const key = indicatorsCacheKey(instrument, timeframe);
+  const cached = candlesCache.get(key);
+  const maxAge = candleSourceMaxAge(timeframe);
+  if (cached && Date.now() - cached.sourceFetchedAt < maxAge) {
+    return candleSnapshot(cached, maxAge, false, instrument);
+  }
+  try {
+    const result = isIntradayTimeframe(timeframe)
+      ? { candles: await getIntradayCandles(instrument, timeframe), sourceFetchedAt: Date.now() }
+      : await getDailyCandles(instrument, timeframe);
+    if (!result) return null;
+    if (!result.candles?.length) throw new EmptyCandleFeedError("Empty candle feed");
+    // Cache raw bars, not live-price adjusted ones. Anchoring changes on each
+    // request while the OHLC source timestamp stays fixed until its next fetch.
+    const next = { candles: result.candles, sourceFetchedAt: result.sourceFetchedAt };
+    candlesCache.set(key, next);
+    return candleSnapshot(next, maxAge, false, instrument);
+  } catch (err) {
+    if (cached && Date.now() - cached.sourceFetchedAt < maxAge * STALE_FALLBACK_MULTIPLIER) {
+      return candleSnapshot(cached, maxAge, true, instrument);
+    }
+    throw err;
+  }
+}
+
+// Retain the existing array API for chart and internal consumers.
 export async function getCandles(
   instrument: string,
   timeframe: IndicatorTimeframe,
 ): Promise<Candle[] | null> {
-  let candles: Candle[] | null;
-  if (isIntradayTimeframe(timeframe)) {
-    candles = await getIntradayCandles(instrument, timeframe);
-  } else {
-    const result = await getDailyCandles(instrument, timeframe);
-    candles = result ? result.candles : null;
+  try {
+    return (await getCandleSnapshot(instrument, timeframe))?.candles ?? null;
+  } catch (err) {
+    // Legacy indicator/outcome consumers use [] to distinguish an empty
+    // upstream series from a transport failure; keep that array contract.
+    if (err instanceof EmptyCandleFeedError) return [];
+    throw err;
   }
-  if (!candles || candles.length === 0) return candles;
-  // Apply the same live-price anchoring that `getIndicators` uses, so the
-  // chart overlay and the AI-generated trade levels live in the same price
-  // space. Without this, gold candles render at futures (GC=F) prices
-  // while the suggested levels sit at spot (XUL10), visibly mis-aligned.
-  return anchorCandlesToLivePrice(instrument, candles);
 }
 
 // Human-readable Indonesian unit/period labels for prompt + UI alignment.

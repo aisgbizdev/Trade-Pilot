@@ -49,6 +49,51 @@ export interface AdaptiveAnalysisContext {
   fundamentalContext?: FundamentalContext | null;
 }
 
+export type AdaptiveCandleFreshnessReason =
+  | "bar_missing" | "bar_old" | "source_missing" | "source_old" | "feed_unavailable";
+
+const MAX_ADAPTIVE_BAR_AGE_MS: Record<string, number> = {
+  "1m": 6 * 60 * 60_000, "5m": 6 * 60 * 60_000,
+  "15m": 6 * 60 * 60_000, "30m": 8 * 60 * 60_000,
+  "1h": 12 * 60 * 60_000, "4h": 36 * 60 * 60_000,
+  "1d": 4 * 24 * 60 * 60_000, "1w": 14 * 24 * 60 * 60_000,
+};
+
+const MAX_ADAPTIVE_SOURCE_AGE_MS: Record<string, number> = {
+  "1m": 30_000, "5m": 60_000, "15m": 3 * 60_000,
+  "30m": 4 * 60_000, "1h": 5 * 60_000,
+  "4h": 15 * 60_000, "1d": 60 * 60_000, "1w": 60 * 60_000,
+};
+
+export function assessAdaptiveCandleFreshness(
+  candles: readonly { date?: string | null }[],
+  timeframe: string | null | undefined,
+  source: { sourceFetchedAt?: unknown; sourceMaxAgeMs?: unknown; isStale?: unknown; staleReason?: unknown },
+  now = Date.now(),
+): { reason: AdaptiveCandleFreshnessReason | null; expiresAt: number | null } {
+  const tf = timeframe?.toLowerCase() ?? "";
+  const barAge = MAX_ADAPTIVE_BAR_AGE_MS[tf];
+  const barTime = candles.length ? Math.max(...candles.map((c) => Date.parse(c.date ?? ""))) : NaN;
+  if (!barAge || !Number.isFinite(barTime) || barTime > now + 60_000) {
+    return { reason: "bar_missing", expiresAt: null };
+  }
+  if (barTime + barAge <= now) return { reason: "bar_old", expiresAt: null };
+
+  const fetched = typeof source.sourceFetchedAt === "string" ? Date.parse(source.sourceFetchedAt) : NaN;
+  const localMaxAge = MAX_ADAPTIVE_SOURCE_AGE_MS[tf];
+  if (!Number.isFinite(fetched) || fetched > now + 60_000 || !localMaxAge ||
+      typeof source.sourceMaxAgeMs !== "number" || !Number.isFinite(source.sourceMaxAgeMs) ||
+      source.sourceMaxAgeMs <= 0 || typeof source.isStale !== "boolean") {
+    return { reason: "source_missing", expiresAt: null };
+  }
+  const sourceExpiry = fetched + Math.min(localMaxAge, source.sourceMaxAgeMs);
+  if (source.staleReason === "feed_unavailable") return { reason: "feed_unavailable", expiresAt: null };
+  if (source.isStale || source.staleReason != null || sourceExpiry <= now) {
+    return { reason: "source_old", expiresAt: null };
+  }
+  return { reason: null, expiresAt: Math.min(sourceExpiry, barTime + barAge) };
+}
+
 export interface AdaptivePlanContext {
   timeframe: string | null;
   validUntil: string | null;

@@ -172,6 +172,10 @@ function standardRulesHandler(status = 200): FetchHandler {
     }
     if (url.includes("/api/historical/candles") && url.includes("purpose=adaptive-layering")) {
       return jsonResponse({
+        sourceFetchedAt: new Date(NOW).toISOString(),
+        sourceMaxAgeMs: 5 * 60_000,
+        isStale: false,
+        staleReason: null,
         candles: [
           { open: 2304, high: 2305, low: 2300, close: 2302 },
           { open: 2302, high: 2304, low: 2298, close: 2300 },
@@ -587,6 +591,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.change(maximumLoss, { target: { value: "500" } });
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+    expect(screen.getByTestId("adaptive-candle-source-time")).toHaveTextContent(/Candle feed retrieved/i);
     expect(screen.queryByTestId("adaptive-plan-comparison")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
@@ -659,7 +664,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-copy-status")).toHaveTextContent("Copy failed");
     expect(execCommand).toHaveBeenCalledWith("copy");
 
-    const storedKey = `trade-pilot:adaptive-plan:v20:${ANALYSIS_ID}`;
+    const storedKey = `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(storedKey)).not.toBeNull());
     expect(JSON.parse(localStorage.getItem(storedKey)!).form.accountTier).toBe("micro");
 
@@ -714,6 +719,30 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(maximumLoss).toHaveValue(250);
   });
 
+  it("blocks Adaptive when a recent bar came from a failed upstream feed", async () => {
+    const failedFeed: FetchHandler = (url) => {
+      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
+      return jsonResponse({
+        sourceFetchedAt: new Date(NOW).toISOString(),
+        sourceMaxAgeMs: 5 * 60_000,
+        isStale: true,
+        staleReason: "feed_unavailable",
+        candles: [{ date: new Date(NOW - 60_000).toISOString(), open: 2300, high: 2305, low: 2295, close: 2301 }],
+      });
+    };
+    installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      feedbackHandler(),
+      failedFeed,
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/upstream feed failed/i));
+    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
+    expect(screen.getByTestId("adaptive-candle-source-time")).toBeInTheDocument();
+  });
+
   it("renders a valid fixed-Mini recommendation from explicit limits", async () => {
     installFetchMock([
       getAnalysisHandler({
@@ -765,7 +794,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v20:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -790,7 +819,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v20:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("does not restore an adaptive plan saved under the cumulative-cap v12 namespace", async () => {
@@ -853,7 +882,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v20:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {

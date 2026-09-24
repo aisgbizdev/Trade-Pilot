@@ -8,6 +8,7 @@ import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-clien
 import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import {
+  assessAdaptiveCandleFreshness,
   buildAdaptivePlanRecommendation,
   createAdaptivePlanFingerprint,
   getAdaptiveChartCandidatePrices,
@@ -26,6 +27,7 @@ import {
   type AdaptivePlanRecommendation,
   type AdaptivePlanReasonCode,
   type AdaptiveChartCandle,
+  type AdaptiveCandleFreshnessReason,
   type AdaptiveSidePositionPlan,
   type AdaptiveRiskStyle,
   type AccountTier,
@@ -60,26 +62,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v20:${analysisId}`;
-}
-
-const MAX_CANDLE_AGE_MS: Record<string, number> = {
-  "1m": 6 * 60 * 60_000,
-  "5m": 6 * 60 * 60_000,
-  "15m": 6 * 60 * 60_000,
-  "30m": 8 * 60 * 60_000,
-  "1h": 12 * 60 * 60_000,
-  "4h": 36 * 60 * 60_000,
-  "1d": 4 * 24 * 60 * 60_000,
-  "1w": 14 * 24 * 60 * 60_000,
-};
-
-function candleExpiry(candles: AdaptiveChartCandle[], timeframe: string | null | undefined): number | null {
-  const maximumAge = MAX_CANDLE_AGE_MS[timeframe?.toLowerCase() ?? ""];
-  const latestDate = candles.length ? Date.parse(candles[candles.length - 1].date ?? "") : Number.NaN;
-  return maximumAge && Number.isFinite(latestDate) && latestDate <= Date.now() + 60_000
-    ? latestDate + maximumAge
-    : null;
+  return `trade-pilot:adaptive-plan:v21:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -681,7 +664,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     status: "loading" | "ready" | "error";
     prices: { buy: number[]; sell: number[] };
     candles: AdaptiveChartCandle[];
-  }>({ status: "loading", prices: { buy: [], sell: [] }, candles: [] });
+    source: { sourceFetchedAt?: unknown; sourceMaxAgeMs?: unknown; isStale?: unknown; staleReason?: unknown };
+    reason: AdaptiveCandleFreshnessReason | null;
+  }>({ status: "loading", prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null });
+  const emptyChartState = (reason: AdaptiveCandleFreshnessReason | null = null) => ({
+    status: "error" as const, prices: { buy: [], sell: [] }, candles: [], source: {}, reason,
+  });
   const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
@@ -697,18 +685,21 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   useEffect(() => {
     if (isRulesLoading) return;
     if (!rulesAvailable || !context.timeframe || !selectedRule) {
-      setChartCandidateState({ status: "error", prices: { buy: [], sell: [] }, candles: [] });
+      setChartCandidateState(emptyChartState());
       return;
     }
     let cancelled = false;
-    setChartCandidateState({ status: "loading", prices: { buy: [], sell: [] }, candles: [] });
+    setChartCandidateState({ status: "loading", prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null });
     fetch(
       `/api/historical/candles?instrument=${encodeURIComponent(instrument)}&timeframe=${encodeURIComponent(context.timeframe)}&purpose=adaptive-layering`,
       { credentials: "include" },
     )
       .then(async (response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json() as Promise<{ candles?: unknown[] }>;
+        return response.json() as Promise<{
+          candles?: unknown[]; sourceFetchedAt?: unknown; sourceMaxAgeMs?: unknown;
+          isStale?: unknown; staleReason?: unknown;
+        }>;
       })
       .then((payload) => {
         if (cancelled) return;
@@ -727,18 +718,21 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               typeof value.date === "string" && Number.isFinite(Date.parse(value.date));
           })
           .sort((a, b) => Date.parse(a.date!) - Date.parse(b.date!));
-        const expiresAt = candleExpiry(candles, context.timeframe);
-        if (expiresAt == null || expiresAt <= Date.now()) {
-          throw new Error("Selected-timeframe candle source is missing or too old for an adaptive recommendation");
+        const freshness = assessAdaptiveCandleFreshness(candles, context.timeframe, payload);
+        if (freshness.reason) {
+          setChartCandidateState({ ...emptyChartState(freshness.reason), source: payload });
+          return;
         }
         setChartCandidateState({
           status: "ready",
           prices: getAdaptiveChartCandidatePrices(candles, tradePlan, selectedRule.minMovement),
           candles,
+          source: payload,
+          reason: null,
         });
       })
       .catch(() => {
-        if (!cancelled) setChartCandidateState({ status: "error", prices: { buy: [], sell: [] }, candles: [] });
+        if (!cancelled) setChartCandidateState(emptyChartState("feed_unavailable"));
       });
     return () => {
       cancelled = true;
@@ -746,10 +740,15 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   }, [context.timeframe, instrument, isRulesLoading, rulesAvailable, selectedRule?.minMovement, tradePlan]);
   useEffect(() => {
     if (chartCandidateState.status !== "ready") return;
-    const expiresAt = candleExpiry(chartCandidateState.candles, context.timeframe);
+    const expiresAt = assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).expiresAt;
     const expire = () => {
       setRecommendation(null);
-      setChartCandidateState({ status: "error", prices: { buy: [], sell: [] }, candles: [] });
+      setChartCandidateState({
+        ...emptyChartState(
+          assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).reason ?? "source_old",
+        ),
+        source: chartCandidateState.source,
+      });
       localStorage.removeItem(storageKey(analysisId));
     };
     if (expiresAt == null || expiresAt <= Date.now()) {
@@ -825,7 +824,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   };
   const calculate = () => {
     if (!rulesAvailable || chartCandidateState.status !== "ready" ||
-        (candleExpiry(chartCandidateState.candles, context.timeframe) ?? 0) <= Date.now()) {
+        assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).reason !== null) {
       setRecommendation(null);
       localStorage.removeItem(storageKey(analysisId));
       return;
@@ -908,7 +907,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               {chartCandidateState.status === "loading"
                 ? copy.adaptive_chart_candidates_loading
                 : chartCandidateState.status === "error"
-                  ? copy.adaptive_chart_candidates_unavailable
+                  ? `${copy.adaptive_chart_candidates_unavailable} ${chartCandidateState.reason
+                      ? copy[`adaptive_candle_${chartCandidateState.reason}`]
+                      : ""}`
                   : copy.adaptive_chart_candidates_ready
                       .replace("{buy}", String(chartCandidateState.prices.buy.length))
                       .replace("{sell}", String(chartCandidateState.prices.sell.length))}
@@ -1024,6 +1025,17 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </div>
           )}
           {rulesUnavailable && <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300" data-testid="adaptive-plan-rules-unavailable">{copy.adaptive_rules_error}</div>}
+          {chartCandidateState.status === "error" && chartCandidateState.reason && (
+            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300" data-testid="adaptive-candle-warning">
+              {copy.adaptive_chart_candidates_unavailable} {copy[`adaptive_candle_${chartCandidateState.reason}`]}
+            </p>
+          )}
+          {typeof chartCandidateState.source.sourceFetchedAt === "string" &&
+            Number.isFinite(Date.parse(chartCandidateState.source.sourceFetchedAt)) && (
+              <p className="text-[11px] text-muted-foreground" data-testid="adaptive-candle-source-time">
+                {copy.adaptive_candle_source_time}: {new Date(chartCandidateState.source.sourceFetchedAt).toLocaleString(lang === "id" ? "id-ID" : "en-US")}
+              </p>
+            )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || chartCandidateState.status !== "ready"} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
