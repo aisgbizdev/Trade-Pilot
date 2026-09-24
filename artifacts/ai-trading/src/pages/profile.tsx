@@ -38,6 +38,7 @@ import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { ProgressionEmblem } from "@/components/progression/progression-emblem";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -328,7 +329,7 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-3.5">
                   <ProgressionEmblem level={progressionSummary.level} masteryLevel={progressionSummary.masteryLevel} className="w-12 h-12 drop-shadow-sm" />
                   <div className="min-w-0 text-left">
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-widest leading-none mb-1">
+                     <p className="text-xs font-bold text-primary uppercase tracking-widest leading-none mb-1">
                       {progressionSummary.masteryLevel > 0
                         ? t.progression.mastery_level.replace("{n}", String(progressionSummary.masteryLevel))
                         : t.progression.level.replace("{n}", String(progressionSummary.level))}
@@ -547,7 +548,8 @@ export default function ProfilePage() {
                 <span className="flex-1 text-sm font-medium text-foreground">{t.alerts.page_title}</span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
-              <button
+               <div>
+               <button
                 type="button"
                 className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => setLocation("/notifications#settings")}
@@ -556,12 +558,11 @@ export default function ProfilePage() {
                 <Bell className="w-4 h-4 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{t.profile_extra.notifications_link_title}</p>
-                  <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-                    {t.profile_extra.notifications_link_subtitle}
-                  </p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
+               <ExpandableExplanation className="px-3.5 pb-2">{t.profile_extra.notifications_link_subtitle}</ExpandableExplanation>
+               </div>
               <button
                 type="button"
                 className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -570,7 +571,7 @@ export default function ProfilePage() {
               >
                 <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
                 <span className="flex-1 text-sm font-medium text-foreground">{t.profile.credit_topup_nav_label}</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mr-1" data-testid="badge-credit-balance">
+                 <Badge variant="secondary" className="text-xs px-1.5 py-0 mr-1" data-testid="badge-credit-balance">
                   {creditBalanceData?.balance ?? 0}
                 </Badge>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -624,19 +625,17 @@ export default function ProfilePage() {
                 data-testid="card-solid-prime-cta"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                   <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                     {t.brand.sponsored_by}
                   </span>
                   <span className="text-sm font-extrabold tracking-wide text-amber-500 dark:text-amber-300">
                     SOLID PRIME
                   </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground/80 mb-3 leading-snug">
+                 <p className="text-xs text-muted-foreground mb-3 leading-snug">
                   {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
                 </p>
-                <p className="text-sm text-foreground/85 leading-relaxed mb-4">
-                  {t.brand.open_account_subtitle}
-                </p>
+                 <ExpandableExplanation className="mb-4">{t.brand.open_account_subtitle}</ExpandableExplanation>
                 <Button asChild className="w-full btn-premium font-semibold h-11">
                   <a
                     href="https://www.sg-berjangka.com"

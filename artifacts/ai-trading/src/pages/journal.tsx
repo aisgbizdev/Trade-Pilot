@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Layout } from "@/components/layout";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { LogTradeDialog } from "@/components/log-trade-dialog";
 import {
   useListJournalEntries,
@@ -194,9 +195,7 @@ export default function JournalPage() {
               >
                 {t.journal.title}
               </h1>
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                {t.journal.subtitle}
-              </p>
+              <ExpandableExplanation>{t.journal.subtitle}</ExpandableExplanation>
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -254,7 +253,7 @@ export default function JournalPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
             <RankRow
               label={t.journal.stats_best_instrument}
               keyText={stats?.bestInstrument?.key ?? null}
@@ -292,7 +291,7 @@ export default function JournalPage() {
             stats.totals.resolved < 2 &&
             !stats.bestInstrument &&
             !stats.bestSession && (
-              <p className="text-[11px] text-muted-foreground italic">
+               <p className="text-xs text-muted-foreground italic">
                 {t.journal.stats_need_more}
               </p>
             )}
@@ -309,7 +308,7 @@ export default function JournalPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="ml-auto h-7 px-2 text-[11px]"
+                 className="ml-auto h-7 px-2 text-xs"
                 onClick={() => {
                   setFilterInstrument("");
                   setFilterOutcome("");
@@ -325,7 +324,7 @@ export default function JournalPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label className="text-[11px]">{t.journal.filter_instrument}</Label>
+               <Label className="text-xs">{t.journal.filter_instrument}</Label>
               <Select
                 value={filterInstrument || SENTINEL_ALL}
                 onValueChange={(v) =>
@@ -351,7 +350,7 @@ export default function JournalPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-[11px]">{t.journal.filter_outcome}</Label>
+               <Label className="text-xs">{t.journal.filter_outcome}</Label>
               <Select
                 value={filterOutcome || SENTINEL_ALL}
                 onValueChange={(v) =>
@@ -377,7 +376,7 @@ export default function JournalPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-[11px]">{t.journal.filter_from}</Label>
+               <Label className="text-xs">{t.journal.filter_from}</Label>
               <Input
                 type="date"
                 value={filterFrom}
@@ -387,7 +386,7 @@ export default function JournalPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[11px]">{t.journal.filter_to}</Label>
+               <Label className="text-xs">{t.journal.filter_to}</Label>
               <Input
                 type="date"
                 value={filterTo}
@@ -504,7 +503,7 @@ function StatBox({
 }) {
   return (
     <div className="rounded-md border border-border/60 p-2.5">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+       <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
         {label}
       </p>
       <p
@@ -593,7 +592,7 @@ function JournalEntryRow({
             <Badge
               variant="outline"
               className={cn(
-                "text-[10px] px-1.5 py-0",
+                 "text-xs px-1.5 py-0",
                 isBuy
                   ? "border-emerald-300 text-emerald-700 dark:text-emerald-400"
                   : "border-red-300 text-red-700 dark:text-red-400",
@@ -608,7 +607,7 @@ function JournalEntryRow({
             </Badge>
             <Badge
               variant="outline"
-              className={cn("text-[10px] px-1.5 py-0", outcomeBadgeClass(entry.outcome))}
+               className={cn("text-xs px-1.5 py-0", outcomeBadgeClass(entry.outcome))}
             >
               {outcomeLabel(
                 entry.outcome as ListJournalEntriesOutcome,
@@ -616,7 +615,7 @@ function JournalEntryRow({
               )}
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+           <p className="text-xs text-muted-foreground mt-0.5">
             {format(tradedAt, "PPp", { locale: dateLocale })}
           </p>
         </div>
@@ -645,7 +644,7 @@ function JournalEntryRow({
       </div>
 
       {(entry.entryPrice || entry.exitPrice || pnlPct != null) && (
-        <div className="grid grid-cols-3 gap-2 text-[11px] text-foreground">
+         <div className="grid grid-cols-3 gap-2 text-xs text-foreground">
           <div>
             <p className="text-muted-foreground">{tJournal.entry_price}</p>
             <p className="font-medium">{entry.entryPrice ?? "—"}</p>
@@ -677,7 +676,7 @@ function JournalEntryRow({
       )}
 
       {entry.mood && (
-        <Badge variant="secondary" className="text-[10px]">
+         <Badge variant="secondary" className="text-xs">
           {entry.mood}
         </Badge>
       )}
@@ -691,7 +690,7 @@ function JournalEntryRow({
       {entry.analysisId && (
         <Link
           href={`/analyses/${entry.analysisId}`}
-          className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+           className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
           data-testid={`link-entry-analysis-${entry.id}`}
         >
           <ExternalLink className="w-3 h-3" />

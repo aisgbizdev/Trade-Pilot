@@ -26,6 +26,7 @@ import {
   Plus,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -132,7 +133,8 @@ function TimeframeRiskDialog({
             <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
             {t.risk_map.title}
           </DialogTitle>
-          <DialogDescription>{t.risk_map.desc}</DialogDescription>
+          <DialogDescription className="sr-only">{t.risk_map.desc}</DialogDescription>
+          <ExpandableExplanation>{t.risk_map.desc}</ExpandableExplanation>
         </DialogHeader>
 
         {isLoading ? (
@@ -189,7 +191,7 @@ function TimeframeRiskDialog({
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground break-words">
+                      <p className="mt-1 text-xs text-muted-foreground break-words">
                         {unavailable
                           ? t.risk_map.category_unavailable
                           : `${tf.riskScore}/100 · ${t.risk_map[`recommendation_${tf.recommendation}` as keyof typeof t.risk_map]}`}
@@ -213,7 +215,7 @@ function TimeframeRiskDialog({
                 </div>
               );
             })}
-            <p className="text-center text-[10px] italic text-muted-foreground">{t.risk_map.note_relative_risk}</p>
+            <p className="text-center text-xs italic text-muted-foreground">{t.risk_map.note_relative_risk}</p>
           </div>
         ) : null}
       </DialogContent>
@@ -403,7 +405,7 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
         <span>{t.analysis_detail.bias_neutral}</span>
         <span>{t.analysis_detail.bias_bullish_strong}</span>
       </div>
-      <p className="text-[11px] text-muted-foreground italic leading-snug">
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
         {t.analysis_detail.bias_subtitle}
       </p>
     </div>
@@ -798,11 +800,10 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_rr}</dt>
           <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-rr`}>{visibleSide.riskRewardRatio}</dd>
         </dl>
-        <div className="mt-auto min-h-[2.75rem] border-t border-border/60 pt-1">
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            <span className="font-semibold text-foreground/80">{t.analysis_detail.trade_plan_rationale}:</span>{" "}
+        <div className="mt-auto border-t border-border/60 pt-1">
+          <ExpandableExplanation label={t.analysis_detail.trade_plan_rationale}>
             {side.rationale}
-          </p>
+          </ExpandableExplanation>
         </div>
         <button
           type="button"
@@ -828,9 +829,9 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
             <Target className="w-3.5 h-3.5 text-primary" />
             {t.analysis_detail.trade_plan_title}
           </h3>
-          <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+          <ExpandableExplanation className="mt-0.5">
             {t.analysis_detail.trade_plan_subtitle}
-          </p>
+          </ExpandableExplanation>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <span
@@ -1469,9 +1470,9 @@ function FundamentalContextCard({
           </div>
           {refreshButton}
         </div>
-        <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+        <ExpandableExplanation className="mt-0.5">
           {t.analysis_detail.fundamental_context_subtitle}
-        </p>
+        </ExpandableExplanation>
       </div>
 
       {driftBanner}
@@ -1841,9 +1842,7 @@ export default function AnalysisDetailPage({
     "technical" | "fundamental" | "market" | null
   >(null);
   const [executionInsightOpen, setExecutionInsightOpen] = useState(false);
-  const [invalidationOpen, setInvalidationOpen] = useState(false);
   const [opportunityOpen, setOpportunityOpen] = useState(false);
-  const [riskOpen, setRiskOpen] = useState(false);
   const [scenariosOpen, setScenariosOpen] = useState(false);
   const [proDetailsOpen, setProDetailsOpen] = useState(false);
   const quickTimeframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2484,30 +2483,20 @@ export default function AnalysisDetailPage({
             className="overflow-hidden border-l-4 border-l-red-500 dark:border-l-red-400 bg-red-50/40 dark:bg-red-950/20"
             data-testid="card-invalidation"
           >
-            <Collapsible open={invalidationOpen} onOpenChange={setInvalidationOpen}>
-              <CollapsibleTrigger
-                className="w-full flex items-start gap-2.5 p-4 text-left transition-colors hover:bg-red-100/40 dark:hover:bg-red-950/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                data-testid="invalidation-trigger"
-                aria-label={`${invalidationOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.invalidation_title}`}
-              >
+            <div className="w-full flex items-start gap-2.5 p-4 text-left" data-testid="invalidation-heading">
                 <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
                   <div>
                     <h3 className="text-sm font-bold text-red-700 dark:text-red-400">
                       {t.analysis_detail.invalidation_title}
                     </h3>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {t.analysis_detail.invalidation_subtitle}
                     </p>
                   </div>
-                  {invalidationOpen ? (
-                    <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  ) : (
-                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  )}
                 </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="border-t border-red-200/60 dark:border-red-900/40">
+            </div>
+              <div className="border-t border-red-200/60 dark:border-red-900/40">
                 <ul className="space-y-1.5 p-4 pt-3" data-testid="list-invalidation">
                   {invalidationItems.map((item, i) => (
                     <li key={i} className="flex gap-2 text-sm text-foreground">
@@ -2516,8 +2505,7 @@ export default function AnalysisDetailPage({
                     </li>
                   ))}
                 </ul>
-              </CollapsibleContent>
-            </Collapsible>
+              </div>
           </Card>
         )}
 
@@ -2558,28 +2546,17 @@ export default function AnalysisDetailPage({
                 className="overflow-hidden border-l-4 border-l-amber-500 dark:border-l-amber-400"
                 data-testid="card-risk"
               >
-                <Collapsible open={riskOpen} onOpenChange={setRiskOpen}>
-                  <CollapsibleTrigger
-                    className="w-full flex items-center justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                    data-testid="risk-trigger"
-                    aria-label={`${riskOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.risk_title}`}
-                  >
+                <div className="w-full flex items-center justify-between gap-2 p-4 text-left" data-testid="risk-heading">
                     <div className="flex items-center gap-2 min-w-0">
                       <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                       <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400">
                         {t.analysis_detail.risk_title}
                       </h3>
                     </div>
-                    {riskOpen ? (
-                      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    )}
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="border-t border-border">
+                </div>
+                  <div className="border-t border-border">
                     <p className="text-sm text-foreground leading-relaxed p-4">{analysis.risk}</p>
-                  </CollapsibleContent>
-                </Collapsible>
+                  </div>
               </Card>
             )}
           </div>
@@ -2646,9 +2623,6 @@ export default function AnalysisDetailPage({
               >
                 <div>
                   <h2 className="text-base font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h2>
-                  <p className="text-[11px] leading-snug text-muted-foreground">
-                    {t.analysis_detail.narrative_details_intro}
-                  </p>
                 </div>
                 {proDetailsOpen ? (
                   <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -2658,6 +2632,7 @@ export default function AnalysisDetailPage({
               </CollapsibleTrigger>
               <CollapsibleContent className="border-t border-border">
                 <div className="p-3 sm:p-4 space-y-2">
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t.analysis_detail.narrative_details_intro}</p>
                   <NarrativeDisclosure
                     title={t.analysis_detail.pro_factor_technical}
                     content={analysis.keyDriversTechnical}
@@ -2724,14 +2699,12 @@ export default function AnalysisDetailPage({
                   <p className="text-base font-bold text-foreground">
                     {t.analysis_detail.execution_insight_title}
                   </p>
-                  <p className="text-[11px] leading-snug text-muted-foreground">
-                    {t.analysis_detail.execution_insight_intro}
-                  </p>
                 </div>
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="border-t border-border">
               <div className="p-4 space-y-3" data-testid="execution-insight-content">
+                <p className="text-xs leading-relaxed text-muted-foreground">{t.analysis_detail.execution_insight_intro}</p>
                 <div className="space-y-3">
                   <div data-testid="exec-scenario-a">
                     <h4 className="text-xs font-semibold text-foreground mb-1">

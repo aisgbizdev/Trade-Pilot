@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-client-react";
 import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import {
   assessAdaptiveCandleFreshness,
   buildAdaptivePlanRecommendation,
@@ -361,7 +362,7 @@ function DirectionSwitch({
     <div className="space-y-1.5" data-testid="adaptive-direction-tabs">
       <div>
         <p className="text-xs font-bold text-foreground">{copy.adaptive_direction_title}</p>
-        <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_direction_help}</p>
+        <ExpandableExplanation>{copy.adaptive_direction_help}</ExpandableExplanation>
       </div>
       <div className="inline-flex max-w-full rounded-md bg-muted p-1" role="group" aria-label={copy.adaptive_direction_title}>
         {([
@@ -538,7 +539,7 @@ function PlanSide({
           )}
         </div>
       )}
-      <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
+      <p className="text-xs leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
       <div className="space-y-2" data-testid={`adaptive-ladder-${plan.side}`}>
         <div className="flex items-center justify-between gap-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.adaptive_layer_plan_title}</p>
@@ -546,7 +547,7 @@ function PlanSide({
             {plan.ladder.length} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
           </span>
         </div>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_layer_financial_help}</p>
+          <ExpandableExplanation>{copy.adaptive_layer_financial_help}</ExpandableExplanation>
         <ol className="space-y-1.5">
           {plan.ladder.map((level) => (
             <li key={`${plan.side}-${level.level}`} className="rounded-md bg-background/70 px-2.5 py-2">
@@ -937,36 +938,35 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         <Calculator className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-foreground">{copy.adaptive_title}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{copy.adaptive_subtitle}</p>
+          <ExpandableExplanation className="mt-0.5">{copy.adaptive_subtitle}</ExpandableExplanation>
         </div>
         <AnalysisGuideLink article="adaptive-position-plan" compact />
       </div>
       <div className="p-4 space-y-4" data-testid="adaptive-plan-content">
-        <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>
+        <ExpandableExplanation>{copy.adaptive_ready}</ExpandableExplanation>
         <details className="rounded-md border border-border/70 bg-muted/20 px-3 py-2" data-testid="adaptive-plan-method">
           <summary className="cursor-pointer text-xs font-semibold text-foreground">{copy.adaptive_method_summary}</summary>
-          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_method_help}</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.adaptive_method_help}</p>
           <div className="mt-2 space-y-1.5 rounded-md border border-primary/20 bg-primary/[0.03] p-2.5 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-analysis-basis">
             <p className="font-semibold text-foreground">{copy.adaptive_analysis_basis_title}</p>
             <p>{copy.adaptive_analysis_basis}</p>
             <p>{copy.adaptive_chart_confirmation}</p>
-            <p className="font-medium text-foreground" data-testid="adaptive-chart-candidate-status">
-              {isAnalysisExpired
-                ? copy.adaptive_analysis_expired
-                : chartCandidateState.status === "loading" || chartCandidateState.scope !== chartScope
-                ? copy.adaptive_chart_candidates_loading
-                : chartCandidateState.status === "error"
-                  ? `${copy.adaptive_chart_candidates_unavailable} ${chartCandidateState.reason
-                      ? copy[`adaptive_candle_${chartCandidateState.reason}`]
-                      : ""}`
-                  : copy.adaptive_chart_candidates_ready
-                      .replace("{buy}", String(chartCandidateState.prices.buy.length))
-                      .replace("{sell}", String(chartCandidateState.prices.sell.length))}
-            </p>
           </div>
-          <p className="mt-2 rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-[10px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
-          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_day_trade_only}</p>
         </details>
+        <p className="text-xs font-medium text-foreground" data-testid="adaptive-chart-candidate-status">
+          {isAnalysisExpired
+            ? copy.adaptive_analysis_expired
+            : chartCandidateState.status === "loading" || chartCandidateState.scope !== chartScope
+            ? copy.adaptive_chart_candidates_loading
+            : chartCandidateState.status === "error"
+              ? `${copy.adaptive_chart_candidates_unavailable} ${chartCandidateState.reason
+                  ? copy[`adaptive_candle_${chartCandidateState.reason}`]
+                  : ""}`
+              : copy.adaptive_chart_candidates_ready
+                  .replace("{buy}", String(chartCandidateState.prices.buy.length))
+                  .replace("{sell}", String(chartCandidateState.prices.sell.length))}
+        </p>
+        <p className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-xs leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
           <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
@@ -1029,7 +1029,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         <div className="space-y-2" data-testid="adaptive-risk-style-selector">
           <div>
             <p className="text-xs font-medium text-foreground">{copy.adaptive_risk_style_title}</p>
-            <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_risk_style_help}</p>
+            <ExpandableExplanation>{copy.adaptive_risk_style_help}</ExpandableExplanation>
           </div>
           <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label={copy.adaptive_risk_style_title}>
             {([
@@ -1229,14 +1229,14 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <details className="rounded-md border border-border p-3" data-testid="adaptive-risk-details">
             <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</summary>
             <ol className="mt-2 list-decimal pl-5 space-y-1 text-[11px] leading-relaxed text-muted-foreground"><li>{copy.adaptive_step_choose}</li><li>{copy.adaptive_step_entry}</li><li>{copy.adaptive_step_add}</li><li>{copy.adaptive_step_stop}</li></ol>
-            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_manual_only}</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_external_liquidation}</p>
             {recommendation.result.assumptions.length > 0 && (
               <ul className="mt-2 space-y-1 border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground">
                 {recommendation.result.assumptions.map((assumption) => <li key={assumption}>• {assumption}</li>)}
               </ul>
             )}
           </details>
+          <p className="text-xs leading-relaxed text-muted-foreground">{copy.adaptive_manual_only}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">{copy.adaptive_external_liquidation}</p>
         </div>}
       </div>
     </Card>

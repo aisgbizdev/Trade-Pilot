@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, Clock3, Loader2, Target, TrendingDown } fr
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { useQuery } from "@tanstack/react-query";
 import {
   OTHER_INSTRUMENT_BUCKET_KEY,
@@ -203,16 +204,16 @@ export function HistoryPerformanceSummary() {
             <Card className="p-3 h-full hover:border-primary/60 transition-colors">
               <Icon className="w-4 h-4 text-primary mb-2" />
               <p className="text-xl font-bold tabular-nums">{value}</p>
-              <p className="text-[10px] text-muted-foreground">{label}</p>
+               <p className="text-xs text-muted-foreground">{label}</p>
             </Card>
           </button>
         ))}
       </div>
 
       <div className="grid md:grid-cols-3 gap-2">
-        <Card className="p-3"><p className="text-[10px] text-muted-foreground">{t.history.insight_consistent}</p><p className="text-sm font-semibold mt-1">{best ? `${best.timeframe} · ${Math.round((best.winRate ?? 0) * 100)}%` : t.history.need_more_samples}</p></Card>
-        <Card className="p-3"><p className="text-[10px] text-muted-foreground">{t.history.insight_expired}</p><p className="text-sm font-semibold mt-1">{mostExpired ? `${mostExpired.timeframe} · ${mostExpired.expired}` : t.history.need_more_samples}</p></Card>
-        <Card className="p-3"><p className="text-[10px] text-muted-foreground">{t.history.insight_sl}</p><p className="text-sm font-semibold mt-1">{mostSl ? `${mostSl.timeframe} · ${mostSl.slHit}` : t.history.need_more_samples}</p></Card>
+         <Card className="p-3"><p className="text-xs text-muted-foreground">{t.history.insight_consistent}</p><p className="text-sm font-semibold mt-1">{best ? `${best.timeframe} · ${Math.round((best.winRate ?? 0) * 100)}%` : t.history.need_more_samples}</p></Card>
+         <Card className="p-3"><p className="text-xs text-muted-foreground">{t.history.insight_expired}</p><p className="text-sm font-semibold mt-1">{mostExpired ? `${mostExpired.timeframe} · ${mostExpired.expired}` : t.history.need_more_samples}</p></Card>
+         <Card className="p-3"><p className="text-xs text-muted-foreground">{t.history.insight_sl}</p><p className="text-sm font-semibold mt-1">{mostSl ? `${mostSl.timeframe} · ${mostSl.slHit}` : t.history.need_more_samples}</p></Card>
       </div>
 
       <Card className="overflow-hidden">
@@ -220,7 +221,7 @@ export function HistoryPerformanceSummary() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold">{t.history.instrument_performance}</h2>
-              <p className="text-[11px] text-muted-foreground mt-1">{t.history.instrument_performance_hint}</p>
+               <ExpandableExplanation><p>{t.history.instrument_performance_hint}</p></ExpandableExplanation>
             </div>
             {(focusedInstrument || instruments.length > 0) && (
               <button
@@ -262,31 +263,29 @@ export function HistoryPerformanceSummary() {
                        <strong className="text-sm">
                          {row.instrument === OTHER_INSTRUMENT_BUCKET_KEY ? t.history.other_instruments : row.instrument}
                        </strong>
-                      <span className="text-xs text-muted-foreground">{row.total} sample</span>
+                       <span className="text-xs text-muted-foreground">{row.total} sample</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 mt-3 text-[11px]">
+                     <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
                       <span>Win <strong>{row.total >= summary.minSamples && row.winRate != null ? `${Math.round(row.winRate * 100)}%` : "—"}</strong></span>
                       <span>TP <strong>{row.tp1Hit + row.tp2Hit}</strong></span>
                       <span>SL <strong>{row.slHit}</strong></span>
                     </div>
                      <OutcomeBar row={row} />
                      {row.total < summary.minSamples && (
-                       <p className="mt-2 text-[10px] font-medium text-muted-foreground">
+                        <p className="mt-2 text-xs font-medium text-muted-foreground">
                          {t.history.samples_needed
                            .replace("{remaining}", String(Math.max(0, summary.minSamples - row.total)))
                            .replace("{have}", String(row.total))
                            .replace("{need}", String(summary.minSamples))}
                        </p>
                      )}
-                     {row.instrument === OTHER_INSTRUMENT_BUCKET_KEY && (
-                       <p className="mt-2 text-[10px] text-muted-foreground">
-                         {t.history.other_instruments_hint}
-                       </p>
-                     )}
                   </button>
+                   {row.instrument === OTHER_INSTRUMENT_BUCKET_KEY && (
+                     <ExpandableExplanation className="mt-2"><p>{t.history.other_instruments_hint}</p></ExpandableExplanation>
+                   )}
                   <button
                      onClick={() => drill(undefined, undefined, row.filterInstruments)}
-                    className="mt-3 text-[11px] font-medium text-primary hover:underline"
+                     className="mt-3 text-xs font-medium text-primary hover:underline"
                   >
                     {t.history.view_instrument_history}
                   </button>
@@ -305,9 +304,9 @@ export function HistoryPerformanceSummary() {
                ? ` · ${selectedInstrument.instrument === OTHER_INSTRUMENT_BUCKET_KEY ? t.history.other_instruments : selectedInstrument.instrument}`
                : ""}
           </h2>
-          <p className="text-[11px] text-muted-foreground mt-1">{t.history.rate_explainer}</p>
+           <p className="text-xs text-muted-foreground mt-1">{t.history.rate_explainer}</p>
         </div>
-        <div className="hidden md:grid grid-cols-[1fr_repeat(8,minmax(54px,1fr))] gap-2 px-4 py-2 text-[10px] text-muted-foreground border-b border-border">
+         <div className="hidden md:grid grid-cols-[1fr_repeat(8,minmax(54px,1fr))] gap-2 px-4 py-2 text-xs text-muted-foreground border-b border-border">
           <span>Timeframe</span><span>Sample</span><span>{t.history.summary_valid}</span><span>Expired</span><span>SL</span><span>TP1</span><span>TP2</span><span>Win rate</span><span>Completion</span>
         </div>
         {timeframeRows.length === 0 ? (

@@ -28,3 +28,4 @@
 - [Adaptive candle freshness](adaptive-candle-freshness.md) — a candle's latest bar time is not fetch time; fail closed when too old until the API exposes source freshness.
 - [Managed workflow port collisions](managed-workflow-port-collisions.md) — a surviving shell-launched server can occupy an artifact's managed port; identify its process group before stopping it.
 - [Adaptive availability without added cost](adaptive-availability-policy.md) — recover on the saved analysis using existing fresh feeds; fail closed rather than buying uptime or replaying AI.
+- [Information density on web and PWA](information-density-web-pwa.md) — optional explanations start closed on desktop and mobile; safety-critical status stays visible.

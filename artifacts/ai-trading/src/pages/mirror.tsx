@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Layout } from "@/components/layout";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { useGetTraderMirrorInsights } from "@workspace/api-client-react";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -47,9 +48,7 @@ export default function MirrorPage() {
               {tm.title}
             </h1>
           </div>
-          <p className="text-[12px] text-muted-foreground leading-snug">
-            {tm.subtitle}
-          </p>
+           <ExpandableExplanation>{tm.subtitle}</ExpandableExplanation>
         </header>
 
         {isLoading && (
@@ -95,7 +94,7 @@ export default function MirrorPage() {
                 className="p-4 space-y-2 bg-gradient-to-br from-primary/10 to-transparent border-primary/30"
                 data-testid="card-mirror-highlights"
               >
-                <h2 className="text-[11px] font-semibold text-primary uppercase tracking-wide">
+                 <h2 className="text-xs font-semibold text-primary uppercase tracking-wide">
                   {tm.highlights}
                 </h2>
                 <ul className="space-y-1.5">
@@ -198,9 +197,7 @@ function CategoryCard({
         <div className="text-muted-foreground mt-0.5">{icon}</div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            {subtitle}
-          </p>
+           <ExpandableExplanation>{subtitle}</ExpandableExplanation>
         </div>
       </div>
       {block.gated ? (
@@ -274,7 +271,7 @@ function MiniStat({
     >
       <div
         className={cn(
-          "flex items-center gap-1 text-[10px] uppercase tracking-wide font-semibold",
+           "flex items-center gap-1 text-xs uppercase tracking-wide font-semibold",
           accent === "positive" && "text-emerald-500",
           accent === "negative" && "text-rose-500",
           accent === "neutral" && "text-muted-foreground",
@@ -286,7 +283,7 @@ function MiniStat({
       <p className="text-sm font-semibold text-foreground mt-1 truncate">
         {value}
       </p>
-      <p className="text-[10px] text-muted-foreground">{sub}</p>
+       <p className="text-xs text-muted-foreground">{sub}</p>
     </div>
   );
 }
@@ -327,9 +324,7 @@ function PostLossCard({
           <h3 className="text-sm font-semibold text-foreground">
             {tm.post_loss_title}
           </h3>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            {tm.post_loss_subtitle}
-          </p>
+           <ExpandableExplanation>{tm.post_loss_subtitle}</ExpandableExplanation>
         </div>
       </div>
       {block.gated ? (
@@ -388,9 +383,7 @@ function ExitDisciplineCard({
           <h3 className="text-sm font-semibold text-foreground">
             {tm.exit_title}
           </h3>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            {tm.exit_subtitle}
-          </p>
+           <ExpandableExplanation>{tm.exit_subtitle}</ExpandableExplanation>
         </div>
       </div>
       {block.gated ? (

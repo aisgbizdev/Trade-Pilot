@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle, Shield, Activity, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle, Shield, Activity, Plus, Info } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { SetAlertModal } from "@/components/set-alert-modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -123,37 +124,15 @@ const IMPACT_STYLES: Record<string, string> = {
   "★":   "text-muted-foreground bg-muted",
 };
 
-const CURRENCY_FLAGS: Record<string, string> = {
-  USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵", AUD: "🇦🇺",
-  CAD: "🇨🇦", CHF: "🇨🇭", CNY: "🇨🇳", CHN: "🇨🇳", NZD: "🇳🇿",
-  IDR: "🇮🇩", HKD: "🇭🇰", GOLD: "🥇", OIL: "🛢️", OPEC: "🛢️",
-};
-
-let calendarExplainerSeq = 0;
-
 function CalendarEventExplainer({ event }: { event: CalendarEvent }) {
   const { t, lang } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const [panelId] = useState(() => `cal-explainer-${++calendarExplainerSeq}`);
-  // Prefer the upstream-provided text when present; otherwise look up
-  // the local dictionary. If neither yields anything, render nothing.
   const dict = explainerFor(event.event, lang);
   const upstream = event.whyTraderCare?.trim();
   if (!dict && !upstream) return null;
   return (
     <div className="mt-1.5">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-[10px] font-medium text-primary hover:underline"
-        data-testid="button-event-explainer-toggle"
-        aria-expanded={open}
-        aria-controls={panelId}
-      >
-        {open ? t.analyze.pre_trade_warning_explainer_hide : t.analyze.calendar_event_explainer_btn}
-      </button>
-      {open && (
-        <div id={panelId} className="mt-1 rounded-lg bg-muted/60 p-2 space-y-1.5 text-[11px] leading-snug">
+      <ExpandableExplanation label={t.analyze.calendar_event_explainer_btn}>
+        <div className="rounded-lg bg-muted/60 p-2 space-y-1.5 text-xs leading-snug">
           {dict ? (
             <>
               <p className="font-semibold text-foreground">{dict.headline}</p>
@@ -171,7 +150,7 @@ function CalendarEventExplainer({ event }: { event: CalendarEvent }) {
             <p className="text-foreground/85">{upstream}</p>
           )}
         </div>
-      )}
+      </ExpandableExplanation>
     </div>
   );
 }
@@ -216,8 +195,8 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
                 <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded shrink-0 mt-0.5", impactStyle)}>
                   {evt.impact}
                 </span>
-                <span className="text-sm leading-none mt-0.5" aria-hidden="true">
-                  {CURRENCY_FLAGS[evt.currency] ?? "🌐"}
+                <span className="text-xs font-bold mt-0.5 px-1 bg-muted rounded text-muted-foreground shrink-0" aria-hidden="true">
+                  {evt.currency}
                 </span>
                 <span className="flex-1 min-w-0 break-words">
                   <span className="text-foreground font-medium">{evt.event}</span>
@@ -226,7 +205,7 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
                   )}
                   <CalendarEventExplainer event={evt} />
                 </span>
-                <span className="text-[10px] text-muted-foreground font-mono shrink-0 mt-0.5 whitespace-nowrap">
+                <span className="text-xs text-muted-foreground font-mono shrink-0 mt-0.5 whitespace-nowrap">
                   {dateLabel} {timeLabel}
                 </span>
               </li>
@@ -234,10 +213,14 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
           })}
         </ul>
       )}
-      <p className="text-[10px] text-muted-foreground italic flex items-start gap-1 leading-relaxed pt-1 border-t border-border/40">
-        <span aria-hidden="true">ℹ</span>
-        {t.analyze.calendar_preview_note}
-      </p>
+      <div className="pt-1 mt-1 border-t border-border/40">
+        <ExpandableExplanation>
+          <p className="flex items-start gap-1 text-xs text-muted-foreground italic leading-relaxed">
+            <Info className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
+            <span>{t.analyze.calendar_preview_note}</span>
+          </p>
+        </ExpandableExplanation>
+      </div>
     </Card>
   );
 }
@@ -281,8 +264,6 @@ function eventEpoch(evt: CalendarEvent): number | null {
 
 function PreTradeWarning({ instrument }: { instrument: string }) {
   const { t, lang } = useTranslation();
-  const [explainerOpen, setExplainerOpen] = useState(false);
-  const explainerPanelId = "pre-trade-warning-explainer-panel";
   // Ask for a wider window than the default preview cap so an unusually
   // packed week (multiple ★★★ events for the same currency on FOMC /
   // NFP days) can't silently truncate the imminent event off the list.
@@ -313,8 +294,7 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
 
   if (!soonest) return null;
 
-  const flag = CURRENCY_FLAGS[soonest.event.currency] ?? "🌐";
-  const eventLabel = `${flag} ${soonest.event.event}`;
+  const eventLabel = `${soonest.event.currency} ${soonest.event.event}`;
   const minutes = Math.floor(soonest.minutes);
   const message =
     minutes < 1
@@ -337,9 +317,9 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
       />
       <div className="min-w-0 flex-1">
         <p className="text-xs font-bold text-amber-700 dark:text-amber-300 leading-tight">
-          ⚠ {t.analyze.pre_trade_warning_title}
+          {t.analyze.pre_trade_warning_title}
         </p>
-        <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-snug mt-0.5">
+        <p className="text-xs text-amber-800 dark:text-amber-200 leading-snug mt-0.5">
           {message}
         </p>
         {(() => {
@@ -348,20 +328,8 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
           if (!dict && !upstream) return null;
           return (
             <div className="mt-1.5">
-              <button
-                type="button"
-                onClick={() => setExplainerOpen((v) => !v)}
-                className="text-[11px] font-medium text-amber-700 dark:text-amber-300 underline-offset-2 hover:underline"
-                data-testid="button-pre-trade-explainer-toggle"
-                aria-expanded={explainerOpen}
-                aria-controls={explainerPanelId}
-              >
-                {explainerOpen
-                  ? t.analyze.pre_trade_warning_explainer_hide
-                  : t.analyze.pre_trade_warning_explainer_btn}
-              </button>
-              {explainerOpen && (
-                <div id={explainerPanelId} className="mt-1.5 rounded-md bg-amber-500/[0.06] border border-amber-500/30 p-2 space-y-1 text-[11px] leading-snug text-amber-900 dark:text-amber-100 break-words">
+              <ExpandableExplanation label={t.analyze.pre_trade_warning_explainer_btn}>
+                <div className="mt-1.5 rounded-md bg-amber-500/[0.06] border border-amber-500/30 p-2 space-y-1 text-xs leading-snug text-amber-900 dark:text-amber-100 break-words">
                   {dict ? (
                     <>
                       <p className="font-semibold">{dict.headline}</p>
@@ -379,7 +347,7 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
                     <p>{upstream}</p>
                   )}
                 </div>
-              )}
+              </ExpandableExplanation>
             </div>
           );
         })()}
@@ -463,9 +431,9 @@ function EconomicCalendarSection() {
         </div>
       </div>
       <div className="pt-1 space-y-2">
-        <p className="text-[10px] text-muted-foreground leading-snug">
+        <ExpandableExplanation>
           {t.analyze.economic_calendar_section_hint}
-        </p>
+        </ExpandableExplanation>
         <div
           className="flex flex-wrap items-center gap-1.5"
           role="group"
@@ -522,7 +490,6 @@ function EconomicCalendarSection() {
           </button>
           {availableCurrencies.map((currency) => {
             const active = effectiveCurrencies.includes(currency);
-            const flag = CURRENCY_FLAGS[currency] ?? "";
             return (
               <button
                 key={currency}
@@ -537,7 +504,6 @@ function EconomicCalendarSection() {
                     : "bg-muted/40 text-foreground border-border hover:bg-muted",
                 )}
               >
-                {flag ? <span className="mr-1" aria-hidden="true">{flag}</span> : null}
                 {currency}
               </button>
             );
@@ -669,9 +635,9 @@ function TimeframeRiskMapSection({
             <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
             {t.risk_map.title}
           </h2>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          <ExpandableExplanation className="mt-1">
             {t.risk_map.desc}
-          </p>
+          </ExpandableExplanation>
         </div>
 
         <div className="space-y-3">
@@ -1366,10 +1332,10 @@ export default function AnalyzePage() {
                 />
                 <p
                   id="analysis-notes-broker-warning"
-                  className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed"
+                  className="text-xs text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed"
                   data-testid="notes-broker-hint"
                 >
-                  <span className="text-primary mt-0.5" aria-hidden="true">ℹ</span>
+                  <Info className="h-3 w-3 text-primary mt-0.5 shrink-0" aria-hidden="true" />
                   {t.analyze.broker_warning}
                 </p>
               </>
