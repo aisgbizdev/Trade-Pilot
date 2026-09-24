@@ -273,6 +273,38 @@ afterEach(() => {
 });
 
 describe("AnalysisDetailPage: happy-path render", () => {
+  it("keeps invalidation and risk cues visible while opening one compact detail at a time", async () => {
+    installFetchMock([getAnalysisHandler({
+      body: {
+        ...ANALYSIS_PAYLOAD,
+        opportunity: "The trend can continue.",
+        risk: "A break below support invalidates the setup.",
+      },
+    }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    const invalidation = await screen.findByTestId("invalidation-heading");
+    const risk = screen.getByTestId("risk-heading");
+    expect(invalidation).toHaveTextContent("2");
+    expect(invalidation).toHaveAttribute("aria-expanded", "false");
+    expect(risk).toHaveTextContent("Risk");
+    expect(screen.queryByTestId("list-invalidation")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("card-risk")).not.toBeInTheDocument();
+    expect(screen.getByTestId("text-risk-disclaimer-short")).toBeVisible();
+
+    fireEvent.click(invalidation);
+    expect(invalidation).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId("list-invalidation").children).toHaveLength(2);
+    fireEvent.click(risk);
+    expect(invalidation).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("list-invalidation")).not.toBeInTheDocument();
+    expect(screen.getByTestId("card-risk")).toHaveTextContent(/break below support/i);
+    fireEvent.click(risk);
+    expect(screen.queryByTestId("card-risk")).not.toBeInTheDocument();
+    expect(screen.getByTestId("text-risk-disclaimer-short")).toBeVisible();
+  });
+
   it("renders the instrument header, bias label, confidence range and risk level from the payload", async () => {
     installFetchMock([getAnalysisHandler({}), feedbackHandler()]);
     const { Wrapper } = makeWrapper();
@@ -614,6 +646,14 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const snapshot = await screen.findByTestId("adaptive-plan-snapshot");
     const reasoning = await screen.findByTestId("adaptive-plan-reasoning") as HTMLDetailsElement;
     expect(reasoning.open).toBe(false);
+    const volatility = screen.getByTestId("adaptive-timeframe-volatility");
+    const volatilityDetails = volatility.querySelector("details") as HTMLDetailsElement;
+    expect(volatilityDetails.open).toBe(false);
+    fireEvent.click(volatilityDetails.querySelector("summary")!);
+    expect(volatilityDetails.open).toBe(true);
+    expect(volatility).toHaveTextContent(/Typical candle range/i);
+    fireEvent.click(volatilityDetails.querySelector("summary")!);
+    expect(volatilityDetails.open).toBe(false);
     fireEvent.click(reasoning.querySelector("summary")!);
     expect(reasoning.open).toBe(true);
     const buyPlan = screen.getByTestId("adaptive-plan-buy");
@@ -642,6 +682,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-ladder-buy")).toHaveTextContent(/2,300/);
     expect(buyPlan.textContent).toMatch(/\$/);
     expect(screen.getByTestId("adaptive-direction-buy")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByTestId("adaptive-direction-tabs")).toHaveLength(1);
+    expect(screen.getByTestId("adaptive-plan-valid").firstElementChild).toBe(screen.getByTestId("adaptive-direction-tabs"));
     expect(screen.queryByTestId("adaptive-plan-sell")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("button-copy-adaptive-plan"));

@@ -907,6 +907,15 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       recommendation.result.sell ??
       null
     : null;
+  const directionControl = recommendation && primaryPlan ? (
+    <DirectionSwitch
+      activeSide={primaryPlan.side}
+      hasBuy={recommendation.result.buy !== null}
+      hasSell={recommendation.result.sell !== null}
+      copy={copy}
+      onChange={setActiveSide}
+    />
+  ) : null;
   const copyPrimaryPlan = async () => {
     if (!primaryPlan || !selected || !recommendation?.result.valid) return;
     if (copyResetTimerRef.current !== null) {
@@ -1101,15 +1110,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           )}
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
-        {recommendation && primaryPlan && (
-          <DirectionSwitch
-            activeSide={primaryPlan.side}
-            hasBuy={recommendation.result.buy !== null}
-            hasSell={recommendation.result.sell !== null}
-            copy={copy}
-            onChange={setActiveSide}
-          />
-        )}
         {recommendation && (
           <details className="rounded-md border border-primary/20 bg-primary/[0.03] p-3" data-testid="adaptive-plan-reasoning">
             <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_reasoning_title}</summary>
@@ -1139,8 +1139,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           </details>
         )}
         {recommendation && (
-          <div className="rounded-md border border-border p-3 space-y-1 text-[11px] leading-relaxed" data-testid="adaptive-timeframe-volatility">
-            <p className="font-bold">{copy.adaptive_volatility_title.replace("{timeframe}", recommendation.context.timeframe ?? "—")}</p>
+          <div className="rounded-md border border-border p-3 text-[11px] leading-relaxed" data-testid="adaptive-timeframe-volatility">
+            <details>
+              <summary className="cursor-pointer text-xs font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                {copy.adaptive_volatility_title.replace("{timeframe}", recommendation.context.timeframe ?? "—")}
+              </summary>
+              <div className="mt-2 space-y-1">
             {recommendation.volatilityDiagnostic.observedRange == null ? (
               <p className="text-muted-foreground">{copy.adaptive_volatility_unavailable}</p>
             ) : (
@@ -1155,6 +1159,15 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 ))}
               </>
             )}
+              </div>
+            </details>
+            {recommendation.volatilityDiagnostic.observedRange == null ? (
+              <p className="mt-1 font-medium text-amber-700 dark:text-amber-300">{copy.adaptive_volatility_unavailable_short}</p>
+            ) : (["buy", "sell"] as const).filter((side) => recommendation.volatilityDiagnostic[side === "buy" ? "buyStopLooksTight" : "sellStopLooksTight"] && recommendation.decision.preferredSide === side).map((side) => (
+              <p key={side} className="mt-1 font-medium text-amber-700 dark:text-amber-300">
+                {copy.adaptive_volatility_tight_short.replace("{side}", side.toUpperCase())}
+              </p>
+            ))}
           </div>
         )}
         {recommendation && (
@@ -1167,8 +1180,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             const alternative = recommendation.candleAlternative;
             return (
               <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" data-testid="adaptive-alternative">
-                <p className="font-bold">{copy.adaptive_alternative_title}</p>
-                <p className="mt-1">{alternative.status === "available"
+                <details>
+                  <summary className="cursor-pointer text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.adaptive_alternative_title}</summary>
+                  <p className="mt-2">{alternative.status === "available"
                   ? copy.adaptive_alternative_basis
                     .replace("{side}", alternative.side.toUpperCase())
                     .replace("{lot}", formatNumber(alternative.lot, lang))
@@ -1180,7 +1194,11 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                     .replace("{loss}", formatMoney(alternative.estimatedLoss, lang))
                     .replace("{profit}", formatMoney(Math.abs(alternative.takeProfit - alternative.entry) * (selectedRule?.contractSize ?? 0) * alternative.lot, lang))
                   : copy.adaptive_alternative_no_levels}</p>
-                <p className="mt-1 font-medium">{copy.adaptive_alternative_unchanged}</p>
+                  <p className="mt-1 font-medium">{copy.adaptive_alternative_unchanged}</p>
+                </details>
+                <p className="mt-1 font-medium">{alternative.status === "available"
+                  ? copy.adaptive_alternative_available_short
+                  : copy.adaptive_alternative_unavailable_short}</p>
               </div>
             );
           })()
@@ -1193,10 +1211,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
            <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
              <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
              <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_scenarios_review_help}</p>
+              {directionControl}
               {primaryPlan && <PlanSide plan={primaryPlan} lang={lang} copy={copy} decision={recommendation.decision} />}
            </div>
          )}
         {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
+            {directionControl}
            <div className="flex flex-wrap items-center justify-between gap-2">
              <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
              <div className="flex items-center gap-2">
