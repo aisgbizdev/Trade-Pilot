@@ -549,6 +549,94 @@ describe("PATCH /superadmin/users/:id/role", () => {
   });
 });
 
+describe("PATCH /superadmin/users/:id/credits", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${regularUser.id}/credits`)
+      .send({ balance: 10 });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for non-super-admin", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${regularUser.id}/credits`)
+      .set(...authHeader(admin))
+      .send({ balance: 10 });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects a negative or non-numeric balance with 400", async () => {
+    const target = await createUser("user");
+    const negative = await request(app)
+      .patch(`/api/superadmin/users/${target.id}/credits`)
+      .set(...authHeader(superAdmin))
+      .send({ balance: -1 });
+    expect(negative.status).toBe(400);
+
+    const notANumber = await request(app)
+      .patch(`/api/superadmin/users/${target.id}/credits`)
+      .set(...authHeader(superAdmin))
+      .send({ balance: "not-a-number" });
+    expect(notANumber.status).toBe(400);
+  });
+
+  it("returns 404 for an unknown user id", async () => {
+    const res = await request(app)
+      .patch(`/api/superadmin/users/999999999/credits`)
+      .set(...authHeader(superAdmin))
+      .send({ balance: 10 });
+    expect(res.status).toBe(404);
+  });
+
+  it("sets the balance up from zero by appending a positive ledger delta", async () => {
+    const target = await createUser("user");
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${target.id}/credits`)
+      .set(...authHeader(superAdmin))
+      .send({ balance: 25 });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: target.id, creditBalance: 25 });
+  });
+
+  it("sets the balance down by appending a negative ledger delta, never going below the target", async () => {
+    const target = await createUser("user");
+    await db.transaction(async (tx) => {
+      await applyCreditLedgerEntry(tx, {
+        userId: target.id,
+        amount: 50,
+        source: "test_seed",
+        sourceEventId: `seed-${randomBytes(4).toString("hex")}`,
+      });
+    });
+
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${target.id}/credits`)
+      .set(...authHeader(superAdmin))
+      .send({ balance: 12 });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: target.id, creditBalance: 12 });
+  });
+
+  it("is a no-op (still 200) when the target already equals the current balance", async () => {
+    const target = await createUser("user");
+    await db.transaction(async (tx) => {
+      await applyCreditLedgerEntry(tx, {
+        userId: target.id,
+        amount: 7,
+        source: "test_seed",
+        sourceEventId: `seed-${randomBytes(4).toString("hex")}`,
+      });
+    });
+
+    const res = await request(app)
+      .patch(`/api/superadmin/users/${target.id}/credits`)
+      .set(...authHeader(superAdmin))
+      .send({ balance: 7 });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: target.id, creditBalance: 7 });
+  });
+});
+
 describe("super_admin lockout protection", () => {
   // These tests verify the count-guard (defense-in-depth) inside PATCH
   // role + DELETE. Through normal request flow the actor is always a

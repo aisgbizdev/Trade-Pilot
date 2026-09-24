@@ -873,10 +873,9 @@ export default function AnalyzePage() {
   const { data: progressionSummary } = useGetProgressionSummary({
     query: { queryKey: getGetProgressionSummaryQueryKey(), staleTime: 30_000 },
   });
-  const hourlyQuota = quota?.hourly;
   const dailyQuota = quota?.daily;
   const canShowQuotaChip = Boolean(
-    quota && !quota.unlimited && hourlyQuota && dailyQuota,
+    quota && !quota.unlimited && dailyQuota,
   );
 
   // Mode selection is retired — every analysis now runs in "pro" mode.
@@ -1155,20 +1154,20 @@ export default function AnalyzePage() {
                 </span>
               </button>
             )}
-            {canShowQuotaChip && hourlyQuota && dailyQuota && (
+            {canShowQuotaChip && dailyQuota && (
               <span
                 className={cn(
                   "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
-                  hourlyQuota.remaining === 0 || dailyQuota.remaining === 0
+                  dailyQuota.remaining === 0
                     ? "bg-destructive/10 border-destructive/40 text-destructive"
-                    : hourlyQuota.remaining <= 1 || dailyQuota.remaining <= 3
+                    : dailyQuota.remaining <= 3
                     ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
                     : "bg-primary/10 border-primary/30 text-primary",
                 )}
                 data-testid="chip-quota"
-                title={`${t.analyze.quota_hour}: ${hourlyQuota.remaining}/${hourlyQuota.limit} • ${t.analyze.quota_day}: ${dailyQuota.remaining}/${dailyQuota.limit}`}
+                title={`${t.analyze.quota_day}: ${dailyQuota.remaining}/${dailyQuota.limit}`}
               >
-                {hourlyQuota.remaining}/{hourlyQuota.limit} {t.analyze.quota_hour_short} · {dailyQuota.remaining}/{dailyQuota.limit} {t.analyze.quota_day_short}
+                {dailyQuota.remaining}/{dailyQuota.limit} {t.analyze.quota_day_short}
               </span>
             )}
           </div>

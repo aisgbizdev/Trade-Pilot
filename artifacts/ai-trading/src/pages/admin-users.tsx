@@ -23,6 +23,7 @@ import {
 import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { UserQuotaEditor } from "@/components/user-quota-editor";
+import { CreditBalanceEditor } from "@/components/credit-balance-editor";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import {
@@ -245,9 +246,6 @@ function AdminUsersContent() {
                           )}`
                         : ""}
                     </p>
-                    <p className="text-[10px] font-medium text-primary mt-0.5" data-testid={`text-credit-balance-${u.id}`}>
-                      {t.admin.users_credit_balance_label}: {(u as { creditBalance?: number }).creditBalance ?? 0}
-                    </p>
                   </div>
                   <div className="flex gap-1.5 ml-2">
                     <button
@@ -281,7 +279,8 @@ function AdminUsersContent() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="mt-2 pt-2 border-t border-border/60">
+                <div className="mt-2 pt-2 border-t border-border/60 space-y-1.5">
+                  <CreditBalanceEditor user={u} />
                   <UserQuotaEditor user={u} />
                 </div>
               </Card>

@@ -3086,11 +3086,6 @@ export const GetAnalysisQuotaResponse = zod.object({
   unlimited: zod
     .boolean()
     .describe("True for admin\/super_admin, who bypass quota"),
-  hourly: zod.object({
-    limit: zod.number().int(),
-    used: zod.number().int(),
-    remaining: zod.number().int(),
-  }),
   daily: zod.object({
     limit: zod.number().int(),
     used: zod.number().int(),
@@ -4828,13 +4823,6 @@ export const GetAllUsersResponse = zod.object({
           "Current purchased-credit balance (sum of credit_ledger for this user).",
         ),
       tags: zod.array(zod.string()),
-      customQuotaPerHour: zod
-        .number()
-        .int()
-        .nullish()
-        .describe(
-          "Per-user analysis-quota override. Null = uses the global default.",
-        ),
       customQuotaPerDay: zod
         .number()
         .int()
@@ -4966,11 +4954,6 @@ export const UpdateUserQuotaParams = zod.object({
 });
 
 export const UpdateUserQuotaBody = zod.object({
-  customQuotaPerHour: zod
-    .number()
-    .int()
-    .nullable()
-    .describe("Positive integer to set an override, or null to clear it."),
   customQuotaPerDay: zod
     .number()
     .int()
@@ -4980,8 +4963,33 @@ export const UpdateUserQuotaBody = zod.object({
 
 export const UpdateUserQuotaResponse = zod.object({
   id: zod.number().int(),
-  customQuotaPerHour: zod.number().int().nullable(),
   customQuotaPerDay: zod.number().int().nullable(),
+});
+
+/**
+ * Unlike POST /admin/topups/manual (which always adds credits and
+ * records a synthetic top-up), this sets the balance to an exact
+ * target. The difference (positive or negative) is appended to the
+ * same append-only credit ledger as every other credit mutation.
+ * @summary Set a user's purchased-credit balance to an exact value
+ */
+export const UpdateUserCreditsParams = zod.object({
+  id: zod.coerce.number().int(),
+});
+
+export const updateUserCreditsBodyBalanceMin = 0;
+
+export const UpdateUserCreditsBody = zod.object({
+  balance: zod
+    .number()
+    .int()
+    .min(updateUserCreditsBodyBalanceMin)
+    .describe("Target credit balance for this user (not a delta)."),
+});
+
+export const UpdateUserCreditsResponse = zod.object({
+  id: zod.number().int(),
+  creditBalance: zod.number().int(),
 });
 
 /**

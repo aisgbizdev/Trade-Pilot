@@ -4,7 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:trade_pilot_api_client/src/model/analysis_quota_credits.dart';
-import 'package:trade_pilot_api_client/src/model/analysis_quota_hourly.dart';
+import 'package:trade_pilot_api_client/src/model/analysis_quota_daily.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -14,7 +14,6 @@ part 'analysis_quota.g.dart';
 ///
 /// Properties:
 /// * [unlimited] - True for admin/super_admin, who bypass quota
-/// * [hourly] 
 /// * [daily] 
 /// * [credits] 
 @BuiltValue()
@@ -23,11 +22,8 @@ abstract class AnalysisQuota implements Built<AnalysisQuota, AnalysisQuotaBuilde
   @BuiltValueField(wireName: r'unlimited')
   bool get unlimited;
 
-  @BuiltValueField(wireName: r'hourly')
-  AnalysisQuotaHourly get hourly;
-
   @BuiltValueField(wireName: r'daily')
-  AnalysisQuotaHourly get daily;
+  AnalysisQuotaDaily get daily;
 
   @BuiltValueField(wireName: r'credits')
   AnalysisQuotaCredits get credits;
@@ -60,15 +56,10 @@ class _$AnalysisQuotaSerializer implements PrimitiveSerializer<AnalysisQuota> {
       object.unlimited,
       specifiedType: const FullType(bool),
     );
-    yield r'hourly';
-    yield serializers.serialize(
-      object.hourly,
-      specifiedType: const FullType(AnalysisQuotaHourly),
-    );
     yield r'daily';
     yield serializers.serialize(
       object.daily,
-      specifiedType: const FullType(AnalysisQuotaHourly),
+      specifiedType: const FullType(AnalysisQuotaDaily),
     );
     yield r'credits';
     yield serializers.serialize(
@@ -105,18 +96,11 @@ class _$AnalysisQuotaSerializer implements PrimitiveSerializer<AnalysisQuota> {
           ) as bool;
           result.unlimited = valueDes;
           break;
-        case r'hourly':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AnalysisQuotaHourly),
-          ) as AnalysisQuotaHourly;
-          result.hourly.replace(valueDes);
-          break;
         case r'daily':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(AnalysisQuotaHourly),
-          ) as AnalysisQuotaHourly;
+            specifiedType: const FullType(AnalysisQuotaDaily),
+          ) as AnalysisQuotaDaily;
           result.daily.replace(valueDes);
           break;
         case r'credits':

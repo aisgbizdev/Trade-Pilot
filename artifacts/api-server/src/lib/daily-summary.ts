@@ -37,7 +37,6 @@ const REUSE_WINDOW_MS = 6 * 60 * 60 * 1000;
 // Hard cap matching the AI quota wired into POST /analyses. Defined
 // locally rather than imported so a future change to the analyses
 // route's per-call limits doesn't silently change digest semantics.
-const ANALYSIS_QUOTA_PER_HOUR = Number(process.env["ANALYSIS_QUOTA_PER_HOUR"] ?? 5);
 const ANALYSIS_QUOTA_PER_DAY = Number(process.env["ANALYSIS_QUOTA_PER_DAY"] ?? 20);
 
 export type DigestKind = "full" | "quota_only";
@@ -98,18 +97,15 @@ function shouldDispatchNow(
 // digests without holding any locks.
 async function hasQuotaLeft(userId: number): Promise<boolean> {
   const now = new Date();
-  const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const [usage] = await db
     .select({
-      hourly: sql<number>`sum(case when ${analyses.createdAt} >= ${hourAgo} then 1 else 0 end)`,
       daily: sql<number>`sum(case when ${analyses.createdAt} >= ${dayAgo} then 1 else 0 end)`,
     })
     .from(analyses)
     .where(and(eq(analyses.userId, userId), gte(analyses.createdAt, dayAgo)));
-  const hourly = Number(usage?.hourly ?? 0);
   const daily = Number(usage?.daily ?? 0);
-  return hourly < ANALYSIS_QUOTA_PER_HOUR && daily < ANALYSIS_QUOTA_PER_DAY;
+  return daily < ANALYSIS_QUOTA_PER_DAY;
 }
 
 // Pick the analysis to surface for one instrument. Reuse a recent one

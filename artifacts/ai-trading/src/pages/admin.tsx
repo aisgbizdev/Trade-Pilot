@@ -30,6 +30,7 @@ import {
 import { Layout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { UserQuotaEditor } from "@/components/user-quota-editor";
+import { CreditBalanceEditor } from "@/components/credit-balance-editor";
 import {
   useGetAdminStats,
   getGetAdminStatsQueryKey,
@@ -650,6 +651,7 @@ function RecentSignupsPanel() {
           {users.map((u) => (
             <div key={u.id} className="py-3 first:pt-0 last:pb-0 space-y-2">
               <UserTagEditor user={u} knownTags={knownTags} />
+              <CreditBalanceEditor user={u} />
               <UserQuotaEditor user={u} />
             </div>
           ))}
@@ -928,7 +930,6 @@ function BroadcastHistoryPanel() {
 
 function QuotaSettingsPanel() {
   const { toast } = useToast();
-  const [hourly, setHourly] = useState<string>("");
   const [daily, setDaily] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -939,9 +940,8 @@ function QuotaSettingsPanel() {
       try {
         const r = await fetch("/api/superadmin/quota-settings", { credentials: "include" });
         if (!r.ok) throw new Error("failed");
-        const data = (await r.json()) as { analysisQuotaPerHour: number; analysisQuotaPerDay: number };
+        const data = (await r.json()) as { analysisQuotaPerDay: number };
         if (!mounted) return;
-        setHourly(String(data.analysisQuotaPerHour));
         setDaily(String(data.analysisQuotaPerDay));
       } catch {
         if (mounted) toast({ title: "Gagal memuat quota settings", variant: "destructive" });
@@ -955,9 +955,8 @@ function QuotaSettingsPanel() {
   }, [toast]);
 
   const save = async () => {
-    const perHour = Number(hourly);
     const perDay = Number(daily);
-    if (!Number.isFinite(perHour) || perHour <= 0 || !Number.isFinite(perDay) || perDay <= 0) {
+    if (!Number.isFinite(perDay) || perDay <= 0) {
       toast({ title: "Quota harus angka > 0", variant: "destructive" });
       return;
     }
@@ -968,13 +967,11 @@ function QuotaSettingsPanel() {
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          analysisQuotaPerHour: Math.floor(perHour),
           analysisQuotaPerDay: Math.floor(perDay),
         }),
       });
-      const data = (await r.json()) as { error?: string; analysisQuotaPerHour?: number; analysisQuotaPerDay?: number };
+      const data = (await r.json()) as { error?: string; analysisQuotaPerDay?: number };
       if (!r.ok) throw new Error(data.error ?? "update failed");
-      setHourly(String(data.analysisQuotaPerHour ?? Math.floor(perHour)));
       setDaily(String(data.analysisQuotaPerDay ?? Math.floor(perDay)));
       toast({ title: "Quota berhasil diupdate" });
     } catch (e) {
@@ -993,24 +990,14 @@ function QuotaSettingsPanel() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              type="number"
-              min={1}
-              value={hourly}
-              onChange={(e) => setHourly(e.target.value)}
-              placeholder="Per hour"
-              data-testid="input-quota-hour"
-            />
-            <Input
-              type="number"
-              min={1}
-              value={daily}
-              onChange={(e) => setDaily(e.target.value)}
-              placeholder="Per day"
-              data-testid="input-quota-day"
-            />
-          </div>
+          <Input
+            type="number"
+            min={1}
+            value={daily}
+            onChange={(e) => setDaily(e.target.value)}
+            placeholder="Per day"
+            data-testid="input-quota-day"
+          />
           <Button onClick={save} disabled={saving} data-testid="button-save-quota">
             {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             Save Quota

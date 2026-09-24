@@ -21,6 +21,7 @@ import {
 import { notifySuperAdminsUserDeleted, notifyAdminsUserCreated } from "../lib/jobs";
 import { createNotificationsForUsers } from "../lib/create-notification";
 import { getAnalysisQuotaConfig, setAnalysisQuotaConfig } from "./analyses";
+import { applyCreditLedgerEntry, getCreditBalanceForUser, CREDIT_BALANCE_LOCK_NAMESPACE } from "../lib/credits";
 
 type AudienceType = "all" | "role" | "tag";
 type Role = "user" | "admin" | "super_admin";
@@ -36,25 +37,21 @@ const router = Router();
 router.get("/superadmin/quota-settings", requireSuperAdmin, async (_req: AuthRequest, res) => {
   const cfg = getAnalysisQuotaConfig();
   res.json({
-    analysisQuotaPerHour: cfg.perHour,
     analysisQuotaPerDay: cfg.perDay,
   });
 });
 
 router.patch("/superadmin/quota-settings", requireSuperAdmin, async (req: AuthRequest, res) => {
-  const perHourRaw = Number(req.body?.analysisQuotaPerHour);
   const perDayRaw = Number(req.body?.analysisQuotaPerDay);
-  const perHour = Number.isFinite(perHourRaw) && perHourRaw > 0 ? Math.floor(perHourRaw) : NaN;
   const perDay = Number.isFinite(perDayRaw) && perDayRaw > 0 ? Math.floor(perDayRaw) : NaN;
-  if (!Number.isFinite(perHour) || !Number.isFinite(perDay)) {
-    res.status(400).json({ error: "Quota per jam/hari harus angka > 0" });
+  if (!Number.isFinite(perDay)) {
+    res.status(400).json({ error: "Quota harian harus angka > 0" });
     return;
   }
-  setAnalysisQuotaConfig(perHour, perDay);
+  setAnalysisQuotaConfig(perDay);
   const cfg = getAnalysisQuotaConfig();
   res.json({
     message: "Quota berhasil diupdate",
-    analysisQuotaPerHour: cfg.perHour,
     analysisQuotaPerDay: cfg.perDay,
   });
 });
@@ -704,7 +701,6 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
       onboardingCompleted: users.onboardingCompleted,
       createdAt: users.createdAt,
       analysisCount: count(analyses.id),
-      customQuotaPerHour: users.customQuotaPerHour,
       customQuotaPerDay: users.customQuotaPerDay,
       creditBalance: sql<number>`coalesce(max(${creditBalances.balance}), 0)`,
     })
@@ -871,20 +867,18 @@ router.patch(
       const n = Number(raw);
       return Number.isFinite(n) && n > 0 ? Math.floor(n) : undefined;
     };
-    const customQuotaPerHour = parseQuotaField(req.body?.customQuotaPerHour);
     const customQuotaPerDay = parseQuotaField(req.body?.customQuotaPerDay);
-    if (customQuotaPerHour === undefined || customQuotaPerDay === undefined) {
+    if (customQuotaPerDay === undefined) {
       res.status(400).json({ error: "Quota harus angka > 0 atau null" });
       return;
     }
 
     const [updated] = await db
       .update(users)
-      .set({ customQuotaPerHour, customQuotaPerDay })
+      .set({ customQuotaPerDay })
       .where(eq(users.id, id))
       .returning({
         id: users.id,
-        customQuotaPerHour: users.customQuotaPerHour,
         customQuotaPerDay: users.customQuotaPerDay,
       });
     if (!updated) {
@@ -892,6 +886,54 @@ router.patch(
       return;
     }
     res.json(updated);
+  },
+);
+
+// Direct admin correction of a user's purchased-credit balance (admin
+// dashboard → RecentSignupsPanel / admin-users.tsx → CreditBalanceEditor).
+// Unlike POST /admin/topups/manual (which always ADDS credits and records
+// a synthetic "topup" for the payment audit trail), this SETS the balance
+// to an exact target — the delta (positive or negative) is appended to the
+// same append-only credit_ledger as every other credit mutation, so the
+// full history of who changed what stays intact even when correcting a
+// mistake downward.
+router.patch(
+  "/superadmin/users/:id/credits",
+  requireSuperAdmin,
+  async (req: AuthRequest, res) => {
+    const id = Number(req.params["id"]);
+    if (!Number.isFinite(id)) {
+      res.status(400).json({ error: "ID tidak valid" });
+      return;
+    }
+
+    const balanceRaw = Number(req.body?.balance);
+    if (!Number.isFinite(balanceRaw) || balanceRaw < 0) {
+      res.status(400).json({ error: "Sisa kredit harus angka >= 0" });
+      return;
+    }
+    const targetBalance = Math.floor(balanceRaw);
+
+    const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.id, id)).limit(1);
+    if (!targetUser) {
+      res.status(404).json({ error: "User tidak ditemukan" });
+      return;
+    }
+
+    const newBalance = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${CREDIT_BALANCE_LOCK_NAMESPACE}::int, ${id}::int)`);
+      const currentBalance = await getCreditBalanceForUser(id);
+      const delta = targetBalance - currentBalance;
+      if (delta === 0) return currentBalance;
+      return applyCreditLedgerEntry(tx, {
+        userId: id,
+        amount: delta,
+        source: "admin_adjustment",
+        sourceEventId: `admin-adjust:${id}:${Date.now()}`,
+      });
+    });
+
+    res.json({ id, creditBalance: newBalance });
   },
 );
 

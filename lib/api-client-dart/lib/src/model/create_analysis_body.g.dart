@@ -168,8 +168,6 @@ class _$CreateAnalysisBody extends CreateAnalysisBody {
   final String? userInputContext;
   @override
   final CreateAnalysisBodyModeEnum mode;
-  @override
-  final bool? isTimeframeSwitch;
 
   factory _$CreateAnalysisBody(
           [void Function(CreateAnalysisBodyBuilder)? updates]) =>
@@ -179,8 +177,7 @@ class _$CreateAnalysisBody extends CreateAnalysisBody {
       {required this.instrument,
       required this.timeframe,
       this.userInputContext,
-      required this.mode,
-      this.isTimeframeSwitch})
+      required this.mode})
       : super._();
   @override
   CreateAnalysisBody rebuild(
@@ -198,8 +195,7 @@ class _$CreateAnalysisBody extends CreateAnalysisBody {
         instrument == other.instrument &&
         timeframe == other.timeframe &&
         userInputContext == other.userInputContext &&
-        mode == other.mode &&
-        isTimeframeSwitch == other.isTimeframeSwitch;
+        mode == other.mode;
   }
 
   @override
@@ -209,7 +205,6 @@ class _$CreateAnalysisBody extends CreateAnalysisBody {
     _$hash = $jc(_$hash, timeframe.hashCode);
     _$hash = $jc(_$hash, userInputContext.hashCode);
     _$hash = $jc(_$hash, mode.hashCode);
-    _$hash = $jc(_$hash, isTimeframeSwitch.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -220,8 +215,7 @@ class _$CreateAnalysisBody extends CreateAnalysisBody {
           ..add('instrument', instrument)
           ..add('timeframe', timeframe)
           ..add('userInputContext', userInputContext)
-          ..add('mode', mode)
-          ..add('isTimeframeSwitch', isTimeframeSwitch))
+          ..add('mode', mode))
         .toString();
   }
 }
@@ -248,11 +242,6 @@ class CreateAnalysisBodyBuilder
   CreateAnalysisBodyModeEnum? get mode => _$this._mode;
   set mode(CreateAnalysisBodyModeEnum? mode) => _$this._mode = mode;
 
-  bool? _isTimeframeSwitch;
-  bool? get isTimeframeSwitch => _$this._isTimeframeSwitch;
-  set isTimeframeSwitch(bool? isTimeframeSwitch) =>
-      _$this._isTimeframeSwitch = isTimeframeSwitch;
-
   CreateAnalysisBodyBuilder() {
     CreateAnalysisBody._defaults(this);
   }
@@ -264,7 +253,6 @@ class CreateAnalysisBodyBuilder
       _timeframe = $v.timeframe;
       _userInputContext = $v.userInputContext;
       _mode = $v.mode;
-      _isTimeframeSwitch = $v.isTimeframeSwitch;
       _$v = null;
     }
     return this;
@@ -293,7 +281,6 @@ class CreateAnalysisBodyBuilder
           userInputContext: userInputContext,
           mode: BuiltValueNullFieldError.checkNotNull(
               mode, r'CreateAnalysisBody', 'mode'),
-          isTimeframeSwitch: isTimeframeSwitch,
         );
     replace(_$result);
     return _$result;

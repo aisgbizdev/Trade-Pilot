@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 
-export type QuotaScope = "hour" | "day" | "concurrent";
+export type QuotaScope = "day" | "concurrent";
 
 export interface QuotaDialogInfo {
   scope: QuotaScope;

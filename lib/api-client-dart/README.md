@@ -155,6 +155,7 @@ Class | Method | HTTP request | Description
 [*SuperadminApi*](doc/SuperadminApi.md) | [**getUserTags**](doc/SuperadminApi.md#getusertags) | **GET** /superadmin/users/{id}/tags | Get all tags for a specific user
 [*SuperadminApi*](doc/SuperadminApi.md) | [**removeUserTag**](doc/SuperadminApi.md#removeusertag) | **DELETE** /superadmin/users/{id}/tags/{tag} | Remove a tag from a user
 [*SuperadminApi*](doc/SuperadminApi.md) | [**resetUserPassword**](doc/SuperadminApi.md#resetuserpassword) | **PATCH** /superadmin/users/{id}/password | Reset user password (superadmin only)
+[*SuperadminApi*](doc/SuperadminApi.md) | [**updateUserCredits**](doc/SuperadminApi.md#updateusercredits) | **PATCH** /superadmin/users/{id}/credits | Set a user&#39;s purchased-credit balance to an exact value
 [*SuperadminApi*](doc/SuperadminApi.md) | [**updateUserQuota**](doc/SuperadminApi.md#updateuserquota) | **PATCH** /superadmin/users/{id}/quota | Set or clear a per-user analysis-quota override
 [*SuperadminApi*](doc/SuperadminApi.md) | [**updateUserRole**](doc/SuperadminApi.md#updateuserrole) | **PATCH** /superadmin/users/{id}/role | Update user role (superadmin only)
 [*TopupsApi*](doc/TopupsApi.md) | [**createTopupRequest**](doc/TopupsApi.md#createtopuprequest) | **POST** /topups | Submit a manual top-up request for admin review
@@ -199,7 +200,7 @@ Class | Method | HTTP request | Description
  - [AnalysisOutcomesSummary](doc/AnalysisOutcomesSummary.md)
  - [AnalysisQuota](doc/AnalysisQuota.md)
  - [AnalysisQuotaCredits](doc/AnalysisQuotaCredits.md)
- - [AnalysisQuotaHourly](doc/AnalysisQuotaHourly.md)
+ - [AnalysisQuotaDaily](doc/AnalysisQuotaDaily.md)
  - [AnalyticsEventBody](doc/AnalyticsEventBody.md)
  - [AnalyticsTokenStats](doc/AnalyticsTokenStats.md)
  - [AnalyticsTokenStatsByInstrumentInner](doc/AnalyticsTokenStatsByInstrumentInner.md)
@@ -352,11 +353,13 @@ Class | Method | HTTP request | Description
  - [TraderMirrorResponse](doc/TraderMirrorResponse.md)
  - [UpdateJournalEntryBody](doc/UpdateJournalEntryBody.md)
  - [UpdateProfileBody](doc/UpdateProfileBody.md)
+ - [UpdateUserCreditBody](doc/UpdateUserCreditBody.md)
  - [UpdateUserQuotaBody](doc/UpdateUserQuotaBody.md)
  - [UpdateUserRoleBody](doc/UpdateUserRoleBody.md)
  - [UploadUrlRequest](doc/UploadUrlRequest.md)
  - [UploadUrlResponse](doc/UploadUrlResponse.md)
  - [User](doc/User.md)
+ - [UserCreditBalance](doc/UserCreditBalance.md)
  - [UserPriceAlert](doc/UserPriceAlert.md)
  - [UserPriceAlertList](doc/UserPriceAlertList.md)
  - [UserQuota](doc/UserQuota.md)

@@ -1,4 +1,4 @@
-import { Clock, CalendarClock, Hourglass, Zap } from "lucide-react";
+import { CalendarClock, Hourglass, Zap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,7 @@ import { useTranslation } from "@/lib/i18n";
 import { hideQuotaDialog, useQuotaDialogState, type QuotaScope } from "@/hooks/use-quota-dialog";
 import { showTopupDialog } from "@/hooks/use-topup-dialog";
 
-const SCOPE_ICON: Record<QuotaScope, typeof Clock> = {
-  hour: Clock,
+const SCOPE_ICON: Record<QuotaScope, typeof CalendarClock> = {
   day: CalendarClock,
   concurrent: Hourglass,
 };
@@ -31,18 +30,8 @@ export function QuotaDialog() {
   if (!info) return null;
 
   const Icon = SCOPE_ICON[info.scope];
-  const title =
-    info.scope === "hour"
-      ? t.quota_dialog.title_hour
-      : info.scope === "day"
-        ? t.quota_dialog.title_day
-        : t.quota_dialog.title_concurrent;
-  const description =
-    info.scope === "hour"
-      ? t.quota_dialog.desc_hour
-      : info.scope === "day"
-        ? t.quota_dialog.desc_day
-        : t.quota_dialog.desc_concurrent;
+  const title = info.scope === "day" ? t.quota_dialog.title_day : t.quota_dialog.title_concurrent;
+  const description = info.scope === "day" ? t.quota_dialog.desc_day : t.quota_dialog.desc_concurrent;
 
   const hasCount = info.limit != null && info.used != null;
   const pct = hasCount ? Math.min(100, Math.round((info.used! / info.limit!) * 100)) : 0;
@@ -77,9 +66,9 @@ export function QuotaDialog() {
           </div>
         )}
 
-        {/* A purchased credit bypasses BOTH the hourly and daily cap
-            (see the analyses route), so the top-up is the primary way
-            forward for either wall — offered as the dominant action with
+        {/* A purchased credit bypasses the daily cap (see the analyses
+            route), so the top-up is the primary way forward — offered
+            as the dominant action with
             the dismiss kept as a quiet text link, not a co-equal button.
             `concurrent` is a per-user processing lock a credit can't
             skip, so that branch keeps a plain acknowledge button. Opens

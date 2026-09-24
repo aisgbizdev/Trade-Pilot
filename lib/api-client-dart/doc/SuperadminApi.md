@@ -17,6 +17,7 @@ Method | HTTP request | Description
 [**getUserTags**](SuperadminApi.md#getusertags) | **GET** /superadmin/users/{id}/tags | Get all tags for a specific user
 [**removeUserTag**](SuperadminApi.md#removeusertag) | **DELETE** /superadmin/users/{id}/tags/{tag} | Remove a tag from a user
 [**resetUserPassword**](SuperadminApi.md#resetuserpassword) | **PATCH** /superadmin/users/{id}/password | Reset user password (superadmin only)
+[**updateUserCredits**](SuperadminApi.md#updateusercredits) | **PATCH** /superadmin/users/{id}/credits | Set a user&#39;s purchased-credit balance to an exact value
 [**updateUserQuota**](SuperadminApi.md#updateuserquota) | **PATCH** /superadmin/users/{id}/quota | Set or clear a per-user analysis-quota override
 [**updateUserRole**](SuperadminApi.md#updateuserrole) | **PATCH** /superadmin/users/{id}/role | Update user role (superadmin only)
 
@@ -343,6 +344,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**MessageResponse**](MessageResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateUserCredits**
+> UserCreditBalance updateUserCredits(id, updateUserCreditBody)
+
+Set a user's purchased-credit balance to an exact value
+
+Unlike POST /admin/topups/manual (which always adds credits and records a synthetic top-up), this sets the balance to an exact target. The difference (positive or negative) is appended to the same append-only credit ledger as every other credit mutation. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getSuperadminApi();
+final int id = 56; // int | 
+final UpdateUserCreditBody updateUserCreditBody = ; // UpdateUserCreditBody | 
+
+try {
+    final response = api.updateUserCredits(id, updateUserCreditBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling SuperadminApi->updateUserCredits: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **int**|  | 
+ **updateUserCreditBody** | [**UpdateUserCreditBody**](UpdateUserCreditBody.md)|  | 
+
+### Return type
+
+[**UserCreditBalance**](UserCreditBalance.md)
 
 ### Authorization
 

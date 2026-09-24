@@ -6,44 +6,52 @@
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'update_user_quota_body.g.dart';
+part 'user_credit_balance.g.dart';
 
-/// UpdateUserQuotaBody
+/// UserCreditBalance
 ///
 /// Properties:
-/// * [customQuotaPerDay] - Positive integer to set an override, or null to clear it.
+/// * [id] 
+/// * [creditBalance] 
 @BuiltValue()
-abstract class UpdateUserQuotaBody implements Built<UpdateUserQuotaBody, UpdateUserQuotaBodyBuilder> {
-  /// Positive integer to set an override, or null to clear it.
-  @BuiltValueField(wireName: r'customQuotaPerDay')
-  int get customQuotaPerDay;
+abstract class UserCreditBalance implements Built<UserCreditBalance, UserCreditBalanceBuilder> {
+  @BuiltValueField(wireName: r'id')
+  int get id;
 
-  UpdateUserQuotaBody._();
+  @BuiltValueField(wireName: r'creditBalance')
+  int get creditBalance;
 
-  factory UpdateUserQuotaBody([void updates(UpdateUserQuotaBodyBuilder b)]) = _$UpdateUserQuotaBody;
+  UserCreditBalance._();
+
+  factory UserCreditBalance([void updates(UserCreditBalanceBuilder b)]) = _$UserCreditBalance;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(UpdateUserQuotaBodyBuilder b) => b;
+  static void _defaults(UserCreditBalanceBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<UpdateUserQuotaBody> get serializer => _$UpdateUserQuotaBodySerializer();
+  static Serializer<UserCreditBalance> get serializer => _$UserCreditBalanceSerializer();
 }
 
-class _$UpdateUserQuotaBodySerializer implements PrimitiveSerializer<UpdateUserQuotaBody> {
+class _$UserCreditBalanceSerializer implements PrimitiveSerializer<UserCreditBalance> {
   @override
-  final Iterable<Type> types = const [UpdateUserQuotaBody, _$UpdateUserQuotaBody];
+  final Iterable<Type> types = const [UserCreditBalance, _$UserCreditBalance];
 
   @override
-  final String wireName = r'UpdateUserQuotaBody';
+  final String wireName = r'UserCreditBalance';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    UpdateUserQuotaBody object, {
+    UserCreditBalance object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'customQuotaPerDay';
+    yield r'id';
     yield serializers.serialize(
-      object.customQuotaPerDay,
+      object.id,
+      specifiedType: const FullType(int),
+    );
+    yield r'creditBalance';
+    yield serializers.serialize(
+      object.creditBalance,
       specifiedType: const FullType(int),
     );
   }
@@ -51,7 +59,7 @@ class _$UpdateUserQuotaBodySerializer implements PrimitiveSerializer<UpdateUserQ
   @override
   Object serialize(
     Serializers serializers,
-    UpdateUserQuotaBody object, {
+    UserCreditBalance object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -62,19 +70,26 @@ class _$UpdateUserQuotaBodySerializer implements PrimitiveSerializer<UpdateUserQ
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required UpdateUserQuotaBodyBuilder result,
+    required UserCreditBalanceBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'customQuotaPerDay':
+        case r'id':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(int),
           ) as int;
-          result.customQuotaPerDay = valueDes;
+          result.id = valueDes;
+          break;
+        case r'creditBalance':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.creditBalance = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -85,12 +100,12 @@ class _$UpdateUserQuotaBodySerializer implements PrimitiveSerializer<UpdateUserQ
   }
 
   @override
-  UpdateUserQuotaBody deserialize(
+  UserCreditBalance deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = UpdateUserQuotaBodyBuilder();
+    final result = UserCreditBalanceBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

@@ -22,7 +22,7 @@ doc/AnalysisNoteResponse.md
 doc/AnalysisOutcomesSummary.md
 doc/AnalysisQuota.md
 doc/AnalysisQuotaCredits.md
-doc/AnalysisQuotaHourly.md
+doc/AnalysisQuotaDaily.md
 doc/AnalyticsEventBody.md
 doc/AnalyticsTokenStats.md
 doc/AnalyticsTokenStatsByInstrumentInner.md
@@ -191,11 +191,13 @@ doc/TraderMirrorResponse.md
 doc/TradingRulesApi.md
 doc/UpdateJournalEntryBody.md
 doc/UpdateProfileBody.md
+doc/UpdateUserCreditBody.md
 doc/UpdateUserQuotaBody.md
 doc/UpdateUserRoleBody.md
 doc/UploadUrlRequest.md
 doc/UploadUrlResponse.md
 doc/User.md
+doc/UserCreditBalance.md
 doc/UserPriceAlert.md
 doc/UserPriceAlertList.md
 doc/UserPriceAlertsApi.md
@@ -253,7 +255,7 @@ lib/src/model/analysis_note_response.dart
 lib/src/model/analysis_outcomes_summary.dart
 lib/src/model/analysis_quota.dart
 lib/src/model/analysis_quota_credits.dart
-lib/src/model/analysis_quota_hourly.dart
+lib/src/model/analysis_quota_daily.dart
 lib/src/model/analytics_event_body.dart
 lib/src/model/analytics_token_stats.dart
 lib/src/model/analytics_token_stats_by_instrument_inner.dart
@@ -407,11 +409,13 @@ lib/src/model/trader_mirror_insights.dart
 lib/src/model/trader_mirror_response.dart
 lib/src/model/update_journal_entry_body.dart
 lib/src/model/update_profile_body.dart
+lib/src/model/update_user_credit_body.dart
 lib/src/model/update_user_quota_body.dart
 lib/src/model/update_user_role_body.dart
 lib/src/model/upload_url_request.dart
 lib/src/model/upload_url_response.dart
 lib/src/model/user.dart
+lib/src/model/user_credit_balance.dart
 lib/src/model/user_price_alert.dart
 lib/src/model/user_price_alert_list.dart
 lib/src/model/user_quota.dart
@@ -423,4 +427,5 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/mobile_auth_exchange_body_test.dart
+test/update_user_credit_body_test.dart
+test/user_credit_balance_test.dart

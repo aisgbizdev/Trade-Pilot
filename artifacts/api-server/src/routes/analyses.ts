@@ -366,45 +366,36 @@ router.post("/analyses/guardrails/:id/wait", requireAuth, async (req: AuthReques
 
 router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
   const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
-  const { perHour, perDay } = await getEffectiveQuota(req.userId!);
+  const { perDay } = await getEffectiveQuota(req.userId!);
   const creditBalance = await getCreditBalanceForUser(req.userId!);
   if (isPrivilegedRole) {
     res.json({
       unlimited: true,
-      hourly: { limit: perHour, used: 0, remaining: perHour },
       daily: { limit: perDay, used: 0, remaining: perDay },
       credits: { balance: creditBalance },
     });
     return;
   }
 
-  // Compute the "last hour" / "last 24h" cutoffs in Postgres itself
-  // (now() - interval) rather than as JS `Date` params compared against
-  // `createdAt`, a `timestamp` column with no timezone. node-postgres
-  // serializes an outgoing `Date` parameter for a no-tz column using the
-  // API server process's OS timezone, while `createdAt` itself is
-  // written via Postgres-side `defaultNow()` (server session tz, GMT
-  // here) — on a non-UTC host those two clocks disagree, and for the
-  // narrow 1h window that's enough to make it never match. Keeping the
-  // whole comparison server-side sidesteps the mismatch entirely.
+  // Compute the "last 24h" cutoff in Postgres itself (now() - interval)
+  // rather than as a JS `Date` param compared against `createdAt`, a
+  // `timestamp` column with no timezone. node-postgres serializes an
+  // outgoing `Date` parameter for a no-tz column using the API server
+  // process's OS timezone, while `createdAt` itself is written via
+  // Postgres-side `defaultNow()` (server session tz, GMT here) — on a
+  // non-UTC host those two clocks disagree. Keeping the whole comparison
+  // server-side sidesteps the mismatch entirely.
   const [usage] = await db
     .select({
-      hourly: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '1 hour' then 1 else 0 end)`,
       daily: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '24 hours' then 1 else 0 end)`,
     })
     .from(analyses)
     .where(and(eq(analyses.userId, req.userId!), sql`${analyses.createdAt} >= now() - interval '24 hours'`));
 
-  const hourlyUsed = Number(usage?.hourly ?? 0);
   const dailyUsed = Number(usage?.daily ?? 0);
 
   res.json({
     unlimited: false,
-    hourly: {
-      limit: perHour,
-      used: hourlyUsed,
-      remaining: Math.max(0, perHour - hourlyUsed),
-    },
     daily: {
       limit: perDay,
       used: dailyUsed,
@@ -523,26 +514,23 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-let ANALYSIS_QUOTA_PER_HOUR = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_HOUR"], 5);
 let ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_DAY"], 20);
 const ANALYSIS_LOCK_NAMESPACE = 4242;
 
-export function getAnalysisQuotaConfig(): { perHour: number; perDay: number } {
-  return { perHour: ANALYSIS_QUOTA_PER_HOUR, perDay: ANALYSIS_QUOTA_PER_DAY };
+export function getAnalysisQuotaConfig(): { perDay: number } {
+  return { perDay: ANALYSIS_QUOTA_PER_DAY };
 }
 
-export function setAnalysisQuotaConfig(perHour: number, perDay: number): void {
-  ANALYSIS_QUOTA_PER_HOUR = parsePositiveInt(String(perHour), ANALYSIS_QUOTA_PER_HOUR);
+export function setAnalysisQuotaConfig(perDay: number): void {
   ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(String(perDay), ANALYSIS_QUOTA_PER_DAY);
 }
 
-// Per-user quota, falling back to the global admin-configured default for
-// whichever of hour/day the user doesn't have a custom override set
-// (admin dashboard → RecentSignupsPanel → UserQuotaEditor).
-async function getEffectiveQuota(userId: number): Promise<{ perHour: number; perDay: number }> {
+// Per-user quota, falling back to the global admin-configured default when
+// the user doesn't have a custom override set (admin dashboard →
+// RecentSignupsPanel → UserQuotaEditor).
+async function getEffectiveQuota(userId: number): Promise<{ perDay: number }> {
   const [row] = await db
     .select({
-      customQuotaPerHour: users.customQuotaPerHour,
       customQuotaPerDay: users.customQuotaPerDay,
     })
     .from(users)
@@ -550,7 +538,6 @@ async function getEffectiveQuota(userId: number): Promise<{ perHour: number; per
     .limit(1);
   const globalCfg = getAnalysisQuotaConfig();
   return {
-    perHour: row?.customQuotaPerHour ?? globalCfg.perHour,
     perDay: row?.customQuotaPerDay ?? globalCfg.perDay,
   };
 }
@@ -563,7 +550,6 @@ type AnalysisRow = typeof analyses.$inferSelect;
 type QuotaOutcome =
   | { kind: "ok"; analysis: AnalysisRow; creditConsumed: boolean; creditBalance?: number }
   | { kind: "busy" }
-  | { kind: "hour"; used: number; limit: number }
   | { kind: "day"; used: number; limit: number }
   | { kind: "aiError" };
 
@@ -749,7 +735,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     // Atomically: take a per-user xact-scoped advisory lock, count usage,
     // call AI, and insert. The lock auto-releases on COMMIT/ROLLBACK so
     // concurrent requests for the same user cannot bypass the quota.
-    const { perHour, perDay } = await getEffectiveQuota(userId);
+    const { perDay } = await getEffectiveQuota(userId);
     outcome = await db.transaction<QuotaOutcome>(async (tx) => {
       const lockRow = await tx.execute(
         sql`SELECT pg_try_advisory_xact_lock(${ANALYSIS_LOCK_NAMESPACE}::int, ${userId}::int) AS acquired`
@@ -757,19 +743,17 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       const acquired = (lockRow.rows?.[0] as { acquired?: boolean } | undefined)?.acquired === true;
       if (!acquired) return { kind: "busy" };
 
-      // See the identical comment on GET /analyses/quota above — cutoffs
-      // are computed in Postgres (now() - interval) rather than as JS
-      // `Date` params, to avoid the client-OS-timezone-vs-server-session-tz
-      // mismatch that silently broke the hourly bucket for non-UTC hosts.
+      // See the identical comment on GET /analyses/quota above — the
+      // cutoff is computed in Postgres (now() - interval) rather than as
+      // a JS `Date` param, to avoid the client-OS-timezone-vs-server-
+      // session-tz mismatch.
       const [usage] = await tx
         .select({
-          hourly: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '1 hour' then 1 else 0 end)`,
           daily: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '24 hours' then 1 else 0 end)`,
         })
         .from(analyses)
         .where(and(eq(analyses.userId, userId), sql`${analyses.createdAt} >= now() - interval '24 hours'`));
 
-      const hourlyCount = Number(usage?.hourly ?? 0);
       const dailyCount = Number(usage?.daily ?? 0);
 
       // Only decide WHETHER a credit will be needed here — the actual
@@ -778,11 +762,10 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       // successful, inserted analysis. Deducting up front would charge
       // the user for analyses that fail at the AI step.
       let willConsumeCredit = false;
-      if (hourlyCount >= perHour || dailyCount >= perDay) {
+      if (dailyCount >= perDay) {
         const balance = await getCreditBalanceForUser(userId);
         if (balance <= 0) {
           // Unchanged existing behavior: no credits, block exactly as before.
-          if (hourlyCount >= perHour) return { kind: "hour", used: hourlyCount, limit: perHour };
           return { kind: "day", used: dailyCount, limit: perDay };
         }
         willConsumeCredit = true;
@@ -830,8 +813,8 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         // Same advisory-lock namespace topups.ts uses for approval grants,
         // so a concurrent top-up approval for this user can't race this
         // spend into a lost balance update. A purchased credit bypasses
-        // both the hourly and daily cap — "one more analysis, whenever,"
-        // not a pacing extension.
+        // the daily cap — "one more analysis, whenever," not a pacing
+        // extension.
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${CREDIT_BALANCE_LOCK_NAMESPACE}::int, ${userId}::int)`);
         creditBalanceAfter = await applyCreditLedgerEntry(tx, {
           userId,
@@ -849,13 +832,6 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     res.status(429).set("Retry-After", "5").json({
       error: "Permintaan analisis sebelumnya masih diproses. Mohon tunggu sebentar.",
       quota: { scope: "concurrent" },
-    });
-    return;
-  }
-  if (outcome.kind === "hour") {
-    res.status(429).set("Retry-After", "3600").json({
-      error: `Batas analisis per jam tercapai (${outcome.limit} analisis/jam). Silakan coba lagi dalam beberapa saat.`,
-      quota: { scope: "hour", limit: outcome.limit, used: outcome.used },
     });
     return;
   }

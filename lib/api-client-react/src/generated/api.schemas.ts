@@ -1241,12 +1241,6 @@ export interface TimeframeRiskMap {
   overall: TimeframeRiskMapOverall;
 }
 
-export type AnalysisQuotaHourly = {
-  limit: number;
-  used: number;
-  remaining: number;
-};
-
 export type AnalysisQuotaDaily = {
   limit: number;
   used: number;
@@ -1260,7 +1254,6 @@ export type AnalysisQuotaCredits = {
 export interface AnalysisQuota {
   /** True for admin/super_admin, who bypass quota */
   unlimited: boolean;
-  hourly: AnalysisQuotaHourly;
   daily: AnalysisQuotaDaily;
   credits: AnalysisQuotaCredits;
 }
@@ -1921,23 +1914,31 @@ export interface UserWithStats {
   creditBalance: number;
   tags: string[];
   /** Per-user analysis-quota override. Null = uses the global default. */
-  customQuotaPerHour?: number | null;
-  /** Per-user analysis-quota override. Null = uses the global default. */
   customQuotaPerDay?: number | null;
   createdAt: string;
 }
 
 export interface UpdateUserQuotaBody {
   /** Positive integer to set an override, or null to clear it. */
-  customQuotaPerHour: number | null;
-  /** Positive integer to set an override, or null to clear it. */
   customQuotaPerDay: number | null;
 }
 
 export interface UserQuota {
   id: number;
-  customQuotaPerHour: number | null;
   customQuotaPerDay: number | null;
+}
+
+export interface UpdateUserCreditBody {
+  /**
+   * Target credit balance for this user (not a delta).
+   * @minimum 0
+   */
+  balance: number;
+}
+
+export interface UserCreditBalance {
+  id: number;
+  creditBalance: number;
 }
 
 export interface UsersList {

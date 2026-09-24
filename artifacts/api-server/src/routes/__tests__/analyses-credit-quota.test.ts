@@ -53,9 +53,9 @@ interface SeedUser {
 
 const seededUserIds: number[] = [];
 
-// customQuotaPerHour/Day = 0 makes the very first analysis request already
-// "over quota" (hourlyCount 0 >= perHour 0), without needing to seed a pile
-// of prior analyses just to exhaust the default 5/hour, 20/day limits.
+// customQuotaPerDay = 0 makes the very first analysis request already
+// "over quota" (dailyCount 0 >= perDay 0), without needing to seed a pile
+// of prior analyses just to exhaust the default 20/day limit.
 async function createZeroQuotaUser(): Promise<SeedUser> {
   const suffix = randomBytes(6).toString("hex");
   const email = `${EMAIL_PREFIX}-${suffix}@example.test`;
@@ -69,7 +69,6 @@ async function createZeroQuotaUser(): Promise<SeedUser> {
       displayName: `Credit Quota Test ${RUN_ID} ${suffix}`,
       securityQuestion: "test?",
       securityAnswerHash,
-      customQuotaPerHour: 0,
       customQuotaPerDay: 0,
     })
     .returning({ id: users.id });
@@ -119,7 +118,7 @@ describe("POST /analyses credit fallback", () => {
       .send({ instrument, timeframe: "1h", mode: "beginner" });
 
     expect(res.status).toBe(429);
-    expect(res.body.quota).toMatchObject({ scope: "hour" });
+    expect(res.body.quota).toMatchObject({ scope: "day" });
     expect(res.body.creditConsumed).toBeUndefined();
   });
 

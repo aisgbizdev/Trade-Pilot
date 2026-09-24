@@ -16,7 +16,6 @@ part 'create_analysis_body.g.dart';
 /// * [timeframe] 
 /// * [userInputContext] 
 /// * [mode] 
-/// * [isTimeframeSwitch] - Internal hint set only by the \"Ganti Timeframe\" quick-switch — marks this request as eligible for the free-timeframe-switch credit bonus once the free hourly/daily quota is exhausted. Never affects quota itself; omit for a fresh/manual analysis.
 @BuiltValue()
 abstract class CreateAnalysisBody implements Built<CreateAnalysisBody, CreateAnalysisBodyBuilder> {
   @BuiltValueField(wireName: r'instrument')
@@ -32,10 +31,6 @@ abstract class CreateAnalysisBody implements Built<CreateAnalysisBody, CreateAna
   @BuiltValueField(wireName: r'mode')
   CreateAnalysisBodyModeEnum get mode;
   // enum modeEnum {  beginner,  pro,  };
-
-  /// Internal hint set only by the \"Ganti Timeframe\" quick-switch — marks this request as eligible for the free-timeframe-switch credit bonus once the free hourly/daily quota is exhausted. Never affects quota itself; omit for a fresh/manual analysis.
-  @BuiltValueField(wireName: r'isTimeframeSwitch')
-  bool? get isTimeframeSwitch;
 
   CreateAnalysisBody._();
 
@@ -82,13 +77,6 @@ class _$CreateAnalysisBodySerializer implements PrimitiveSerializer<CreateAnalys
       object.mode,
       specifiedType: const FullType(CreateAnalysisBodyModeEnum),
     );
-    if (object.isTimeframeSwitch != null) {
-      yield r'isTimeframeSwitch';
-      yield serializers.serialize(
-        object.isTimeframeSwitch,
-        specifiedType: const FullType(bool),
-      );
-    }
   }
 
   @override
@@ -140,14 +128,6 @@ class _$CreateAnalysisBodySerializer implements PrimitiveSerializer<CreateAnalys
             specifiedType: const FullType(CreateAnalysisBodyModeEnum),
           ) as CreateAnalysisBodyModeEnum;
           result.mode = valueDes;
-          break;
-        case r'isTimeframeSwitch':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(bool),
-          ) as bool?;
-          if (valueDes == null) continue;
-          result.isTimeframeSwitch = valueDes;
           break;
         default:
           unhandled.add(key);

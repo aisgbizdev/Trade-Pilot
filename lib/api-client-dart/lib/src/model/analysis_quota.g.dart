@@ -10,9 +10,7 @@ class _$AnalysisQuota extends AnalysisQuota {
   @override
   final bool unlimited;
   @override
-  final AnalysisQuotaHourly hourly;
-  @override
-  final AnalysisQuotaHourly daily;
+  final AnalysisQuotaDaily daily;
   @override
   final AnalysisQuotaCredits credits;
 
@@ -20,10 +18,7 @@ class _$AnalysisQuota extends AnalysisQuota {
       (AnalysisQuotaBuilder()..update(updates))._build();
 
   _$AnalysisQuota._(
-      {required this.unlimited,
-      required this.hourly,
-      required this.daily,
-      required this.credits})
+      {required this.unlimited, required this.daily, required this.credits})
       : super._();
   @override
   AnalysisQuota rebuild(void Function(AnalysisQuotaBuilder) updates) =>
@@ -37,7 +32,6 @@ class _$AnalysisQuota extends AnalysisQuota {
     if (identical(other, this)) return true;
     return other is AnalysisQuota &&
         unlimited == other.unlimited &&
-        hourly == other.hourly &&
         daily == other.daily &&
         credits == other.credits;
   }
@@ -46,7 +40,6 @@ class _$AnalysisQuota extends AnalysisQuota {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, unlimited.hashCode);
-    _$hash = $jc(_$hash, hourly.hashCode);
     _$hash = $jc(_$hash, daily.hashCode);
     _$hash = $jc(_$hash, credits.hashCode);
     _$hash = $jf(_$hash);
@@ -57,7 +50,6 @@ class _$AnalysisQuota extends AnalysisQuota {
   String toString() {
     return (newBuiltValueToStringHelper(r'AnalysisQuota')
           ..add('unlimited', unlimited)
-          ..add('hourly', hourly)
           ..add('daily', daily)
           ..add('credits', credits))
         .toString();
@@ -72,15 +64,10 @@ class AnalysisQuotaBuilder
   bool? get unlimited => _$this._unlimited;
   set unlimited(bool? unlimited) => _$this._unlimited = unlimited;
 
-  AnalysisQuotaHourlyBuilder? _hourly;
-  AnalysisQuotaHourlyBuilder get hourly =>
-      _$this._hourly ??= AnalysisQuotaHourlyBuilder();
-  set hourly(AnalysisQuotaHourlyBuilder? hourly) => _$this._hourly = hourly;
-
-  AnalysisQuotaHourlyBuilder? _daily;
-  AnalysisQuotaHourlyBuilder get daily =>
-      _$this._daily ??= AnalysisQuotaHourlyBuilder();
-  set daily(AnalysisQuotaHourlyBuilder? daily) => _$this._daily = daily;
+  AnalysisQuotaDailyBuilder? _daily;
+  AnalysisQuotaDailyBuilder get daily =>
+      _$this._daily ??= AnalysisQuotaDailyBuilder();
+  set daily(AnalysisQuotaDailyBuilder? daily) => _$this._daily = daily;
 
   AnalysisQuotaCreditsBuilder? _credits;
   AnalysisQuotaCreditsBuilder get credits =>
@@ -96,7 +83,6 @@ class AnalysisQuotaBuilder
     final $v = _$v;
     if ($v != null) {
       _unlimited = $v.unlimited;
-      _hourly = $v.hourly.toBuilder();
       _daily = $v.daily.toBuilder();
       _credits = $v.credits.toBuilder();
       _$v = null;
@@ -124,15 +110,12 @@ class AnalysisQuotaBuilder
           _$AnalysisQuota._(
             unlimited: BuiltValueNullFieldError.checkNotNull(
                 unlimited, r'AnalysisQuota', 'unlimited'),
-            hourly: hourly.build(),
             daily: daily.build(),
             credits: credits.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
-        _$failedField = 'hourly';
-        hourly.build();
         _$failedField = 'daily';
         daily.build();
         _$failedField = 'credits';

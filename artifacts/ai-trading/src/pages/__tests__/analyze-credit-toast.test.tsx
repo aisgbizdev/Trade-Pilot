@@ -26,7 +26,6 @@ describe("AnalyzePage: credit-consumed toast", () => {
           if (url.includes("/api/analyses/quota")) {
             return jsonResponse({
               unlimited: false,
-              hourly: { remaining: 0, limit: 5 },
               daily: { remaining: 0, limit: 10 },
               credits: { balance: 4 },
             });

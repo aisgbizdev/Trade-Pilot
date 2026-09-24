@@ -1,4 +1,4 @@
-# trade_pilot_api_client.model.AnalysisQuotaHourly
+# trade_pilot_api_client.model.AnalysisQuotaDaily
 
 ## Load the model package
 ```dart

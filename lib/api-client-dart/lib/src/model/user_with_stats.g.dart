@@ -141,8 +141,6 @@ class _$UserWithStats extends UserWithStats {
   @override
   final BuiltList<String> tags;
   @override
-  final int? customQuotaPerHour;
-  @override
   final int? customQuotaPerDay;
   @override
   final DateTime createdAt;
@@ -159,7 +157,6 @@ class _$UserWithStats extends UserWithStats {
       required this.analysisCount,
       required this.creditBalance,
       required this.tags,
-      this.customQuotaPerHour,
       this.customQuotaPerDay,
       required this.createdAt})
       : super._();
@@ -182,7 +179,6 @@ class _$UserWithStats extends UserWithStats {
         analysisCount == other.analysisCount &&
         creditBalance == other.creditBalance &&
         tags == other.tags &&
-        customQuotaPerHour == other.customQuotaPerHour &&
         customQuotaPerDay == other.customQuotaPerDay &&
         createdAt == other.createdAt;
   }
@@ -198,7 +194,6 @@ class _$UserWithStats extends UserWithStats {
     _$hash = $jc(_$hash, analysisCount.hashCode);
     _$hash = $jc(_$hash, creditBalance.hashCode);
     _$hash = $jc(_$hash, tags.hashCode);
-    _$hash = $jc(_$hash, customQuotaPerHour.hashCode);
     _$hash = $jc(_$hash, customQuotaPerDay.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
     _$hash = $jf(_$hash);
@@ -216,7 +211,6 @@ class _$UserWithStats extends UserWithStats {
           ..add('analysisCount', analysisCount)
           ..add('creditBalance', creditBalance)
           ..add('tags', tags)
-          ..add('customQuotaPerHour', customQuotaPerHour)
           ..add('customQuotaPerDay', customQuotaPerDay)
           ..add('createdAt', createdAt))
         .toString();
@@ -262,11 +256,6 @@ class UserWithStatsBuilder
   ListBuilder<String> get tags => _$this._tags ??= ListBuilder<String>();
   set tags(ListBuilder<String>? tags) => _$this._tags = tags;
 
-  int? _customQuotaPerHour;
-  int? get customQuotaPerHour => _$this._customQuotaPerHour;
-  set customQuotaPerHour(int? customQuotaPerHour) =>
-      _$this._customQuotaPerHour = customQuotaPerHour;
-
   int? _customQuotaPerDay;
   int? get customQuotaPerDay => _$this._customQuotaPerDay;
   set customQuotaPerDay(int? customQuotaPerDay) =>
@@ -291,7 +280,6 @@ class UserWithStatsBuilder
       _analysisCount = $v.analysisCount;
       _creditBalance = $v.creditBalance;
       _tags = $v.tags.toBuilder();
-      _customQuotaPerHour = $v.customQuotaPerHour;
       _customQuotaPerDay = $v.customQuotaPerDay;
       _createdAt = $v.createdAt;
       _$v = null;
@@ -332,7 +320,6 @@ class UserWithStatsBuilder
             creditBalance: BuiltValueNullFieldError.checkNotNull(
                 creditBalance, r'UserWithStats', 'creditBalance'),
             tags: tags.build(),
-            customQuotaPerHour: customQuotaPerHour,
             customQuotaPerDay: customQuotaPerDay,
             createdAt: BuiltValueNullFieldError.checkNotNull(
                 createdAt, r'UserWithStats', 'createdAt'),

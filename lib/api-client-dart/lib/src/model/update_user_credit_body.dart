@@ -6,44 +6,44 @@
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'update_user_quota_body.g.dart';
+part 'update_user_credit_body.g.dart';
 
-/// UpdateUserQuotaBody
+/// UpdateUserCreditBody
 ///
 /// Properties:
-/// * [customQuotaPerDay] - Positive integer to set an override, or null to clear it.
+/// * [balance] - Target credit balance for this user (not a delta).
 @BuiltValue()
-abstract class UpdateUserQuotaBody implements Built<UpdateUserQuotaBody, UpdateUserQuotaBodyBuilder> {
-  /// Positive integer to set an override, or null to clear it.
-  @BuiltValueField(wireName: r'customQuotaPerDay')
-  int get customQuotaPerDay;
+abstract class UpdateUserCreditBody implements Built<UpdateUserCreditBody, UpdateUserCreditBodyBuilder> {
+  /// Target credit balance for this user (not a delta).
+  @BuiltValueField(wireName: r'balance')
+  int get balance;
 
-  UpdateUserQuotaBody._();
+  UpdateUserCreditBody._();
 
-  factory UpdateUserQuotaBody([void updates(UpdateUserQuotaBodyBuilder b)]) = _$UpdateUserQuotaBody;
+  factory UpdateUserCreditBody([void updates(UpdateUserCreditBodyBuilder b)]) = _$UpdateUserCreditBody;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(UpdateUserQuotaBodyBuilder b) => b;
+  static void _defaults(UpdateUserCreditBodyBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<UpdateUserQuotaBody> get serializer => _$UpdateUserQuotaBodySerializer();
+  static Serializer<UpdateUserCreditBody> get serializer => _$UpdateUserCreditBodySerializer();
 }
 
-class _$UpdateUserQuotaBodySerializer implements PrimitiveSerializer<UpdateUserQuotaBody> {
+class _$UpdateUserCreditBodySerializer implements PrimitiveSerializer<UpdateUserCreditBody> {
   @override
-  final Iterable<Type> types = const [UpdateUserQuotaBody, _$UpdateUserQuotaBody];
+  final Iterable<Type> types = const [UpdateUserCreditBody, _$UpdateUserCreditBody];
 
   @override
-  final String wireName = r'UpdateUserQuotaBody';
+  final String wireName = r'UpdateUserCreditBody';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    UpdateUserQuotaBody object, {
+    UpdateUserCreditBody object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'customQuotaPerDay';
+    yield r'balance';
     yield serializers.serialize(
-      object.customQuotaPerDay,
+      object.balance,
       specifiedType: const FullType(int),
     );
   }
@@ -51,7 +51,7 @@ class _$UpdateUserQuotaBodySerializer implements PrimitiveSerializer<UpdateUserQ
   @override
   Object serialize(
     Serializers serializers,
-    UpdateUserQuotaBody object, {
+    UpdateUserCreditBody object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -62,19 +62,19 @@ class _$UpdateUserQuotaBodySerializer implements PrimitiveSerializer<UpdateUserQ
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required UpdateUserQuotaBodyBuilder result,
+    required UpdateUserCreditBodyBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'customQuotaPerDay':
+        case r'balance':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(int),
           ) as int;
-          result.customQuotaPerDay = valueDes;
+          result.balance = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -85,12 +85,12 @@ class _$UpdateUserQuotaBodySerializer implements PrimitiveSerializer<UpdateUserQ
   }
 
   @override
-  UpdateUserQuotaBody deserialize(
+  UpdateUserCreditBody deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = UpdateUserQuotaBodyBuilder();
+    final result = UpdateUserCreditBodyBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

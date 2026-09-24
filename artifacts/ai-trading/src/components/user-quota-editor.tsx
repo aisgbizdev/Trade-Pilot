@@ -16,18 +16,17 @@ import { useTranslation } from "@/lib/i18n";
 // RecentSignupsPanel and in the full admin-users.tsx User Management
 // page — both already render a searchable/paginated user list, so this
 // is just the inline editor for one row, no separate picker needed. Null
-// on both fields means the user is on the global default (set via
-// admin.tsx's QuotaSettingsPanel); setting either field overrides just
-// this user, independent of the global value.
+// means the user is on the global default (set via admin.tsx's
+// QuotaSettingsPanel); setting the field overrides just this user,
+// independent of the global value.
 export function UserQuotaEditor({ user }: { user: UserWithStats }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateQuota = useUpdateUserQuota();
 
-  const hasOverride = user.customQuotaPerHour != null || user.customQuotaPerDay != null;
+  const hasOverride = user.customQuotaPerDay != null;
   const [editing, setEditing] = useState(false);
-  const [hourly, setHourly] = useState(String(user.customQuotaPerHour ?? ""));
   const [daily, setDaily] = useState(String(user.customQuotaPerDay ?? ""));
 
   const invalidate = () => {
@@ -35,16 +34,15 @@ export function UserQuotaEditor({ user }: { user: UserWithStats }) {
   };
 
   const save = async () => {
-    const perHour = Number(hourly);
     const perDay = Number(daily);
-    if (!Number.isFinite(perHour) || perHour <= 0 || !Number.isFinite(perDay) || perDay <= 0) {
+    if (!Number.isFinite(perDay) || perDay <= 0) {
       toast({ title: t.admin.user_quota_invalid, variant: "destructive" });
       return;
     }
     try {
       await updateQuota.mutateAsync({
         id: user.id,
-        data: { customQuotaPerHour: Math.floor(perHour), customQuotaPerDay: Math.floor(perDay) },
+        data: { customQuotaPerDay: Math.floor(perDay) },
       });
       invalidate();
       setEditing(false);
@@ -58,7 +56,7 @@ export function UserQuotaEditor({ user }: { user: UserWithStats }) {
     try {
       await updateQuota.mutateAsync({
         id: user.id,
-        data: { customQuotaPerHour: null, customQuotaPerDay: null },
+        data: { customQuotaPerDay: null },
       });
       invalidate();
       setEditing(false);
@@ -74,7 +72,6 @@ export function UserQuotaEditor({ user }: { user: UserWithStats }) {
         <Gauge className="w-3 h-3 text-muted-foreground shrink-0" />
         {hasOverride ? (
           <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quota-override-${user.id}`}>
-            {user.customQuotaPerHour ?? "—"}/{t.admin.user_quota_hour_short} ·{" "}
             {user.customQuotaPerDay ?? "—"}/{t.admin.user_quota_day_short}
           </Badge>
         ) : (
@@ -83,7 +80,6 @@ export function UserQuotaEditor({ user }: { user: UserWithStats }) {
         <button
           type="button"
           onClick={() => {
-            setHourly(String(user.customQuotaPerHour ?? ""));
             setDaily(String(user.customQuotaPerDay ?? ""));
             setEditing(true);
           }}
@@ -98,15 +94,6 @@ export function UserQuotaEditor({ user }: { user: UserWithStats }) {
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap" data-testid={`quota-editor-${user.id}`}>
-      <Input
-        type="number"
-        min={1}
-        value={hourly}
-        onChange={(e) => setHourly(e.target.value)}
-        placeholder={t.admin.user_quota_hour_short}
-        className="h-7 w-16 text-xs px-2"
-        data-testid={`input-quota-hour-${user.id}`}
-      />
       <Input
         type="number"
         min={1}

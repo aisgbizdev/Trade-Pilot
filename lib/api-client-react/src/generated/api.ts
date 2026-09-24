@@ -144,11 +144,13 @@ import type {
   TraderMirrorResponse,
   UpdateJournalEntryBody,
   UpdateProfileBody,
+  UpdateUserCreditBody,
   UpdateUserQuotaBody,
   UpdateUserRoleBody,
   UploadUrlRequest,
   UploadUrlResponse,
   User,
+  UserCreditBalance,
   UserPriceAlert,
   UserPriceAlertList,
   UserQuota,
@@ -10639,6 +10641,115 @@ export const useUpdateUserQuota = <
   TContext
 > => {
   return useMutation(getUpdateUserQuotaMutationOptions(options));
+};
+
+export const getUpdateUserCreditsUrl = (id: number) => {
+  return `/api/superadmin/users/${id}/credits`;
+};
+
+/**
+ * Unlike POST /admin/topups/manual (which always adds credits and
+ * records a synthetic top-up), this sets the balance to an exact
+ * target. The difference (positive or negative) is appended to the
+ * same append-only credit ledger as every other credit mutation.
+ * @summary Set a user's purchased-credit balance to an exact value
+ */
+export const updateUserCredits = async (
+  id: number,
+  updateUserCreditBody: UpdateUserCreditBody,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<UserCreditBalance> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<UserCreditBalance>(getUpdateUserCreditsUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(updateUserCreditBody),
+  });
+};
+
+export const getUpdateUserCreditsMutationKey = () =>
+  ["updateUserCredits"] as const;
+
+export const getUpdateUserCreditsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserCredits>>,
+    TError,
+    UpdateUserCreditsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateUserCredits>>,
+  TError,
+  UpdateUserCreditsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateUserCreditsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateUserCredits>>,
+    UpdateUserCreditsMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateUserCredits(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateUserCreditsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateUserCredits>>
+>;
+export type UpdateUserCreditsMutationBody = BodyType<UpdateUserCreditBody>;
+export type UpdateUserCreditsMutationError = ErrorType<ErrorResponse>;
+export type UpdateUserCreditsMutationVariables = {
+  id: number;
+  data: BodyType<UpdateUserCreditBody>;
+};
+
+/**
+ * @summary Set a user's purchased-credit balance to an exact value
+ */
+export const useUpdateUserCredits = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserCredits>>,
+    TError,
+    UpdateUserCreditsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateUserCredits>>,
+  TError,
+  UpdateUserCreditsMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateUserCreditsMutationOptions(options));
 };
 
 export const getRemoveUserTagUrl = (id: number, tag: string) => {

@@ -1,8 +1,8 @@
 /**
  * Covers the "Top Up Credits" CTA on the quota-exceeded dialog
- * (src/components/quota-dialog.tsx). A purchased credit bypasses BOTH the
- * hourly and daily cap, so the CTA + hint show for either wall — but not
- * for `concurrent`, which is a per-user processing lock a credit can't skip.
+ * (src/components/quota-dialog.tsx). A purchased credit bypasses the
+ * daily cap, so the CTA + hint show for that wall — but not for
+ * `concurrent`, which is a per-user processing lock a credit can't skip.
  * The CTA opens the top-up popup (TopupDialog) in place instead of
  * navigating to /topup — see topup-dialog.test.tsx for that dialog's own
  * behavior.
@@ -82,22 +82,6 @@ describe("QuotaDialog top-up CTA", () => {
 
     expect(window.location.pathname).toBe("/analyze");
     expect(screen.queryByTestId("dialog-quota")).not.toBeInTheDocument();
-  });
-
-  it("renders the top-up CTA for an hourly-scope block (a credit skips the wait)", async () => {
-    render(
-      <Wrapper>
-        <QuotaDialog />
-      </Wrapper>,
-    );
-
-    act(() => {
-      showQuotaDialog({ scope: "hour", limit: 5, used: 5 });
-    });
-
-    await screen.findByTestId("dialog-quota");
-    expect(screen.getByTestId("button-quota-dialog-topup")).toBeInTheDocument();
-    expect(screen.getByTestId("text-quota-dialog-topup-hint")).toBeInTheDocument();
   });
 
   it("does not render the top-up CTA for a concurrent-scope block", async () => {

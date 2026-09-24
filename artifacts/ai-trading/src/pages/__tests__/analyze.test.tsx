@@ -42,7 +42,6 @@ vi.mock("@/components/analysis-levels-chart", () => ({
 
 const QUOTA_PAYLOAD = {
   unlimited: false,
-  hourly: { remaining: 4, limit: 5 },
   daily: { remaining: 9, limit: 10 },
 };
 
@@ -234,7 +233,6 @@ describe("AnalyzePage: happy-path render", () => {
 
       // Quota chip resolves once the query settles.
       const chip = await screen.findByTestId("chip-quota");
-      expect(chip.textContent).toMatch(/4\/5/);
       expect(chip.textContent).toMatch(/9\/10/);
 
       const progression = await screen.findByTestId("button-dashboard-progression");

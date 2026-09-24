@@ -33,7 +33,7 @@ import 'package:trade_pilot_api_client/src/model/analysis_note_response.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_outcomes_summary.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_quota.dart';
 import 'package:trade_pilot_api_client/src/model/analysis_quota_credits.dart';
-import 'package:trade_pilot_api_client/src/model/analysis_quota_hourly.dart';
+import 'package:trade_pilot_api_client/src/model/analysis_quota_daily.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_event_body.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_instrument_inner.dart';
@@ -186,11 +186,13 @@ import 'package:trade_pilot_api_client/src/model/trader_mirror_insights.dart';
 import 'package:trade_pilot_api_client/src/model/trader_mirror_response.dart';
 import 'package:trade_pilot_api_client/src/model/update_journal_entry_body.dart';
 import 'package:trade_pilot_api_client/src/model/update_profile_body.dart';
+import 'package:trade_pilot_api_client/src/model/update_user_credit_body.dart';
 import 'package:trade_pilot_api_client/src/model/update_user_quota_body.dart';
 import 'package:trade_pilot_api_client/src/model/update_user_role_body.dart';
 import 'package:trade_pilot_api_client/src/model/upload_url_request.dart';
 import 'package:trade_pilot_api_client/src/model/upload_url_response.dart';
 import 'package:trade_pilot_api_client/src/model/user.dart';
+import 'package:trade_pilot_api_client/src/model/user_credit_balance.dart';
 import 'package:trade_pilot_api_client/src/model/user_price_alert.dart';
 import 'package:trade_pilot_api_client/src/model/user_price_alert_list.dart';
 import 'package:trade_pilot_api_client/src/model/user_quota.dart';
@@ -222,7 +224,7 @@ part 'serializers.g.dart';
   AnalysisOutcomesSummary,
   AnalysisQuota,
   AnalysisQuotaCredits,
-  AnalysisQuotaHourly,
+  AnalysisQuotaDaily,
   AnalyticsEventBody,
   AnalyticsTokenStats,
   AnalyticsTokenStatsByInstrumentInner,
@@ -375,11 +377,13 @@ part 'serializers.g.dart';
   TraderMirrorResponse,
   UpdateJournalEntryBody,
   UpdateProfileBody,
+  UpdateUserCreditBody,
   UpdateUserQuotaBody,
   UpdateUserRoleBody,
   UploadUrlRequest,
   UploadUrlResponse,
   User,
+  UserCreditBalance,
   UserPriceAlert,
   UserPriceAlertList,
   UserQuota,

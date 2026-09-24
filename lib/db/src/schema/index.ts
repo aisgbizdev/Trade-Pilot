@@ -286,10 +286,9 @@ export const users = pgTable("users", {
   failedResetAttempts: integer("failed_reset_attempts").notNull().default(0),
   resetLockedUntil: timestamp("reset_locked_until"),
   // Per-user analysis-quota override (admin dashboard). Null means "use
-  // the global default" (see ANALYSIS_QUOTA_PER_HOUR/PER_DAY in
-  // routes/analyses.ts, itself admin-configurable). A non-null value
-  // overrides just this one user, independent of the global setting.
-  customQuotaPerHour: integer("custom_quota_per_hour"),
+  // the global default" (see ANALYSIS_QUOTA_PER_DAY in routes/analyses.ts,
+  // itself admin-configurable). A non-null value overrides just this one
+  // user, independent of the global setting.
   customQuotaPerDay: integer("custom_quota_per_day"),
   // Store-readiness (P2-B4.1): three more push categories, following the
   // exact opt-out pattern as every other `push*` column above — false

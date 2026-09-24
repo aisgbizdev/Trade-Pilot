@@ -1,12 +1,12 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'analysis_quota_hourly.dart';
+part of 'analysis_quota_daily.dart';
 
 // **************************************************************************
 // BuiltValueGenerator
 // **************************************************************************
 
-class _$AnalysisQuotaHourly extends AnalysisQuotaHourly {
+class _$AnalysisQuotaDaily extends AnalysisQuotaDaily {
   @override
   final int limit;
   @override
@@ -14,26 +14,26 @@ class _$AnalysisQuotaHourly extends AnalysisQuotaHourly {
   @override
   final int remaining;
 
-  factory _$AnalysisQuotaHourly(
-          [void Function(AnalysisQuotaHourlyBuilder)? updates]) =>
-      (AnalysisQuotaHourlyBuilder()..update(updates))._build();
+  factory _$AnalysisQuotaDaily(
+          [void Function(AnalysisQuotaDailyBuilder)? updates]) =>
+      (AnalysisQuotaDailyBuilder()..update(updates))._build();
 
-  _$AnalysisQuotaHourly._(
+  _$AnalysisQuotaDaily._(
       {required this.limit, required this.used, required this.remaining})
       : super._();
   @override
-  AnalysisQuotaHourly rebuild(
-          void Function(AnalysisQuotaHourlyBuilder) updates) =>
+  AnalysisQuotaDaily rebuild(
+          void Function(AnalysisQuotaDailyBuilder) updates) =>
       (toBuilder()..update(updates)).build();
 
   @override
-  AnalysisQuotaHourlyBuilder toBuilder() =>
-      AnalysisQuotaHourlyBuilder()..replace(this);
+  AnalysisQuotaDailyBuilder toBuilder() =>
+      AnalysisQuotaDailyBuilder()..replace(this);
 
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is AnalysisQuotaHourly &&
+    return other is AnalysisQuotaDaily &&
         limit == other.limit &&
         used == other.used &&
         remaining == other.remaining;
@@ -51,7 +51,7 @@ class _$AnalysisQuotaHourly extends AnalysisQuotaHourly {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'AnalysisQuotaHourly')
+    return (newBuiltValueToStringHelper(r'AnalysisQuotaDaily')
           ..add('limit', limit)
           ..add('used', used)
           ..add('remaining', remaining))
@@ -59,9 +59,9 @@ class _$AnalysisQuotaHourly extends AnalysisQuotaHourly {
   }
 }
 
-class AnalysisQuotaHourlyBuilder
-    implements Builder<AnalysisQuotaHourly, AnalysisQuotaHourlyBuilder> {
-  _$AnalysisQuotaHourly? _$v;
+class AnalysisQuotaDailyBuilder
+    implements Builder<AnalysisQuotaDaily, AnalysisQuotaDailyBuilder> {
+  _$AnalysisQuotaDaily? _$v;
 
   int? _limit;
   int? get limit => _$this._limit;
@@ -75,11 +75,11 @@ class AnalysisQuotaHourlyBuilder
   int? get remaining => _$this._remaining;
   set remaining(int? remaining) => _$this._remaining = remaining;
 
-  AnalysisQuotaHourlyBuilder() {
-    AnalysisQuotaHourly._defaults(this);
+  AnalysisQuotaDailyBuilder() {
+    AnalysisQuotaDaily._defaults(this);
   }
 
-  AnalysisQuotaHourlyBuilder get _$this {
+  AnalysisQuotaDailyBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
       _limit = $v.limit;
@@ -91,27 +91,27 @@ class AnalysisQuotaHourlyBuilder
   }
 
   @override
-  void replace(AnalysisQuotaHourly other) {
-    _$v = other as _$AnalysisQuotaHourly;
+  void replace(AnalysisQuotaDaily other) {
+    _$v = other as _$AnalysisQuotaDaily;
   }
 
   @override
-  void update(void Function(AnalysisQuotaHourlyBuilder)? updates) {
+  void update(void Function(AnalysisQuotaDailyBuilder)? updates) {
     if (updates != null) updates(this);
   }
 
   @override
-  AnalysisQuotaHourly build() => _build();
+  AnalysisQuotaDaily build() => _build();
 
-  _$AnalysisQuotaHourly _build() {
+  _$AnalysisQuotaDaily _build() {
     final _$result = _$v ??
-        _$AnalysisQuotaHourly._(
+        _$AnalysisQuotaDaily._(
           limit: BuiltValueNullFieldError.checkNotNull(
-              limit, r'AnalysisQuotaHourly', 'limit'),
+              limit, r'AnalysisQuotaDaily', 'limit'),
           used: BuiltValueNullFieldError.checkNotNull(
-              used, r'AnalysisQuotaHourly', 'used'),
+              used, r'AnalysisQuotaDaily', 'used'),
           remaining: BuiltValueNullFieldError.checkNotNull(
-              remaining, r'AnalysisQuotaHourly', 'remaining'),
+              remaining, r'AnalysisQuotaDaily', 'remaining'),
         );
     replace(_$result);
     return _$result;

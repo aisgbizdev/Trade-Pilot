@@ -20,7 +20,6 @@ part 'user_with_stats.g.dart';
 /// * [analysisCount] 
 /// * [creditBalance] - Current purchased-credit balance (sum of credit_ledger for this user).
 /// * [tags] 
-/// * [customQuotaPerHour] - Per-user analysis-quota override. Null = uses the global default.
 /// * [customQuotaPerDay] - Per-user analysis-quota override. Null = uses the global default.
 /// * [createdAt] 
 @BuiltValue()
@@ -51,10 +50,6 @@ abstract class UserWithStats implements Built<UserWithStats, UserWithStatsBuilde
 
   @BuiltValueField(wireName: r'tags')
   BuiltList<String> get tags;
-
-  /// Per-user analysis-quota override. Null = uses the global default.
-  @BuiltValueField(wireName: r'customQuotaPerHour')
-  int? get customQuotaPerHour;
 
   /// Per-user analysis-quota override. Null = uses the global default.
   @BuiltValueField(wireName: r'customQuotaPerDay')
@@ -126,13 +121,6 @@ class _$UserWithStatsSerializer implements PrimitiveSerializer<UserWithStats> {
       object.tags,
       specifiedType: const FullType(BuiltList, [FullType(String)]),
     );
-    if (object.customQuotaPerHour != null) {
-      yield r'customQuotaPerHour';
-      yield serializers.serialize(
-        object.customQuotaPerHour,
-        specifiedType: const FullType(int),
-      );
-    }
     if (object.customQuotaPerDay != null) {
       yield r'customQuotaPerDay';
       yield serializers.serialize(
@@ -223,14 +211,6 @@ class _$UserWithStatsSerializer implements PrimitiveSerializer<UserWithStats> {
             specifiedType: const FullType(BuiltList, [FullType(String)]),
           ) as BuiltList<String>;
           result.tags.replace(valueDes);
-          break;
-        case r'customQuotaPerHour':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(int),
-          ) as int?;
-          if (valueDes == null) continue;
-          result.customQuotaPerHour = valueDes;
           break;
         case r'customQuotaPerDay':
           final valueDes = serializers.deserialize(
