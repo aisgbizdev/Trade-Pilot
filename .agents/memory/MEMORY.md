@@ -26,3 +26,4 @@
 - [Deployment image size](deployment-image-size.md) — Playwright traces/videos can exceed Replit's 8 GiB limit; exclude test outputs/caches, but retain node_modules because runtime packaging depends on them.
 - [Expo tab-bar inset modes](expo-tab-bar-insets.md) — reserve full bottom clearance for absolute classic tabs, but not for iOS NativeTabs, which applies system content insets.
 - [Adaptive candle freshness](adaptive-candle-freshness.md) — a candle's latest bar time is not fetch time; fail closed when too old until the API exposes source freshness.
+- [Managed workflow port collisions](managed-workflow-port-collisions.md) — a surviving shell-launched server can occupy an artifact's managed port; identify its process group before stopping it.
