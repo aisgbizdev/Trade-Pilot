@@ -15,10 +15,21 @@ function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
+export interface PendingTiktokProfile extends TiktokProfile {
+  /** Set only when this signup was reached via the mobile OAuth browser
+   *  flow — see mobileOauthTransactions in the schema. Null for an
+   *  ordinary website signup. */
+  mobileTransactionId: number | null;
+}
+
 /** Issue a fresh pending-signup token for this TikTok profile. Returns the
- *  raw token (show once, via an httpOnly cookie — never a URL) and expiry. */
+ *  raw token (show once, via an httpOnly cookie — never a URL) and expiry.
+ *  `mobileTransactionId` links this signup to a mobile OAuth transaction so
+ *  POST /auth/tiktok/complete-signup knows to hand the browser back to the
+ *  app (one-time exchange code) instead of creating a normal web session. */
 export async function issuePendingTiktokSignup(
   profile: TiktokProfile,
+  mobileTransactionId?: number,
 ): Promise<{ token: string; expiresAt: Date }> {
   const raw = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + TTL_MS);
@@ -28,6 +39,7 @@ export async function issuePendingTiktokSignup(
     tiktokId: profile.tiktokId,
     displayName: profile.displayName,
     avatarUrl: profile.avatarUrl,
+    mobileTransactionId: mobileTransactionId ?? null,
     expiresAt,
   });
 
@@ -39,7 +51,7 @@ export async function issuePendingTiktokSignup(
  *  if the token is missing, expired, or already used. */
 export async function peekPendingTiktokSignup(
   rawToken: string,
-): Promise<TiktokProfile | null> {
+): Promise<PendingTiktokProfile | null> {
   if (typeof rawToken !== "string" || rawToken.length === 0) return null;
   const [row] = await db
     .select()
@@ -53,7 +65,12 @@ export async function peekPendingTiktokSignup(
     )
     .limit(1);
   if (!row) return null;
-  return { tiktokId: row.tiktokId, displayName: row.displayName, avatarUrl: row.avatarUrl };
+  return {
+    tiktokId: row.tiktokId,
+    displayName: row.displayName,
+    avatarUrl: row.avatarUrl,
+    mobileTransactionId: row.mobileTransactionId,
+  };
 }
 
 /** Consume the pending-signup token inside the caller's transaction — must
@@ -62,7 +79,7 @@ export async function peekPendingTiktokSignup(
 export async function consumePendingTiktokSignup(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   rawToken: string,
-): Promise<TiktokProfile | null> {
+): Promise<PendingTiktokProfile | null> {
   const tokenHash = hashToken(rawToken);
   const [row] = await tx
     .select()
@@ -80,5 +97,10 @@ export async function consumePendingTiktokSignup(
     .update(pendingTiktokSignups)
     .set({ usedAt: new Date() })
     .where(eq(pendingTiktokSignups.id, row.id));
-  return { tiktokId: row.tiktokId, displayName: row.displayName, avatarUrl: row.avatarUrl };
+  return {
+    tiktokId: row.tiktokId,
+    displayName: row.displayName,
+    avatarUrl: row.avatarUrl,
+    mobileTransactionId: row.mobileTransactionId,
+  };
 }

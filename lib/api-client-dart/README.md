@@ -101,6 +101,7 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**changeSecurityQuestion**](doc/AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
 [*AuthApi*](doc/AuthApi.md) | [**completeTiktokSignup**](doc/AuthApi.md#completetiktoksignup) | **POST** /auth/tiktok/complete-signup | Finish a brand-new TikTok sign-in by supplying an email
 [*AuthApi*](doc/AuthApi.md) | [**deleteAccount**](doc/AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
+[*AuthApi*](doc/AuthApi.md) | [**exchangeMobileAuthCode**](doc/AuthApi.md#exchangemobileauthcode) | **POST** /auth/mobile/exchange | Exchange a one-time mobile OAuth code (+ PKCE verifier) for a TradePilot session
 [*AuthApi*](doc/AuthApi.md) | [**getForgotPasswordQuestion**](doc/AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [*AuthApi*](doc/AuthApi.md) | [**getMe**](doc/AuthApi.md#getme) | **GET** /auth/me | Get current user
 [*AuthApi*](doc/AuthApi.md) | [**getTiktokPendingSignup**](doc/AuthApi.md#gettiktokpendingsignup) | **GET** /auth/tiktok/pending-signup | Look up the TikTok profile pending a complete-signup email
@@ -112,6 +113,8 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**reauthenticateWithGoogle**](doc/AuthApi.md#reauthenticatewithgoogle) | **POST** /auth/reauth/google | Prove identity with a fresh Google ID token for a sensitive operation
 [*AuthApi*](doc/AuthApi.md) | [**register**](doc/AuthApi.md#register) | **POST** /auth/register | Register new user
 [*AuthApi*](doc/AuthApi.md) | [**resetPassword**](doc/AuthApi.md#resetpassword) | **POST** /auth/forgot-password/reset | Reset password with token
+[*AuthApi*](doc/AuthApi.md) | [**startFacebookMobileOauth**](doc/AuthApi.md#startfacebookmobileoauth) | **GET** /auth/facebook/mobile/start | Begin the mobile OAuth browser flow for Facebook login/registration
+[*AuthApi*](doc/AuthApi.md) | [**startTiktokMobileOauth**](doc/AuthApi.md#starttiktokmobileoauth) | **GET** /auth/tiktok/mobile/start | Begin the mobile OAuth browser flow for TikTok login/registration
 [*AuthApi*](doc/AuthApi.md) | [**updateProfile**](doc/AuthApi.md#updateprofile) | **PATCH** /auth/profile | Update user profile
 [*AuthApi*](doc/AuthApi.md) | [**verifySecurityAnswer**](doc/AuthApi.md#verifysecurityanswer) | **POST** /auth/forgot-password/verify | Verify security answer and get reset token
 [*DailySummaryApi*](doc/DailySummaryApi.md) | [**getDailySummary**](doc/DailySummaryApi.md#getdailysummary) | **GET** /me/daily-summary | Get current user&#39;s daily summary settings + today&#39;s digest
@@ -266,6 +269,7 @@ Class | Method | HTTP request | Description
  - [MessageResponse](doc/MessageResponse.md)
  - [MirrorGatedInsight](doc/MirrorGatedInsight.md)
  - [MirrorGroupStat](doc/MirrorGroupStat.md)
+ - [MobileAuthExchangeBody](doc/MobileAuthExchangeBody.md)
  - [NativePushRegisterBody](doc/NativePushRegisterBody.md)
  - [NativePushTestResult](doc/NativePushTestResult.md)
  - [NativePushUnregisterBody](doc/NativePushUnregisterBody.md)

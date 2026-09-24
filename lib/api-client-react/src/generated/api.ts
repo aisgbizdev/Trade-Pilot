@@ -92,6 +92,7 @@ import type {
   LoginBody,
   ManualTopupBody,
   MessageResponse,
+  MobileAuthExchangeBody,
   NativePushRegisterBody,
   NativePushTestResult,
   NativePushUnregisterBody,
@@ -129,6 +130,8 @@ import type {
   SecurityQuestionResponse,
   SetAnalysisNoteBody,
   StandardTradingRules,
+  StartFacebookMobileOauthParams,
+  StartTiktokMobileOauthParams,
   TagsList,
   TiktokCompleteSignupBody,
   TiktokPendingSignupResponse,
@@ -2853,6 +2856,345 @@ export const useCompleteTiktokSignup = <
   TContext
 > => {
   return useMutation(getCompleteTiktokSignupMutationOptions(options));
+};
+
+export const getStartFacebookMobileOauthUrl = (
+  params: StartFacebookMobileOauthParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/auth/facebook/mobile/start?${stringifiedParams}`
+    : `/api/auth/facebook/mobile/start`;
+};
+
+/**
+ * For the Flutter app: open this URL in a system browser (Custom
+ * Tabs / ASWebAuthenticationSession). It validates `redirect_uri`
+ * against an exact allowlist (`MOBILE_OAUTH_REDIRECT_URIS`), creates
+ * a persistent (multi-instance-safe) transaction row, and 302s to
+ * Facebook's own consent screen — the provider-facing
+ * `redirect_uri` is still this backend's existing HTTPS
+ * `/auth/facebook/callback`, registered in the Meta app exactly as
+ * for the website flow. That callback tells this mobile transaction
+ * apart from an ordinary web login purely by the `state` value, so
+ * the website flow's behavior is completely unchanged.
+ * @summary Begin the mobile OAuth browser flow for Facebook login/registration
+ */
+export const startFacebookMobileOauth = async (
+  params: StartFacebookMobileOauthParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<unknown> => {
+  return customFetch<unknown>(getStartFacebookMobileOauthUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getStartFacebookMobileOauthQueryKey = (
+  params?: StartFacebookMobileOauthParams,
+) => {
+  return [
+    `/api/auth/facebook/mobile/start`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getStartFacebookMobileOauthQueryOptions = <
+  TData = Awaited<ReturnType<typeof startFacebookMobileOauth>>,
+  TError = ErrorType<void | ErrorResponse>,
+>(
+  params: StartFacebookMobileOauthParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof startFacebookMobileOauth>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getStartFacebookMobileOauthQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof startFacebookMobileOauth>>
+  > = ({ signal }) =>
+    startFacebookMobileOauth(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof startFacebookMobileOauth>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type StartFacebookMobileOauthQueryResult = NonNullable<
+  Awaited<ReturnType<typeof startFacebookMobileOauth>>
+>;
+export type StartFacebookMobileOauthQueryError =
+  ErrorType<void | ErrorResponse>;
+
+/**
+ * @summary Begin the mobile OAuth browser flow for Facebook login/registration
+ */
+
+export function useStartFacebookMobileOauth<
+  TData = Awaited<ReturnType<typeof startFacebookMobileOauth>>,
+  TError = ErrorType<void | ErrorResponse>,
+>(
+  params: StartFacebookMobileOauthParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof startFacebookMobileOauth>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getStartFacebookMobileOauthQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getStartTiktokMobileOauthUrl = (
+  params: StartTiktokMobileOauthParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/auth/tiktok/mobile/start?${stringifiedParams}`
+    : `/api/auth/tiktok/mobile/start`;
+};
+
+/**
+ * Same shape as GET /auth/facebook/mobile/start, for TikTok. A
+ * brand-new TikTok sign-in (no existing tiktok_id) still can't
+ * create the account directly — TikTok never returns an email — so
+ * the provider callback redirects the system browser to the
+ * existing web page `/auth/tiktok/complete-signup?mobile=1` to
+ * collect one first; only after that page succeeds does the browser
+ * get handed back to the app via the deep link with a one-time code.
+ * @summary Begin the mobile OAuth browser flow for TikTok login/registration
+ */
+export const startTiktokMobileOauth = async (
+  params: StartTiktokMobileOauthParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<unknown> => {
+  return customFetch<unknown>(getStartTiktokMobileOauthUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getStartTiktokMobileOauthQueryKey = (
+  params?: StartTiktokMobileOauthParams,
+) => {
+  return [
+    `/api/auth/tiktok/mobile/start`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getStartTiktokMobileOauthQueryOptions = <
+  TData = Awaited<ReturnType<typeof startTiktokMobileOauth>>,
+  TError = ErrorType<void | ErrorResponse>,
+>(
+  params: StartTiktokMobileOauthParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof startTiktokMobileOauth>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getStartTiktokMobileOauthQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof startTiktokMobileOauth>>
+  > = ({ signal }) =>
+    startTiktokMobileOauth(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof startTiktokMobileOauth>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type StartTiktokMobileOauthQueryResult = NonNullable<
+  Awaited<ReturnType<typeof startTiktokMobileOauth>>
+>;
+export type StartTiktokMobileOauthQueryError = ErrorType<void | ErrorResponse>;
+
+/**
+ * @summary Begin the mobile OAuth browser flow for TikTok login/registration
+ */
+
+export function useStartTiktokMobileOauth<
+  TData = Awaited<ReturnType<typeof startTiktokMobileOauth>>,
+  TError = ErrorType<void | ErrorResponse>,
+>(
+  params: StartTiktokMobileOauthParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof startTiktokMobileOauth>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getStartTiktokMobileOauthQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getExchangeMobileAuthCodeUrl = () => {
+  return `/api/auth/mobile/exchange`;
+};
+
+/**
+ * The last leg of the mobile OAuth browser flow: after the app is
+ * foregrounded via the `id.tradepilot.app://auth/callback?code=...`
+ * deep link, call this with that code and the PKCE `code_verifier`
+ * that produced the `code_challenge` originally sent to
+ * `/mobile/start`. On success this is the only point in the whole
+ * mobile flow where a TradePilot session is actually created
+ * (`createSingleSession` — signing in on the phone signs every other
+ * device out, same policy as every other login method) and the only
+ * response that ever contains a Bearer token; the deep-link URL
+ * itself never carries one. The code is single-use, expires 60-120
+ * seconds after being issued, and is consumed atomically.
+ * @summary Exchange a one-time mobile OAuth code (+ PKCE verifier) for a TradePilot session
+ */
+export const exchangeMobileAuthCode = async (
+  mobileAuthExchangeBody: MobileAuthExchangeBody,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AuthResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<AuthResponse>(getExchangeMobileAuthCodeUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(mobileAuthExchangeBody),
+  });
+};
+
+export const getExchangeMobileAuthCodeMutationKey = () =>
+  ["exchangeMobileAuthCode"] as const;
+
+export const getExchangeMobileAuthCodeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof exchangeMobileAuthCode>>,
+    TError,
+    ExchangeMobileAuthCodeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof exchangeMobileAuthCode>>,
+  TError,
+  ExchangeMobileAuthCodeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getExchangeMobileAuthCodeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof exchangeMobileAuthCode>>,
+    ExchangeMobileAuthCodeMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return exchangeMobileAuthCode(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExchangeMobileAuthCodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof exchangeMobileAuthCode>>
+>;
+export type ExchangeMobileAuthCodeMutationBody =
+  BodyType<MobileAuthExchangeBody>;
+export type ExchangeMobileAuthCodeMutationError = ErrorType<ErrorResponse>;
+export type ExchangeMobileAuthCodeMutationVariables = {
+  data: BodyType<MobileAuthExchangeBody>;
+};
+
+/**
+ * @summary Exchange a one-time mobile OAuth code (+ PKCE verifier) for a TradePilot session
+ */
+export const useExchangeMobileAuthCode = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof exchangeMobileAuthCode>>,
+    TError,
+    ExchangeMobileAuthCodeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof exchangeMobileAuthCode>>,
+  TError,
+  ExchangeMobileAuthCodeMutationVariables,
+  TContext
+> => {
+  return useMutation(getExchangeMobileAuthCodeMutationOptions(options));
 };
 
 export const getLogoutUrl = () => {

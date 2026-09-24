@@ -13,6 +13,7 @@ Method | HTTP request | Description
 [**changeSecurityQuestion**](AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
 [**completeTiktokSignup**](AuthApi.md#completetiktoksignup) | **POST** /auth/tiktok/complete-signup | Finish a brand-new TikTok sign-in by supplying an email
 [**deleteAccount**](AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
+[**exchangeMobileAuthCode**](AuthApi.md#exchangemobileauthcode) | **POST** /auth/mobile/exchange | Exchange a one-time mobile OAuth code (+ PKCE verifier) for a TradePilot session
 [**getForgotPasswordQuestion**](AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
 [**getMe**](AuthApi.md#getme) | **GET** /auth/me | Get current user
 [**getTiktokPendingSignup**](AuthApi.md#gettiktokpendingsignup) | **GET** /auth/tiktok/pending-signup | Look up the TikTok profile pending a complete-signup email
@@ -24,6 +25,8 @@ Method | HTTP request | Description
 [**reauthenticateWithGoogle**](AuthApi.md#reauthenticatewithgoogle) | **POST** /auth/reauth/google | Prove identity with a fresh Google ID token for a sensitive operation
 [**register**](AuthApi.md#register) | **POST** /auth/register | Register new user
 [**resetPassword**](AuthApi.md#resetpassword) | **POST** /auth/forgot-password/reset | Reset password with token
+[**startFacebookMobileOauth**](AuthApi.md#startfacebookmobileoauth) | **GET** /auth/facebook/mobile/start | Begin the mobile OAuth browser flow for Facebook login/registration
+[**startTiktokMobileOauth**](AuthApi.md#starttiktokmobileoauth) | **GET** /auth/tiktok/mobile/start | Begin the mobile OAuth browser flow for TikTok login/registration
 [**updateProfile**](AuthApi.md#updateprofile) | **PATCH** /auth/profile | Update user profile
 [**verifySecurityAnswer**](AuthApi.md#verifysecurityanswer) | **POST** /auth/forgot-password/verify | Verify security answer and get reset token
 
@@ -184,6 +187,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**MessageResponse**](MessageResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **exchangeMobileAuthCode**
+> AuthResponse exchangeMobileAuthCode(mobileAuthExchangeBody)
+
+Exchange a one-time mobile OAuth code (+ PKCE verifier) for a TradePilot session
+
+The last leg of the mobile OAuth browser flow: after the app is foregrounded via the `id.tradepilot.app://auth/callback?code=...` deep link, call this with that code and the PKCE `code_verifier` that produced the `code_challenge` originally sent to `/mobile/start`. On success this is the only point in the whole mobile flow where a TradePilot session is actually created (`createSingleSession` — signing in on the phone signs every other device out, same policy as every other login method) and the only response that ever contains a Bearer token; the deep-link URL itself never carries one. The code is single-use, expires 60-120 seconds after being issued, and is consumed atomically. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAuthApi();
+final MobileAuthExchangeBody mobileAuthExchangeBody = ; // MobileAuthExchangeBody | 
+
+try {
+    final response = api.exchangeMobileAuthCode(mobileAuthExchangeBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->exchangeMobileAuthCode: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **mobileAuthExchangeBody** | [**MobileAuthExchangeBody**](MobileAuthExchangeBody.md)|  | 
+
+### Return type
+
+[**AuthResponse**](AuthResponse.md)
 
 ### Authorization
 
@@ -649,6 +695,98 @@ No authorization required
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **startFacebookMobileOauth**
+> startFacebookMobileOauth(redirectUri, codeChallenge, codeChallengeMethod)
+
+Begin the mobile OAuth browser flow for Facebook login/registration
+
+For the Flutter app: open this URL in a system browser (Custom Tabs / ASWebAuthenticationSession). It validates `redirect_uri` against an exact allowlist (`MOBILE_OAUTH_REDIRECT_URIS`), creates a persistent (multi-instance-safe) transaction row, and 302s to Facebook's own consent screen — the provider-facing `redirect_uri` is still this backend's existing HTTPS `/auth/facebook/callback`, registered in the Meta app exactly as for the website flow. That callback tells this mobile transaction apart from an ordinary web login purely by the `state` value, so the website flow's behavior is completely unchanged. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAuthApi();
+final String redirectUri = redirectUri_example; // String | Must exactly match one entry in MOBILE_OAUTH_REDIRECT_URIS. No prefix/substring matching.
+final String codeChallenge = codeChallenge_example; // String | Base64url(SHA-256(code_verifier)) — the mobile app's own PKCE challenge for the eventual /auth/mobile/exchange call.
+final String codeChallengeMethod = codeChallengeMethod_example; // String | 
+
+try {
+    api.startFacebookMobileOauth(redirectUri, codeChallenge, codeChallengeMethod);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->startFacebookMobileOauth: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **redirectUri** | **String**| Must exactly match one entry in MOBILE_OAUTH_REDIRECT_URIS. No prefix/substring matching. | 
+ **codeChallenge** | **String**| Base64url(SHA-256(code_verifier)) — the mobile app's own PKCE challenge for the eventual /auth/mobile/exchange call. | 
+ **codeChallengeMethod** | **String**|  | 
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **startTiktokMobileOauth**
+> startTiktokMobileOauth(redirectUri, codeChallenge, codeChallengeMethod)
+
+Begin the mobile OAuth browser flow for TikTok login/registration
+
+Same shape as GET /auth/facebook/mobile/start, for TikTok. A brand-new TikTok sign-in (no existing tiktok_id) still can't create the account directly — TikTok never returns an email — so the provider callback redirects the system browser to the existing web page `/auth/tiktok/complete-signup?mobile=1` to collect one first; only after that page succeeds does the browser get handed back to the app via the deep link with a one-time code. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAuthApi();
+final String redirectUri = redirectUri_example; // String | Must exactly match one entry in MOBILE_OAUTH_REDIRECT_URIS. No prefix/substring matching.
+final String codeChallenge = codeChallenge_example; // String | Base64url(SHA-256(code_verifier)) — the mobile app's own PKCE challenge for the eventual /auth/mobile/exchange call.
+final String codeChallengeMethod = codeChallengeMethod_example; // String | 
+
+try {
+    api.startTiktokMobileOauth(redirectUri, codeChallenge, codeChallengeMethod);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->startTiktokMobileOauth: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **redirectUri** | **String**| Must exactly match one entry in MOBILE_OAUTH_REDIRECT_URIS. No prefix/substring matching. | 
+ **codeChallenge** | **String**| Base64url(SHA-256(code_verifier)) — the mobile app's own PKCE challenge for the eventual /auth/mobile/exchange call. | 
+ **codeChallengeMethod** | **String**|  | 
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

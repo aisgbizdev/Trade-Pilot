@@ -28,6 +28,8 @@ import {
   facebookOAuthLimiter,
   tiktokOAuthLimiter,
   tiktokCompleteSignupLimiter,
+  mobileOauthStartLimiter,
+  mobileOauthExchangeLimiter,
   reauthLimiter,
 } from "../middleware/rate-limit";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
@@ -72,6 +74,18 @@ import {
 } from "../lib/tiktok-oauth";
 import { findUserByTiktokId, createUserFromTiktokSignup, TiktokEmailTakenError } from "../lib/tiktok-account";
 import { issuePendingTiktokSignup, peekPendingTiktokSignup, consumePendingTiktokSignup } from "../lib/pending-tiktok-signup";
+import {
+  createMobileTransaction,
+  findPendingMobileTransaction,
+  getMobileTransactionById,
+  issueMobileExchangeCode,
+  consumeMobileExchangeCode,
+  isAllowedMobileRedirectUri,
+  isValidCodeChallenge,
+  buildMobileCallbackUrl,
+  type MobileOauthTransactionRow,
+} from "../lib/mobile-oauth";
+import { ExchangeMobileAuthCodeBody } from "@workspace/api-zod";
 
 const router = Router();
 
@@ -415,9 +429,124 @@ router.get("/auth/facebook", facebookOAuthLimiter, (req, res) => {
   res.redirect(buildFacebookAuthUrl(baseUrl, state));
 });
 
+// ---------------------------------------------------------------------------
+// Mobile OAuth browser flow (Flutter) — Facebook. See lib/mobile-oauth.ts
+// for the transaction model. The Flutter app opens this URL in a system
+// browser; it validates redirect_uri + PKCE params, creates a persistent
+// transaction row, and redirects straight to Facebook's own consent
+// screen using the SAME provider-facing redirect_uri
+// (/auth/facebook/callback) as the website flow — nothing about what
+// Facebook itself sees is any different from a normal web login.
+// ---------------------------------------------------------------------------
+router.get("/auth/facebook/mobile/start", mobileOauthStartLimiter, async (req, res) => {
+  if (!isFacebookOAuthConfigured()) {
+    res.status(503).json({ error: "provider_unavailable" });
+    return;
+  }
+
+  const redirectUri = typeof req.query["redirect_uri"] === "string" ? req.query["redirect_uri"] : null;
+  const codeChallenge = typeof req.query["code_challenge"] === "string" ? req.query["code_challenge"] : null;
+  const codeChallengeMethod =
+    typeof req.query["code_challenge_method"] === "string" ? req.query["code_challenge_method"] : null;
+
+  if (!isAllowedMobileRedirectUri(redirectUri)) {
+    res.status(400).json({ error: "invalid_callback" });
+    return;
+  }
+  if (codeChallengeMethod !== "S256" || !isValidCodeChallenge(codeChallenge)) {
+    res.status(400).json({ error: "invalid_callback" });
+    return;
+  }
+
+  const { state } = await createMobileTransaction({
+    provider: "facebook",
+    redirectUri,
+    codeChallenge,
+  });
+
+  const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+  res.redirect(buildFacebookAuthUrl(baseUrl, state));
+});
+
+// Facebook and TikTok's own consent screens redirect back to the SAME
+// callback URL below for both the website and the mobile OAuth browser
+// flow (Flutter) — the provider itself only ever knows about one
+// registered HTTPS redirect_uri. The two flows are told apart purely by
+// whether the returned `state` matches a pending mobileOauthTransactions
+// row (mobile) or the state cookie set by GET /auth/facebook below (web);
+// see lib/mobile-oauth.ts. Checked first, before any cookie is even read,
+// so the website flow's own logic further down is completely unchanged
+// when it isn't a mobile transaction.
+async function handleFacebookMobileCallback(
+  req: { query: Record<string, unknown>; protocol: string; get(name: string): string | undefined },
+  res: { redirect(url: string): void },
+  transaction: MobileOauthTransactionRow,
+): Promise<void> {
+  const fail = (errorCode: string) => {
+    logger.warn({ errorCode, provider: "facebook" }, "[auth] Facebook mobile OAuth callback failed");
+    res.redirect(buildMobileCallbackUrl(transaction.redirectUri, { error: errorCode }));
+  };
+
+  if (req.query["error"]) {
+    fail("access_denied");
+    return;
+  }
+  const code = typeof req.query["code"] === "string" ? req.query["code"] : null;
+  if (!code) {
+    fail("invalid_state");
+    return;
+  }
+  if (!isFacebookOAuthConfigured()) {
+    fail("provider_unavailable");
+    return;
+  }
+
+  let profile;
+  try {
+    const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+    profile = await exchangeCodeForFacebookProfile(baseUrl, code);
+  } catch (err) {
+    logger.warn({ err }, "[auth] Facebook mobile code exchange failed");
+    fail("authentication_failed");
+    return;
+  }
+
+  if (!profile.email) {
+    fail("facebook_no_email");
+    return;
+  }
+
+  let user: typeof users.$inferSelect;
+  let isNewUser: boolean;
+  try {
+    ({ user, isNewUser } = await resolveFacebookUser({ ...profile, email: profile.email }));
+  } catch (err) {
+    if (err instanceof FacebookAccountConflictError) {
+      fail("account_conflict");
+    } else {
+      logger.error({ err }, "[auth] Facebook mobile user upsert failed");
+      fail("authentication_failed");
+    }
+    return;
+  }
+
+  // No session is created here — only a one-time code. The mobile app
+  // exchanges it via POST /auth/mobile/exchange, which is the only point
+  // in this whole flow that creates a real TradePilot session.
+  const exchangeCode = await issueMobileExchangeCode(transaction.id, user.id, isNewUser);
+  res.redirect(buildMobileCallbackUrl(transaction.redirectUri, { code: exchangeCode }));
+}
+
 // Facebook redirects back here with `?code` + `?state`. On any failure we
 // bounce to /login?error=facebook rather than showing a JSON blob.
 router.get("/auth/facebook/callback", facebookOAuthLimiter, async (req, res) => {
+  const stateParam = typeof req.query["state"] === "string" ? req.query["state"] : null;
+  const mobileTransaction = await findPendingMobileTransaction(stateParam);
+  if (mobileTransaction) {
+    await handleFacebookMobileCallback(req, res, mobileTransaction);
+    return;
+  }
+
   const fail = (reason: string, code = "facebook") => {
     res.clearCookie(FACEBOOK_STATE_COOKIE, { path: "/api/auth/facebook" });
     logger.warn({ reason }, "[auth] Facebook OAuth callback failed");
@@ -530,9 +659,122 @@ router.get("/auth/tiktok", tiktokOAuthLimiter, (req, res) => {
   res.redirect(buildTiktokAuthUrl(baseUrl, state, codeVerifier));
 });
 
+// ---------------------------------------------------------------------------
+// Mobile OAuth browser flow (Flutter) — TikTok. Same shape as Facebook's
+// /mobile/start above, but TikTok also needs its OWN provider-side PKCE
+// verifier (equivalent to the tt_oauth_verifier cookie the web flow uses)
+// — a system-browser tab opened fresh by the app can't rely on carrying a
+// cookie back to whichever backend instance handles the callback, so it's
+// stored on the transaction row instead (see lib/mobile-oauth.ts).
+// ---------------------------------------------------------------------------
+router.get("/auth/tiktok/mobile/start", mobileOauthStartLimiter, async (req, res) => {
+  if (!isTiktokOAuthConfigured()) {
+    res.status(503).json({ error: "provider_unavailable" });
+    return;
+  }
+
+  const redirectUri = typeof req.query["redirect_uri"] === "string" ? req.query["redirect_uri"] : null;
+  const codeChallenge = typeof req.query["code_challenge"] === "string" ? req.query["code_challenge"] : null;
+  const codeChallengeMethod =
+    typeof req.query["code_challenge_method"] === "string" ? req.query["code_challenge_method"] : null;
+
+  if (!isAllowedMobileRedirectUri(redirectUri)) {
+    res.status(400).json({ error: "invalid_callback" });
+    return;
+  }
+  if (codeChallengeMethod !== "S256" || !isValidCodeChallenge(codeChallenge)) {
+    res.status(400).json({ error: "invalid_callback" });
+    return;
+  }
+
+  const providerCodeVerifier = generateCodeVerifier();
+  const { state } = await createMobileTransaction({
+    provider: "tiktok",
+    redirectUri,
+    codeChallenge,
+    providerCodeVerifier,
+  });
+
+  const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+  res.redirect(buildTiktokAuthUrl(baseUrl, state, providerCodeVerifier));
+});
+
+// See handleFacebookMobileCallback above for the general shape. TikTok's
+// version additionally has to fork on new-vs-returning user exactly like
+// the website callback below does, since TikTok never returns an email —
+// a brand-new mobile sign-in still needs the web /auth/tiktok/complete-signup
+// page to collect one, just linked back to this mobile transaction (see
+// pendingTiktokSignups.mobileTransactionId) so that page hands the browser
+// back to the app afterward instead of landing on the dashboard.
+async function handleTiktokMobileCallback(
+  req: { query: Record<string, unknown>; protocol: string; get(name: string): string | undefined },
+  res: { redirect(url: string): void; cookie(name: string, value: string, opts: Record<string, unknown>): void },
+  transaction: MobileOauthTransactionRow,
+): Promise<void> {
+  const fail = (errorCode: string) => {
+    logger.warn({ errorCode, provider: "tiktok" }, "[auth] TikTok mobile OAuth callback failed");
+    res.redirect(buildMobileCallbackUrl(transaction.redirectUri, { error: errorCode }));
+  };
+
+  if (req.query["error"]) {
+    fail("access_denied");
+    return;
+  }
+  const code = typeof req.query["code"] === "string" ? req.query["code"] : null;
+  if (!code) {
+    fail("invalid_state");
+    return;
+  }
+  if (!isTiktokOAuthConfigured() || !transaction.providerCodeVerifier) {
+    fail("provider_unavailable");
+    return;
+  }
+
+  let profile;
+  try {
+    const baseUrl = resolvePublicBaseUrl(requestOrigin(req));
+    profile = await exchangeCodeForTiktokProfile(baseUrl, code, transaction.providerCodeVerifier);
+  } catch (err) {
+    logger.warn({ err }, "[auth] TikTok mobile code exchange failed");
+    fail("authentication_failed");
+    return;
+  }
+
+  const existingUser = await findUserByTiktokId(profile.tiktokId);
+  if (existingUser) {
+    await db
+      .update(users)
+      .set({ tiktokDisplayName: profile.displayName, tiktokAvatarUrl: profile.avatarUrl, updatedAt: new Date() })
+      .where(eq(users.id, existingUser.id));
+    const exchangeCode = await issueMobileExchangeCode(transaction.id, existingUser.id, false);
+    res.redirect(buildMobileCallbackUrl(transaction.redirectUri, { code: exchangeCode }));
+    return;
+  }
+
+  // Brand-new TikTok sign-in via mobile: still no email. Reuse the same
+  // web complete-signup page — linked to this mobile transaction — rather
+  // than build a second, parallel email-collection UI.
+  const { token: pendingToken } = await issuePendingTiktokSignup(profile, transaction.id);
+  res.cookie(TIKTOK_PENDING_COOKIE, pendingToken, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    maxAge: TIKTOK_PENDING_TTL_MS,
+    path: "/api/auth/tiktok",
+  });
+  res.redirect("/auth/tiktok/complete-signup?mobile=1");
+}
+
 // TikTok redirects back here with `?code` + `?state`. On any failure we
 // bounce to /login?error=tiktok rather than showing a JSON blob.
 router.get("/auth/tiktok/callback", tiktokOAuthLimiter, async (req, res) => {
+  const mobileStateParam = typeof req.query["state"] === "string" ? req.query["state"] : null;
+  const mobileTransaction = await findPendingMobileTransaction(mobileStateParam);
+  if (mobileTransaction) {
+    await handleTiktokMobileCallback(req, res, mobileTransaction);
+    return;
+  }
+
   const clearOAuthCookies = () => {
     res.clearCookie(TIKTOK_STATE_COOKIE, { path: "/api/auth/tiktok" });
     res.clearCookie(TIKTOK_VERIFIER_COOKIE, { path: "/api/auth/tiktok" });
@@ -638,6 +880,11 @@ router.post(
   async (req, res) => {
     const pendingToken = req.cookies?.[TIKTOK_PENDING_COOKIE];
     if (!pendingToken) {
+      // We have no row to check here, so we can't know whether this was a
+      // mobile-linked signup — the frontend's own `?mobile=1` query flag
+      // (set when it was redirected here from the mobile OAuth callback)
+      // is what lets the page still offer a "back to app" deep link for
+      // this case. See tiktok-complete-signup.tsx.
       res.status(400).json({ error: "Sesi pendaftaran TikTok tidak ditemukan atau sudah kedaluwarsa." });
       return;
     }
@@ -648,16 +895,33 @@ router.post(
     }
 
     let user: typeof users.$inferSelect;
+    // Captured from the pending-signup row before the transaction either
+    // commits or rolls back — a JS variable assignment survives a DB
+    // rollback even though the row's own `usedAt` update doesn't (see
+    // consumePendingTiktokSignup's doc comment), so this is still correct
+    // in the TiktokEmailTakenError branch below.
+    let mobileTransactionId: number | null = null;
     try {
       user = await db.transaction(async (tx) => {
         const profile = await consumePendingTiktokSignup(tx, pendingToken);
         if (!profile) {
           throw new Error("PENDING_SIGNUP_EXPIRED");
         }
+        mobileTransactionId = profile.mobileTransactionId;
         return createUserFromTiktokSignup(tx, profile, parsed.data.email);
       });
     } catch (err) {
       if (err instanceof TiktokEmailTakenError) {
+        if (mobileTransactionId != null) {
+          const tx = await getMobileTransactionById(mobileTransactionId);
+          if (tx) {
+            res.status(409).json({
+              error: "Email sudah terdaftar",
+              mobileRedirectUrl: buildMobileCallbackUrl(tx.redirectUri, { error: "email_already_registered" }),
+            });
+            return;
+          }
+        }
         res.status(409).json({ error: "Email sudah terdaftar" });
         return;
       }
@@ -671,6 +935,23 @@ router.post(
     }
 
     res.clearCookie(TIKTOK_PENDING_COOKIE, { path: "/api/auth/tiktok" });
+
+    // Mobile-linked signup: hand the browser back to the app with a
+    // one-time exchange code instead of creating a web session here.
+    // "Session hanya dibuat ketika exchange mobile berhasil" — the actual
+    // createSingleSession call for this user happens in
+    // POST /auth/mobile/exchange, not here.
+    if (mobileTransactionId != null) {
+      const tx = await getMobileTransactionById(mobileTransactionId);
+      if (tx) {
+        const exchangeCode = await issueMobileExchangeCode(tx.id, user.id, true);
+        res.status(201).json({
+          user: serializeUser(user),
+          mobileRedirectUrl: buildMobileCallbackUrl(tx.redirectUri, { code: exchangeCode }),
+        });
+        return;
+      }
+    }
 
     const token = generateToken();
     const expiresAt = getSessionExpiry(true);
@@ -688,6 +969,53 @@ router.post(
     res.status(201).json({ token, user: serializeUser(user) });
   },
 );
+
+// ---------------------------------------------------------------------------
+// Final leg of the mobile OAuth browser flow (Flutter) — exchanges the
+// one-time code from the id.tradepilot.app://auth/callback?code=... deep
+// link, plus the PKCE code_verifier, for a real TradePilot session. This
+// is the ONLY point in the whole mobile Facebook/TikTok flow that creates
+// a session or ever returns a Bearer token — the callback routes above
+// only ever hand back an opaque, short-lived code.
+// ---------------------------------------------------------------------------
+router.post("/auth/mobile/exchange", mobileOauthExchangeLimiter, async (req, res) => {
+  const parsed = ExchangeMobileAuthCodeBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Permintaan tidak valid." });
+    return;
+  }
+
+  const outcome = await consumeMobileExchangeCode(parsed.data.code, parsed.data.codeVerifier);
+  if (!outcome.ok) {
+    const byReason = {
+      not_found: { status: 401, error: "authentication_failed" },
+      bad_verifier: { status: 401, error: "invalid_verifier" },
+      already_used: { status: 409, error: "code_already_used" },
+      expired: { status: 410, error: "exchange_expired" },
+    } as const;
+    const mapped = byReason[outcome.reason];
+    logger.warn({ reason: outcome.reason }, "[auth] Mobile OAuth exchange rejected");
+    res.status(mapped.status).json({ error: mapped.error });
+    return;
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.id, outcome.userId)).limit(1);
+  if (!user) {
+    // Extremely unlikely (account deleted between code issuance and
+    // exchange) — the code was already consumed above either way.
+    res.status(401).json({ error: "authentication_failed" });
+    return;
+  }
+
+  const token = generateToken();
+  const expiresAt = getSessionExpiry(true);
+  await createSingleSession(user.id, token, expiresAt);
+
+  if (outcome.isNewUser) void notifyAdminsUserCreated(user.displayName);
+  void notifyLoginAlert(user.id);
+
+  res.json({ token, user: serializeUser(user) });
+});
 
 // ---------------------------------------------------------------------------
 // Native Google Sign-In (mobile). The Flutter app obtains a Google ID token

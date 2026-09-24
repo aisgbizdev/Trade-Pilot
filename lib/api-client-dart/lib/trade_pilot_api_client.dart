@@ -120,6 +120,7 @@ export 'package:trade_pilot_api_client/src/model/manual_topup_body.dart';
 export 'package:trade_pilot_api_client/src/model/message_response.dart';
 export 'package:trade_pilot_api_client/src/model/mirror_gated_insight.dart';
 export 'package:trade_pilot_api_client/src/model/mirror_group_stat.dart';
+export 'package:trade_pilot_api_client/src/model/mobile_auth_exchange_body.dart';
 export 'package:trade_pilot_api_client/src/model/native_push_register_body.dart';
 export 'package:trade_pilot_api_client/src/model/native_push_test_result.dart';
 export 'package:trade_pilot_api_client/src/model/native_push_unregister_body.dart';

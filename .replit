@@ -139,6 +139,11 @@ TIKTOK_CLIENT_KEY = "sbawr7b929hgx066qo"
 # Basic → Reset App Secret) and do not paste the new one here even
 # temporarily; use the Secrets panel instead.
 FACEBOOK_APP_ID = "1064686263283744"
+# Mobile OAuth browser flow (Flutter app) — Facebook/TikTok login from the
+# app opens a system browser at GET /auth/{facebook,tiktok}/mobile/start.
+# This is an exact-match allowlist (never prefix/wildcard matching) of the
+# custom-scheme redirect URIs the mobile app may request; not a secret.
+MOBILE_OAUTH_REDIRECT_URIS = "id.tradepilot.app://auth/callback"
 
 [nix]
 channel = "stable-25_05"

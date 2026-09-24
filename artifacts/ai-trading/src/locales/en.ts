@@ -189,6 +189,7 @@ export const en = {
     tiktok_signup_expired_title: "Signup Session Expired",
     tiktok_signup_expired_desc: "Your TikTok signup session has expired. Please try TikTok login again.",
     tiktok_back_to_login: "Back to Login",
+    tiktok_back_to_app: "Back to App",
     tiktok_email_invalid: "Enter a valid email",
     tiktok_email_taken: "This email is already registered. Try logging in with email/password or another method.",
     tiktok_signup_failed: "Failed to complete signup",

@@ -97,6 +97,7 @@ doc/ManualTopupBody.md
 doc/MessageResponse.md
 doc/MirrorGatedInsight.md
 doc/MirrorGroupStat.md
+doc/MobileAuthExchangeBody.md
 doc/NativePushApi.md
 doc/NativePushRegisterBody.md
 doc/NativePushTestResult.md
@@ -323,6 +324,7 @@ lib/src/model/manual_topup_body.dart
 lib/src/model/message_response.dart
 lib/src/model/mirror_gated_insight.dart
 lib/src/model/mirror_group_stat.dart
+lib/src/model/mobile_auth_exchange_body.dart
 lib/src/model/native_push_register_body.dart
 lib/src/model/native_push_test_result.dart
 lib/src/model/native_push_unregister_body.dart
@@ -421,3 +423,4 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
+test/mobile_auth_exchange_body_test.dart

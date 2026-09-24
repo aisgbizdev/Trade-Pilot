@@ -10,6 +10,7 @@ import {
   pgEnum,
   uniqueIndex,
   index,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 
 export type TradeSideShape = {
@@ -384,8 +385,75 @@ export const pendingTiktokSignups = pgTable("pending_tiktok_signups", {
   tiktokId: text("tiktok_id").notNull(),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
+  // Set only when this pending signup was reached via the mobile OAuth
+  // browser flow (GET /auth/tiktok/mobile/start), not the website. Lets
+  // POST /auth/tiktok/complete-signup know to finish the linked
+  // mobileOauthTransactions row (issue a one-time exchange code and hand
+  // the browser back to the app) instead of creating a normal web
+  // session/cookie. Null for an ordinary website signup. FK defined below
+  // with an explicit short name — Drizzle's auto-generated name for this
+  // pair (`pending_tiktok_signups_mobile_transaction_id_mobile_oauth_transactions_id_fk`)
+  // exceeds Postgres's 63-byte identifier limit, gets silently truncated
+  // on creation, and then never matches what `drizzle-kit push` expects on
+  // the next run — every push after the first would re-"fix" it forever.
+  mobileTransactionId: integer("mobile_transaction_id"),
   expiresAt: timestamp("expires_at").notNull(),
   usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  mobileTransactionFk: foreignKey({
+    name: "pending_tiktok_signups_mobile_tx_fk",
+    columns: [t.mobileTransactionId],
+    foreignColumns: [mobileOauthTransactions.id],
+  }).onDelete("set null"),
+}));
+
+// Persistent (never in-memory — the API can run as multiple instances)
+// state for the mobile OAuth browser flow: Flutter opens a system browser
+// at GET /auth/{facebook,tiktok}/mobile/start, which redirects to the
+// provider with a `state` that maps to one row here instead of a cookie
+// (a native system-browser tab can't rely on the app's own cookie jar the
+// way a same-origin web redirect can). The existing web
+// GET /auth/{facebook,tiktok}/callback routes tell mobile and web apart by
+// checking whether the incoming `state` matches a row here BEFORE falling
+// back to their existing cookie-based check — the web flow's behavior is
+// completely unchanged when it doesn't.
+//
+// Two phases, tracked by which columns are set:
+//   1. "pending"  — issued by /mobile/start; provider hasn't verified yet.
+//   2. "issued"   — the provider callback verified the user and stashed
+//      `userId` + `exchangeCodeHash` + `codeExpiresAt`; POST
+//      /auth/mobile/exchange is the only consumer, and it's a short
+//      (60-120s) window by design — this is a handoff, not a session.
+// `consumedAt` makes the exchange one-time-use; enforced atomically via a
+// conditional UPDATE ... WHERE consumed_at IS NULL (see lib/mobile-oauth.ts),
+// the same pattern topups.ts and reauth.ts already use for single-use rows.
+export const mobileOauthTransactions = pgTable("mobile_oauth_transactions", {
+  id: serial("id").primaryKey(),
+  // SHA-256 of the `state` value round-tripped through the provider —
+  // this IS the CSRF/session-binding check (equivalent to the web flow's
+  // cookie-equals-query-param comparison), so the raw value is never
+  // stored.
+  stateHash: text("state_hash").notNull().unique(),
+  provider: text("provider").notNull(), // "facebook" | "tiktok"
+  // Validated once at /mobile/start against MOBILE_OAUTH_REDIRECT_URIS
+  // (exact-match allowlist, never re-validated from client input again) —
+  // reused verbatim for every subsequent redirect this transaction makes.
+  redirectUri: text("redirect_uri").notNull(),
+  mobileCodeChallenge: text("mobile_code_challenge").notNull(),
+  mobileCodeChallengeMethod: text("mobile_code_challenge_method").notNull().default("S256"),
+  // TikTok's OWN PKCE verifier for its provider-side code exchange
+  // (equivalent to the tt_oauth_verifier cookie the web flow uses) — a
+  // system browser tab started fresh by the app can't carry that cookie
+  // back to a different backend instance, so it lives here instead.
+  // Unused for Facebook (no provider-side PKCE in this app's flow).
+  providerCodeVerifier: text("provider_code_verifier"),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  isNewUser: boolean("is_new_user").notNull().default(false),
+  exchangeCodeHash: text("exchange_code_hash").unique(),
+  codeExpiresAt: timestamp("code_expires_at"),
+  consumedAt: timestamp("consumed_at"),
+  expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

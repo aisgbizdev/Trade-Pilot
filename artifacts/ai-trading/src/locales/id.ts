@@ -191,6 +191,7 @@ export const id: Translations = {
     tiktok_signup_expired_title: "Sesi Pendaftaran Berakhir",
     tiktok_signup_expired_desc: "Sesi pendaftaran TikTok kamu sudah kedaluwarsa. Silakan coba login TikTok lagi.",
     tiktok_back_to_login: "Kembali ke Login",
+    tiktok_back_to_app: "Kembali ke Aplikasi",
     tiktok_email_invalid: "Masukkan email yang valid",
     tiktok_email_taken: "Email ini sudah terdaftar. Coba login dengan email/password atau metode lain.",
     tiktok_signup_failed: "Gagal menyelesaikan pendaftaran",

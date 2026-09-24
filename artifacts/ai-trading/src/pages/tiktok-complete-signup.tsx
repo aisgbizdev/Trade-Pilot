@@ -27,11 +27,26 @@ import { BrandLogo } from "@/components/brand-logo";
 // in a short-lived httpOnly cookie this page never reads directly; it
 // only asks the server for a friendly display name via
 // GET /api/auth/tiktok/pending-signup and then submits the email here.
+// Fixed, safe deep link used only for the "session expired" case reached
+// from the mobile OAuth flow — see the `?mobile=1` handling below. Every
+// OTHER mobile redirect (success code, or an error discovered while a
+// pending-signup row still exists) uses the real mobileRedirectUrl the
+// backend returns, built from that flow's own already-allowlisted
+// redirect_uri; this one is a last resort for when the row itself is gone
+// and the backend has nothing left to redirect to.
+const MOBILE_SIGNUP_EXPIRED_DEEP_LINK = "id.tradepilot.app://auth/callback?error=signup_expired";
+
 export default function TiktokCompleteSignupPage() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Set by the backend's mobile OAuth callback when it redirects here
+  // (GET /auth/tiktok/callback -> .../complete-signup?mobile=1) for a
+  // brand-new TikTok sign-in reached via the Flutter app instead of the
+  // website — see lib/mobile-oauth.ts.
+  const isMobileFlow = new URLSearchParams(window.location.search).get("mobile") === "1";
 
   const pending = useGetTiktokPendingSignup({
     query: { queryKey: getGetTiktokPendingSignupQueryKey(), retry: false },
@@ -65,11 +80,22 @@ export default function TiktokCompleteSignupPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await completeSignup.mutateAsync({ data: { email: values.email } });
+      const result = await completeSignup.mutateAsync({ data: { email: values.email } });
+      // Mobile OAuth flow: no session was created (see routes/auth.ts) —
+      // hand the browser back to the app with its one-time exchange code
+      // instead of landing on the web dashboard.
+      if (result.mobileRedirectUrl) {
+        window.location.href = result.mobileRedirectUrl;
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       setLocation("/dashboard");
     } catch (err: unknown) {
-      const apiErr = err as { status?: number; data?: { error?: string } };
+      const apiErr = err as { status?: number; data?: { error?: string; mobileRedirectUrl?: string } };
+      if (apiErr?.data?.mobileRedirectUrl) {
+        window.location.href = apiErr.data.mobileRedirectUrl;
+        return;
+      }
       toast({
         title: t.auth.tiktok_signup_failed,
         description:
@@ -110,14 +136,30 @@ export default function TiktokCompleteSignupPage() {
             {pendingExpired ? (
               <div className="text-center py-4 space-y-3" data-testid="text-tiktok-signup-expired">
                 <p className="text-sm text-muted-foreground">{t.auth.tiktok_signup_expired_desc}</p>
-                <button
-                  type="button"
-                  onClick={() => setLocation("/login")}
-                  className="text-sm text-primary font-semibold hover:underline"
-                  data-testid="link-back-to-login"
-                >
-                  {t.auth.tiktok_back_to_login}
-                </button>
+                {isMobileFlow ? (
+                  // The pending-signup row is gone, so the backend has no
+                  // mobile transaction to build a real redirect from (see
+                  // POST /auth/tiktok/complete-signup) — this fixed deep
+                  // link is the one case that isn't the flow's own
+                  // already-allowlisted redirect_uri, used only here as a
+                  // last resort so the user isn't stranded in the browser.
+                  <a
+                    href={MOBILE_SIGNUP_EXPIRED_DEEP_LINK}
+                    className="block text-sm text-primary font-semibold hover:underline"
+                    data-testid="link-back-to-app"
+                  >
+                    {t.auth.tiktok_back_to_app}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/login")}
+                    className="text-sm text-primary font-semibold hover:underline"
+                    data-testid="link-back-to-login"
+                  >
+                    {t.auth.tiktok_back_to_login}
+                  </button>
+                )}
               </div>
             ) : (
               <Form {...form}>

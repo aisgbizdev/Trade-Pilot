@@ -15,6 +15,7 @@ part 'auth_response.g.dart';
 /// * [user] 
 /// * [message] 
 /// * [token] - Session token for mobile Bearer auth. Only present when a new session was created (login or register).
+/// * [mobileRedirectUrl] - POST /auth/tiktok/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST /auth/mobile/exchange.
 @BuiltValue()
 abstract class AuthResponse implements Built<AuthResponse, AuthResponseBuilder> {
   @BuiltValueField(wireName: r'user')
@@ -26,6 +27,10 @@ abstract class AuthResponse implements Built<AuthResponse, AuthResponseBuilder> 
   /// Session token for mobile Bearer auth. Only present when a new session was created (login or register).
   @BuiltValueField(wireName: r'token')
   String? get token;
+
+  /// POST /auth/tiktok/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST /auth/mobile/exchange.
+  @BuiltValueField(wireName: r'mobileRedirectUrl')
+  String? get mobileRedirectUrl;
 
   AuthResponse._();
 
@@ -66,6 +71,13 @@ class _$AuthResponseSerializer implements PrimitiveSerializer<AuthResponse> {
       yield r'token';
       yield serializers.serialize(
         object.token,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.mobileRedirectUrl != null) {
+      yield r'mobileRedirectUrl';
+      yield serializers.serialize(
+        object.mobileRedirectUrl,
         specifiedType: const FullType(String),
       );
     }
@@ -114,6 +126,14 @@ class _$AuthResponseSerializer implements PrimitiveSerializer<AuthResponse> {
           ) as String?;
           if (valueDes == null) continue;
           result.token = valueDes;
+          break;
+        case r'mobileRedirectUrl':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.mobileRedirectUrl = valueDes;
           break;
         default:
           unhandled.add(key);

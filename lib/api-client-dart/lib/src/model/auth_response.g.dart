@@ -13,11 +13,15 @@ class _$AuthResponse extends AuthResponse {
   final String? message;
   @override
   final String? token;
+  @override
+  final String? mobileRedirectUrl;
 
   factory _$AuthResponse([void Function(AuthResponseBuilder)? updates]) =>
       (AuthResponseBuilder()..update(updates))._build();
 
-  _$AuthResponse._({required this.user, this.message, this.token}) : super._();
+  _$AuthResponse._(
+      {required this.user, this.message, this.token, this.mobileRedirectUrl})
+      : super._();
   @override
   AuthResponse rebuild(void Function(AuthResponseBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -31,7 +35,8 @@ class _$AuthResponse extends AuthResponse {
     return other is AuthResponse &&
         user == other.user &&
         message == other.message &&
-        token == other.token;
+        token == other.token &&
+        mobileRedirectUrl == other.mobileRedirectUrl;
   }
 
   @override
@@ -40,6 +45,7 @@ class _$AuthResponse extends AuthResponse {
     _$hash = $jc(_$hash, user.hashCode);
     _$hash = $jc(_$hash, message.hashCode);
     _$hash = $jc(_$hash, token.hashCode);
+    _$hash = $jc(_$hash, mobileRedirectUrl.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -49,7 +55,8 @@ class _$AuthResponse extends AuthResponse {
     return (newBuiltValueToStringHelper(r'AuthResponse')
           ..add('user', user)
           ..add('message', message)
-          ..add('token', token))
+          ..add('token', token)
+          ..add('mobileRedirectUrl', mobileRedirectUrl))
         .toString();
   }
 }
@@ -70,6 +77,11 @@ class AuthResponseBuilder
   String? get token => _$this._token;
   set token(String? token) => _$this._token = token;
 
+  String? _mobileRedirectUrl;
+  String? get mobileRedirectUrl => _$this._mobileRedirectUrl;
+  set mobileRedirectUrl(String? mobileRedirectUrl) =>
+      _$this._mobileRedirectUrl = mobileRedirectUrl;
+
   AuthResponseBuilder() {
     AuthResponse._defaults(this);
   }
@@ -80,6 +92,7 @@ class AuthResponseBuilder
       _user = $v.user.toBuilder();
       _message = $v.message;
       _token = $v.token;
+      _mobileRedirectUrl = $v.mobileRedirectUrl;
       _$v = null;
     }
     return this;
@@ -106,6 +119,7 @@ class AuthResponseBuilder
             user: user.build(),
             message: message,
             token: token,
+            mobileRedirectUrl: mobileRedirectUrl,
           );
     } catch (_) {
       late String _$failedField;

@@ -599,6 +599,12 @@ export const RegisterResponse = zod.object({
     .describe(
       "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
     ),
+  mobileRedirectUrl: zod
+    .string()
+    .optional()
+    .describe(
+      "POST \/auth\/tiktok\/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST \/auth\/mobile\/exchange.",
+    ),
 });
 
 /**
@@ -642,6 +648,12 @@ export const LoginResponse = zod.object({
     .optional()
     .describe(
       "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
+    ),
+  mobileRedirectUrl: zod
+    .string()
+    .optional()
+    .describe(
+      "POST \/auth\/tiktok\/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST \/auth\/mobile\/exchange.",
     ),
 });
 
@@ -690,6 +702,12 @@ export const LoginWithGoogleNativeResponse = zod.object({
     .optional()
     .describe(
       "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
+    ),
+  mobileRedirectUrl: zod
+    .string()
+    .optional()
+    .describe(
+      "POST \/auth\/tiktok\/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST \/auth\/mobile\/exchange.",
     ),
 });
 
@@ -812,6 +830,12 @@ export const LoginWithAppleNativeResponse = zod.object({
     .describe(
       "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
     ),
+  mobileRedirectUrl: zod
+    .string()
+    .optional()
+    .describe(
+      "POST \/auth\/tiktok\/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST \/auth\/mobile\/exchange.",
+    ),
 });
 
 /**
@@ -915,6 +939,131 @@ export const CompleteTiktokSignupResponse = zod.object({
     .optional()
     .describe(
       "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
+    ),
+  mobileRedirectUrl: zod
+    .string()
+    .optional()
+    .describe(
+      "POST \/auth\/tiktok\/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST \/auth\/mobile\/exchange.",
+    ),
+});
+
+/**
+ * For the Flutter app: open this URL in a system browser (Custom
+ * Tabs / ASWebAuthenticationSession). It validates `redirect_uri`
+ * against an exact allowlist (`MOBILE_OAUTH_REDIRECT_URIS`), creates
+ * a persistent (multi-instance-safe) transaction row, and 302s to
+ * Facebook's own consent screen — the provider-facing
+ * `redirect_uri` is still this backend's existing HTTPS
+ * `/auth/facebook/callback`, registered in the Meta app exactly as
+ * for the website flow. That callback tells this mobile transaction
+ * apart from an ordinary web login purely by the `state` value, so
+ * the website flow's behavior is completely unchanged.
+ * @summary Begin the mobile OAuth browser flow for Facebook login/registration
+ */
+export const StartFacebookMobileOauthQueryParams = zod.object({
+  redirect_uri: zod.coerce
+    .string()
+    .describe(
+      "Must exactly match one entry in MOBILE_OAUTH_REDIRECT_URIS. No prefix\/substring matching.",
+    ),
+  code_challenge: zod.coerce
+    .string()
+    .describe(
+      "Base64url(SHA-256(code_verifier)) — the mobile app's own PKCE challenge for the eventual \/auth\/mobile\/exchange call.",
+    ),
+  code_challenge_method: zod.enum(["S256"]),
+});
+
+export const StartFacebookMobileOauthResponse = zod.void();
+
+/**
+ * Same shape as GET /auth/facebook/mobile/start, for TikTok. A
+ * brand-new TikTok sign-in (no existing tiktok_id) still can't
+ * create the account directly — TikTok never returns an email — so
+ * the provider callback redirects the system browser to the
+ * existing web page `/auth/tiktok/complete-signup?mobile=1` to
+ * collect one first; only after that page succeeds does the browser
+ * get handed back to the app via the deep link with a one-time code.
+ * @summary Begin the mobile OAuth browser flow for TikTok login/registration
+ */
+export const StartTiktokMobileOauthQueryParams = zod.object({
+  redirect_uri: zod.coerce
+    .string()
+    .describe(
+      "Must exactly match one entry in MOBILE_OAUTH_REDIRECT_URIS. No prefix\/substring matching.",
+    ),
+  code_challenge: zod.coerce
+    .string()
+    .describe(
+      "Base64url(SHA-256(code_verifier)) — the mobile app's own PKCE challenge for the eventual \/auth\/mobile\/exchange call.",
+    ),
+  code_challenge_method: zod.enum(["S256"]),
+});
+
+export const StartTiktokMobileOauthResponse = zod.void();
+
+/**
+ * The last leg of the mobile OAuth browser flow: after the app is
+ * foregrounded via the `id.tradepilot.app://auth/callback?code=...`
+ * deep link, call this with that code and the PKCE `code_verifier`
+ * that produced the `code_challenge` originally sent to
+ * `/mobile/start`. On success this is the only point in the whole
+ * mobile flow where a TradePilot session is actually created
+ * (`createSingleSession` — signing in on the phone signs every other
+ * device out, same policy as every other login method) and the only
+ * response that ever contains a Bearer token; the deep-link URL
+ * itself never carries one. The code is single-use, expires 60-120
+ * seconds after being issued, and is consumed atomically.
+ * @summary Exchange a one-time mobile OAuth code (+ PKCE verifier) for a TradePilot session
+ */
+export const ExchangeMobileAuthCodeBody = zod.object({
+  code: zod
+    .string()
+    .describe(
+      "The opaque one-time code from the `code=` param of the id.tradepilot.app:\/\/auth\/callback deep link.",
+    ),
+  codeVerifier: zod
+    .string()
+    .describe(
+      "The PKCE code_verifier that produced the code_challenge originally sent to the mobile \/start endpoint.",
+    ),
+});
+
+export const ExchangeMobileAuthCodeResponse = zod.object({
+  user: zod.object({
+    id: zod.number().int(),
+    email: zod.string(),
+    displayName: zod.string(),
+    avatarUrl: zod
+      .string()
+      .nullish()
+      .describe(
+        "Object-storage path (e.g. `\/objects\/uploads\/uuid`) for the user's profile photo. Null if not set.",
+      ),
+    role: zod.enum(["user", "admin", "super_admin"]),
+    selectedMode: zod.enum(["beginner", "pro"]),
+    themePreference: zod.enum(["light", "dark"]),
+    onboardingCompleted: zod.boolean(),
+    hasPassword: zod
+      .boolean()
+      .describe(
+        "True when the account has a local password usable for login and for re-authentication. False for Google-only or Apple-only accounts (use POST \/auth\/reauth\/google or POST \/auth\/reauth\/apple for sensitive operations).",
+      ),
+    createdAt: zod.coerce.date(),
+  }),
+  message: zod.string().optional(),
+  token: zod
+    .string()
+    .optional()
+    .describe(
+      "Session token for mobile Bearer auth. Only present when a new session was created (login or register).",
+    ),
+  mobileRedirectUrl: zod
+    .string()
+    .optional()
+    .describe(
+      "POST \/auth\/tiktok\/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST \/auth\/mobile\/exchange.",
     ),
 });
 

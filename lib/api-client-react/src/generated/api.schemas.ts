@@ -512,6 +512,8 @@ export interface AuthResponse {
   message?: string;
   /** Session token for mobile Bearer auth. Only present when a new session was created (login or register). */
   token?: string;
+  /** POST /auth/tiktok/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST /auth/mobile/exchange. */
+  mobileRedirectUrl?: string;
 }
 
 export type RegisterBodySelectedMode =
@@ -712,6 +714,13 @@ export interface TiktokPendingSignupResponse {
 
 export interface TiktokCompleteSignupBody {
   email: string;
+}
+
+export interface MobileAuthExchangeBody {
+  /** The opaque one-time code from the `code=` param of the id.tradepilot.app://auth/callback deep link. */
+  code: string;
+  /** The PKCE code_verifier that produced the code_challenge originally sent to the mobile /start endpoint. */
+  codeVerifier: string;
 }
 
 export interface ChangeSecurityQuestionBody {
@@ -2460,6 +2469,44 @@ export type RecordGuardrailTelemetry201 = {
   ok: boolean;
   id: number;
 };
+
+export type StartFacebookMobileOauthParams = {
+  /**
+   * Must exactly match one entry in MOBILE_OAUTH_REDIRECT_URIS. No prefix/substring matching.
+   */
+  redirect_uri: string;
+  /**
+   * Base64url(SHA-256(code_verifier)) — the mobile app's own PKCE challenge for the eventual /auth/mobile/exchange call.
+   */
+  code_challenge: string;
+  code_challenge_method: StartFacebookMobileOauthCodeChallengeMethod;
+};
+
+export type StartFacebookMobileOauthCodeChallengeMethod =
+  (typeof StartFacebookMobileOauthCodeChallengeMethod)[keyof typeof StartFacebookMobileOauthCodeChallengeMethod];
+
+export const StartFacebookMobileOauthCodeChallengeMethod = {
+  S256: "S256",
+} as const;
+
+export type StartTiktokMobileOauthParams = {
+  /**
+   * Must exactly match one entry in MOBILE_OAUTH_REDIRECT_URIS. No prefix/substring matching.
+   */
+  redirect_uri: string;
+  /**
+   * Base64url(SHA-256(code_verifier)) — the mobile app's own PKCE challenge for the eventual /auth/mobile/exchange call.
+   */
+  code_challenge: string;
+  code_challenge_method: StartTiktokMobileOauthCodeChallengeMethod;
+};
+
+export type StartTiktokMobileOauthCodeChallengeMethod =
+  (typeof StartTiktokMobileOauthCodeChallengeMethod)[keyof typeof StartTiktokMobileOauthCodeChallengeMethod];
+
+export const StartTiktokMobileOauthCodeChallengeMethod = {
+  S256: "S256",
+} as const;
 
 export type ListJournalEntriesParams = {
   instrument?: string;

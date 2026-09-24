@@ -163,6 +163,28 @@ export const tiktokCompleteSignupLimiter = buildLimiter({
     "Terlalu banyak percobaan. Coba lagi dalam beberapa menit. / Too many attempts. Try again in a few minutes.",
 });
 
+// GET /auth/{facebook,tiktok}/mobile/start — per-IP; the caller isn't
+// authenticated (this is the very first hop of the mobile OAuth flow).
+export const mobileOauthStartLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak percobaan login. Coba lagi dalam beberapa menit. / Too many login attempts. Try again in a few minutes.",
+});
+
+// POST /auth/mobile/exchange — per-IP. Deliberately tighter than the start
+// limiter: a legitimate app calls this exactly once per sign-in, right
+// after the browser redirect completes, so a burst of attempts here is a
+// much stronger abuse signal than repeated /mobile/start hits.
+export const mobileOauthExchangeLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyFn: (req) => clientIp(req),
+  message:
+    "Terlalu banyak percobaan. Coba lagi dalam beberapa menit. / Too many attempts. Try again in a few minutes.",
+});
+
 // POST /auth/reauth/google and POST /auth/reauth/apple — per-user (mounted
 // after requireAuth). Tighter budget: a legit re-auth happens once right
 // before a sensitive action. Shared across both providers rather than

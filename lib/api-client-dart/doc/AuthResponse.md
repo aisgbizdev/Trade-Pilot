@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **user** | [**User**](User.md) |  | 
 **message** | **String** |  | [optional] 
 **token** | **String** | Session token for mobile Bearer auth. Only present when a new session was created (login or register). | [optional] 
+**mobileRedirectUrl** | **String** | POST /auth/tiktok/complete-signup only, and only when that signup originated from the mobile OAuth browser flow: the deep link (with a one-time exchange code, or an error code) to hand the browser back to the app. When present, no session is created yet and `token` is absent — the app must still call POST /auth/mobile/exchange. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 
