@@ -1187,6 +1187,7 @@ export const en = {
     adaptive_chart_candidates_ready: "Current chart candidates found: {buy} for Buy and {sell} for Sell. Only candidates aligned with the selected scenario and all hard limits can be included.",
     adaptive_chart_candidates_unavailable: "A fresh candle snapshot is needed before making a new Adaptive recommendation. Saved Standard Plan levels remain unchanged.",
     adaptive_refresh_candles: "Retry candle feed",
+    adaptive_refresh_rules: "Retry trading rules",
     adaptive_analysis_expired: "This saved analysis has expired. Run a new analysis before making an Adaptive recommendation.",
     adaptive_candle_bar_missing: "The selected timeframe has no valid bar timestamp.",
     adaptive_candle_bar_old: "The latest bar is too old for the selected timeframe (the market may be closed).",

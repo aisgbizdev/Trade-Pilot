@@ -2,7 +2,8 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../live-prices.js", () => ({ getLivePriceFor: vi.fn(async () => null) }));
 import { getLivePriceFor } from "../live-prices.js";
-import { clearIndicatorsCache, getCandleSnapshot, getCandles, YAHOO_RETRY_CONFIG } from "../historical.js";
+import { clearIndicatorsCache, getCandleSnapshot, getCandles, getIndicators, YAHOO_RETRY_CONFIG } from "../historical.js";
+import { checkAdaptiveReadiness } from "../adaptive-readiness.js";
 
 function yahoo(barTime: number): Response {
   return new Response(JSON.stringify({
@@ -78,5 +79,57 @@ describe("candle source snapshot", () => {
       chart: { result: [], error: null },
     }), { status: 200 }));
     expect(await getCandles("BTC/USD", "1h")).toEqual([]);
+  });
+
+  it("coalesces concurrent candle and indicator requests to one upstream fetch", async () => {
+    let resolveFetch!: (response: Response) => void;
+    fetchSpy.mockImplementation(() => new Promise<Response>((resolve) => { resolveFetch = resolve; }));
+    const first = getCandleSnapshot("EUR/USD", "1h");
+    const second = getCandleSnapshot("EUR/USD", "1h");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    resolveFetch(yahoo(now - 60_000));
+    expect(await second).toEqual(await first);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses the preflight candle source for indicator context without another upstream call", async () => {
+    fetchSpy.mockResolvedValue(yahoo(now - 60_000));
+    expect(await checkAdaptiveReadiness("XAU/USD", "1h")).toBe("ready");
+    await getIndicators("XAU/USD", "1h");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not pass a fresh retrieval of market-closed bars as ready", async () => {
+    fetchSpy.mockResolvedValue(yahoo(now - 13 * 3_600_000));
+    expect(await checkAdaptiveReadiness("XAU/USD", "1h")).toBe("bar_old");
+  });
+
+  it("limits retries during a failed feed but recovers without relabelling stale candles", async () => {
+    fetchSpy.mockResolvedValueOnce(yahoo(now - 60_000))
+      .mockResolvedValueOnce(new Response("down", { status: 404 }))
+      .mockResolvedValueOnce(yahoo(now + 6 * 60_000));
+    await getCandleSnapshot("EUR/USD", "1h");
+    vi.mocked(Date.now).mockReturnValue(now + 6 * 60_000);
+    expect((await getCandleSnapshot("EUR/USD", "1h"))?.isStale).toBe(true);
+    expect((await getCandleSnapshot("EUR/USD", "1h"))?.isStale).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    vi.mocked(Date.now).mockReturnValue(now + 6 * 60_000 + 3_001);
+    const recovered = await getCandleSnapshot("EUR/USD", "1h");
+    expect(recovered?.isStale).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("limits a full outage to one fetch per cooldown even with concurrent callers", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("down", { status: 404 }))
+      .mockResolvedValueOnce(yahoo(now - 60_000));
+    const results = await Promise.allSettled(Array.from({ length: 8 },
+      () => getCandleSnapshot("XAU/USD", "1h")));
+    expect(results.every((result) => result.status === "rejected")).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    await expect(getCandleSnapshot("XAU/USD", "1h")).rejects.toThrow();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    vi.mocked(Date.now).mockReturnValue(now + 3_001);
+    expect((await getCandleSnapshot("XAU/USD", "1h"))?.isStale).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

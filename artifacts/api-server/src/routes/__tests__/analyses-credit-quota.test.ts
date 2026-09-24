@@ -34,6 +34,11 @@ vi.mock("../../lib/webpush", async () => {
   return { ...actual, sendPushToUser: vi.fn(async () => 0) };
 });
 
+vi.mock("../../lib/adaptive-readiness", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/adaptive-readiness")>("../../lib/adaptive-readiness");
+  return { ...actual, checkAdaptiveReadiness: vi.fn(async () => "ready" as const) };
+});
+
 const request = (await import("supertest")).default;
 const app = (await import("../../app")).default;
 const { db } = await import("../../lib/db");
@@ -41,6 +46,8 @@ const { users, sessions, analyses, notifications, creditBalances, creditLedger }
   "@workspace/db/schema"
 );
 const { applyCreditLedgerEntry } = await import("../../lib/credits");
+const { checkAdaptiveReadiness } = await import("../../lib/adaptive-readiness");
+const { generateAnalysis } = await import("../../lib/openai");
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `analyses-credit-test-${RUN_ID}`;
@@ -110,6 +117,44 @@ afterAll(async () => {
 });
 
 describe("POST /analyses credit fallback", () => {
+  it("rejects an unavailable Adaptive feed before any AI cost or credit spend", async () => {
+    const user = await createZeroQuotaUser();
+    await seedCredits(user.id, 2);
+    vi.mocked(checkAdaptiveReadiness).mockResolvedValueOnce("feed_unavailable");
+    const aiCallsBefore = vi.mocked(generateAnalysis).mock.calls.length;
+
+    const res = await request(app)
+      .post("/api/analyses")
+      .set("Authorization", `Bearer ${user.token}`)
+      .send({ instrument: "XAU/USD", timeframe: "1h", mode: "beginner" });
+
+    expect(res.status).toBe(503);
+    expect(res.body.error).toMatch(/tidak ada kredit dipotong/i);
+    expect(vi.mocked(generateAnalysis).mock.calls.length).toBe(aiCallsBefore);
+    const [balance] = await db.select().from(creditBalances).where(eq(creditBalances.userId, user.id));
+    expect(balance?.balance).toBe(2);
+    expect(await db.select().from(analyses).where(eq(analyses.userId, user.id))).toHaveLength(0);
+    expect(await db.select().from(creditLedger).where(eq(creditLedger.userId, user.id))).toHaveLength(1);
+  });
+
+  it("charges once when Adaptive inputs are ready, without repeating the preflight on a saved result", async () => {
+    const user = await createZeroQuotaUser();
+    await seedCredits(user.id, 2);
+    const aiCallsBefore = vi.mocked(generateAnalysis).mock.calls.length;
+    const res = await request(app)
+      .post("/api/analyses")
+      .set("Authorization", `Bearer ${user.token}`)
+      .send({ instrument: "XAU/USD", timeframe: "1h", mode: "beginner" });
+    expect(res.status).toBe(201);
+    expect(res.body.creditConsumed).toBe(true);
+    expect(res.body.creditBalance).toBe(1);
+    expect(vi.mocked(generateAnalysis).mock.calls.length).toBe(aiCallsBefore + 1);
+    const saved = await request(app).get(`/api/analyses/${res.body.id}`)
+      .set("Authorization", `Bearer ${user.token}`);
+    expect(saved.status).toBe(200);
+    expect(vi.mocked(generateAnalysis).mock.calls.length).toBe(aiCallsBefore + 1);
+  });
+
   it("still 429s exactly as before when the user has zero credits", async () => {
     const user = await createZeroQuotaUser();
     const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;

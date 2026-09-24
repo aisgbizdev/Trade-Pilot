@@ -1189,6 +1189,7 @@ export const id: Translations = {
     adaptive_chart_candidates_ready: "Kandidat chart terkini: {buy} untuk Buy dan {sell} untuk Sell. Hanya kandidat yang searah skenario pilihan dan lolos semua batas keras yang dapat dipakai.",
     adaptive_chart_candidates_unavailable: "Snapshot candle baru diperlukan sebelum membuat rekomendasi Adaptive. Level Standard Plan tersimpan tidak diubah.",
     adaptive_refresh_candles: "Coba lagi feed candle",
+    adaptive_refresh_rules: "Coba lagi aturan trading",
     adaptive_analysis_expired: "Analisis tersimpan sudah kedaluwarsa. Jalankan analisis baru sebelum membuat rekomendasi Adaptive.",
     adaptive_candle_bar_missing: "Waktu bar pada timeframe pilihan tidak valid atau tidak tersedia.",
     adaptive_candle_bar_old: "Bar terakhir terlalu lama untuk timeframe pilihan (pasar mungkin sedang tutup).",

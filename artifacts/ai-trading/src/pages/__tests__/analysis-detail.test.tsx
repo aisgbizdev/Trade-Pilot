@@ -836,6 +836,32 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(margin).toHaveValue(20000);
   });
 
+  it("automatically retries a temporary Adaptive outage once on the same saved analysis", async () => {
+    let candleRequests = 0;
+    const candles: FetchHandler = (url) => {
+      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
+      candleRequests++;
+      return candleRequests === 1
+        ? jsonResponse({ error: "feed unavailable" }, 502)
+        : jsonResponse(candleSnapshot());
+    };
+    const { calls } = installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      feedbackHandler(), candles, standardRulesHandler(),
+    ]);
+    const timers = vi.spyOn(window, "setTimeout");
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    await screen.findByTestId("adaptive-candle-warning");
+    const retry = timers.mock.calls.find(([callback, delay]) =>
+      typeof callback === "function" && callback.name === "requestFreshCandles" && delay === 4_000);
+    expect(retry).toBeDefined();
+    act(() => { (retry![0] as () => void)(); });
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    expect(candleRequests).toBe(2);
+    expect(calls.filter((call) => (call.init?.method ?? "GET") === "POST" && /\/api\/analyses(?:\?|$)/.test(call.url))).toHaveLength(0);
+  });
+
   it("ignores a late candle response after switching instrument and timeframe", async () => {
     let finishOld: ((response: Response) => void) | undefined;
     const candles: FetchHandler = (url) => {
@@ -1151,7 +1177,28 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     await screen.findByTestId("adaptive-plan-rules-unavailable", {}, { timeout: 5_000 });
     expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
+    expect(screen.getByTestId("button-refresh-adaptive-rules")).toBeEnabled();
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
+  });
+
+  it("recovers unavailable trading rules without starting a new paid analysis", async () => {
+    let rulesRequests = 0;
+    const rules: FetchHandler = (url) => {
+      if (!url.includes("/api/trading-rules/standard")) return null;
+      rulesRequests++;
+      return jsonResponse(rulesRequests === 1 ? { error: "rules unavailable" } : STANDARD_RULES_PAYLOAD,
+        rulesRequests === 1 ? 503 : 200);
+    };
+    const { calls } = installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      rules, standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.click(await screen.findByTestId("button-refresh-adaptive-rules"));
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    expect(rulesRequests).toBe(2);
+    expect(calls.filter((call) => (call.init?.method ?? "GET") === "POST" && /\/api\/analyses(?:\?|$)/.test(call.url))).toHaveLength(0);
   });
 
   it("keeps the full analysis available while hiding position calculations for other products", async () => {

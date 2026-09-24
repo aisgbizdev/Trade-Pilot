@@ -138,6 +138,9 @@ export function clearIndicatorsCache(): void {
   indicatorsCache.clear();
   dailyCache = null;
   candlesCache.clear();
+  candleRequests.clear();
+  yahooRequests.clear();
+  candleFailureUntil.clear();
 }
 
 // Aggregate daily candles into ISO-week (Mon–Sun) candles. Each weekly bar uses
@@ -321,7 +324,7 @@ export const YAHOO_RETRY_CONFIG = {
   backoffMs: 500,
 };
 
-async function fetchYahooCandles(
+async function fetchYahooCandlesUnshared(
   yahooSymbol: string,
   interval: string,
   range: string,
@@ -347,6 +350,20 @@ async function fetchYahooCandles(
   throw lastErr instanceof Error
     ? lastErr
     : new Error(`Yahoo Finance fetch failed for ${yahooSymbol}`);
+}
+
+const yahooRequests = new Map<string, Promise<Candle[]>>();
+function fetchYahooCandles(yahooSymbol: string, interval: string, range: string): Promise<Candle[]> {
+  const key = `${yahooSymbol}|${interval}|${range}`;
+  const existing = yahooRequests.get(key);
+  if (existing) return existing;
+  const request = fetchYahooCandlesUnshared(yahooSymbol, interval, range);
+  yahooRequests.set(key, request);
+  void request.then(
+    () => { if (yahooRequests.get(key) === request) yahooRequests.delete(key); },
+    () => { if (yahooRequests.get(key) === request) yahooRequests.delete(key); },
+  );
+  return request;
 }
 
 async function getIntradayCandles(
@@ -503,7 +520,13 @@ export async function getIndicators(
     }
     let candles: Candle[] | null;
     try {
-      candles = await getIntradayCandles(instrument, timeframe);
+      const source = candlesCache.get(cacheKey);
+      if (source && Date.now() - source.sourceFetchedAt < ttl) {
+        candles = source.candles;
+      } else {
+        candles = await getIntradayCandles(instrument, timeframe);
+        if (candles?.length) candlesCache.set(cacheKey, { candles, sourceFetchedAt: Date.now() });
+      }
     } catch (err) {
       console.warn(
         `[historical] intraday fetch failed for ${instrument} ${timeframe}; using stale cache if available`,
@@ -567,6 +590,9 @@ class EmptyCandleFeedError extends Error {}
 
 type CachedCandles = { candles: Candle[]; sourceFetchedAt: number };
 const candlesCache = new Map<string, CachedCandles>();
+const candleRequests = new Map<string, Promise<CandleSnapshot | null>>();
+const candleFailureUntil = new Map<string, number>();
+const CANDLE_FAILURE_COOLDOWN_MS = 3_000;
 
 // The daily feed is shared for one hour. Its age limit must reflect that
 // upstream cache, not the shorter indicators computation cache.
@@ -595,7 +621,7 @@ async function candleSnapshot(
 // The timestamp records a successful upstream retrieval, never a cache read
 // or the separate live-price anchor. On failure a bounded cached snapshot can
 // still be displayed, but it is explicitly marked stale for Adaptive.
-export async function getCandleSnapshot(
+async function loadCandleSnapshot(
   instrument: string,
   timeframe: IndicatorTimeframe,
 ): Promise<CandleSnapshot | null> {
@@ -604,6 +630,10 @@ export async function getCandleSnapshot(
   const maxAge = candleSourceMaxAge(timeframe);
   if (cached && Date.now() - cached.sourceFetchedAt < maxAge) {
     return candleSnapshot(cached, maxAge, false, instrument);
+  }
+  if ((candleFailureUntil.get(key) ?? 0) > Date.now()) {
+    if (cached) return candleSnapshot(cached, maxAge, true, instrument);
+    throw new Error("Candle source temporarily unavailable");
   }
   try {
     const result = isIntradayTimeframe(timeframe)
@@ -615,13 +645,31 @@ export async function getCandleSnapshot(
     // request while the OHLC source timestamp stays fixed until its next fetch.
     const next = { candles: result.candles, sourceFetchedAt: result.sourceFetchedAt };
     candlesCache.set(key, next);
+    candleFailureUntil.delete(key);
     return candleSnapshot(next, maxAge, false, instrument);
   } catch (err) {
+    candleFailureUntil.set(key, Date.now() + CANDLE_FAILURE_COOLDOWN_MS);
     if (cached && Date.now() - cached.sourceFetchedAt < maxAge * STALE_FALLBACK_MULTIPLIER) {
       return candleSnapshot(cached, maxAge, true, instrument);
     }
     throw err;
   }
+}
+
+export function getCandleSnapshot(
+  instrument: string,
+  timeframe: IndicatorTimeframe,
+): Promise<CandleSnapshot | null> {
+  const key = indicatorsCacheKey(instrument, timeframe);
+  const existing = candleRequests.get(key);
+  if (existing) return existing;
+  const request = loadCandleSnapshot(instrument, timeframe);
+  candleRequests.set(key, request);
+  void request.then(
+    () => { if (candleRequests.get(key) === request) candleRequests.delete(key); },
+    () => { if (candleRequests.get(key) === request) candleRequests.delete(key); },
+  );
+  return request;
 }
 
 // Retain the existing array API for chart and internal consumers.

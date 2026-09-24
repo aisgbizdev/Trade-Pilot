@@ -19,6 +19,7 @@ import {
 } from "@workspace/instrument-taxonomy";
 import { estimateCostUsd } from "../lib/model-pricing";
 import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
+import { checkAdaptiveReadiness, offersAdaptive } from "../lib/adaptive-readiness";
 import { getLivePriceFor } from "../lib/live-prices";
 import {
   getRelevantNews,
@@ -595,6 +596,22 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const typedMode = mode as "beginner" | "pro";
   const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
+
+  // A paid analysis must not spend OpenAI tokens if its advertised Adaptive
+  // inputs are already unavailable. This uses the same cached candle source as
+  // the detail view; it never generates another AI analysis on retry.
+  if (offersAdaptive(instrument)) {
+    const readiness = isSupportedIndicatorTimeframe(timeframe)
+      ? await checkAdaptiveReadiness(instrument, timeframe)
+      : "feed_unavailable";
+    if (readiness !== "ready") {
+      logger.warn({ instrument, timeframe, reason: readiness }, "[analyses] Adaptive preflight unavailable");
+      res.status(503).set("Retry-After", "5").json({
+        error: "Data Adaptive belum siap. Coba lagi sebentar; analisis belum dibuat dan tidak ada kredit dipotong.",
+      });
+      return;
+    }
+  }
 
   // External context fetches are pure HTTP — do them outside any transaction.
   // Indicators only support daily/weekly today; skip them for intraday timeframes

@@ -27,3 +27,4 @@
 - [Expo tab-bar inset modes](expo-tab-bar-insets.md) — reserve full bottom clearance for absolute classic tabs, but not for iOS NativeTabs, which applies system content insets.
 - [Adaptive candle freshness](adaptive-candle-freshness.md) — a candle's latest bar time is not fetch time; fail closed when too old until the API exposes source freshness.
 - [Managed workflow port collisions](managed-workflow-port-collisions.md) — a surviving shell-launched server can occupy an artifact's managed port; identify its process group before stopping it.
+- [Adaptive availability without added cost](adaptive-availability-policy.md) — recover on the saved analysis using existing fresh feeds; fail closed rather than buying uptime or replaying AI.

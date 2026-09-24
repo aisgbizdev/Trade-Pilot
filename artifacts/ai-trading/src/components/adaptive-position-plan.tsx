@@ -638,6 +638,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const chartScope = `${analysisId}:${instrument}:${context.timeframe ?? ""}`;
   const copyResetTimerRef = useRef<number | null>(null);
   const restoredStateKeyRef = useRef<string | null>(null);
+  const autoRetryRef = useRef({ scope: "", attempted: false });
   useEffect(() => {
     restoredStateKeyRef.current = null;
     setForm(DEFAULT_FORM);
@@ -687,7 +688,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     });
     setReloadToken((previous) => previous + 1);
   };
-  const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError } = useGetStandardTradingRules({
+  const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError, refetch: refetchRules } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
   const standardRuleCode = getAdaptiveStandardRuleCode(instrument);
@@ -770,6 +771,23 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     const timer = window.setTimeout(requestFreshCandles, Math.min(expiresAt - Date.now(), 2_147_483_647));
     return () => window.clearTimeout(timer);
   }, [analysisId, chartCandidateState, context.timeframe, context.validUntil, instrument, isAnalysisExpired]);
+  useEffect(() => {
+    if (autoRetryRef.current.scope !== chartScope) {
+      autoRetryRef.current = { scope: chartScope, attempted: false };
+    }
+    if (chartCandidateState.scope !== chartScope || isAnalysisExpired) return;
+    if (chartCandidateState.status === "ready") {
+      autoRetryRef.current.attempted = false;
+      return;
+    }
+    if (chartCandidateState.status !== "error" || !chartCandidateState.reason ||
+        autoRetryRef.current.attempted || !rulesAvailable) return;
+    autoRetryRef.current.attempted = true;
+    // One bounded retry per failure episode. A persistent outage stays visible
+    // with a manual retry instead of repeatedly polling the upstream feed.
+    const timer = window.setTimeout(requestFreshCandles, 4_000);
+    return () => window.clearTimeout(timer);
+  }, [chartCandidateState.status, chartCandidateState.reason, chartCandidateState.scope, chartScope, isAnalysisExpired, rulesAvailable]);
   const marginCapacity = getAdaptiveMarginCapacity(availableMargin, selectedRule);
   const fingerprint = createAdaptivePlanFingerprint({
     instrument,
@@ -1075,6 +1093,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || isAnalysisExpired || chartCandidateState.status !== "ready" || chartCandidateState.scope !== chartScope} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
+          {!isAnalysisExpired && rulesUnavailable && (
+            <Button type="button" size="sm" variant="outline" onClick={() => void refetchRules()} data-testid="button-refresh-adaptive-rules">{copy.adaptive_refresh_rules}</Button>
+          )}
           {!isAnalysisExpired && chartCandidateState.status === "error" && (
             <Button type="button" size="sm" variant="outline" onClick={requestFreshCandles} disabled={!rulesAvailable || chartCandidateState.scope !== chartScope} data-testid="button-refresh-adaptive-candles">{copy.adaptive_refresh_candles}</Button>
           )}
