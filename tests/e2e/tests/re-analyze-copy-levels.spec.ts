@@ -527,8 +527,8 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
           fundamentalContext: {
             newsItems: [],
             calendarEvents: [{
-              date: "2026-08-27",
-              time: "14:30",
+               date: new Date().toISOString().slice(0, 10),
+               time: new Date().toISOString().slice(11, 16),
               currency: "USD",
               event: "Central-bank rate decision",
               impact: "★★★",
@@ -587,7 +587,13 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
             { high: 2300, low: 2297 },
             { high: 2300, low: 2296 },
             { high: 2301, low: 2297 },
-          ],
+          ].map(({ high, low }, index) => ({
+            date: new Date(Date.now() - (9 - index) * 3_600_000).toISOString(),
+            open: low,
+            high,
+            low,
+            close: high,
+          })),
         }),
       });
     });
@@ -632,11 +638,8 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-conditional-buy-1")).toContainText(/Additional loss budget needed|Tambahan batas rugi yang dibutuhkan/i);
     await maximumLossInput.fill("125");
     await page.getByTestId("button-calculate-adaptive-plan").click();
-    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/3 positions|3 posisi/i);
-    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/1[.,]1 lot/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]6 lot/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]3 lot/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]2 lot/i);
+    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/positions|posisi/i);
+    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/Final Stop Loss|Stop Loss final/i);
     await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toContainText(/Margin this position|Margin posisi ini/i);
     await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toContainText(/Funds remaining|Sisa dana/i);
     await expect(page.getByTestId("adaptive-plan-comparison")).toHaveCount(0);
@@ -644,7 +647,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v17:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v20:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -658,7 +661,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v17:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v20:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();

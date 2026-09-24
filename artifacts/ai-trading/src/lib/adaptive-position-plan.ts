@@ -37,6 +37,7 @@ export type AdaptivePlanReasonCode =
 
 export interface AdaptiveAnalysisContext {
   timeframe?: string | null;
+  validUntil?: string | Date | null;
   marketCondition?: string | null;
   riskLevel?: string | null;
   tradingBias?: string | null;
@@ -50,6 +51,7 @@ export interface AdaptiveAnalysisContext {
 
 export interface AdaptivePlanContext {
   timeframe: string | null;
+  validUntil: string | null;
   marketCondition: string | null;
   riskLevel: string | null;
   tradingBias: string | null;
@@ -61,8 +63,34 @@ export interface AdaptivePlanContext {
     newsCount: number;
     eventCount: number;
     highImpactCount: number;
+    upcomingHighImpactCount: number;
   };
 }
+
+export interface AdaptiveVolatilityDiagnostic {
+  status: "unavailable" | "observed" | "tight_stop";
+  timeframe: string | null;
+  candleCount: number;
+  observedRange: number | null;
+  buyStopDistance: number | null;
+  sellStopDistance: number | null;
+  buyStopLooksTight: boolean | null;
+  sellStopLooksTight: boolean | null;
+}
+
+export type AdaptiveCandleAlternative =
+  | {
+      status: "available";
+      side: "buy" | "sell";
+      entry: number;
+      stopLoss: number;
+      takeProfit: number;
+      riskReward: number;
+      lot: number;
+      estimatedLoss: number;
+      dayMargin: number;
+    }
+  | { status: "needs_reanalysis"; reason: string };
 
 export interface AdaptivePlanDecision {
   posture: AdaptivePlanPosture;
@@ -105,8 +133,11 @@ export interface AdaptivePositionPlanInput {
 }
 
 export interface AdaptiveChartCandle {
+  date?: string;
+  open?: number;
   high: number;
   low: number;
+  close?: number;
 }
 
 export interface AdaptiveLadderLevel {
@@ -185,7 +216,11 @@ export interface AdaptivePlanRecommendation {
   } | null;
   context: AdaptivePlanContext;
   decision: AdaptivePlanDecision;
+  volatilityDiagnostic: AdaptiveVolatilityDiagnostic;
+  candleAlternative: AdaptiveCandleAlternative;
 }
+
+const MAX_ADDITIONAL_LAYERS = 6;
 
 const ADAPTIVE_LOT_PROFILE_FACTORS: Record<AdaptiveLotProfile, readonly number[]> = {
   decreasing: [0.75, 0.5],
@@ -296,7 +331,7 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
   },
   regular: {
     minimumLot: 1,
-    maximumLot: 50,
+    maximumLot: null,
     lotStep: 1,
     marginMultiplierFromMini: 10,
     contractMultiplierFromMini: 10,
@@ -494,8 +529,30 @@ function normalizeContext(input?: AdaptiveAnalysisContext): AdaptivePlanContext 
   const technicalValues = [input?.techBuyCount, input?.techSellCount, input?.techNeutralCount];
   const hasTechnical = technicalValues.every((value) => value != null && Number.isFinite(value) && value >= 0);
   const fundamentalContext = input?.fundamentalContext;
+  const calendarEvents = fundamentalContext?.calendarEvents ?? [];
+  const now = Date.now();
+  const validUntilDate = input?.validUntil == null ? null : new Date(input.validUntil);
+  const upcomingHighImpactCount = calendarEvents.filter((event) => {
+    const candidate = event as typeof event & {
+      epochMs?: number | null;
+      date?: string | null;
+      time?: string | null;
+    };
+    if (candidate.impact !== "★★★") return false;
+    const eventTime = Number.isFinite(candidate.epochMs)
+      ? candidate.epochMs!
+      : typeof candidate.date === "string" && typeof candidate.time === "string"
+        ? Date.parse(`${candidate.date}T${candidate.time}:00Z`)
+        : Number.NaN;
+    return Number.isFinite(eventTime) &&
+      eventTime >= now - 2 * 60 * 60 * 1000 &&
+      eventTime <= now + 24 * 60 * 60 * 1000;
+  }).length;
   return {
     timeframe: input?.timeframe ?? null,
+    validUntil: validUntilDate && Number.isFinite(validUntilDate.getTime())
+      ? validUntilDate.toISOString()
+      : null,
     marketCondition: input?.marketCondition ?? null,
     riskLevel: input?.riskLevel ?? null,
     tradingBias: normalizeBias(input?.tradingBias),
@@ -507,13 +564,16 @@ function normalizeContext(input?: AdaptiveAnalysisContext): AdaptivePlanContext 
     fundamental: {
       available: fundamentalContext != null,
       newsCount: fundamentalContext?.newsItems?.length ?? 0,
-      eventCount: fundamentalContext?.calendarEvents?.length ?? 0,
-      highImpactCount: fundamentalContext?.calendarEvents?.filter((event) => event.impact === "★★★").length ?? 0,
+      eventCount: calendarEvents.length,
+      highImpactCount: upcomingHighImpactCount,
+      upcomingHighImpactCount,
     },
   };
 }
 
 function hasCompleteContext(context: AdaptivePlanContext): boolean {
+  const hasSupportedTimeframe = context.timeframe != null &&
+    SUPPORTED_ADAPTIVE_TIMEFRAMES.has(context.timeframe.toLowerCase());
   const hasValidMarketCondition = ["trending_up", "trending_down", "ranging", "volatile"].includes(context.marketCondition ?? "");
   const hasValidRiskLevel = ["low", "medium", "high"].includes(context.riskLevel ?? "");
   const hasValidConfidence = Number.isFinite(context.confidenceMin) &&
@@ -521,14 +581,17 @@ function hasCompleteContext(context: AdaptivePlanContext): boolean {
     context.confidenceMin! >= 0 &&
     context.confidenceMax! <= 100 &&
     context.confidenceMin! <= context.confidenceMax!;
+  const validUntilMs = context.validUntil == null ? Number.NaN : Date.parse(context.validUntil);
+  const isFresh = Number.isFinite(validUntilMs) && validUntilMs > Date.now();
   return Boolean(
-    context.timeframe &&
+    hasSupportedTimeframe &&
       hasValidMarketCondition &&
       hasValidRiskLevel &&
       context.tradingBias &&
       hasValidConfidence &&
       context.technical &&
-      context.fundamental.available,
+      context.fundamental.available &&
+      isFresh,
   );
 }
 
@@ -536,14 +599,14 @@ function timeframeIsShort(timeframe: string | null): boolean {
   return timeframe != null && ["1m", "5m", "15m"].includes(timeframe.toLowerCase());
 }
 
+const SUPPORTED_ADAPTIVE_TIMEFRAMES = new Set(["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"]);
+
 export function getAdaptiveChartCandidatePrices(
   candles: AdaptiveChartCandle[],
   tradePlan: TradePlan,
   minMovement: number,
 ): { buy: number[]; sell: number[] } {
-  const recent = candles
-    .filter((candle) => Number.isFinite(candle.high) && Number.isFinite(candle.low) && candle.high >= candle.low)
-    .slice(-160);
+  const recent = validCandles(candles);
   const candidates: { buy: number[]; sell: number[] } = { buy: [], sell: [] };
   if (recent.length < 5 || !Number.isFinite(minMovement) || minMovement <= 0) return candidates;
 
@@ -628,17 +691,30 @@ function sidePlan(
     return move > 0 ? move * rule.contractSize * lot : null;
   };
   const checkpointProgress: Array<{ progress: number; basis: AdaptiveLayerBasis }> = [];
+  const minimumSeparation = Math.max(rule.minMovement * 2, distance * 0.025);
+  const priceAtProgress = (progress: number) =>
+    roundPrice(side === "buy" ? entry - distance * progress : entry + distance * progress, rule.minMovement);
   const adverseEdge = entryRange == null
     ? entry
     : roundPrice(side === "buy" ? entryRange.low : entryRange.high, rule.minMovement);
   const edgeProgress = Math.abs(entry - adverseEdge) / distance;
-  if (adverseEdge !== entry && adverseEdge !== stopLoss && edgeProgress > 0 && edgeProgress < 1) {
+  if (
+    adverseEdge !== entry &&
+    adverseEdge !== stopLoss &&
+    edgeProgress > 0 &&
+    edgeProgress < 1 &&
+    Math.abs(entry - adverseEdge) >= minimumSeparation
+  ) {
     checkpointProgress.push({ progress: edgeProgress, basis: "entry_zone_edge" });
   }
   for (const price of input.checkpointPrices?.[side] ?? []) {
-    const progress = Math.abs(entry - roundPrice(price, rule.minMovement)) / distance;
-    if (!Number.isFinite(progress) || progress <= 0 || progress >= 1) continue;
-    if (checkpointProgress.some((candidate) => Math.abs(candidate.progress - progress) < 1e-6)) continue;
+    const roundedPrice = roundPrice(price, rule.minMovement);
+    const progress = (side === "buy" ? entry - roundedPrice : roundedPrice - entry) / distance;
+    if (!Number.isFinite(progress) || progress <= 0 || progress >= 1 ||
+        Math.abs(entry - roundedPrice) < minimumSeparation) continue;
+    if (checkpointProgress.some((candidate) =>
+      Math.abs(priceAtProgress(candidate.progress) - roundedPrice) < minimumSeparation,
+    )) continue;
     checkpointProgress.push({ progress, basis: "current_chart_swing" });
   }
   checkpointProgress.sort((a, b) => a.progress - b.progress);
@@ -652,10 +728,7 @@ function sidePlan(
         ? requestedLot
         : Math.min(requestedLot, rule.maximumLot);
       return {
-        price: roundPrice(
-          side === "buy" ? entry - distance * progress : entry + distance * progress,
-          rule.minMovement,
-        ),
+        price: priceAtProgress(progress),
         lot: Math.max(rule.minimumLot, floorLot(cappedLot, lotStep)),
         basis,
         invalidationProgress: progress,
@@ -665,13 +738,16 @@ function sidePlan(
 
   if (input.layerRiskWeights?.length && input.maximumLoss != null) {
     const weights = input.layerRiskWeights.slice(0, plannedEntries.length);
-    const totalWeight = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
+    const normalizedWeights = plannedEntries.map((_, index) =>
+      Math.max(0, weights[index] ?? 1),
+    );
+    const totalWeight = normalizedWeights.reduce((sum, weight) => sum + weight, 0);
     if (totalWeight > 0) {
       for (const [index, planned] of plannedEntries.entries()) {
         const riskPerLot =
           (side === "buy" ? planned.price - stopLoss : stopLoss - planned.price) *
           rule.contractSize;
-        const allocatedRisk = input.maximumLoss * (Math.max(0, weights[index] ?? 0) / totalWeight);
+        const allocatedRisk = input.maximumLoss * (normalizedWeights[index] / totalWeight);
         const requestedLot = riskPerLot > 0 ? allocatedRisk / riskPerLot : 0;
         const cappedLot = rule.maximumLot == null
           ? requestedLot
@@ -799,6 +875,7 @@ export function createAdaptivePlanFingerprint({
   context,
   standardRule,
   checkpointPrices,
+  candles,
   accountTier = "mini",
   riskStyle = "conservative",
 }: {
@@ -807,6 +884,7 @@ export function createAdaptivePlanFingerprint({
   context: AdaptiveAnalysisContext;
   standardRule: StandardTradingRuleInstrument | null | undefined;
   checkpointPrices?: { buy?: number[]; sell?: number[] };
+  candles?: AdaptiveChartCandle[];
   accountTier?: AccountTier;
   riskStyle?: AdaptiveRiskStyle;
 }): string {
@@ -815,6 +893,9 @@ export function createAdaptivePlanFingerprint({
     tradePlan,
     context: {
       timeframe: context.timeframe ?? null,
+      validUntil: context.validUntil instanceof Date
+        ? context.validUntil.toISOString()
+        : context.validUntil ?? null,
       marketCondition: context.marketCondition ?? null,
       riskLevel: context.riskLevel ?? null,
       tradingBias: context.tradingBias ?? null,
@@ -834,6 +915,7 @@ export function createAdaptivePlanFingerprint({
         }
       : null,
     checkpointPrices: checkpointPrices ?? null,
+    candles: candles ?? null,
     accountTier,
     riskStyle,
   });
@@ -860,15 +942,15 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   }
   if (input.existingExposure == null || input.existingExposure < 0) errors.push("Existing exposure is required.");
   if (input.initialLot == null || input.initialLot <= 0) errors.push("Initial lot is required.");
-  if (!Number.isInteger(input.levels) || input.levels < 0 || input.levels > 2) {
-    errors.push("Number of additional levels must be between 0 and 2.");
+  if (!Number.isInteger(input.levels) || input.levels < 0 || input.levels > MAX_ADDITIONAL_LAYERS) {
+    errors.push(`Number of additional levels must be between 0 and ${MAX_ADDITIONAL_LAYERS}.`);
   }
   for (const [side, sideLevel] of Object.entries(input.sideLevels ?? {})) {
     if (
       sideLevel !== undefined &&
-      (!Number.isInteger(sideLevel) || sideLevel < 0 || sideLevel > 2 || sideLevel > input.levels)
+      (!Number.isInteger(sideLevel) || sideLevel < 0 || sideLevel > MAX_ADDITIONAL_LAYERS || sideLevel > input.levels)
     ) {
-      errors.push(`${side === "buy" ? "Buy" : "Sell"} additional levels must be an integer between 0 and the requested level count.`);
+      errors.push(`${side === "buy" ? "Buy" : "Sell"} additional levels must be an integer between 0 and the requested level count (maximum ${MAX_ADDITIONAL_LAYERS}).`);
     }
   }
 
@@ -921,7 +1003,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
   const assumptions = [
     `${input.accountTier[0].toUpperCase()}${input.accountTier.slice(1)} profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
     movementAssumption,
-    `Initial entry uses the Standard Plan; up to two manual additions can create at most three total positions. The ${tierText} range applies separately to each position, not to cumulative planned lots.`,
+    `Initial entry uses the Standard Plan; up to ${MAX_ADDITIONAL_LAYERS} manual additions are limited to distinct saved entry-zone or chart-swing prices. The ${tierText} range applies separately to each position, not to cumulative planned lots.`,
     `The entered USD ${maxCycleLoss} maximum loss is a hard amount for every position in the complete plan.`,
     "Available trading funds are used directly; the recommendation may reserve part of the entered loss ceiling according to risk style and market context.",
     `Current open ${input.instrument} ${input.accountTier} exposure is ${input.existingExposure ?? 0} lot. It is not subtracted from the ${tierMax ?? "unlimited"}-lot per-position cap; entered free funds must already exclude margin committed elsewhere.`,
@@ -987,6 +1069,199 @@ function addRejectedCandidates(
   };
 }
 
+function validCandles(candles: AdaptiveChartCandle[] | undefined): AdaptiveChartCandle[] {
+  return (candles ?? []).filter((candle) =>
+    Number.isFinite(candle.high) &&
+    Number.isFinite(candle.low) &&
+    candle.low > 0 &&
+    candle.high >= candle.low &&
+    (candle.open == null || (
+      Number.isFinite(candle.open) && candle.open >= candle.low && candle.open <= candle.high
+    )) &&
+    (candle.close == null || (
+      Number.isFinite(candle.close) && candle.close >= candle.low && candle.close <= candle.high
+    )) &&
+    (candle.date == null || Number.isFinite(Date.parse(candle.date))),
+  ).slice(-160);
+}
+
+function getVolatilityDiagnostic(
+  candles: AdaptiveChartCandle[] | undefined,
+  timeframe: string | null,
+  tradePlan: TradePlan,
+): AdaptiveVolatilityDiagnostic {
+  const normalizedTimeframe = timeframe?.toLowerCase() ?? null;
+  const recent = validCandles(candles);
+  if (
+    !normalizedTimeframe ||
+    !SUPPORTED_ADAPTIVE_TIMEFRAMES.has(normalizedTimeframe) ||
+    recent.length < 5
+  ) {
+    return {
+      status: "unavailable",
+      timeframe: normalizedTimeframe,
+      candleCount: recent.length,
+      observedRange: null,
+      buyStopDistance: null,
+      sellStopDistance: null,
+      buyStopLooksTight: null,
+      sellStopLooksTight: null,
+    };
+  }
+  // A multi-month or multi-week high-to-low span is not one candle's noise
+  // envelope. Compare the saved stop to the typical bar at THIS timeframe.
+  const ranges = recent.map(({ high, low }) => high - low).sort((a, b) => a - b);
+  const middle = Math.floor(ranges.length / 2);
+  const observedRange = ranges.length % 2
+    ? ranges[middle]
+    : (ranges[middle - 1] + ranges[middle]) / 2;
+  const stopDistance = (side: "buy" | "sell"): number | null => {
+    const entry = priceFromTradeSide(tradePlan[side], "entryZone");
+    const stop = priceFromTradeSide(tradePlan[side], "stopLoss");
+    if (entry == null || stop == null || entry <= 0 || stop <= 0) return null;
+    return Math.abs(entry - stop);
+  };
+  const buyStopDistance = stopDistance("buy");
+  const sellStopDistance = stopDistance("sell");
+  const buyStopLooksTight = buyStopDistance == null ? null : buyStopDistance < observedRange;
+  const sellStopLooksTight = sellStopDistance == null ? null : sellStopDistance < observedRange;
+  return {
+    status: buyStopLooksTight || sellStopLooksTight ? "tight_stop" : "observed",
+    timeframe: normalizedTimeframe,
+    candleCount: recent.length,
+    observedRange,
+    buyStopDistance,
+    sellStopDistance,
+    buyStopLooksTight,
+    sellStopLooksTight,
+  };
+}
+
+function getCandleAlternative(
+  candles: AdaptiveChartCandle[] | undefined,
+  timeframe: string | null,
+  side: "buy" | "sell" | "both" | "none",
+  tradePlan: TradePlan,
+  rule: AdaptiveRule,
+  availableFunds: number,
+  usableRiskBudget: number,
+): AdaptiveCandleAlternative {
+  const normalizedTimeframe = timeframe?.toLowerCase() ?? null;
+  const recent = validCandles(candles);
+  if (
+    !normalizedTimeframe ||
+    !SUPPORTED_ADAPTIVE_TIMEFRAMES.has(normalizedTimeframe) ||
+    recent.length < 7 ||
+    side === "none" ||
+    side === "both"
+  ) {
+    return {
+      status: "needs_reanalysis",
+      reason: "A single supported direction and at least seven valid candles at the saved analysis timeframe are required to derive independent swing-based entry, stop, and target levels.",
+    };
+  }
+  const swings = { lows: [] as number[], highs: [] as number[] };
+  for (let index = 2; index < recent.length - 2; index += 1) {
+    const candle = recent[index];
+    const neighbors = [recent[index - 2], recent[index - 1], recent[index + 1], recent[index + 2]];
+    if (neighbors.every((neighbor) => candle.low <= neighbor.low)) swings.lows.push(candle.low);
+    if (neighbors.every((neighbor) => candle.high >= neighbor.high)) swings.highs.push(candle.high);
+  }
+  const rawEntry = priceFromTradeSide(tradePlan[side], "entryZone");
+  if (rawEntry == null || rawEntry <= 0) {
+    return { status: "needs_reanalysis", reason: "The saved entry is incomplete." };
+  }
+  const savedStop = priceFromTradeSide(tradePlan[side], "stopLoss");
+  if (savedStop == null) return { status: "needs_reanalysis", reason: "The saved stop is incomplete." };
+  const savedRange = entryRangeFromTradeSide(tradePlan[side]);
+  const tolerance = Math.max(rule.minMovement * 2, Math.abs(rawEntry - savedStop) * 0.25);
+  const entryCandidates = (side === "buy" ? swings.lows : swings.highs)
+    .filter((price) => savedRange
+      ? price >= savedRange.low && price <= savedRange.high
+      : Math.abs(price - rawEntry) <= tolerance)
+    .sort((a, b) => Math.abs(a - rawEntry) - Math.abs(b - rawEntry));
+  for (const rawEntryCandidate of entryCandidates) {
+    const entry = roundPrice(rawEntryCandidate, rule.minMovement);
+    const stopCandidates = side === "buy"
+      ? swings.lows.filter((price) => price < entry - rule.minMovement * 2).sort((a, b) => b - a)
+      : swings.highs.filter((price) => price > entry + rule.minMovement * 2).sort((a, b) => a - b);
+    const targetCandidates = side === "buy"
+      ? swings.highs.filter((price) => price > entry + rule.minMovement * 2).sort((a, b) => a - b)
+      : swings.lows.filter((price) => price < entry - rule.minMovement * 2).sort((a, b) => b - a);
+    for (const rawStop of stopCandidates) {
+      for (const rawTarget of targetCandidates) {
+      const stopLoss = roundPrice(rawStop, rule.minMovement);
+      const takeProfit = roundPrice(rawTarget, rule.minMovement);
+      const riskDistance = Math.abs(entry - stopLoss);
+      const targetDistance = Math.abs(takeProfit - entry);
+      const riskReward = riskDistance > 0 ? targetDistance / riskDistance : 0;
+      if (riskReward < 1) continue;
+      const lot = rule.minimumLot;
+      const estimatedLoss = riskDistance * rule.contractSize * lot;
+      const dayMargin = lot * rule.marginPerLot;
+      if (estimatedLoss > usableRiskBudget || estimatedLoss + dayMargin > availableFunds) {
+        continue;
+      }
+      return {
+        status: "available",
+        side,
+        entry,
+        stopLoss,
+        takeProfit,
+        riskReward,
+        lot,
+        estimatedLoss,
+        dayMargin,
+      };
+      }
+    }
+  }
+  return {
+    status: "needs_reanalysis",
+    reason: "The candles do not provide independent swing entry, stop and target levels with at least 1:1 reward-to-risk that fit the current funds and loss ceiling.",
+  };
+}
+
+function availableLayerCount(
+  side: "buy" | "sell",
+  tradeSide: TradeSide,
+  checkpointPrices: { buy?: number[]; sell?: number[] } | undefined,
+  minMovement: number,
+): number {
+  const range = entryRangeFromTradeSide(tradeSide);
+  const stop = priceFromTradeSide(tradeSide, "stopLoss");
+  if (!range || stop == null || !Number.isFinite(minMovement) || minMovement <= 0) return 0;
+  const entry = roundPrice(range.midpoint, minMovement);
+  const roundedStop = roundPrice(stop, minMovement);
+  const distance = side === "buy" ? entry - roundedStop : roundedStop - entry;
+  if (distance <= 0) return 0;
+  const prices = new Set<number>();
+  const minimumSeparation = Math.max(minMovement * 2, distance * 0.025);
+  const adverseEdge = roundPrice(side === "buy" ? range.low : range.high, minMovement);
+  const edgeProgress = (side === "buy" ? entry - adverseEdge : adverseEdge - entry) / distance;
+  if (
+    adverseEdge !== entry &&
+    adverseEdge !== roundedStop &&
+    edgeProgress > 0 &&
+    edgeProgress < 1 &&
+    Math.abs(entry - adverseEdge) >= minimumSeparation
+  ) {
+    prices.add(adverseEdge);
+  }
+  for (const price of checkpointPrices?.[side] ?? []) {
+    if (!Number.isFinite(price)) continue;
+    const rounded = roundPrice(price, minMovement);
+    const progress = (side === "buy" ? entry - rounded : rounded - entry) / distance;
+    if (
+      progress > 0 &&
+      progress < 1 &&
+      Math.abs(entry - rounded) >= minimumSeparation &&
+      [...prices].every((other) => Math.abs(other - rounded) >= minimumSeparation)
+    ) prices.add(rounded);
+  }
+  return Math.min(MAX_ADDITIONAL_LAYERS, prices.size);
+}
+
 /**
  * Builds a practical position-size recommendation from the user's available
  * margin and the entry/stop levels already produced by the AI analysis.
@@ -1003,6 +1278,7 @@ export function buildAdaptivePlanRecommendation({
   standardRule,
   context: analysisContext,
   checkpointPrices,
+  candles,
   accountTier = "mini",
   riskStyle = "conservative",
 }: {
@@ -1014,12 +1290,24 @@ export function buildAdaptivePlanRecommendation({
   standardRule: StandardTradingRuleInstrument | null;
   context?: AdaptiveAnalysisContext;
   checkpointPrices?: { buy?: number[]; sell?: number[] };
+  candles?: AdaptiveChartCandle[];
   accountTier?: AccountTier;
   riskStyle?: AdaptiveRiskStyle;
 }): AdaptivePlanRecommendation {
   const market = adaptiveMarketForInstrument(instrument);
   const rule = ruleFromStandardTradingRules(instrument, standardRule, accountTier);
   const context = normalizeContext(analysisContext);
+  const volatilityDiagnostic = getVolatilityDiagnostic(candles, context.timeframe, tradePlan);
+  const buildCandleAlternative = (preferred: AdaptivePlanDecision["preferredSide"], usableRiskBudget: number) =>
+    rule ? getCandleAlternative(
+      candles,
+      context.timeframe,
+      preferred,
+      tradePlan,
+      rule!,
+      availableMargin ?? 0,
+      usableRiskBudget,
+    ) : { status: "needs_reanalysis" as const, reason: "Instrument rule is unavailable." };
   const reasonCodes: AdaptivePlanReasonCode[] = [];
   let posture: AdaptivePlanPosture = "scaling_allowed";
   let preferredSide: AdaptivePlanDecision["preferredSide"] = "both";
@@ -1048,6 +1336,8 @@ export function buildAdaptivePlanRecommendation({
       recommendation: null,
       context,
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+      volatilityDiagnostic,
+      candleAlternative: { status: "needs_reanalysis", reason: "Account inputs are incomplete." },
     };
   }
   if (!rule) {
@@ -1064,6 +1354,8 @@ export function buildAdaptivePlanRecommendation({
       recommendation: null,
       context,
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+      volatilityDiagnostic,
+      candleAlternative: { status: "needs_reanalysis", reason: "Instrument rule is unavailable." },
     };
   }
   if (maximumLoss > availableMargin) {
@@ -1080,12 +1372,34 @@ export function buildAdaptivePlanRecommendation({
       recommendation: null,
       context,
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+      volatilityDiagnostic,
+      candleAlternative: { status: "needs_reanalysis", reason: "Maximum loss exceeds available trading funds." },
+    };
+  }
+  if (context.validUntil == null || Date.parse(context.validUntil) <= Date.now()) {
+    return {
+      result: {
+        valid: false,
+        market,
+        rule,
+        errors: ["Saved analysis is expired or has no validUntil timestamp; reanalysis is required."],
+        assumptions: [],
+        buy: null,
+        sell: null,
+      },
+      recommendation: null,
+      context,
+      decision: { posture: "not_recommended", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+      volatilityDiagnostic,
+      candleAlternative: { status: "needs_reanalysis", reason: "The saved analysis is expired or lacks validUntil." },
     };
   }
 
-  const requestedLevels = 2;
+  const requestedLevels = Math.max(
+    availableLayerCount("buy", tradePlan.buy, checkpointPrices, rule?.minMovement ?? 0),
+    availableLayerCount("sell", tradePlan.sell, checkpointPrices, rule?.minMovement ?? 0),
+  );
   let levels = requestedLevels;
-  let softWarningCount = 0;
 
   if (!hasCompleteContext(context)) {
     posture = "entry_only";
@@ -1096,19 +1410,15 @@ export function buildAdaptivePlanRecommendation({
     if (!context.fundamental.available) reasonCodes.push("fundamental_unavailable");
   } else {
     if (timeframeIsShort(context.timeframe)) {
-      softWarningCount += 1;
       reasonCodes.push("short_timeframe");
     }
     if (context.riskLevel === "high") {
-      softWarningCount += 1;
       reasonCodes.push("high_risk");
     }
     if (context.marketCondition === "volatile") {
-      softWarningCount += 1;
       reasonCodes.push("volatile_market");
     }
     if (context.confidenceMax != null && context.confidenceMax < 70) {
-      softWarningCount += 1;
       reasonCodes.push("low_confidence");
     }
 
@@ -1125,7 +1435,6 @@ export function buildAdaptivePlanRecommendation({
     let hasDirectionalConflict = Boolean(marketDirection && biasDirection && marketDirection !== biasDirection);
 
     if (context.tradingBias === "neutral") {
-      softWarningCount += 1;
       preferredSide = tradePlan.preferredSide === "buy" || tradePlan.preferredSide === "sell"
         ? tradePlan.preferredSide
         : "none";
@@ -1145,7 +1454,6 @@ export function buildAdaptivePlanRecommendation({
       const totalDirectional = buy + sell;
       const imbalance = totalDirectional > 0 ? Math.abs(buy - sell) / totalDirectional : 0;
       if (totalDirectional === 0 || imbalance < 0.2) {
-        softWarningCount += 1;
         reasonCodes.push("technical_mixed");
       } else if (buy > sell) {
         reasonCodes.push("technical_supports_buy");
@@ -1171,20 +1479,28 @@ export function buildAdaptivePlanRecommendation({
     }
 
     if (context.fundamental.highImpactCount > 0) {
-      softWarningCount += 1;
       reasonCodes.push("fundamental_high_impact");
     } else if (context.fundamental.newsCount + context.fundamental.eventCount > 0) {
       reasonCodes.push("fundamental_present");
     } else {
       reasonCodes.push("fundamental_clear");
     }
-    if (posture !== "not_recommended") {
-      // Any soft warning removes all optional additions while preserving an
-      // auditable entry-only result.
-      levels = softWarningCount > 0 ? 0 : levels;
-    }
   }
 
+  if (posture !== "not_recommended" && posture !== "entry_only") {
+    if (preferredSide === "buy") {
+      levels = availableLayerCount("buy", tradePlan.buy, checkpointPrices, rule.minMovement);
+    } else if (preferredSide === "sell") {
+      levels = availableLayerCount("sell", tradePlan.sell, checkpointPrices, rule.minMovement);
+    } else if (preferredSide === "both") {
+      levels = Math.max(
+        availableLayerCount("buy", tradePlan.buy, checkpointPrices, rule.minMovement),
+        availableLayerCount("sell", tradePlan.sell, checkpointPrices, rule.minMovement),
+      );
+    } else {
+      levels = 0;
+    }
+  }
   if (levels > 0) reasonCodes.push("staged_add_condition");
   const lotProfile = resolveAdaptiveLotProfile(riskStyle, context, preferredSide);
   const layerLotFactors = ADAPTIVE_LOT_PROFILE_FACTORS[lotProfile];
@@ -1265,6 +1581,8 @@ export function buildAdaptivePlanRecommendation({
             recommendation: diagnosticRecommendation,
             context,
             decision: { posture, preferredSide, reasonCodes },
+            volatilityDiagnostic,
+            candleAlternative: buildCandleAlternative("none", usableRiskBudget),
           };
         }
         const acceptedLevels = Math.max(
@@ -1335,6 +1653,8 @@ export function buildAdaptivePlanRecommendation({
             preferredSide,
             reasonCodes: effectiveReasonCodes,
           },
+          volatilityDiagnostic,
+          candleAlternative: buildCandleAlternative(preferredSide, usableRiskBudget),
         };
       }
     }
@@ -1375,5 +1695,7 @@ export function buildAdaptivePlanRecommendation({
       : null,
     context,
     decision: { posture, preferredSide, reasonCodes },
+    volatilityDiagnostic,
+    candleAlternative: buildCandleAlternative(preferredSide, usableRiskBudget),
   };
 }

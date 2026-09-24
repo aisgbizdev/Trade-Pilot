@@ -2392,6 +2392,7 @@ export default function AnalysisDetailPage({
             tradePlan={tradePlan}
             context={{
               timeframe: analysis.timeframe,
+              validUntil: analysis.validUntil,
               marketCondition: analysis.marketCondition,
               riskLevel: analysis.riskLevel,
               tradingBias: analysis.tradingBias,

@@ -25,3 +25,4 @@
 - [Replit static SPA deep links](replit-static-spa-deep-links.md) — static artifact hosting may raw-404 client routes despite emitted 404/200 files; use a process server with history fallback for direct URLs.
 - [Deployment image size](deployment-image-size.md) — Playwright traces/videos can exceed Replit's 8 GiB limit; exclude test outputs/caches, but retain node_modules because runtime packaging depends on them.
 - [Expo tab-bar inset modes](expo-tab-bar-insets.md) — reserve full bottom clearance for absolute classic tabs, but not for iOS NativeTabs, which applies system content insets.
+- [Adaptive candle freshness](adaptive-candle-freshness.md) — a candle's latest bar time is not fetch time; fail closed when too old until the API exposes source freshness.

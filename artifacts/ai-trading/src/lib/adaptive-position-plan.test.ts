@@ -132,6 +132,7 @@ function indexTradePlan(entryLow: number, entryHigh: number): TradePlan {
 
 const SUPPORTIVE_CONTEXT = {
   timeframe: "1h",
+  validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   marketCondition: "trending_up",
   riskLevel: "low",
   tradingBias: "bullish_strong",
@@ -337,7 +338,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(getStandardTradingRuleCode("EUR/USD")).toBeNull();
   });
 
-  it("exposes exact tier sizing and caps Regular at 50 lots", () => {
+  it("exposes source-backed Micro and Mini caps without inventing a Regular cap", () => {
     const micro = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "micro");
     const mini = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "mini");
     const regular = getAdaptiveMarketRule("XAU/USD", GOLD_RULE, "regular");
@@ -364,7 +365,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(regular).toMatchObject({
       accountTier: "regular",
       minimumLot: 1,
-      maximumLot: 50,
+      maximumLot: null,
       lotStep: 1,
       contractSize: 100,
       marginAtMinimumLot: 1_000,
@@ -372,7 +373,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     });
     expect(getAdaptiveMarginCapacity(500, micro)).toBe(0.09);
     expect(getAdaptiveMarginCapacity(500, mini)).toBe(0.5);
-    expect(getAdaptiveMarginCapacity(100_000, regular)).toBe(50);
+    expect(getAdaptiveMarginCapacity(100_000, regular)).toBe(100);
   });
 
   it("scales Micro lot, margin, contract value, and risk from the Mini rule", () => {
@@ -396,13 +397,13 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(result.buy?.totalFundsAtStop).toBeCloseTo(20.21);
   });
 
-  it("builds a Buy recommendation with three total positions when analysis and limits support them", () => {
+  it("builds candidate-driven Buy positions only at saved distinct levels", () => {
     const assessment = buildRecommendation();
 
     expect(assessment.result.valid).toBe(true);
     expect(assessment.recommendation).toMatchObject({
-      levels: 2,
-      positions: 3,
+      levels: 4,
+      positions: 5,
       marginBudget: 5_000,
       maximumLoss: 500,
     });
@@ -410,18 +411,21 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
       posture: "scaling_allowed",
       preferredSide: "buy",
     });
-    expect(assessment.result.buy?.ladder).toHaveLength(3);
+    expect(assessment.result.buy?.ladder).toHaveLength(5);
     expect(assessment.result.sell?.ladder).toHaveLength(1);
-    expect(assessment.result.buy?.totalLots).toBe(2.3);
+    expect(assessment.result.buy?.totalLots).toBeGreaterThan(0.9);
     expect(assessment.result.buy?.ladder.every((level) => level.lot <= 0.9)).toBe(true);
     expect(assessment.result.buy?.ladder[1]).toMatchObject({
       price: 2300,
       basis: "entry_zone_edge",
     });
-    expect(assessment.result.buy?.ladder.map((level) => level.lot)).toEqual([0.9, 0.8, 0.6]);
+    expect(new Set(assessment.result.buy?.ladder.map((level) => level.price)).size).toBe(5);
+    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(
+      assessment.recommendation!.usableRiskBudget,
+    );
   });
 
-  it("builds the same three-position plan for a supported Sell analysis", () => {
+  it("builds candidate-driven positions for a supported Sell analysis", () => {
     const assessment = buildRecommendation({
       tradePlan: { ...TRADE_PLAN, preferredSide: "sell" },
       context: {
@@ -435,7 +439,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
 
     expect(assessment.result.valid).toBe(true);
     expect(assessment.decision.preferredSide).toBe("sell");
-    expect(assessment.result.sell?.ladder).toHaveLength(3);
+    expect(assessment.result.sell?.ladder).toHaveLength(5);
     expect(assessment.result.buy?.ladder).toHaveLength(1);
   });
 
@@ -475,7 +479,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     }
   });
 
-  it("makes Regular Layer 1 visibly different across risk styles instead of always using 50 lots", () => {
+  it("sizes Regular from explicit risk styles without imposing a derived broker cap", () => {
     const common = {
       accountTier: "regular" as const,
       availableMargin: 200_000,
@@ -495,7 +499,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(aggressive.result.valid).toBe(true);
     expect(initialLots[0]).toBeLessThan(initialLots[1]!);
     expect(initialLots[1]).toBeLessThan(initialLots[2]!);
-    expect(initialLots).not.toEqual([50, 50, 50]);
+    expect(initialLots.every((lot) => lot! < 50)).toBe(true);
   });
 
   it("derives lot per layer from allocated risk and distance to Stop Loss", () => {
@@ -507,10 +511,10 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(assessment.recommendation).toMatchObject({
       riskStyle: "aggressive",
       lotProfile: "increasing",
-      positions: 3,
+      positions: 5,
     });
-    expect(assessment.result.buy?.ladder.map((level) => level.lot)).toEqual([0.8, 0.3, 0.2]);
-    expect(assessment.result.buy?.totalLots).toBe(1.3);
+    expect(assessment.result.buy?.ladder.length).toBe(5);
+    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(150);
     expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(150);
   });
 
@@ -522,7 +526,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     });
 
     expect(assessment.recommendation?.lotProfile).toBe("mixed");
-    expect(assessment.result.buy?.ladder.map((level) => level.lot)).toEqual([0.8, 0.3, 0.2]);
+    expect(assessment.result.buy?.ladder.length).toBe(5);
+    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(150);
   });
 
   it("uses the selected style for Sell while hard limits can still force entry-only", () => {
@@ -539,7 +544,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     });
     const constrained = buildRecommendation({ riskStyle: "aggressive", maximumLoss: 15 });
 
-    expect(sell.result.sell?.ladder.map((level) => level.lot)).toEqual([0.9, 0.9, 0.8]);
+    expect(sell.result.sell?.ladder.length).toBe(5);
+    expect(sell.result.sell?.ladder.every((level) => level.lot <= 0.9)).toBe(true);
     expect(constrained.recommendation).toMatchObject({
       riskStyle: "aggressive",
       lotProfile: "increasing",
@@ -718,19 +724,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     const assessment = buildRecommendation({
       context: {
         ...SUPPORTIVE_CONTEXT,
-        fundamentalContext: {
-          newsItems: [],
-          calendarEvents: [{
-            date: "2026-08-27",
-            time: "14:30",
-            currency: "USD",
-            event: "Central-bank rate decision",
-            impact: "★★★",
-            actual: null,
-            forecast: null,
-            previous: null,
-          }],
-        },
+        fundamentalContext: undefined,
       },
     });
 
@@ -738,12 +732,12 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(assessment.result.buy?.rejectedLadder[0]?.financialAlternative).toBeNull();
   });
 
-  it("rejects more than two additions and accepts a valid Regular tier plan", () => {
-    const tooManyLayers = buildAdaptivePositionPlan({ ...VALID_INPUT, levels: 3 });
+  it("bounds additions and accepts a valid Regular tier plan without a 50-lot source cap", () => {
+    const tooManyLayers = buildAdaptivePositionPlan({ ...VALID_INPUT, levels: 7 });
     const buySideBypass = buildAdaptivePositionPlan({
       ...VALID_INPUT,
-      levels: 2,
-      sideLevels: { buy: 3, sell: 0 },
+      levels: 6,
+      sideLevels: { buy: 7, sell: 0 },
     });
     const sellSideBypass = buildAdaptivePositionPlan({
       ...VALID_INPUT,
@@ -759,13 +753,13 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     });
 
     expect(tooManyLayers.valid).toBe(false);
-    expect(tooManyLayers.errors.join(" ")).toMatch(/between 0 and 2/i);
+    expect(tooManyLayers.errors.join(" ")).toMatch(/between 0 and 6/i);
     expect(buySideBypass.valid).toBe(false);
     expect(buySideBypass.errors.join(" ")).toMatch(/Buy additional levels/i);
     expect(sellSideBypass.valid).toBe(false);
     expect(sellSideBypass.errors.join(" ")).toMatch(/Sell additional levels/i);
     expect(regular.valid).toBe(true);
-    expect(regular.rule).toMatchObject({ maximumLot: 50, contractSize: 100, marginAtMinimumLot: 1_000 });
+    expect(regular.rule).toMatchObject({ maximumLot: null, contractSize: 100, marginAtMinimumLot: 1_000 });
   });
 
   it("scales Regular margin, profit, and loss tenfold from the Mini rule", () => {
@@ -915,6 +909,16 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(assessment.decision.posture).toBe("entry_only");
   });
 
+  it("does not mirror a checkpoint from the wrong side of the saved risk path", () => {
+    const assessment = buildRecommendation({
+      checkpointPrices: { buy: [2303], sell: [2299] },
+    });
+
+    expect(assessment.recommendation?.levels).toBe(1);
+    expect(assessment.result.buy?.ladder.map((level) => level.price)).toEqual([2301, 2300]);
+    expect(assessment.result.sell?.ladder.map((level) => level.price)).toEqual([2301]);
+  });
+
   it("fails closed to entry-only when required analysis context is missing", () => {
     const assessment = buildRecommendation({
       context: { ...SUPPORTIVE_CONTEXT, fundamentalContext: undefined },
@@ -925,16 +929,225 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(assessment.decision.reasonCodes).toContain("context_unavailable");
   });
 
-  it("removes the one optional layer when a soft risk warning exists", () => {
+  it("keeps supported layers while applying a soft risk warning", () => {
     const assessment = buildRecommendation({
       context: { ...SUPPORTIVE_CONTEXT, timeframe: "5m" },
     });
 
     expect(assessment.result.valid).toBe(true);
-    expect(assessment.recommendation?.levels).toBe(0);
-    expect(assessment.decision.posture).toBe("entry_only");
+    expect(assessment.recommendation?.levels).toBeGreaterThan(0);
+    expect(assessment.decision.posture).toBe("scaling_allowed");
     expect(assessment.decision.reasonCodes).toContain("short_timeframe");
   });
+
+  it("keeps a $300 Micro account within its $100 loss ceiling and $0.09 per-position cap", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      accountTier: "micro",
+      availableFunds: 300,
+      maximumLoss: 100,
+      initialLot: 0.01,
+      levels: 2,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.rule).toMatchObject({ accountTier: "micro", maximumLot: 0.09 });
+    expect(result.buy?.ladder.every((level) => level.lot <= 0.09)).toBe(true);
+    expect(result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(100);
+    expect(result.buy?.totalFundsAtStop).toBeLessThanOrEqual(300);
+    expect(result.buy?.ladder.every((level) => level.lot >= 0.01)).toBe(true);
+  });
+
+  it("calculates the three distinct Micro entries without trying to spend the $100 loss ceiling", () => {
+    const tradePlan: TradePlan = {
+      ...TRADE_PLAN,
+      buy: {
+        ...TRADE_PLAN.buy,
+        entryZone: "4300",
+        stopLoss: "4285",
+        takeProfit1: "4320",
+        takeProfit2: "4350",
+      },
+    };
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT,
+      tradePlan,
+      accountTier: "micro",
+      availableFunds: 300,
+      maximumLoss: 100,
+      initialLot: 0.09,
+      levels: 2,
+      includedSides: { buy: true, sell: false },
+      checkpointPrices: { buy: [4295, 4290, 4299.9] },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.buy?.ladder.map((level) => level.price)).toEqual([4300, 4295, 4290]);
+    expect(result.buy?.ladder.map((level) => level.lot)).toEqual([0.09, 0.09, 0.09]);
+    expect(result.buy?.marginRequired).toBeCloseTo(270);
+    expect(result.buy?.estimatedCycleLoss).toBeCloseTo(2.7);
+    expect(result.buy?.profitToTakeProfit2).toBeCloseTo(14.85);
+    expect(tradePlan.buy.stopLoss).toBe("4285");
+  });
+
+  it("does not automatically switch account tiers while sizing", () => {
+    const micro = buildRecommendation({
+      accountTier: "micro",
+      availableMargin: 300,
+      maximumLoss: 100,
+    });
+    const mini = buildRecommendation({
+      accountTier: "mini",
+      availableMargin: 300,
+      maximumLoss: 100,
+    });
+
+    expect(micro.result.rule?.accountTier).toBe("micro");
+    expect(micro.result.buy?.ladder.every((level) => level.lot <= 0.09)).toBe(true);
+    expect(mini.result.rule?.accountTier).toBe("mini");
+  });
+
+  it("fails closed for missing, invalid, and expired analysis freshness", () => {
+    const expired = buildRecommendation({
+      context: { ...SUPPORTIVE_CONTEXT, validUntil: new Date(Date.now() - 1_000).toISOString() },
+    });
+    const missing = buildRecommendation({
+      context: { ...SUPPORTIVE_CONTEXT, validUntil: undefined },
+    });
+
+    expect(expired.result.valid).toBe(false);
+    expect(expired.result.errors).toContain(
+      "Saved analysis is expired or has no validUntil timestamp; reanalysis is required.",
+    );
+    expect(expired.recommendation).toBeNull();
+    expect(missing.result.valid).toBe(false);
+    expect(missing.recommendation).toBeNull();
+  });
+
+  it("counts only high-impact events within the imminent or immediate post-release window", () => {
+    const now = new Date();
+    const imminent = buildRecommendation({
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        fundamentalContext: {
+          newsItems: [],
+          calendarEvents: [{
+            date: now.toISOString().slice(0, 10),
+            time: now.toISOString().slice(11, 16),
+            currency: "USD",
+            event: "Central-bank rate decision",
+            impact: "★★★",
+            actual: null,
+            forecast: null,
+            previous: null,
+          }],
+        },
+      },
+    });
+    const pastOrDistant = buildRecommendation({
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        fundamentalContext: {
+          newsItems: [],
+          calendarEvents: [-30, 45].map((dayOffset) => {
+            const date = new Date(Date.now() + dayOffset * 24 * 60 * 60 * 1000);
+            return {
+              date: date.toISOString().slice(0, 10),
+              time: "12:00",
+              currency: "USD",
+              event: "Old or distant release",
+              impact: "★★★",
+              actual: null,
+              forecast: null,
+              previous: null,
+            };
+          }),
+        },
+      },
+    });
+
+    expect(imminent.context.fundamental.upcomingHighImpactCount).toBe(1);
+    expect(imminent.decision.reasonCodes).toContain("fundamental_high_impact");
+    expect(pastOrDistant.context.fundamental.upcomingHighImpactCount).toBe(0);
+    expect(pastOrDistant.decision.reasonCodes).not.toContain("fundamental_high_impact");
+  });
+
+  it("reports volatility from the selected timeframe candles without altering Standard Plan stops", () => {
+    const candles = [
+      [2304, 2300], [2305, 2301], [2306, 2302], [2303, 2297], [2304, 2299],
+      [2307, 2301], [2310, 2302], [2308, 2301], [2305, 2300], [2312, 2303], [2309, 2302],
+    ].map(([high, low], index) => ({
+      date: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+      open: low,
+      high,
+      low,
+      close: high - 1,
+    }));
+    const assessment = buildRecommendation({
+      candles,
+      context: { ...SUPPORTIVE_CONTEXT, timeframe: "4h" },
+    });
+
+    expect(assessment.volatilityDiagnostic).toMatchObject({
+      status: "observed",
+      timeframe: "4h",
+      candleCount: 11,
+      observedRange: 6,
+      buyStopLooksTight: false,
+    });
+    expect(assessment.result.buy?.stopLoss).toBe(2290);
+    expect(assessment.candleAlternative).toMatchObject({
+      status: "available",
+      side: "buy",
+    });
+    if (assessment.candleAlternative.status === "available") {
+      expect(assessment.candleAlternative.entry).not.toBe(assessment.result.buy?.entry);
+      expect(assessment.candleAlternative.stopLoss).toBeLessThan(assessment.candleAlternative.entry);
+      expect(assessment.candleAlternative.takeProfit).toBeGreaterThan(assessment.candleAlternative.entry);
+    }
+  });
+
+  it("reports invalid or insufficient candles and requires reanalysis instead of inventing alternatives", () => {
+    const insufficient = buildRecommendation({
+      candles: [
+        { high: 2303, low: 2300 },
+        { high: 2304, low: 2301 },
+        { high: 2302, low: 2299 },
+        { high: 2305, low: 2300 },
+      ],
+    });
+    const invalid = buildRecommendation({
+      candles: Array.from({ length: 8 }, () => ({ high: 10, low: -1 })),
+    });
+
+    expect(insufficient.volatilityDiagnostic.status).toBe("unavailable");
+    expect(insufficient.candleAlternative.status).toBe("needs_reanalysis");
+    expect(invalid.volatilityDiagnostic).toMatchObject({
+      status: "unavailable",
+      candleCount: 0,
+    });
+    expect(invalid.candleAlternative.status).toBe("needs_reanalysis");
+  });
+
+  it.each(["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"])(
+    "assesses saved %s against candles from that same timeframe",
+    (timeframe) => {
+      const candles = Array.from({ length: 7 }, (_, index) => ({
+        date: new Date(Date.now() - (7 - index) * 60_000).toISOString(),
+        open: 2300,
+        high: 2302 + index,
+        low: 2298 - index,
+        close: 2301,
+      }));
+      const result = buildRecommendation({
+        context: { ...SUPPORTIVE_CONTEXT, timeframe },
+        candles,
+      });
+      expect(result.volatilityDiagnostic.timeframe).toBe(timeframe.toLowerCase());
+      expect(result.volatilityDiagnostic.candleCount).toBe(7);
+      expect(result.result.buy?.stopLoss).toBe(2290);
+      expect(result.context.timeframe).toBe(timeframe);
+    },
+  );
 
   it("invalidates saved recommendations when analysis context changes", () => {
     const base = {
@@ -948,6 +1161,10 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(createAdaptivePlanFingerprint({
       ...base,
       context: { ...SUPPORTIVE_CONTEXT, timeframe: "4h" },
+    })).not.toBe(original);
+    expect(createAdaptivePlanFingerprint({
+      ...base,
+      context: { ...SUPPORTIVE_CONTEXT, validUntil: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() },
     })).not.toBe(original);
     expect(createAdaptivePlanFingerprint({
       ...base,

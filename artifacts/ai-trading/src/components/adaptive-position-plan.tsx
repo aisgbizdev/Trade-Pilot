@@ -60,7 +60,26 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v19:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v20:${analysisId}`;
+}
+
+const MAX_CANDLE_AGE_MS: Record<string, number> = {
+  "1m": 6 * 60 * 60_000,
+  "5m": 6 * 60 * 60_000,
+  "15m": 6 * 60 * 60_000,
+  "30m": 8 * 60 * 60_000,
+  "1h": 12 * 60 * 60_000,
+  "4h": 36 * 60 * 60_000,
+  "1d": 4 * 24 * 60 * 60_000,
+  "1w": 14 * 24 * 60 * 60_000,
+};
+
+function candleExpiry(candles: AdaptiveChartCandle[], timeframe: string | null | undefined): number | null {
+  const maximumAge = MAX_CANDLE_AGE_MS[timeframe?.toLowerCase() ?? ""];
+  const latestDate = candles.length ? Date.parse(candles[candles.length - 1].date ?? "") : Number.NaN;
+  return maximumAge && Number.isFinite(latestDate) && latestDate <= Date.now() + 60_000
+    ? latestDate + maximumAge
+    : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -95,7 +114,7 @@ function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommenda
       (isRecord(value.recommendation) &&
         typeof value.recommendation.positions === "number" &&
         value.recommendation.positions >= 1 &&
-        value.recommendation.positions <= 3 &&
+        value.recommendation.positions <= 7 &&
         typeof value.recommendation.usableRiskBudget === "number" &&
         typeof value.recommendation.riskUtilizationRate === "number" &&
         isAdaptiveRiskStyle(value.recommendation.riskStyle) &&
@@ -103,6 +122,8 @@ function isStoredRecommendation(value: unknown): value is AdaptivePlanRecommenda
     (!value.result.valid || (isRecord(rule) && rule.marginBasis === "day")) &&
     (value.decision.posture === "scaling_allowed" || value.decision.posture === "entry_only" || value.decision.posture === "not_recommended") &&
     (value.decision.preferredSide === "buy" || value.decision.preferredSide === "sell" || value.decision.preferredSide === "both" || value.decision.preferredSide === "none") &&
+    isRecord(value.volatilityDiagnostic) &&
+    isRecord(value.candleAlternative) &&
     Array.isArray(value.decision.reasonCodes) &&
     value.decision.reasonCodes.every((code) => typeof code === "string");
 }
@@ -412,6 +433,30 @@ function PlanSide({
   const stageGuidance = plan.ladder.length > 1 && scenarioIsPreferred
     ? copy.adaptive_side_scaling_allowed
     : copy.adaptive_side_entry_only;
+  const first = plan.ladder[0];
+  const fillDescription = (
+    positions: number,
+    lots: number,
+    margin: number,
+    loss: number,
+    profit: number | null,
+  ) => copy.adaptive_fill_values
+    .replace("{positions}", formatNumber(positions, lang, 0))
+    .replace("{lots}", formatNumber(lots, lang))
+    .replace("{margin}", formatMoney(margin, lang))
+    .replace("{loss}", formatMoney(loss, lang))
+    .replace("{lossPercent}", formatNumber(summary && summary.marginBudget > 0 ? loss / summary.marginBudget * 100 : null, lang))
+    .replace("{profit}", formatMoney(profit, lang))
+    .replace("{profitPercent}", formatNumber(summary && summary.marginBudget > 0 && profit != null ? profit / summary.marginBudget * 100 : null, lang));
+  const unusedReason = plan.rejectedLadder.some((level) => level.rejectReason === "day_margin")
+    ? copy.adaptive_unused_reason_margin
+    : plan.rejectedLadder.some((level) => level.rejectReason === "tier_limit")
+      ? copy.adaptive_unused_reason_tier
+      : plan.ladder.length === 1 && plan.rejectedLadder.length === 0
+        ? copy.adaptive_unused_reason_levels
+        : summary && summary.riskUtilizationRate < 1 && plan.rejectedLadder.length === 0
+          ? copy.adaptive_unused_reason_policy
+          : copy.adaptive_unused_reason_capacity;
   return (
     <div className={`rounded-md border-l-4 p-3 space-y-3 bg-muted/20 ${isBuy ? "border-l-emerald-500" : "border-l-red-500"}`} data-testid={`adaptive-plan-${plan.side}`}>
       <div className="flex items-center justify-between gap-2">
@@ -441,7 +486,7 @@ function PlanSide({
             </div>
             <div className="rounded-md bg-background/70 p-2">
               <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_total_positions}</p>
-              <p className="mt-0.5 text-sm font-bold tabular-nums">{summary.positions} {copy.adaptive_snapshot_layers}</p>
+               <p className="mt-0.5 text-sm font-bold tabular-nums">{plan.ladder.length} {copy.adaptive_snapshot_layers}</p>
             </div>
             <div className="rounded-md bg-background/70 p-2">
               <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_total_lots}</p>
@@ -485,6 +530,29 @@ function PlanSide({
               </div>
             )}
           </div>
+        </div>
+      )}
+      {summary && first && (
+        <div className="rounded-md border border-border/70 bg-background p-3 space-y-2" data-testid={`adaptive-fill-scenarios-${plan.side}`}>
+          <p className="text-xs font-bold">{copy.adaptive_fill_range_title}</p>
+          <dl className="space-y-2 text-[11px]">
+            <div>
+              <dt className="font-semibold">{copy.adaptive_fill_first}</dt>
+              <dd className="text-muted-foreground">{fillDescription(1, first.lot, first.dayMarginForLot, first.riskToStopForLot, first.profitToTakeProfit2)}</dd>
+            </div>
+            {plan.ladder.length > 1 && (
+              <div>
+                <dt className="font-semibold">{copy.adaptive_fill_all}</dt>
+                <dd className="text-muted-foreground">{fillDescription(plan.ladder.length, plan.totalLots, plan.marginRequired, plan.estimatedCycleLoss, plan.profitToTakeProfit2)}</dd>
+              </div>
+            )}
+          </dl>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_fill_uncertain}</p>
+          {summary.maximumLoss - plan.estimatedCycleLoss > 0.01 && (
+            <p className="border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground" data-testid="adaptive-unused-reason">
+              <strong className="text-foreground">{copy.adaptive_unused_reason_title}:</strong> {unusedReason}
+            </p>
+          )}
         </div>
       )}
       <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
@@ -591,6 +659,19 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     setActiveSide("buy");
     setCopyStatus("idle");
   }, [analysisId]);
+  useEffect(() => {
+    const expiresAt = context.validUntil == null ? Number.NaN : new Date(context.validUntil).getTime();
+    const clearExpiredPlan = () => {
+      setRecommendation(null);
+      localStorage.removeItem(storageKey(analysisId));
+    };
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      clearExpiredPlan();
+      return;
+    }
+    const timer = window.setTimeout(clearExpiredPlan, Math.min(expiresAt - Date.now(), 2_147_483_647));
+    return () => window.clearTimeout(timer);
+  }, [analysisId, context.validUntil]);
   useEffect(() => () => {
     if (copyResetTimerRef.current !== null) {
       window.clearTimeout(copyResetTimerRef.current);
@@ -599,7 +680,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const [chartCandidateState, setChartCandidateState] = useState<{
     status: "loading" | "ready" | "error";
     prices: { buy: number[]; sell: number[] };
-  }>({ status: "loading", prices: { buy: [], sell: [] } });
+    candles: AdaptiveChartCandle[];
+  }>({ status: "loading", prices: { buy: [], sell: [] }, candles: [] });
   const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
@@ -615,11 +697,11 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   useEffect(() => {
     if (isRulesLoading) return;
     if (!rulesAvailable || !context.timeframe || !selectedRule) {
-      setChartCandidateState({ status: "error", prices: { buy: [], sell: [] } });
+      setChartCandidateState({ status: "error", prices: { buy: [], sell: [] }, candles: [] });
       return;
     }
     let cancelled = false;
-    setChartCandidateState({ status: "loading", prices: { buy: [], sell: [] } });
+    setChartCandidateState({ status: "loading", prices: { buy: [], sell: [] }, candles: [] });
     fetch(
       `/api/historical/candles?instrument=${encodeURIComponent(instrument)}&timeframe=${encodeURIComponent(context.timeframe)}&purpose=adaptive-layering`,
       { credentials: "include" },
@@ -636,20 +718,47 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             return typeof value.high === "number" &&
               Number.isFinite(value.high) &&
               typeof value.low === "number" &&
-              Number.isFinite(value.low);
-          });
+              Number.isFinite(value.low) &&
+              value.low > 0 && value.high >= value.low &&
+              typeof value.open === "number" && Number.isFinite(value.open) &&
+              value.open >= value.low && value.open <= value.high &&
+              typeof value.close === "number" && Number.isFinite(value.close) &&
+              value.close >= value.low && value.close <= value.high &&
+              typeof value.date === "string" && Number.isFinite(Date.parse(value.date));
+          })
+          .sort((a, b) => Date.parse(a.date!) - Date.parse(b.date!));
+        const expiresAt = candleExpiry(candles, context.timeframe);
+        if (expiresAt == null || expiresAt <= Date.now()) {
+          throw new Error("Selected-timeframe candle source is missing or too old for an adaptive recommendation");
+        }
         setChartCandidateState({
           status: "ready",
           prices: getAdaptiveChartCandidatePrices(candles, tradePlan, selectedRule.minMovement),
+          candles,
         });
       })
       .catch(() => {
-        if (!cancelled) setChartCandidateState({ status: "error", prices: { buy: [], sell: [] } });
+        if (!cancelled) setChartCandidateState({ status: "error", prices: { buy: [], sell: [] }, candles: [] });
       });
     return () => {
       cancelled = true;
     };
   }, [context.timeframe, instrument, isRulesLoading, rulesAvailable, selectedRule?.minMovement, tradePlan]);
+  useEffect(() => {
+    if (chartCandidateState.status !== "ready") return;
+    const expiresAt = candleExpiry(chartCandidateState.candles, context.timeframe);
+    const expire = () => {
+      setRecommendation(null);
+      setChartCandidateState({ status: "error", prices: { buy: [], sell: [] }, candles: [] });
+      localStorage.removeItem(storageKey(analysisId));
+    };
+    if (expiresAt == null || expiresAt <= Date.now()) {
+      expire();
+      return;
+    }
+    const timer = window.setTimeout(expire, Math.min(expiresAt - Date.now(), 2_147_483_647));
+    return () => window.clearTimeout(timer);
+  }, [analysisId, chartCandidateState, context.timeframe]);
   const marginCapacity = getAdaptiveMarginCapacity(availableMargin, selectedRule);
   const fingerprint = createAdaptivePlanFingerprint({
     instrument,
@@ -657,6 +766,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     context,
     standardRule: rulesAvailable ? standardRule : null,
     checkpointPrices: chartCandidateState.prices,
+    candles: chartCandidateState.candles,
     accountTier: form.accountTier,
     riskStyle: form.riskStyle,
   });
@@ -686,6 +796,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             context,
             standardRule: rulesAvailable ? standardRule : null,
             checkpointPrices: chartCandidateState.prices,
+            candles: chartCandidateState.candles,
              accountTier: parsedForm.accountTier ?? "mini",
             riskStyle: parsedForm.riskStyle ?? "conservative",
           })
@@ -696,7 +807,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         return;
       }
       if (shouldRestore && parsedForm) setForm({ ...DEFAULT_FORM, ...parsedForm });
-      if (shouldRestore && isStoredRecommendation(parsed.recommendation)) {
+      if (shouldRestore && isStoredRecommendation(parsed.recommendation) &&
+          context.validUntil != null && new Date(context.validUntil).getTime() > Date.now()) {
         const restored = normalizeStoredRecommendation(parsed.recommendation);
         setRecommendation(restored);
         setActiveSide(preferredAvailableSide(restored));
@@ -712,7 +824,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     if (field === "accountTier") localStorage.removeItem(storageKey(analysisId));
   };
   const calculate = () => {
-    if (!rulesAvailable) {
+    if (!rulesAvailable || chartCandidateState.status !== "ready" ||
+        (candleExpiry(chartCandidateState.candles, context.timeframe) ?? 0) <= Date.now()) {
       setRecommendation(null);
       localStorage.removeItem(storageKey(analysisId));
       return;
@@ -726,6 +839,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       standardRule,
       context,
       checkpointPrices: chartCandidateState.prices,
+      candles: chartCandidateState.candles,
       accountTier: form.accountTier,
       riskStyle: form.riskStyle,
     });
@@ -831,10 +945,10 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           {selectedRule && (
             <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-account-rule">
               <p className="mb-1 font-bold text-foreground">{copy.adaptive_fixed_scope}</p>
-              <p>{copy.adaptive_account_rule
+              <p>{(selectedRule.maximumLot == null ? copy.adaptive_account_rule_uncapped : copy.adaptive_account_rule)
                 .replace("{tier}", accountTierLabel(form.accountTier, copy))
                 .replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))
-                .replace("{maximum}", formatNumber(selectedRule.maximumLot, lang, 2))
+                .replace("{maximum}", selectedRule.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))
                 .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))
                 .replace("{size}", formatNumber(selectedRule.contractSize, lang, 2))
                 .replace("{unit}", standardRule?.contractUnit ?? "")}</p>
@@ -887,7 +1001,10 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               >
                 <span className="block text-[11px] font-semibold">{label}</span>
                 <span className="mt-0.5 block text-[10px] leading-relaxed">
-                  {description.replace("{maximum}", formatNumber(selectedRule?.maximumLot, lang, 2))}
+                  {(style === "aggressive" && selectedRule?.maximumLot == null
+                    ? copy.adaptive_risk_style_aggressive_desc_uncapped
+                    : description
+                  ).replace("{maximum}", selectedRule?.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))}
                 </span>
               </button>
             ))}
@@ -909,7 +1026,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           {rulesUnavailable && <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300" data-testid="adaptive-plan-rules-unavailable">{copy.adaptive_rules_error}</div>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || chartCandidateState.status === "loading"} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
+          <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || chartCandidateState.status !== "ready"} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {recommendation && primaryPlan && (
@@ -948,6 +1065,53 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 : copy.adaptive_context_fundamental_unavailable}</p>
             </div>
           </details>
+        )}
+        {recommendation && (
+          <div className="rounded-md border border-border p-3 space-y-1 text-[11px] leading-relaxed" data-testid="adaptive-timeframe-volatility">
+            <p className="font-bold">{copy.adaptive_volatility_title.replace("{timeframe}", recommendation.context.timeframe ?? "—")}</p>
+            {recommendation.volatilityDiagnostic.observedRange == null ? (
+              <p className="text-muted-foreground">{copy.adaptive_volatility_unavailable}</p>
+            ) : (
+              <>
+                <p className="text-muted-foreground">{copy.adaptive_volatility_observed
+                  .replace("{range}", formatNumber(recommendation.volatilityDiagnostic.observedRange, lang, 4))
+                  .replace("{count}", String(recommendation.volatilityDiagnostic.candleCount))}</p>
+                {(["buy", "sell"] as const).filter((side) => recommendation.volatilityDiagnostic[side === "buy" ? "buyStopLooksTight" : "sellStopLooksTight"] && recommendation.decision.preferredSide === side).map((side) => (
+                  <p key={side} className="font-medium text-amber-700 dark:text-amber-300">{copy.adaptive_volatility_tight
+                    .replace("{side}", side.toUpperCase())
+                    .replace("{distance}", formatNumber(recommendation.volatilityDiagnostic[side === "buy" ? "buyStopDistance" : "sellStopDistance"], lang, 4))}</p>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+        {recommendation && (
+          (() => {
+            const preferred = recommendation.decision.preferredSide;
+            const unsuitable = (preferred === "buy" && recommendation.volatilityDiagnostic.buyStopLooksTight) ||
+              (preferred === "sell" && recommendation.volatilityDiagnostic.sellStopLooksTight) ||
+              !recommendation.result.valid;
+            if (!unsuitable) return null;
+            const alternative = recommendation.candleAlternative;
+            return (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" data-testid="adaptive-alternative">
+                <p className="font-bold">{copy.adaptive_alternative_title}</p>
+                <p className="mt-1">{alternative.status === "available"
+                  ? copy.adaptive_alternative_basis
+                    .replace("{side}", alternative.side.toUpperCase())
+                    .replace("{lot}", formatNumber(alternative.lot, lang))
+                    .replace("{entry}", formatNumber(alternative.entry, lang, 4))
+                    .replace("{stop}", formatNumber(alternative.stopLoss, lang, 4))
+                    .replace("{target}", formatNumber(alternative.takeProfit, lang, 4))
+                    .replace("{rr}", formatNumber(alternative.riskReward, lang))
+                    .replace("{margin}", formatMoney(alternative.dayMargin, lang))
+                    .replace("{loss}", formatMoney(alternative.estimatedLoss, lang))
+                    .replace("{profit}", formatMoney(Math.abs(alternative.takeProfit - alternative.entry) * (selectedRule?.contractSize ?? 0) * alternative.lot, lang))
+                  : copy.adaptive_alternative_no_levels}</p>
+                <p className="mt-1 font-medium">{copy.adaptive_alternative_unchanged}</p>
+              </div>
+            );
+          })()
         )}
         {recommendation && !recommendation.result.valid && <div className="border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 space-y-2" data-testid="adaptive-plan-invalid">
           <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{copy.adaptive_invalid_title}</p>
