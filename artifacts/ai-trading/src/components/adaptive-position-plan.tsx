@@ -633,6 +633,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
   const [activeSide, setActiveSide] = useState<"buy" | "sell">("buy");
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
+  const [reloadToken, setReloadToken] = useState(0);
+  const [analysisExpired, setAnalysisExpired] = useState(false);
+  const chartScope = `${analysisId}:${instrument}:${context.timeframe ?? ""}`;
   const copyResetTimerRef = useRef<number | null>(null);
   const restoredStateKeyRef = useRef<string | null>(null);
   useEffect(() => {
@@ -645,9 +648,11 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   useEffect(() => {
     const expiresAt = context.validUntil == null ? Number.NaN : new Date(context.validUntil).getTime();
     const clearExpiredPlan = () => {
+      setAnalysisExpired(true);
       setRecommendation(null);
       localStorage.removeItem(storageKey(analysisId));
     };
+    setAnalysisExpired(false);
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
       clearExpiredPlan();
       return;
@@ -662,14 +667,26 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   }, []);
   const [chartCandidateState, setChartCandidateState] = useState<{
     status: "loading" | "ready" | "error";
+    scope: string;
     prices: { buy: number[]; sell: number[] };
     candles: AdaptiveChartCandle[];
     source: { sourceFetchedAt?: unknown; sourceMaxAgeMs?: unknown; isStale?: unknown; staleReason?: unknown };
     reason: AdaptiveCandleFreshnessReason | null;
-  }>({ status: "loading", prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null });
+  }>({ status: "loading", scope: "", prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null });
   const emptyChartState = (reason: AdaptiveCandleFreshnessReason | null = null) => ({
-    status: "error" as const, prices: { buy: [], sell: [] }, candles: [], source: {}, reason,
+    status: "error" as const, scope: chartScope, prices: { buy: [], sell: [] }, candles: [], source: {}, reason,
   });
+  const isAnalysisExpired = analysisExpired || context.validUntil == null ||
+    new Date(context.validUntil).getTime() <= Date.now();
+  const requestFreshCandles = () => {
+    if (context.validUntil == null || new Date(context.validUntil).getTime() <= Date.now()) return;
+    setRecommendation(null);
+    localStorage.removeItem(storageKey(analysisId));
+    setChartCandidateState({
+      status: "loading", scope: chartScope, prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null,
+    });
+    setReloadToken((previous) => previous + 1);
+  };
   const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
@@ -684,15 +701,18 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     : null;
   useEffect(() => {
     if (isRulesLoading) return;
-    if (!rulesAvailable || !context.timeframe || !selectedRule) {
+    if (!rulesAvailable || !context.timeframe || !selectedRule || isAnalysisExpired) {
       setChartCandidateState(emptyChartState());
       return;
     }
     let cancelled = false;
-    setChartCandidateState({ status: "loading", prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null });
+    const controller = new AbortController();
+    setChartCandidateState({
+      status: "loading", scope: chartScope, prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null,
+    });
     fetch(
       `/api/historical/candles?instrument=${encodeURIComponent(instrument)}&timeframe=${encodeURIComponent(context.timeframe)}&purpose=adaptive-layering`,
-      { credentials: "include" },
+      { credentials: "include", cache: "no-store", signal: controller.signal },
     )
       .then(async (response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -725,6 +745,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         }
         setChartCandidateState({
           status: "ready",
+          scope: chartScope,
           prices: getAdaptiveChartCandidatePrices(candles, tradePlan, selectedRule.minMovement),
           candles,
           source: payload,
@@ -736,28 +757,19 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       });
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [context.timeframe, instrument, isRulesLoading, rulesAvailable, selectedRule?.minMovement, tradePlan]);
+  }, [analysisId, context.timeframe, context.validUntil, instrument, isAnalysisExpired, isRulesLoading, rulesAvailable, selectedRule?.minMovement, tradePlan, reloadToken]);
   useEffect(() => {
-    if (chartCandidateState.status !== "ready") return;
+    if (chartCandidateState.status !== "ready" || chartCandidateState.scope !== chartScope || isAnalysisExpired) return;
     const expiresAt = assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).expiresAt;
-    const expire = () => {
-      setRecommendation(null);
-      setChartCandidateState({
-        ...emptyChartState(
-          assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).reason ?? "source_old",
-        ),
-        source: chartCandidateState.source,
-      });
-      localStorage.removeItem(storageKey(analysisId));
-    };
     if (expiresAt == null || expiresAt <= Date.now()) {
-      expire();
+      requestFreshCandles();
       return;
     }
-    const timer = window.setTimeout(expire, Math.min(expiresAt - Date.now(), 2_147_483_647));
+    const timer = window.setTimeout(requestFreshCandles, Math.min(expiresAt - Date.now(), 2_147_483_647));
     return () => window.clearTimeout(timer);
-  }, [analysisId, chartCandidateState, context.timeframe]);
+  }, [analysisId, chartCandidateState, context.timeframe, context.validUntil, instrument, isAnalysisExpired]);
   const marginCapacity = getAdaptiveMarginCapacity(availableMargin, selectedRule);
   const fingerprint = createAdaptivePlanFingerprint({
     instrument,
@@ -772,7 +784,14 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const rulesUnavailable = !isRulesLoading && !rulesAvailable;
 
   useEffect(() => {
-    if (isRulesLoading || chartCandidateState.status === "loading") return;
+    if (isRulesLoading) return;
+    if (!rulesAvailable) {
+      localStorage.removeItem(storageKey(analysisId));
+      setRecommendation(null);
+      return;
+    }
+    if (chartCandidateState.status !== "ready" ||
+        chartCandidateState.scope !== chartScope || isAnalysisExpired) return;
     const restoreKey = `${analysisId}:${rulesAvailable ? "ready" : "unavailable"}`;
     const shouldRestore = restoredStateKeyRef.current !== restoreKey;
     if (shouldRestore) {
@@ -806,6 +825,13 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         return;
       }
       if (shouldRestore && parsedForm) setForm({ ...DEFAULT_FORM, ...parsedForm });
+      // The same OHLC bars can be served again with a new source snapshot.
+      // Never restore a calculation made against the previous retrieval.
+      if (parsed.sourceFetchedAt !== chartCandidateState.source.sourceFetchedAt) {
+        setRecommendation(null);
+        localStorage.removeItem(storageKey(analysisId));
+        return;
+      }
       if (shouldRestore && isStoredRecommendation(parsed.recommendation) &&
           context.validUntil != null && new Date(context.validUntil).getTime() > Date.now()) {
         const restored = normalizeStoredRecommendation(parsed.recommendation);
@@ -823,7 +849,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     if (field === "accountTier") localStorage.removeItem(storageKey(analysisId));
   };
   const calculate = () => {
-    if (!rulesAvailable || chartCandidateState.status !== "ready" ||
+    if (!rulesAvailable || isAnalysisExpired || chartCandidateState.status !== "ready" ||
+        chartCandidateState.scope !== chartScope ||
         assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).reason !== null) {
       setRecommendation(null);
       localStorage.removeItem(storageKey(analysisId));
@@ -844,7 +871,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     });
     setRecommendation(next);
     setActiveSide(preferredAvailableSide(next));
-    localStorage.setItem(storageKey(analysisId), JSON.stringify({ fingerprint, form, recommendation: next }));
+    localStorage.setItem(storageKey(analysisId), JSON.stringify({
+      fingerprint, form, recommendation: next, sourceFetchedAt: chartCandidateState.source.sourceFetchedAt,
+    }));
   };
   const reset = () => {
     setForm(DEFAULT_FORM);
@@ -904,7 +933,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             <p>{copy.adaptive_analysis_basis}</p>
             <p>{copy.adaptive_chart_confirmation}</p>
             <p className="font-medium text-foreground" data-testid="adaptive-chart-candidate-status">
-              {chartCandidateState.status === "loading"
+              {isAnalysisExpired
+                ? copy.adaptive_analysis_expired
+                : chartCandidateState.status === "loading" || chartCandidateState.scope !== chartScope
                 ? copy.adaptive_chart_candidates_loading
                 : chartCandidateState.status === "error"
                   ? `${copy.adaptive_chart_candidates_unavailable} ${chartCandidateState.reason
@@ -1025,7 +1056,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </div>
           )}
           {rulesUnavailable && <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300" data-testid="adaptive-plan-rules-unavailable">{copy.adaptive_rules_error}</div>}
-          {chartCandidateState.status === "error" && chartCandidateState.reason && (
+          {isAnalysisExpired && (
+            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300" data-testid="adaptive-analysis-expired">
+              {copy.adaptive_analysis_expired}
+            </p>
+          )}
+          {!isAnalysisExpired && chartCandidateState.status === "error" && chartCandidateState.reason && (
             <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300" data-testid="adaptive-candle-warning">
               {copy.adaptive_chart_candidates_unavailable} {copy[`adaptive_candle_${chartCandidateState.reason}`]}
             </p>
@@ -1038,7 +1074,10 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || chartCandidateState.status !== "ready"} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
+          <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || isAnalysisExpired || chartCandidateState.status !== "ready" || chartCandidateState.scope !== chartScope} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
+          {!isAnalysisExpired && chartCandidateState.status === "error" && (
+            <Button type="button" size="sm" variant="outline" onClick={requestFreshCandles} disabled={!rulesAvailable || chartCandidateState.scope !== chartScope} data-testid="button-refresh-adaptive-candles">{copy.adaptive_refresh_candles}</Button>
+          )}
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {recommendation && primaryPlan && (
