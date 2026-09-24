@@ -10,6 +10,7 @@ import {
   pgEnum,
   uniqueIndex,
   index,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 
 export type TradeSideShape = {
@@ -368,6 +369,25 @@ export const reauthTokens = pgTable("reauth_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Mobile OAuth handshake state already exists in production. Keep it in the
+// schema so development and production remain aligned on publish.
+export const mobileOauthTransactions = pgTable("mobile_oauth_transactions", {
+  id: serial("id").primaryKey(),
+  stateHash: text("state_hash").notNull().unique(),
+  provider: text("provider").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  mobileCodeChallenge: text("mobile_code_challenge").notNull(),
+  mobileCodeChallengeMethod: text("mobile_code_challenge_method").notNull().default("S256"),
+  providerCodeVerifier: text("provider_code_verifier"),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  isNewUser: boolean("is_new_user").notNull().default(false),
+  exchangeCodeHash: text("exchange_code_hash").unique(),
+  codeExpiresAt: timestamp("code_expires_at"),
+  consumedAt: timestamp("consumed_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Holds a verified TikTok profile between GET /auth/tiktok/callback and
 // POST /auth/tiktok/complete-signup for a brand-new TikTok sign-in (no
 // existing tiktok_id match). TikTok's Login Kit never returns an email, so
@@ -384,10 +404,17 @@ export const pendingTiktokSignups = pgTable("pending_tiktok_signups", {
   tiktokId: text("tiktok_id").notNull(),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
+  mobileTransactionId: integer("mobile_transaction_id"),
   expiresAt: timestamp("expires_at").notNull(),
   usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  foreignKey({
+    name: "pending_tiktok_signups_mobile_tx_fk",
+    columns: [table.mobileTransactionId],
+    foreignColumns: [mobileOauthTransactions.id],
+  }).onDelete("set null"),
+]);
 
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
