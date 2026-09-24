@@ -1910,7 +1910,6 @@ export default function AnalysisDetailPage({
       timeframe,
       mode: analysis.mode,
       userInputContext: analysis.userInputContext,
-      isTimeframeSwitch: true,
     }).then((succeeded) => {
       if (!succeeded && quickTimeframeTargetRef.current === timeframe) {
         setQuickTimeframeStatus("error");

@@ -17,10 +17,6 @@ export interface RefreshableAnalysis {
   mode: string;
   userInputContext?: string | null;
   carriedOver?: boolean;
-  /** Set by the "Ganti Timeframe" quick-switch only — marks this request
-   *  as a timeframe change (not a same-timeframe "Analisis Ulang") so it
-   *  can qualify for the free-timeframe-switch credit bonus server-side. */
-  isTimeframeSwitch?: boolean;
 }
 
 export function useRefreshAnalysis(options?: {
@@ -58,7 +54,6 @@ export function useRefreshAnalysis(options?: {
             timeframe: analysis.timeframe as CreateAnalysisBodyTimeframe,
             mode: analysis.mode as CreateAnalysisBodyMode,
             userInputContext: trimmedNotes ? trimmedNotes : undefined,
-            isTimeframeSwitch: analysis.isTimeframeSwitch,
           },
         });
         trackEvent("analysis_created", {

@@ -1050,8 +1050,6 @@ export interface CreateAnalysisBody {
   timeframe: CreateAnalysisBodyTimeframe;
   userInputContext?: string;
   mode: CreateAnalysisBodyMode;
-  /** Internal hint set only by the "Ganti Timeframe" quick-switch — marks this request as eligible for the free-timeframe-switch credit bonus once the free hourly/daily quota is exhausted. Never affects quota itself; omit for a fresh/manual analysis. */
-  isTimeframeSwitch?: boolean;
 }
 
 export interface AnalysesSummary {

@@ -1697,7 +1697,6 @@ describe("AnalysisDetailPage: automatic timeframe analysis", () => {
         timeframe: "4h",
         mode: "beginner",
         userInputContext: "Watch the H4 resistance.",
-        isTimeframeSwitch: true,
       },
     ]);
 
