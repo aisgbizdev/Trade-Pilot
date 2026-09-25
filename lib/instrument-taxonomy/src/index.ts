@@ -14,3 +14,9 @@ const PRIMARY_INSTRUMENT_SET: ReadonlySet<string> = new Set(PRIMARY_INSTRUMENTS)
 export function isPrimaryInstrument(instrument: string): instrument is PrimaryInstrument {
   return PRIMARY_INSTRUMENT_SET.has(instrument);
 }
+
+export {
+  BROKER_CONTRACT_TIERS,
+  type BrokerContractCode,
+  type BrokerAccountTier,
+} from "./broker-contract-tiers.js";

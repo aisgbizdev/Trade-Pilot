@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StandardTradingRuleInstrument, TradePlan } from "@workspace/api-client-react";
+import { BROKER_CONTRACT_TIERS } from "@workspace/instrument-taxonomy";
 import {
   buildAdaptivePlanRecommendation as buildAdaptivePlanRecommendationCore,
   buildAdaptivePositionPlan,
@@ -309,6 +310,27 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(hsiWithNikkeiRule.rule).toBeNull();
     expect(nikkeiWithGoldRule.valid).toBe(false);
     expect(nikkeiWithGoldRule.rule).toBeNull();
+  });
+
+  it("rejects stale Mini contract sizes or units for every tier without overriding the API rule", () => {
+    const cases = [
+      ["XAU/USD", GOLD_RULE, "XUL10"],
+      ["BRENT", BRENT_RULE, "BCO10_BBJ"],
+      ["HSI", HSI_RULE, "HKK50_BBJ"],
+      ["NIKKEI", NIKKEI_RULE, "JPK50_BBJ"],
+    ] as const;
+    for (const [instrument, standardRule, code] of cases) {
+      const contract = BROKER_CONTRACT_TIERS[code];
+      for (const tier of ["micro", "mini", "regular"] as const) {
+        expect(getAdaptiveMarketRule(instrument, standardRule, tier)).toMatchObject({
+          contractSize: contract[tier].size,
+          contractUnit: contract.unit,
+          contractSource: contract[tier].source,
+        });
+        expect(getAdaptiveMarketRule(instrument, { ...standardRule, contractSize: contract.mini.size + 1 }, tier)).toBeNull();
+        expect(getAdaptiveMarketRule(instrument, { ...standardRule, contractUnit: "barrel" === contract.unit ? "troy ounce" : "barrel" }, tier)).toBeNull();
+      }
+    }
   });
 
   it("scales index contract and margin by account tier without using Gold sizing", () => {

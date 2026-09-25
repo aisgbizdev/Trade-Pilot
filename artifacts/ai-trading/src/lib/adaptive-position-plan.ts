@@ -4,9 +4,11 @@ import type {
   TradePlan,
   TradeSide,
 } from "@workspace/api-client-react";
+import { BROKER_CONTRACT_TIERS } from "@workspace/instrument-taxonomy";
+import type { BrokerAccountTier, BrokerContractCode } from "@workspace/instrument-taxonomy";
 
 export type AdaptiveMarket = "gold" | "brent" | "hang_seng" | "nikkei";
-export type AccountTier = "micro" | "mini" | "regular";
+export type AccountTier = BrokerAccountTier;
 export type AdaptiveRiskStyle = "conservative" | "balanced" | "aggressive";
 export type AdaptiveLotProfile = "decreasing" | "mixed" | "increasing";
 export type AdaptivePlanPosture = "scaling_allowed" | "entry_only" | "not_recommended";
@@ -402,19 +404,6 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
   },
 };
 
-// Contract value for ONE minimum-size position at each tier, not per
-// numeric lot. Mini must match the source API rule; Regular comes from the
-// supplied broker table. Micro is an explicit 1/10 Mini assumption.
-const TIER_CONTRACTS: Record<AdaptiveMarket, {
-  unit: AdaptiveRule["contractUnit"];
-  sizes: Record<AccountTier, number>;
-}> = {
-  gold: { unit: "troy ounce", sizes: { micro: 1, mini: 10, regular: 100 } },
-  brent: { unit: "barrel", sizes: { micro: 10, mini: 100, regular: 1_000 } },
-  hang_seng: { unit: "USD/point", sizes: { micro: 0.5, mini: 5, regular: 5 } },
-  nikkei: { unit: "USD/point", sizes: { micro: 0.5, mini: 5, regular: 5 } },
-};
-
 function contractValueForLot(rule: AdaptiveRule, lot: number): number {
   return rule.contractSize * (lot / rule.minimumLot);
 }
@@ -476,7 +465,7 @@ function adaptiveMarketForInstrument(instrument: string): AdaptiveMarket | null 
   return null;
 }
 
-function standardCodeForMarket(market: AdaptiveMarket): StandardTradingRuleInstrument["code"] {
+function standardCodeForMarket(market: AdaptiveMarket): BrokerContractCode {
   switch (market) {
     case "gold": return "XUL10";
     case "brent": return "BCO10_BBJ";
@@ -525,12 +514,13 @@ function ruleFromStandardTradingRules(
 
   const minMovement = numericValues(standardRule.minimumPriceMovement)[0];
   const tier = ACCOUNT_TIER_SPECS[accountTier];
-  const contract = TIER_CONTRACTS[market];
-  if (standardRule.contractSize !== contract.sizes.mini ||
+  const contract = BROKER_CONTRACT_TIERS[standardCodeForMarket(market)];
+  if (standardRule.contractSize !== contract.mini.size ||
       standardRule.contractUnit !== contract.unit) return null;
   const marginAtMinimumLot = standardRule.initialMarginUsdPerLot * tier.marginMultiplierFromMini;
   const marginPerLot = marginAtMinimumLot / tier.minimumLot;
-  const contractSize = contract.sizes[accountTier];
+  const tierContract = contract[accountTier];
+  const contractSize = tierContract.size;
   if (
     !Number.isFinite(contractSize) ||
     contractSize <= 0 ||
@@ -551,7 +541,7 @@ function ruleFromStandardTradingRules(
     marginBasis: "day",
     contractSize,
     contractUnit: contract.unit,
-    contractSource: accountTier === "micro" ? "micro_assumption" : "broker_document",
+    contractSource: tierContract.source,
     minMovement,
     marginPerLot,
     marginAtMinimumLot,
