@@ -754,6 +754,30 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
   });
 
   it.each([
+    { tier: "micro" as const, funds: 50.006, loss: 40, rawShortfall: 9.994, displayedShortfall: 10, plannedPositions: 2 },
+    { tier: "regular" as const, funds: 4_000.006, loss: 3_000, rawShortfall: 99.994, displayedShortfall: 100, plannedPositions: 1 },
+  ])("retains the exact $tier risk decision when the displayed shortfall needs a fraction of a cent", ({
+    tier, funds, loss, rawShortfall, displayedShortfall, plannedPositions,
+  }) => {
+    const input = { accountTier: tier, maximumLoss: loss, riskStyle: "balanced" as const };
+    const current = buildRecommendation({ ...input, availableMargin: funds });
+    const next = current.result.buy?.rejectedLadder[0];
+    expect(next?.rejectReason).toBe("day_margin");
+    expect(next?.financialAlternative?.additionalFundsRequired).toBeCloseTo(rawShortfall, 6);
+    expect(next?.cumulativeFundsAtStop).toBeCloseTo(
+      next!.cumulativeDayMargin + next!.estimatedRiskToStop,
+    );
+    expect(next!.estimatedRiskToStop).toBeLessThanOrEqual(current.recommendation!.usableRiskBudget);
+
+    const roundedDown = Math.round(rawShortfall * 100) / 100;
+    expect(roundedDown).toBeLessThan(rawShortfall);
+    expect(buildRecommendation({ ...input, availableMargin: funds + roundedDown }).result.buy?.ladder)
+      .toHaveLength(plannedPositions);
+    expect(buildRecommendation({ ...input, availableMargin: funds + displayedShortfall }).result.buy?.ladder)
+      .toHaveLength(plannedPositions + 1);
+  });
+
+  it.each([
     { tier: "micro" as const, funds: 50, loss: 40, extraFunds: 10, plannedPositions: 2, nextPrice: 2303, nextLot: 0.01, nextRisk: 30 },
     { tier: "regular" as const, funds: 4_000, loss: 3_000, extraFunds: 100, plannedPositions: 1, nextPrice: 2302, nextLot: 1, nextRisk: 2_100 },
   ])("uses only Sell checkpoints for the $tier broker-funds alternative", ({

@@ -1371,11 +1371,13 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
   });
 
   it.each([
-    { tier: "micro", funds: "50", loss: "40", nextPosition: 3, nextLot: "0.01", riskBlockedLoss: "15" },
-    { tier: "regular", funds: "4000", loss: "3000", nextPosition: 2, nextLot: "1", riskBlockedLoss: "2000" },
+    { tier: "micro", funds: "50", loss: "40", nextPosition: 3, nextLot: "0.01", expectedExtra: 6, riskBlockedLoss: "15" },
+    { tier: "regular", funds: "4000", loss: "3000", nextPosition: 2, nextLot: "1", expectedExtra: 100, riskBlockedLoss: "2000" },
+    { tier: "micro", funds: "50.006", loss: "40", nextPosition: 3, nextLot: "0.01", expectedExtra: 6, riskBlockedLoss: "15" },
+    { tier: "regular", funds: "4000.006", loss: "3000", nextPosition: 2, nextLot: "1", expectedExtra: 100, riskBlockedLoss: "2000" },
   ] as const)(
-    "only shows the $tier broker-funds alternative while funds are the sole next-layer blocker",
-    async ({ tier, funds, loss, nextPosition, nextLot, riskBlockedLoss }) => {
+    "only shows the $tier broker-funds alternative with $funds available while funds are the sole next-layer blocker",
+    async ({ tier, funds, loss, nextPosition, nextLot, expectedExtra, riskBlockedLoss }) => {
       installFetchMock([
         getAnalysisHandler({
           body: {
@@ -1405,7 +1407,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
         new RegExp(`Position ${nextPosition}.*${nextLot.replace(".", "\\.")} lot: about \\$[\\d,]+ more free broker funds needed to review`),
       );
       const extra = Number(nextLayerText.match(/about \$([\d,]+) more free broker funds/)?.[1].replaceAll(",", ""));
-      expect(extra).toBeGreaterThan(0);
+      expect(extra).toBe(expectedExtra);
       expect(screen.getByTestId(`adaptive-conditional-buy-${nextPosition - 1}`)).toHaveTextContent(`$${extra}`);
       expect(screen.getByTestId("adaptive-next-layer-buy")).toHaveTextContent(/not a TradePilot analysis-credit top-up/i);
       expect(within(screen.getByTestId("adaptive-snapshot-positions-buy")).getAllByTestId(/^adaptive-snapshot-position-buy-\d+$/))

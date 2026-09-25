@@ -228,6 +228,12 @@ function formatMoney(value: number | null | undefined, lang: "en" | "id", maximu
   return formatted === "—" ? formatted : `$${formatted}`;
 }
 
+function formatRequiredFunds(value: number | null | undefined, lang: "en" | "id"): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  // A funding suggestion must never round below the raw value the calculator compares.
+  return formatMoney(Math.ceil(value * 100) / 100, lang);
+}
+
 function formatProfit(value: number | null | undefined, lang: "en" | "id"): string {
   const formatted = formatMoney(value, lang);
   return formatted === "—" ? formatted : `+${formatted}`;
@@ -392,7 +398,7 @@ function LayerFinancialBreakdown({
         <dt className="text-muted-foreground">{copy.adaptive_layer_cumulative_risk}</dt>
         <dd className="text-right font-semibold tabular-nums">{formatMoney(level.estimatedRiskToStop, lang)}</dd>
         <dt className="text-muted-foreground">{copy.adaptive_layer_funds_at_stop}</dt>
-        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.cumulativeFundsAtStop, lang)}</dd>
+        <dd className="text-right font-semibold tabular-nums">{rejected ? formatRequiredFunds(level.cumulativeFundsAtStop, lang) : formatMoney(level.cumulativeFundsAtStop, lang)}</dd>
         <dt className="text-muted-foreground">{copy.adaptive_layer_remaining_funds}</dt>
         <dd className={`text-right font-semibold tabular-nums ${exceedsFunds ? "text-amber-700 dark:text-amber-400" : ""}`}>
           {exceedsFunds ? copy.adaptive_layer_exceeds_funds : formatMoney(remainingFunds, lang)}
@@ -416,7 +422,7 @@ function LayerFinancialBreakdown({
       </dl>
       {exceedsFunds && (
         <p className="mt-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-          {copy.adaptive_layer_shortfall.replace("{amount}", formatMoney(Math.abs(level.remainingFundsAtStop!), lang))}
+          {copy.adaptive_layer_shortfall.replace("{amount}", formatRequiredFunds(Math.abs(level.remainingFundsAtStop!), lang))}
         </p>
       )}
     </div>
@@ -643,7 +649,7 @@ function PlanSide({
                 {copy.adaptive_next_funds.replace("{position}", String(fundsOnlyCandidate.level + 1))
                   .replace("{price}", formatNumber(fundsOnlyCandidate.price, lang, 4))
                   .replace("{lot}", formatNumber(fundsOnlyCandidate.lot, lang))
-                  .replace("{amount}", formatMoney(fundsOnlyCandidate.financialAlternative!.additionalFundsRequired, lang))}
+                  .replace("{amount}", formatRequiredFunds(fundsOnlyCandidate.financialAlternative!.additionalFundsRequired, lang))}
               </p>
               <p className="mt-1 text-muted-foreground">{copy.adaptive_next_funds_note}</p>
             </>
@@ -708,13 +714,13 @@ function PlanSide({
                       <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_conditional_help}</p>
                       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
                         <dt className="text-muted-foreground">{copy.adaptive_conditional_additional_funds}</dt>
-                        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.financialAlternative.additionalFundsRequired, lang)}</dd>
+                        <dd className="text-right font-semibold tabular-nums">{formatRequiredFunds(level.financialAlternative.additionalFundsRequired, lang)}</dd>
                         <dt className="text-muted-foreground">{copy.adaptive_conditional_additional_loss}</dt>
                         <dd className="text-right font-semibold tabular-nums">{formatMoney(level.financialAlternative.additionalLossBudgetRequired, lang)}</dd>
                         <dt className="text-muted-foreground">{copy.adaptive_conditional_total_risk}</dt>
                         <dd className="text-right font-semibold tabular-nums">{formatMoney(level.estimatedRiskToStop, lang)}</dd>
                         <dt className="text-muted-foreground">{copy.adaptive_conditional_total_funds}</dt>
-                        <dd className="text-right font-semibold tabular-nums">{formatMoney(level.cumulativeFundsAtStop, lang)}</dd>
+                        <dd className="text-right font-semibold tabular-nums">{formatRequiredFunds(level.cumulativeFundsAtStop, lang)}</dd>
                       </dl>
                       <p className="mt-1 text-[10px] font-medium text-primary">{copy.adaptive_conditional_manual}</p>
                     </div>
@@ -1455,14 +1461,14 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                        : copy.adaptive_side_not_aligned).replace("{side}", sideName)
                     : copy.adaptive_side_unavailable.replace("{side}", sideName);
               const blockerText = diagnostic?.blocker === "margin"
-                ? copy.adaptive_minimum_blocker_margin.replace("{amount}", formatMoney(diagnostic.marginShortfall, lang))
+                ? copy.adaptive_minimum_blocker_margin.replace("{amount}", formatRequiredFunds(diagnostic.marginShortfall, lang))
                 : diagnostic?.blocker === "risk"
                   ? copy.adaptive_minimum_blocker_risk
                     .replace("{risk}", formatMoney(diagnostic.riskAtStop, lang))
                     .replace("{budget}", formatMoney(diagnostic.effectiveLossBudget, lang))
                   : diagnostic?.blocker === "margin_and_risk"
                     ? copy.adaptive_minimum_blocker_both
-                      .replace("{funds}", formatMoney(diagnostic.marginShortfall, lang))
+                    .replace("{funds}", formatRequiredFunds(diagnostic.marginShortfall, lang))
                       .replace("{risk}", formatMoney(diagnostic.riskAtStop, lang))
                       .replace("{budget}", formatMoney(diagnostic.effectiveLossBudget, lang))
                     : diagnostic?.blocker === "direction"
@@ -1471,12 +1477,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                         ? copy.adaptive_minimum_blocker_analysis
                         : null;
               const actionText = diagnostic?.nextAction === "funds"
-                ? copy.adaptive_minimum_action_funds.replace("{amount}", formatMoney(diagnostic.marginShortfall, lang))
+                ? copy.adaptive_minimum_action_funds.replace("{amount}", formatRequiredFunds(diagnostic.marginShortfall, lang))
                 : diagnostic?.nextAction === "loss_budget"
                   ? copy.adaptive_minimum_action_loss.replace("{amount}", formatMoney(diagnostic.maximumLossShortfall, lang))
                   : diagnostic?.nextAction === "funds_and_loss_budget"
                     ? copy.adaptive_minimum_action_both
-                      .replace("{funds}", formatMoney(diagnostic.marginShortfall, lang))
+                      .replace("{funds}", formatRequiredFunds(diagnostic.marginShortfall, lang))
                       .replace("{loss}", formatMoney(diagnostic.maximumLossShortfall, lang))
                     : diagnostic?.nextAction === "reanalysis"
                       ? copy.adaptive_minimum_action_reanalysis
@@ -1531,11 +1537,11 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                    const diagnostic = recommendation.sideEvaluations[side].diagnostic;
                    const blockedReason = diagnostic?.marginShortfall && diagnostic.riskShortfall
                      ? copy.adaptive_minimum_blocker_both
-                       .replace("{funds}", formatMoney(diagnostic.marginShortfall, lang))
+                       .replace("{funds}", formatRequiredFunds(diagnostic.marginShortfall, lang))
                        .replace("{risk}", formatMoney(diagnostic.riskAtStop, lang))
                        .replace("{budget}", formatMoney(diagnostic.effectiveLossBudget, lang))
                      : diagnostic?.marginShortfall
-                       ? copy.adaptive_minimum_blocker_margin.replace("{amount}", formatMoney(diagnostic.marginShortfall, lang))
+                       ? copy.adaptive_minimum_blocker_margin.replace("{amount}", formatRequiredFunds(diagnostic.marginShortfall, lang))
                        : diagnostic?.riskShortfall
                          ? copy.adaptive_minimum_blocker_risk
                            .replace("{risk}", formatMoney(diagnostic.riskAtStop, lang))
