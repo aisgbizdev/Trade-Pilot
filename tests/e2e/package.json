@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build-deps": "pnpm --filter @workspace/api-server run build && PORT=20853 BASE_PATH=/ pnpm --filter @workspace/ai-trading run build",
+    "build-deps": "pnpm --filter @workspace/api-server run build:e2e && PORT=20853 BASE_PATH=/ pnpm --filter @workspace/ai-trading run build",
     "install-browsers": "../../scripts/install-e2e-browsers.sh",
     "start-test-server": "node ./server/test-server.mjs",
     "test": "pnpm run install-browsers && pnpm run build-deps && pnpm run test:no-build",
