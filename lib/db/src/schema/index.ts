@@ -139,6 +139,10 @@ export const nativePushPlatformEnum = pgEnum("native_push_platform", [
   "ios",
 ]);
 
+// Retain the production session/audit schema when publishing newer changes.
+export const sessionPlatformEnum = pgEnum("session_platform", ["web", "native"]);
+export const authEventTypeEnum = pgEnum("auth_event_type", ["login", "logout"]);
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -337,9 +341,22 @@ export const sessions = pgTable("sessions", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
+  platform: sessionPlatformEnum("platform").notNull().default("web"),
+  lastActivityAt: timestamp("last_activity_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const authEvents = pgTable("auth_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventType: authEventTypeEnum("event_type").notNull(),
+  platform: sessionPlatformEnum("platform").notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  createdAtIdx: index("auth_events_created_at_idx").on(t.createdAt),
+}));
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
@@ -1027,6 +1044,8 @@ export const creditTopupRequests = pgTable("credit_topup_requests", {
   reviewNote: text("review_note"),
   creditsGranted: integer("credits_granted"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+  deletedByUserId: integer("deleted_by_user_id").references(() => users.id, { onDelete: "set null" }),
 }, (t) => ({
   statusIdx: index("credit_topup_requests_status_idx").on(t.status),
   userIdx: index("credit_topup_requests_user_idx").on(t.userId),
