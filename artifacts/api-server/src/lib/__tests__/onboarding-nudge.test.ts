@@ -9,6 +9,13 @@ import { dispatchOnboardingNudges } from "../onboarding-nudge";
 
 const RUN_ID = randomBytes(4).toString("hex");
 const seededUserIds: number[] = [];
+// 12:00 in Asia/Jakarta, safely outside the default 22:00–07:00 quiet window.
+// Keep the fixture well before real users so a test tick does not dispatch
+// onboarding notifications to unrelated accounts in the shared dev database.
+const DAYTIME = new Date("2020-01-15T05:00:00.000Z");
+const QUIET_TIME = new Date("2020-01-15T17:00:00.000Z"); // 00:00 in Jakarta
+const hoursBefore = (now: Date, hours: number) =>
+  new Date(now.getTime() - hours * 60 * 60 * 1000);
 
 async function createUser(overrides: Partial<typeof users.$inferInsert> = {}): Promise<number> {
   const suffix = randomBytes(6).toString("hex");
@@ -38,8 +45,8 @@ afterAll(async () => {
 
 describe("onboarding-nudge: one-shot semantics", () => {
   it("skips users <24h old", async () => {
-    const id = await createUser({ createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000) });
-    await dispatchOnboardingNudges(new Date());
+    const id = await createUser({ createdAt: hoursBefore(DAYTIME, 1) });
+    await dispatchOnboardingNudges(DAYTIME);
     const [row] = await db
       .select({ stamp: users.onboardingNudgeSentAt })
       .from(users)
@@ -49,9 +56,9 @@ describe("onboarding-nudge: one-shot semantics", () => {
   });
 
   it("stamps users with a populated watchlist without sending", async () => {
-    const id = await createUser({ createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000) });
+    const id = await createUser({ createdAt: hoursBefore(DAYTIME, 25) });
     await db.insert(watchlistItems).values({ userId: id, instrument: "EUR/USD" });
-    await dispatchOnboardingNudges(new Date());
+    await dispatchOnboardingNudges(DAYTIME);
     const [row] = await db
       .select({ stamp: users.onboardingNudgeSentAt })
       .from(users)
@@ -67,8 +74,8 @@ describe("onboarding-nudge: one-shot semantics", () => {
   });
 
   it("is a true one-shot — second dispatch tick is a no-op", async () => {
-    const id = await createUser({ createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000) });
-    await dispatchOnboardingNudges(new Date());
+    const id = await createUser({ createdAt: hoursBefore(DAYTIME, 25) });
+    await dispatchOnboardingNudges(DAYTIME);
     const [first] = await db
       .select({ stamp: users.onboardingNudgeSentAt })
       .from(users)
@@ -77,7 +84,7 @@ describe("onboarding-nudge: one-shot semantics", () => {
     expect(first.stamp).not.toBeNull();
     const stamp1 = first.stamp!;
 
-    await dispatchOnboardingNudges(new Date(Date.now() + 60 * 1000));
+    await dispatchOnboardingNudges(new Date(DAYTIME.getTime() + 60 * 1000));
     const [second] = await db
       .select({ stamp: users.onboardingNudgeSentAt })
       .from(users)
@@ -85,5 +92,22 @@ describe("onboarding-nudge: one-shot semantics", () => {
       .limit(1);
     // Stamp must remain exactly the same (no re-write).
     expect(second.stamp?.getTime()).toBe(stamp1.getTime());
+  });
+
+  it("defers sending during quiet hours without stamping the user", async () => {
+    const id = await createUser({ createdAt: hoursBefore(DAYTIME, 25) });
+    const stats = await dispatchOnboardingNudges(QUIET_TIME);
+    const [row] = await db
+      .select({ stamp: users.onboardingNudgeSentAt })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    const delivered = await db
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(eq(notifications.userId, id));
+    expect(stats.suppressedQuiet).toBeGreaterThanOrEqual(1);
+    expect(row.stamp).toBeNull();
+    expect(delivered).toHaveLength(0);
   });
 });
