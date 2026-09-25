@@ -1547,6 +1547,59 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId(`adaptive-next-layer-${side}`)).not.toBeInTheDocument();
   });
 
+  it("shows a limited $200 Mini Buy against Moderate's $150 target without recommending Sell or another AI credit", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: {
+            ...TRADE_PLAN,
+            buy: { ...TRADE_PLAN.buy, stopLoss: "2,281.00" },
+            sell: { ...TRADE_PLAN.sell, stopLoss: "2,336.00" },
+          },
+          riskLevel: "low",
+          tradingBias: "bullish_strong",
+          confidenceMin: 65,
+          confidenceMax: 78,
+          techBuyCount: 14,
+          techSellCount: 4,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const margin = await screen.findByTestId("input-adaptive-available-margin");
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+    expect(screen.getByTestId("button-adaptive-risk-style-balanced")).toHaveTextContent("Moderate");
+    fireEvent.change(margin, { target: { value: "1000" } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "200" } });
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+
+    expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent("WAIT");
+    expect(screen.getByTestId("adaptive-selected-limited")).toHaveTextContent("Limited option only");
+    expect(screen.getByTestId("adaptive-selected-decision")).toHaveTextContent("$150");
+    expect(screen.getByTestId("adaptive-selected-decision")).toHaveTextContent("$200");
+    expect(screen.getByTestId("adaptive-compare-tier-micro")).toHaveTextContent("hypothetical only");
+    expect(screen.getByTestId("adaptive-compare-mini-buy")).toHaveTextContent("Limited only");
+    expect(screen.getByTestId("adaptive-compare-mini-sell")).toHaveTextContent("Market-conditional");
+    expect(screen.getByTestId("adaptive-compare-mini-sell")).toHaveTextContent("Hard risk blocked");
+    expect(screen.getByTestId("adaptive-tier-comparison")).toHaveTextContent("No additional AI credit");
+    expect(screen.getByTestId("adaptive-insights")).not.toHaveTextContent("run a fresh analysis");
+
+    fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
+    expect(screen.queryByTestId("adaptive-tier-comparison")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent(/buy/i);
+    expect(screen.getByTestId("adaptive-compare-tier-mini")).toHaveTextContent("hypothetical only");
+    fireEvent.click(screen.getByTestId("button-adaptive-account-mini"));
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent("WAIT");
+  });
+
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
       `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`,
@@ -1635,7 +1688,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
-    expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
+    expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Moderate style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
     const key = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
@@ -1702,7 +1755,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     await waitFor(() => expect(screen.getByTestId("adaptive-direction-sell")).toHaveAttribute("aria-pressed", "true"));
     expect(screen.getByTestId("button-adaptive-risk-style-balanced")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
+    expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Moderate style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-plan-sell")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-snapshot-positions-sell")).toHaveTextContent(/Position 1 · Initial entry.*lot/i);

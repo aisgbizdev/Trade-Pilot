@@ -20,3 +20,9 @@ Low, Medium, and High reserve progressively more of the selected plan margin for
 **Why:** Reusing the earlier percentages after moving the denominator from total funds to allocated plan margin made Low too restrictive. The revised bands preserve a meaningful conservative-to-active progression while keeping every style under the agreed ceiling.
 
 **How to apply:** Calculate each style's loss limit from its allocated plan margin, compare the complete single-Stop-loss ladder against that limit, and never increase lots merely to consume the available budget.
+
+If a minimum-lot trade fits the entered hard loss ceiling and broker funds but exceeds the chosen style's preferred risk target, show it as a **limited option**, not a primary Buy/Sell recommendation or an impossible trade.
+
+**Why:** The owner explicitly chose this distinction for a Mini Buy that risks exactly the hard maximum but exceeds Moderate's preferred 75% target. Hiding it as impossible loses useful information; treating it as a normal entry loses the intended buffer.
+
+**How to apply:** Keep the market-direction gate independent of affordability. Show the hard maximum, effective style target, and broker funds separately; make the selected actual account's next action clear without changing stops, broker minimum lots, risk limits, or charging another AI analysis for a tier comparison.

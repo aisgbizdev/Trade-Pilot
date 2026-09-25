@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Calculator, Check, ChevronDown, ChevronRight, Copy, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-clien
 import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
+import { ADAPTIVE_ACCOUNT_TIERS, compareAdaptiveAccountTiers, type AdaptiveTierRow, type AdaptiveTierSide } from "@/lib/adaptive-tier-comparison";
 import {
   assessAdaptiveCandleFreshness,
   buildAdaptivePlanRecommendation,
@@ -237,6 +238,99 @@ function formatRequiredFunds(value: number | null | undefined, lang: "en" | "id"
 function formatProfit(value: number | null | undefined, lang: "en" | "id"): string {
   const formatted = formatMoney(value, lang);
   return formatted === "—" ? formatted : `+${formatted}`;
+}
+
+function TierDecision({
+  rows, selectedTier, maximumLoss, availableMargin, lang, copy,
+}: {
+  rows: Record<AccountTier, AdaptiveTierRow>;
+  selectedTier: AccountTier;
+  maximumLoss: number | null;
+  availableMargin: number | null;
+  lang: "en" | "id";
+  copy: AdaptiveCopy;
+}) {
+  const row = rows[selectedTier];
+  const preferred = row.preferredSide ? row[row.preferredSide] : null;
+  const ready = (row.action === "buy" || row.action === "sell") &&
+    preferred?.fit === "within_target" && preferred.marketAligned &&
+    row.recommendation.sideEvaluations[row.action].status === "viable";
+  const action = ready ? row.action : row.action === "skip" ? "skip" : "wait";
+  const label = action === "buy" ? copy.adaptive_buy : action === "sell" ? copy.adaptive_sell
+    : action === "skip" ? copy.adaptive_compare_skip : copy.adaptive_compare_wait;
+  const sideName = row.preferredSide === "buy" ? copy.adaptive_buy : copy.adaptive_sell;
+  const fundsShortfall = preferred?.fundsAtStop != null && availableMargin != null
+    ? Math.max(0, preferred.fundsAtStop - availableMargin) : 0;
+  const hardRiskShortfall = preferred?.riskAtStop != null && maximumLoss != null
+    ? Math.max(0, preferred.riskAtStop - maximumLoss) : 0;
+  const detail = ready
+    ? copy.adaptive_compare_ready.replace("{side}", sideName)
+    : row.actionReason === "market_conflict" ? copy.adaptive_compare_conflict
+    : !preferred || !preferred.marketAligned ? copy.adaptive_compare_unconfirmed
+    : preferred.fit === "limited" ? copy.adaptive_compare_limited
+    : preferred.fit === "blocked_both" ? copy.adaptive_compare_both
+        .replace("{risk}", formatRequiredFunds(hardRiskShortfall, lang))
+        .replace("{funds}", formatRequiredFunds(fundsShortfall, lang))
+    : preferred.fit === "blocked_risk" ? copy.adaptive_compare_risk
+        .replace("{risk}", formatRequiredFunds(hardRiskShortfall, lang))
+    : preferred.fit === "blocked_funds" ? copy.adaptive_compare_funds
+        .replace("{funds}", formatRequiredFunds(fundsShortfall, lang))
+    : copy.adaptive_compare_unavailable;
+  const fitLabel = (side: AdaptiveTierSide) => copy[`adaptive_compare_fit_${side.fit}`];
+  const sideSummary = (side: AdaptiveTierSide, tier: AccountTier, direction: "buy" | "sell") => (
+    <div key={direction} className="min-w-0 rounded-md bg-background/70 px-2.5 py-2" data-testid={`adaptive-compare-${tier}-${direction}`}>
+      <div className="flex flex-wrap items-center justify-between gap-x-2">
+        <span className="font-semibold">{direction === "buy" ? copy.adaptive_buy : copy.adaptive_sell}</span>
+        <span className={side.marketAligned ? "text-foreground" : "text-muted-foreground"}>
+          {side.marketAligned ? fitLabel(side) : `${copy.adaptive_compare_conditional} · ${fitLabel(side)}`}
+        </span>
+      </div>
+      <p className="mt-0.5 text-muted-foreground tabular-nums">
+        {formatNumber(side.lot, lang)} {copy.adaptive_lot} · {copy.adaptive_compare_risk_short} {formatMoney(side.riskAtStop, lang)} · {copy.adaptive_compare_funds_short} {formatRequiredFunds(side.fundsAtStop, lang)}
+      </p>
+    </div>
+  );
+  return (
+    <section className="space-y-3" aria-label={copy.adaptive_compare_title} data-testid="adaptive-tier-comparison">
+      <div className={`rounded-lg border-l-4 p-4 shadow-sm ${ready ? "border-l-emerald-600 border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:border-l-emerald-500 dark:bg-emerald-950/20" : "border-l-amber-600 border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:border-l-amber-500 dark:bg-amber-950/20"}`} data-testid="adaptive-selected-decision">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{copy.adaptive_compare_selected} · {accountTierLabel(selectedTier, copy)}</p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h3 className="text-xl font-bold tracking-tight text-foreground" data-testid="adaptive-selected-action">{label}</h3>
+          {preferred?.fit === "limited" && <span className="rounded bg-amber-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 dark:bg-amber-900/50 dark:text-amber-200" data-testid="adaptive-selected-limited">{copy.adaptive_compare_limited_badge}</span>}
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-foreground/85" data-testid="adaptive-selected-reason">{detail}</p>
+        {ready && preferred?.entry != null && (
+          <p className="mt-1 text-xs font-medium" data-testid="adaptive-selected-next-step">
+            {copy.adaptive_compare_ready_next.replace("{entry}", formatNumber(preferred.entry, lang, 2))}
+          </p>
+        )}
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-current/10 pt-3 text-[11px] sm:grid-cols-4">
+          <div><span className="block text-muted-foreground">{copy.adaptive_compare_hard_max}</span><strong className="tabular-nums">{formatMoney(maximumLoss, lang)}</strong></div>
+          <div><span className="block text-muted-foreground">{copy.adaptive_compare_style_target.replace("{rate}", formatNumber(maximumLoss && preferred?.effectiveBudget != null ? preferred.effectiveBudget / maximumLoss * 100 : null, lang, 0))}</span><strong className="tabular-nums">{formatMoney(preferred?.effectiveBudget, lang)}</strong></div>
+          <div><span className="block text-muted-foreground">{copy.adaptive_compare_min_risk}</span><strong className="tabular-nums">{formatMoney(preferred?.riskAtStop, lang)}</strong></div>
+          <div><span className="block text-muted-foreground">{copy.adaptive_compare_broker_funds}</span><strong className="tabular-nums">{formatRequiredFunds(preferred?.fundsAtStop, lang)}</strong></div>
+        </div>
+        {preferred?.fit === "limited" && <p className="mt-2 text-[11px] font-medium text-amber-900 dark:text-amber-200">{copy.adaptive_compare_limited_next.replace("{target}", formatMoney(preferred.effectiveBudget, lang))}</p>}
+      </div>
+      <div className="rounded-lg border border-border bg-muted/20 p-3">
+        <h4 className="text-xs font-bold">{copy.adaptive_compare_title}</h4>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_compare_disclaimer}</p>
+        <div className="mt-3 space-y-2">
+          {ADAPTIVE_ACCOUNT_TIERS.map((tier) => {
+            const item = rows[tier];
+            return <div key={tier} className={`rounded-md border p-2.5 ${tier === selectedTier ? "border-primary/50 bg-primary/[0.04]" : "border-border/70 bg-background/50"}`} data-testid={`adaptive-compare-tier-${tier}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <strong className="text-xs">{accountTierLabel(tier, copy)} <span className="font-normal text-muted-foreground">· {tier === selectedTier ? copy.adaptive_compare_actual : copy.adaptive_compare_hypothetical}</span></strong>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{tier !== selectedTier ? copy.adaptive_compare_hypothetical : label}</span>
+              </div>
+              <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">{sideSummary(item.buy, tier, "buy")}{sideSummary(item.sell, tier, "sell")}</div>
+            </div>;
+          })}
+        </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_compare_no_credit}</p>
+      </div>
+    </section>
+  );
 }
 
 function reasonText(code: AdaptivePlanReasonCode, context: AdaptivePlanContext, copy: AdaptiveCopy): string {
@@ -1024,6 +1118,24 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     setActiveInsight(null);
     localStorage.removeItem(storageKey(analysisId));
   };
+  // The comparison is local to this calculation. Never reuse its result across
+  // changed form values, chart retrievals, expired analysis or broker rules.
+  const tierComparison = useMemo(() => {
+    if (!recommendation || !rulesAvailable || isAnalysisExpired ||
+        chartCandidateState.status !== "ready" || chartCandidateState.scope !== chartScope ||
+        assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).reason !== null) return null;
+    return compareAdaptiveAccountTiers({
+      instrument, tradePlan, availableMargin, maximumLoss, existingExposure,
+      standardRule, context, checkpointPrices: chartCandidateState.prices,
+      candles: chartCandidateState.candles, accountTier: form.accountTier,
+      riskStyle: form.riskStyle,
+    });
+  }, [recommendation, rulesAvailable, isAnalysisExpired, chartCandidateState,
+    chartScope, context, instrument, tradePlan, standardRule, availableMargin,
+    maximumLoss, existingExposure, form.accountTier, form.riskStyle]);
+  const financialOnlyBlock = tierComparison != null &&
+    (["limited", "hard_risk", "funds", "both"] as const).some((reason) =>
+      tierComparison[form.accountTier].actionReason === reason);
   const selected = recommendation?.recommendation;
   const tierContracts = standardRule
     ? (["micro", "mini", "regular"] as const).map((tier) => getAdaptiveMarketRule(instrument, standardRule, tier))
@@ -1306,6 +1418,10 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           )}
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
+        {recommendation && tierComparison && (
+          <TierDecision rows={tierComparison} selectedTier={form.accountTier}
+            maximumLoss={maximumLoss} availableMargin={availableMargin} lang={lang} copy={copy} />
+        )}
         {recommendation && (
           <div className="space-y-2" data-testid="adaptive-insights">
             <div className="relative min-w-0">
@@ -1363,7 +1479,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             )}
             {showAlternative && recommendation.candleAlternative.status !== "available" && (
               <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300" role="status">
-                {copy.adaptive_alternative_unavailable_short}
+                {financialOnlyBlock ? copy.adaptive_compare_financial_no_alternative : copy.adaptive_alternative_unavailable_short}
               </p>
             )}
           </div>
@@ -1436,11 +1552,11 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                     .replace("{margin}", formatMoney(alternative.dayMargin, lang))
                     .replace("{loss}", formatMoney(alternative.estimatedLoss, lang))
                     .replace("{profit}", formatMoney(Math.abs(alternative.takeProfit - alternative.entry) * (selectedRule ? selectedRule.contractSize * alternative.lot / selectedRule.minimumLot : 0), lang))
-                  : copy.adaptive_alternative_no_levels}</p>
+                   : financialOnlyBlock ? copy.adaptive_compare_financial_no_alternative : copy.adaptive_alternative_no_levels}</p>
                   <p className="mt-1 font-medium">{copy.adaptive_alternative_unchanged}</p>
                 <p className="mt-1 font-medium">{alternative.status === "available"
                   ? copy.adaptive_alternative_available_short
-                  : copy.adaptive_alternative_unavailable_short}</p>
+                  : financialOnlyBlock ? copy.adaptive_compare_no_credit : copy.adaptive_alternative_unavailable_short}</p>
               </div>
             );
           })()

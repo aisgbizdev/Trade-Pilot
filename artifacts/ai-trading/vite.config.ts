@@ -113,6 +113,9 @@ export default defineConfig({
         // emitted only as static-host SPA fallbacks (see `spaFallbackHtml`).
         // No need to precache a third + fourth copy of the app shell.
         globIgnores: ["**/404.html", "**/200.html"],
+        // The app shell is just over Workbox's default 2 MiB limit; retain
+        // offline/install support while keeping a bounded precache cap.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       // Enable the service worker in dev so push notifications and the
       // install/enable flow can be tested from the Replit preview without
