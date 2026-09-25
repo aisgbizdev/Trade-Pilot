@@ -8,7 +8,7 @@ import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-clien
 import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
-import { ADAPTIVE_ACCOUNT_TIERS, compareAdaptiveAccountTiers, type AdaptiveTierRow, type AdaptiveTierSide } from "@/lib/adaptive-tier-comparison";
+import { compareAdaptiveAccountTiers, type AdaptiveTierRow } from "@/lib/adaptive-tier-comparison";
 import {
   assessAdaptiveCandleFreshness,
   buildAdaptivePlanRecommendation,
@@ -240,7 +240,7 @@ function formatProfit(value: number | null | undefined, lang: "en" | "id"): stri
   return formatted === "—" ? formatted : `+${formatted}`;
 }
 
-function TierDecision({
+function AdaptiveDecisionSummary({
   rows, selectedTier, maximumLoss, availableMargin, lang, copy,
 }: {
   rows: Record<AccountTier, AdaptiveTierRow>;
@@ -276,58 +276,25 @@ function TierDecision({
     : preferred.fit === "blocked_funds" ? copy.adaptive_compare_funds
         .replace("{funds}", formatRequiredFunds(fundsShortfall, lang))
     : copy.adaptive_compare_unavailable;
-  const fitLabel = (side: AdaptiveTierSide) => copy[`adaptive_compare_fit_${side.fit}`];
-  const sideSummary = (side: AdaptiveTierSide, tier: AccountTier, direction: "buy" | "sell") => (
-    <div key={direction} className="min-w-0 rounded-md bg-background/70 px-2.5 py-2" data-testid={`adaptive-compare-${tier}-${direction}`}>
-      <div className="flex flex-wrap items-center justify-between gap-x-2">
-        <span className="font-semibold">{direction === "buy" ? copy.adaptive_buy : copy.adaptive_sell}</span>
-        <span className={side.marketAligned ? "text-foreground" : "text-muted-foreground"}>
-          {side.marketAligned ? fitLabel(side) : `${copy.adaptive_compare_conditional} · ${fitLabel(side)}`}
-        </span>
-      </div>
-      <p className="mt-0.5 text-muted-foreground tabular-nums">
-        {formatNumber(side.lot, lang)} {copy.adaptive_lot} · {copy.adaptive_compare_risk_short} {formatMoney(side.riskAtStop, lang)} · {copy.adaptive_compare_funds_short} {formatRequiredFunds(side.fundsAtStop, lang)}
-      </p>
-    </div>
-  );
   return (
-    <section className="space-y-3" aria-label={copy.adaptive_compare_title} data-testid="adaptive-tier-comparison">
-      <div className={`rounded-lg border-l-4 p-4 shadow-sm ${ready ? "border-l-emerald-600 border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:border-l-emerald-500 dark:bg-emerald-950/20" : "border-l-amber-600 border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:border-l-amber-500 dark:bg-amber-950/20"}`} data-testid="adaptive-selected-decision">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{copy.adaptive_compare_selected} · {accountTierLabel(selectedTier, copy)}</p>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h3 className="text-xl font-bold tracking-tight text-foreground" data-testid="adaptive-selected-action">{label}</h3>
-          {preferred?.fit === "limited" && <span className="rounded bg-amber-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 dark:bg-amber-900/50 dark:text-amber-200" data-testid="adaptive-selected-limited">{copy.adaptive_compare_limited_badge}</span>}
-        </div>
-        <p className="mt-1 text-xs leading-relaxed text-foreground/85" data-testid="adaptive-selected-reason">{detail}</p>
-        {ready && preferred?.entry != null && (
-          <p className="mt-1 text-xs font-medium" data-testid="adaptive-selected-next-step">
-            {copy.adaptive_compare_ready_next.replace("{entry}", formatNumber(preferred.entry, lang, 2))}
-          </p>
-        )}
-        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-current/10 pt-3 text-[11px] sm:grid-cols-4">
-          <div><span className="block text-muted-foreground">{copy.adaptive_compare_hard_max}</span><strong className="tabular-nums">{formatMoney(maximumLoss, lang)}</strong></div>
-          <div><span className="block text-muted-foreground">{copy.adaptive_compare_style_target.replace("{rate}", formatNumber(maximumLoss && preferred?.effectiveBudget != null ? preferred.effectiveBudget / maximumLoss * 100 : null, lang, 0))}</span><strong className="tabular-nums">{formatMoney(preferred?.effectiveBudget, lang)}</strong></div>
-          <div><span className="block text-muted-foreground">{copy.adaptive_compare_min_risk}</span><strong className="tabular-nums">{formatMoney(preferred?.riskAtStop, lang)}</strong></div>
-          <div><span className="block text-muted-foreground">{copy.adaptive_compare_broker_funds}</span><strong className="tabular-nums">{formatRequiredFunds(preferred?.fundsAtStop, lang)}</strong></div>
-        </div>
-        {preferred?.fit === "limited" && <p className="mt-2 text-[11px] font-medium text-amber-900 dark:text-amber-200">{copy.adaptive_compare_limited_next.replace("{target}", formatMoney(preferred.effectiveBudget, lang))}</p>}
+    <section aria-label={copy.adaptive_decision_title} className="space-y-2 py-2" data-testid="adaptive-selected-decision">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h3 className={`text-xl font-bold tracking-tight ${ready ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-300"}`} data-testid="adaptive-selected-action">{label}</h3>
+        {preferred?.fit === "limited" && <span className="text-xs font-semibold text-amber-700 dark:text-amber-300" data-testid="adaptive-selected-limited">{copy.adaptive_compare_limited_badge}</span>}
       </div>
-      <div className="rounded-lg border border-border bg-muted/20 p-3">
-        <h4 className="text-xs font-bold">{copy.adaptive_compare_title}</h4>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_compare_disclaimer}</p>
-        <div className="mt-3 space-y-2">
-          {ADAPTIVE_ACCOUNT_TIERS.map((tier) => {
-            const item = rows[tier];
-            return <div key={tier} className={`rounded-md border p-2.5 ${tier === selectedTier ? "border-primary/50 bg-primary/[0.04]" : "border-border/70 bg-background/50"}`} data-testid={`adaptive-compare-tier-${tier}`}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong className="text-xs">{accountTierLabel(tier, copy)} <span className="font-normal text-muted-foreground">· {tier === selectedTier ? copy.adaptive_compare_actual : copy.adaptive_compare_hypothetical}</span></strong>
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{tier !== selectedTier ? copy.adaptive_compare_hypothetical : label}</span>
-              </div>
-              <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">{sideSummary(item.buy, tier, "buy")}{sideSummary(item.sell, tier, "sell")}</div>
-            </div>;
-          })}
-        </div>
-        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_compare_no_credit}</p>
+      <p className="text-xs leading-relaxed text-foreground/85" data-testid="adaptive-selected-reason">{detail}</p>
+      {ready && preferred?.entry != null && (
+        <p className="text-xs font-medium" data-testid="adaptive-selected-next-step">
+          {copy.adaptive_compare_ready_next.replace("{entry}", formatNumber(preferred.entry, lang, 2))}
+        </p>
+      )}
+      {preferred?.fit === "limited" && (
+        <p className="text-xs font-medium text-amber-700 dark:text-amber-300">{copy.adaptive_compare_limited_next.replace("{target}", formatMoney(preferred.effectiveBudget, lang))}</p>
+      )}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 text-xs sm:grid-cols-3">
+        <div><span className="block text-muted-foreground">{copy.adaptive_compare_hard_max}</span><strong className="tabular-nums">{formatMoney(maximumLoss, lang)}</strong></div>
+        <div><span className="block text-muted-foreground">{copy.adaptive_compare_min_risk}</span><strong className="tabular-nums">{formatMoney(preferred?.riskAtStop, lang)}</strong></div>
+        <div><span className="block text-muted-foreground">{copy.adaptive_compare_broker_funds}</span><strong className="tabular-nums">{formatRequiredFunds(preferred?.fundsAtStop, lang)}</strong></div>
       </div>
     </section>
   );
@@ -1419,7 +1386,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {recommendation && tierComparison && (
-          <TierDecision rows={tierComparison} selectedTier={form.accountTier}
+          <AdaptiveDecisionSummary rows={tierComparison} selectedTier={form.accountTier}
             maximumLoss={maximumLoss} availableMargin={availableMargin} lang={lang} copy={copy} />
         )}
         {recommendation && (

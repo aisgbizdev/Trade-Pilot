@@ -1548,7 +1548,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
   });
 
   it("shows a limited $200 Mini Buy against Moderate's $150 target without recommending Sell or another AI credit", async () => {
-    installFetchMock([
+    const { calls } = installFetchMock([
       getAnalysisHandler({
         body: {
           ...ANALYSIS_PAYLOAD,
@@ -1583,21 +1583,27 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-selected-limited")).toHaveTextContent("Limited option only");
     expect(screen.getByTestId("adaptive-selected-decision")).toHaveTextContent("$150");
     expect(screen.getByTestId("adaptive-selected-decision")).toHaveTextContent("$200");
-    expect(screen.getByTestId("adaptive-compare-tier-micro")).toHaveTextContent("hypothetical only");
-    expect(screen.getByTestId("adaptive-compare-mini-buy")).toHaveTextContent("Limited only");
-    expect(screen.getByTestId("adaptive-compare-mini-sell")).toHaveTextContent("Market-conditional");
-    expect(screen.getByTestId("adaptive-compare-mini-sell")).toHaveTextContent("Hard risk blocked");
-    expect(screen.getByTestId("adaptive-tier-comparison")).toHaveTextContent("No additional AI credit");
+    expect(screen.getByTestId("adaptive-selected-decision")).toHaveAccessibleName("Adaptive decision");
+    expect(screen.queryByText("Account tier comparison")).not.toBeInTheDocument();
+    expect(screen.queryByText(/hypothetical only/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-compare-tier-micro")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-compare-tier-mini")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-compare-tier-regular")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-insights")).not.toHaveTextContent("run a fresh analysis");
 
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
-    expect(screen.queryByTestId("adaptive-tier-comparison")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-selected-decision")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent(/buy/i);
-    expect(screen.getByTestId("adaptive-compare-tier-mini")).toHaveTextContent("hypothetical only");
+    expect(screen.queryByTestId("adaptive-compare-tier-mini")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-account-mini"));
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent("WAIT");
+    fireEvent.click(screen.getByTestId("button-language-toggle"));
+    expect(screen.getByTestId("adaptive-selected-decision")).toHaveAccessibleName("Keputusan Adaptive");
+    expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent("TUNGGU");
+    expect(screen.queryByText("Perbandingan tier akun")).not.toBeInTheDocument();
+    expect(calls.filter((call) => (call.init?.method ?? "GET") === "POST" && /\/api\/analyses(?:\?|$)/.test(call.url))).toHaveLength(0);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
