@@ -21,7 +21,7 @@ Rejected layers may expose a conditional financial alternative only when every a
 
 **Why:** The user confirmed that a realistic trading plan should explain how funding or risk capacity could support a later manual layer without turning adverse price movement into an entry trigger. If an analysis blocker and a financial blocker coexist, the analysis blocker must take precedence so money never appears to buy around a safety gate.
 
-**How to apply:** Calculate both financial shortfalls from the candidate's cumulative margin and one-final-SL risk. Never expose the financial alternative for analysis, direction, confidence, volatility, event, checkpoint, or per-position tier blockers; require chart and saved-analysis confirmation before every manual layer.
+**How to apply:** Calculate the funds shortfall from cumulative margin **plus** loss at the final SL, and the loss-budget shortfall from cumulative SL risk. Classify rejection against that same combined-funds condition used to accept the plan; checking day margin alone can mislabel a funds-only rejection as an analysis blocker. Never expose the financial alternative for analysis, direction, confidence, volatility, event, checkpoint, or per-position tier blockers; require chart and saved-analysis confirmation before every manual layer.
 
 The saved AI analysis is the primary product output; the adaptive plan is a secondary explanation of what the user's selected account tier and available margin can support. Keep the default UI output-first: direction, entry and staged prices/lots, one final SL, saved TP targets, margin, and maximum loss. Put comparison, provenance, and detailed reasoning behind progressive disclosure.
 

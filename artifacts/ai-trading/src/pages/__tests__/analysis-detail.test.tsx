@@ -874,12 +874,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(reasoning.textContent).toMatch(/Technical snapshot: 12 support up, 4 support down/i);
     expect(snapshot).toHaveTextContent(/Answer at a glance/i);
     expect(snapshot).toHaveTextContent(/Entry point/i);
-    expect(snapshot).toHaveTextContent(/Total planned positions/i);
-    expect(snapshot).toHaveTextContent(/3 positions/i);
-    expect(snapshot).toHaveTextContent(/Total planned lots/i);
+    expect(snapshot).toHaveTextContent(/If all entries fill: 3 positions · 0\.26 lot/i);
     expect(snapshot).toHaveTextContent(/One final Stop Loss/i);
     expect(snapshot).toHaveTextContent(/Estimated maximum loss/i);
-    expect(snapshot).toHaveTextContent(/0.26 lot/i);
     expect(screen.getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/\$250/);
     expect(screen.getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/50% of loss ceiling/i);
     expect(screen.getByTestId("adaptive-unused-risk-buffer")).toHaveTextContent(/\$250/);
@@ -1327,6 +1324,16 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("adaptive-plan-invalid")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/0\.[1-9] lot/i);
     expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/Weighted average entry/i);
+    const summary = screen.getByTestId("adaptive-snapshot-positions-buy");
+    const positions = within(summary).getAllByTestId(/^adaptive-snapshot-position-buy-\d+$/);
+    expect(positions.length).toBeGreaterThan(1);
+    expect(positions[0]).toHaveTextContent(/Position 1 · Initial entry.*2,301.*lot/i);
+    expect(positions[1]).toHaveTextContent(/Position 2 · Additional.*lot/i);
+    expect(screen.getByTestId("adaptive-snapshot-all-filled-buy")).toHaveTextContent(
+      new RegExp(`If all entries fill: ${positions.length} positions`),
+    );
+    expect(screen.getByTestId("adaptive-ladder-buy")).not.toHaveAttribute("open");
+    expect(screen.getByTestId("adaptive-fill-scenarios-buy")).not.toHaveAttribute("open");
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Margin this position/i);
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Risk this position at final SL/i);
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Funds remaining/i);
@@ -1338,6 +1345,29 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-rejected-layer-financial-buy-1")).toHaveTextContent(/Funds remaining/i);
     expect(screen.getByTestId("adaptive-conditional-buy-1")).toHaveTextContent(/Conditional financial plan/i);
     expect(screen.getByTestId("adaptive-conditional-buy-1")).toHaveTextContent(/Additional loss budget needed/i);
+    expect(screen.queryByTestId("adaptive-next-layer-funds-buy")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-next-layer-blocked-buy")).toHaveTextContent(/not included/i);
+
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+    fireEvent.change(margin, { target: { value: "330" } });
+    fireEvent.change(maximumLoss, { target: { value: "300" } });
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-next-layer-funds-buy")).toHaveTextContent(
+      /Position 2.*lot: about \$[\d,.]+ more free broker funds needed to review/i,
+    );
+    expect(screen.getByTestId("adaptive-next-layer-buy")).toHaveTextContent(
+      /not a TradePilot analysis-credit top-up/i,
+    );
+    expect(screen.getByTestId("adaptive-snapshot-all-filled-buy")).toHaveTextContent(/1 position · 0\.1 lot/i);
+    fireEvent.click(screen.getByTestId("button-language-toggle"));
+    expect(screen.getByTestId("adaptive-snapshot-positions-buy")).toHaveTextContent(/Harga entry & lot tiap posisi/i);
+    expect(screen.getByTestId("adaptive-snapshot-all-filled-buy")).toHaveTextContent(/Jika semua entry terisi: 1 posisi · 0,1 lot/i);
+    expect(screen.getByTestId("adaptive-next-layer-funds-buy")).toHaveTextContent(/perkiraan perlu tambahan dana bebas broker/i);
+    fireEvent.change(margin, { target: { value: "450" } });
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(screen.getByTestId("adaptive-snapshot-position-buy-1")).toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-snapshot-all-filled-buy")).toHaveTextContent(/2 posisi/i);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
@@ -1498,6 +1528,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-plan-sell")).toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-snapshot-positions-sell")).toHaveTextContent(/Position 1 · Initial entry.*lot/i);
     expect(screen.queryByTestId("adaptive-plan-buy")).not.toBeInTheDocument();
   });
 

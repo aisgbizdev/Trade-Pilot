@@ -845,7 +845,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(buy.ladder.every((level) => level.cumulativeProfitToTakeProfit2 === null)).toBe(true);
   });
 
-  it("exposes the corrected financial breakdown even for an analysis-rejected candidate", () => {
+  it("classifies a candidate blocked by combined margin and SL loss as a funds shortfall", () => {
     const assessment = buildRecommendation({
       availableMargin: 450,
       maximumLoss: 450,
@@ -861,8 +861,11 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
       estimatedRiskToStop: 300,
       cumulativeFundsAtStop: 600,
       remainingFundsAtStop: -150,
-      rejectReason: "analysis_limit",
-      financialAlternative: null,
+      rejectReason: "day_margin",
+      financialAlternative: {
+        additionalFundsRequired: 150,
+        additionalLossBudgetRequired: 0,
+      },
     });
   });
 

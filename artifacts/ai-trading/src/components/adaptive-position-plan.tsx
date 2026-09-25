@@ -500,6 +500,16 @@ function PlanSide({
       ? copy.adaptive_side_scaling_allowed
       : copy.adaptive_side_entry_only;
   const first = plan.ladder[0];
+  const nextCandidate = plan.rejectedLadder[0];
+  const fundsOnlyCandidate = !conditional &&
+    nextCandidate?.rejectReason === "day_margin" &&
+    nextCandidate.financialAlternative != null &&
+    nextCandidate.financialAlternative.additionalFundsRequired > 0 &&
+    nextCandidate.financialAlternative.additionalLossBudgetRequired <= 0.001 &&
+    summary != null &&
+    nextCandidate.estimatedRiskToStop <= summary.usableRiskBudget + 0.001
+    ? nextCandidate
+    : null;
   const fillDescription = (
     positions: number,
     lots: number,
@@ -530,9 +540,6 @@ function PlanSide({
           {isBuy ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           {isBuy ? copy.adaptive_buy : copy.adaptive_sell}
         </h4>
-        <Badge variant="outline" className="text-[10px]">
-          {plan.ladder.length} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
-        </Badge>
       </div>
       {(
         <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
@@ -545,19 +552,21 @@ function PlanSide({
               {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
             </Badge>}
           </div>
+          <div className="rounded-md bg-background/70 p-2.5" data-testid={`adaptive-snapshot-positions-${plan.side}`}>
+            <p className="text-[11px] font-bold">{copy.adaptive_position_prices_title}</p>
+            <ol className="mt-2 divide-y divide-border/60">
+              {plan.ladder.map((level) => (
+                <li key={`${plan.side}-summary-${level.level}`} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-1.5 text-[11px]" data-testid={`adaptive-snapshot-position-${plan.side}-${level.level}`}>
+                  <span className="font-medium">{copy.adaptive_position} {level.level + 1} · {level.level === 0 ? copy.adaptive_initial : copy.adaptive_additional_short}</span>
+                  <span className="font-semibold tabular-nums">{formatNumber(level.price, lang, 4)} · {formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-1 border-t border-border/70 pt-2 text-[11px] font-semibold" data-testid={`adaptive-snapshot-all-filled-${plan.side}`}>
+              {copy.adaptive_if_all_filled}: {plan.ladder.length} {plan.ladder.length === 1 ? copy.adaptive_position_singular : copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.adaptive_entry}</p>
-              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(plan.entry, lang, 4)}</p>
-            </div>
-            <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_total_positions}</p>
-               <p className="mt-0.5 text-sm font-bold tabular-nums">{plan.ladder.length} {copy.adaptive_snapshot_layers}</p>
-            </div>
-            <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.adaptive_snapshot_total_lots}</p>
-              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}</p>
-            </div>
             <div className="rounded-md bg-background/70 p-2">
               <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
               <p className="mt-0.5 text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</p>
@@ -599,8 +608,9 @@ function PlanSide({
         </div>
       )}
       {summary && first && (
-        <div className="rounded-md border border-border/70 bg-background p-3 space-y-2" data-testid={`adaptive-fill-scenarios-${plan.side}`}>
-          <p className="text-xs font-bold">{copy.adaptive_fill_range_title}</p>
+        <details className="rounded-md border border-border/70 bg-background p-3" data-testid={`adaptive-fill-scenarios-${plan.side}`}>
+          <summary className="cursor-pointer text-xs font-bold">{copy.adaptive_fill_range_title}</summary>
+          <div className="mt-2 space-y-2">
           <dl className="space-y-2 text-[11px]">
             <div>
               <dt className="font-semibold">{copy.adaptive_fill_first}</dt>
@@ -619,16 +629,38 @@ function PlanSide({
               <strong className="text-foreground">{copy.adaptive_unused_reason_title}:</strong> {unusedReason}
             </p>
           )}
+          </div>
+        </details>
+      )}
+      <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">
+        {conditional || plan.ladder.length === 1 ? stageGuidance : copy.adaptive_additional_reminder}
+      </p>
+      {!conditional && nextCandidate && (
+        <div className="rounded-md border border-amber-300/70 bg-amber-50/60 p-2.5 text-[11px] dark:border-amber-900 dark:bg-amber-950/20" data-testid={`adaptive-next-layer-${plan.side}`}>
+          {fundsOnlyCandidate ? (
+            <>
+              <p className="font-semibold" data-testid={`adaptive-next-layer-funds-${plan.side}`}>
+                {copy.adaptive_next_funds.replace("{position}", String(fundsOnlyCandidate.level + 1))
+                  .replace("{price}", formatNumber(fundsOnlyCandidate.price, lang, 4))
+                  .replace("{lot}", formatNumber(fundsOnlyCandidate.lot, lang))
+                  .replace("{amount}", formatMoney(fundsOnlyCandidate.financialAlternative!.additionalFundsRequired, lang))}
+              </p>
+              <p className="mt-1 text-muted-foreground">{copy.adaptive_next_funds_note}</p>
+            </>
+          ) : (
+            <p className="font-medium" data-testid={`adaptive-next-layer-blocked-${plan.side}`}>
+              {copy.adaptive_next_blocked.replace("{position}", String(nextCandidate.level + 1))
+                .replace("{reason}", rejectedReason(nextCandidate.rejectReason, copy))}
+              {nextCandidate.financialAlternative?.additionalLossBudgetRequired
+                ? ` ${copy.adaptive_next_funds_not_enough}`
+                : ""}
+            </p>
+          )}
         </div>
       )}
-      <p className="text-xs leading-relaxed text-muted-foreground border-t border-border/60 pt-2">{stageGuidance}</p>
-      <div className="space-y-2" data-testid={`adaptive-ladder-${plan.side}`}>
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.adaptive_layer_plan_title}</p>
-          <span className="text-[10px] font-semibold text-foreground">
-            {plan.ladder.length} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
-          </span>
-        </div>
+      <details className="space-y-2 border-t border-border/60 pt-2" data-testid={`adaptive-ladder-${plan.side}`}>
+        <summary className="cursor-pointer text-xs font-semibold">{copy.adaptive_position_details}</summary>
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{stageGuidance}</p>
           <ExpandableExplanation>{copy.adaptive_layer_financial_help}</ExpandableExplanation>
         <ol className="space-y-1.5">
           {plan.ladder.map((level) => (
@@ -693,7 +725,7 @@ function PlanSide({
             </div>
           </details>
         )}
-      </div>
+      </details>
       <details className="border-t border-border/60 pt-2">
         <summary className="cursor-pointer text-[10px] font-semibold text-muted-foreground">{copy.adaptive_more_calculation_details}</summary>
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">

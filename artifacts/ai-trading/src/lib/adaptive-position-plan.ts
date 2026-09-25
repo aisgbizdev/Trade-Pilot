@@ -1114,7 +1114,7 @@ function addRejectedCandidates(
             ? "analysis_limit"
             : candidate.rule?.maximumLot != null && level.lot > candidate.rule.maximumLot
               ? "tier_limit"
-              : level.cumulativeDayMargin > marginBudget
+              : level.cumulativeFundsAtStop > marginBudget
                 ? "day_margin"
                 : level.estimatedRiskToStop > maximumLoss
                   ? "loss_ceiling"
