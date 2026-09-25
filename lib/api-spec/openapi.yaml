@@ -220,6 +220,32 @@ paths:
         "409":
           description: Request already reviewed
           content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /admin/topups/{id}:
+    delete:
+      operationId: deleteTopupRequest
+      tags: [admin]
+      summary: Soft-delete a top-up request, reversing its credit grant if it was approved
+      description: >-
+        Never a physical row delete (credit_ledger.topupRequestId references
+        this row once approved). If the request was approved, the credits
+        it granted are clawed back first via a negative credit_ledger
+        entry, then the row is marked deleted and excluded from every list
+        endpoint.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Request deleted, with any reversed credits and the user's resulting balance
+          content: { application/json: { schema: { $ref: "#/components/schemas/DeleteTopupResponse" } } }
+        "400":
+          description: Invalid id
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: Forbidden
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "404":
+          description: Request not found (or already deleted)
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
   /admin/topups/manual:
     post:
       operationId: createManualTopup
@@ -5199,6 +5225,22 @@ components:
         - reviewNote
         - creditsGranted
         - createdAt
+
+    DeleteTopupResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        creditsReversed:
+          type: integer
+          description: Credits clawed back from the user (0 if the request was never approved).
+        creditBalance:
+          type: integer
+          description: The user's credit balance after any reversal.
+      required:
+        - id
+        - creditsReversed
+        - creditBalance
 
     TopupRequestWithUser:
       allOf:

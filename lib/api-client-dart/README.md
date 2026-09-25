@@ -67,6 +67,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**backfillProgression**](doc/AdminApi.md#backfillprogression) | **POST** /admin/progression/backfill | Safely backfill only unequivocal historical progression evidence
 [*AdminApi*](doc/AdminApi.md) | [**broadcastNotification**](doc/AdminApi.md#broadcastnotification) | **POST** /admin/notifications | Broadcast notification to selected audience
 [*AdminApi*](doc/AdminApi.md) | [**createManualTopup**](doc/AdminApi.md#createmanualtopup) | **POST** /admin/topups/manual | Directly grant credits to a user, bypassing the normal request/proof-upload flow
+[*AdminApi*](doc/AdminApi.md) | [**deleteTopupRequest**](doc/AdminApi.md#deletetopuprequest) | **DELETE** /admin/topups/{id} | Soft-delete a top-up request, reversing its credit grant if it was approved
 [*AdminApi*](doc/AdminApi.md) | [**getAdminAnalyticsTokens**](doc/AdminApi.md#getadminanalyticstokens) | **GET** /admin/analytics/tokens | AI (OpenAI) token usage and estimated cost breakdown
 [*AdminApi*](doc/AdminApi.md) | [**getAdminAnalyticsUsage**](doc/AdminApi.md#getadminanalyticsusage) | **GET** /admin/analytics/usage | Feature-usage, device, browser, and country breakdown from analytics events
 [*AdminApi*](doc/AdminApi.md) | [**getAdminFeedback**](doc/AdminApi.md#getadminfeedback) | **GET** /admin/feedback | List user feedback rows (admin only)
@@ -239,6 +240,7 @@ Class | Method | HTTP request | Description
  - [DailySummarySettingsUpdate](doc/DailySummarySettingsUpdate.md)
  - [DailySummaryToday](doc/DailySummaryToday.md)
  - [DeleteAccountBody](doc/DeleteAccountBody.md)
+ - [DeleteTopupResponse](doc/DeleteTopupResponse.md)
  - [ErrorResponse](doc/ErrorResponse.md)
  - [Feedback](doc/Feedback.md)
  - [FeedbackBody](doc/FeedbackBody.md)

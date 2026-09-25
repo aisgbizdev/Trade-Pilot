@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, count, desc, eq, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, isNull, sql, sum } from "drizzle-orm";
 import { db } from "../lib/db";
 import { creditTopupRequests, users } from "@workspace/db/schema";
 import { requireAdmin, requireAuth, requireSuperAdmin, type AuthRequest } from "../middleware/auth";
@@ -147,7 +147,7 @@ router.post("/topups", requireAuth, async (req: AuthRequest, res) => {
 router.get("/topups/mine", requireAuth, async (req: AuthRequest, res) => {
   const { page, limit } = GetMyTopupRequestsQueryParams.parse(req.query);
   const offset = (page - 1) * limit;
-  const whereClause = eq(creditTopupRequests.userId, req.userId!);
+  const whereClause = and(eq(creditTopupRequests.userId, req.userId!), isNull(creditTopupRequests.deletedAt));
   const [rows, [totalRow]] = await Promise.all([
     db
       .select()
@@ -164,7 +164,7 @@ router.get("/topups/mine", requireAuth, async (req: AuthRequest, res) => {
 router.get("/admin/topups", requireAdmin, async (req: AuthRequest, res) => {
   const { status, page, limit } = GetPendingTopupRequestsQueryParams.parse(req.query);
   const offset = (page - 1) * limit;
-  const whereClause = eq(creditTopupRequests.status, status);
+  const whereClause = and(eq(creditTopupRequests.status, status), isNull(creditTopupRequests.deletedAt));
   const [rows, [totalRow]] = await Promise.all([
     db
       .select({ request: creditTopupRequests, userEmail: users.email, userDisplayName: users.displayName })
@@ -189,7 +189,7 @@ router.get("/admin/topups", requireAdmin, async (req: AuthRequest, res) => {
 });
 
 router.get("/admin/topups/summary", requireSuperAdmin, async (_req: AuthRequest, res) => {
-  const approved = eq(creditTopupRequests.status, "approved");
+  const approved = and(eq(creditTopupRequests.status, "approved"), isNull(creditTopupRequests.deletedAt));
 
   const [totalsRaw] = await db
     .select({
@@ -392,6 +392,57 @@ router.post("/admin/topups/manual", requireSuperAdmin, async (req: AuthRequest, 
 
   await notifyTopupApproved(userId, amountRupiah, credits);
   res.status(201).json(serializeTopupRequest(row));
+});
+
+// Soft-delete a top-up request (never a real row delete — see the
+// deletedAt/deletedByUserId comment on the schema: credit_ledger.topupRequestId
+// references this row with onDelete "restrict" once approved, and the ledger
+// itself is append-only). If the request was approved, the credits it
+// granted are clawed back first via a negative ledger entry (source
+// "topup_reversal") under the same balance lock every other credit
+// mutation uses, so this can never race a concurrent spend/grant for the
+// same user into a lost update.
+router.delete("/admin/topups/:id", requireSuperAdmin, async (req: AuthRequest, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: "ID tidak valid" });
+    return;
+  }
+
+  const [target] = await db
+    .select()
+    .from(creditTopupRequests)
+    .where(and(eq(creditTopupRequests.id, id), isNull(creditTopupRequests.deletedAt)))
+    .limit(1);
+  if (!target) {
+    res.status(404).json({ error: "Permintaan top-up tidak ditemukan" });
+    return;
+  }
+
+  const creditsReversed = await db.transaction(async (tx) => {
+    let reversed = 0;
+    if (target.status === "approved" && target.creditsGranted) {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(${CREDIT_BALANCE_LOCK_NAMESPACE}::int, ${target.userId}::int)`,
+      );
+      await applyCreditLedgerEntry(tx, {
+        userId: target.userId,
+        amount: -target.creditsGranted,
+        source: "topup_reversal",
+        sourceEventId: `topup-reversal:${id}`,
+        topupRequestId: id,
+      });
+      reversed = target.creditsGranted;
+    }
+    await tx
+      .update(creditTopupRequests)
+      .set({ deletedAt: new Date(), deletedByUserId: req.userId! })
+      .where(eq(creditTopupRequests.id, id));
+    return reversed;
+  });
+
+  const creditBalance = await getCreditBalanceForUser(target.userId);
+  res.json({ id, creditsReversed, creditBalance });
 });
 
 export default router;

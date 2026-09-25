@@ -1059,6 +1059,15 @@ export const creditTopupRequests = pgTable("credit_topup_requests", {
   reviewNote: text("review_note"),
   creditsGranted: integer("credits_granted"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  // Soft delete only (DELETE /admin/topups/:id) — the row is never
+  // physically removed because credit_ledger.topupRequestId references it
+  // with onDelete "restrict" once approved, and even for a never-approved
+  // request a hard delete would erase the record permanently. When an
+  // approved request is "deleted", the admin route also appends a negative
+  // credit_ledger entry (source "topup_reversal") clawing back the granted
+  // credits before setting this — see routes/topups.ts.
+  deletedAt: timestamp("deleted_at"),
+  deletedByUserId: integer("deleted_by_user_id").references(() => users.id, { onDelete: "set null" }),
 }, (t) => ({
   statusIdx: index("credit_topup_requests_status_idx").on(t.status),
   userIdx: index("credit_topup_requests_user_idx").on(t.userId),

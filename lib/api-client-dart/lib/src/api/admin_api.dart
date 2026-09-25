@@ -18,6 +18,7 @@ import 'package:trade_pilot_api_client/src/model/broadcast_notification_body.dar
 import 'package:trade_pilot_api_client/src/model/broadcast_send_result.dart';
 import 'package:trade_pilot_api_client/src/model/broadcasts_list.dart';
 import 'package:trade_pilot_api_client/src/model/date.dart';
+import 'package:trade_pilot_api_client/src/model/delete_topup_response.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/manual_topup_body.dart';
 import 'package:trade_pilot_api_client/src/model/outbound_click_stats.dart';
@@ -288,6 +289,81 @@ class AdminApi {
     }
 
     return Response<TopupRequest>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Soft-delete a top-up request, reversing its credit grant if it was approved
+  /// Never a physical row delete (credit_ledger.topupRequestId references this row once approved). If the request was approved, the credits it granted are clawed back first via a negative credit_ledger entry, then the row is marked deleted and excluded from every list endpoint.
+  ///
+  /// Parameters:
+  /// * [id] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DeleteTopupResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DeleteTopupResponse>> deleteTopupRequest({ 
+    required int id,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/topups/{id}'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(int)).toString());
+    final _options = Options(
+      method: r'DELETE',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DeleteTopupResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DeleteTopupResponse),
+      ) as DeleteTopupResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DeleteTopupResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

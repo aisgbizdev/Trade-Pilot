@@ -1331,6 +1331,14 @@ export interface TopupRequest {
   createdAt: string;
 }
 
+export interface DeleteTopupResponse {
+  id: number;
+  /** Credits clawed back from the user (0 if the request was never approved). */
+  creditsReversed: number;
+  /** The user's credit balance after any reversal. */
+  creditBalance: number;
+}
+
 export type TopupRequestWithUser = TopupRequest & {
   userEmail: string;
   userDisplayName: string;

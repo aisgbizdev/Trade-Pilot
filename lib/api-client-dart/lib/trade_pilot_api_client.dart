@@ -89,6 +89,7 @@ export 'package:trade_pilot_api_client/src/model/daily_summary_settings.dart';
 export 'package:trade_pilot_api_client/src/model/daily_summary_settings_update.dart';
 export 'package:trade_pilot_api_client/src/model/daily_summary_today.dart';
 export 'package:trade_pilot_api_client/src/model/delete_account_body.dart';
+export 'package:trade_pilot_api_client/src/model/delete_topup_response.dart';
 export 'package:trade_pilot_api_client/src/model/error_response.dart';
 export 'package:trade_pilot_api_client/src/model/feedback.dart';
 export 'package:trade_pilot_api_client/src/model/feedback_body.dart';

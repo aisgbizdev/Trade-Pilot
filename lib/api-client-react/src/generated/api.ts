@@ -53,6 +53,7 @@ import type {
   DailySummarySettings,
   DailySummarySettingsUpdate,
   DeleteAccountBody,
+  DeleteTopupResponse,
   ErrorResponse,
   Feedback,
   FeedbackBody,
@@ -1389,6 +1390,95 @@ export const useReviewCreditTopupRequest = <
   TContext
 > => {
   return useMutation(getReviewCreditTopupRequestMutationOptions(options));
+};
+
+export const getDeleteTopupRequestUrl = (id: number) => {
+  return `/api/admin/topups/${id}`;
+};
+
+/**
+ * Never a physical row delete (credit_ledger.topupRequestId references this row once approved). If the request was approved, the credits it granted are clawed back first via a negative credit_ledger entry, then the row is marked deleted and excluded from every list endpoint.
+ * @summary Soft-delete a top-up request, reversing its credit grant if it was approved
+ */
+export const deleteTopupRequest = async (
+  id: number,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<DeleteTopupResponse> => {
+  return customFetch<DeleteTopupResponse>(getDeleteTopupRequestUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteTopupRequestMutationKey = () =>
+  ["deleteTopupRequest"] as const;
+
+export const getDeleteTopupRequestMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTopupRequest>>,
+    TError,
+    DeleteTopupRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteTopupRequest>>,
+  TError,
+  DeleteTopupRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteTopupRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteTopupRequest>>,
+    DeleteTopupRequestMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteTopupRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteTopupRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteTopupRequest>>
+>;
+
+export type DeleteTopupRequestMutationError = ErrorType<ErrorResponse>;
+export type DeleteTopupRequestMutationVariables = { id: number };
+
+/**
+ * @summary Soft-delete a top-up request, reversing its credit grant if it was approved
+ */
+export const useDeleteTopupRequest = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTopupRequest>>,
+    TError,
+    DeleteTopupRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteTopupRequest>>,
+  TError,
+  DeleteTopupRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteTopupRequestMutationOptions(options));
 };
 
 export const getCreateManualTopupUrl = () => {

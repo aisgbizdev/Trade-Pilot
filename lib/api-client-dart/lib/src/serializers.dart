@@ -72,6 +72,7 @@ import 'package:trade_pilot_api_client/src/model/daily_summary_settings.dart';
 import 'package:trade_pilot_api_client/src/model/daily_summary_settings_update.dart';
 import 'package:trade_pilot_api_client/src/model/daily_summary_today.dart';
 import 'package:trade_pilot_api_client/src/model/delete_account_body.dart';
+import 'package:trade_pilot_api_client/src/model/delete_topup_response.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/feedback.dart';
 import 'package:trade_pilot_api_client/src/model/feedback_body.dart';
@@ -263,6 +264,7 @@ part 'serializers.g.dart';
   DailySummarySettingsUpdate,
   DailySummaryToday,
   DeleteAccountBody,
+  DeleteTopupResponse,
   ErrorResponse,
   Feedback,
   FeedbackBody,

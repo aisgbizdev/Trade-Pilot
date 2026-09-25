@@ -507,3 +507,105 @@ describe("GET /admin/topups/summary", () => {
     expect(res.body.byUser.some((r: { userId: number }) => r.userId === carol.id)).toBe(false);
   });
 });
+
+describe("DELETE /admin/topups/:id", () => {
+  it("returns 401 without auth", async () => {
+    const id = await insertPendingTopup(alice, 1_000, 4);
+    const res = await request(app).delete(`/api/admin/topups/${id}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a plain admin (super_admin only)", async () => {
+    const id = await insertPendingTopup(alice, 1_000, 4);
+    const res = await request(app)
+      .delete(`/api/admin/topups/${id}`)
+      .set(...authHeader(admin));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for an unknown id", async () => {
+    const res = await request(app)
+      .delete("/api/admin/topups/999999999")
+      .set(...authHeader(superAdmin));
+    expect(res.status).toBe(404);
+  });
+
+  it("deletes a pending request without touching the credit balance", async () => {
+    const id = await insertPendingTopup(alice, 1_000, 4);
+    const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
+
+    const res = await request(app)
+      .delete(`/api/admin/topups/${id}`)
+      .set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id, creditsReversed: 0 });
+
+    const after = await request(app).get("/api/topups/balance").set(...authHeader(alice));
+    expect(after.body.balance).toBe(before.body.balance);
+
+    const [row] = await db.select().from(creditTopupRequests).where(eq(creditTopupRequests.id, id));
+    expect(row!.deletedAt).not.toBeNull();
+    expect(row!.deletedByUserId).toBe(superAdmin.id);
+  });
+
+  it("deleting an approved request claws back the granted credits via a reversal ledger entry", async () => {
+    const created = await request(app)
+      .post("/api/topups")
+      .set(...authHeader(alice))
+      .send({ amountRupiah: PKG_5K.amountRupiah, proofObjectPath: PROOF_PATH });
+    expect(created.status).toBe(201);
+    const id = created.body.id as number;
+    seededRequestIds.push(id);
+
+    const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
+
+    const res = await request(app)
+      .delete(`/api/admin/topups/${id}`)
+      .set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id, creditsReversed: PKG_5K.credits });
+    expect(res.body.creditBalance).toBe(before.body.balance - PKG_5K.credits);
+
+    const after = await request(app).get("/api/topups/balance").set(...authHeader(alice));
+    expect(after.body.balance).toBe(before.body.balance - PKG_5K.credits);
+
+    const ledgerRows = await db.select().from(creditLedger).where(eq(creditLedger.topupRequestId, id));
+    expect(ledgerRows).toHaveLength(2);
+    const reversal = ledgerRows.find((r) => r.source === "topup_reversal");
+    expect(reversal?.amount).toBe(-PKG_5K.credits);
+  });
+
+  it("a deleted request no longer appears in GET /admin/topups or GET /admin/topups/summary", async () => {
+    const dave = await createUser("user");
+    const created = await request(app)
+      .post("/api/topups")
+      .set(...authHeader(dave))
+      .send({ amountRupiah: PKG_5K.amountRupiah, proofObjectPath: PROOF_PATH });
+    const id = created.body.id as number;
+    seededRequestIds.push(id);
+
+    await request(app).delete(`/api/admin/topups/${id}`).set(...authHeader(superAdmin));
+
+    const list = await request(app)
+      .get("/api/admin/topups")
+      .set(...authHeader(admin))
+      .query({ status: "approved" });
+    expect(list.body.requests.some((r: { id: number }) => r.id === id)).toBe(false);
+
+    const summary = await request(app).get("/api/admin/topups/summary").set(...authHeader(superAdmin));
+    expect(summary.body.byUser.some((r: { userId: number }) => r.userId === dave.id)).toBe(false);
+  });
+
+  it("returns 404 on a second delete of the same request (already deleted)", async () => {
+    const id = await insertPendingTopup(alice, 1_000, 4);
+    const first = await request(app)
+      .delete(`/api/admin/topups/${id}`)
+      .set(...authHeader(superAdmin));
+    expect(first.status).toBe(200);
+
+    const second = await request(app)
+      .delete(`/api/admin/topups/${id}`)
+      .set(...authHeader(superAdmin));
+    expect(second.status).toBe(404);
+  });
+});

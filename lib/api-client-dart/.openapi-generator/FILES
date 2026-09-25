@@ -63,6 +63,7 @@ doc/DailySummarySettings.md
 doc/DailySummarySettingsUpdate.md
 doc/DailySummaryToday.md
 doc/DeleteAccountBody.md
+doc/DeleteTopupResponse.md
 doc/ErrorResponse.md
 doc/EventsApi.md
 doc/Feedback.md
@@ -295,6 +296,7 @@ lib/src/model/daily_summary_settings_update.dart
 lib/src/model/daily_summary_today.dart
 lib/src/model/date.dart
 lib/src/model/delete_account_body.dart
+lib/src/model/delete_topup_response.dart
 lib/src/model/error_response.dart
 lib/src/model/feedback.dart
 lib/src/model/feedback_body.dart
@@ -427,5 +429,4 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/update_user_credit_body_test.dart
-test/user_credit_balance_test.dart
+test/delete_topup_response_test.dart

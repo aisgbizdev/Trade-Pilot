@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Loader2, Wallet, Check, X, UserPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Wallet, Check, X, UserPlus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   useGetPendingTopupRequests,
   getGetPendingTopupRequestsQueryKey,
   useReviewCreditTopupRequest,
+  useDeleteTopupRequest,
   useGetAllUsers,
   getGetAllUsersQueryKey,
   useCreateManualTopup,
@@ -242,6 +243,7 @@ function AdminTopupsContent() {
   const [creditsGranted, setCreditsGranted] = useState("");
   const [reviewNote, setReviewNote] = useState("");
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<TopupRequestWithUser | null>(null);
 
   const queryParams = { status: statusFilter, page, limit: PAGE_SIZE };
   const { data, isLoading } = useGetPendingTopupRequests(
@@ -253,6 +255,7 @@ function AdminTopupsContent() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const reviewRequest = useReviewCreditTopupRequest();
+  const deleteRequest = useDeleteTopupRequest();
 
   const openReview = (request: TopupRequestWithUser, decision: "approved" | "rejected") => {
     setReviewTarget(request);
@@ -277,6 +280,23 @@ function AdminTopupsContent() {
       toast({ title: reviewDecision === "approved" ? t.admin.topups_approve_success : t.admin.topups_reject_success });
     } catch (err: unknown) {
       toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.topups_review_error, variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const result = await deleteRequest.mutateAsync({ id: deleteTarget.id });
+      queryClient.invalidateQueries({ queryKey: getGetPendingTopupRequestsQueryKey() });
+      setDeleteTarget(null);
+      toast({
+        title:
+          result.creditsReversed > 0
+            ? t.admin.topups_delete_success_reversed.replace("{n}", String(result.creditsReversed))
+            : t.admin.topups_delete_success,
+      });
+    } catch (err: unknown) {
+      toast({ title: ((err as { data?: { error?: string } })?.data?.error) ?? t.admin.topups_delete_error, variant: "destructive" });
     }
   };
 
@@ -371,24 +391,33 @@ function AdminTopupsContent() {
                       <p className="text-xs text-muted-foreground mt-1 italic">"{r.reviewNote}"</p>
                     )}
                   </div>
-                  {r.status === "pending" && (
-                    <div className="flex gap-1.5 shrink-0">
-                      <button
-                        onClick={() => openReview(r, "approved")}
-                        className="p-1.5 rounded hover:bg-green-500/10 text-muted-foreground hover:text-green-600"
-                        data-testid={`button-approve-${r.id}`}
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => openReview(r, "rejected")}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                        data-testid={`button-reject-${r.id}`}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex gap-1.5 shrink-0">
+                    {r.status === "pending" && (
+                      <>
+                        <button
+                          onClick={() => openReview(r, "approved")}
+                          className="p-1.5 rounded hover:bg-green-500/10 text-muted-foreground hover:text-green-600"
+                          data-testid={`button-approve-${r.id}`}
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openReview(r, "rejected")}
+                          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                          data-testid={`button-reject-${r.id}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => setDeleteTarget(r)}
+                      className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                      data-testid={`button-delete-topup-${r.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -468,6 +497,31 @@ function AdminTopupsContent() {
           onOpenChange={setManualDialogOpen}
           onGranted={() => queryClient.invalidateQueries({ queryKey: getGetPendingTopupRequestsQueryKey() })}
         />
+
+        <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{t.admin.topups_delete_confirm_title}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {deleteTarget?.status === "approved" && deleteTarget.creditsGranted
+                  ? t.admin.topups_delete_confirm_desc_approved.replace("{n}", String(deleteTarget.creditsGranted))
+                  : t.admin.topups_delete_confirm_desc}
+              </p>
+              <Button
+                className="w-full"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteRequest.isPending}
+                data-testid="button-confirm-delete-topup"
+              >
+                {deleteRequest.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                {t.admin.topups_delete_button}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

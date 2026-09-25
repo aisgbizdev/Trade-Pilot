@@ -364,6 +364,28 @@ export const ReviewCreditTopupRequestResponse = zod.object({
 });
 
 /**
+ * Never a physical row delete (credit_ledger.topupRequestId references this row once approved). If the request was approved, the credits it granted are clawed back first via a negative credit_ledger entry, then the row is marked deleted and excluded from every list endpoint.
+ * @summary Soft-delete a top-up request, reversing its credit grant if it was approved
+ */
+export const DeleteTopupRequestParams = zod.object({
+  id: zod.coerce.number().int(),
+});
+
+export const DeleteTopupRequestResponse = zod.object({
+  id: zod.number().int(),
+  creditsReversed: zod
+    .number()
+    .int()
+    .describe(
+      "Credits clawed back from the user (0 if the request was never approved).",
+    ),
+  creditBalance: zod
+    .number()
+    .int()
+    .describe("The user's credit balance after any reversal."),
+});
+
+/**
  * For support cases where a user paid but couldn't complete the normal top-up flow (e.g. proof upload failed, or the transfer was confirmed outside the app). Creates an already-approved top-up request row (no proof) and credits the user's balance immediately. The `note` is required and stored as the request's review note for the audit trail.
  * @summary Directly grant credits to a user, bypassing the normal request/proof-upload flow
  */

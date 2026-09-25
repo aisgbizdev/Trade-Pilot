@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**backfillProgression**](AdminApi.md#backfillprogression) | **POST** /admin/progression/backfill | Safely backfill only unequivocal historical progression evidence
 [**broadcastNotification**](AdminApi.md#broadcastnotification) | **POST** /admin/notifications | Broadcast notification to selected audience
 [**createManualTopup**](AdminApi.md#createmanualtopup) | **POST** /admin/topups/manual | Directly grant credits to a user, bypassing the normal request/proof-upload flow
+[**deleteTopupRequest**](AdminApi.md#deletetopuprequest) | **DELETE** /admin/topups/{id} | Soft-delete a top-up request, reversing its credit grant if it was approved
 [**getAdminAnalyticsTokens**](AdminApi.md#getadminanalyticstokens) | **GET** /admin/analytics/tokens | AI (OpenAI) token usage and estimated cost breakdown
 [**getAdminAnalyticsUsage**](AdminApi.md#getadminanalyticsusage) | **GET** /admin/analytics/usage | Feature-usage, device, browser, and country breakdown from analytics events
 [**getAdminFeedback**](AdminApi.md#getadminfeedback) | **GET** /admin/feedback | List user feedback rows (admin only)
@@ -142,6 +143,49 @@ No authorization required
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deleteTopupRequest**
+> DeleteTopupResponse deleteTopupRequest(id)
+
+Soft-delete a top-up request, reversing its credit grant if it was approved
+
+Never a physical row delete (credit_ledger.topupRequestId references this row once approved). If the request was approved, the credits it granted are clawed back first via a negative credit_ledger entry, then the row is marked deleted and excluded from every list endpoint.
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+final int id = 56; // int | 
+
+try {
+    final response = api.deleteTopupRequest(id);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->deleteTopupRequest: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **int**|  | 
+
+### Return type
+
+[**DeleteTopupResponse**](DeleteTopupResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
