@@ -987,6 +987,16 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       recommendation.sideEvaluations[activeSide].conditionalPlan ??
       null
     : null;
+  const reviewPlans = recommendation && !recommendation.result.valid
+    ? activeSide === "none"
+      ? (["buy", "sell"] as const)
+          .map((side) => recommendation.result[side] ?? recommendation.sideEvaluations[side].conditionalPlan)
+          .filter((plan): plan is AdaptiveSidePositionPlan => plan !== null)
+      : primaryPlan ? [primaryPlan] : []
+    : [];
+  const hasConditionalScenarios = recommendation != null &&
+    (recommendation.sideEvaluations.buy.conditionalPlan !== null ||
+      recommendation.sideEvaluations.sell.conditionalPlan !== null);
   const directionControl = recommendation &&
     (recommendation.result.buy || recommendation.result.sell ||
       recommendation.sideEvaluations.buy.conditionalPlan || recommendation.sideEvaluations.sell.conditionalPlan) ? (
@@ -1299,8 +1309,10 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 ? copy.adaptive_side_ready.replace("{side}", sideName)
                 : evaluation.status === "blocked"
                   ? copy.adaptive_side_blocked.replace("{side}", sideName)
-                  : evaluation.status === "not_aligned"
-                    ? copy.adaptive_side_not_aligned.replace("{side}", sideName)
+                   : evaluation.status === "not_aligned"
+                     ? (recommendation.decision.preferredSide === "none"
+                       ? copy.adaptive_side_conditional
+                       : copy.adaptive_side_not_aligned).replace("{side}", sideName)
                     : copy.adaptive_side_unavailable.replace("{side}", sideName);
               const blockerText = diagnostic?.blocker === "margin"
                 ? copy.adaptive_minimum_blocker_margin.replace("{amount}", formatMoney(diagnostic.marginShortfall, lang))
@@ -1366,8 +1378,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           </div>
         )}
         {recommendation && !recommendation.result.valid && <div className="border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 space-y-2" data-testid="adaptive-plan-invalid">
-          <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{copy.adaptive_invalid_title}</p>
-          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{copy.adaptive_invalid_description}</p>
+          <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{hasConditionalScenarios ? copy.adaptive_conditional_overview_title : copy.adaptive_invalid_title}</p>
+          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{hasConditionalScenarios ? copy.adaptive_conditional_overview_help : copy.adaptive_invalid_description}</p>
         </div>}
          {recommendation && !recommendation.result.valid && (
            (recommendation.result.buy || recommendation.result.sell ||
@@ -1376,18 +1388,21 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
              <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
              <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_scenarios_review_help}</p>
               {directionControl}
-               {primaryPlan && recommendation.sideEvaluations[primaryPlan.side].status !== "viable" && (
-                 <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" role="status">
-                   {copy.adaptive_conditional_not_actionable}
-                 </p>
-               )}
-               {primaryPlan && <PlanSide
-                 plan={primaryPlan}
-                 lang={lang}
-                 copy={copy}
-                 decision={recommendation.decision}
-                 conditional={recommendation.sideEvaluations[primaryPlan.side].status !== "viable"}
-               />}
+                {reviewPlans.map((plan) => (
+                  <div key={plan.side} className="space-y-2 rounded-md border border-border p-2.5" data-testid={`adaptive-review-side-${plan.side}`}>
+                    <p className="text-xs font-bold text-foreground">{plan.side === "buy" ? copy.adaptive_buy : copy.adaptive_sell}</p>
+                    <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" role="status">
+                      {copy.adaptive_conditional_not_actionable}
+                    </p>
+                    <PlanSide
+                      plan={plan}
+                      lang={lang}
+                      copy={copy}
+                      decision={recommendation.decision}
+                      conditional
+                    />
+                  </div>
+                ))}
            </div>
           ))}
         {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">

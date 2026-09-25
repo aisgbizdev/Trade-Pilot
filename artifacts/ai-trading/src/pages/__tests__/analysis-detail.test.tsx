@@ -1008,6 +1008,40 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(calls.filter((call) => call.url.includes("/api/historical/candles"))).toHaveLength(0);
   });
 
+  it("shows both conditional Buy and Sell plans immediately when the main analysis says Neutral/Wait", async () => {
+    const candles: FetchHandler = (url) =>
+      url.includes("/api/historical/candles") && url.includes("purpose=adaptive-layering")
+        ? jsonResponse(candleSnapshot())
+        : null;
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradingBias: "neutral",
+          marketCondition: "ranging",
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(), candles, standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "20000" } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "2000" } });
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+
+    expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/Buy and Sell scenarios available/i);
+    expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Conditional scenario/i);
+    expect(screen.getByTestId("adaptive-review-side-sell")).toHaveTextContent(/Conditional scenario/i);
+    expect(screen.queryByTestId("adaptive-plan-valid")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-copy-adaptive-plan")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("adaptive-direction-sell"));
+    expect(screen.getByTestId("adaptive-review-side-sell")).toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-review-side-buy")).not.toBeInTheDocument();
+  });
+
   it("does not restore a saved recommendation against a newer source snapshot with unchanged bars", async () => {
     let fetchedAt = NOW;
     const candles: FetchHandler = (url) => {
