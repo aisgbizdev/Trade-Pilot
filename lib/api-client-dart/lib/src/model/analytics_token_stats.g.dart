@@ -19,6 +19,8 @@ class _$AnalyticsTokenStats extends AnalyticsTokenStats {
   final BuiltList<AnalyticsTokenStatsTopUsersInner> topUsers;
   @override
   final AnalyticsTokenStatsTotals totals;
+  @override
+  final BuiltList<AnalyticsTokenStatsBySegmentInner> bySegment;
 
   factory _$AnalyticsTokenStats(
           [void Function(AnalyticsTokenStatsBuilder)? updates]) =>
@@ -30,7 +32,8 @@ class _$AnalyticsTokenStats extends AnalyticsTokenStats {
       required this.byModel,
       required this.byInstrument,
       required this.topUsers,
-      required this.totals})
+      required this.totals,
+      required this.bySegment})
       : super._();
   @override
   AnalyticsTokenStats rebuild(
@@ -50,7 +53,8 @@ class _$AnalyticsTokenStats extends AnalyticsTokenStats {
         byModel == other.byModel &&
         byInstrument == other.byInstrument &&
         topUsers == other.topUsers &&
-        totals == other.totals;
+        totals == other.totals &&
+        bySegment == other.bySegment;
   }
 
   @override
@@ -62,6 +66,7 @@ class _$AnalyticsTokenStats extends AnalyticsTokenStats {
     _$hash = $jc(_$hash, byInstrument.hashCode);
     _$hash = $jc(_$hash, topUsers.hashCode);
     _$hash = $jc(_$hash, totals.hashCode);
+    _$hash = $jc(_$hash, bySegment.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -74,7 +79,8 @@ class _$AnalyticsTokenStats extends AnalyticsTokenStats {
           ..add('byModel', byModel)
           ..add('byInstrument', byInstrument)
           ..add('topUsers', topUsers)
-          ..add('totals', totals))
+          ..add('totals', totals)
+          ..add('bySegment', bySegment))
         .toString();
   }
 }
@@ -121,6 +127,12 @@ class AnalyticsTokenStatsBuilder
   set totals(AnalyticsTokenStatsTotalsBuilder? totals) =>
       _$this._totals = totals;
 
+  ListBuilder<AnalyticsTokenStatsBySegmentInner>? _bySegment;
+  ListBuilder<AnalyticsTokenStatsBySegmentInner> get bySegment =>
+      _$this._bySegment ??= ListBuilder<AnalyticsTokenStatsBySegmentInner>();
+  set bySegment(ListBuilder<AnalyticsTokenStatsBySegmentInner>? bySegment) =>
+      _$this._bySegment = bySegment;
+
   AnalyticsTokenStatsBuilder() {
     AnalyticsTokenStats._defaults(this);
   }
@@ -134,6 +146,7 @@ class AnalyticsTokenStatsBuilder
       _byInstrument = $v.byInstrument.toBuilder();
       _topUsers = $v.topUsers.toBuilder();
       _totals = $v.totals.toBuilder();
+      _bySegment = $v.bySegment.toBuilder();
       _$v = null;
     }
     return this;
@@ -164,6 +177,7 @@ class AnalyticsTokenStatsBuilder
             byInstrument: byInstrument.build(),
             topUsers: topUsers.build(),
             totals: totals.build(),
+            bySegment: bySegment.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -178,6 +192,8 @@ class AnalyticsTokenStatsBuilder
         topUsers.build();
         _$failedField = 'totals';
         totals.build();
+        _$failedField = 'bySegment';
+        bySegment.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'AnalyticsTokenStats', _$failedField, e.toString());

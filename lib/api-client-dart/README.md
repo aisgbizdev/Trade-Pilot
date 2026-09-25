@@ -206,6 +206,7 @@ Class | Method | HTTP request | Description
  - [AnalyticsTokenStats](doc/AnalyticsTokenStats.md)
  - [AnalyticsTokenStatsByInstrumentInner](doc/AnalyticsTokenStatsByInstrumentInner.md)
  - [AnalyticsTokenStatsByModelInner](doc/AnalyticsTokenStatsByModelInner.md)
+ - [AnalyticsTokenStatsBySegmentInner](doc/AnalyticsTokenStatsBySegmentInner.md)
  - [AnalyticsTokenStatsDailyTokensInner](doc/AnalyticsTokenStatsDailyTokensInner.md)
  - [AnalyticsTokenStatsTopUsersInner](doc/AnalyticsTokenStatsTopUsersInner.md)
  - [AnalyticsTokenStatsTotals](doc/AnalyticsTokenStatsTotals.md)

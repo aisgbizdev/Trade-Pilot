@@ -416,6 +416,108 @@ describe("GET /superadmin/users search and pagination", () => {
   });
 });
 
+describe("GET /superadmin/users — segment field + ?segment= filter", () => {
+  it("reports 'free' for a plain user with no top-up and no quota override", async () => {
+    const freeUser = await createUser("user");
+    const res = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: freeUser.email })
+      .set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+    const found = res.body.users.find((u: { id: number }) => u.id === freeUser.id);
+    expect(found.segment).toBe("free");
+  });
+
+  it("reports 'paid' for a user with a lifetime topup_approval ledger entry", async () => {
+    const paidUser = await createUser("user");
+    await db.transaction(async (tx) => {
+      await applyCreditLedgerEntry(tx, {
+        userId: paidUser.id,
+        amount: 15,
+        source: "topup_approval",
+        sourceEventId: `sa-users-segment-paid-${RUN_ID}`,
+      });
+    });
+
+    const res = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: paidUser.email })
+      .set(...authHeader(superAdmin));
+    const found = res.body.users.find((u: { id: number }) => u.id === paidUser.id);
+    expect(found.segment).toBe("paid");
+  });
+
+  it("reports 'dev' for a user with a quota override, even if they also topped up (dev wins)", async () => {
+    const devUser = await createUser("user");
+    await db.transaction(async (tx) => {
+      await applyCreditLedgerEntry(tx, {
+        userId: devUser.id,
+        amount: 15,
+        source: "topup_approval",
+        sourceEventId: `sa-users-segment-dev-${RUN_ID}`,
+      });
+    });
+    await db.update(users).set({ customQuotaPerDay: 100 }).where(eq(users.id, devUser.id));
+
+    const res = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: devUser.email })
+      .set(...authHeader(superAdmin));
+    const found = res.body.users.find((u: { id: number }) => u.id === devUser.id);
+    expect(found.segment).toBe("dev");
+  });
+
+  it("?segment=free/paid/dev filters the list server-side, not just annotates it", async () => {
+    const freeUser = await createUser("user");
+    const paidUser = await createUser("user");
+    const devUser = await createUser("user");
+    await db.transaction(async (tx) => {
+      await applyCreditLedgerEntry(tx, {
+        userId: paidUser.id,
+        amount: 15,
+        source: "topup_approval",
+        sourceEventId: `sa-users-segment-filter-paid-${RUN_ID}`,
+      });
+    });
+    await db.update(users).set({ customQuotaPerDay: 100 }).where(eq(users.id, devUser.id));
+
+    const freeRes = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: `${EMAIL_PREFIX}-user-`, segment: "free" })
+      .set(...authHeader(superAdmin));
+    const freeIds = freeRes.body.users.map((u: { id: number }) => u.id);
+    expect(freeIds).toContain(freeUser.id);
+    expect(freeIds).not.toContain(paidUser.id);
+    expect(freeIds).not.toContain(devUser.id);
+
+    const paidRes = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: `${EMAIL_PREFIX}-user-`, segment: "paid" })
+      .set(...authHeader(superAdmin));
+    const paidIds = paidRes.body.users.map((u: { id: number }) => u.id);
+    expect(paidIds).toContain(paidUser.id);
+    expect(paidIds).not.toContain(freeUser.id);
+    expect(paidIds).not.toContain(devUser.id);
+
+    const devRes = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: `${EMAIL_PREFIX}-user-`, segment: "dev" })
+      .set(...authHeader(superAdmin));
+    const devIds = devRes.body.users.map((u: { id: number }) => u.id);
+    expect(devIds).toContain(devUser.id);
+    expect(devIds).not.toContain(freeUser.id);
+    expect(devIds).not.toContain(paidUser.id);
+  });
+
+  it("ignores an invalid ?segment= value instead of erroring", async () => {
+    const res = await request(app)
+      .get("/api/superadmin/users")
+      .query({ segment: "not-a-real-segment" })
+      .set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+  });
+});
+
 describe("DELETE /superadmin/users/:id", () => {
   it("removes the user when they exist", async () => {
     // Seed a victim user via the route under test, then delete it.

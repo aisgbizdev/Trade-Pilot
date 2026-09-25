@@ -376,6 +376,7 @@ class SuperadminApi {
   ///
   /// Parameters:
   /// * [search] - ILIKE filter on email or display name
+  /// * [segment] - Filter by user segment (see UserWithStats.segment). Omit for all segments.
   /// * [page] 
   /// * [limit] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -389,6 +390,7 @@ class SuperadminApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<UsersList>> getAllUsers({ 
     String? search,
+    String? segment,
     int? page = 1,
     int? limit = 50,
     CancelToken? cancelToken,
@@ -413,6 +415,7 @@ class SuperadminApi {
 
     final _queryParameters = <String, dynamic>{
       if (search != null) r'search': encodeQueryParameter(_serializers, search, const FullType(String)),
+      if (segment != null) r'segment': encodeQueryParameter(_serializers, segment, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
       if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };

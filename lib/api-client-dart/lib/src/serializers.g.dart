@@ -41,6 +41,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AnalyticsTokenStats.serializer)
       ..add(AnalyticsTokenStatsByInstrumentInner.serializer)
       ..add(AnalyticsTokenStatsByModelInner.serializer)
+      ..add(AnalyticsTokenStatsBySegmentInner.serializer)
+      ..add(AnalyticsTokenStatsBySegmentInnerSegmentEnum.serializer)
       ..add(AnalyticsTokenStatsDailyTokensInner.serializer)
       ..add(AnalyticsTokenStatsTopUsersInner.serializer)
       ..add(AnalyticsTokenStatsTotals.serializer)
@@ -260,6 +262,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(UserThemePreferenceEnum.serializer)
       ..add(UserWithStats.serializer)
       ..add(UserWithStatsRoleEnum.serializer)
+      ..add(UserWithStatsSegmentEnum.serializer)
       ..add(UserWithStatsSelectedModeEnum.serializer)
       ..add(UsersList.serializer)
       ..add(VerifySecurityAnswerBody.serializer)
@@ -305,6 +308,10 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList,
               const [const FullType(AnalyticsTokenStatsTopUsersInner)]),
           () => ListBuilder<AnalyticsTokenStatsTopUsersInner>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(AnalyticsTokenStatsBySegmentInner)]),
+          () => ListBuilder<AnalyticsTokenStatsBySegmentInner>())
       ..addBuilderFactory(
           const FullType(BuiltList,
               const [const FullType(AnalyticsUsageStatsDailyActivityInner)]),

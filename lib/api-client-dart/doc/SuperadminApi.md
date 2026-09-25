@@ -185,7 +185,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getAllUsers**
-> UsersList getAllUsers(search, page, limit)
+> UsersList getAllUsers(search, segment, page, limit)
 
 Get all users (superadmin only)
 
@@ -195,11 +195,12 @@ import 'package:trade_pilot_api_client/api.dart';
 
 final api = TradePilotApiClient().getSuperadminApi();
 final String search = search_example; // String | ILIKE filter on email or display name
+final String segment = segment_example; // String | Filter by user segment (see UserWithStats.segment). Omit for all segments.
 final int page = 56; // int | 
 final int limit = 56; // int | 
 
 try {
-    final response = api.getAllUsers(search, page, limit);
+    final response = api.getAllUsers(search, segment, page, limit);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling SuperadminApi->getAllUsers: $e\n');
@@ -211,6 +212,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **search** | **String**| ILIKE filter on email or display name | [optional] 
+ **segment** | **String**| Filter by user segment (see UserWithStats.segment). Omit for all segments. | [optional] 
  **page** | **int**|  | [optional] [default to 1]
  **limit** | **int**|  | [optional] [default to 50]
 

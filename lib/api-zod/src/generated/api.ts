@@ -4128,6 +4128,24 @@ export const GetAdminStatsResponse = zod.object({
     .describe(
       "Logout events today (user-initiated or the 15-minute web idle auto-logout) for role='user' accounts only, counted per event.",
     ),
+  totalFreeUsers: zod
+    .number()
+    .int()
+    .describe(
+      "User-segmentation for cost\/revenue accounting (mutually exclusive with totalPaidUsers\/totalDevUsers): never topped up and no admin quota override.",
+    ),
+  totalPaidUsers: zod
+    .number()
+    .int()
+    .describe(
+      'Has at least one lifetime \"topup_approval\" credit_ledger entry, and no admin quota override (Development takes priority — see totalDevUsers).',
+    ),
+  totalDevUsers: zod
+    .number()
+    .int()
+    .describe(
+      "Has an admin-set per-user quota override (customQuotaPerDay), treated as an internal\/testing account even if it also has a real top-up on record.",
+    ),
   totalAnalysesToday: zod.number().int(),
   totalAnalysesThisWeek: zod.number().int(),
   totalAnalysesThisMonth: zod.number().int(),
@@ -4275,6 +4293,19 @@ export const GetAdminAnalyticsTokensResponse = zod.object({
     totalCostUsd: zod.number(),
     totalCalls: zod.number().int(),
   }),
+  bySegment: zod
+    .array(
+      zod.object({
+        segment: zod.enum(["free", "paid", "dev"]),
+        totalTokens: zod.number().int(),
+        estimatedCostUsd: zod.number(),
+        callCount: zod.number().int(),
+        analysisCount: zod.number().int(),
+      }),
+    )
+    .describe(
+      "Token cost + analysis volume for each cost\/revenue segment (see UserWithStats.segment) — always exactly 3 entries (free, paid, dev), zero-filled for a segment with no activity in this window.",
+    ),
 });
 
 /**
@@ -4831,6 +4862,12 @@ export const GetAllUsersQueryParams = zod.object({
     .string()
     .optional()
     .describe("ILIKE filter on email or display name"),
+  segment: zod
+    .enum(["free", "paid", "dev"])
+    .optional()
+    .describe(
+      "Filter by user segment (see UserWithStats.segment). Omit for all segments.",
+    ),
   page: zod.coerce.number().int().default(getAllUsersQueryPageDefault),
   limit: zod.coerce.number().int().default(getAllUsersQueryLimitDefault),
 });
@@ -4854,9 +4891,14 @@ export const GetAllUsersResponse = zod.object({
       customQuotaPerDay: zod
         .number()
         .int()
-        .nullish()
+        .nullable()
         .describe(
           "Per-user analysis-quota override. Null = uses the global default.",
+        ),
+      segment: zod
+        .enum(["free", "paid", "dev"])
+        .describe(
+          'Cost\/revenue\/profit accounting segment (see GET \/admin\/stats\' totalFreeUsers\/totalPaidUsers\/totalDevUsers). Mutually exclusive: \"dev\" (customQuotaPerDay set) wins over \"paid\" (a lifetime topup_approval credit_ledger entry) wins over \"free\".',
         ),
       createdAt: zod.coerce.date(),
     }),

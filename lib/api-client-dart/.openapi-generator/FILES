@@ -27,6 +27,7 @@ doc/AnalyticsEventBody.md
 doc/AnalyticsTokenStats.md
 doc/AnalyticsTokenStatsByInstrumentInner.md
 doc/AnalyticsTokenStatsByModelInner.md
+doc/AnalyticsTokenStatsBySegmentInner.md
 doc/AnalyticsTokenStatsDailyTokensInner.md
 doc/AnalyticsTokenStatsTopUsersInner.md
 doc/AnalyticsTokenStatsTotals.md
@@ -261,6 +262,7 @@ lib/src/model/analytics_event_body.dart
 lib/src/model/analytics_token_stats.dart
 lib/src/model/analytics_token_stats_by_instrument_inner.dart
 lib/src/model/analytics_token_stats_by_model_inner.dart
+lib/src/model/analytics_token_stats_by_segment_inner.dart
 lib/src/model/analytics_token_stats_daily_tokens_inner.dart
 lib/src/model/analytics_token_stats_top_users_inner.dart
 lib/src/model/analytics_token_stats_totals.dart
@@ -429,3 +431,4 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
+test/analytics_token_stats_by_segment_inner_test.dart

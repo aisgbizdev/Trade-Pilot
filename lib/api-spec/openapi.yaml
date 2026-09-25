@@ -3036,6 +3036,14 @@ paths:
           description: ILIKE filter on email or display name
           schema:
             type: string
+        - name: segment
+          in: query
+          description: >-
+            Filter by user segment (see UserWithStats.segment). Omit for
+            all segments.
+          schema:
+            type: string
+            enum: [free, paid, dev]
         - name: page
           in: query
           schema:
@@ -5822,6 +5830,24 @@ components:
           description: >-
             Logout events today (user-initiated or the 15-minute web idle
             auto-logout) for role='user' accounts only, counted per event.
+        totalFreeUsers:
+          type: integer
+          description: >-
+            User-segmentation for cost/revenue accounting (mutually
+            exclusive with totalPaidUsers/totalDevUsers): never topped up
+            and no admin quota override.
+        totalPaidUsers:
+          type: integer
+          description: >-
+            Has at least one lifetime "topup_approval" credit_ledger entry,
+            and no admin quota override (Development takes priority — see
+            totalDevUsers).
+        totalDevUsers:
+          type: integer
+          description: >-
+            Has an admin-set per-user quota override (customQuotaPerDay),
+            treated as an internal/testing account even if it also has a
+            real top-up on record.
         totalAnalysesToday:
           type: integer
         totalAnalysesThisWeek:
@@ -5856,6 +5882,9 @@ components:
         - totalUsersToday
         - totalLoginsToday
         - totalLogoutsToday
+        - totalFreeUsers
+        - totalPaidUsers
+        - totalDevUsers
         - totalAnalysesToday
         - totalAnalysesThisWeek
         - totalAnalysesThisMonth
@@ -6084,6 +6113,27 @@ components:
             totalCalls:
               type: integer
           required: [totalTokens, totalCostUsd, totalCalls]
+        bySegment:
+          type: array
+          description: >-
+            Token cost + analysis volume for each cost/revenue segment (see
+            UserWithStats.segment) — always exactly 3 entries (free, paid,
+            dev), zero-filled for a segment with no activity in this window.
+          items:
+            type: object
+            properties:
+              segment:
+                type: string
+                enum: [free, paid, dev]
+              totalTokens:
+                type: integer
+              estimatedCostUsd:
+                type: number
+              callCount:
+                type: integer
+              analysisCount:
+                type: integer
+            required: [segment, totalTokens, estimatedCostUsd, callCount, analysisCount]
       required:
         - windowDays
         - dailyTokens
@@ -6091,6 +6141,7 @@ components:
         - byInstrument
         - topUsers
         - totals
+        - bySegment
 
     UserWithStats:
       type: object
@@ -6120,6 +6171,14 @@ components:
           type: integer
           nullable: true
           description: Per-user analysis-quota override. Null = uses the global default.
+        segment:
+          type: string
+          enum: [free, paid, dev]
+          description: >-
+            Cost/revenue/profit accounting segment (see GET /admin/stats'
+            totalFreeUsers/totalPaidUsers/totalDevUsers). Mutually
+            exclusive: "dev" (customQuotaPerDay set) wins over "paid" (a
+            lifetime topup_approval credit_ledger entry) wins over "free".
         createdAt:
           type: string
           format: date-time
@@ -6132,6 +6191,8 @@ components:
         - analysisCount
         - creditBalance
         - tags
+        - customQuotaPerDay
+        - segment
         - createdAt
 
     UpdateUserQuotaBody:

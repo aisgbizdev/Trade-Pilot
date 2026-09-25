@@ -8,6 +8,7 @@ import 'package:trade_pilot_api_client/src/model/analytics_token_stats_totals.da
 import 'package:built_collection/built_collection.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_daily_tokens_inner.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_instrument_inner.dart';
+import 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_segment_inner.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_model_inner.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -23,6 +24,7 @@ part 'analytics_token_stats.g.dart';
 /// * [byInstrument] 
 /// * [topUsers] 
 /// * [totals] 
+/// * [bySegment] - Token cost + analysis volume for each cost/revenue segment (see UserWithStats.segment) — always exactly 3 entries (free, paid, dev), zero-filled for a segment with no activity in this window.
 @BuiltValue()
 abstract class AnalyticsTokenStats implements Built<AnalyticsTokenStats, AnalyticsTokenStatsBuilder> {
   @BuiltValueField(wireName: r'windowDays')
@@ -42,6 +44,10 @@ abstract class AnalyticsTokenStats implements Built<AnalyticsTokenStats, Analyti
 
   @BuiltValueField(wireName: r'totals')
   AnalyticsTokenStatsTotals get totals;
+
+  /// Token cost + analysis volume for each cost/revenue segment (see UserWithStats.segment) — always exactly 3 entries (free, paid, dev), zero-filled for a segment with no activity in this window.
+  @BuiltValueField(wireName: r'bySegment')
+  BuiltList<AnalyticsTokenStatsBySegmentInner> get bySegment;
 
   AnalyticsTokenStats._();
 
@@ -95,6 +101,11 @@ class _$AnalyticsTokenStatsSerializer implements PrimitiveSerializer<AnalyticsTo
     yield serializers.serialize(
       object.totals,
       specifiedType: const FullType(AnalyticsTokenStatsTotals),
+    );
+    yield r'bySegment';
+    yield serializers.serialize(
+      object.bySegment,
+      specifiedType: const FullType(BuiltList, [FullType(AnalyticsTokenStatsBySegmentInner)]),
     );
   }
 
@@ -160,6 +171,13 @@ class _$AnalyticsTokenStatsSerializer implements PrimitiveSerializer<AnalyticsTo
             specifiedType: const FullType(AnalyticsTokenStatsTotals),
           ) as AnalyticsTokenStatsTotals;
           result.totals.replace(valueDes);
+          break;
+        case r'bySegment':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(AnalyticsTokenStatsBySegmentInner)]),
+          ) as BuiltList<AnalyticsTokenStatsBySegmentInner>;
+          result.bySegment.replace(valueDes);
           break;
         default:
           unhandled.add(key);

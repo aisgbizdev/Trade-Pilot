@@ -55,6 +55,7 @@ export 'package:trade_pilot_api_client/src/model/analytics_event_body.dart';
 export 'package:trade_pilot_api_client/src/model/analytics_token_stats.dart';
 export 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_instrument_inner.dart';
 export 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_model_inner.dart';
+export 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_segment_inner.dart';
 export 'package:trade_pilot_api_client/src/model/analytics_token_stats_daily_tokens_inner.dart';
 export 'package:trade_pilot_api_client/src/model/analytics_token_stats_top_users_inner.dart';
 export 'package:trade_pilot_api_client/src/model/analytics_token_stats_totals.dart';

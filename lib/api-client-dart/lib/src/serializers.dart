@@ -38,6 +38,7 @@ import 'package:trade_pilot_api_client/src/model/analytics_event_body.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_instrument_inner.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_model_inner.dart';
+import 'package:trade_pilot_api_client/src/model/analytics_token_stats_by_segment_inner.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_daily_tokens_inner.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_top_users_inner.dart';
 import 'package:trade_pilot_api_client/src/model/analytics_token_stats_totals.dart';
@@ -230,6 +231,7 @@ part 'serializers.g.dart';
   AnalyticsTokenStats,
   AnalyticsTokenStatsByInstrumentInner,
   AnalyticsTokenStatsByModelInner,
+  AnalyticsTokenStatsBySegmentInner,
   AnalyticsTokenStatsDailyTokensInner,
   AnalyticsTokenStatsTopUsersInner,
   AnalyticsTokenStatsTotals,
@@ -411,6 +413,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StandardTradingRuleInstrument)]),
         () => ListBuilder<StandardTradingRuleInstrument>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsTokenStatsBySegmentInner)]),
+        () => ListBuilder<AnalyticsTokenStatsBySegmentInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(TopupMonthSummary)]),

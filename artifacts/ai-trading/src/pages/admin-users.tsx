@@ -26,6 +26,7 @@ import { UserQuotaEditor } from "@/components/user-quota-editor";
 import { CreditBalanceEditor } from "@/components/credit-balance-editor";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
+import { SEGMENT_BADGE_CLASS } from "@/lib/user-segment";
 import {
   useGetAllUsers,
   getGetAllUsersQueryKey,
@@ -36,6 +37,7 @@ import {
   type UsersList,
   type CreateUserBody,
   type UpdateUserRoleBodyRole,
+  type GetAllUsersSegment,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -44,6 +46,9 @@ const ROLE_BADGE: Record<string, "secondary" | "outline" | "destructive"> = {
   admin: "outline",
   super_admin: "destructive",
 };
+
+const SEGMENT_FILTERS = ["all", "free", "paid", "dev"] as const;
+type SegmentFilter = (typeof SEGMENT_FILTERS)[number];
 
 function AdminUsersContent() {
   const [, setLocation] = useLocation();
@@ -69,6 +74,7 @@ function AdminUsersContent() {
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [segmentFilter, setSegmentFilter] = useState<SegmentFilter>("all");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
 
@@ -90,7 +96,12 @@ function AdminUsersContent() {
     securityAnswer: "",
   });
 
-  const queryParams = { search: search.trim() || undefined, page, limit: PAGE_SIZE };
+  const queryParams = {
+    search: search.trim() || undefined,
+    segment: segmentFilter === "all" ? undefined : (segmentFilter as GetAllUsersSegment),
+    page,
+    limit: PAGE_SIZE,
+  };
   const { data, isLoading } = useGetAllUsers(
     queryParams,
     { query: { queryKey: getGetAllUsersQueryKey(queryParams) } },
@@ -201,6 +212,23 @@ function AdminUsersContent() {
           />
         </div>
 
+        <div className="flex gap-1.5">
+          {SEGMENT_FILTERS.map((s) => (
+            <button
+              key={s}
+              onClick={() => { setSegmentFilter(s); setPage(1); }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                segmentFilter === s
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-transparent text-muted-foreground border-border hover:bg-muted"
+              }`}
+              data-testid={`button-segment-filter-${s}`}
+            >
+              {t.admin[`user_segment_filter_${s}` as "user_segment_filter_all"]}
+            </button>
+          ))}
+        </div>
+
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -231,6 +259,12 @@ function AdminUsersContent() {
                         className="text-[10px] px-1.5 py-0"
                       >
                         {(u as { analysisCount?: number }).analysisCount ?? 0 > 0 ? t.admin.users_active : t.admin.users_inactive}
+                      </Badge>
+                      <Badge
+                        className={`text-[10px] px-1.5 py-0 ${SEGMENT_BADGE_CLASS[u.segment]}`}
+                        data-testid={`badge-segment-${u.id}`}
+                      >
+                        {t.admin[`user_segment_${u.segment}` as "user_segment_free"]}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{u.email}</p>

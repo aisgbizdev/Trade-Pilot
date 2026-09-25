@@ -65,6 +65,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
+import { SEGMENT_BADGE_CLASS } from "@/lib/user-segment";
 import { useQueryClient } from "@tanstack/react-query";
 
 const MARKET_CONDITION_COLORS: Record<string, string> = {
@@ -586,6 +587,31 @@ function TokenUsagePanel() {
               </div>
             </div>
           </div>
+
+          {data.bySegment && data.bySegment.length > 0 && (
+            <div>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {t.admin.token_usage_by_segment}
+              </h4>
+              <div className="grid grid-cols-3 gap-2">
+                {data.bySegment.map((row) => (
+                  <div
+                    key={row.segment}
+                    className={`rounded-lg border p-2 text-center ${SEGMENT_BADGE_CLASS[row.segment]}`}
+                    data-testid={`stat-token-segment-${row.segment}`}
+                  >
+                    <div className="text-sm font-bold">{fmtCost(row.estimatedCostUsd)}</div>
+                    <div className="text-[10px] mt-0.5 opacity-80">
+                      {t.admin[`user_segment_${row.segment}` as "user_segment_free"]}
+                    </div>
+                    <div className="text-[10px] mt-0.5 opacity-70">
+                      {fmtTokens(row.totalTokens)} · {row.analysisCount} {t.admin.token_usage_by_segment_analyses_suffix}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {data.topUsers.length > 0 && (
             <div>
@@ -1109,6 +1135,29 @@ function AdminContent() {
                 </Card>
               ))}
             </div>
+
+            <Card className="p-4" data-testid="card-user-segments">
+              <h3 className="text-sm font-semibold text-foreground">{t.admin.user_segments_title}</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">{t.admin.user_segments_subtitle}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { key: "free", label: t.admin.user_segment_free, value: stats?.totalFreeUsers ?? 0 },
+                    { key: "paid", label: t.admin.user_segment_paid, value: stats?.totalPaidUsers ?? 0 },
+                    { key: "dev", label: t.admin.user_segment_dev, value: stats?.totalDevUsers ?? 0 },
+                  ] as const
+                ).map(({ key, label, value }) => (
+                  <div
+                    key={key}
+                    className={`rounded-lg border p-2.5 text-center ${SEGMENT_BADGE_CLASS[key]}`}
+                    data-testid={`stat-segment-${key}`}
+                  >
+                    <div className="text-xl font-bold">{value}</div>
+                    <div className="text-[10px] mt-0.5 opacity-80">{label}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
 
             {stats?.instrumentBreakdown && stats.instrumentBreakdown.length > 0 && (
               <Card className="p-4">

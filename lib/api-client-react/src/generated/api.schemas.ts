@@ -1719,6 +1719,12 @@ export interface AdminStats {
   totalLoginsToday: number;
   /** Logout events today (user-initiated or the 15-minute web idle auto-logout) for role='user' accounts only, counted per event. */
   totalLogoutsToday: number;
+  /** User-segmentation for cost/revenue accounting (mutually exclusive with totalPaidUsers/totalDevUsers): never topped up and no admin quota override. */
+  totalFreeUsers: number;
+  /** Has at least one lifetime "topup_approval" credit_ledger entry, and no admin quota override (Development takes priority — see totalDevUsers). */
+  totalPaidUsers: number;
+  /** Has an admin-set per-user quota override (customQuotaPerDay), treated as an internal/testing account even if it also has a real top-up on record. */
+  totalDevUsers: number;
   totalAnalysesToday: number;
   totalAnalysesThisWeek: number;
   totalAnalysesThisMonth: number;
@@ -1887,6 +1893,23 @@ export type AnalyticsTokenStatsTotals = {
   totalCalls: number;
 };
 
+export type AnalyticsTokenStatsBySegmentItemSegment =
+  (typeof AnalyticsTokenStatsBySegmentItemSegment)[keyof typeof AnalyticsTokenStatsBySegmentItemSegment];
+
+export const AnalyticsTokenStatsBySegmentItemSegment = {
+  free: "free",
+  paid: "paid",
+  dev: "dev",
+} as const;
+
+export type AnalyticsTokenStatsBySegmentItem = {
+  segment: AnalyticsTokenStatsBySegmentItemSegment;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  callCount: number;
+  analysisCount: number;
+};
+
 export interface AnalyticsTokenStats {
   windowDays: number;
   dailyTokens: AnalyticsTokenStatsDailyTokensItem[];
@@ -1894,6 +1917,8 @@ export interface AnalyticsTokenStats {
   byInstrument: AnalyticsTokenStatsByInstrumentItem[];
   topUsers: AnalyticsTokenStatsTopUsersItem[];
   totals: AnalyticsTokenStatsTotals;
+  /** Token cost + analysis volume for each cost/revenue segment (see UserWithStats.segment) — always exactly 3 entries (free, paid, dev), zero-filled for a segment with no activity in this window. */
+  bySegment: AnalyticsTokenStatsBySegmentItem[];
 }
 
 export type UserWithStatsRole =
@@ -1913,6 +1938,18 @@ export const UserWithStatsSelectedMode = {
   pro: "pro",
 } as const;
 
+/**
+ * Cost/revenue/profit accounting segment (see GET /admin/stats' totalFreeUsers/totalPaidUsers/totalDevUsers). Mutually exclusive: "dev" (customQuotaPerDay set) wins over "paid" (a lifetime topup_approval credit_ledger entry) wins over "free".
+ */
+export type UserWithStatsSegment =
+  (typeof UserWithStatsSegment)[keyof typeof UserWithStatsSegment];
+
+export const UserWithStatsSegment = {
+  free: "free",
+  paid: "paid",
+  dev: "dev",
+} as const;
+
 export interface UserWithStats {
   id: number;
   email: string;
@@ -1924,7 +1961,9 @@ export interface UserWithStats {
   creditBalance: number;
   tags: string[];
   /** Per-user analysis-quota override. Null = uses the global default. */
-  customQuotaPerDay?: number | null;
+  customQuotaPerDay: number | null;
+  /** Cost/revenue/profit accounting segment (see GET /admin/stats' totalFreeUsers/totalPaidUsers/totalDevUsers). Mutually exclusive: "dev" (customQuotaPerDay set) wins over "paid" (a lifetime topup_approval credit_ledger entry) wins over "free". */
+  segment: UserWithStatsSegment;
   createdAt: string;
 }
 
@@ -2744,6 +2783,19 @@ export type GetAllUsersParams = {
    * ILIKE filter on email or display name
    */
   search?: string;
+  /**
+   * Filter by user segment (see UserWithStats.segment). Omit for all segments.
+   */
+  segment?: GetAllUsersSegment;
   page?: number;
   limit?: number;
 };
+
+export type GetAllUsersSegment =
+  (typeof GetAllUsersSegment)[keyof typeof GetAllUsersSegment];
+
+export const GetAllUsersSegment = {
+  free: "free",
+  paid: "paid",
+  dev: "dev",
+} as const;

@@ -57,11 +57,40 @@ final BuiltSet<UserWithStatsSelectedModeEnum>
   _$userWithStatsSelectedModeEnum_pro,
 ]);
 
+const UserWithStatsSegmentEnum _$userWithStatsSegmentEnum_free =
+    const UserWithStatsSegmentEnum._('free');
+const UserWithStatsSegmentEnum _$userWithStatsSegmentEnum_paid =
+    const UserWithStatsSegmentEnum._('paid');
+const UserWithStatsSegmentEnum _$userWithStatsSegmentEnum_dev =
+    const UserWithStatsSegmentEnum._('dev');
+
+UserWithStatsSegmentEnum _$userWithStatsSegmentEnumValueOf(String name) {
+  switch (name) {
+    case 'free':
+      return _$userWithStatsSegmentEnum_free;
+    case 'paid':
+      return _$userWithStatsSegmentEnum_paid;
+    case 'dev':
+      return _$userWithStatsSegmentEnum_dev;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<UserWithStatsSegmentEnum> _$userWithStatsSegmentEnumValues =
+    BuiltSet<UserWithStatsSegmentEnum>(const <UserWithStatsSegmentEnum>[
+  _$userWithStatsSegmentEnum_free,
+  _$userWithStatsSegmentEnum_paid,
+  _$userWithStatsSegmentEnum_dev,
+]);
+
 Serializer<UserWithStatsRoleEnum> _$userWithStatsRoleEnumSerializer =
     _$UserWithStatsRoleEnumSerializer();
 Serializer<UserWithStatsSelectedModeEnum>
     _$userWithStatsSelectedModeEnumSerializer =
     _$UserWithStatsSelectedModeEnumSerializer();
+Serializer<UserWithStatsSegmentEnum> _$userWithStatsSegmentEnumSerializer =
+    _$UserWithStatsSegmentEnumSerializer();
 
 class _$UserWithStatsRoleEnumSerializer
     implements PrimitiveSerializer<UserWithStatsRoleEnum> {
@@ -123,6 +152,37 @@ class _$UserWithStatsSelectedModeEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$UserWithStatsSegmentEnumSerializer
+    implements PrimitiveSerializer<UserWithStatsSegmentEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'free': 'free',
+    'paid': 'paid',
+    'dev': 'dev',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'free': 'free',
+    'paid': 'paid',
+    'dev': 'dev',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[UserWithStatsSegmentEnum];
+  @override
+  final String wireName = 'UserWithStatsSegmentEnum';
+
+  @override
+  Object serialize(Serializers serializers, UserWithStatsSegmentEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  UserWithStatsSegmentEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      UserWithStatsSegmentEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$UserWithStats extends UserWithStats {
   @override
   final int id;
@@ -141,7 +201,9 @@ class _$UserWithStats extends UserWithStats {
   @override
   final BuiltList<String> tags;
   @override
-  final int? customQuotaPerDay;
+  final int customQuotaPerDay;
+  @override
+  final UserWithStatsSegmentEnum segment;
   @override
   final DateTime createdAt;
 
@@ -157,7 +219,8 @@ class _$UserWithStats extends UserWithStats {
       required this.analysisCount,
       required this.creditBalance,
       required this.tags,
-      this.customQuotaPerDay,
+      required this.customQuotaPerDay,
+      required this.segment,
       required this.createdAt})
       : super._();
   @override
@@ -180,6 +243,7 @@ class _$UserWithStats extends UserWithStats {
         creditBalance == other.creditBalance &&
         tags == other.tags &&
         customQuotaPerDay == other.customQuotaPerDay &&
+        segment == other.segment &&
         createdAt == other.createdAt;
   }
 
@@ -195,6 +259,7 @@ class _$UserWithStats extends UserWithStats {
     _$hash = $jc(_$hash, creditBalance.hashCode);
     _$hash = $jc(_$hash, tags.hashCode);
     _$hash = $jc(_$hash, customQuotaPerDay.hashCode);
+    _$hash = $jc(_$hash, segment.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -212,6 +277,7 @@ class _$UserWithStats extends UserWithStats {
           ..add('creditBalance', creditBalance)
           ..add('tags', tags)
           ..add('customQuotaPerDay', customQuotaPerDay)
+          ..add('segment', segment)
           ..add('createdAt', createdAt))
         .toString();
   }
@@ -261,6 +327,10 @@ class UserWithStatsBuilder
   set customQuotaPerDay(int? customQuotaPerDay) =>
       _$this._customQuotaPerDay = customQuotaPerDay;
 
+  UserWithStatsSegmentEnum? _segment;
+  UserWithStatsSegmentEnum? get segment => _$this._segment;
+  set segment(UserWithStatsSegmentEnum? segment) => _$this._segment = segment;
+
   DateTime? _createdAt;
   DateTime? get createdAt => _$this._createdAt;
   set createdAt(DateTime? createdAt) => _$this._createdAt = createdAt;
@@ -281,6 +351,7 @@ class UserWithStatsBuilder
       _creditBalance = $v.creditBalance;
       _tags = $v.tags.toBuilder();
       _customQuotaPerDay = $v.customQuotaPerDay;
+      _segment = $v.segment;
       _createdAt = $v.createdAt;
       _$v = null;
     }
@@ -320,7 +391,10 @@ class UserWithStatsBuilder
             creditBalance: BuiltValueNullFieldError.checkNotNull(
                 creditBalance, r'UserWithStats', 'creditBalance'),
             tags: tags.build(),
-            customQuotaPerDay: customQuotaPerDay,
+            customQuotaPerDay: BuiltValueNullFieldError.checkNotNull(
+                customQuotaPerDay, r'UserWithStats', 'customQuotaPerDay'),
+            segment: BuiltValueNullFieldError.checkNotNull(
+                segment, r'UserWithStats', 'segment'),
             createdAt: BuiltValueNullFieldError.checkNotNull(
                 createdAt, r'UserWithStats', 'createdAt'),
           );

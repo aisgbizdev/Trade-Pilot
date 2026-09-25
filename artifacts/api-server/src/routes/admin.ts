@@ -23,6 +23,7 @@ import { notifySuperAdminsUserDeleted, notifyAdminsUserCreated } from "../lib/jo
 import { createNotificationsForUsers } from "../lib/create-notification";
 import { getAnalysisQuotaConfig, setAnalysisQuotaConfig } from "./analyses";
 import { applyCreditLedgerEntry, getCreditBalanceForUser, CREDIT_BALANCE_LOCK_NAMESPACE } from "../lib/credits";
+import { isUserSegment, segmentFilterClause, userSegmentCaseSql, USER_SEGMENTS } from "../lib/user-segment";
 
 type AudienceType = "all" | "role" | "tag";
 type Role = "user" | "admin" | "super_admin";
@@ -107,6 +108,22 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
       sql`${authEvents.createdAt} >= ${todayStart}`,
     ));
 
+  // User segmentation for cost/revenue/profit accounting — see
+  // lib/user-segment.ts for the precedence rule and why it's centralized.
+  const [devUsersResult] = await db
+    .select({ count: count(users.id) })
+    .from(users)
+    .where(segmentFilterClause("dev"));
+
+  const [paidUsersResult] = await db
+    .select({ count: count(users.id) })
+    .from(users)
+    .where(segmentFilterClause("paid"));
+
+  const devUserCount = Number(devUsersResult.count);
+  const paidUserCount = Number(paidUsersResult.count);
+  const freeUserCount = Number(totalUsers.count) - devUserCount - paidUserCount;
+
   const instrumentBreakdown = await db
     .select({
       instrument: analyses.instrument,
@@ -135,6 +152,9 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
     totalUsersToday: Number(usersTodayResult.count),
     totalLoginsToday: Number(loginsTodayResult.count),
     totalLogoutsToday: Number(logoutsTodayResult.count),
+    totalFreeUsers: freeUserCount,
+    totalPaidUsers: paidUserCount,
+    totalDevUsers: devUserCount,
     totalAnalysesToday: Number(todayResult.count),
     totalAnalysesThisWeek: Number(weekResult.count),
     totalAnalysesThisMonth: Number(monthResult.count),
@@ -339,8 +359,47 @@ router.get("/admin/analytics/tokens", requireAdmin, async (req: AuthRequest, res
     .from(aiTokenUsage)
     .where(inWindow);
 
+  // Token cost + analysis volume broken down by cost/revenue segment (see
+  // lib/user-segment.ts) — two separate aggregates (ai_token_usage and
+  // analyses don't have a 1:1 row relationship: a retry can log more than
+  // one token-usage row per analysis) merged in memory into one array
+  // covering all three segments, zero-filled for whichever segment had no
+  // activity in this window.
+  const tokensBySegmentRaw = await db
+    .select({
+      segment: userSegmentCaseSql,
+      totalTokens: sum(aiTokenUsage.totalTokens),
+      estimatedCostUsd: sum(aiTokenUsage.estimatedCostUsd),
+      callCount: sum(aiTokenUsage.callCount),
+    })
+    .from(aiTokenUsage)
+    .innerJoin(users, eq(aiTokenUsage.userId, users.id))
+    .where(inWindow)
+    .groupBy(userSegmentCaseSql);
+
+  const analysesBySegmentRaw = await db
+    .select({
+      segment: userSegmentCaseSql,
+      analysisCount: count(analyses.id),
+    })
+    .from(analyses)
+    .innerJoin(users, eq(analyses.userId, users.id))
+    .where(gte(analyses.createdAt, windowStart))
+    .groupBy(userSegmentCaseSql);
+
+  const tokensBySegmentMap = new Map(tokensBySegmentRaw.map((r) => [r.segment, r]));
+  const analysesBySegmentMap = new Map(analysesBySegmentRaw.map((r) => [r.segment, r]));
+  const bySegment = USER_SEGMENTS.map((segment) => ({
+    segment,
+    totalTokens: Number(tokensBySegmentMap.get(segment)?.totalTokens ?? 0),
+    estimatedCostUsd: Number(tokensBySegmentMap.get(segment)?.estimatedCostUsd ?? 0),
+    callCount: Number(tokensBySegmentMap.get(segment)?.callCount ?? 0),
+    analysisCount: Number(analysesBySegmentMap.get(segment)?.analysisCount ?? 0),
+  }));
+
   res.json({
     windowDays,
+    bySegment,
     dailyTokens: dailyTokensRaw.map((r) => ({
       date: r.date,
       totalTokens: Number(r.totalTokens ?? 0),
@@ -699,6 +758,8 @@ router.get("/admin/broadcasts", requireSuperAdmin, async (req: AuthRequest, res)
 
 router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res) => {
   const search = String(req.query["search"] ?? "").trim();
+  const segmentRaw = String(req.query["segment"] ?? "").trim();
+  const segment = isUserSegment(segmentRaw) ? segmentRaw : undefined;
   const rawPage = Number(req.query["page"] ?? 1);
   const rawLimit = Number(req.query["limit"] ?? 50);
   const page = Number.isFinite(rawPage) ? Math.max(1, Math.floor(rawPage)) : 1;
@@ -707,9 +768,10 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
     : 50;
   const offset = (page - 1) * limit;
 
-  const searchClause = search
-    ? or(ilike(users.email, `%${search}%`), ilike(users.displayName, `%${search}%`))
-    : undefined;
+  const filterClause = and(
+    search ? or(ilike(users.email, `%${search}%`), ilike(users.displayName, `%${search}%`)) : undefined,
+    segment ? segmentFilterClause(segment) : undefined,
+  );
 
   const baseQuery = db
     .select({
@@ -723,16 +785,18 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
       analysisCount: count(analyses.id),
       customQuotaPerDay: users.customQuotaPerDay,
       creditBalance: sql<number>`coalesce(max(${creditBalances.balance}), 0)`,
+      segment: userSegmentCaseSql,
     })
     .from(users)
     .leftJoin(analyses, eq(analyses.userId, users.id))
     .leftJoin(creditBalances, eq(creditBalances.userId, users.id))
+    .where(filterClause)
     .groupBy(users.id)
     .orderBy(desc(users.createdAt))
     .limit(limit)
     .offset(offset);
 
-  const rows = (await (searchClause ? baseQuery.where(searchClause) : baseQuery)).map((r) => ({
+  const rows = (await baseQuery).map((r) => ({
     ...r,
     creditBalance: Number(r.creditBalance),
   }));
@@ -753,8 +817,7 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
     tagsByUser.set(r.userId, arr);
   }
 
-  const totalQuery = db.select({ count: count(users.id) }).from(users);
-  const [total] = await (searchClause ? totalQuery.where(searchClause) : totalQuery);
+  const [total] = await db.select({ count: count(users.id) }).from(users).where(filterClause);
 
   res.json({
     users: rows.map((u) => ({ ...u, tags: tagsByUser.get(u.id) ?? [] })),
