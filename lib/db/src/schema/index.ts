@@ -322,6 +322,15 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// platform distinguishes a cookie-issuing website login from a
+// Bearer-token native/mobile-app login (set once at creation in
+// lib/session.ts's createSingleSession — never changes for a session's
+// lifetime). Needed because the 15-minute idle auto-logout in
+// middleware/auth.ts applies to "web" sessions only; native app sessions
+// keep relying solely on expiresAt, since a mobile app can legitimately
+// sit backgrounded for a long time without that meaning the user left.
+export const sessionPlatformEnum = pgEnum("session_platform", ["web", "native"]);
+
 export const sessions = pgTable("sessions", {
   id: serial("id").primaryKey(),
   userId: integer("user_id")
@@ -329,8 +338,38 @@ export const sessions = pgTable("sessions", {
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
+  platform: sessionPlatformEnum("platform").notNull().default("web"),
+  // Updated (throttled, not on every single request) each time a "web"
+  // session makes an authenticated request — see requireAuth. Ignored for
+  // "native" sessions, which never idle-time-out.
+  lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Append-only per-event login/logout log — deliberately NOT inferred from
+// `sessions` row creation/deletion, because createSingleSession's
+// delete-then-reinsert collapses repeat same-day logins into one row, and
+// a session row can also disappear via single-session replacement or
+// account deletion, neither of which is a user-initiated logout. This is
+// the source for the admin dashboard's "Login Hari Ini"/"Logout Hari Ini"
+// counters (counted per event, not per unique user — see routes/admin.ts).
+export const authEventTypeEnum = pgEnum("auth_event_type", ["login", "logout"]);
+
+export const authEvents = pgTable("auth_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventType: authEventTypeEnum("event_type").notNull(),
+  platform: sessionPlatformEnum("platform").notNull(),
+  // Only meaningful for "logout": "user_initiated" (POST /auth/logout),
+  // "idle_timeout" (15-minute web idle auto-logout), or
+  // "account_deleted". Single-session replacement (logging in elsewhere)
+  // is deliberately NOT logged as a logout — it isn't user-initiated and
+  // would double-count against the same login that caused it.
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  createdAtIdx: index("auth_events_created_at_idx").on(t.createdAt),
+}));
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),

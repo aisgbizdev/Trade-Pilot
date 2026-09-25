@@ -5810,11 +5810,18 @@ components:
       properties:
         totalUsersToday:
           type: integer
-        totalUsersActiveToday:
+        totalLoginsToday:
           type: integer
           description: >-
-            Distinct users who created at least one analysis today — a real
-            usage signal, not just "has a valid session cookie".
+            Login events today for role='user' accounts only (admin/
+            super_admin logins are excluded so staff dashboard visits don't
+            inflate it), counted per event, not per distinct user —
+            independent of totalAnalysesToday.
+        totalLogoutsToday:
+          type: integer
+          description: >-
+            Logout events today (user-initiated or the 15-minute web idle
+            auto-logout) for role='user' accounts only, counted per event.
         totalAnalysesToday:
           type: integer
         totalAnalysesThisWeek:
@@ -5847,7 +5854,8 @@ components:
             - pro
       required:
         - totalUsersToday
-        - totalUsersActiveToday
+        - totalLoginsToday
+        - totalLogoutsToday
         - totalAnalysesToday
         - totalAnalysesThisWeek
         - totalAnalysesThisMonth

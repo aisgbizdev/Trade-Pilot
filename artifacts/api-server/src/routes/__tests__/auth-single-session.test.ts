@@ -100,3 +100,45 @@ describe("single active session per account", () => {
     expect(rows).toHaveLength(1);
   });
 });
+
+describe("web session 15-minute idle auto-logout", () => {
+  it("a web session idle for over 15 minutes is rejected on its next request and removed", async () => {
+    const user = await createUser();
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ email: user.email, password: PASSWORD });
+    expect(login.status).toBe(200);
+    const token = login.body.token as string;
+
+    await db
+      .update(sessions)
+      .set({ lastActivityAt: new Date(Date.now() - 16 * 60 * 1000) })
+      .where(eq(sessions.userId, user.id));
+
+    const res = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(401);
+
+    const rows = await db.select().from(sessions).where(eq(sessions.userId, user.id));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("a web session active within the last 15 minutes still works", async () => {
+    const user = await createUser();
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ email: user.email, password: PASSWORD });
+    const token = login.body.token as string;
+
+    await db
+      .update(sessions)
+      .set({ lastActivityAt: new Date(Date.now() - 10 * 60 * 1000) })
+      .where(eq(sessions.userId, user.id));
+
+    const res = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+  });
+});

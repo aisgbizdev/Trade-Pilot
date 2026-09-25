@@ -15,7 +15,8 @@ part 'admin_stats.g.dart';
 ///
 /// Properties:
 /// * [totalUsersToday] 
-/// * [totalUsersActiveToday] - Distinct users who created at least one analysis today — a real usage signal, not just \"has a valid session cookie\".
+/// * [totalLoginsToday] - Login events today for role='user' accounts only (admin/ super_admin logins are excluded so staff dashboard visits don't inflate it), counted per event, not per distinct user — independent of totalAnalysesToday.
+/// * [totalLogoutsToday] - Logout events today (user-initiated or the 15-minute web idle auto-logout) for role='user' accounts only, counted per event.
 /// * [totalAnalysesToday] 
 /// * [totalAnalysesThisWeek] 
 /// * [totalAnalysesThisMonth] 
@@ -27,9 +28,13 @@ abstract class AdminStats implements Built<AdminStats, AdminStatsBuilder> {
   @BuiltValueField(wireName: r'totalUsersToday')
   int get totalUsersToday;
 
-  /// Distinct users who created at least one analysis today — a real usage signal, not just \"has a valid session cookie\".
-  @BuiltValueField(wireName: r'totalUsersActiveToday')
-  int get totalUsersActiveToday;
+  /// Login events today for role='user' accounts only (admin/ super_admin logins are excluded so staff dashboard visits don't inflate it), counted per event, not per distinct user — independent of totalAnalysesToday.
+  @BuiltValueField(wireName: r'totalLoginsToday')
+  int get totalLoginsToday;
+
+  /// Logout events today (user-initiated or the 15-minute web idle auto-logout) for role='user' accounts only, counted per event.
+  @BuiltValueField(wireName: r'totalLogoutsToday')
+  int get totalLogoutsToday;
 
   @BuiltValueField(wireName: r'totalAnalysesToday')
   int get totalAnalysesToday;
@@ -77,9 +82,14 @@ class _$AdminStatsSerializer implements PrimitiveSerializer<AdminStats> {
       object.totalUsersToday,
       specifiedType: const FullType(int),
     );
-    yield r'totalUsersActiveToday';
+    yield r'totalLoginsToday';
     yield serializers.serialize(
-      object.totalUsersActiveToday,
+      object.totalLoginsToday,
+      specifiedType: const FullType(int),
+    );
+    yield r'totalLogoutsToday';
+    yield serializers.serialize(
+      object.totalLogoutsToday,
       specifiedType: const FullType(int),
     );
     yield r'totalAnalysesToday';
@@ -142,12 +152,19 @@ class _$AdminStatsSerializer implements PrimitiveSerializer<AdminStats> {
           ) as int;
           result.totalUsersToday = valueDes;
           break;
-        case r'totalUsersActiveToday':
+        case r'totalLoginsToday':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(int),
           ) as int;
-          result.totalUsersActiveToday = valueDes;
+          result.totalLoginsToday = valueDes;
+          break;
+        case r'totalLogoutsToday':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.totalLogoutsToday = valueDes;
           break;
         case r'totalAnalysesToday':
           final valueDes = serializers.deserialize(

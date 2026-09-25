@@ -4116,11 +4116,17 @@ export const UnregisterNativePushDeviceResponse = zod.object({
  */
 export const GetAdminStatsResponse = zod.object({
   totalUsersToday: zod.number().int(),
-  totalUsersActiveToday: zod
+  totalLoginsToday: zod
     .number()
     .int()
     .describe(
-      'Distinct users who created at least one analysis today — a real usage signal, not just \"has a valid session cookie\".',
+      "Login events today for role='user' accounts only (admin\/ super_admin logins are excluded so staff dashboard visits don't inflate it), counted per event, not per distinct user — independent of totalAnalysesToday.",
+    ),
+  totalLogoutsToday: zod
+    .number()
+    .int()
+    .describe(
+      "Logout events today (user-initiated or the 15-minute web idle auto-logout) for role='user' accounts only, counted per event.",
     ),
   totalAnalysesToday: zod.number().int(),
   totalAnalysesThisWeek: zod.number().int(),

@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../lib/db";
-import { sessions, users } from "@workspace/db/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { users } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+import { resolveSession } from "../lib/session";
 
 export interface AuthRequest extends Request {
   userId?: number;
@@ -23,13 +24,7 @@ export async function requireAuth(
     return;
   }
 
-  const [session] = await db
-    .select({ userId: sessions.userId, expiresAt: sessions.expiresAt })
-    .from(sessions)
-    .where(
-      and(eq(sessions.token, token), gt(sessions.expiresAt, new Date()))
-    )
-    .limit(1);
+  const session = await resolveSession(token);
 
   if (!session) {
     res.status(401).json({ error: "Session expired or invalid" });
@@ -64,11 +59,7 @@ export async function getAuthContext(
     req.headers["authorization"]?.replace("Bearer ", "");
   if (!token) return null;
 
-  const [session] = await db
-    .select({ userId: sessions.userId, expiresAt: sessions.expiresAt })
-    .from(sessions)
-    .where(and(eq(sessions.token, token), gt(sessions.expiresAt, new Date())))
-    .limit(1);
+  const session = await resolveSession(token);
   if (!session) return null;
 
   const [user] = await db

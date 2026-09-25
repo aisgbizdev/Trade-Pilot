@@ -10,7 +10,9 @@ class _$AdminStats extends AdminStats {
   @override
   final int totalUsersToday;
   @override
-  final int totalUsersActiveToday;
+  final int totalLoginsToday;
+  @override
+  final int totalLogoutsToday;
   @override
   final int totalAnalysesToday;
   @override
@@ -29,7 +31,8 @@ class _$AdminStats extends AdminStats {
 
   _$AdminStats._(
       {required this.totalUsersToday,
-      required this.totalUsersActiveToday,
+      required this.totalLoginsToday,
+      required this.totalLogoutsToday,
       required this.totalAnalysesToday,
       required this.totalAnalysesThisWeek,
       required this.totalAnalysesThisMonth,
@@ -49,7 +52,8 @@ class _$AdminStats extends AdminStats {
     if (identical(other, this)) return true;
     return other is AdminStats &&
         totalUsersToday == other.totalUsersToday &&
-        totalUsersActiveToday == other.totalUsersActiveToday &&
+        totalLoginsToday == other.totalLoginsToday &&
+        totalLogoutsToday == other.totalLogoutsToday &&
         totalAnalysesToday == other.totalAnalysesToday &&
         totalAnalysesThisWeek == other.totalAnalysesThisWeek &&
         totalAnalysesThisMonth == other.totalAnalysesThisMonth &&
@@ -62,7 +66,8 @@ class _$AdminStats extends AdminStats {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, totalUsersToday.hashCode);
-    _$hash = $jc(_$hash, totalUsersActiveToday.hashCode);
+    _$hash = $jc(_$hash, totalLoginsToday.hashCode);
+    _$hash = $jc(_$hash, totalLogoutsToday.hashCode);
     _$hash = $jc(_$hash, totalAnalysesToday.hashCode);
     _$hash = $jc(_$hash, totalAnalysesThisWeek.hashCode);
     _$hash = $jc(_$hash, totalAnalysesThisMonth.hashCode);
@@ -77,7 +82,8 @@ class _$AdminStats extends AdminStats {
   String toString() {
     return (newBuiltValueToStringHelper(r'AdminStats')
           ..add('totalUsersToday', totalUsersToday)
-          ..add('totalUsersActiveToday', totalUsersActiveToday)
+          ..add('totalLoginsToday', totalLoginsToday)
+          ..add('totalLogoutsToday', totalLogoutsToday)
           ..add('totalAnalysesToday', totalAnalysesToday)
           ..add('totalAnalysesThisWeek', totalAnalysesThisWeek)
           ..add('totalAnalysesThisMonth', totalAnalysesThisMonth)
@@ -96,10 +102,15 @@ class AdminStatsBuilder implements Builder<AdminStats, AdminStatsBuilder> {
   set totalUsersToday(int? totalUsersToday) =>
       _$this._totalUsersToday = totalUsersToday;
 
-  int? _totalUsersActiveToday;
-  int? get totalUsersActiveToday => _$this._totalUsersActiveToday;
-  set totalUsersActiveToday(int? totalUsersActiveToday) =>
-      _$this._totalUsersActiveToday = totalUsersActiveToday;
+  int? _totalLoginsToday;
+  int? get totalLoginsToday => _$this._totalLoginsToday;
+  set totalLoginsToday(int? totalLoginsToday) =>
+      _$this._totalLoginsToday = totalLoginsToday;
+
+  int? _totalLogoutsToday;
+  int? get totalLogoutsToday => _$this._totalLogoutsToday;
+  set totalLogoutsToday(int? totalLogoutsToday) =>
+      _$this._totalLogoutsToday = totalLogoutsToday;
 
   int? _totalAnalysesToday;
   int? get totalAnalysesToday => _$this._totalAnalysesToday;
@@ -143,7 +154,8 @@ class AdminStatsBuilder implements Builder<AdminStats, AdminStatsBuilder> {
     final $v = _$v;
     if ($v != null) {
       _totalUsersToday = $v.totalUsersToday;
-      _totalUsersActiveToday = $v.totalUsersActiveToday;
+      _totalLoginsToday = $v.totalLoginsToday;
+      _totalLogoutsToday = $v.totalLogoutsToday;
       _totalAnalysesToday = $v.totalAnalysesToday;
       _totalAnalysesThisWeek = $v.totalAnalysesThisWeek;
       _totalAnalysesThisMonth = $v.totalAnalysesThisMonth;
@@ -175,8 +187,10 @@ class AdminStatsBuilder implements Builder<AdminStats, AdminStatsBuilder> {
           _$AdminStats._(
             totalUsersToday: BuiltValueNullFieldError.checkNotNull(
                 totalUsersToday, r'AdminStats', 'totalUsersToday'),
-            totalUsersActiveToday: BuiltValueNullFieldError.checkNotNull(
-                totalUsersActiveToday, r'AdminStats', 'totalUsersActiveToday'),
+            totalLoginsToday: BuiltValueNullFieldError.checkNotNull(
+                totalLoginsToday, r'AdminStats', 'totalLoginsToday'),
+            totalLogoutsToday: BuiltValueNullFieldError.checkNotNull(
+                totalLogoutsToday, r'AdminStats', 'totalLogoutsToday'),
             totalAnalysesToday: BuiltValueNullFieldError.checkNotNull(
                 totalAnalysesToday, r'AdminStats', 'totalAnalysesToday'),
             totalAnalysesThisWeek: BuiltValueNullFieldError.checkNotNull(

@@ -11,6 +11,7 @@ import {
   analyticsEvents,
   aiTokenUsage,
   creditBalances,
+  authEvents,
 } from "@workspace/db/schema";
 import { eq, and, count, sum, desc, sql, ilike, or, inArray, gte, lte } from "drizzle-orm";
 import {
@@ -80,13 +81,31 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
     .select({ count: count(users.id) })
     .from(users)
     .where(sql`${users.createdAt} >= ${todayStart}`);
-  // "Active" = created at least one analysis today — a real usage signal,
-  // not just "has a valid session cookie" (sessions can stay valid for
-  // weeks under "remember me" without the user actually doing anything).
-  const [usersActiveTodayResult] = await db
-    .select({ count: sql<number>`count(distinct ${analyses.userId})` })
-    .from(analyses)
-    .where(sql`${analyses.createdAt} >= ${todayStart}`);
+  // Login/logout counted per EVENT (not distinct user) from auth_events —
+  // deliberately independent of totalAnalysesToday. See lib/session.ts for
+  // why this can't just be inferred from `sessions` row creation/deletion.
+  // Joined against `users` and restricted to role = 'user' so an admin's
+  // own dashboard visits don't inflate a metric meant to reflect real
+  // (non-staff) traffic — uses the account's CURRENT role, not whatever it
+  // was at the moment of that login/logout.
+  const [loginsTodayResult] = await db
+    .select({ count: count(authEvents.id) })
+    .from(authEvents)
+    .innerJoin(users, eq(users.id, authEvents.userId))
+    .where(and(
+      eq(authEvents.eventType, "login"),
+      eq(users.role, "user"),
+      sql`${authEvents.createdAt} >= ${todayStart}`,
+    ));
+  const [logoutsTodayResult] = await db
+    .select({ count: count(authEvents.id) })
+    .from(authEvents)
+    .innerJoin(users, eq(users.id, authEvents.userId))
+    .where(and(
+      eq(authEvents.eventType, "logout"),
+      eq(users.role, "user"),
+      sql`${authEvents.createdAt} >= ${todayStart}`,
+    ));
 
   const instrumentBreakdown = await db
     .select({
@@ -114,7 +133,8 @@ router.get("/admin/stats", requireAdmin, async (req: AuthRequest, res) => {
 
   res.json({
     totalUsersToday: Number(usersTodayResult.count),
-    totalUsersActiveToday: Number(usersActiveTodayResult.count),
+    totalLoginsToday: Number(loginsTodayResult.count),
+    totalLogoutsToday: Number(logoutsTodayResult.count),
     totalAnalysesToday: Number(todayResult.count),
     totalAnalysesThisWeek: Number(weekResult.count),
     totalAnalysesThisMonth: Number(monthResult.count),

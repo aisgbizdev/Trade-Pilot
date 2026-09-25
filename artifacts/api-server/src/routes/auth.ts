@@ -14,7 +14,7 @@ import {
 import { eq, and, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth";
-import { createSingleSession } from "../lib/session";
+import { createSingleSession, endSession } from "../lib/session";
 import {
   forgotPasswordQuestionLimiter,
   forgotPasswordVerifyLimiter,
@@ -1009,7 +1009,7 @@ router.post("/auth/mobile/exchange", mobileOauthExchangeLimiter, async (req, res
 
   const token = generateToken();
   const expiresAt = getSessionExpiry(true);
-  await createSingleSession(user.id, token, expiresAt);
+  await createSingleSession(user.id, token, expiresAt, "native");
 
   if (outcome.isNewUser) void notifyAdminsUserCreated(user.displayName);
   void notifyLoginAlert(user.id);
@@ -1076,7 +1076,7 @@ router.post(
 
     const token = generateToken();
     const expiresAt = getSessionExpiry(true);
-    await createSingleSession(user.id, token, expiresAt);
+    await createSingleSession(user.id, token, expiresAt, "native");
 
     if (isNewUser) void notifyAdminsUserCreated(user.displayName);
     void notifyLoginAlert(user.id);
@@ -1263,7 +1263,7 @@ router.post(
 
     const token = generateToken();
     const expiresAt = getSessionExpiry(true);
-    await createSingleSession(user.id, token, expiresAt);
+    await createSingleSession(user.id, token, expiresAt, "native");
 
     if (isNewUser) void notifyAdminsUserCreated(user.displayName);
     void notifyLoginAlert(user.id);
@@ -1354,7 +1354,7 @@ router.post(
 router.post("/auth/logout", requireAuth, async (req: AuthRequest, res) => {
   const token = req.sessionToken;
   if (token) {
-    await db.delete(sessions).where(eq(sessions.token, token));
+    await endSession(token, "user_initiated");
   }
   res.clearCookie("session_token");
   res.json({ message: "Berhasil logout" });

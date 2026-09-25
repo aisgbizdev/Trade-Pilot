@@ -1715,8 +1715,10 @@ export type AdminStatsModeBreakdown = {
 
 export interface AdminStats {
   totalUsersToday: number;
-  /** Distinct users who created at least one analysis today — a real usage signal, not just "has a valid session cookie". */
-  totalUsersActiveToday: number;
+  /** Login events today for role='user' accounts only (admin/ super_admin logins are excluded so staff dashboard visits don't inflate it), counted per event, not per distinct user — independent of totalAnalysesToday. */
+  totalLoginsToday: number;
+  /** Logout events today (user-initiated or the 15-minute web idle auto-logout) for role='user' accounts only, counted per event. */
+  totalLogoutsToday: number;
   totalAnalysesToday: number;
   totalAnalysesThisWeek: number;
   totalAnalysesThisMonth: number;
