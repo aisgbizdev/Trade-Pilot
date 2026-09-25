@@ -1543,6 +1543,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId(`adaptive-review-side-${side}`)).toHaveTextContent(/Conditional scenario/i);
+    expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
     expect(screen.queryByTestId(`adaptive-next-layer-funds-${side}`)).not.toBeInTheDocument();
     expect(screen.queryByTestId(`adaptive-next-layer-${side}`)).not.toBeInTheDocument();
   });
@@ -1584,6 +1585,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-selected-decision")).toHaveTextContent("$150");
     expect(screen.getByTestId("adaptive-selected-decision")).toHaveTextContent("$200");
     expect(screen.getByTestId("adaptive-selected-decision")).toHaveAccessibleName("Adaptive decision");
+    expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
     expect(screen.queryByText("Account tier comparison")).not.toBeInTheDocument();
     expect(screen.queryByText(/hypothetical only/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-compare-tier-micro")).not.toBeInTheDocument();
@@ -1604,6 +1606,107 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent("TUNGGU");
     expect(screen.queryByText("Perbandingan tier akun")).not.toBeInTheDocument();
     expect(calls.filter((call) => (call.init?.method ?? "GET") === "POST" && /\/api\/analyses(?:\?|$)/.test(call.url))).toHaveLength(0);
+  });
+
+  it.each([
+    { name: "funds only", tier: "mini", funds: "250", loss: "200", risk: false, funding: true, message: /available broker funds/i },
+    { name: "hard risk only", tier: "regular", funds: "5000", loss: "200", risk: true, funding: false, message: /minimum lot exceeds your loss limit/i },
+    { name: "both limits", tier: "regular", funds: "1000", loss: "200", risk: true, funding: true, message: /minimum lot exceeds your loss limit and needs more broker funds/i },
+  ] as const)("explains $name for the selected account without changing inputs or charging AI", async ({ tier, funds, loss, risk, funding, message }) => {
+    const { calls } = installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: {
+            ...TRADE_PLAN,
+            buy: { ...TRADE_PLAN.buy, stopLoss: "2,281.00" },
+            sell: { ...TRADE_PLAN.sell, stopLoss: "2,336.00" },
+          },
+          riskLevel: "low",
+          tradingBias: "bullish_strong",
+          confidenceMin: 65,
+          confidenceMax: 78,
+          techBuyCount: 14,
+          techSellCount: 4,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const margin = await screen.findByTestId("input-adaptive-available-margin");
+    fireEvent.click(screen.getByTestId(`button-adaptive-account-${tier}`));
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+    fireEvent.change(margin, { target: { value: funds } });
+    const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
+    fireEvent.change(maximumLoss, { target: { value: loss } });
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+
+    const dialog = await screen.findByTestId("adaptive-blocked-dialog");
+    expect(dialog).toHaveAccessibleName("Why can't I enter?");
+    expect(dialog).toHaveTextContent(message);
+    expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent("SKIP");
+    expect(within(dialog).queryByTestId("adaptive-blocked-edit-loss") !== null).toBe(risk);
+    expect(within(dialog).queryByTestId("adaptive-blocked-edit-funds") !== null).toBe(funding);
+    if (risk) {
+      expect(within(dialog).getByTestId("adaptive-blocked-figures")).toHaveTextContent("Over loss limit");
+      expect(within(dialog).getByTestId("adaptive-blocked-figures")).toHaveTextContent("$2,000");
+    }
+    if (funding) {
+      expect(within(dialog).getByTestId("adaptive-blocked-figures")).toHaveTextContent("Funds short");
+      expect(within(dialog).getByTestId("adaptive-blocked-figures")).toHaveTextContent(`$${Number(funds).toLocaleString("en-US")}`);
+    }
+    const field = risk ? maximumLoss : margin;
+    fireEvent.click(within(dialog).getByTestId(risk ? "adaptive-blocked-edit-loss" : "adaptive-blocked-edit-funds"));
+    await waitFor(() => expect(field).toHaveFocus());
+    expect(margin).toHaveValue(Number(funds));
+    expect(maximumLoss).toHaveValue(Number(loss));
+    expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-selected-decision")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(screen.getByTestId("adaptive-selected-action")).toHaveTextContent(/buy/i);
+    expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
+    expect(calls.filter((call) => (call.init?.method ?? "GET") === "POST" && /\/api\/analyses(?:\?|$)/.test(call.url))).toHaveLength(0);
+  });
+
+  it("opens the financial explanation only on manual calculation, not restoration or language change", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: { ...TRADE_PLAN, buy: { ...TRADE_PLAN.buy, stopLoss: "2,281.00" } },
+          riskLevel: "low", tradingBias: "bullish_strong",
+          confidenceMin: 65, confidenceMax: 78, techBuyCount: 14, techSellCount: 4,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(), standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    const view = render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const margin = await screen.findByTestId("input-adaptive-available-margin");
+    fireEvent.change(margin, { target: { value: "250" } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "200" } });
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    const dialog = await screen.findByTestId("adaptive-blocked-dialog");
+    fireEvent.click(within(dialog).getByTestId("adaptive-blocked-dismiss"));
+    expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-language-toggle"));
+    expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-selected-decision")).toBeInTheDocument();
+    view.unmount();
+    const { Wrapper: NewWrapper } = makeWrapper();
+    render(<NewWrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></NewWrapper>);
+    await screen.findByTestId("adaptive-selected-decision");
+    expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(await screen.findByTestId("adaptive-blocked-dialog")).toHaveAccessibleName("Kenapa belum bisa entry?");
+    expect(screen.getByTestId("adaptive-blocked-dialog")).toHaveTextContent(/dana broker/i);
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {

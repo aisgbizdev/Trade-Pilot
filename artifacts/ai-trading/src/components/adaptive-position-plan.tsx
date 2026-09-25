@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { AlertTriangle, Calculator, Check, ChevronDown, ChevronRight, Copy, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-client-react";
 import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
@@ -40,6 +41,14 @@ type AdaptiveRecommendationSummary = NonNullable<AdaptivePlanRecommendation["rec
 type AdaptiveSnapshotBudget = Pick<AdaptiveRecommendationSummary,
   "marginBudget" | "maximumLoss" | "usableRiskBudget" | "riskUtilizationRate" | "unusedRiskBuffer" | "riskStyle">;
 type AdaptiveInsight = "reasoning" | "volatility" | "alternative" | "buy" | "sell";
+type FinancialBlockReason = "hard_risk" | "funds" | "both";
+type FinancialBlock = {
+  reason: FinancialBlockReason;
+  riskAtStop: number;
+  fundsAtStop: number;
+  maximumLoss: number;
+  availableMargin: number;
+};
 
 interface Props {
   analysisId: number;
@@ -297,6 +306,62 @@ function AdaptiveDecisionSummary({
         <div><span className="block text-muted-foreground">{copy.adaptive_compare_broker_funds}</span><strong className="tabular-nums">{formatRequiredFunds(preferred?.fundsAtStop, lang)}</strong></div>
       </div>
     </section>
+  );
+}
+
+function AdaptiveFinancialBlockDialog({
+  block, onClose, onEdit, onCloseAutoFocus, lang, copy,
+}: {
+  block: FinancialBlock | null;
+  onClose: () => void;
+  onEdit: (field: "availableMargin" | "maximumLoss") => void;
+  onCloseAutoFocus: ComponentProps<typeof DialogContent>["onCloseAutoFocus"];
+  lang: "en" | "id";
+  copy: AdaptiveCopy;
+}) {
+  const riskBlocked = block?.reason === "hard_risk" || block?.reason === "both";
+  const fundsBlocked = block?.reason === "funds" || block?.reason === "both";
+  return (
+    <Dialog open={block !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent onCloseAutoFocus={onCloseAutoFocus} closeLabel={copy.adaptive_blocked_close} className="w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg p-4 sm:p-6" data-testid="adaptive-blocked-dialog">
+        <DialogHeader className="pr-7 text-left">
+          <DialogTitle>{copy.adaptive_blocked_title}</DialogTitle>
+          <DialogDescription>
+            {block?.reason === "both" ? copy.adaptive_blocked_both
+              : riskBlocked ? copy.adaptive_blocked_risk : copy.adaptive_blocked_funds}
+          </DialogDescription>
+        </DialogHeader>
+        {block && (
+          <>
+            <dl className="space-y-2 rounded-md border border-border p-3 text-sm" data-testid="adaptive-blocked-figures">
+              {riskBlocked && (
+                <>
+                  <div className="flex justify-between gap-3"><dt>{copy.adaptive_compare_hard_max}</dt><dd className="font-semibold tabular-nums">{formatMoney(block.maximumLoss, lang, 4)}</dd></div>
+                  <div className="flex justify-between gap-3"><dt>{copy.adaptive_compare_min_risk}</dt><dd className="font-semibold tabular-nums">{formatRequiredFunds(block.riskAtStop, lang)}</dd></div>
+                  <div className="flex justify-between gap-3 text-amber-700 dark:text-amber-300"><dt>{copy.adaptive_blocked_risk_gap}</dt><dd className="font-semibold tabular-nums">{formatRequiredFunds(block.riskAtStop - block.maximumLoss, lang)}</dd></div>
+                </>
+              )}
+              {fundsBlocked && (
+                <>
+                  <div className="flex justify-between gap-3"><dt>{copy.adaptive_available_margin}</dt><dd className="font-semibold tabular-nums">{formatMoney(block.availableMargin, lang, 4)}</dd></div>
+                  <div className="flex justify-between gap-3"><dt>{copy.adaptive_compare_broker_funds}</dt><dd className="font-semibold tabular-nums">{formatRequiredFunds(block.fundsAtStop, lang)}</dd></div>
+                  <div className="flex justify-between gap-3 text-amber-700 dark:text-amber-300"><dt>{copy.adaptive_blocked_funds_gap}</dt><dd className="font-semibold tabular-nums">{formatRequiredFunds(block.fundsAtStop - block.availableMargin, lang)}</dd></div>
+                </>
+              )}
+            </dl>
+            <p className="text-sm text-muted-foreground">
+              {block.reason === "both" ? copy.adaptive_blocked_both_next
+                : riskBlocked ? copy.adaptive_blocked_risk_next : copy.adaptive_blocked_funds_next}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {riskBlocked && <Button type="button" size="sm" onClick={() => onEdit("maximumLoss")} data-testid="adaptive-blocked-edit-loss">{copy.adaptive_blocked_edit_loss}</Button>}
+              {fundsBlocked && <Button type="button" size="sm" onClick={() => onEdit("availableMargin")} data-testid="adaptive-blocked-edit-funds">{copy.adaptive_blocked_edit_funds}</Button>}
+              <Button type="button" size="sm" variant="outline" onClick={onClose} data-testid="adaptive-blocked-dismiss">{copy.adaptive_blocked_dismiss}</Button>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -813,6 +878,10 @@ export function AdaptivePositionPlan(props: Props) {
 function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, context, lang, copy }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
+  const [financialBlock, setFinancialBlock] = useState<FinancialBlock | null>(null);
+  const focusAfterDialogRef = useRef<"availableMargin" | "maximumLoss" | null>(null);
+  const availableMarginInputRef = useRef<HTMLInputElement>(null);
+  const maximumLossInputRef = useRef<HTMLInputElement>(null);
   const [activeSide, setActiveSide] = useState<"buy" | "sell" | "none">("none");
   const [activeInsight, setActiveInsight] = useState<AdaptiveInsight | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
@@ -826,6 +895,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     restoredStateKeyRef.current = null;
     setForm(DEFAULT_FORM);
     setRecommendation(null);
+    setFinancialBlock(null);
     setActiveSide("none");
     setActiveInsight(null);
     setCopyStatus("idle");
@@ -1048,9 +1118,11 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((previous) => ({ ...previous, [field]: value }));
     setRecommendation(null);
+    setFinancialBlock(null);
     if (field === "accountTier") localStorage.removeItem(storageKey(analysisId));
   };
   const calculate = () => {
+    setFinancialBlock(null);
     if (!rulesAvailable || isAnalysisExpired || chartCandidateState.status !== "ready" ||
         chartCandidateState.scope !== chartScope ||
         assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).reason !== null) {
@@ -1071,6 +1143,26 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       accountTier: form.accountTier,
       riskStyle: form.riskStyle,
     });
+    const chosen = compareAdaptiveAccountTiers({
+      instrument, tradePlan, availableMargin, maximumLoss, existingExposure,
+      standardRule, context, checkpointPrices: chartCandidateState.prices,
+      candles: chartCandidateState.candles, accountTier: form.accountTier,
+      riskStyle: form.riskStyle,
+    })[form.accountTier];
+    const minimum = chosen.preferredSide ? chosen[chosen.preferredSide] : null;
+    if ((chosen.actionReason === "hard_risk" || chosen.actionReason === "funds" || chosen.actionReason === "both") &&
+        minimum?.riskAtStop != null && Number.isFinite(minimum.riskAtStop) &&
+        minimum.fundsAtStop != null && Number.isFinite(minimum.fundsAtStop) &&
+        maximumLoss != null && Number.isFinite(maximumLoss) &&
+        availableMargin != null && Number.isFinite(availableMargin)) {
+      setFinancialBlock({
+        reason: chosen.actionReason,
+        riskAtStop: minimum.riskAtStop,
+        fundsAtStop: minimum.fundsAtStop,
+        maximumLoss,
+        availableMargin,
+      });
+    }
     setRecommendation(next);
     setActiveSide(preferredAvailableSide(next));
     setActiveInsight(null);
@@ -1081,6 +1173,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const reset = () => {
     setForm(DEFAULT_FORM);
     setRecommendation(null);
+    setFinancialBlock(null);
     setActiveSide("none");
     setActiveInsight(null);
     localStorage.removeItem(storageKey(analysisId));
@@ -1100,6 +1193,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   }, [recommendation, rulesAvailable, isAnalysisExpired, chartCandidateState,
     chartScope, context, instrument, tradePlan, standardRule, availableMargin,
     maximumLoss, existingExposure, form.accountTier, form.riskStyle]);
+  useEffect(() => {
+    if (financialBlock && (!recommendation || !tierComparison)) setFinancialBlock(null);
+  }, [financialBlock, recommendation, tierComparison]);
   const financialOnlyBlock = tierComparison != null &&
     (["limited", "hard_risk", "funds", "both"] as const).some((reason) =>
       tierComparison[form.accountTier].actionReason === reason);
@@ -1290,14 +1386,14 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_available_margin}</span>
             <span className="relative block">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">$</span>
-              <Input type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-available-margin" />
+              <Input ref={availableMarginInputRef} type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-available-margin" />
             </span>
           </label>
           <label className="block space-y-1">
             <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_maximum_loss}</span>
             <span className="relative block">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">$</span>
-              <Input type="number" min="0" step="any" value={form.maximumLoss} placeholder="0" onChange={(event) => updateField("maximumLoss", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-maximum-loss" />
+              <Input ref={maximumLossInputRef} type="number" min="0" step="any" value={form.maximumLoss} placeholder="0" onChange={(event) => updateField("maximumLoss", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-maximum-loss" />
             </span>
           </label>
         </div>
@@ -1389,6 +1485,20 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <AdaptiveDecisionSummary rows={tierComparison} selectedTier={form.accountTier}
             maximumLoss={maximumLoss} availableMargin={availableMargin} lang={lang} copy={copy} />
         )}
+        <AdaptiveFinancialBlockDialog block={recommendation && tierComparison ? financialBlock : null}
+          onClose={() => setFinancialBlock(null)}
+          onEdit={(field) => {
+            focusAfterDialogRef.current = field;
+            setFinancialBlock(null);
+          }}
+          onCloseAutoFocus={(event) => {
+            const field = focusAfterDialogRef.current;
+            if (!field) return;
+            event.preventDefault();
+            focusAfterDialogRef.current = null;
+            (field === "availableMargin" ? availableMarginInputRef : maximumLossInputRef).current?.focus();
+          }}
+          lang={lang} copy={copy} />
         {recommendation && (
           <div className="space-y-2" data-testid="adaptive-insights">
             <div className="relative min-w-0">
