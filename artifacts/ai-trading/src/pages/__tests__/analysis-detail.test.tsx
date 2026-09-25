@@ -1427,11 +1427,107 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
   );
 
   it.each([
-    { tier: "micro", funds: "50", loss: "40" },
-    { tier: "regular", funds: "4000", loss: "3000" },
-  ] as const)("does not suggest more broker funds for an unaligned $tier analysis", async ({ tier, funds, loss }) => {
+    { tier: "micro", funds: "50", loss: "40", nextPosition: 3, nextLot: "0.01", riskBlockedLoss: "15" },
+    { tier: "regular", funds: "4000", loss: "3000", nextPosition: 2, nextLot: "1", riskBlockedLoss: "2000" },
+  ] as const)(
+    "keeps the $tier Sell funding alternative tied to Sell checkpoints",
+    async ({ tier, funds, loss, nextPosition, nextLot, riskBlockedLoss }) => {
+      const sellSwingCandles: FetchHandler = (url) => {
+        if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
+        return jsonResponse({
+          sourceFetchedAt: new Date(NOW).toISOString(),
+          sourceMaxAgeMs: 5 * 60_000,
+          isStale: false,
+          staleReason: null,
+          candles: [2301, 2302, 2304, 2302, 2301, 2302, 2306, 2302, 2301].map((high, index) => ({
+            date: new Date(NOW - (9 - index) * 3_600_000).toISOString(),
+            open: 2301, high, low: 2300, close: 2301,
+          })),
+        });
+      };
+      installFetchMock([
+        getAnalysisHandler({
+          body: {
+            ...ANALYSIS_PAYLOAD,
+            tradePlan: { ...TRADE_PLAN, preferredSide: "sell" },
+            marketCondition: "trending_down",
+            tradingBias: "bearish_strong",
+            riskLevel: "low",
+            confidenceMin: 65,
+            confidenceMax: 78,
+            techBuyCount: 4,
+            techSellCount: 14,
+            fundamentalContext: { newsItems: [], calendarEvents: [] },
+          },
+        }),
+        feedbackHandler(),
+        sellSwingCandles,
+        standardRulesHandler(),
+      ]);
+      const { Wrapper } = makeWrapper();
+      render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+      const margin = await screen.findByTestId("input-adaptive-available-margin");
+      const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
+      fireEvent.click(screen.getByTestId(`button-adaptive-account-${tier}`));
+      fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+      fireEvent.change(margin, { target: { value: funds } });
+      fireEvent.change(maximumLoss, { target: { value: loss } });
+      await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+      fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+
+      expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("adaptive-direction-sell"));
+      expect(screen.getByTestId("adaptive-plan-sell")).toBeInTheDocument();
+      expect(screen.queryByTestId("adaptive-plan-buy")).not.toBeInTheDocument();
+      const nextLayerText = screen.getByTestId("adaptive-next-layer-funds-sell").textContent ?? "";
+      const match = nextLayerText.match(
+        new RegExp(`Position ${nextPosition} · ([\\d,.]+) · ${nextLot.replace(".", "\\.")} lot: about \\$([\\d,.]+) more free broker funds needed to review`),
+      );
+      expect(match).not.toBeNull();
+      const nextPrice = Number(match![1].replaceAll(",", ""));
+      const extra = Number(match![2].replaceAll(",", ""));
+      expect(nextPrice).toBeGreaterThan(2301);
+      expect(extra).toBeGreaterThan(0);
+      expect(screen.getByTestId(`adaptive-conditional-sell-${nextPosition - 1}`)).toHaveTextContent(`$${extra}`);
+      expect(screen.getByTestId("adaptive-next-layer-sell")).toHaveTextContent(/not a TradePilot analysis-credit top-up/i);
+
+      fireEvent.change(maximumLoss, { target: { value: riskBlockedLoss } });
+      fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+      expect(screen.queryByTestId("adaptive-next-layer-funds-sell")).not.toBeInTheDocument();
+      expect(screen.getByTestId("adaptive-next-layer-blocked-sell")).toHaveTextContent(/loss limit/i);
+
+      fireEvent.change(maximumLoss, { target: { value: loss } });
+      fireEvent.change(margin, { target: { value: String(Number(funds) + extra) } });
+      fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+      expect(screen.getByTestId(`adaptive-snapshot-position-sell-${nextPosition - 1}`)).toHaveTextContent(
+        new RegExp(`${match![1]} · ${nextLot.replace(".", "\\.")} lot`),
+      );
+      expect(within(screen.getByTestId("adaptive-snapshot-positions-sell")).getAllByTestId(/^adaptive-snapshot-position-sell-\d+$/))
+        .toHaveLength(nextPosition);
+      fireEvent.click(screen.getByTestId("adaptive-direction-buy"));
+      expect(screen.getByTestId("button-copy-adaptive-plan")).toBeDisabled();
+      expect(screen.queryByTestId("adaptive-plan-sell")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("adaptive-next-layer-funds-buy")).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    { tier: "micro", funds: "50", loss: "40", side: "buy" },
+    { tier: "regular", funds: "4000", loss: "3000", side: "buy" },
+    { tier: "micro", funds: "50", loss: "40", side: "sell" },
+    { tier: "regular", funds: "4000", loss: "3000", side: "sell" },
+  ] as const)("does not suggest more broker funds for an unaligned $tier $side analysis", async ({ tier, funds, loss, side }) => {
     installFetchMock([
-      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: { ...TRADE_PLAN, preferredSide: side },
+          marketCondition: side === "sell" ? "trending_down" : "trending_up",
+          tradingBias: side === "sell" ? "bearish_strong" : "bullish_strong",
+          techBuyCount: side === "sell" ? 4 : 14,
+          techSellCount: side === "sell" ? 14 : 4,
+        },
+      }),
       feedbackHandler(),
       standardRulesHandler(),
     ]);
@@ -1444,9 +1540,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: loss } });
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
-    expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Conditional scenario/i);
-    expect(screen.queryByTestId("adaptive-next-layer-funds-buy")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("adaptive-next-layer-buy")).not.toBeInTheDocument();
+    expect(screen.getByTestId(`adaptive-review-side-${side}`)).toHaveTextContent(/Conditional scenario/i);
+    expect(screen.queryByTestId(`adaptive-next-layer-funds-${side}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`adaptive-next-layer-${side}`)).not.toBeInTheDocument();
   });
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {

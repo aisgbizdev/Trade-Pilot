@@ -33,4 +33,4 @@ Financial-shortfall tests should separate calculator arithmetic from page presen
 
 **Why:** Assuming identical levels made a correct Micro page calculation look wrong when its current chart placed the next checkpoint at a different price.
 
-**How to apply:** Pin exact tier-specific shortfalls in core tests; in page tests, compare the displayed amount to that page's rejected-candidate breakdown and recalculate with its own displayed funding amount. Do not copy a core fixture's expected price or shortfall into a page test without checking the chart candidates.
+**How to apply:** Pin exact tier-specific shortfalls in core tests; in page tests, compare the displayed amount to that page's rejected-candidate breakdown and recalculate with its own displayed funding amount. Do not copy a core fixture's expected price or shortfall into a page test without checking the chart candidates. For Sell page tests, supply a confirmed swing high inside the saved risk path with enough neighboring candles on both sides; a high-looking bar near the edge is not a confirmed checkpoint, so the page may correctly have no next layer.

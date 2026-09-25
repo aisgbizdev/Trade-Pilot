@@ -753,6 +753,67 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     });
   });
 
+  it.each([
+    { tier: "micro" as const, funds: 50, loss: 40, extraFunds: 10, plannedPositions: 2, nextPrice: 2303, nextLot: 0.01, nextRisk: 30 },
+    { tier: "regular" as const, funds: 4_000, loss: 3_000, extraFunds: 100, plannedPositions: 1, nextPrice: 2302, nextLot: 1, nextRisk: 2_100 },
+  ])("uses only Sell checkpoints for the $tier broker-funds alternative", ({
+    tier, funds, loss, extraFunds, plannedPositions, nextPrice, nextLot, nextRisk,
+  }) => {
+    const sellInput = {
+      accountTier: tier,
+      riskStyle: "balanced" as const,
+      tradePlan: { ...TRADE_PLAN, preferredSide: "sell" as const },
+      context: {
+        ...SUPPORTIVE_CONTEXT,
+        marketCondition: "trending_down",
+        tradingBias: "bearish_strong",
+        techBuyCount: 4,
+        techSellCount: 14,
+      },
+    };
+    const current = buildRecommendation({ ...sellInput, availableMargin: funds, maximumLoss: loss });
+    const next = current.result.sell?.rejectedLadder[0];
+    expect(current.result.valid).toBe(true);
+    expect(current.decision.preferredSide).toBe("sell");
+    expect(current.result.buy).toBeNull();
+    expect(current.sideEvaluations.buy.status).toBe("not_aligned");
+    expect(current.result.sell?.ladder).toHaveLength(plannedPositions);
+    expect(next).toMatchObject({
+      level: plannedPositions,
+      price: nextPrice,
+      lot: nextLot,
+      estimatedRiskToStop: nextRisk,
+      rejectReason: "day_margin",
+      financialAlternative: { additionalFundsRequired: extraFunds, additionalLossBudgetRequired: 0 },
+    });
+    expect(next!.cumulativeDayMargin + next!.estimatedRiskToStop).toBeCloseTo(funds + extraFunds);
+    expect(next!.cumulativeFundsAtStop).toBeCloseTo(funds + extraFunds);
+    expect(next!.estimatedRiskToStop).toBeLessThanOrEqual(current.recommendation!.usableRiskBudget);
+
+    const recalculated = buildRecommendation({
+      ...sellInput, availableMargin: funds + extraFunds, maximumLoss: loss,
+    });
+    expect(recalculated.result.sell?.ladder).toHaveLength(plannedPositions + 1);
+    expect(recalculated.result.sell?.ladder[plannedPositions]).toMatchObject({ price: nextPrice, lot: nextLot });
+    expect(recalculated.result.buy).toBeNull();
+    expect(recalculated.sideEvaluations.buy.status).toBe("not_aligned");
+
+    const riskBlocked = buildRecommendation({
+      ...sellInput, availableMargin: tier === "micro" ? 30 : 3_000,
+      maximumLoss: tier === "micro" ? 15 : 2_000,
+    });
+    expect(riskBlocked.result.sell?.rejectedLadder[0]?.financialAlternative?.additionalLossBudgetRequired)
+      .toBeGreaterThan(0);
+    const analysisBlocked = buildRecommendation({
+      ...sellInput,
+      availableMargin: funds,
+      maximumLoss: loss,
+      context: { ...sellInput.context, fundamentalContext: undefined },
+    });
+    expect(analysisBlocked.sideEvaluations.sell.status).toBe("not_aligned");
+    expect(analysisBlocked.result.sell).toBeNull();
+  });
+
   it.each(["micro", "regular"] as const)(
     "keeps $tier analysis and per-position tier guardrails ahead of funding alternatives",
     (accountTier) => {
