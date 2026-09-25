@@ -577,6 +577,155 @@ test.describe("Adaptive settings at narrow and desktop widths", () => {
 
 // ---------------------------------------------------------------------------
 
+test.describe("Adaptive result layout (authenticated Chromium)", () => {
+  test("keeps prices, lots, totals and next broker funds legible at 320px, 390px and desktop", async ({
+    page,
+    baseURL,
+  }, testInfo) => {
+    const user = await registerUser(baseURL!, "adaptive-result-layout");
+    await signIn(page, user);
+    const analysis = {
+      ...buildStubAnalysis(STUB_ID_RESPONSIVE_ADAPTIVE),
+      validUntil: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+      fundamentalContext: { newsItems: [], calendarEvents: [] },
+      tradePlan: {
+        preferredSide: "buy" as const,
+        buy: {
+          entryZone: "2,300.00–2,302.00",
+          stopLoss: "2,290.00",
+          takeProfit1: "2,315.00",
+          takeProfit2: "2,325.00",
+          riskRewardRatio: "1:1.5",
+          rationale: "Bullish structure.",
+        },
+        sell: {
+          entryZone: "2,300.00–2,302.00",
+          stopLoss: "2,312.00",
+          takeProfit1: "2,290.00",
+          takeProfit2: "2,280.00",
+          riskRewardRatio: "1:1.2",
+          rationale: "Bearish alternative.",
+        },
+      },
+    };
+    await page.route(`**/api/analyses/${STUB_ID_RESPONSIVE_ADAPTIVE}`, async (route: Route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(analysis) });
+    });
+    await page.route("**/api/historical/candles?*purpose=adaptive-layering*", async (route: Route) => {
+      const now = Date.now();
+      const candles = [
+        { open: 2304, high: 2305, low: 2300, close: 2302 },
+        { open: 2302, high: 2304, low: 2298, close: 2300 },
+        { open: 2300, high: 2302, low: 2295, close: 2297 },
+        { open: 2297, high: 2301, low: 2297, close: 2300 },
+        { open: 2300, high: 2307, low: 2299, close: 2305 },
+        { open: 2305, high: 2309, low: 2301, close: 2303 },
+        { open: 2303, high: 2306, low: 2299, close: 2301 },
+      ].map((candle, index) => ({
+        ...candle, date: new Date(now - (7 - index) * 3_600_000).toISOString(),
+      }));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          candles,
+          sourceFetchedAt: new Date(now).toISOString(),
+          sourceMaxAgeMs: 5 * 60_000,
+          isStale: false,
+          staleReason: null,
+        }),
+      });
+    });
+    await page.goto(`/analyses/${STUB_ID_RESPONSIVE_ADAPTIVE}`);
+    const card = page.getByTestId("card-adaptive-position-plan");
+    await expect(card).toBeVisible();
+    const margin = page.getByTestId("input-adaptive-available-margin");
+    const loss = page.getByTestId("input-adaptive-maximum-loss");
+    await expect(page.getByTestId("button-calculate-adaptive-plan")).toBeEnabled();
+
+    // Check actual glyph rectangles, not just DOM presence or document scrollWidth:
+    // the card itself has overflow-hidden and can mask an overflowing child.
+    async function expectTextFits(testId: string, width: number) {
+      const measurements = await page.getByTestId(testId).evaluate((element) => {
+        const card = element.closest('[data-testid="card-adaptive-position-plan"]')!;
+        const cardBox = card.getBoundingClientRect();
+        const box = element.getBoundingClientRect();
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const lines: { left: number; right: number }[] = [];
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (!node.textContent?.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const rect of Array.from(range.getClientRects())) lines.push({ left: rect.left, right: rect.right });
+        }
+        return {
+          cardLeft: cardBox.left, cardRight: cardBox.right,
+          left: box.left, right: box.right, lines,
+          viewportWidth: document.documentElement.clientWidth,
+          pageWidth: document.documentElement.scrollWidth,
+        };
+      });
+      expect(measurements.lines.length, `${width}px: ${testId} contains visible text`).toBeGreaterThan(0);
+      expect(measurements.pageWidth, `${width}px: page does not scroll sideways`).toBeLessThanOrEqual(width + 1);
+      for (const line of measurements.lines) {
+        expect(line.left, `${width}px: ${testId} text inside card`).toBeGreaterThanOrEqual(Math.max(0, measurements.cardLeft) - 1);
+        expect(line.right, `${width}px: ${testId} text inside card`).toBeLessThanOrEqual(Math.min(measurements.viewportWidth, measurements.cardRight) + 1);
+        expect(line.left, `${width}px: ${testId} text inside element`).toBeGreaterThanOrEqual(measurements.left - 1);
+        expect(line.right, `${width}px: ${testId} text inside element`).toBeLessThanOrEqual(measurements.right + 1);
+      }
+    }
+
+    for (const width of [320, 390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      await margin.fill("20000");
+      await loss.fill("2000");
+      await page.getByTestId("button-calculate-adaptive-plan").click();
+      const result = page.getByTestId("adaptive-plan-valid");
+      await expect(result).toBeVisible();
+      const positions = page.locator('[data-testid^="adaptive-snapshot-position-buy-"]');
+      expect(await positions.count(), `${width}px: multiple calculated positions`).toBeGreaterThan(1);
+      for (let index = 0; index < await positions.count(); index++) {
+        const position = page.getByTestId(`adaptive-snapshot-position-buy-${index}`);
+        await expect(position).toContainText(/lot/i);
+        await expectTextFits(`adaptive-snapshot-position-buy-${index}`, width);
+      }
+      const total = page.getByTestId("adaptive-snapshot-all-filled-buy");
+      await expect(total).toContainText(/lot/i);
+      await expectTextFits("adaptive-snapshot-all-filled-buy", width);
+
+      const ladder = page.getByTestId("adaptive-ladder-buy");
+      const fillScenarios = page.getByTestId("adaptive-fill-scenarios-buy");
+      await expect(ladder).not.toHaveAttribute("open", "");
+      await expect(fillScenarios).not.toHaveAttribute("open", "");
+      await ladder.locator("summary").first().click();
+      await expect(ladder).toHaveAttribute("open", "");
+      await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toBeVisible();
+      await ladder.locator("summary").first().click();
+      await fillScenarios.locator("summary").click();
+      await expect(fillScenarios.locator("dd").first()).toBeVisible();
+      await fillScenarios.locator("summary").click();
+
+      // A funds-only next position has a long, visible broker message.
+      await page.getByTestId("button-adaptive-risk-style-balanced").click();
+      await margin.fill("330");
+      await loss.fill("300");
+      await page.getByTestId("button-calculate-adaptive-plan").click();
+      await expect(result).toBeVisible();
+      await expect(page.getByTestId("adaptive-next-layer-funds-buy")).toContainText(/lot.*broker funds|lot.*dana bebas broker/i);
+      await expectTextFits("adaptive-snapshot-position-buy-0", width);
+      await expectTextFits("adaptive-snapshot-all-filled-buy", width);
+      await expectTextFits("adaptive-next-layer-funds-buy", width);
+      await testInfo.attach(`adaptive-result-${width}px`, {
+        body: await card.screenshot(),
+        contentType: "image/png",
+      });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+
 test.describe("Adaptive plan manual safeguards (real Chromium + refreshed context)", () => {
   test("uses standard rules and re-evaluates the saved plan after a fundamental refresh", async ({
     page,
