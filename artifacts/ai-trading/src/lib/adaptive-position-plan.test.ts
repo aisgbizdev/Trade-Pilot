@@ -323,9 +323,50 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
       minimumLot: 0.1,
     });
     expect(getAdaptiveMarketRule("NIKKEI", NIKKEI_RULE, "regular")).toMatchObject({
-      contractSize: 50,
+      contractSize: 5,
       marginAtMinimumLot: 1_000,
       minimumLot: 1,
+    });
+  });
+
+  it.each([
+    ["XAU/USD", GOLD_RULE, TRADE_PLAN, 11, 14, 24, [1, 10, 100]],
+    ["BRENT", BRENT_RULE, BRENT_TRADE_PLAN, 1.15, 1.35, 2.25, [10, 100, 1_000]],
+    ["HSI", HSI_RULE, indexTradePlan(18_500, 18_510), 105, 155, 255, [0.5, 5, 5]],
+    ["NIKKEI", NIKKEI_RULE, indexTradePlan(38_500, 38_510), 105, 155, 255, [0.5, 5, 5]],
+  ] as const)("values one minimum %s contract at each tier without double-counting lots", (
+    instrument, standardRule, tradePlan, stopDistance, tp1Distance, tp2Distance, sizes,
+  ) => {
+    for (const [index, tier] of (["micro", "mini", "regular"] as const).entries()) {
+      const minimumLot = [0.01, 0.1, 1][index];
+      const result = buildAdaptivePositionPlan({
+        ...VALID_INPUT, instrument, standardRule, tradePlan, accountTier: tier,
+        initialLot: minimumLot, levels: 0, checkpointPrices: {},
+        availableFunds: 100_000, maximumLoss: 50_000,
+      });
+      expect(result.valid).toBe(true);
+      expect(result.rule).toMatchObject({
+        contractSize: sizes[index], minimumLot,
+        contractSource: tier === "micro" ? "micro_assumption" : "broker_document",
+      });
+      expect(result.buy?.ladder[0].riskToStopForLot).toBeCloseTo(stopDistance * sizes[index]);
+      expect(result.buy?.profitToTakeProfit1).toBeCloseTo(tp1Distance * sizes[index]);
+      expect(result.buy?.profitToTakeProfit2).toBeCloseTo(tp2Distance * sizes[index]);
+      expect(result.assumptions.join(" ")).toMatch(tier === "micro"
+        ? /assumption of 1\/10 Mini, not an official broker rule/
+        : /broker tier table; the API rule supplies Mini only/);
+    }
+  });
+
+  it("scales additional minimum positions and minimum-lot diagnostics by tier contract value", () => {
+    const result = buildAdaptivePositionPlan({
+      ...VALID_INPUT, accountTier: "mini", initialLot: 0.2, levels: 0,
+    });
+    expect(result.buy?.ladder[0].riskToStopForLot).toBe(220);
+    expect(result.buy?.ladder[0].profitToTakeProfit1).toBe(280);
+    const assessment = buildRecommendation({ accountTier: "regular", availableMargin: 5_000, maximumLoss: 2_000 });
+    expect(assessment.sideEvaluations.sell.diagnostic).toMatchObject({
+      lot: 1, riskAtStop: 1_100, marginRequired: 1_000, fundsRequiredAtStop: 2_100,
     });
   });
 
@@ -393,19 +434,19 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     });
     expect(result.buy?.ladder.map((level) => level.lot)).toEqual([0.01, 0.01]);
     expect(result.buy?.marginRequired).toBe(20);
-    expect(result.buy?.estimatedCycleLoss).toBeCloseTo(0.21);
-    expect(result.buy?.totalFundsAtStop).toBeCloseTo(20.21);
+    expect(result.buy?.estimatedCycleLoss).toBeCloseTo(21);
+    expect(result.buy?.totalFundsAtStop).toBeCloseTo(41);
   });
 
   it("builds candidate-driven Buy positions only at saved distinct levels", () => {
-    const assessment = buildRecommendation();
+    const assessment = buildRecommendation({ availableMargin: 100_000, maximumLoss: 10_000 });
 
     expect(assessment.result.valid).toBe(true);
     expect(assessment.recommendation).toMatchObject({
       levels: 4,
       positions: 5,
-      marginBudget: 5_000,
-      maximumLoss: 500,
+      marginBudget: 100_000,
+      maximumLoss: 10_000,
     });
     expect(assessment.decision).toMatchObject({
       posture: "scaling_allowed",
@@ -428,6 +469,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
 
   it("builds candidate-driven positions for a supported Sell analysis", () => {
     const assessment = buildRecommendation({
+      availableMargin: 100_000,
+      maximumLoss: 10_000,
       tradePlan: { ...TRADE_PLAN, preferredSide: "sell" },
       context: {
         ...SUPPORTIVE_CONTEXT,
@@ -472,8 +515,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(sellDiagnostic).toMatchObject({
       lot: 0.1,
       marginRequired: 100,
-      riskAtStop: 11,
-      fundsRequiredAtStop: 111,
+      riskAtStop: 110,
+      fundsRequiredAtStop: 210,
       effectiveLossBudget: 250,
       blocker: "direction",
       nextAction: "wait",
@@ -512,13 +555,13 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(diagnostic).toMatchObject({
       lot: 0.1,
       marginRequired: 100,
-      riskAtStop: 11,
-      fundsRequiredAtStop: 111,
+      riskAtStop: 110,
+      fundsRequiredAtStop: 210,
       effectiveLossBudget: 50,
-      marginShortfall: 6,
-      riskShortfall: 0,
-      blocker: "margin",
-      nextAction: "funds",
+      marginShortfall: 105,
+      riskShortfall: 60,
+      blocker: "margin_and_risk",
+      nextAction: "funds_and_loss_budget",
     });
   });
 
@@ -552,7 +595,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     for (const assessment of [conservative, balanced, aggressive]) {
       const ladder = assessment.result.buy?.ladder ?? [];
       expect(ladder.every((level) => level.lot <= 0.9)).toBe(true);
-      expect(assessment.result.buy?.totalLots).toBeGreaterThan(0.9);
+      expect(assessment.result.buy?.totalLots).toBeGreaterThan(0);
       expect(assessment.result.buy?.estimatedCycleLoss)
         .toBeLessThanOrEqual(assessment.recommendation!.usableRiskBudget);
     }
@@ -584,7 +627,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
   it("derives lot per layer from allocated risk and distance to Stop Loss", () => {
     const assessment = buildRecommendation({
       riskStyle: "aggressive",
-      maximumLoss: 150,
+      maximumLoss: 10_000,
+      availableMargin: 100_000,
     });
 
     expect(assessment.recommendation).toMatchObject({
@@ -593,25 +637,27 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
       positions: 5,
     });
     expect(assessment.result.buy?.ladder.length).toBe(5);
-    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(150);
-    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(150);
+    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(10_000);
   });
 
   it("changes an aggressive lot profile when the saved analysis is ranging", () => {
     const assessment = buildRecommendation({
       riskStyle: "aggressive",
-      maximumLoss: 150,
+      maximumLoss: 10_000,
+      availableMargin: 100_000,
       context: { ...SUPPORTIVE_CONTEXT, marketCondition: "ranging" },
     });
 
     expect(assessment.recommendation?.lotProfile).toBe("mixed");
     expect(assessment.result.buy?.ladder.length).toBe(5);
-    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(150);
+    expect(assessment.result.buy?.estimatedCycleLoss).toBeLessThanOrEqual(10_000);
   });
 
   it("uses the selected style for Sell while hard limits can still force entry-only", () => {
     const sell = buildRecommendation({
       riskStyle: "aggressive",
+      availableMargin: 100_000,
+      maximumLoss: 10_000,
       tradePlan: { ...TRADE_PLAN, preferredSide: "sell" },
       context: {
         ...SUPPORTIVE_CONTEXT,
@@ -621,7 +667,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
         techSellCount: 14,
       },
     });
-    const constrained = buildRecommendation({ riskStyle: "aggressive", maximumLoss: 15 });
+    const constrained = buildRecommendation({ riskStyle: "aggressive", maximumLoss: 115 });
 
     expect(sell.result.sell?.ladder.length).toBe(5);
     expect(sell.result.sell?.ladder.every((level) => level.lot <= 0.9)).toBe(true);
@@ -636,8 +682,9 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
 
   it("degrades from three to two total positions when the available funds cannot support all rows", () => {
     const assessment = buildRecommendation({
-      availableMargin: 250,
-      maximumLoss: 100,
+      availableMargin: 450,
+      maximumLoss: 450,
+      riskStyle: "aggressive",
     });
 
     expect(assessment.result.valid).toBe(true);
@@ -658,14 +705,14 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
   });
 
   it("uses the entered maximum loss as an absolute hard ceiling", () => {
-    const entryOnly = buildRecommendation({ maximumLoss: 30 });
+    const entryOnly = buildRecommendation({ maximumLoss: 220 });
 
     expect(entryOnly.result.valid).toBe(true);
     expect(entryOnly.recommendation).toMatchObject({
       levels: 0,
       positions: 1,
-      maximumLoss: 30,
-      usableRiskBudget: 15,
+      maximumLoss: 220,
+      usableRiskBudget: 110,
     });
     expect(entryOnly.decision.posture).toBe("entry_only");
     expect(entryOnly.result.buy?.ladder).toHaveLength(1);
@@ -673,7 +720,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
   });
 
   it("does not subtract existing exposure from the per-position Mini cap", () => {
-    const assessment = buildRecommendation({ existingExposure: 0.9 });
+    const assessment = buildRecommendation({ existingExposure: 0.9, availableMargin: 100_000, maximumLoss: 10_000 });
 
     expect(assessment.result.valid).toBe(true);
     expect(assessment.result.buy?.ladder.every((level) => level.lot <= 0.9)).toBe(true);
@@ -685,7 +732,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     const result = buildAdaptivePositionPlan({
       ...VALID_INPUT,
       availableFunds: 10_000,
-      maximumLoss: 1_000,
+      maximumLoss: 10_000,
       initialLot: 0.9,
       levels: 2,
       sideLevels: { buy: 2, sell: 0 },
@@ -735,24 +782,24 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(buy.ladder[0].basis).toBe("analysis_entry");
     expect(buy.ladder[1].basis).toBe("entry_zone_edge");
     expect(buy.marginRequired).toBe(200);
-    expect(buy.estimatedCycleLoss).toBe(21);
-    expect(buy.totalFundsAtStop).toBe(221);
-    expect(buy.remainingFundsAtStop).toBe(4_779);
+    expect(buy.estimatedCycleLoss).toBe(210);
+    expect(buy.totalFundsAtStop).toBe(410);
+    expect(buy.remainingFundsAtStop).toBe(4_590);
     expect(buy.ladder[0]).toMatchObject({
       dayMarginForLot: 100,
       cumulativeDayMargin: 100,
-      riskToStopForLot: 11,
-      estimatedRiskToStop: 11,
-      cumulativeFundsAtStop: 111,
-      remainingFundsAtStop: 4_889,
+      riskToStopForLot: 110,
+      estimatedRiskToStop: 110,
+      cumulativeFundsAtStop: 210,
+      remainingFundsAtStop: 4_790,
     });
     expect(buy.ladder[1]).toMatchObject({
       dayMarginForLot: 100,
       cumulativeDayMargin: 200,
-      riskToStopForLot: 10,
-      estimatedRiskToStop: 21,
-      cumulativeFundsAtStop: 221,
-      remainingFundsAtStop: 4_779,
+      riskToStopForLot: 100,
+      estimatedRiskToStop: 210,
+      cumulativeFundsAtStop: 410,
+      remainingFundsAtStop: 4_590,
     });
     expect(buy.profitToTakeProfit1).toBeGreaterThan(0);
     expect(buy.profitToTakeProfit2).toBeGreaterThan(buy.profitToTakeProfit1);
@@ -776,10 +823,11 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(buy.ladder.every((level) => level.cumulativeProfitToTakeProfit2 === null)).toBe(true);
   });
 
-  it("exposes the same financial breakdown for a rejected candidate layer", () => {
+  it("exposes the corrected financial breakdown even for an analysis-rejected candidate", () => {
     const assessment = buildRecommendation({
-      availableMargin: 250,
-      maximumLoss: 100,
+      availableMargin: 450,
+      maximumLoss: 450,
+      riskStyle: "aggressive",
     });
     const rejected = assessment.result.buy?.rejectedLadder[0];
 
@@ -787,15 +835,12 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(rejected).toMatchObject({
       dayMarginForLot: 100,
       cumulativeDayMargin: 300,
-      riskToStopForLot: 9,
-      estimatedRiskToStop: 30,
-      cumulativeFundsAtStop: 330,
-      remainingFundsAtStop: -80,
-      rejectReason: "day_margin",
-      financialAlternative: {
-        additionalFundsRequired: 80,
-        additionalLossBudgetRequired: 0,
-      },
+      riskToStopForLot: 90,
+      estimatedRiskToStop: 300,
+      cumulativeFundsAtStop: 600,
+      remainingFundsAtStop: -150,
+      rejectReason: "analysis_limit",
+      financialAlternative: null,
     });
   });
 
@@ -858,9 +903,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
       levels: 0,
       maximumLoss: 5_000,
     });
-    // P/L is a per-lot value, so compare both tiers at the same lot size.
-    // Mini correctly rejects one lot as above its 0.9 per-position cap, but
-    // still exposes the calculated candidate for this direct scaling check.
+    // One numeric lot represents ten Mini minimum positions. The tier's
+    // minimum contract value must not be multiplied by the numeric lot again.
     const miniPerLot = buildAdaptivePositionPlan({
       ...VALID_INPUT,
       accountTier: "mini",
@@ -879,11 +923,12 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(miniMinimum.valid).toBe(true);
     expect(regularMinimum.valid).toBe(true);
     expect(regularMinimum.buy?.marginRequired).toBeCloseTo((miniMinimum.buy?.marginRequired ?? 0) * 10);
+    expect(regularMinimum.buy?.estimatedCycleLoss).toBeCloseTo((miniMinimum.buy?.estimatedCycleLoss ?? 0) * 10);
     expect(miniPerLot.valid).toBe(false);
     expect(regularPerLot.valid).toBe(true);
-    expect(regularPerLot.buy?.estimatedCycleLoss).toBeCloseTo((miniPerLot.buy?.estimatedCycleLoss ?? 0) * 10);
-    expect(regularPerLot.buy?.profitToTakeProfit1).toBeCloseTo((miniPerLot.buy?.profitToTakeProfit1 ?? 0) * 10);
-    expect(regularPerLot.buy?.profitToTakeProfit2).toBeCloseTo((miniPerLot.buy?.profitToTakeProfit2 ?? 0) * 10);
+    expect(regularPerLot.buy?.estimatedCycleLoss).toBeCloseTo(miniPerLot.buy?.estimatedCycleLoss ?? 0);
+    expect(regularPerLot.buy?.profitToTakeProfit1).toBeCloseTo(miniPerLot.buy?.profitToTakeProfit1 ?? 0);
+    expect(regularPerLot.buy?.profitToTakeProfit2).toBeCloseTo(miniPerLot.buy?.profitToTakeProfit2 ?? 0);
   });
 
   it("preserves Regular insufficient-funds and maximum-loss blockers", () => {
@@ -1042,6 +1087,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
   it("keeps supported layers while applying a soft risk warning", () => {
     const assessment = buildRecommendation({
       context: { ...SUPPORTIVE_CONTEXT, timeframe: "5m" },
+      maximumLoss: 10_000,
+      availableMargin: 100_000,
     });
 
     expect(assessment.result.valid).toBe(true);
@@ -1068,7 +1115,7 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(result.buy?.ladder.every((level) => level.lot >= 0.01)).toBe(true);
   });
 
-  it("calculates the three distinct Micro entries without trying to spend the $100 loss ceiling", () => {
+  it("calculates three distinct Micro entries against the corrected contract value", () => {
     const tradePlan: TradePlan = {
       ...TRADE_PLAN,
       buy: {
@@ -1083,8 +1130,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
       ...VALID_INPUT,
       tradePlan,
       accountTier: "micro",
-      availableFunds: 300,
-      maximumLoss: 100,
+      availableFunds: 600,
+      maximumLoss: 300,
       initialLot: 0.09,
       levels: 2,
       includedSides: { buy: true, sell: false },
@@ -1094,8 +1141,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(result.buy?.ladder.map((level) => level.price)).toEqual([4300, 4295, 4290]);
     expect(result.buy?.ladder.map((level) => level.lot)).toEqual([0.09, 0.09, 0.09]);
     expect(result.buy?.marginRequired).toBeCloseTo(270);
-    expect(result.buy?.estimatedCycleLoss).toBeCloseTo(2.7);
-    expect(result.buy?.profitToTakeProfit2).toBeCloseTo(14.85);
+    expect(result.buy?.estimatedCycleLoss).toBeCloseTo(270);
+    expect(result.buy?.profitToTakeProfit2).toBeCloseTo(1485);
     expect(tradePlan.buy.stopLoss).toBe("4285");
   });
 

@@ -609,6 +609,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(
       /contract size is 100 barrel/i,
     );
+    expect(screen.getByTestId("adaptive-contract-micro")).toHaveTextContent(/10 barrel/i);
+    expect(screen.getByTestId("adaptive-contract-mini")).toHaveTextContent(/100 barrel/i);
+    expect(screen.getByTestId("adaptive-contract-regular")).toHaveTextContent(/1,000 barrel/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(
       /supports XAU\/USD, BRENT, HSI, and NIKKEI analyses/i,
     );
@@ -680,6 +683,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Micro: a minimum 0.01 lot requires \$10 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Maximum 0.09 lot applies to each position/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Contract size is 1 troy ounce/i);
+    expect(screen.getByTestId("adaptive-contract-table")).toHaveTextContent(/Micro is an assumed 1\/10 of Mini.*not an official broker rule/i);
+    expect(screen.getByTestId("adaptive-contract-micro")).toHaveTextContent(/1 troy ounce/i);
+    expect(screen.getByTestId("adaptive-contract-mini")).toHaveTextContent(/10 troy ounce/i);
+    expect(screen.getByTestId("adaptive-contract-regular")).toHaveTextContent(/100 troy ounce/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/minimum to open a Micro account is \$50/i);
     fireEvent.click(screen.getByTestId("button-adaptive-account-regular"));
     expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-pressed", "true");
@@ -718,7 +725,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(snapshot).toHaveTextContent(/Total planned lots/i);
     expect(snapshot).toHaveTextContent(/One final Stop Loss/i);
     expect(snapshot).toHaveTextContent(/Estimated maximum loss/i);
-    expect(snapshot).toHaveTextContent(/0.27 lot/i);
+    expect(snapshot).toHaveTextContent(/0.26 lot/i);
     expect(screen.getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/\$250/);
     expect(screen.getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/50% of loss ceiling/i);
     expect(screen.getByTestId("adaptive-unused-risk-buffer")).toHaveTextContent(/\$250/);
@@ -775,7 +782,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-copy-status")).toHaveTextContent("Copy failed");
     expect(execCommand).toHaveBeenCalledWith("copy");
 
-    const storedKey = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
+    const storedKey = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(storedKey)).not.toBeNull());
     expect(JSON.parse(localStorage.getItem(storedKey)!).form.accountTier).toBe("micro");
 
@@ -878,7 +885,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
     const standardPlan = screen.getByTestId("card-trade-plan").textContent;
-    const storedKey = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
+    const storedKey = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
     expect(localStorage.getItem(storedKey)).not.toBeNull();
 
     const expiry = timers.mock.calls.find(([callback, delay]) =>
@@ -989,7 +996,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
   it("requires a new analysis after expiry rather than retrying the candle feed", async () => {
     const { calls } = installFetchMock([standardRulesHandler()]);
     const { Wrapper } = makeWrapper();
-    const key = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
     localStorage.setItem(key, JSON.stringify({ recommendation: { valid: true } }));
     render(
       <Wrapper>
@@ -1108,7 +1115,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
     expect(localStorage.getItem(key)).not.toBeNull();
 
     view.unmount();
@@ -1161,7 +1168,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Risk this position at final SL/i);
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Funds remaining/i);
 
-    fireEvent.change(maximumLoss, { target: { value: "30" } });
+    fireEvent.change(maximumLoss, { target: { value: "220" } });
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(await screen.findByTestId("adaptive-rejected-buy")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-rejected-layer-financial-buy-1")).toHaveTextContent(/Margin this position/i);
@@ -1172,7 +1179,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -1197,7 +1204,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("does not restore an adaptive plan saved under the cumulative-cap v12 namespace", async () => {
@@ -1260,7 +1267,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {
@@ -1440,6 +1447,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Take Profit 2/i);
     expect(await screen.findByTestId("input-adaptive-available-margin")).toBeInTheDocument();
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(ruleText);
+    expect(screen.getByTestId("adaptive-contract-micro")).toHaveTextContent(/0.5 USD\/point/i);
+    expect(screen.getByTestId("adaptive-contract-mini")).toHaveTextContent(/5 USD\/point/i);
+    expect(screen.getByTestId("adaptive-contract-regular")).toHaveTextContent(/5 USD\/point/i);
+    expect(screen.getByTestId("adaptive-contract-table")).toHaveTextContent(/USD 0.50\/point for indices.*not an official broker rule/i);
   });
 });
 

@@ -65,7 +65,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v22:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v23:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -982,6 +982,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     localStorage.removeItem(storageKey(analysisId));
   };
   const selected = recommendation?.recommendation;
+  const tierContracts = standardRule
+    ? (["micro", "mini", "regular"] as const).map((tier) => getAdaptiveMarketRule(instrument, standardRule, tier))
+    : [];
   const primaryPlan = recommendation
     ? activeSide === "none"
       ? null
@@ -1123,7 +1126,25 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 .replace("{maximum}", selectedRule.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))
                 .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))
                 .replace("{size}", formatNumber(selectedRule.contractSize, lang, 2))
-                .replace("{unit}", standardRule?.contractUnit ?? "")}</p>
+                .replace("{unit}", selectedRule.contractUnit)}</p>
+              <p className="mt-1">{copy.adaptive_contract_minimum_basis.replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))}</p>
+              {tierContracts.every((rule) => rule != null) && (
+                <div className="mt-2" data-testid="adaptive-contract-table">
+                  <p className="font-semibold text-foreground">{copy.adaptive_contract_table_title}</p>
+                  <table className="mt-1 w-full text-left">
+                    <thead><tr><th scope="col">{copy.adaptive_contract_tier}</th><th scope="col">{copy.adaptive_contract_value}</th></tr></thead>
+                    <tbody>
+                      {tierContracts.map((rule) => rule && (
+                        <tr key={rule.accountTier} data-testid={`adaptive-contract-${rule.accountTier}`}>
+                          <th scope="row" className="font-medium">{accountTierLabel(rule.accountTier, copy)}</th>
+                          <td>{formatNumber(rule.contractSize, lang, 2)} {rule.contractUnit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="mt-1">{copy.adaptive_contract_micro_assumption}</p>
+                </div>
+              )}
               {selectedRule.minimumOpeningFunds != null && (
                 <p className="mt-1">{copy.adaptive_account_opening_minimum.replace("{amount}", formatMoney(selectedRule.minimumOpeningFunds, lang))}</p>
               )}
@@ -1305,7 +1326,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                     .replace("{rr}", formatNumber(alternative.riskReward, lang))
                     .replace("{margin}", formatMoney(alternative.dayMargin, lang))
                     .replace("{loss}", formatMoney(alternative.estimatedLoss, lang))
-                    .replace("{profit}", formatMoney(Math.abs(alternative.takeProfit - alternative.entry) * (selectedRule?.contractSize ?? 0) * alternative.lot, lang))
+                    .replace("{profit}", formatMoney(Math.abs(alternative.takeProfit - alternative.entry) * (selectedRule ? selectedRule.contractSize * alternative.lot / selectedRule.minimumLot : 0), lang))
                   : copy.adaptive_alternative_no_levels}</p>
                   <p className="mt-1 font-medium">{copy.adaptive_alternative_unchanged}</p>
                 </details>

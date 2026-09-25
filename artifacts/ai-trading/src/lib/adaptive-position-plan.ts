@@ -168,6 +168,8 @@ export interface AdaptiveRule {
   accountTier: AccountTier;
   marginBasis: "day";
   contractSize: number;
+  contractUnit: "troy ounce" | "barrel" | "USD/point";
+  contractSource: "broker_document" | "micro_assumption";
   minMovement: number;
   marginPerLot: number;
   marginAtMinimumLot: number;
@@ -375,7 +377,6 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
   maximumLot: number | null;
   lotStep: number;
   marginMultiplierFromMini: number;
-  contractMultiplierFromMini: number;
   minimumOpeningFunds: number | null;
 }> = {
   micro: {
@@ -383,7 +384,6 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: 0.09,
     lotStep: 0.01,
     marginMultiplierFromMini: 0.1,
-    contractMultiplierFromMini: 0.1,
     minimumOpeningFunds: 50,
   },
   mini: {
@@ -391,7 +391,6 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: 0.9,
     lotStep: 0.1,
     marginMultiplierFromMini: 1,
-    contractMultiplierFromMini: 1,
     minimumOpeningFunds: null,
   },
   regular: {
@@ -399,10 +398,26 @@ const ACCOUNT_TIER_SPECS: Record<AccountTier, {
     maximumLot: null,
     lotStep: 1,
     marginMultiplierFromMini: 10,
-    contractMultiplierFromMini: 10,
     minimumOpeningFunds: null,
   },
 };
+
+// Contract value for ONE minimum-size position at each tier, not per
+// numeric lot. Mini must match the source API rule; Regular comes from the
+// supplied broker table. Micro is an explicit 1/10 Mini assumption.
+const TIER_CONTRACTS: Record<AdaptiveMarket, {
+  unit: AdaptiveRule["contractUnit"];
+  sizes: Record<AccountTier, number>;
+}> = {
+  gold: { unit: "troy ounce", sizes: { micro: 1, mini: 10, regular: 100 } },
+  brent: { unit: "barrel", sizes: { micro: 10, mini: 100, regular: 1_000 } },
+  hang_seng: { unit: "USD/point", sizes: { micro: 0.5, mini: 5, regular: 5 } },
+  nikkei: { unit: "USD/point", sizes: { micro: 0.5, mini: 5, regular: 5 } },
+};
+
+function contractValueForLot(rule: AdaptiveRule, lot: number): number {
+  return rule.contractSize * (lot / rule.minimumLot);
+}
 
 function standardMarketForInstrument(instrument: string): AdaptiveMarket | null {
   const normalized = instrument.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -510,11 +525,12 @@ function ruleFromStandardTradingRules(
 
   const minMovement = numericValues(standardRule.minimumPriceMovement)[0];
   const tier = ACCOUNT_TIER_SPECS[accountTier];
+  const contract = TIER_CONTRACTS[market];
+  if (standardRule.contractSize !== contract.sizes.mini ||
+      standardRule.contractUnit !== contract.unit) return null;
   const marginAtMinimumLot = standardRule.initialMarginUsdPerLot * tier.marginMultiplierFromMini;
   const marginPerLot = marginAtMinimumLot / tier.minimumLot;
-  // The supplied trading-rule table is the Mini profile. Micro is one tenth
-  // of Mini and Regular is ten times Mini for both margin and contract value.
-  const contractSize = standardRule.contractSize * tier.contractMultiplierFromMini;
+  const contractSize = contract.sizes[accountTier];
   if (
     !Number.isFinite(contractSize) ||
     contractSize <= 0 ||
@@ -534,6 +550,8 @@ function ruleFromStandardTradingRules(
     accountTier,
     marginBasis: "day",
     contractSize,
+    contractUnit: contract.unit,
+    contractSource: accountTier === "micro" ? "micro_assumption" : "broker_document",
     minMovement,
     marginPerLot,
     marginAtMinimumLot,
@@ -753,7 +771,7 @@ function sidePlan(
   const profitForLot = (price: number, target: number | null, lot: number): number | null => {
     if (target == null) return null;
     const move = side === "buy" ? target - price : price - target;
-    return move > 0 ? move * rule.contractSize * lot : null;
+    return move > 0 ? move * contractValueForLot(rule, lot) : null;
   };
   const checkpointProgress: Array<{ progress: number; basis: AdaptiveLayerBasis }> = [];
   const minimumSeparation = Math.max(rule.minMovement * 2, distance * 0.025);
@@ -811,7 +829,7 @@ function sidePlan(
       for (const [index, planned] of plannedEntries.entries()) {
         const riskPerLot =
           (side === "buy" ? planned.price - stopLoss : stopLoss - planned.price) *
-          rule.contractSize;
+          rule.contractSize / rule.minimumLot;
         const allocatedRisk = input.maximumLoss * (normalizedWeights[index] / totalWeight);
         const requestedLot = riskPerLot > 0 ? allocatedRisk / riskPerLot : 0;
         const cappedLot = rule.maximumLot == null
@@ -832,8 +850,7 @@ function sidePlan(
     cumulativeLots = roundLot(cumulativeLots + planned.lot, lotStep);
     const riskToStopForLot =
       (side === "buy" ? planned.price - stopLoss : stopLoss - planned.price) *
-      rule.contractSize *
-      planned.lot;
+      contractValueForLot(rule, planned.lot);
     const dayMarginForLot = planned.lot * rule.marginPerLot;
     const profitToTakeProfit1 = profitForLot(planned.price, takeProfit1, planned.lot);
     const profitToTakeProfit2 = profitForLot(planned.price, takeProfit2, planned.lot);
@@ -1066,7 +1083,7 @@ export function buildAdaptivePositionPlan(input: AdaptivePositionPlanInput): Ada
     ? `Minimum movement from ${rule.source}: ${rule.minMovement}; no percentage gap limit is assumed because the source rule does not provide one.`
     : `Minimum movement from ${rule.source}: ${rule.minMovement}; a gap above ${rule.maxGapPercent}% is treated as an external execution risk.`;
   const assumptions = [
-    `${input.accountTier[0].toUpperCase()}${input.accountTier.slice(1)} profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract size ${rule.contractSize} ${input.standardRule?.contractUnit ?? "units"} per lot from ${rule.source}.`,
+    `${input.accountTier[0].toUpperCase()}${input.accountTier.slice(1)} profile: USD ${rule.marginAtMinimumLot} margin for ${rule.minimumLot.toFixed(2)} lot; contract value ${rule.contractSize} ${rule.contractUnit} for one minimum-size position (${rule.minimumLot.toFixed(2)} lot). ${rule.contractSource === "micro_assumption" ? "Micro contract value is an assumption of 1/10 Mini, not an official broker rule." : "Contract value comes from the broker tier table; the API rule supplies Mini only."}`,
     movementAssumption,
     `Initial entry uses the Standard Plan; up to ${MAX_ADDITIONAL_LAYERS} manual additions are limited to distinct saved entry-zone or chart-swing prices. The ${tierText} range applies separately to each position, not to cumulative planned lots.`,
     `The entered USD ${maxCycleLoss} maximum loss is a hard amount for every position in the complete plan.`,
@@ -1262,7 +1279,7 @@ function getCandleAlternative(
       const riskReward = riskDistance > 0 ? targetDistance / riskDistance : 0;
       if (riskReward < 1) continue;
       const lot = rule.minimumLot;
-      const estimatedLoss = riskDistance * rule.contractSize * lot;
+      const estimatedLoss = riskDistance * contractValueForLot(rule, lot);
       const dayMargin = lot * rule.marginPerLot;
       if (estimatedLoss > usableRiskBudget || estimatedLoss + dayMargin > availableFunds) {
         continue;
