@@ -617,6 +617,120 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
   });
 
+  it("keeps Adaptive explanations and warnings in the selected language across live language changes", async () => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    const account = await screen.findByTestId("adaptive-account-explanation") as HTMLDetailsElement;
+    const funds = screen.getByTestId("adaptive-funds-explanation") as HTMLDetailsElement;
+    const risk = screen.getByTestId("adaptive-risk-explanation") as HTMLDetailsElement;
+    const disclaimer = screen.getByTestId("adaptive-disclaimer");
+    const dayTrade = screen.getByTestId("adaptive-daytrade-only");
+    const toggle = screen.getByTestId("button-language-toggle");
+
+    expect(account.open).toBe(false);
+    expect(funds.open).toBe(false);
+    expect(risk.open).toBe(false);
+    expect(within(account).getByText("Minimum 0.10 lot · $100 margin")).not.toBeVisible();
+    expect(within(funds).getByText(/Enter free funds that can cover/)).not.toBeVisible();
+    expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).not.toBeVisible();
+    expect(disclaimer).toBeVisible();
+    expect(disclaimer).toHaveTextContent(/not a profit guarantee or automatic order/);
+    expect(dayTrade).toBeVisible();
+    expect(dayTrade).toHaveTextContent(/Overnight holding and rollover fees are excluded/);
+
+    fireEvent.click(within(account).getByText("Show account explanation"));
+    fireEvent.click(within(funds).getByText("Show funds and risk explanation"));
+    fireEvent.click(within(risk).getByText("Show risk style explanation"));
+    expect(account.open).toBe(true);
+    expect(funds.open).toBe(true);
+    expect(risk.open).toBe(true);
+    expect(within(account).getByText("Minimum 0.10 lot · $100 margin")).toBeVisible();
+    expect(within(funds).getByText(/Enter free funds that can cover/)).toBeVisible();
+    expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAccessibleName("Beralih ke Bahasa Inggris");
+    expect(account.open).toBe(true);
+    expect(funds.open).toBe(true);
+    expect(risk.open).toBe(true);
+    expect(within(account).getByText("Lihat penjelasan tipe akun")).toBeVisible();
+    expect(within(funds).getByText("Lihat penjelasan dana dan risiko")).toBeVisible();
+    expect(within(risk).getByText("Lihat penjelasan gaya risiko")).toBeVisible();
+    expect(within(account).getByText("Minimum 0,10 lot · margin $100")).toBeVisible();
+    expect(within(account).queryByText("Minimum 0.10 lot · $100 margin")).not.toBeInTheDocument();
+    expect(within(funds).getByText(/Masukkan dana bebas yang dapat menutup/)).toBeVisible();
+    expect(within(funds).queryByText(/Enter free funds that can cover/)).not.toBeInTheDocument();
+    expect(within(risk).getByText(/Memakai maksimal 50% batas rugi/)).toBeVisible();
+    expect(within(risk).queryByText(/Uses at most 50% of the loss ceiling/)).not.toBeInTheDocument();
+    expect(disclaimer).toBeVisible();
+    expect(disclaimer).toHaveTextContent(/bukan jaminan profit atau order otomatis/);
+    expect(dayTrade).toBeVisible();
+    expect(dayTrade).toHaveTextContent(/Posisi overnight dan biaya menginap tidak dihitung/);
+
+    fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
+    expect(within(account).getByText("Minimum 0,01 lot · margin $10")).toBeVisible();
+    expect(within(account).queryByText("Minimum 0,10 lot · margin $100")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-adaptive-account-regular"));
+    expect(within(account).getByText("Minimum 1,00 lot · margin $1.000")).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+    expect(within(risk).getByText(/Memakai maksimal 75% batas rugi/)).toBeVisible();
+    expect(within(risk).queryByText(/Memakai maksimal 50% batas rugi/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-aggressive"));
+    expect(within(risk).getByText(/Dapat memakai sampai 100% batas rugi.*dana bebas/)).toBeVisible();
+
+    fireEvent.click(within(account).getByText("Lihat penjelasan tipe akun"));
+    fireEvent.click(within(funds).getByText("Lihat penjelasan dana dan risiko"));
+    fireEvent.click(within(risk).getByText("Lihat penjelasan gaya risiko"));
+    expect(account.open).toBe(false);
+    expect(funds.open).toBe(false);
+    expect(risk.open).toBe(false);
+    expect(within(account).getByText("Minimum 1,00 lot · margin $1.000")).not.toBeVisible();
+    expect(within(funds).getByText(/Masukkan dana bebas yang dapat menutup/)).not.toBeVisible();
+    expect(within(risk).getByText(/Dapat memakai sampai 100% batas rugi/)).not.toBeVisible();
+    expect(disclaimer).toBeVisible();
+    expect(dayTrade).toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAccessibleName("Switch to Indonesian");
+    expect(account.open).toBe(false);
+    expect(funds.open).toBe(false);
+    expect(risk.open).toBe(false);
+    expect(within(account).getByText("Show account explanation")).toBeVisible();
+    expect(within(funds).getByText("Show funds and risk explanation")).toBeVisible();
+    expect(within(risk).getByText("Show risk style explanation")).toBeVisible();
+    expect(within(account).getByText("Minimum 1.00 lot · $1,000 margin")).not.toBeVisible();
+    expect(within(risk).getByText(/May use up to 100% of the loss ceiling.*free funds/)).not.toBeVisible();
+    expect(disclaimer).toBeVisible();
+    expect(disclaimer).toHaveTextContent(/not a profit guarantee or automatic order/);
+    expect(dayTrade).toBeVisible();
+    expect(dayTrade).toHaveTextContent(/Overnight holding and rollover fees are excluded/);
+
+    fireEvent.click(within(account).getByText("Show account explanation"));
+    fireEvent.click(within(funds).getByText("Show funds and risk explanation"));
+    fireEvent.click(within(risk).getByText("Show risk style explanation"));
+    expect(within(account).getByText("Minimum 1.00 lot · $1,000 margin")).toBeVisible();
+    expect(within(funds).getByText(/Enter free funds that can cover/)).toBeVisible();
+    expect(within(risk).getByText(/May use up to 100% of the loss ceiling.*free funds/)).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
+    expect(within(account).getByText("Minimum 0.01 lot · $10 margin")).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+    expect(within(risk).getByText(/Uses at most 75% of the loss ceiling/)).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-conservative"));
+    expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).toBeVisible();
+  });
+
   it("defaults to Mini, supports all account tiers, and keeps separate Buy and Sell ladders", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     const execCommand = vi.fn(() => false);
