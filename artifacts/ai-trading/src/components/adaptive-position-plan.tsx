@@ -1109,30 +1109,31 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         <p className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-xs leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
-          <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
             {([
-              ["micro", copy.adaptive_account_micro, copy.adaptive_account_micro_desc],
-              ["mini", copy.adaptive_account_mini, copy.adaptive_account_mini_desc],
-              ["regular", copy.adaptive_account_regular, copy.adaptive_account_regular_desc],
-            ] as const).map(([tier, label, description]) => (
+              ["micro", copy.adaptive_account_micro],
+              ["mini", copy.adaptive_account_mini],
+              ["regular", copy.adaptive_account_regular],
+            ] as const).map(([tier, label]) => (
               <button
                 key={tier}
                 type="button"
                 aria-pressed={form.accountTier === tier}
                 onClick={() => updateField("accountTier", tier)}
-                className={`rounded-md border px-2.5 py-2 text-left transition-colors ${
+                className={`min-h-10 rounded-md border px-3 py-2 text-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   form.accountTier === tier
                     ? "border-primary bg-primary/[0.08] text-foreground shadow-sm"
                     : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
                 }`}
                 data-testid={`button-adaptive-account-${tier}`}
               >
-                <span className="block text-[11px] font-semibold">{label}</span>
-                <span className="mt-0.5 block text-[10px] leading-relaxed">{description}</span>
+                {label}
               </button>
             ))}
           </div>
-          {selectedRule && (
+          <ExpandableExplanation label={copy.adaptive_account_explanation_label} testId="adaptive-account-explanation">
+            <p>{form.accountTier === "micro" ? copy.adaptive_account_micro_desc : form.accountTier === "mini" ? copy.adaptive_account_mini_desc : copy.adaptive_account_regular_desc}</p>
+            {selectedRule && (
             <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-account-rule">
               <p className="mb-1 font-bold text-foreground">{copy.adaptive_fixed_scope}</p>
               <p>{(selectedRule.maximumLot == null ? copy.adaptive_account_rule_uncapped : copy.adaptive_account_rule)
@@ -1164,7 +1165,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 <p className="mt-1">{copy.adaptive_account_opening_minimum.replace("{amount}", formatMoney(selectedRule.minimumOpeningFunds, lang))}</p>
               )}
             </div>
-          )}
+            )}
+          </ExpandableExplanation>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1">
@@ -1173,7 +1175,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">$</span>
               <Input type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-available-margin" />
             </span>
-            <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_available_margin_help}</span>
           </label>
           <label className="block space-y-1">
             <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_maximum_loss}</span>
@@ -1181,42 +1182,50 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">$</span>
               <Input type="number" min="0" step="any" value={form.maximumLoss} placeholder="0" onChange={(event) => updateField("maximumLoss", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-maximum-loss" />
             </span>
-            <span className="block text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_maximum_loss_help}</span>
           </label>
         </div>
-        <div className="space-y-2" data-testid="adaptive-risk-style-selector">
-          <div>
-            <p className="text-xs font-medium text-foreground">{copy.adaptive_risk_style_title}</p>
-            <ExpandableExplanation>{copy.adaptive_risk_style_help}</ExpandableExplanation>
+        <ExpandableExplanation label={copy.adaptive_funds_explanation_label} testId="adaptive-funds-explanation">
+          <div className="space-y-2">
+            <p><strong className="text-foreground">{copy.adaptive_available_margin}:</strong> {copy.adaptive_available_margin_help}</p>
+            <p><strong className="text-foreground">{copy.adaptive_maximum_loss}:</strong> {copy.adaptive_maximum_loss_help}</p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label={copy.adaptive_risk_style_title}>
+        </ExpandableExplanation>
+        <div className="space-y-2" data-testid="adaptive-risk-style-selector">
+          <p className="text-xs font-medium text-foreground">{copy.adaptive_risk_style_title}</p>
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label={copy.adaptive_risk_style_title}>
             {([
-              ["conservative", copy.adaptive_risk_style_conservative, copy.adaptive_risk_style_conservative_desc],
-              ["balanced", copy.adaptive_risk_style_balanced, copy.adaptive_risk_style_balanced_desc],
-              ["aggressive", copy.adaptive_risk_style_aggressive, copy.adaptive_risk_style_aggressive_desc],
-            ] as const).map(([style, label, description]) => (
+              ["conservative", copy.adaptive_risk_style_conservative],
+              ["balanced", copy.adaptive_risk_style_balanced],
+              ["aggressive", copy.adaptive_risk_style_aggressive],
+            ] as const).map(([style, label]) => (
               <button
                 key={style}
                 type="button"
                 aria-pressed={form.riskStyle === style}
                 onClick={() => updateField("riskStyle", style)}
-                className={`rounded-md border px-2.5 py-2 text-left transition-colors ${
+                className={`min-h-10 rounded-md border px-3 py-2 text-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   form.riskStyle === style
                     ? "border-primary bg-primary/[0.08] text-foreground shadow-sm"
                     : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
                 }`}
                 data-testid={`button-adaptive-risk-style-${style}`}
               >
-                <span className="block text-[11px] font-semibold">{label}</span>
-                <span className="mt-0.5 block text-[10px] leading-relaxed">
-                  {(style === "aggressive" && selectedRule?.maximumLot == null
-                    ? copy.adaptive_risk_style_aggressive_desc_uncapped
-                    : description
-                  ).replace("{maximum}", selectedRule?.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))}
-                </span>
+                {label}
               </button>
             ))}
           </div>
+          <ExpandableExplanation label={copy.adaptive_risk_explanation_label} testId="adaptive-risk-explanation">
+            <p className="font-semibold text-foreground">{riskStyleLabel(form.riskStyle, copy)}</p>
+            <p>{(form.riskStyle === "conservative"
+              ? copy.adaptive_risk_style_conservative_desc
+              : form.riskStyle === "balanced"
+                ? copy.adaptive_risk_style_balanced_desc
+                : selectedRule?.maximumLot == null
+                  ? copy.adaptive_risk_style_aggressive_desc_uncapped
+                  : copy.adaptive_risk_style_aggressive_desc
+            ).replace("{maximum}", selectedRule?.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))}</p>
+            <p className="mt-1">{copy.adaptive_risk_style_help}</p>
+          </ExpandableExplanation>
         </div>
         <div className="space-y-2">
           <span className="block rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-[10px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-daytrade-only">{copy.adaptive_day_trade_only}</span>
