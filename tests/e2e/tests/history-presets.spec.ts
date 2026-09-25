@@ -100,7 +100,7 @@ test.describe("History saved-filter presets (real Chromium + real DB)", () => {
     await signIn(page, user);
 
     // Land on /history with a real filter combo so "Save preset" is enabled.
-    await page.goto("/history?instruments=XAU%2FUSD&timeframes=1h");
+    await page.goto("/history?view=history&instruments=XAU%2FUSD&timeframes=1h");
     await expect(page.getByTestId("active-filters-row")).toBeVisible();
 
     // --- 1. SAVE -----------------------------------------------------
@@ -121,7 +121,7 @@ test.describe("History saved-filter presets (real Chromium + real DB)", () => {
 
     // --- 2. APPLY ----------------------------------------------------
     // Navigate away with no filters, then re-apply via chip tap.
-    await page.goto("/history");
+    await page.goto("/history?view=history");
     await expect(page.getByTestId("active-filters-row")).toHaveCount(0);
 
     const applyTarget = page.locator('[data-testid^="preset-apply-"]', {
@@ -197,7 +197,7 @@ test.describe("History saved-filter presets (real Chromium + real DB)", () => {
       expect(res.status(), `seed preset ${i}`).toBe(201);
     }
 
-    await page.goto("/history?instruments=XAU%2FUSD&timeframes=1h");
+    await page.goto("/history?view=history&instruments=XAU%2FUSD&timeframes=1h");
     await expect(page.getByTestId("active-filters-row")).toBeVisible();
 
     // The 21st save should be rejected by the server (409) and the UI

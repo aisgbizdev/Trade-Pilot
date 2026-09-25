@@ -1,27 +1,23 @@
 /**
- * E2E regression guard for progressive nav threshold logic in layout.tsx.
+ * E2E regression guard for the current nav in layout.tsx.
  *
  * The bottom nav and desktop top nav filter items from FULL_NAV by
  * `totalAnalyses >= item.minCount`:
  *
  *   /analyze   minCount: 0  → always visible
  *   /history   minCount: 0  → always visible
- *   /journal   minCount: 1  → appears after first analysis
- *   /mirror    minCount: 5  → appears after fifth analysis
- *   /analytics minCount: 5  → appears after fifth analysis
+ *   /guide     minCount: 0  → always visible
+ *   /journal, /mirror, /analytics are no longer navigation tabs.
  *
  * Three seeded scenarios are tested end-to-end against the real API
  * (fresh registered users), with `/api/analyses/summary` stubbed to
  * inject the desired `totalAnalyses` count without running the full
  * AI pipeline:
  *
- *   Scenario A — 0 analyses : only Analyze + History tabs visible
- *   Scenario B — 1 analysis  : Analyze + Journal + History visible
- *   Scenario C — 5 analyses  : all five tabs visible
+ *   All three analysis counts show Analyze + History + Guide.
  *
- * Each scenario also verifies that tabs hidden from the nav are still
- * reachable by typing their URL directly (the layout hides the tab
- * entry-point but never blocks the route).
+ * The direct-route check covers the retained journal/mirror routes and
+ * the analytics redirect to History's Summary view.
  *
  * Both nav surfaces are exercised:
  *   • Desktop top nav  (hidden lg:flex)  — viewport 1280 × 720
@@ -151,7 +147,7 @@ test.describe("Nav thresholds – 0 analyses (brand-new user)", () => {
     await page.goto("/analyze");
 
     // Desktop viewport (1280×720 default) → header nav is visible
-    await assertDesktopNavVisible(page, ["analyze", "history"]);
+    await assertDesktopNavVisible(page, ["analyze", "history", "guide"]);
     await assertDesktopNavHidden(page, ["journal", "mirror", "analytics"]);
   });
 
@@ -167,7 +163,7 @@ test.describe("Nav thresholds – 0 analyses (brand-new user)", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/analyze");
 
-    await assertMobileNavVisible(page, ["analyze", "history"]);
+    await assertMobileNavVisible(page, ["analyze", "history", "guide"]);
     await assertMobileNavHidden(page, ["journal", "mirror", "analytics"]);
   });
 
@@ -187,11 +183,10 @@ test.describe("Nav thresholds – 0 analyses (brand-new user)", () => {
     await page.goto("/mirror");
     await expect(page.getByTestId("page-mirror")).toBeVisible();
 
-    // /analytics — for a 0-analysis user the page shows the empty state
+    // /analytics is now an alias for the History Summary view.
     await page.goto("/analytics");
-    await expect(page).toHaveURL(/\/analytics$/);
-    // Empty-state CTA from analytics.tsx confirms the page mounted.
-    await expect(page.getByTestId("button-start-analysis")).toBeVisible();
+    await expect(page).toHaveURL(/\/history\?view=summary$/);
+    await expect(page.getByRole("button", { name: /summary|ringkasan/i })).toBeVisible();
   });
 });
 
@@ -208,7 +203,7 @@ test.describe("Nav thresholds – 1 analysis", () => {
     await signIn(page, user);
     await page.goto("/analyze");
 
-    await assertDesktopNavVisible(page, ["analyze", "history"]);
+    await assertDesktopNavVisible(page, ["analyze", "history", "guide"]);
     await assertDesktopNavHidden(page, ["journal", "mirror", "analytics"]);
   });
 
@@ -223,7 +218,7 @@ test.describe("Nav thresholds – 1 analysis", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/analyze");
 
-    await assertMobileNavVisible(page, ["analyze", "history"]);
+    await assertMobileNavVisible(page, ["analyze", "history", "guide"]);
     await assertMobileNavHidden(page, ["journal", "mirror", "analytics"]);
   });
 });
@@ -232,17 +227,17 @@ test.describe("Nav thresholds – 1 analysis", () => {
 // Scenario C — 5 analyses
 // ══════════════════════════════════════════════════════════════════════════
 test.describe("Nav thresholds – 5 analyses", () => {
-  test("desktop: Analytics unlocks while Journal and Mirror stay hidden", async ({ page, baseURL }) => {
+  test("desktop: Guide stays visible while old tabs stay hidden", async ({ page, baseURL }) => {
     const user = await registerUser(baseURL!, "5a");
     await stubAnalysesSummary(page, 5);
     await signIn(page, user);
     await page.goto("/analyze");
 
-    await assertDesktopNavVisible(page, ["analyze", "history", "analytics"]);
-    await assertDesktopNavHidden(page, ["journal", "mirror"]);
+    await assertDesktopNavVisible(page, ["analyze", "history", "guide"]);
+    await assertDesktopNavHidden(page, ["journal", "mirror", "analytics"]);
   });
 
-  test("mobile: Analytics unlocks while Journal and Mirror stay hidden", async ({ page, baseURL }) => {
+  test("mobile: Guide stays visible while old tabs stay hidden", async ({ page, baseURL }) => {
     const user = await registerUser(baseURL!, "5b");
     await stubAnalysesSummary(page, 5);
     await signIn(page, user);
@@ -250,7 +245,7 @@ test.describe("Nav thresholds – 5 analyses", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/analyze");
 
-    await assertMobileNavVisible(page, ["analyze", "history", "analytics"]);
-    await assertMobileNavHidden(page, ["journal", "mirror"]);
+    await assertMobileNavVisible(page, ["analyze", "history", "guide"]);
+    await assertMobileNavHidden(page, ["journal", "mirror", "analytics"]);
   });
 });

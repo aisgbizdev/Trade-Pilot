@@ -1024,6 +1024,10 @@ export const progressionEvidenceSessions = pgTable("progression_evidence_session
 });
 
 export const creditTopupStatusEnum = pgEnum("credit_topup_status", ["pending", "approved", "rejected"]);
+// Legacy provider metadata is retained for historical requests. New top-ups
+// still use the manual flow, but omitting these production columns from the
+// source schema would cause Publish to delete the existing payment records.
+export const creditTopupProviderEnum = pgEnum("credit_topup_provider", ["manual", "doku"]);
 
 // One row per top-up attempt — the manual submit-then-admin-review workflow.
 // Money is stored as a whole-Rupiah integer (no subunit in practice), not a
@@ -1046,6 +1050,11 @@ export const creditTopupRequests = pgTable("credit_topup_requests", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
   deletedByUserId: integer("deleted_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  paymentProvider: creditTopupProviderEnum("payment_provider").notNull().default("manual"),
+  dokuInvoiceNumber: text("doku_invoice_number").unique("credit_topup_requests_doku_invoice_number_unique"),
+  dokuSessionId: text("doku_session_id"),
+  dokuPaymentUrl: text("doku_payment_url"),
+  dokuExpiresAt: timestamp("doku_expires_at"),
 }, (t) => ({
   statusIdx: index("credit_topup_requests_status_idx").on(t.status),
   userIdx: index("credit_topup_requests_user_idx").on(t.userId),
