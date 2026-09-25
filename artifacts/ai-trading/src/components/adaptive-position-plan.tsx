@@ -1109,7 +1109,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         <p className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-xs leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
-          <div className="grid grid-cols-3 gap-2" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
+          <div className="grid grid-cols-3 gap-2 max-[359px]:-mx-3" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
             {([
               ["micro", copy.adaptive_account_micro],
               ["mini", copy.adaptive_account_mini],
@@ -1120,7 +1120,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 type="button"
                 aria-pressed={form.accountTier === tier}
                 onClick={() => updateField("accountTier", tier)}
-                className={`min-h-10 rounded-md border px-3 py-2 text-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`min-h-10 rounded-md border px-3 py-2 text-center text-xs max-[359px]:text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   form.accountTier === tier
                     ? "border-primary bg-primary/[0.08] text-foreground shadow-sm"
                     : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
@@ -1192,7 +1192,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         </ExpandableExplanation>
         <div className="space-y-2" data-testid="adaptive-risk-style-selector">
           <p className="text-xs font-medium text-foreground">{copy.adaptive_risk_style_title}</p>
-          <div className="grid grid-cols-3 gap-2" role="group" aria-label={copy.adaptive_risk_style_title}>
+          <div className="grid grid-cols-3 gap-2 max-[359px]:-mx-3" role="group" aria-label={copy.adaptive_risk_style_title}>
             {([
               ["conservative", copy.adaptive_risk_style_conservative],
               ["balanced", copy.adaptive_risk_style_balanced],
@@ -1203,7 +1203,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 type="button"
                 aria-pressed={form.riskStyle === style}
                 onClick={() => updateField("riskStyle", style)}
-                className={`min-h-10 rounded-md border px-3 py-2 text-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`min-h-10 rounded-md border px-3 py-2 text-center text-xs max-[359px]:text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   form.riskStyle === style
                     ? "border-primary bg-primary/[0.08] text-foreground shadow-sm"
                     : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"

@@ -75,6 +75,7 @@ const STUB_ID_STANDARD_REGRESSION = 9_999_950;
 const STUB_ID_ADAPTIVE_REFRESH = 9_999_940;
 const STUB_ID_HSI_ADAPTIVE = 9_999_930;
 const STUB_ID_UNSUPPORTED_ADAPTIVE = 9_999_920;
+const STUB_ID_RESPONSIVE_ADAPTIVE = 9_999_910;
 
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
@@ -487,6 +488,90 @@ test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", ()
     await expect(page.getByTestId("card-adaptive-position-plan")).toHaveCount(0);
     await expect(page.getByTestId("input-adaptive-available-margin")).toHaveCount(0);
     await expect(page.getByTestId("button-calculate-adaptive-plan")).toHaveCount(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+test.describe("Adaptive settings at narrow and desktop widths", () => {
+  test("keeps the three choices readable and explanations compact at 320px, 390px, and desktop", async ({
+    page,
+    baseURL,
+  }, testInfo) => {
+    const user = await registerUser(baseURL!, "adaptive-responsive");
+    await signIn(page, user);
+    await page.route(`**/api/analyses/${STUB_ID_RESPONSIVE_ADAPTIVE}`, async (route: Route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildStubAnalysis(STUB_ID_RESPONSIVE_ADAPTIVE)),
+      });
+    });
+    await page.goto(`/analyses/${STUB_ID_RESPONSIVE_ADAPTIVE}`);
+
+    const card = page.getByTestId("card-adaptive-position-plan");
+    await expect(card).toBeVisible();
+    const account = page.getByTestId("adaptive-account-selector");
+    const risk = page.getByTestId("adaptive-risk-style-selector");
+    const explanations = [
+      page.getByTestId("adaptive-account-explanation"),
+      page.getByTestId("adaptive-funds-explanation"),
+      page.getByTestId("adaptive-risk-explanation"),
+    ];
+
+    for (const width of [320, 390, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      for (const [group, names] of [
+        [account, ["Micro", "Mini", "Regular"]],
+        [risk, ["Conservative", "Balanced", "Aggressive"]],
+      ] as const) {
+        const buttons = group.getByRole("button");
+        await expect(buttons).toHaveCount(3);
+        const layout = await buttons.evaluateAll((nodes) => nodes.map((node) => {
+          const button = node as HTMLButtonElement;
+          const box = button.getBoundingClientRect();
+          const text = document.createRange();
+          text.selectNodeContents(button);
+          const textBox = text.getBoundingClientRect();
+          return {
+            label: button.textContent?.trim(),
+            left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+            textLeft: textBox.left, textRight: textBox.right,
+          };
+        }));
+        expect(layout.map(({ label }) => label)).toEqual(names);
+        for (const [index, box] of layout.entries()) {
+          expect(box.right - box.left, `${width}px: ${box.label} touch width`).toBeGreaterThanOrEqual(70);
+          expect(box.bottom - box.top, `${width}px: ${box.label} touch height`).toBeGreaterThanOrEqual(40);
+          expect(box.textLeft, `${width}px: ${box.label} text starts within button`).toBeGreaterThanOrEqual(box.left - 1);
+          expect(box.textRight, `${width}px: ${box.label} text ends within button`).toBeLessThanOrEqual(box.right + 1);
+          expect(box.left, `${width}px: ${box.label} starts on screen`).toBeGreaterThanOrEqual(-1);
+          expect(box.right, `${width}px: ${box.label} ends on screen`).toBeLessThanOrEqual(width + 1);
+          if (index > 0) {
+            expect(box.top, `${width}px: ${box.label} stays in one row`).toBeCloseTo(layout[0].top, 0);
+            expect(box.left, `${width}px: ${box.label} does not overlap`).toBeGreaterThanOrEqual(layout[index - 1].right);
+          }
+        }
+      }
+      for (const details of explanations) {
+        await expect(details).not.toHaveAttribute("open", "");
+        const summary = details.locator("summary");
+        await expect(summary).toBeVisible();
+        const box = await details.boundingBox();
+        expect(box, `${width}px: collapsed explanation is laid out`).not.toBeNull();
+        expect(box!.height, `${width}px: closed explanation remains compact`).toBeLessThanOrEqual(44);
+        await summary.click();
+        await expect(details).toHaveAttribute("open", "");
+        await expect(details.locator("p").first()).toBeVisible();
+        await summary.click();
+        await expect(details).not.toHaveAttribute("open", "");
+      }
+      await expect(card).toBeVisible();
+      await testInfo.attach(`adaptive-settings-${width}px`, {
+        body: await card.screenshot(),
+        contentType: "image/png",
+      });
+    }
   });
 });
 
