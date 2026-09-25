@@ -412,7 +412,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
       preferredSide: "buy",
     });
     expect(assessment.result.buy?.ladder).toHaveLength(5);
-    expect(assessment.result.sell?.ladder).toHaveLength(1);
+    expect(assessment.result.sell).toBeNull();
+    expect(assessment.sideEvaluations.sell.status).toBe("not_aligned");
     expect(assessment.result.buy?.totalLots).toBeGreaterThan(0.9);
     expect(assessment.result.buy?.ladder.every((level) => level.lot <= 0.9)).toBe(true);
     expect(assessment.result.buy?.ladder[1]).toMatchObject({
@@ -440,7 +441,85 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(assessment.result.valid).toBe(true);
     expect(assessment.decision.preferredSide).toBe("sell");
     expect(assessment.result.sell?.ladder).toHaveLength(5);
-    expect(assessment.result.buy?.ladder).toHaveLength(1);
+    expect(assessment.result.buy).toBeNull();
+    expect(assessment.sideEvaluations.buy.status).toBe("not_aligned");
+  });
+
+  it("accepts the aligned side independently when the opposite saved Stop Loss is financially unsafe", () => {
+    const assessment = buildRecommendation({
+      tradePlan: {
+        ...TRADE_PLAN,
+        sell: { ...TRADE_PLAN.sell, stopLoss: "10000" },
+      },
+    });
+
+    expect(assessment.result.valid).toBe(true);
+    expect(assessment.result.buy?.ladder.length).toBeGreaterThan(0);
+    expect(assessment.result.sell).toBeNull();
+    expect(assessment.decision.preferredSide).toBe("buy");
+    expect(assessment.sideEvaluations.buy.status).toBe("viable");
+    expect(assessment.sideEvaluations.sell.status).toBe("not_aligned");
+    expect(assessment.sideEvaluations.sell.conditionalPlan).toBeNull();
+    expect(assessment.sideEvaluations.sell.diagnostic?.riskShortfall).toBeGreaterThan(0);
+  });
+
+  it("shows conditional minimum-lot numbers for a geometrically valid but directionally disallowed side", () => {
+    const assessment = buildRecommendation();
+    const sellDiagnostic = assessment.sideEvaluations.sell.diagnostic;
+
+    expect(assessment.result.sell).toBeNull();
+    expect(assessment.sideEvaluations.sell.status).toBe("not_aligned");
+    expect(sellDiagnostic).toMatchObject({
+      lot: 0.1,
+      marginRequired: 100,
+      riskAtStop: 11,
+      fundsRequiredAtStop: 111,
+      effectiveLossBudget: 250,
+      blocker: "direction",
+      nextAction: "wait",
+    });
+    const conditionalPlan = assessment.sideEvaluations.sell.conditionalPlan;
+    expect(conditionalPlan?.ladder.length).toBeGreaterThan(0);
+    expect(conditionalPlan?.totalFundsAtStop).toBeLessThanOrEqual(5_000);
+    expect(conditionalPlan?.estimatedCycleLoss).toBeLessThanOrEqual(250);
+  });
+
+  it("leaves minimum-lot diagnostics unavailable when saved side prices are incomplete", () => {
+    const assessment = buildRecommendation({
+      tradePlan: {
+        ...TRADE_PLAN,
+        sell: { ...TRADE_PLAN.sell, entryZone: "not available" },
+      },
+    });
+
+    expect(assessment.sideEvaluations.sell).toEqual({
+      status: "unavailable",
+      diagnostic: null,
+      conditionalPlan: null,
+    });
+  });
+
+  it("reports minimum-lot margin and actual final-SL risk when no safe side fits", () => {
+    const assessment = buildRecommendation({
+      availableMargin: 105,
+      maximumLoss: 100,
+      checkpointPrices: {},
+    });
+    const diagnostic = assessment.sideEvaluations.buy.diagnostic;
+
+    expect(assessment.result.valid).toBe(false);
+    expect(assessment.recommendation).toBeNull();
+    expect(diagnostic).toMatchObject({
+      lot: 0.1,
+      marginRequired: 100,
+      riskAtStop: 11,
+      fundsRequiredAtStop: 111,
+      effectiveLossBudget: 50,
+      marginShortfall: 6,
+      riskShortfall: 0,
+      blocker: "margin",
+      nextAction: "funds",
+    });
   });
 
   it("applies Model C risk utilization and whole-plan layer allocation", () => {
@@ -728,8 +807,10 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
       },
     });
 
-    expect(assessment.result.buy?.rejectedLadder[0]?.rejectReason).toBe("analysis_limit");
-    expect(assessment.result.buy?.rejectedLadder[0]?.financialAlternative).toBeNull();
+    expect(assessment.result.valid).toBe(false);
+    expect(assessment.sideEvaluations.buy.status).toBe("not_aligned");
+    expect(assessment.sideEvaluations.buy.conditionalPlan?.rejectedLadder[0]?.rejectReason).toBe("analysis_limit");
+    expect(assessment.sideEvaluations.buy.conditionalPlan?.rejectedLadder[0]?.financialAlternative).toBeNull();
   });
 
   it("bounds additions and accepts a valid Regular tier plan without a 50-lot source cap", () => {
@@ -868,7 +949,8 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
 
     expect(assessment.result.valid).toBe(true);
     expect(assessment.result.buy?.entry).toBe(2302);
-    expect(assessment.result.sell?.entry).toBe(2300);
+    expect(assessment.result.sell).toBeNull();
+    expect(assessment.sideEvaluations.sell.status).toBe("not_aligned");
   });
 
   it("uses real chart swing points only inside the saved entry-to-stop path", () => {
@@ -916,17 +998,45 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
 
     expect(assessment.recommendation?.levels).toBe(1);
     expect(assessment.result.buy?.ladder.map((level) => level.price)).toEqual([2301, 2300]);
-    expect(assessment.result.sell?.ladder.map((level) => level.price)).toEqual([2301]);
+    expect(assessment.result.sell).toBeNull();
   });
 
-  it("fails closed to entry-only when required analysis context is missing", () => {
+  it("keeps both sides conditional and unselected when required analysis context is missing", () => {
     const assessment = buildRecommendation({
       context: { ...SUPPORTIVE_CONTEXT, fundamentalContext: undefined },
     });
 
-    expect(assessment.recommendation?.levels).toBe(0);
+    expect(assessment.result.valid).toBe(false);
+    expect(assessment.recommendation).toBeNull();
     expect(assessment.decision.posture).toBe("entry_only");
+    expect(assessment.decision.preferredSide).toBe("none");
     expect(assessment.decision.reasonCodes).toContain("context_unavailable");
+    expect(assessment.result.buy).toBeNull();
+    expect(assessment.result.sell).toBeNull();
+    expect(assessment.sideEvaluations.buy.status).toBe("not_aligned");
+    expect(assessment.sideEvaluations.sell.status).toBe("not_aligned");
+    expect(assessment.sideEvaluations.buy.conditionalPlan?.ladder).toHaveLength(1);
+    expect(assessment.sideEvaluations.sell.conditionalPlan?.ladder).toHaveLength(1);
+  });
+
+  it("does not promote the saved preferred side when current analysis bias is neutral", () => {
+    const assessment = buildRecommendation({
+      tradePlan: { ...TRADE_PLAN, preferredSide: "buy" },
+      context: { ...SUPPORTIVE_CONTEXT, tradingBias: "neutral" },
+    });
+
+    expect(assessment.result.valid).toBe(false);
+    expect(assessment.recommendation).toBeNull();
+    expect(assessment.decision).toMatchObject({
+      posture: "entry_only",
+      preferredSide: "none",
+    });
+    expect(assessment.result.buy).toBeNull();
+    expect(assessment.result.sell).toBeNull();
+    expect(assessment.sideEvaluations.buy.status).toBe("not_aligned");
+    expect(assessment.sideEvaluations.sell.status).toBe("not_aligned");
+    expect(assessment.sideEvaluations.buy.conditionalPlan?.ladder).toHaveLength(1);
+    expect(assessment.sideEvaluations.sell.conditionalPlan?.ladder).toHaveLength(1);
   });
 
   it("keeps supported layers while applying a soft risk warning", () => {

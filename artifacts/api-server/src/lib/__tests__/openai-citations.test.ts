@@ -217,6 +217,7 @@ describe("generateAnalysis — hard grounding gate", () => {
           newsItems: [newsItem("Gold rallies on Fed pause")],
           calendarEvents: [calEvent("FOMC statement", "USD")],
         },
+        2305,
       ),
     ).rejects.toThrow(/grounding failed/i);
 

@@ -88,6 +88,10 @@ function TradePlanCard({ side, data, label, colors, t }: {
 }) {
   if (!data) return null;
   const accentColor = side === "buy" ? colors.bullish : colors.bearish;
+  const isMissing = (val?: string | null) => !val || /^(?:n\/a|na|—|-)$/i.test(val.trim());
+  const pending = [data.entryZone, data.stopLoss, data.takeProfit1, data.takeProfit2]
+    .some((val) => isMissing(val) || /\b(menunggu|tunggu|belum|pending|wait for)\b/i.test(val ?? ""));
+  const displayLevel = (val?: string | null) => isMissing(val) ? t.analysis.pending_level : val;
 
   return (
     <View
@@ -103,6 +107,11 @@ function TradePlanCard({ side, data, label, colors, t }: {
       <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: accentColor, marginBottom: 10 }}>
         {label}
       </Text>
+      {pending ? (
+        <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground, marginBottom: 8 }}>
+          {t.analysis.pending_guidance}
+        </Text>
+      ) : null}
       {[
         { key: t.analysis.entry, val: data.entryZone },
         { key: t.analysis.stop_loss, val: data.stopLoss },
@@ -110,14 +119,13 @@ function TradePlanCard({ side, data, label, colors, t }: {
         { key: t.analysis.tp2, val: data.takeProfit2 },
         { key: t.analysis.rr, val: data.riskRewardRatio },
       ]
-        .filter((r) => r.val)
         .map(({ key, val }) => (
           <View
             key={key}
             style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 6, gap: 8 }}
           >
             <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.mutedForeground, flexShrink: 1 }}>{key}</Text>
-            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.foreground, flex: 1, textAlign: "right", minWidth: 100 }}>{val}</Text>
+            <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.foreground, flex: 1, textAlign: "right", minWidth: 100 }}>{displayLevel(val)}</Text>
           </View>
         ))}
       {data.rationale ? (

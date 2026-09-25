@@ -721,8 +721,9 @@ function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
 function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: string; t: T }) {
   const [copied, setCopied] = useState<"buy" | "sell" | null>(null);
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
+  const isUnavailable = (raw: string): boolean => /^(?:n\/a|na|—|-)$/i.test(raw.trim());
   const unavailableLevel = (raw: string, replacement: string): string =>
-    isFastIntraday && /^(?:n\/a|na|—|-)$/i.test(raw.trim()) ? replacement : raw;
+    isUnavailable(raw) ? replacement : raw;
   const displaySide = (side: TradeSide): TradeSide => ({
     ...side,
     entryZone: unavailableLevel(side.entryZone, t.analysis_detail.fast_plan_entry_pending),
@@ -761,6 +762,13 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
 
   const renderSide = (side: TradeSide, kind: "buy" | "sell") => {
     const visibleSide = displaySide(side);
+    const priceFields = [side.entryZone, side.stopLoss, side.takeProfit1, side.takeProfit2];
+    const pending = priceFields.some((raw) =>
+      isUnavailable(raw) ||
+      !/\d/.test(raw) ||
+      /\b(menunggu|tunggu|belum|pending|await|wait for|not available)\b/i.test(raw),
+    ) || isUnavailable(side.riskRewardRatio) ||
+      !/\b1:\d+(?:\.\d+)?\b/.test(side.riskRewardRatio);
     const accent =
       kind === "buy"
         ? "border-l-emerald-500 dark:border-l-emerald-400"
@@ -788,6 +796,11 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
             {kind === "buy" ? t.analysis_detail.trade_plan_side_buy : t.analysis_detail.trade_plan_side_sell}
           </h4>
         </div>
+        {pending && (
+          <p className="mt-1.5 text-[11px] leading-snug text-amber-700 dark:text-amber-300" data-testid={`trade-plan-${kind}-pending`}>
+            {t.analysis_detail.fast_plan_wait_title} {t.analysis_detail.fast_plan_entry_pending}
+          </p>
+        )}
         <dl className="mt-1.5 grid grid-cols-2 gap-x-2.5 gap-y-1 text-[11px]">
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_entry}</dt>
           <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-entry`}>{visibleSide.entryZone}</dd>
@@ -805,7 +818,7 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
             {side.rationale}
           </ExpandableExplanation>
         </div>
-        <button
+        {!pending && <button
           type="button"
           onClick={() => copyLevels(side, kind)}
           className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
@@ -816,7 +829,7 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
           ) : (
             <><Copy className="w-3 h-3" /><span>{t.analysis_detail.copy_levels}</span></>
           )}
-        </button>
+        </button>}
       </div>
     );
   };

@@ -273,6 +273,57 @@ afterEach(() => {
 });
 
 describe("AnalysisDetailPage: happy-path render", () => {
+  it("explains a legacy 1h side without levels instead of offering n/a as a plan", async () => {
+    installFetchMock([getAnalysisHandler({
+      body: {
+        ...ANALYSIS_PAYLOAD,
+        tradePlan: {
+          ...TRADE_PLAN,
+          preferredSide: "sell",
+          buy: {
+            entryZone: "tunggu konfirmasi ulang",
+            stopLoss: "n/a",
+            takeProfit1: "n/a",
+            takeProfit2: "n/a",
+            riskRewardRatio: "n/a",
+            rationale: "Level untuk skenario ini tidak konsisten dari AI.",
+          },
+        },
+      },
+    }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    const card = await screen.findByTestId("card-trade-plan");
+    expect(card).not.toHaveTextContent(/\bn\/a\b/i);
+    expect(screen.getByTestId("trade-plan-buy-pending")).toHaveTextContent(/No entry yet/i);
+    expect(screen.queryByTestId("button-copy-levels-buy")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-copy-levels-sell")).toBeInTheDocument();
+    expect(screen.getByTestId("trade-plan-sell-sl")).toHaveTextContent("2,312.00");
+  });
+
+  it("does not offer Copy for a new pending-quote plan without numeric levels", async () => {
+    const pendingSide = {
+      entryZone: "Menunggu quote dan konfirmasi struktur; level belum dapat ditentukan",
+      stopLoss: "Menunggu quote dan konfirmasi struktur; level belum dapat ditentukan",
+      takeProfit1: "Menunggu quote dan konfirmasi struktur; level belum dapat ditentukan",
+      takeProfit2: "Menunggu quote dan konfirmasi struktur; level belum dapat ditentukan",
+      riskRewardRatio: "Belum dihitung — entry masih pending",
+      rationale: "Tunggu harga terkini untuk memvalidasi struktur.",
+    };
+    installFetchMock([getAnalysisHandler({
+      body: { ...ANALYSIS_PAYLOAD, tradePlan: { ...TRADE_PLAN, preferredSide: "wait", buy: pendingSide, sell: pendingSide } },
+    }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    await screen.findByTestId("card-trade-plan");
+    expect(screen.getByTestId("trade-plan-buy-pending")).toBeInTheDocument();
+    expect(screen.getByTestId("trade-plan-sell-pending")).toBeInTheDocument();
+    expect(screen.queryByTestId("button-copy-levels-buy")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-copy-levels-sell")).not.toBeInTheDocument();
+  });
+
   it("keeps invalidation and risk cues visible while opening one compact detail at a time", async () => {
     installFetchMock([getAnalysisHandler({
       body: {
@@ -704,25 +755,25 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const sellPlan = screen.getByTestId("adaptive-plan-sell");
     expect(screen.getByTestId("adaptive-direction-sell")).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByTestId("adaptive-plan-buy")).not.toBeInTheDocument();
-    expect(sellPlan.textContent).toMatch(/initial entry only/i);
+    expect(sellPlan.textContent).toMatch(/Conditional scenario · not actionable now/i);
     expect(sellPlan.textContent).toMatch(/One final Stop Loss/i);
     expect(sellPlan.textContent).toMatch(/\$/);
+    expect(screen.getByText(/not actionable now.*copying as an entry plan is disabled/i)).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-tp-profit-sell-1")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect(screen.getByTestId("adaptive-tp-profit-sell-2")).toHaveTextContent(/Estimated profit.*\+\$/i);
     expect((screen.getByTestId("adaptive-risk-details") as HTMLDetailsElement).open).toBe(false);
 
+    expect(screen.getByTestId("button-copy-adaptive-plan")).toBeDisabled();
     fireEvent.click(screen.getByTestId("button-copy-adaptive-plan"));
-    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
-    const sellCopy = String(writeText.mock.calls[1]?.[0]);
-    expect(sellCopy).toContain("Direction: SELL");
-    expect(sellCopy).not.toEqual(buyCopy);
+    expect(writeText).toHaveBeenCalledTimes(1);
 
+    fireEvent.click(screen.getByTestId("adaptive-direction-buy"));
     writeText.mockRejectedValueOnce(new Error("permission denied"));
     fireEvent.click(screen.getByTestId("button-copy-adaptive-plan"));
     expect(await screen.findByTestId("adaptive-copy-status")).toHaveTextContent("Copy failed");
     expect(execCommand).toHaveBeenCalledWith("copy");
 
-    const storedKey = `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`;
+    const storedKey = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(storedKey)).not.toBeNull());
     expect(JSON.parse(localStorage.getItem(storedKey)!).form.accountTier).toBe("micro");
 
@@ -812,7 +863,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     };
     const timers = vi.spyOn(window, "setTimeout");
     installFetchMock([
-      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN, fundamentalContext: { newsItems: [], calendarEvents: [] } } }),
       feedbackHandler(), candles, standardRulesHandler(),
     ]);
     const { Wrapper } = makeWrapper();
@@ -825,7 +876,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
     const standardPlan = screen.getByTestId("card-trade-plan").textContent;
-    const storedKey = `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`;
+    const storedKey = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
     expect(localStorage.getItem(storedKey)).not.toBeNull();
 
     const expiry = timers.mock.calls.find(([callback, delay]) =>
@@ -936,7 +987,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
   it("requires a new analysis after expiry rather than retrying the candle feed", async () => {
     const { calls } = installFetchMock([standardRulesHandler()]);
     const { Wrapper } = makeWrapper();
-    const key = `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
     localStorage.setItem(key, JSON.stringify({ recommendation: { valid: true } }));
     render(
       <Wrapper>
@@ -964,7 +1015,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       return jsonResponse(candleSnapshot(fetchedAt));
     };
     installFetchMock([
-      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN, fundamentalContext: { newsItems: [], calendarEvents: [] } } }),
       feedbackHandler(), candles, standardRulesHandler(),
     ]);
     const first = makeWrapper();
@@ -974,7 +1025,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
     expect(localStorage.getItem(key)).not.toBeNull();
 
     view.unmount();
@@ -1038,7 +1089,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -1063,7 +1114,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("does not restore an adaptive plan saved under the cumulative-cap v12 namespace", async () => {
@@ -1126,7 +1177,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Balanced style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v21:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v22:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {

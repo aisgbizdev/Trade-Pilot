@@ -214,9 +214,10 @@ describe("POST /api/analyses with timeframe 30m", () => {
         ]),
       }),
       // Seventh arg is the live-price anchor. The live feed isn't mocked
-      // here so getLivePriceFor resolves to null (instrument not in the
-      // cached payload), which is the expected "no live anchor" value.
+      // here so getLivePriceFor resolves to null; the selected timeframe
+      // indicator close is passed separately as the eighth arg.
       null,
+      1.0852,
     );
 
     // The persisted snapshot is also returned in the response so the

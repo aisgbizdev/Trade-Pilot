@@ -137,6 +137,8 @@ const id: Locale = {
     main_scenario: "Skenario Utama",
     alt_scenario: "Skenario Alternatif",
     trade_plan: "Trade Plan",
+    pending_level: "Tunggu konfirmasi level",
+    pending_guidance: "Skenario bersyarat — level transaksi belum tervalidasi.",
     buy: "Buy",
     sell: "Sell",
     entry: "Entry",

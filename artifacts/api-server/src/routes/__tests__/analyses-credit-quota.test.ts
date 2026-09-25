@@ -117,7 +117,7 @@ afterAll(async () => {
 });
 
 describe("POST /analyses credit fallback", () => {
-  it("rejects an unavailable Adaptive feed before any AI cost or credit spend", async () => {
+  it("still delivers the core analysis when optional Adaptive candles are unavailable", async () => {
     const user = await createZeroQuotaUser();
     await seedCredits(user.id, 2);
     vi.mocked(checkAdaptiveReadiness).mockResolvedValueOnce("feed_unavailable");
@@ -128,13 +128,13 @@ describe("POST /analyses credit fallback", () => {
       .set("Authorization", `Bearer ${user.token}`)
       .send({ instrument: "XAU/USD", timeframe: "1h", mode: "beginner" });
 
-    expect(res.status).toBe(503);
-    expect(res.body.error).toMatch(/tidak ada kredit dipotong/i);
-    expect(vi.mocked(generateAnalysis).mock.calls.length).toBe(aiCallsBefore);
+    expect(res.status).toBe(201);
+    expect(res.body.creditConsumed).toBe(true);
+    expect(vi.mocked(generateAnalysis).mock.calls.length).toBe(aiCallsBefore + 1);
     const [balance] = await db.select().from(creditBalances).where(eq(creditBalances.userId, user.id));
-    expect(balance?.balance).toBe(2);
-    expect(await db.select().from(analyses).where(eq(analyses.userId, user.id))).toHaveLength(0);
-    expect(await db.select().from(creditLedger).where(eq(creditLedger.userId, user.id))).toHaveLength(1);
+    expect(balance?.balance).toBe(1);
+    expect(await db.select().from(analyses).where(eq(analyses.userId, user.id))).toHaveLength(1);
+    expect(await db.select().from(creditLedger).where(eq(creditLedger.userId, user.id))).toHaveLength(2);
   });
 
   it("charges once when Adaptive inputs are ready, without repeating the preflight on a saved result", async () => {

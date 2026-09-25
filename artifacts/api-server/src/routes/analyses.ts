@@ -18,7 +18,7 @@ import {
   PRIMARY_INSTRUMENTS,
 } from "@workspace/instrument-taxonomy";
 import { estimateCostUsd } from "../lib/model-pricing";
-import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
+import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe, type IndicatorTimeframe } from "../lib/historical";
 import { checkAdaptiveReadiness, offersAdaptive } from "../lib/adaptive-readiness";
 import { getLivePriceFor } from "../lib/live-prices";
 import {
@@ -597,19 +597,15 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
 
-  // A paid analysis must not spend OpenAI tokens if its advertised Adaptive
-  // inputs are already unavailable. This uses the same cached candle source as
-  // the detail view; it never generates another AI analysis on retry.
+  // Adaptive is an optional sizing layer. A temporary candle outage must not
+  // prevent the core market analysis from being created. The detail view keeps
+  // Adaptive unavailable until it can obtain a genuinely fresh snapshot.
   if (offersAdaptive(instrument)) {
     const readiness = isSupportedIndicatorTimeframe(timeframe)
       ? await checkAdaptiveReadiness(instrument, timeframe)
       : "feed_unavailable";
     if (readiness !== "ready") {
-      logger.warn({ instrument, timeframe, reason: readiness }, "[analyses] Adaptive preflight unavailable");
-      res.status(503).set("Retry-After", "5").json({
-        error: "Data Adaptive belum siap. Coba lagi sebentar; analisis belum dibuat dan tidak ada kredit dipotong.",
-      });
-      return;
+      logger.warn({ instrument, timeframe, reason: readiness }, "[analyses] Adaptive snapshot unavailable; continuing core analysis");
     }
   }
 
@@ -617,6 +613,19 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   // Indicators only support daily/weekly today; skip them for intraday timeframes
   // so the AI is not fed stale daily data labelled as e.g. "1h".
   const indicatorTf = isSupportedIndicatorTimeframe(timeframe) ? timeframe : null;
+  const timeframeOrder: IndicatorTimeframe[] = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"];
+  const selectedIndex = indicatorTf ? timeframeOrder.indexOf(indicatorTf) : -1;
+  const comparisonTimeframes = selectedIndex < 0
+    ? []
+    : [timeframeOrder[selectedIndex - 1], timeframeOrder[selectedIndex + 1]]
+        .filter((tf): tf is IndicatorTimeframe => tf !== undefined);
+  // Comparisons are advisory context, not a substitute for the selected
+  // timeframe's actual execution levels. Keep optional feeds bounded so they
+  // cannot indefinitely delay a paid user's answer.
+  const boundedIndicators = (tf: IndicatorTimeframe) => Promise.race([
+    getIndicators(instrument, tf),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+  ]);
   const contextParts: string[] = [];
   // Snapshot the overall buy/sell/neutral tally that drives the Market Context
   // Summary card on the Analyze tab so the saved analysis page can render the
@@ -635,6 +644,9 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   // doesn't cover this instrument (futures-only); the model then anchors to
   // the indicator block's last close as before.
   let livePrice: number | null = null;
+  // Close from the user's selected timeframe only. Comparison timeframe
+  // summaries are context, never an execution-price anchor.
+  let selectedTimeframePrice: number | null = null;
   // Bound the live-price lookup: the upstream forex fetch has no timeout of
   // its own, so without this a stalled feed could hang the whole analysis.
   // Best-effort — null just means "no live anchor", same as no coverage.
@@ -647,8 +659,12 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       livePrice = p;
     }),
     indicatorTf
-      ? getIndicators(instrument, indicatorTf).then((ind) => {
+      ? boundedIndicators(indicatorTf).then((ind) => {
           if (ind) {
+            selectedTimeframePrice =
+              Number.isFinite(ind.lastClose) && ind.lastClose > 0
+                ? ind.lastClose
+                : null;
             contextParts.push(formatIndicatorsForPrompt(ind, indicatorTf));
             techCounts = {
               buy: ind.overallSummary.buy,
@@ -658,6 +674,17 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           }
         })
       : Promise.resolve(),
+    Promise.all(comparisonTimeframes.map(async (tf) => {
+      const ind = await boundedIndicators(tf).catch(() => null);
+      return ind ? formatIndicatorsForPrompt(ind, tf) : null;
+    })).then((comparisons) => {
+      const available = comparisons.filter((item): item is string => item !== null);
+      if (available.length) {
+        contextParts.push(
+          `TIMEFRAME PEMBANDING (untuk menilai arah dan timing; level entry/SL/TP harus sesuai timeframe utama ${timeframe}):\n${available.join("\n")}`,
+        );
+      }
+    }),
     isFastIntraday
       ? Promise.resolve()
       : getRelevantNews(instrument).then((news) => {
@@ -747,6 +774,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         indicatorContext,
         fundamentalSnapshot,
         livePrice,
+        selectedTimeframePrice,
       ));
     } catch (aiErr) {
       logger.error(
@@ -833,6 +861,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           indicatorContext,
           fundamentalSnapshot,
           livePrice,
+          selectedTimeframePrice,
         ));
       } catch (aiErr) {
         logger.error(
@@ -911,24 +940,27 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
   const completeTitle = "Analisis Selesai";
   const completeMessage = `Analisis ${instrument} (${timeframe}, ${typedMode === "beginner" ? "Pemula" : "Pro"}) telah selesai diproses.`;
-  await createNotification(
-    req.userId!,
-    {
-      title: completeTitle,
-      message: completeMessage,
-      type: "info",
-      // Tapping the notification (in-app or native push) opens this exact
-      // analysis; the client ownership-checks the id before navigating.
-      actionType: "open_analysis",
-      actionId: String(analysis.id),
-    },
-    {
-      title: "Analisis Selesai ✅",
-      body: `${instrument} (${timeframe}) — buka TradePilot untuk lihat hasilnya.`,
-      url: `/analyses/${analysis.id}`,
-      tag: `analysis-${analysis.id}`,
-    },
-  );
+  try {
+    await createNotification(
+      req.userId!,
+      {
+        title: completeTitle,
+        message: completeMessage,
+        type: "info",
+        // Tapping the notification opens this saved analysis.
+        actionType: "open_analysis",
+        actionId: String(analysis.id),
+      },
+      {
+        title: "Analisis Selesai ✅",
+        body: `${instrument} (${timeframe}) — buka TradePilot untuk lihat hasilnya.`,
+        url: `/analyses/${analysis.id}`,
+        tag: `analysis-${analysis.id}`,
+      },
+    );
+  } catch (err) {
+    logger.warn({ err, analysisId: analysis.id }, "Analysis saved but completion notification failed");
+  }
 
   // Auto-arm price alerts for the AI's trade plan when the user already
   // has push enabled — they shouldn't need a second tap to opt in for

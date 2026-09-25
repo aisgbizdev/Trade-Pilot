@@ -29,3 +29,4 @@
 - [Managed workflow port collisions](managed-workflow-port-collisions.md) — a surviving shell-launched server can occupy an artifact's managed port; identify its process group before stopping it.
 - [Adaptive availability without added cost](adaptive-availability-policy.md) — recover on the saved analysis using existing fresh feeds; fail closed rather than buying uptime or replaying AI.
 - [Information density on web and PWA](information-density-web-pwa.md) — optional explanations start closed on desktop and mobile; safety-critical status stays visible.
+- [Two-sided market advisor](two-sided-market-advisor.md) — rank the strongest setup, but give fair conditional Buy and Sell guidance so the user can choose.

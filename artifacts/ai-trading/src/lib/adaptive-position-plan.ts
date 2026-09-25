@@ -143,6 +143,25 @@ export interface AdaptivePlanDecision {
   reasonCodes: AdaptivePlanReasonCode[];
 }
 
+export interface AdaptiveMinimumLotDiagnostic {
+  lot: number;
+  marginRequired: number;
+  riskAtStop: number;
+  fundsRequiredAtStop: number;
+  effectiveLossBudget: number;
+  marginShortfall: number;
+  riskShortfall: number;
+  maximumLossShortfall: number;
+  blocker: "margin" | "risk" | "margin_and_risk" | "analysis" | "direction";
+  nextAction: "funds" | "loss_budget" | "funds_and_loss_budget" | "reanalysis" | "wait";
+}
+
+export interface AdaptiveSideEvaluation {
+  status: "viable" | "blocked" | "not_aligned" | "unavailable";
+  diagnostic: AdaptiveMinimumLotDiagnostic | null;
+  conditionalPlan: AdaptiveSidePositionPlan | null;
+}
+
 export interface AdaptiveRule {
   market: AdaptiveMarket;
   label: string;
@@ -261,6 +280,7 @@ export interface AdaptivePlanRecommendation {
   } | null;
   context: AdaptivePlanContext;
   decision: AdaptivePlanDecision;
+  sideEvaluations: { buy: AdaptiveSideEvaluation; sell: AdaptiveSideEvaluation };
   volatilityDiagnostic: AdaptiveVolatilityDiagnostic;
   candleAlternative: AdaptiveCandleAlternative;
 }
@@ -1354,6 +1374,10 @@ export function buildAdaptivePlanRecommendation({
       usableRiskBudget,
     ) : { status: "needs_reanalysis" as const, reason: "Instrument rule is unavailable." };
   const reasonCodes: AdaptivePlanReasonCode[] = [];
+  const unavailableSides = {
+    buy: { status: "unavailable" as const, diagnostic: null, conditionalPlan: null },
+    sell: { status: "unavailable" as const, diagnostic: null, conditionalPlan: null },
+  };
   let posture: AdaptivePlanPosture = "scaling_allowed";
   let preferredSide: AdaptivePlanDecision["preferredSide"] = "both";
   if (
@@ -1381,6 +1405,7 @@ export function buildAdaptivePlanRecommendation({
       recommendation: null,
       context,
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+      sideEvaluations: unavailableSides,
       volatilityDiagnostic,
       candleAlternative: { status: "needs_reanalysis", reason: "Account inputs are incomplete." },
     };
@@ -1399,6 +1424,7 @@ export function buildAdaptivePlanRecommendation({
       recommendation: null,
       context,
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+      sideEvaluations: unavailableSides,
       volatilityDiagnostic,
       candleAlternative: { status: "needs_reanalysis", reason: "Instrument rule is unavailable." },
     };
@@ -1417,6 +1443,7 @@ export function buildAdaptivePlanRecommendation({
       recommendation: null,
       context,
       decision: { posture: "entry_only", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+      sideEvaluations: unavailableSides,
       volatilityDiagnostic,
       candleAlternative: { status: "needs_reanalysis", reason: "Maximum loss exceeds available trading funds." },
     };
@@ -1435,6 +1462,7 @@ export function buildAdaptivePlanRecommendation({
       recommendation: null,
       context,
       decision: { posture: "not_recommended", preferredSide: "none", reasonCodes: ["context_unavailable"] },
+      sideEvaluations: unavailableSides,
       volatilityDiagnostic,
       candleAlternative: { status: "needs_reanalysis", reason: "The saved analysis is expired or lacks validUntil." },
     };
@@ -1480,9 +1508,9 @@ export function buildAdaptivePlanRecommendation({
     let hasDirectionalConflict = Boolean(marketDirection && biasDirection && marketDirection !== biasDirection);
 
     if (context.tradingBias === "neutral") {
-      preferredSide = tradePlan.preferredSide === "buy" || tradePlan.preferredSide === "sell"
-        ? tradePlan.preferredSide
-        : "none";
+      preferredSide = "none";
+      posture = "entry_only";
+      levels = 0;
       reasonCodes.push("neutral_bias");
     } else if (biasDirection === "buy") {
       preferredSide = "buy";
@@ -1494,7 +1522,12 @@ export function buildAdaptivePlanRecommendation({
 
     if (context.marketCondition === "ranging") reasonCodes.push("range_supports_scaling");
 
-    if (context.technical && !hasDirectionalConflict) {
+    if (context.technical && context.tradingBias === "neutral") {
+      const { buy, sell } = context.technical;
+      if (buy > sell) reasonCodes.push("technical_supports_buy");
+      else if (sell > buy) reasonCodes.push("technical_supports_sell");
+      else reasonCodes.push("technical_mixed");
+    } else if (context.technical && !hasDirectionalConflict) {
       const { buy, sell } = context.technical;
       const totalDirectional = buy + sell;
       const imbalance = totalDirectional > 0 ? Math.abs(buy - sell) / totalDirectional : 0;
@@ -1562,185 +1595,238 @@ export function buildAdaptivePlanRecommendation({
   const usableRiskBudget = maximumLoss * riskUtilizationRate;
 
   const marginBudget = availableMargin;
-  const buyPlanAvailable = sideGeometryError("buy", tradePlan.buy) === null;
-  const sellPlanAvailable = sideGeometryError("sell", tradePlan.sell) === null;
-
-  // Allocate the usable loss budget across the complete plan first. Lot sizes
-  // are then derived from each layer's exact distance to the final Stop Loss.
-  // If margin is tighter than risk, scale the allocation down before removing
-  // an analysis-supported layer.
-  const levelCandidates = Array.from(
-    { length: levels + 1 },
-    (_, index) => levels - index,
-  );
-  for (const candidateLevels of levelCandidates) {
-    for (let scalePercent = 100; scalePercent >= 1; scalePercent -= 1) {
-      const candidateRiskBudget = usableRiskBudget * (scalePercent / 100);
-      const result = buildAdaptivePositionPlan({
-        instrument,
-        tradePlan,
-        standardRule,
-        availableFunds: marginBudget,
-        maximumLoss: candidateRiskBudget,
-        existingExposure,
-        initialLot: rule.minimumLot,
-        accountTier,
-        levels: candidateLevels,
-        sideLevels:
-          preferredSide === "buy"
-            ? { buy: candidateLevels, sell: 0 }
-            : preferredSide === "sell"
-              ? { buy: 0, sell: candidateLevels }
-              : { buy: candidateLevels, sell: candidateLevels },
-        includedSides:
-          preferredSide === "buy"
-            ? { buy: true, sell: sellPlanAvailable }
-            : preferredSide === "sell"
-              ? { buy: buyPlanAvailable, sell: true }
-              : { buy: buyPlanAvailable, sell: sellPlanAvailable },
-        layerLotFactors: layerLotFactors.slice(0, candidateLevels),
-        layerRiskWeights: riskPolicy.layerRiskWeights.slice(0, candidateLevels + 1),
-        checkpointPrices,
-      });
-      if (result.valid) {
-        if (posture === "not_recommended") {
-          const diagnosticRecommendation = {
-            initialLot: result.buy?.ladder[0]?.lot ?? result.sell?.ladder[0]?.lot ?? rule.minimumLot,
-            levels: 0,
-            positions: 1,
-            marginBudget,
-            maximumLoss,
-            usableRiskBudget,
-            riskUtilizationRate,
-            contextRiskMultiplier,
-            unusedRiskBuffer: maximumLoss - usableRiskBudget,
-            riskStyle,
-            lotProfile,
-          };
-          return {
-            result: {
-              ...result,
-              valid: false,
-              errors: [...result.errors, "The technical snapshot conflicts with the market direction."],
-            },
-            recommendation: diagnosticRecommendation,
-            context,
-            decision: { posture, preferredSide, reasonCodes },
-            volatilityDiagnostic,
-            candleAlternative: buildCandleAlternative("none", usableRiskBudget),
-          };
-        }
-        const acceptedLevels = Math.max(
-          preferredSide === "buy" ? (result.buy?.ladder.length ?? 1) - 1 : 0,
-          preferredSide === "sell" ? (result.sell?.ladder.length ?? 1) - 1 : 0,
-          preferredSide === "both"
-            ? Math.max(
-                (result.buy?.ladder.length ?? 1) - 1,
-                (result.sell?.ladder.length ?? 1) - 1,
-              )
-            : 0,
-        );
-        const effectivePosture =
-          acceptedLevels === 0 && posture === "scaling_allowed"
-            ? "entry_only"
-            : posture;
-        const effectiveReasonCodes =
-          acceptedLevels === 0
-            ? reasonCodes.filter((code) => code !== "staged_add_condition")
-            : reasonCodes;
-        const fullCandidate =
-          candidateLevels < requestedLevels
-            ? buildAdaptivePositionPlan({
-                instrument,
-                tradePlan,
-                standardRule,
-                availableFunds: marginBudget,
-                 maximumLoss: usableRiskBudget,
-                existingExposure,
-                 initialLot: rule.minimumLot,
-                accountTier,
-                levels: requestedLevels,
-                sideLevels:
-                  preferredSide === "buy"
-                    ? { buy: requestedLevels, sell: 0 }
-                    : preferredSide === "sell"
-                      ? { buy: 0, sell: requestedLevels }
-                      : { buy: requestedLevels, sell: requestedLevels },
-                includedSides:
-                  preferredSide === "buy"
-                    ? { buy: true, sell: sellPlanAvailable }
-                    : preferredSide === "sell"
-                      ? { buy: buyPlanAvailable, sell: true }
-                      : { buy: buyPlanAvailable, sell: sellPlanAvailable },
-                layerLotFactors,
-                 layerRiskWeights: riskPolicy.layerRiskWeights,
-                checkpointPrices,
-              })
-            : result;
-        return {
-          result: addRejectedCandidates(result, fullCandidate, marginBudget, usableRiskBudget, levels),
-          recommendation: {
-            initialLot: result.buy?.ladder[0]?.lot ?? result.sell?.ladder[0]?.lot ?? rule.minimumLot,
-            levels: acceptedLevels,
-            positions: acceptedLevels + 1,
-            marginBudget,
-            maximumLoss,
-            usableRiskBudget,
-            riskUtilizationRate,
-            contextRiskMultiplier,
-            unusedRiskBuffer: maximumLoss - usableRiskBudget,
-            riskStyle,
-            lotProfile,
-          },
-          context,
-          decision: {
-            posture: effectivePosture,
-            preferredSide,
-            reasonCodes: effectiveReasonCodes,
-          },
-          volatilityDiagnostic,
-          candleAlternative: buildCandleAlternative(preferredSide, usableRiskBudget),
-        };
-      }
-    }
-  }
-
-  const diagnosticResult = buildAdaptivePositionPlan({
+  type Side = "buy" | "sell";
+  type SideResult = { result: AdaptivePositionPlanResult; levels: number; lotProfile: AdaptiveLotProfile } | null;
+  const sideNames: Side[] = ["buy", "sell"];
+  const sideEvaluations: AdaptivePlanRecommendation["sideEvaluations"] = {
+    buy: { status: "unavailable", diagnostic: null, conditionalPlan: null },
+    sell: { status: "unavailable", diagnostic: null, conditionalPlan: null },
+  };
+  const sideResults: Record<Side, SideResult> = { buy: null, sell: null };
+  const sideIsAligned = (side: Side) => preferredSide === side;
+  const buildSideInput = (side: Side, candidateLevels: number, budget: number) => ({
     instrument,
     tradePlan,
     standardRule,
     availableFunds: marginBudget,
-    maximumLoss: usableRiskBudget,
+    maximumLoss: budget,
     existingExposure,
     initialLot: rule.minimumLot,
     accountTier,
-    levels: 0,
-    sideLevels: { buy: 0, sell: 0 },
-    includedSides: { buy: buyPlanAvailable, sell: sellPlanAvailable },
-    layerLotFactors: [],
-    layerRiskWeights: [1],
+    levels: candidateLevels,
+    sideLevels: side === "buy"
+      ? { buy: candidateLevels, sell: 0 }
+      : { buy: 0, sell: candidateLevels },
+    includedSides: side === "buy"
+      ? { buy: true, sell: false }
+      : { buy: false, sell: true },
+    layerLotFactors: layerLotFactors.slice(0, candidateLevels),
+    layerRiskWeights: riskPolicy.layerRiskWeights.slice(0, candidateLevels + 1),
     checkpointPrices,
   });
-  return {
-    result: diagnosticResult,
-    recommendation: diagnosticResult.valid
-      ? {
-          initialLot: rule.minimumLot,
-          levels: 0,
-          positions: 1,
-          marginBudget,
-          maximumLoss,
-          usableRiskBudget,
-          riskUtilizationRate,
-          contextRiskMultiplier,
-          unusedRiskBuffer: maximumLoss - usableRiskBudget,
-          riskStyle,
-          lotProfile,
+
+  for (const side of sideNames) {
+    const geometryError = sideGeometryError(side, tradePlan[side]);
+    if (geometryError) {
+      sideEvaluations[side] = { status: "unavailable", diagnostic: null, conditionalPlan: null };
+      continue;
+    }
+
+    const minimumPlan = buildAdaptivePositionPlan({
+      ...buildSideInput(side, 0, usableRiskBudget),
+      layerLotFactors: [],
+      layerRiskWeights: [],
+    });
+    const minimumSidePlan = minimumPlan[side];
+    if (
+      !minimumSidePlan ||
+      !Number.isFinite(minimumSidePlan.marginRequired) ||
+      minimumSidePlan.marginRequired <= 0 ||
+      !Number.isFinite(minimumSidePlan.estimatedCycleLoss) ||
+      minimumSidePlan.estimatedCycleLoss <= 0 ||
+      !Number.isFinite(minimumSidePlan.totalFundsAtStop)
+    ) {
+      sideEvaluations[side] = { status: "unavailable", diagnostic: null, conditionalPlan: null };
+      continue;
+    }
+    const minMargin = minimumSidePlan.marginRequired;
+    const minRisk = minimumSidePlan.estimatedCycleLoss;
+    const marginShortfall = Math.max(0, minimumSidePlan.totalFundsAtStop - marginBudget);
+    const riskShortfall = Math.max(0, minRisk - usableRiskBudget);
+    const hasAnalysisBlock = posture === "not_recommended" ||
+      reasonCodes.some((code) => ["context_unavailable", "short_timeframe", "high_risk", "volatile_market", "low_confidence", "neutral_bias", "fundamental_high_impact", "directional_conflict"].includes(code));
+    const directionBlock = !sideIsAligned(side) || posture === "not_recommended" || reasonCodes.includes("directional_conflict");
+    const blocker = directionBlock
+      ? "direction" as const
+      : hasAnalysisBlock
+        ? "analysis" as const
+      : marginShortfall > 0 && riskShortfall > 0
+        ? "margin_and_risk" as const
+        : marginShortfall > 0
+          ? "margin" as const
+          : "risk" as const;
+    sideEvaluations[side] = {
+      status: "blocked",
+      conditionalPlan: null,
+      diagnostic: {
+        lot: rule.minimumLot,
+        marginRequired: minMargin,
+        riskAtStop: minRisk,
+        fundsRequiredAtStop: minimumSidePlan.totalFundsAtStop,
+        effectiveLossBudget: usableRiskBudget,
+        marginShortfall,
+        riskShortfall,
+        maximumLossShortfall: Math.max(0, minRisk / riskUtilizationRate - maximumLoss),
+        blocker,
+        nextAction: directionBlock
+          ? "wait"
+          : hasAnalysisBlock
+            ? "reanalysis"
+          : marginShortfall > 0 && riskShortfall > 0
+            ? "funds_and_loss_budget"
+            : marginShortfall > 0
+              ? "funds"
+              : "loss_budget",
+      },
+    };
+
+    if (!sideIsAligned(side)) {
+      let conditionalPlan: AdaptiveSidePositionPlan | null = null;
+      if (posture !== "not_recommended") {
+        const requestedLevels = availableLayerCount(side, tradePlan[side], checkpointPrices, rule.minMovement);
+        const candidates = posture === "entry_only"
+          ? [0]
+          : Array.from({ length: requestedLevels + 1 }, (_, index) => requestedLevels - index);
+        for (const candidateLevels of candidates) {
+          let accepted: AdaptivePositionPlanResult | null = null;
+          for (let scalePercent = 100; scalePercent >= 1; scalePercent -= 1) {
+            const candidate = buildAdaptivePositionPlan(buildSideInput(
+              side,
+              candidateLevels,
+              usableRiskBudget * (scalePercent / 100),
+            ));
+            if (candidate.valid) {
+              accepted = candidate;
+              break;
+            }
+          }
+          if (!accepted) continue;
+          const fullCandidate = candidateLevels < requestedLevels
+            ? buildAdaptivePositionPlan(buildSideInput(side, requestedLevels, usableRiskBudget))
+            : accepted;
+          const withRejected = addRejectedCandidates(accepted, fullCandidate, marginBudget, usableRiskBudget, requestedLevels);
+          conditionalPlan = withRejected[side];
+          break;
         }
-      : null,
+      }
+      sideEvaluations[side] = {
+        ...sideEvaluations[side],
+        status: "not_aligned",
+        conditionalPlan,
+      };
+      continue;
+    }
+    if (!minimumPlan.valid || posture === "not_recommended") continue;
+    const sideRequestedLevels = availableLayerCount(side, tradePlan[side], checkpointPrices, rule.minMovement);
+    const candidates = posture === "entry_only"
+      ? [0]
+      : Array.from({ length: sideRequestedLevels + 1 }, (_, index) => sideRequestedLevels - index);
+    for (const candidateLevels of candidates) {
+      let accepted: AdaptivePositionPlanResult | null = null;
+      for (let scalePercent = 100; scalePercent >= 1; scalePercent -= 1) {
+        const candidate = buildAdaptivePositionPlan(buildSideInput(
+          side,
+          candidateLevels,
+          usableRiskBudget * (scalePercent / 100),
+        ));
+        if (candidate.valid) {
+          accepted = candidate;
+          break;
+        }
+      }
+      if (!accepted) continue;
+      const fullCandidate = candidateLevels < sideRequestedLevels
+        ? buildAdaptivePositionPlan(buildSideInput(side, sideRequestedLevels, usableRiskBudget))
+        : accepted;
+      const withRejected = addRejectedCandidates(accepted, fullCandidate, marginBudget, usableRiskBudget, sideRequestedLevels);
+      sideResults[side] = {
+        result: withRejected,
+        levels: (withRejected[side]?.ladder.length ?? 1) - 1,
+        lotProfile: resolveAdaptiveLotProfile(riskStyle, context, side),
+      };
+      sideEvaluations[side] = { status: "viable", diagnostic: null, conditionalPlan: null };
+      break;
+    }
+  }
+
+  const selectedSide = preferredSide === "buy" || preferredSide === "sell"
+    ? (sideResults[preferredSide] ? preferredSide : null)
+    : null;
+  if (!selectedSide || posture === "not_recommended") {
+    const sideWord = (side: Side) => side === "buy" ? "Buy" : "Sell";
+    const errors = sideNames
+      .filter((side) => sideIsAligned(side) && sideEvaluations[side].status === "blocked")
+      .map((side) => `${sideWord(side)} minimum lot exceeds the effective margin and/or Stop Loss risk budget.`);
+    if (!errors.length) errors.push(
+      posture === "not_recommended"
+        ? "The technical snapshot conflicts with the market direction."
+        : "No directionally supported side has a safe minimum-lot plan.",
+    );
+    return {
+      result: {
+        valid: false,
+        market,
+        rule,
+        errors,
+        assumptions: [],
+        buy: null,
+        sell: null,
+      },
+      recommendation: null,
+      context,
+      decision: { posture: posture === "scaling_allowed" ? "not_recommended" : posture, preferredSide, reasonCodes },
+      sideEvaluations,
+      volatilityDiagnostic,
+      candleAlternative: buildCandleAlternative("none", usableRiskBudget),
+    };
+  }
+
+  const selected = sideResults[selectedSide]!;
+  const acceptedLevels = selected.levels;
+  const effectivePosture = acceptedLevels === 0 && posture === "scaling_allowed" ? "entry_only" : posture;
+  const effectiveReasonCodes = acceptedLevels === 0
+    ? reasonCodes.filter((code) => code !== "staged_add_condition")
+    : reasonCodes;
+  const result: AdaptivePositionPlanResult = {
+    ...selected.result,
+    valid: true,
+    errors: [],
+    buy: sideResults.buy?.result.buy ?? null,
+    sell: sideResults.sell?.result.sell ?? null,
+  };
+  return {
+    result,
+    recommendation: {
+      initialLot: selected.result[selectedSide]?.ladder[0]?.lot ?? rule.minimumLot,
+      levels: acceptedLevels,
+      positions: acceptedLevels + 1,
+      marginBudget,
+      maximumLoss,
+      usableRiskBudget,
+      riskUtilizationRate,
+      contextRiskMultiplier,
+      unusedRiskBuffer: maximumLoss - usableRiskBudget,
+      riskStyle,
+      lotProfile: selected.lotProfile,
+    },
     context,
-    decision: { posture, preferredSide, reasonCodes },
+    decision: {
+      posture: effectivePosture,
+      preferredSide: selectedSide,
+      reasonCodes: effectiveReasonCodes,
+    },
+    sideEvaluations,
     volatilityDiagnostic,
-    candleAlternative: buildCandleAlternative(preferredSide, usableRiskBudget),
+    candleAlternative: buildCandleAlternative(selectedSide, usableRiskBudget),
   };
 }

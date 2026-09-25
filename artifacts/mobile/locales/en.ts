@@ -135,6 +135,8 @@ const en = {
     main_scenario: "Main Scenario",
     alt_scenario: "Alternative Scenario",
     trade_plan: "Trade Plan",
+    pending_level: "Wait for level confirmation",
+    pending_guidance: "Conditional scenario — trade levels are not yet validated.",
     buy: "Buy",
     sell: "Sell",
     entry: "Entry Zone",
