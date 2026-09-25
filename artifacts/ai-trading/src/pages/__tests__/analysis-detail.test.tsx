@@ -1370,6 +1370,85 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-snapshot-all-filled-buy")).toHaveTextContent(/2 posisi/i);
   });
 
+  it.each([
+    { tier: "micro", funds: "50", loss: "40", nextPosition: 3, nextLot: "0.01", riskBlockedLoss: "15" },
+    { tier: "regular", funds: "4000", loss: "3000", nextPosition: 2, nextLot: "1", riskBlockedLoss: "2000" },
+  ] as const)(
+    "only shows the $tier broker-funds alternative while funds are the sole next-layer blocker",
+    async ({ tier, funds, loss, nextPosition, nextLot, riskBlockedLoss }) => {
+      installFetchMock([
+        getAnalysisHandler({
+          body: {
+            ...ANALYSIS_PAYLOAD,
+            tradePlan: TRADE_PLAN,
+            fundamentalContext: { newsItems: [], calendarEvents: [] },
+          },
+        }),
+        feedbackHandler(),
+        standardRulesHandler(),
+      ]);
+      const { Wrapper } = makeWrapper();
+      render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+      const margin = await screen.findByTestId("input-adaptive-available-margin");
+      const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
+      await screen.findByTestId("adaptive-account-rule");
+      fireEvent.click(screen.getByTestId(`button-adaptive-account-${tier}`));
+      fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+      fireEvent.change(margin, { target: { value: funds } });
+      fireEvent.change(maximumLoss, { target: { value: loss } });
+      await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+      fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+
+      expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
+      const nextLayerText = screen.getByTestId("adaptive-next-layer-funds-buy").textContent ?? "";
+      expect(nextLayerText).toMatch(
+        new RegExp(`Position ${nextPosition}.*${nextLot.replace(".", "\\.")} lot: about \\$[\\d,]+ more free broker funds needed to review`),
+      );
+      const extra = Number(nextLayerText.match(/about \$([\d,]+) more free broker funds/)?.[1].replaceAll(",", ""));
+      expect(extra).toBeGreaterThan(0);
+      expect(screen.getByTestId(`adaptive-conditional-buy-${nextPosition - 1}`)).toHaveTextContent(`$${extra}`);
+      expect(screen.getByTestId("adaptive-next-layer-buy")).toHaveTextContent(/not a TradePilot analysis-credit top-up/i);
+      expect(within(screen.getByTestId("adaptive-snapshot-positions-buy")).getAllByTestId(/^adaptive-snapshot-position-buy-\d+$/))
+        .toHaveLength(nextPosition - 1);
+
+      fireEvent.change(maximumLoss, { target: { value: riskBlockedLoss } });
+      fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+      expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
+      expect(screen.queryByTestId("adaptive-next-layer-funds-buy")).not.toBeInTheDocument();
+      expect(screen.getByTestId("adaptive-next-layer-blocked-buy")).toHaveTextContent(/loss limit/i);
+
+      fireEvent.change(maximumLoss, { target: { value: loss } });
+      fireEvent.change(margin, { target: { value: String(Number(funds) + extra) } });
+      fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+      expect(screen.getByTestId(`adaptive-snapshot-position-buy-${nextPosition - 1}`)).toBeInTheDocument();
+      expect(within(screen.getByTestId("adaptive-snapshot-positions-buy")).getAllByTestId(/^adaptive-snapshot-position-buy-\d+$/))
+        .toHaveLength(nextPosition);
+    },
+  );
+
+  it.each([
+    { tier: "micro", funds: "50", loss: "40" },
+    { tier: "regular", funds: "4000", loss: "3000" },
+  ] as const)("does not suggest more broker funds for an unaligned $tier analysis", async ({ tier, funds, loss }) => {
+    installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const margin = await screen.findByTestId("input-adaptive-available-margin");
+    fireEvent.click(screen.getByTestId(`button-adaptive-account-${tier}`));
+    fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+    fireEvent.change(margin, { target: { value: funds } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: loss } });
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Conditional scenario/i);
+    expect(screen.queryByTestId("adaptive-next-layer-funds-buy")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-next-layer-buy")).not.toBeInTheDocument();
+  });
+
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
       `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`,

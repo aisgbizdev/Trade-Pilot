@@ -719,6 +719,69 @@ describe("XAU/USD Micro, Mini, and Regular Adaptive Plan", () => {
     expect(assessment.result.buy?.rejectedLadder.length).toBeGreaterThan(0);
   });
 
+  it.each([
+    { tier: "micro" as const, funds: 50, loss: 40, extraFunds: 10, plannedPositions: 2, nextLot: 0.01 },
+    { tier: "regular" as const, funds: 4_000, loss: 3_000, extraFunds: 100, plannedPositions: 1, nextLot: 1 },
+  ])("calculates the $tier next-layer broker-funds shortfall from margin plus final-SL risk", ({
+    tier, funds, loss, extraFunds, plannedPositions, nextLot,
+  }) => {
+    const current = buildRecommendation({
+      accountTier: tier, availableMargin: funds, maximumLoss: loss, riskStyle: "balanced",
+    });
+    const next = current.result.buy?.rejectedLadder[0];
+    expect(current.result.valid).toBe(true);
+    expect(current.recommendation?.marginBudget).toBe(funds);
+    expect(current.result.buy?.ladder).toHaveLength(plannedPositions);
+    expect(next).toMatchObject({
+      level: plannedPositions,
+      lot: nextLot,
+      rejectReason: "day_margin",
+      financialAlternative: { additionalFundsRequired: extraFunds, additionalLossBudgetRequired: 0 },
+    });
+    expect(next!.cumulativeDayMargin).toBeLessThan(funds);
+    expect(next!.cumulativeFundsAtStop).toBeCloseTo(funds + extraFunds);
+    expect(next!.estimatedRiskToStop).toBeLessThanOrEqual(current.recommendation!.usableRiskBudget);
+
+    const recalculated = buildRecommendation({
+      accountTier: tier, availableMargin: funds + extraFunds, maximumLoss: loss, riskStyle: "balanced",
+    });
+    expect(recalculated.result.valid).toBe(true);
+    expect(recalculated.result.buy?.ladder).toHaveLength(plannedPositions + 1);
+    expect(recalculated.result.buy?.ladder[plannedPositions]).toMatchObject({
+      price: next!.price,
+      lot: nextLot,
+    });
+  });
+
+  it.each(["micro", "regular"] as const)(
+    "keeps $tier analysis and per-position tier guardrails ahead of funding alternatives",
+    (accountTier) => {
+      const unaligned = buildRecommendation({
+        accountTier,
+        availableMargin: 100_000,
+        maximumLoss: 10_000,
+        context: { ...SUPPORTIVE_CONTEXT, fundamentalContext: undefined },
+      });
+      expect(unaligned.sideEvaluations.buy.status).toBe("not_aligned");
+      expect(unaligned.sideEvaluations.buy.conditionalPlan?.rejectedLadder.length).toBeGreaterThan(0);
+      const analysisRejected = unaligned.sideEvaluations.buy.conditionalPlan?.rejectedLadder
+        .filter((level) => level.rejectReason === "analysis_limit");
+      expect(analysisRejected?.length).toBeGreaterThan(0);
+      expect(analysisRejected?.every((level) => level.financialAlternative === null)).toBe(true);
+
+      const funded = buildRecommendation({
+        accountTier, availableMargin: 100_000, maximumLoss: 10_000, riskStyle: "aggressive",
+      });
+      expect(funded.result.valid).toBe(true);
+      expect(funded.result.rule?.maximumLot).toBe(accountTier === "micro" ? 0.09 : null);
+      expect(funded.result.buy?.ladder.every((level) =>
+        funded.result.rule?.maximumLot == null || level.lot <= funded.result.rule.maximumLot
+      )).toBe(true);
+      expect(funded.result.buy?.rejectedLadder.some((level) => level.rejectReason === "tier_limit"))
+        .toBe(false);
+    },
+  );
+
   it("uses all entered funds as the visible budget without a hidden allocation", () => {
     const assessment = buildRecommendation({ availableMargin: 1_234 });
 

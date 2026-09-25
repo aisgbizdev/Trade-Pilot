@@ -28,3 +28,9 @@ The saved AI analysis is the primary product output; the adaptive plan is a seco
 **Why:** Users need a quick, actionable reading without losing the technical/fundamental intelligence that distinguishes Trade Pilot from a standalone lot calculator. Novices should not face a wall of narrative, while professionals must still be able to inspect the full reasoning and all objective alternatives.
 
 **How to apply:** Never let a 3×3 tier/risk comparison dominate the analysis page. Show one active Buy/Sell scenario at a time, keep all explicit combinations accessible, and never let presentation changes alter the saved analysis thesis, TP/SL, or ladder safety rules.
+
+Financial-shortfall tests should separate calculator arithmetic from page presentation. The calculation fixture and live-chart fixture can supply different valid checkpoints, so their next-layer shortfalls need not have the same dollar amount.
+
+**Why:** Assuming identical levels made a correct Micro page calculation look wrong when its current chart placed the next checkpoint at a different price.
+
+**How to apply:** Pin exact tier-specific shortfalls in core tests; in page tests, compare the displayed amount to that page's rejected-candidate breakdown and recalculate with its own displayed funding amount. Do not copy a core fixture's expected price or shortfall into a page test without checking the chart candidates.
