@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Calculator, Check, Copy, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, Check, ChevronDown, ChevronRight, Copy, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -38,6 +38,7 @@ type AdaptiveCopy = Translations["analysis_detail"];
 type AdaptiveRecommendationSummary = NonNullable<AdaptivePlanRecommendation["recommendation"]>;
 type AdaptiveSnapshotBudget = Pick<AdaptiveRecommendationSummary,
   "marginBudget" | "maximumLoss" | "usableRiskBudget" | "riskUtilizationRate" | "unusedRiskBuffer" | "riskStyle">;
+type AdaptiveInsight = "reasoning" | "volatility" | "alternative" | "buy" | "sell";
 
 interface Props {
   analysisId: number;
@@ -714,6 +715,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
   const [activeSide, setActiveSide] = useState<"buy" | "sell" | "none">("none");
+  const [activeInsight, setActiveInsight] = useState<AdaptiveInsight | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
   const [reloadToken, setReloadToken] = useState(0);
   const [analysisExpired, setAnalysisExpired] = useState(false);
@@ -726,6 +728,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     setForm(DEFAULT_FORM);
     setRecommendation(null);
     setActiveSide("none");
+    setActiveInsight(null);
     setCopyStatus("idle");
   }, [analysisId]);
   useEffect(() => {
@@ -971,6 +974,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     });
     setRecommendation(next);
     setActiveSide(preferredAvailableSide(next));
+    setActiveInsight(null);
     localStorage.setItem(storageKey(analysisId), JSON.stringify({
       fingerprint, form, recommendation: next, sourceFetchedAt: chartCandidateState.source.sourceFetchedAt,
     }));
@@ -979,6 +983,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     setForm(DEFAULT_FORM);
     setRecommendation(null);
     setActiveSide("none");
+    setActiveInsight(null);
     localStorage.removeItem(storageKey(analysisId));
   };
   const selected = recommendation?.recommendation;
@@ -1017,6 +1022,16 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const hasConditionalScenarios = recommendation != null &&
     (recommendation.sideEvaluations.buy.conditionalPlan !== null ||
       recommendation.sideEvaluations.sell.conditionalPlan !== null);
+  const showAlternative = recommendation != null && (
+    (recommendation.decision.preferredSide === "buy" && recommendation.volatilityDiagnostic.buyStopLooksTight) ||
+    (recommendation.decision.preferredSide === "sell" && recommendation.volatilityDiagnostic.sellStopLooksTight) ||
+    !recommendation.result.valid
+  );
+  const tightStops = recommendation
+    ? (["buy", "sell"] as const).filter((side) =>
+        recommendation.volatilityDiagnostic[side === "buy" ? "buyStopLooksTight" : "sellStopLooksTight"] &&
+        recommendation.decision.preferredSide === side)
+    : [];
   const directionControl = recommendation &&
     (recommendation.result.buy || recommendation.result.sell ||
       recommendation.sideEvaluations.buy.conditionalPlan || recommendation.sideEvaluations.sell.conditionalPlan) ? (
@@ -1245,8 +1260,70 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {recommendation && (
-          <details className="rounded-md border border-primary/20 bg-primary/[0.03] p-3" data-testid="adaptive-plan-reasoning">
-            <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_reasoning_title}</summary>
+          <div className="space-y-2" data-testid="adaptive-insights">
+            <div className="relative min-w-0">
+              <div role="group" aria-label={copy.adaptive_insights_title} className="flex gap-2 overflow-x-auto overscroll-x-contain pb-2 pr-7 [scrollbar-width:thin] md:flex-wrap md:overflow-visible md:pb-0 md:pr-0">
+                {([
+                  { key: "reasoning", label: copy.adaptive_insight_reasoning, warning: false },
+                  { key: "volatility", label: copy.adaptive_insight_volatility, warning: tightStops.length > 0 || recommendation.volatilityDiagnostic.observedRange == null },
+                  ...(showAlternative ? [{ key: "alternative" as const, label: copy.adaptive_insight_alternative, warning: recommendation.candleAlternative.status !== "available" }] : []),
+                  ...(["buy", "sell"] as const).map((side) => {
+                    const status = recommendation.sideEvaluations[side].status;
+                    return {
+                      key: side,
+                      label: `${side === "buy" ? copy.adaptive_buy : copy.adaptive_sell} · ${copy[`adaptive_insight_${status}`]}`,
+                      warning: status !== "viable",
+                    };
+                  }),
+                ] as { key: AdaptiveInsight; label: string; warning: boolean }[]).map(({ key, label, warning }) => {
+                  const open = activeInsight === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      data-testid={`adaptive-insight-button-${key}`}
+                      aria-expanded={open}
+                      aria-controls={open ? `adaptive-insight-panel-${key}` : undefined}
+                      onClick={() => setActiveInsight(open ? null : key)}
+                      className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                        warning
+                          ? "border-amber-700/50 bg-amber-500/10 text-amber-800 hover:bg-amber-500/20 dark:text-amber-300"
+                          : key === "buy" || key === "sell"
+                            ? "border-emerald-600/40 bg-emerald-500/10 text-emerald-800 hover:bg-emerald-500/20 dark:text-emerald-300"
+                          : "border-border bg-card text-foreground hover:bg-muted"
+                      } ${open ? "ring-1 ring-primary/60 border-primary/70" : ""}`}
+                    >
+                      {warning && <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />}
+                      {label}
+                      {open && <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex w-8 items-center justify-end bg-gradient-to-l from-background via-background/80 to-transparent pb-2 text-muted-foreground md:hidden" aria-hidden="true">
+                <ChevronRight className="h-4 w-4" />
+              </div>
+            </div>
+            {tightStops.map((side) => (
+              <p key={side} className="text-[11px] font-medium text-amber-700 dark:text-amber-300" role="status">
+                {copy.adaptive_volatility_tight_short.replace("{side}", side.toUpperCase())}
+              </p>
+            ))}
+            {recommendation.volatilityDiagnostic.observedRange == null && (
+              <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300" role="status">
+                {copy.adaptive_volatility_unavailable_short}
+              </p>
+            )}
+            {showAlternative && recommendation.candleAlternative.status !== "available" && (
+              <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300" role="status">
+                {copy.adaptive_alternative_unavailable_short}
+              </p>
+            )}
+          </div>
+        )}
+        {recommendation && activeInsight === "reasoning" && (
+          <div id="adaptive-insight-panel-reasoning" role="region" aria-label={copy.adaptive_reasoning_title} className="rounded-md border border-primary/20 bg-primary/[0.03] p-3" data-testid="adaptive-plan-reasoning">
+            <h4 className="text-xs font-bold text-foreground">{copy.adaptive_reasoning_title}</h4>
             <div className="mt-2.5 flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
@@ -1270,14 +1347,13 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 ? copy.adaptive_context_fundamental.replace("{news}", String(recommendation.context.fundamental.newsCount)).replace("{events}", String(recommendation.context.fundamental.eventCount)).replace("{highImpact}", String(recommendation.context.fundamental.highImpactCount))
                 : copy.adaptive_context_fundamental_unavailable}</p>
             </div>
-          </details>
+          </div>
         )}
-        {recommendation && (
-          <div className="rounded-md border border-border p-3 text-[11px] leading-relaxed" data-testid="adaptive-timeframe-volatility">
-            <details>
-              <summary className="cursor-pointer text-xs font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        {recommendation && activeInsight === "volatility" && (
+          <div id="adaptive-insight-panel-volatility" role="region" aria-label={copy.adaptive_volatility_title.replace("{timeframe}", recommendation.context.timeframe ?? "—")} className="rounded-md border border-border p-3 text-[11px] leading-relaxed" data-testid="adaptive-timeframe-volatility">
+              <h4 className="text-xs font-bold text-foreground">
                 {copy.adaptive_volatility_title.replace("{timeframe}", recommendation.context.timeframe ?? "—")}
-              </summary>
+              </h4>
               <div className="mt-2 space-y-1">
             {recommendation.volatilityDiagnostic.observedRange == null ? (
               <p className="text-muted-foreground">{copy.adaptive_volatility_unavailable}</p>
@@ -1294,28 +1370,14 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               </>
             )}
               </div>
-            </details>
-            {recommendation.volatilityDiagnostic.observedRange == null ? (
-              <p className="mt-1 font-medium text-amber-700 dark:text-amber-300">{copy.adaptive_volatility_unavailable_short}</p>
-            ) : (["buy", "sell"] as const).filter((side) => recommendation.volatilityDiagnostic[side === "buy" ? "buyStopLooksTight" : "sellStopLooksTight"] && recommendation.decision.preferredSide === side).map((side) => (
-              <p key={side} className="mt-1 font-medium text-amber-700 dark:text-amber-300">
-                {copy.adaptive_volatility_tight_short.replace("{side}", side.toUpperCase())}
-              </p>
-            ))}
           </div>
         )}
-        {recommendation && (
+        {recommendation && activeInsight === "alternative" && showAlternative && (
           (() => {
-            const preferred = recommendation.decision.preferredSide;
-            const unsuitable = (preferred === "buy" && recommendation.volatilityDiagnostic.buyStopLooksTight) ||
-              (preferred === "sell" && recommendation.volatilityDiagnostic.sellStopLooksTight) ||
-              !recommendation.result.valid;
-            if (!unsuitable) return null;
             const alternative = recommendation.candleAlternative;
             return (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" data-testid="adaptive-alternative">
-                <details>
-                  <summary className="cursor-pointer text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{copy.adaptive_alternative_title}</summary>
+              <div id="adaptive-insight-panel-alternative" role="region" aria-label={copy.adaptive_alternative_title} className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" data-testid="adaptive-alternative">
+                  <h4 className="text-xs font-bold">{copy.adaptive_alternative_title}</h4>
                   <p className="mt-2">{alternative.status === "available"
                   ? copy.adaptive_alternative_basis
                     .replace("{side}", alternative.side.toUpperCase())
@@ -1329,7 +1391,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                     .replace("{profit}", formatMoney(Math.abs(alternative.takeProfit - alternative.entry) * (selectedRule ? selectedRule.contractSize * alternative.lot / selectedRule.minimumLot : 0), lang))
                   : copy.adaptive_alternative_no_levels}</p>
                   <p className="mt-1 font-medium">{copy.adaptive_alternative_unchanged}</p>
-                </details>
                 <p className="mt-1 font-medium">{alternative.status === "available"
                   ? copy.adaptive_alternative_available_short
                   : copy.adaptive_alternative_unavailable_short}</p>
@@ -1337,9 +1398,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             );
           })()
         )}
-        {recommendation && (
-          <div className="space-y-2" data-testid="adaptive-side-evaluations">
-            {(["buy", "sell"] as const).map((side) => {
+        {recommendation && (activeInsight === "buy" || activeInsight === "sell") && (
+          <div id={`adaptive-insight-panel-${activeInsight}`} role="region" aria-label={activeInsight === "buy" ? copy.adaptive_buy : copy.adaptive_sell} data-testid="adaptive-side-evaluations">
+            {([activeInsight] as const).map((side) => {
               const evaluation = recommendation.sideEvaluations[side];
               const sideName = side.toUpperCase();
               const diagnostic = evaluation.diagnostic;

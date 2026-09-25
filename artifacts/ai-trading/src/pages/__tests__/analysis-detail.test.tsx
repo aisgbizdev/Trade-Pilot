@@ -702,18 +702,27 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     const snapshot = await screen.findByTestId("adaptive-plan-snapshot");
-    const reasoning = await screen.findByTestId("adaptive-plan-reasoning") as HTMLDetailsElement;
-    expect(reasoning.open).toBe(false);
-    const volatility = screen.getByTestId("adaptive-timeframe-volatility");
-    const volatilityDetails = volatility.querySelector("details") as HTMLDetailsElement;
-    expect(volatilityDetails.open).toBe(false);
-    fireEvent.click(volatilityDetails.querySelector("summary")!);
-    expect(volatilityDetails.open).toBe(true);
-    expect(volatility).toHaveTextContent(/Typical candle range/i);
-    fireEvent.click(volatilityDetails.querySelector("summary")!);
-    expect(volatilityDetails.open).toBe(false);
-    fireEvent.click(reasoning.querySelector("summary")!);
-    expect(reasoning.open).toBe(true);
+    const whyButton = await screen.findByTestId("adaptive-insight-button-reasoning");
+    const volatilityButton = screen.getByTestId("adaptive-insight-button-volatility");
+    expect(whyButton).toHaveAttribute("aria-expanded", "false");
+    expect(volatilityButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("adaptive-timeframe-volatility")).not.toBeInTheDocument();
+    fireEvent.click(volatilityButton);
+    expect(volatilityButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId("adaptive-timeframe-volatility")).toHaveTextContent(/Typical candle range/i);
+    fireEvent.click(whyButton);
+    expect(volatilityButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("adaptive-timeframe-volatility")).not.toBeInTheDocument();
+    const reasoning = screen.getByTestId("adaptive-plan-reasoning");
+    expect(whyButton).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(whyButton);
+    expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("adaptive-insight-button-buy"));
+    expect(screen.getByTestId("adaptive-side-status-buy")).toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-side-status-sell")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("adaptive-insight-button-sell"));
+    expect(screen.queryByTestId("adaptive-side-status-buy")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-side-status-sell")).toBeInTheDocument();
     const buyPlan = screen.getByTestId("adaptive-plan-buy");
     expect(reasoning.textContent).toMatch(/Why this plan was chosen/i);
     expect(reasoning.textContent).toMatch(/favor the rise scenario/i);
@@ -1042,6 +1051,15 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/Buy and Sell scenarios available/i);
+    const alternativeButton = screen.getByTestId("adaptive-insight-button-alternative");
+    expect(alternativeButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("adaptive-alternative")).not.toBeInTheDocument();
+    fireEvent.click(alternativeButton);
+    expect(screen.getByTestId("adaptive-alternative")).toHaveTextContent(/Alternative/i);
+    fireEvent.click(screen.getByTestId("adaptive-insight-button-buy"));
+    expect(screen.queryByTestId("adaptive-alternative")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-side-status-buy")).toHaveTextContent(/BUY/i);
+    expect(screen.queryByTestId("adaptive-side-status-sell")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Conditional scenario/i);
     expect(screen.getByTestId("adaptive-review-side-sell")).toHaveTextContent(/Conditional scenario/i);
     for (const side of ["buy", "sell"] as const) {
