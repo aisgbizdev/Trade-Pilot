@@ -1161,6 +1161,7 @@ export const id: Translations = {
     adaptive_snapshot_title: "Ringkasan plan",
     adaptive_snapshot_ready: "Ringkasan berdasarkan tipe akun dan gaya risiko yang kamu pilih.",
     adaptive_snapshot_wait: "Angka hanya sebagai acuan—pilihan saat ini diblokir atau masih menunggu konfirmasi.",
+    adaptive_snapshot_unavailable: "Angka aman belum bisa dihitung dari Entry, Stop Loss, aturan trading, serta batas risiko atau dana saat ini. Cek status sisi di atas; jangan gunakan ini sebagai sinyal Entry.",
     adaptive_snapshot_lot_layers: "Lot awal dan posisi tambahan",
     adaptive_snapshot_total_positions: "Total posisi rencana",
     adaptive_snapshot_total_lots: "Total lot rencana",

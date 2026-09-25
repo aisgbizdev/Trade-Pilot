@@ -36,6 +36,8 @@ import {
 
 type AdaptiveCopy = Translations["analysis_detail"];
 type AdaptiveRecommendationSummary = NonNullable<AdaptivePlanRecommendation["recommendation"]>;
+type AdaptiveSnapshotBudget = Pick<AdaptiveRecommendationSummary,
+  "marginBudget" | "maximumLoss" | "usableRiskBudget" | "riskUtilizationRate" | "unusedRiskBuffer" | "riskStyle">;
 
 interface Props {
   analysisId: number;
@@ -486,7 +488,7 @@ function PlanSide({
   lang: "en" | "id";
   copy: AdaptiveCopy;
   decision: AdaptivePlanDecision;
-  summary?: AdaptiveRecommendationSummary | null;
+  summary?: AdaptiveSnapshotBudget | null;
   conditional?: boolean;
 }) {
   const isBuy = plan.side === "buy";
@@ -531,16 +533,16 @@ function PlanSide({
           {plan.ladder.length} {copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
         </Badge>
       </div>
-      {summary && (
+      {(
         <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
           <div>
             <p className="text-xs font-bold text-foreground">{copy.adaptive_snapshot_title}</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {copy.adaptive_snapshot_ready}
+              {conditional ? copy.adaptive_snapshot_wait : copy.adaptive_snapshot_ready}
             </p>
-            <Badge variant="outline" className="mt-2 text-[10px]" data-testid="adaptive-risk-style-active">
+            {summary && <Badge variant="outline" className="mt-2 text-[10px]" data-testid="adaptive-risk-style-active">
               {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
-            </Badge>
+            </Badge>}
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <div className="rounded-md bg-background/70 p-2">
@@ -563,17 +565,17 @@ function PlanSide({
               <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
               <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
             </div>
-              <div className="rounded-md bg-background/70 p-2" data-testid="adaptive-usable-risk-budget">
+              {summary && <div className="rounded-md bg-background/70 p-2" data-testid="adaptive-usable-risk-budget">
                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_usable_risk_budget}</p>
                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.usableRiskBudget, lang)}</p>
                 <p className="mt-1 text-[10px] text-muted-foreground">
                   {copy.adaptive_risk_budget_rate.replace("{rate}", formatNumber(summary.riskUtilizationRate * 100, lang, 0))}
                 </p>
-              </div>
-              <div className="rounded-md bg-background/70 p-2" data-testid="adaptive-unused-risk-buffer">
+              </div>}
+              {summary && <div className="rounded-md bg-background/70 p-2" data-testid="adaptive-unused-risk-buffer">
                 <p className="text-[10px] text-muted-foreground">{copy.adaptive_unused_risk_buffer}</p>
                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.unusedRiskBuffer, lang)}</p>
-              </div>
+              </div>}
             {plan.takeProfit1 != null && (
               <div className="rounded-md bg-background/70 p-2" data-testid={`adaptive-take-profit-${plan.side}-1`}>
                 <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
@@ -987,13 +989,28 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       recommendation.sideEvaluations[activeSide].conditionalPlan ??
       null
     : null;
-  const reviewPlans = recommendation && !recommendation.result.valid
+  const reviewSides = recommendation && !recommendation.result.valid
     ? activeSide === "none"
       ? (["buy", "sell"] as const)
-          .map((side) => recommendation.result[side] ?? recommendation.sideEvaluations[side].conditionalPlan)
-          .filter((plan): plan is AdaptiveSidePositionPlan => plan !== null)
-      : primaryPlan ? [primaryPlan] : []
+      : ([activeSide] as ("buy" | "sell")[])
     : [];
+  const snapshotForSide = (side: "buy" | "sell"): AdaptiveSnapshotBudget | null => {
+    if (!recommendation) return null;
+    if (recommendation.result.valid && recommendation.result[side] && selected) return selected;
+    const budget = recommendation.sideEvaluations[side].diagnostic?.effectiveLossBudget;
+    if (budget == null || !Number.isFinite(budget) || budget <= 0 ||
+        maximumLoss == null || !Number.isFinite(maximumLoss) || maximumLoss <= 0 ||
+        availableMargin == null || !Number.isFinite(availableMargin) || availableMargin <= 0 ||
+        budget > maximumLoss) return null;
+    return {
+      marginBudget: availableMargin,
+      maximumLoss,
+      usableRiskBudget: budget,
+      riskUtilizationRate: budget / maximumLoss,
+      unusedRiskBuffer: maximumLoss - budget,
+      riskStyle: form.riskStyle,
+    };
+  };
   const hasConditionalScenarios = recommendation != null &&
     (recommendation.sideEvaluations.buy.conditionalPlan !== null ||
       recommendation.sideEvaluations.sell.conditionalPlan !== null);
@@ -1382,29 +1399,47 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{hasConditionalScenarios ? copy.adaptive_conditional_overview_help : copy.adaptive_invalid_description}</p>
         </div>}
          {recommendation && !recommendation.result.valid && (
-           (recommendation.result.buy || recommendation.result.sell ||
-             recommendation.sideEvaluations.buy.conditionalPlan || recommendation.sideEvaluations.sell.conditionalPlan) && (
            <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
              <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
              <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_scenarios_review_help}</p>
               {directionControl}
-                {reviewPlans.map((plan) => (
-                  <div key={plan.side} className="space-y-2 rounded-md border border-border p-2.5" data-testid={`adaptive-review-side-${plan.side}`}>
-                    <p className="text-xs font-bold text-foreground">{plan.side === "buy" ? copy.adaptive_buy : copy.adaptive_sell}</p>
-                    <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" role="status">
-                      {copy.adaptive_conditional_not_actionable}
-                    </p>
-                    <PlanSide
-                      plan={plan}
-                      lang={lang}
-                      copy={copy}
-                      decision={recommendation.decision}
-                      conditional
-                    />
-                  </div>
-                ))}
+                 {reviewSides.map((side) => {
+                   const plan = recommendation.result[side] ?? recommendation.sideEvaluations[side].conditionalPlan;
+                   const diagnostic = recommendation.sideEvaluations[side].diagnostic;
+                   const blockedReason = diagnostic?.marginShortfall && diagnostic.riskShortfall
+                     ? copy.adaptive_minimum_blocker_both
+                       .replace("{funds}", formatMoney(diagnostic.marginShortfall, lang))
+                       .replace("{risk}", formatMoney(diagnostic.riskAtStop, lang))
+                       .replace("{budget}", formatMoney(diagnostic.effectiveLossBudget, lang))
+                     : diagnostic?.marginShortfall
+                       ? copy.adaptive_minimum_blocker_margin.replace("{amount}", formatMoney(diagnostic.marginShortfall, lang))
+                       : diagnostic?.riskShortfall
+                         ? copy.adaptive_minimum_blocker_risk
+                           .replace("{risk}", formatMoney(diagnostic.riskAtStop, lang))
+                           .replace("{budget}", formatMoney(diagnostic.effectiveLossBudget, lang))
+                         : copy.adaptive_snapshot_unavailable;
+                   return (
+                     <div key={side} className="space-y-2 rounded-md border border-border p-2.5" data-testid={`adaptive-review-side-${side}`}>
+                       <p className="text-xs font-bold text-foreground">{side === "buy" ? copy.adaptive_buy : copy.adaptive_sell}</p>
+                       <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" role="status">
+                         {copy.adaptive_conditional_not_actionable}
+                       </p>
+                       {plan ? <PlanSide
+                         plan={plan}
+                         lang={lang}
+                         copy={copy}
+                         decision={recommendation.decision}
+                         summary={snapshotForSide(side)}
+                         conditional
+                       /> : <div className="rounded-md border border-border bg-muted/20 p-3 space-y-1" data-testid={`adaptive-plan-snapshot-unavailable-${side}`}>
+                         <p className="text-xs font-bold">{copy.adaptive_snapshot_title}</p>
+                         <p className="text-[11px] text-muted-foreground">{blockedReason}</p>
+                       </div>}
+                     </div>
+                   );
+                 })}
            </div>
-          ))}
+           )}
         {recommendation?.result.valid && (recommendation.result.buy || recommendation.result.sell) && selected && <div className="space-y-3" data-testid="adaptive-plan-valid">
             {directionControl}
            <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1453,7 +1488,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               lang={lang}
               copy={copy}
               decision={recommendation.decision}
-              summary={selected}
+               summary={snapshotForSide(primaryPlan.side)}
               conditional={recommendation.sideEvaluations[primaryPlan.side].status !== "viable"}
             />}
           <details className="rounded-md border border-border p-3" data-testid="adaptive-risk-details">

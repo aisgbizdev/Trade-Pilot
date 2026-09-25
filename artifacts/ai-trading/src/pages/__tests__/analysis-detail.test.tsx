@@ -2,7 +2,7 @@
 // mounts inside `<Layout>`, so the layout-bell poll and the SSE
 // constructor are stubbed in `src/test/setup.ts`.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import AnalysisDetailPage from "../analysis-detail";
 import { AdaptivePositionPlan } from "../../components/adaptive-position-plan";
@@ -716,6 +716,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(snapshot).toHaveTextContent(/Total planned positions/i);
     expect(snapshot).toHaveTextContent(/3 positions/i);
     expect(snapshot).toHaveTextContent(/Total planned lots/i);
+    expect(snapshot).toHaveTextContent(/One final Stop Loss/i);
+    expect(snapshot).toHaveTextContent(/Estimated maximum loss/i);
     expect(snapshot).toHaveTextContent(/0.27 lot/i);
     expect(screen.getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/\$250/);
     expect(screen.getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/50% of loss ceiling/i);
@@ -1026,7 +1028,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       feedbackHandler(), candles, standardRulesHandler(),
     ]);
     const { Wrapper } = makeWrapper();
-    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const view = render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
     fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "20000" } });
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "2000" } });
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
@@ -1035,11 +1037,58 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/Buy and Sell scenarios available/i);
     expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Conditional scenario/i);
     expect(screen.getByTestId("adaptive-review-side-sell")).toHaveTextContent(/Conditional scenario/i);
+    for (const side of ["buy", "sell"] as const) {
+      const review = screen.getByTestId(`adaptive-review-side-${side}`);
+      expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Answer at a glance/i);
+      expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Reference numbers only/i);
+      expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Entry point/i);
+      expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/One final Stop Loss/i);
+      expect(within(review).getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/\$1,000/);
+      expect(within(review).getByTestId("adaptive-unused-risk-buffer")).toHaveTextContent(/\$1,000/);
+      expect(within(review).getByTestId(`adaptive-tp-profit-${side}-1`)).toHaveTextContent(/Estimated profit/i);
+      expect(within(review).getByTestId(`adaptive-tp-profit-${side}-2`)).toHaveTextContent(/Estimated profit/i);
+    }
     expect(screen.queryByTestId("adaptive-plan-valid")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-copy-adaptive-plan")).not.toBeInTheDocument();
+    view.unmount();
+    const restored = makeWrapper();
+    render(<restored.Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></restored.Wrapper>);
+    await waitFor(() => expect(screen.getAllByTestId("adaptive-plan-snapshot")).toHaveLength(2));
+    expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Reference numbers only/i);
+    expect(screen.getByTestId("adaptive-review-side-sell")).toHaveTextContent(/Reference numbers only/i);
     expect(screen.queryByTestId("button-copy-adaptive-plan")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("adaptive-direction-sell"));
     expect(screen.getByTestId("adaptive-review-side-sell")).toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-review-side-buy")).not.toBeInTheDocument();
+  });
+
+  it("does not invent figures for an uncalculable side alongside a conditional plan", async () => {
+    const candles: FetchHandler = (url) =>
+      url.includes("/api/historical/candles") && url.includes("purpose=adaptive-layering")
+        ? jsonResponse(candleSnapshot())
+        : null;
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradingBias: "neutral",
+          marketCondition: "ranging",
+          tradePlan: { ...TRADE_PLAN, sell: { ...TRADE_PLAN.sell, stopLoss: "2,290.00" } },
+          fundamentalContext: { newsItems: [], calendarEvents: [] },
+        },
+      }),
+      feedbackHandler(), candles, standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "20000" } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "2000" } });
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(within(screen.getByTestId("adaptive-review-side-buy")).getByTestId("adaptive-plan-snapshot")).toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-plan-snapshot-unavailable-sell")).toHaveTextContent(/No safe figures can be calculated/i);
+    expect(screen.queryByTestId("adaptive-plan-sell")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-copy-adaptive-plan")).not.toBeInTheDocument();
   });
 
   it("does not restore a saved recommendation against a newer source snapshot with unchanged bars", async () => {

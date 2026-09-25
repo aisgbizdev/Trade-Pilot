@@ -1159,6 +1159,7 @@ export const en = {
     adaptive_snapshot_title: "Answer at a glance",
     adaptive_snapshot_ready: "Your selected tier and risk style, shown as an objective scenario.",
     adaptive_snapshot_wait: "Reference numbers only—the current choice is blocked or waiting for confirmation.",
+    adaptive_snapshot_unavailable: "No safe figures can be calculated from the saved entry, Stop Loss, trading rules and available risk or funds. Review the side status above; do not use this as an entry.",
     adaptive_snapshot_lot_layers: "Initial lot and extra positions",
     adaptive_snapshot_total_positions: "Total planned positions",
     adaptive_snapshot_total_lots: "Total planned lots",
