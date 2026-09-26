@@ -16,6 +16,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+const { toastSpy } = vi.hoisted(() => ({ toastSpy: vi.fn() }));
+vi.mock("@/hooks/use-toast", () => ({
+  useToast: () => ({ toast: toastSpy, dismiss: vi.fn(), toasts: [] }),
+  toast: toastSpy,
+}));
+
 import ProfilePage from "../profile";
 import {
   TEST_USER,
@@ -25,8 +31,17 @@ import {
   type FetchHandler,
 } from "./test-helpers";
 
-function profileHandlers(opts: { updatedUser?: typeof TEST_USER }): FetchHandler[] {
+function profileHandlers(opts: { updatedUser?: typeof TEST_USER; balanceHandler?: () => Response | Promise<Response> }): FetchHandler[] {
   return [
+    (url) => url.includes("/api/topups/balance")
+      ? opts.balanceHandler?.() ?? jsonResponse({ balance: 12 })
+      : null,
+    (url) => url.includes("/api/progression/summary")
+      ? jsonResponse({ level: 1, rank: "Beginner", masteryLevel: 0, totalXp: 0 })
+      : null,
+    (url) => url.includes("/api/ticker-news")
+      ? jsonResponse({ articles: [], total: 0 })
+      : null,
     (url, init) => {
       const method = (init?.method ?? "GET").toUpperCase();
       if (method !== "PATCH") return null;
@@ -62,6 +77,7 @@ function profileHandlers(opts: { updatedUser?: typeof TEST_USER }): FetchHandler
 beforeEach(() => {
   localStorage.clear();
   window.history.replaceState({}, "", "/profile");
+  toastSpy.mockClear();
 });
 
 afterEach(() => {
@@ -108,6 +124,9 @@ describe("ProfilePage: happy-path render", () => {
     expect(settings).toContainElement(screen.getByTestId("button-toggle-security-section"));
     expect(settings).toContainElement(screen.getByTestId("button-go-my-alerts"));
     expect(settings).toContainElement(screen.getByTestId("button-go-notification-settings"));
+    expect(screen.getByTestId("button-go-my-alerts")).toHaveTextContent("View and manage your price alerts");
+    expect(screen.getByTestId("button-go-notification-settings")).toHaveTextContent("Choose push, notification types");
+    expect(await screen.findByTestId("badge-credit-balance")).toHaveTextContent("12");
 
     // Logout button is rendered at the bottom of the page.
     expect(screen.getByTestId("button-logout")).toBeInTheDocument();
@@ -196,5 +215,78 @@ describe("ProfilePage: user actions", () => {
       const payload = patched?.body ? JSON.parse(patched.body) : null;
       expect(payload?.displayName).toBe(NEW_NAME);
     });
+  });
+
+  it("keeps the entered name editable and reports a failed save", async () => {
+    installFetchMock([
+      (url, init) => url.includes("/api/auth/profile") && init?.method === "PATCH"
+        ? jsonResponse({ error: "Unavailable" }, 503)
+        : null,
+      ...profileHandlers({}),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><ProfilePage /></Wrapper>);
+    await screen.findByText(TEST_USER.displayName);
+    fireEvent.click(screen.getByTestId("button-edit-name"));
+    fireEvent.change(screen.getByTestId("input-display-name"), { target: { value: "New trader" } });
+    fireEvent.click(screen.getByTestId("button-save-name"));
+    await waitFor(() => expect(toastSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Couldn't update name. Please try again.", variant: "destructive" }),
+    ));
+    expect(screen.getByTestId("input-display-name")).toHaveValue("New trader");
+    expect(screen.queryByTestId("button-edit-name")).not.toBeInTheDocument();
+  });
+
+  it("restores the previous theme and reports a failed save", async () => {
+    const { calls } = installFetchMock([
+      (url, init) => url.includes("/api/auth/profile") && init?.method === "PATCH"
+        ? jsonResponse({ error: "Unavailable" }, 503)
+        : null,
+      ...profileHandlers({}),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><ProfilePage /></Wrapper>);
+    fireEvent.click(screen.getByTestId("button-theme-light"));
+    await waitFor(() => expect(toastSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Couldn't save theme. Display restored.", variant: "destructive" }),
+    ));
+    expect(screen.getByTestId("button-theme-dark")).toHaveClass("bg-primary");
+    expect(localStorage.getItem("test-theme")).toBe("dark");
+    expect(calls.find((c) => c.method === "PATCH")?.body).toContain('"themePreference":"light"');
+  });
+
+  it("confirms a successfully saved theme", async () => {
+    const { calls } = installFetchMock(profileHandlers({}));
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><ProfilePage /></Wrapper>);
+    fireEvent.click(screen.getByTestId("button-theme-light"));
+    await waitFor(() => expect(toastSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Theme saved" }),
+    ));
+    expect(screen.getByTestId("button-theme-light")).toHaveClass("bg-primary");
+    expect(localStorage.getItem("test-theme")).toBe("light");
+    expect(calls.find((c) => c.method === "PATCH")?.body).toContain('"themePreference":"light"');
+  });
+
+  it("shows loading and a real zero balance as distinct states", async () => {
+    let resolveBalance!: (response: Response) => void;
+    const pendingBalance = new Promise<Response>((resolve) => { resolveBalance = resolve; });
+    installFetchMock(profileHandlers({ balanceHandler: () => pendingBalance }));
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><ProfilePage /></Wrapper>);
+    expect(screen.getByTestId("credit-balance-status")).toHaveTextContent("Loading balance");
+    expect(screen.queryByTestId("badge-credit-balance")).not.toBeInTheDocument();
+    await act(async () => { resolveBalance(jsonResponse({ balance: 0 })); });
+    expect(await screen.findByTestId("badge-credit-balance")).toHaveTextContent("0");
+    expect(screen.queryByTestId("credit-balance-status")).not.toBeInTheDocument();
+  });
+
+  it("does not show zero when balance loading fails", async () => {
+    installFetchMock(profileHandlers({ balanceHandler: () => jsonResponse({ error: "Unavailable" }, 503) }));
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><ProfilePage /></Wrapper>);
+    await waitFor(() => expect(screen.getByTestId("credit-balance-status")).toHaveTextContent("Balance unavailable"));
+    expect(screen.queryByTestId("badge-credit-balance")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-go-topup")).toBeInTheDocument();
   });
 });

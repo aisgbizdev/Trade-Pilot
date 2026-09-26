@@ -651,6 +651,8 @@ export const en = {
   profile: {
     title: "Profile",
     credit_topup_nav_label: "Analysis Credits",
+    credit_balance_loading: "Loading balance…",
+    credit_balance_unavailable: "Balance unavailable",
     role_super_admin: "Super Admin",
     role_admin: "Admin",
     role_user: "User",
@@ -678,6 +680,9 @@ export const en = {
     delete_account_confirm_button: "Permanently Delete",
     delete_account_error_generic: "Could not delete your account. Please try again.",
     name_updated: "Name updated",
+    name_update_failed: "Couldn't update name. Please try again.",
+    theme_updated: "Theme saved",
+    theme_update_failed: "Couldn't save theme. Display restored.",
     avatar_change: "Change photo",
     avatar_remove: "Remove photo",
     avatar_uploading: "Uploading…",
@@ -1716,8 +1721,9 @@ export const en = {
     disclaimer: "Educational content, not financial advice. Habits matter more than any single trade.",
   },
   profile_extra: {
+    alerts_link_subtitle: "View and manage your price alerts.",
     notifications_link_title: "Notification Settings",
-    notifications_link_subtitle: "Push, alert types, market sessions, daily summary, guardrails.",
+    notifications_link_subtitle: "Choose push, notification types, and daily summaries.",
   },
   legal: {
     privacy_link: "Privacy Policy",

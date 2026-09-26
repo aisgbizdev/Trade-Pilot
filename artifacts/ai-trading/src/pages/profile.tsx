@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, Trash2, KeyRound, Wallet } from "lucide-react";
+import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, BellRing, Trash2, KeyRound, Wallet } from "lucide-react";
 import { avatarSrc, uploadAvatar, validateAvatarFile } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,7 @@ export default function ProfilePage() {
 
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.displayName ?? "");
+  const [themeSaving, setThemeSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarUrl = avatarSrc(user?.avatarUrl);
@@ -122,19 +123,35 @@ export default function ProfilePage() {
   const [showSecAnswer, setShowSecAnswer] = useState(false);
 
   const handleThemeToggle = async (th: "light" | "dark") => {
+    if (th === theme || themeSaving || updateProfile.isPending) return;
+    const previousTheme = theme;
     setTheme(th);
-    await updateProfile.mutateAsync({ data: { themePreference: th } });
+    setThemeSaving(true);
+    try {
+      await updateProfile.mutateAsync({ data: { themePreference: th } });
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      toast({ title: t.profile.theme_updated });
+    } catch {
+      setTheme(previousTheme);
+      toast({ title: t.profile.theme_update_failed, variant: "destructive" });
+    } finally {
+      setThemeSaving(false);
+    }
   };
 
   const { data: progressionSummary } = useGetProgressionSummary();
-  const { data: creditBalanceData } = useGetCreditBalance({ query: { queryKey: getGetCreditBalanceQueryKey() } });
+  const creditBalance = useGetCreditBalance({ query: { queryKey: getGetCreditBalanceQueryKey() } });
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
-    await updateProfile.mutateAsync({ data: { displayName: newName.trim() } });
-    queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-    setEditingName(false);
-    toast({ title: t.profile.name_updated });
+    try {
+      await updateProfile.mutateAsync({ data: { displayName: newName.trim() } });
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      setEditingName(false);
+      toast({ title: t.profile.name_updated });
+    } catch {
+      toast({ title: t.profile.name_update_failed, variant: "destructive" });
+    }
   };
 
   const handleChangePassword = async () => {
@@ -271,9 +288,10 @@ export default function ProfilePage() {
                       size="sm"
                       className="h-9 px-4 shrink-0"
                       onClick={handleSaveName}
-                      disabled={updateProfile.isPending}
+                      disabled={updateProfile.isPending || !newName.trim()}
                       data-testid="button-save-name"
                     >
+                      {updateProfile.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" aria-hidden="true" />}
                       {t.common.save}
                     </Button>
                   </div>
@@ -349,13 +367,14 @@ export default function ProfilePage() {
           <div className="contents">
             <Card className="p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h3 className="text-sm font-semibold text-foreground">{t.profile.theme_label}</h3>
-              <div className="inline-flex self-start rounded-xl border border-border/60 bg-muted/25 p-1" data-testid="theme-segmented-control">
+              <div className="inline-flex self-start items-center rounded-xl border border-border/60 bg-muted/25 p-1" data-testid="theme-segmented-control" aria-busy={themeSaving}>
                 <button
                   type="button"
                   onClick={() => handleThemeToggle("light")}
+                  disabled={themeSaving || updateProfile.isPending}
                   data-testid="button-theme-light"
                   className={cn(
-                    "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
                     theme === "light"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -367,9 +386,10 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => handleThemeToggle("dark")}
+                  disabled={themeSaving || updateProfile.isPending}
                   data-testid="button-theme-dark"
                   className={cn(
-                    "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
                     theme === "dark"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -544,8 +564,11 @@ export default function ProfilePage() {
                 onClick={() => setLocation("/my-alerts")}
                 data-testid="button-go-my-alerts"
               >
-                <Bell className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="flex-1 text-sm font-medium text-foreground">{t.alerts.page_title}</span>
+                 <BellRing className="w-4 h-4 text-muted-foreground shrink-0" />
+                 <span className="flex-1 min-w-0">
+                   <span className="block text-sm font-medium text-foreground">{t.alerts.page_title}</span>
+                   <span className="block text-xs leading-relaxed text-muted-foreground">{t.profile_extra.alerts_link_subtitle}</span>
+                 </span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
                <div>
@@ -558,10 +581,10 @@ export default function ProfilePage() {
                 <Bell className="w-4 h-4 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{t.profile_extra.notifications_link_title}</p>
+                   <p className="text-xs leading-relaxed text-muted-foreground">{t.profile_extra.notifications_link_subtitle}</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
-               <ExpandableExplanation inline className="px-3.5 pb-2">{t.profile_extra.notifications_link_subtitle}</ExpandableExplanation>
                </div>
               <button
                 type="button"
@@ -570,10 +593,19 @@ export default function ProfilePage() {
                 data-testid="button-go-topup"
               >
                 <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="flex-1 text-sm font-medium text-foreground">{t.profile.credit_topup_nav_label}</span>
-                 <Badge variant="secondary" className="text-xs px-1.5 py-0 mr-1" data-testid="badge-credit-balance">
-                  {creditBalanceData?.balance ?? 0}
-                </Badge>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{t.profile.credit_topup_nav_label}</span>
+                  {!creditBalance.isSuccess && (
+                    <span className="block text-xs leading-relaxed text-muted-foreground" role="status" data-testid="credit-balance-status">
+                      {creditBalance.isError ? t.profile.credit_balance_unavailable : t.profile.credit_balance_loading}
+                    </span>
+                  )}
+                </span>
+                {creditBalance.isSuccess && (
+                  <Badge variant="secondary" className="text-xs px-1.5 py-0 mr-1" data-testid="badge-credit-balance">
+                    {creditBalance.data.balance}
+                  </Badge>
+                )}
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
             </Card>

@@ -653,6 +653,8 @@ export const id: Translations = {
   profile: {
     title: "Profil",
     credit_topup_nav_label: "Kredit Analisis",
+    credit_balance_loading: "Memuat saldo…",
+    credit_balance_unavailable: "Saldo belum tersedia",
     role_super_admin: "Super Admin",
     role_admin: "Admin",
     role_user: "Pengguna",
@@ -680,6 +682,9 @@ export const id: Translations = {
     delete_account_confirm_button: "Hapus Permanen",
     delete_account_error_generic: "Gagal menghapus akun. Silakan coba lagi.",
     name_updated: "Nama berhasil diperbarui",
+    name_update_failed: "Gagal memperbarui nama. Coba lagi.",
+    theme_updated: "Tema berhasil disimpan",
+    theme_update_failed: "Gagal menyimpan tema. Tampilan dikembalikan.",
     avatar_change: "Ganti foto",
     avatar_remove: "Hapus foto",
     avatar_uploading: "Mengunggah…",
@@ -1718,8 +1723,9 @@ export const id: Translations = {
     disclaimer: "Konten edukasi, bukan saran finansial. Kebiasaan lebih penting daripada satu trade apa pun.",
   },
   profile_extra: {
+    alerts_link_subtitle: "Lihat dan kelola alert harga yang kamu buat.",
     notifications_link_title: "Pengaturan Notifikasi",
-    notifications_link_subtitle: "Push, jenis alert, sesi pasar, ringkasan harian, guardrail.",
+    notifications_link_subtitle: "Atur push, jenis notifikasi, dan ringkasan harian.",
   },
   legal: {
     privacy_link: "Kebijakan Privasi",
