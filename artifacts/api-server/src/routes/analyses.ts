@@ -46,7 +46,7 @@ import { resetDormancyStreak } from "../lib/dormancy";
 import { detectGuardrailSignals, GUARDRAIL_KINDS, type GuardrailKind } from "../lib/anti-pattern";
 import { guardrailEvents } from "@workspace/db/schema";
 import { z } from "zod";
-import { awardProgression, revokeProgressionEvidence, riskWaitSourceEventId } from "../lib/progression";
+import { awardProgression, riskWaitSourceEventId } from "../lib/progression";
 import {
   applyCreditLedgerEntry,
   consumeFreeTimeframeSwitch,
@@ -1502,8 +1502,7 @@ router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res)
       .set({ feedbackType, outcome: outcome ?? null, note: note ?? null })
       .where(eq(feedback.id, existing[0].id))
       .returning();
-    if (typeof note === "string" && note.trim().length >= 40) void awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(updated.id), qualityScore: 100, metadata: { analysisId, feedbackId: updated.id } });
-    else void revokeProgressionEvidence(req.userId!, "analysis_evaluation", String(updated.id), "Evaluation no longer meets minimum quality");
+    await awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(updated.id), qualityScore: 100, metadata: { analysisId, feedbackId: updated.id } });
     res.json(updated);
     return;
   }
@@ -1518,7 +1517,7 @@ router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res)
       note: note ?? null,
     })
     .returning();
-  if (typeof note === "string" && note.trim().length >= 40) void awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(newFeedback.id), qualityScore: 100, metadata: { analysisId, feedbackId: newFeedback.id } });
+  await awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(newFeedback.id), qualityScore: 100, metadata: { analysisId, feedbackId: newFeedback.id } });
   res.status(201).json(newFeedback);
 });
 

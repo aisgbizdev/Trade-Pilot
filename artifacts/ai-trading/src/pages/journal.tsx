@@ -33,6 +33,7 @@ import {
   useDeleteJournalEntry,
   getListJournalEntriesQueryKey,
   getGetJournalStatsQueryKey,
+  getGetProgressionSummaryQueryKey,
   type JournalEntry,
   type ListJournalEntriesParams,
   type ListJournalEntriesOutcome,
@@ -151,6 +152,9 @@ export default function JournalPage() {
           });
           queryClient.invalidateQueries({
             queryKey: getGetJournalStatsQueryKey(),
+          });
+          queryClient.invalidateQueries({
+            queryKey: getGetProgressionSummaryQueryKey(),
           });
         },
         onError: () => {

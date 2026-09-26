@@ -1,7 +1,15 @@
 import { ProgressionEmblem } from "@/components/ProgressionEmblem";
 import { AchievementBadge } from "@/components/AchievementBadge";
+import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
+import {
+  decideProgressionLevelUp,
+  parseProgressionLevelCheckpoint,
+  progressionLevelStorageKey,
+} from "@/lib/progression-level-up";
+import { PROGRESSION_XP_SOURCES } from "@/lib/progression-help";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import {
   useGetProgressionCatalog,
@@ -9,9 +17,10 @@ import {
   useGetProgressionSummary,
 } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -73,14 +82,48 @@ function isRankKey(value: string): value is RankKey {
 export default function ProgressionScreen() {
   const colors = useColors();
   const { t, lang } = useLang();
+  const { user } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("overview");
+  const [showLevelingDetails, setShowLevelingDetails] = useState(false);
+  const [celebratedLevel, setCelebratedLevel] = useState<number | null>(null);
+  const [levelStorageFailed, setLevelStorageFailed] = useState(false);
+  const persistenceQueue = useRef<Promise<void>>(Promise.resolve());
   const summaryQuery = useGetProgressionSummary();
   const catalogQuery = useGetProgressionCatalog();
   const historyQuery = useGetProgressionHistory();
   const loading = summaryQuery.isLoading || catalogQuery.isLoading || historyQuery.isLoading;
   const failed = summaryQuery.isError || catalogQuery.isError || historyQuery.isError;
+
+  useEffect(() => {
+    const summary = summaryQuery.data;
+    if (user?.id == null || !summary) return;
+
+    let active = true;
+    const operation = persistenceQueue.current.then(async () => {
+      const storageKey = progressionLevelStorageKey(user.id);
+      const previous = parseProgressionLevelCheckpoint(
+        await AsyncStorage.getItem(storageKey),
+      );
+      const decision = decideProgressionLevelUp(previous, {
+        level: summary.level,
+        totalXp: summary.totalXp,
+      });
+      await AsyncStorage.setItem(storageKey, JSON.stringify(decision.checkpoint));
+      if (active && decision.celebrationLevel !== null) {
+        setCelebratedLevel(decision.celebrationLevel);
+      }
+      if (active) setLevelStorageFailed(false);
+    }).catch(() => {
+      if (active) setLevelStorageFailed(true);
+    });
+    persistenceQueue.current = operation;
+
+    return () => {
+      active = false;
+    };
+  }, [summaryQuery.data?.level, summaryQuery.data?.totalXp, user?.id]);
 
   const retry = () => {
     void Promise.all([
@@ -147,6 +190,38 @@ export default function ProgressionScreen() {
     nextText: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 11 },
     track: { height: 8, width: "100%", borderRadius: 4, backgroundColor: colors.muted, overflow: "hidden", marginTop: 7 },
     fill: { height: "100%", borderRadius: 4, backgroundColor: colors.primary },
+    levelingToggle: {
+      width: "100%",
+      minHeight: 44,
+      marginTop: 7,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    levelingIcon: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 14,
+      backgroundColor: colors.muted,
+    },
+    levelingCopy: { flex: 1, minWidth: 0 },
+    levelingTitle: { color: colors.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 },
+    levelingDetail: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 2 },
+    levelingRules: {
+      width: "100%",
+      gap: 9,
+      marginTop: 5,
+      paddingTop: 11,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+    },
+    levelingRule: { flexDirection: "row", alignItems: "flex-start", gap: 9 },
+    levelingRuleText: { flex: 1, color: colors.foreground, fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16 },
+    levelingRewards: { alignItems: "flex-end", minWidth: 74 },
+    levelingReward: { color: colors.primary, fontFamily: "Inter_700Bold", fontSize: 11 },
+    levelingCap: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 9, marginTop: 2 },
     streakRow: { flexDirection: "row", width: "100%", gap: 10, marginTop: 16, flexWrap: "wrap" },
     streak: { flex: 1, minWidth: 120, backgroundColor: colors.muted, borderRadius: colors.radius, padding: 12 },
     streakLabel: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 10 },
@@ -196,6 +271,35 @@ export default function ProgressionScreen() {
     retryText: { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 },
     allButton: { minHeight: 44, justifyContent: "center", alignItems: "center" },
     allText: { color: colors.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 },
+    levelModalOverlay: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      backgroundColor: "rgba(0,0,0,0.58)",
+    },
+    levelModalCard: {
+      width: "100%",
+      maxWidth: 360,
+      alignItems: "center",
+      padding: 24,
+      borderRadius: colors.radius,
+      backgroundColor: colors.card,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+    },
+    levelModalClose: { position: "absolute", top: 8, right: 8, width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+    levelModalIcon: {
+      width: 58,
+      height: 58,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 29,
+      backgroundColor: colors.muted,
+      marginTop: 8,
+    },
+    levelModalTitle: { color: colors.foreground, fontFamily: "Inter_700Bold", fontSize: 22, textAlign: "center", marginTop: 16 },
+    levelModalMessage: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 8 },
   });
 
   const header = (
@@ -342,6 +446,47 @@ export default function ProgressionScreen() {
           >
             <View style={[styles.fill, { width: `${progress * 100}%` }]} />
           </View>
+          <Pressable
+            testID="progression-leveling-help-toggle"
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showLevelingDetails }}
+            accessibilityLabel={t.progression.leveling_title}
+            onPress={() => setShowLevelingDetails((expanded) => !expanded)}
+            style={({ pressed }) => [styles.levelingToggle, { opacity: pressed ? 0.65 : 1 }]}
+          >
+            <View style={styles.levelingIcon}>
+              <Feather name="trending-up" size={15} color={colors.primary} />
+            </View>
+            <View style={styles.levelingCopy}>
+              <Text style={styles.levelingTitle}>{t.progression.leveling_title}</Text>
+              <Text style={styles.levelingDetail}>
+                {t.progression.leveling_remaining.replace("{xp}", remaining.toLocaleString())}
+              </Text>
+            </View>
+            <Feather
+              name={showLevelingDetails ? "chevron-up" : "chevron-down"}
+              size={18}
+              color={colors.mutedForeground}
+            />
+          </Pressable>
+          {showLevelingDetails ? (
+            <View style={styles.levelingRules} testID="progression-leveling-help-details">
+              {PROGRESSION_XP_SOURCES.map(({ copyKey, xp, dailyCap }) => (
+                <View key={copyKey} style={styles.levelingRule}>
+                  <Feather name="check" size={14} color={colors.primary} />
+                  <Text style={styles.levelingRuleText}>{t.progression[copyKey]}</Text>
+                  <View style={styles.levelingRewards}>
+                    <Text style={styles.levelingReward}>
+                      {t.progression.leveling_reward.replace("{xp}", String(xp))}
+                    </Text>
+                    <Text style={styles.levelingCap}>
+                      {t.progression.leveling_daily_cap.replace("{count}", String(dailyCap))}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
           <View style={styles.streakRow}>
             <View style={styles.streak}>
               <Text style={styles.streakLabel}>{t.progression.current_streak}</Text>
@@ -400,6 +545,40 @@ export default function ProgressionScreen() {
           <View style={styles.card}>{renderHistory()}</View>
         ) : null}
       </ScrollView>
+      {levelStorageFailed ? (
+        <Text accessibilityRole="alert" style={styles.error}>{t.progression.level_up_storage_error}</Text>
+      ) : null}
+      <Modal
+        visible={celebratedLevel !== null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setCelebratedLevel(null)}
+      >
+        <View style={styles.levelModalOverlay}>
+          <View style={styles.levelModalCard} accessibilityViewIsModal>
+            <Pressable
+              testID="progression-level-up-close"
+              accessibilityRole="button"
+              accessibilityLabel={t.progression.level_up_close}
+              hitSlop={8}
+              onPress={() => setCelebratedLevel(null)}
+              style={({ pressed }) => [styles.levelModalClose, { opacity: pressed ? 0.5 : 1 }]}
+            >
+              <Feather name="x" size={22} color={colors.mutedForeground} />
+            </Pressable>
+            <View style={styles.levelModalIcon}>
+              <Feather name="award" size={28} color={colors.primary} />
+            </View>
+            <Text style={styles.levelModalTitle}>{t.progression.level_up_title}</Text>
+            {celebratedLevel !== null ? (
+              <Text style={styles.levelModalMessage}>
+                {t.progression.level_up_message.replace("{n}", String(celebratedLevel))}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

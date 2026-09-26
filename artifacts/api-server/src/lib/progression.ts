@@ -7,7 +7,7 @@ import { createNotification } from "./create-notification";
 import { withinQuietHours } from "./notification-guards";
 import { createHmac } from "node:crypto";
 
-export const PROGRESSION_RULE_VERSION = "104.1";
+export const PROGRESSION_RULE_VERSION = "104.2";
 export const PROGRESSION_SOURCES = [
   "quality_journal", "analysis_evaluation", "pre_analysis_checklist",
   "guide_completion", "discipline_streak", "risk_warning_wait",
@@ -37,10 +37,10 @@ export const ACHIEVEMENTS = [
 export const RANK_KEYS = RANKS.map((r) => r[0]);
 
 export function levelForXp(totalXp: number): { level: number; masteryLevel: number; nextXp: number; currentLevelXp: number } {
-  // 100 deliberately increasing levels; level n needs 100 + (n-1)*25 XP.
+  // Early milestones are attainable through a few ordinary discipline actions.
   let remaining = Math.max(0, totalXp), level = 1;
   while (level < 100) {
-    const needed = 100 + (level - 1) * 25;
+    const needed = 50 + (level - 1) * 20;
     if (remaining < needed) {
       const currentLevelXp = totalXp - remaining;
       return { level, masteryLevel: 0, currentLevelXp, nextXp: currentLevelXp + needed };
@@ -153,7 +153,10 @@ export async function awardProgression(input: {
       const inserted = await tx.insert(progressionAchievements).values({ userId: input.userId, key, sourceLedgerId: ledger[0]!.id }).onConflictDoNothing().returning({ key: progressionAchievements.key });
       if (inserted[0]) badges.push(key);
     }
-    return { awarded: true, xp: rule.xp, notice: { level: curve.level > (prior?.level ?? 1) ? curve.level : undefined, rank: rankKey !== (prior?.rankKey ?? "seedling") ? rankKey : undefined, badges } };
+    // Compare with the user's XP under the current curve, not their stored
+    // level from an older curve, so a rules rollout is not a new achievement.
+    const previousCurve = levelForXp(prior?.totalXp ?? 0);
+    return { awarded: true, xp: rule.xp, notice: { level: curve.level > previousCurve.level ? curve.level : undefined, rank: rankKey !== rankForLevel(previousCurve.level) ? rankKey : undefined, badges } };
   });
   const notice = "notice" in result ? result.notice : undefined;
   if (result.awarded && user.progressionNotificationsEnabled && notice && (notice.level || notice.rank || notice.badges.length)) {

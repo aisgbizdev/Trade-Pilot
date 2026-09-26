@@ -8,7 +8,15 @@ import { feedback, progressionAchievements, progressionEvidenceSessions, progres
 import { ACHIEVEMENTS, awardProgression, checklistCycleSubject, levelForXp, rankForLevel, validProgressionTimezone } from "../lib/progression";
 
 const router = Router();
-export const GUIDE_IDS = ["how-ai-works","feature-map","reading-analysis","validity-confidence","adaptive-plan","personal-progression","analysis-workflow","bias-confidence-validity","levels-chart","timeframe-risk-map","technical-fundamental","standard-plan","adaptive-position-plan","account-rules","terms"] as const;
+export const GUIDE_IDS = [
+  "how-ai-works", "feature-map", "history-performance", "reading-analysis",
+  "validity-confidence", "adaptive-plan", "personal-progression",
+  "analysis-workflow", "bias-confidence-validity", "levels-chart",
+  "timeframe-risk-map", "technical-fundamental", "standard-plan",
+  "adaptive-position-plan", "account-rules", "terms", "data-handling",
+  "fomo", "revenge", "loss-aversion", "anchoring", "risk-mindset",
+  "plan-vs-prediction", "journaling", "patience",
+] as const;
 const CHECKLIST_ITEMS = ["risk_acknowledged","invalidation_reviewed","timeframe_checked","no_revenge_trade"] as const;
 
 type GuideLedgerRow = {
@@ -51,7 +59,7 @@ const activitySchema = z.object({ token: z.string().min(32).max(256) });
 router.get("/progression/summary", requireAuth, async (req: AuthRequest, res): Promise<void> => {
   const [profile] = await db.select().from(progressionProfiles).where(eq(progressionProfiles.userId, req.userId!)).limit(1);
   const totalXp = profile?.totalXp ?? 0; const curve = levelForXp(totalXp);
-  res.json({ totalXp, level: profile?.level ?? curve.level, masteryLevel: profile?.masteryLevel ?? curve.masteryLevel, rank: profile?.rankKey ?? rankForLevel(curve.level), currentLevelXp: curve.currentLevelXp, nextLevelXp: curve.nextXp, currentStreak: profile?.currentStreak ?? 0, longestStreak: profile?.longestStreak ?? 0 });
+  res.json({ totalXp, level: curve.level, masteryLevel: curve.masteryLevel, rank: rankForLevel(curve.level), currentLevelXp: curve.currentLevelXp, nextLevelXp: curve.nextXp, currentStreak: profile?.currentStreak ?? 0, longestStreak: profile?.longestStreak ?? 0 });
 });
 
 router.get("/progression/catalog", requireAuth, async (req: AuthRequest, res): Promise<void> => {
@@ -62,8 +70,9 @@ router.get("/progression/catalog", requireAuth, async (req: AuthRequest, res): P
   const count = (source: string) => ledger.filter((x) => x.source === source && x.xp > 0 && !revoked.has(x.id)).length;
   const completedGuideIds = completedGuideIdsFromLedger(ledger);
   const [profile] = await db.select().from(progressionProfiles).where(eq(progressionProfiles.userId, req.userId!)).limit(1);
-  const p = profile ?? { level: 1, masteryLevel: 0, currentStreak: 0, totalXp: 0 };
-  const eligible = (key: string) => key === "first_reflection" ? count("quality_journal") >= 1 : key.startsWith("journal_") ? count("quality_journal") >= Number(key.split("_")[1]) : key.startsWith("evaluation_") ? count("analysis_evaluation") >= Number(key.split("_")[1]) : key.startsWith("checklist_") ? count("pre_analysis_checklist") >= Number(key.split("_")[1]) : key.startsWith("guide_") ? count("guide_completion") >= Number(key.split("_")[1]) : key.startsWith("wait_") ? count("risk_warning_wait") >= Number(key.split("_")[1]) : key.startsWith("streak_") ? p.currentStreak >= Number(key.split("_")[1]) : key.startsWith("level_") ? p.level >= Number(key.split("_")[1]) : key === "mastery_1" ? p.masteryLevel >= 1 : p.totalXp >= 1000;
+  const p = profile ?? { currentStreak: 0, totalXp: 0 };
+  const curve = levelForXp(p.totalXp);
+  const eligible = (key: string) => key === "first_reflection" ? count("quality_journal") >= 1 : key.startsWith("journal_") ? count("quality_journal") >= Number(key.split("_")[1]) : key.startsWith("evaluation_") ? count("analysis_evaluation") >= Number(key.split("_")[1]) : key.startsWith("checklist_") ? count("pre_analysis_checklist") >= Number(key.split("_")[1]) : key.startsWith("guide_") ? count("guide_completion") >= Number(key.split("_")[1]) : key.startsWith("wait_") ? count("risk_warning_wait") >= Number(key.split("_")[1]) : key.startsWith("streak_") ? p.currentStreak >= Number(key.split("_")[1]) : key.startsWith("level_") ? curve.level >= Number(key.split("_")[1]) : key === "mastery_1" ? curve.masteryLevel >= 1 : p.totalXp >= 1000;
   res.json({ achievements: ACHIEVEMENTS.map((key) => ({ key, unlocked: map.has(key) && eligible(key), unlockedAt: map.has(key) && eligible(key) ? map.get(key)?.toISOString() ?? null : null })), completedGuideIds });
 });
 
@@ -137,13 +146,12 @@ router.post("/admin/progression/backfill", requireAdmin, async (_req: AuthReques
   const evaluations = await db.select({ id: feedback.id, userId: feedback.userId, analysisId: feedback.analysisId, note: feedback.note, createdAt: feedback.createdAt }).from(feedback);
   let awarded = 0;
   for (const row of journals) {
-    if ((row.note?.trim().length ?? 0) < 120 || !row.mood || !row.entryPrice) continue;
-    const r = await awardProgression({ userId: row.userId, source: "quality_journal", sourceEventId: String(row.id), qualityScore: 100, occurredAt: row.createdAt, ruleVersion: "104-backfill.1", metadata: { journalId: row.id, backfill: true } });
+    if ((row.note?.trim().length ?? 0) < 10) continue;
+    const r = await awardProgression({ userId: row.userId, source: "quality_journal", sourceEventId: String(row.id), qualityScore: 100, occurredAt: row.createdAt, ruleVersion: "104-backfill.2", metadata: { journalId: row.id, backfill: true } });
     if (r.awarded) awarded++;
   }
   for (const row of evaluations) {
-    if ((row.note?.trim().length ?? 0) < 40) continue;
-    const r = await awardProgression({ userId: row.userId, source: "analysis_evaluation", sourceEventId: String(row.id), qualityScore: 100, occurredAt: row.createdAt, ruleVersion: "104-backfill.1", metadata: { feedbackId: row.id, analysisId: row.analysisId, backfill: true } });
+    const r = await awardProgression({ userId: row.userId, source: "analysis_evaluation", sourceEventId: String(row.id), qualityScore: 100, occurredAt: row.createdAt, ruleVersion: "104-backfill.2", metadata: { feedbackId: row.id, analysisId: row.analysisId, backfill: true } });
     if (r.awarded) awarded++;
   }
   res.json({ awarded, scanned: journals.length + evaluations.length, ruleVersion: "104-backfill.1" });

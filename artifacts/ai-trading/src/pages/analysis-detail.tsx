@@ -58,6 +58,7 @@ import type { IndicatorTimeframe } from "@/hooks/use-technical-indicators";
 import {
   useGetAnalysis,
   getGetAnalysisQueryKey,
+  getGetProgressionSummaryQueryKey,
   useSubmitFeedback,
   useRefreshFundamentals,
   useGetAnalysisAlerts,
@@ -2026,6 +2027,7 @@ export default function AnalysisDetailPage({
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQueryKey(id) });
+      queryClient.invalidateQueries({ queryKey: getGetProgressionSummaryQueryKey() });
       trackEvent("feedback_submitted", { analysisId: id });
       setFeedbackSubmitted(true);
       toast({ title: t.analysis_detail.feedback_saved });

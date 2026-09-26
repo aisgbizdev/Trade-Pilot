@@ -130,6 +130,56 @@ export default function ProgressionPage() {
                   {t.progression.next_level.replace("{xp}", String(summary.nextLevelXp - summary.totalXp))}
                 </p>
               )}
+              {summary.nextLevelXp && (
+                <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-left">
+                  <p className="text-xs text-white/80">
+                    {t.progression.level_up_hint.replace("{xp}", (summary.nextLevelXp - summary.totalXp).toLocaleString())}
+                  </p>
+                  <ExpandableExplanation
+                    label={t.progression.level_up_ways_label}
+                    className="mt-0.5"
+                    contentClassName="text-white/80"
+                    testId="progression-level-up-help"
+                  >
+                    <ul className="space-y-1.5 pt-1">
+                      <li>
+                        <Link href="/journal" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_journal}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "20").replace("{cap}", "2")}</span>
+                      </li>
+                      <li>
+                        <Link href="/history" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_evaluation}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "12").replace("{cap}", "3")}</span>
+                      </li>
+                      <li>
+                        <Link href="/analyze" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_checklist}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "8").replace("{cap}", "3")}</span>
+                      </li>
+                      <li>
+                        <Link href="/guide" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_guide}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "15").replace("{cap}", "2")}</span>
+                      </li>
+                      <li>
+                        <Link href="/analyze" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_wait}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "15").replace("{cap}", "2")}</span>
+                      </li>
+                      <li>
+                        <span className="font-medium text-white">{t.progression.level_up_streak}</span>
+                        <span> — {t.progression.level_up_per_day.replace("{xp}", "10")}</span>
+                      </li>
+                    </ul>
+                  </ExpandableExplanation>
+                </div>
+              )}
             </div>
             
             <div className="flex gap-4 justify-center md:justify-start pt-2">

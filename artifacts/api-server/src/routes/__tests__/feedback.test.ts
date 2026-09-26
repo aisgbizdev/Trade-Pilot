@@ -11,6 +11,7 @@ import {
   sessions,
   analyses,
   feedback,
+  xpLedger,
 } from "@workspace/db/schema";
 
 const RUN_ID = randomBytes(4).toString("hex");
@@ -224,6 +225,9 @@ describe("POST /analyses/:id/feedback happy path", () => {
     expect(row.feedbackType).toBe("useful");
     expect(row.outcome).toBe("correct");
     expect(row.note).toBe(`note-${RUN_ID}`);
+    const awards = await db.select().from(xpLedger).where(eq(xpLedger.userId, alice.id));
+    expect(awards.filter((award) => award.source === "analysis_evaluation")).toHaveLength(1);
+    expect(awards.find((award) => award.source === "analysis_evaluation")?.xp).toBe(12);
   });
 
   it("a second POST from the same owner UPDATES (not duplicates) the existing row", async () => {
@@ -239,6 +243,8 @@ describe("POST /analyses/:id/feedback happy path", () => {
       });
     expect(res.status).toBe(200);
     expect(res.body.feedbackType).toBe("not_useful");
+    const awards = await db.select().from(xpLedger).where(eq(xpLedger.userId, alice.id));
+    expect(awards.filter((award) => award.source === "analysis_evaluation")).toHaveLength(1);
     expect(res.body.outcome).toBe("wrong");
     expect(res.body.note).toBeNull();
 

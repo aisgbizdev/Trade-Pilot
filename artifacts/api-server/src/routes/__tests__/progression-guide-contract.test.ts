@@ -7,7 +7,7 @@ import {
 } from "../progression";
 
 describe("progression guide evidence contract", () => {
-  it.each(["personal-progression", "timeframe-risk-map"] as const)(
+  it.each(["personal-progression", "timeframe-risk-map", "history-performance", "data-handling", "fomo", "patience"] as const)(
     "accepts completion evidence for %s",
     (guideId) => {
       expect(GUIDE_IDS).toContain(guideId);

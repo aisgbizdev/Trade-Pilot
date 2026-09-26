@@ -114,8 +114,7 @@ function serialize(row: typeof tradeJournal.$inferSelect) {
 // A reflection is deliberately judged only from planning/reflection fields,
 // never outcome, P/L, quantity, or trade frequency.
 function journalQuality(row: { note: string | null; mood: string | null; entryPrice: string | null }): number {
-  const noteLength = row.note?.trim().length ?? 0;
-  return noteLength >= 120 && Boolean(row.mood) && Boolean(row.entryPrice) ? 100 : 0;
+  return (row.note?.trim().length ?? 0) >= 10 ? 100 : 0;
 }
 
 // Normalize a date-only `to` filter ("YYYY-MM-DD" → midnight UTC) so the
@@ -516,7 +515,7 @@ router.post(
         tradedAt: data.tradedAt ?? new Date(),
       })
       .returning();
-    if (journalQuality(row)) void awardProgression({ userId: req.userId!, source: "quality_journal", sourceEventId: String(row.id), qualityScore: 100, metadata: { journalId: row.id } });
+    if (journalQuality(row)) await awardProgression({ userId: req.userId!, source: "quality_journal", sourceEventId: String(row.id), qualityScore: 100, metadata: { journalId: row.id } });
     res.status(201).json(serialize(row));
   },
 );
@@ -644,8 +643,8 @@ router.patch(
         and(eq(tradeJournal.id, id), eq(tradeJournal.userId, req.userId!)),
       )
       .returning();
-    if (journalQuality(row)) void awardProgression({ userId: req.userId!, source: "quality_journal", sourceEventId: String(row.id), qualityScore: 100, metadata: { journalId: row.id } });
-    else void revokeProgressionEvidence(req.userId!, "quality_journal", String(row.id), "Journal no longer meets minimum reflection quality");
+    if (journalQuality(row)) await awardProgression({ userId: req.userId!, source: "quality_journal", sourceEventId: String(row.id), qualityScore: 100, metadata: { journalId: row.id } });
+    else await revokeProgressionEvidence(req.userId!, "quality_journal", String(row.id), "Journal no longer meets minimum reflection quality");
     res.json(serialize(row));
   },
 );

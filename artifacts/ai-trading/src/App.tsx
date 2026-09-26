@@ -37,6 +37,7 @@ import AdminTopupsPage from "@/pages/admin-topups";
 import AdminDashboardPage from "@/pages/admin-dashboard";
 import TopupPage from "@/pages/topup";
 import { SplashScreen } from "@/components/splash-screen";
+import { ProgressionLevelUpWatcher } from "@/components/progression/level-up-watcher";
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
 
@@ -223,6 +224,7 @@ function App() {
                 <EmbedProvider>
                   <AuthProvider>
                     <ThemeSync />
+                    <ProgressionLevelUpWatcher />
                     <Router />
                   </AuthProvider>
                 </EmbedProvider>
