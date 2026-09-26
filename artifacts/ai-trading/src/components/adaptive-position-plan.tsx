@@ -1415,9 +1415,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             {chartCandidateState.status === "error" ? copy.adaptive_rules_error : copy.adaptive_chart_candidates_loading}
           </p>
         )}
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center sm:gap-3" data-testid="adaptive-account-row">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
-          <div className="grid grid-cols-3 gap-2 max-[359px]:-mx-3" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
+          <div className="grid min-w-0 grid-cols-3 gap-2 max-[359px]:-mx-3" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
             {([
               ["micro", copy.adaptive_account_micro],
               ["mini", copy.adaptive_account_mini],
@@ -1428,7 +1428,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 type="button"
                 aria-pressed={form.accountTier === tier}
                 onClick={() => updateField("accountTier", tier)}
-                className={`min-h-10 rounded-md border px-3 py-2 text-center text-xs max-[359px]:text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`min-h-10 min-w-0 rounded-md border px-1.5 py-2 text-center text-xs max-[359px]:text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   form.accountTier === tier
                     ? "border-primary bg-primary/[0.08] text-foreground shadow-sm"
                     : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
@@ -1456,9 +1456,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </span>
           </label>
         </div>
-        <div className="space-y-2" data-testid="adaptive-risk-style-selector">
-          <p className="text-xs font-medium text-foreground">{copy.adaptive_risk_style_title}</p>
-          <div className="grid grid-cols-3 gap-2 max-[359px]:-mx-3" role="group" aria-label={copy.adaptive_risk_style_title}>
+        <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center sm:gap-3" data-testid="adaptive-risk-style-selector">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_risk_style_title}</p>
+          <div className="grid min-w-0 grid-cols-3 gap-2 max-[359px]:-mx-3" role="group" aria-label={copy.adaptive_risk_style_title}>
             {([
               ["conservative", copy.adaptive_risk_style_conservative],
               ["balanced", copy.adaptive_risk_style_balanced],
@@ -1469,7 +1469,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 type="button"
                 aria-pressed={form.riskStyle === style}
                 onClick={() => updateField("riskStyle", style)}
-                className={`min-h-10 rounded-md border px-3 py-2 text-center text-xs max-[359px]:text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`min-h-10 min-w-0 rounded-md border px-1.5 py-2 text-center text-xs leading-tight [overflow-wrap:anywhere] max-[359px]:text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   form.riskStyle === style
                     ? "border-primary bg-primary/[0.08] text-foreground shadow-sm"
                     : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
@@ -1480,18 +1480,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               </button>
             ))}
           </div>
-          <ExpandableExplanation label={copy.adaptive_risk_explanation_label} testId="adaptive-risk-explanation">
-            <p className="font-semibold text-foreground">{riskStyleLabel(form.riskStyle, copy)}</p>
-            <p>{(form.riskStyle === "conservative"
-              ? copy.adaptive_risk_style_conservative_desc
-              : form.riskStyle === "balanced"
-                ? copy.adaptive_risk_style_balanced_desc
-                : selectedRule?.maximumLot == null
-                  ? copy.adaptive_risk_style_aggressive_desc_uncapped
-                  : copy.adaptive_risk_style_aggressive_desc
-            ).replace("{maximum}", selectedRule?.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))}</p>
-            <p className="mt-1">{copy.adaptive_risk_style_help}</p>
-          </ExpandableExplanation>
         </div>
         <div className="space-y-2">
           <p className="text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-daytrade-only">{copy.adaptive_day_trade_only}</p>
@@ -1634,6 +1622,19 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 )}
                 <p><strong className="text-foreground">{copy.adaptive_available_margin}:</strong> {copy.adaptive_available_margin_help}</p>
                 <p><strong className="text-foreground">{copy.adaptive_maximum_loss}:</strong> {copy.adaptive_maximum_loss_help}</p>
+              </section>
+              <section className="space-y-2 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-risk-style-details">
+                <h3 className="font-bold text-foreground">{copy.adaptive_risk_style_title}</h3>
+                <p className="font-semibold text-foreground">{riskStyleLabel(form.riskStyle, copy)}</p>
+                <p>{(form.riskStyle === "conservative"
+                  ? copy.adaptive_risk_style_conservative_desc
+                  : form.riskStyle === "balanced"
+                    ? copy.adaptive_risk_style_balanced_desc
+                    : selectedRule?.maximumLot == null
+                      ? copy.adaptive_risk_style_aggressive_desc_uncapped
+                      : copy.adaptive_risk_style_aggressive_desc
+                ).replace("{maximum}", selectedRule?.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))}</p>
+                <p>{copy.adaptive_risk_style_help}</p>
               </section>
               {recommendation && (
                 <section className="space-y-3 border-t border-border pt-4">

@@ -1182,7 +1182,6 @@ export const id: Translations = {
     adaptive_capacity_none: "Dana ini belum memenuhi margin transaksi minimum untuk profil {tier}.",
     adaptive_risk_style_title: "Gaya risiko",
     adaptive_risk_style_help: "Gaya menentukan bagian batas rugi yang boleh dipakai dan pembagian risk budget seluruh layer. Lot dihitung dari jarak tiap entry ke Stop Loss; guardrail pasar tetap lebih utama.",
-    adaptive_risk_explanation_label: "Lihat penjelasan gaya risiko",
     adaptive_risk_style_conservative: "Conservative",
     adaptive_risk_style_conservative_desc: "Memakai maksimal 50% batas rugi, dengan initial lebih kecil dan cadangan layer lebih besar.",
     adaptive_risk_style_balanced: "Moderat",

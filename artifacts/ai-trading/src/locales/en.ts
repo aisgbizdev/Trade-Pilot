@@ -1180,7 +1180,6 @@ export const en = {
     adaptive_capacity_none: "These funds do not cover the minimum transaction margin for the {tier} profile.",
     adaptive_risk_style_title: "Risk style",
     adaptive_risk_style_help: "Style controls how much of the loss ceiling may be used and how risk is allocated across the complete layer plan. Lots come from each entry's distance to Stop Loss; market guardrails still take priority.",
-    adaptive_risk_explanation_label: "Show risk style explanation",
     adaptive_risk_style_conservative: "Conservative",
     adaptive_risk_style_conservative_desc: "Uses at most 50% of the loss ceiling, with a smaller initial allocation and more layer reserve.",
     adaptive_risk_style_balanced: "Moderate",

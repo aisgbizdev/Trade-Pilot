@@ -476,7 +476,7 @@ test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", ()
 // ---------------------------------------------------------------------------
 
 test.describe("Adaptive settings at narrow and desktop widths", () => {
-  test("keeps the three choices readable and explanations compact at 320px, 390px, and desktop", async ({
+  test("keeps account and risk choices readable, with inline desktop labels and no extra disclosure", async ({
     page,
     baseURL,
   }, testInfo) => {
@@ -495,18 +495,34 @@ test.describe("Adaptive settings at narrow and desktop widths", () => {
     await expect(card).toBeVisible();
     const account = page.getByTestId("adaptive-account-selector");
     const risk = page.getByTestId("adaptive-risk-style-selector");
-    const explanation = page.getByTestId("adaptive-risk-explanation");
     await expect(page.getByTestId("adaptive-account-explanation")).toHaveCount(0);
     await expect(page.getByTestId("adaptive-funds-explanation")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-risk-explanation")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-risk-style-details")).toHaveCount(0);
 
-    for (const width of [320, 390, 1280]) {
+    for (const width of [320, 390, 768, 975, 1280]) {
       await page.setViewportSize({ width, height: 800 });
-      for (const [group, names] of [
-        [account, ["Micro", "Mini", "Regular"]],
-        [risk, ["Conservative", "Moderate", "Aggressive"]],
+      const rowWidths: number[] = [];
+      for (const [row, group, names] of [
+        [page.getByTestId("adaptive-account-row"), account, ["Micro", "Mini", "Regular"]],
+        [risk, risk.getByRole("group"), ["Conservative", "Moderate", "Aggressive"]],
       ] as const) {
         const buttons = group.getByRole("button");
         await expect(buttons).toHaveCount(3);
+        const label = row.locator("h4, p").first();
+        const labelBox = await label.boundingBox();
+        const firstButtonBox = await buttons.first().boundingBox();
+        expect(labelBox).not.toBeNull();
+        expect(firstButtonBox).not.toBeNull();
+        if (width >= 640) {
+          expect(labelBox!.x + labelBox!.width).toBeLessThan(firstButtonBox!.x);
+          expect(Math.abs(labelBox!.y + labelBox!.height / 2 - firstButtonBox!.y - firstButtonBox!.height / 2)).toBeLessThanOrEqual(3);
+        } else {
+          expect(firstButtonBox!.y).toBeGreaterThanOrEqual(labelBox!.y + labelBox!.height);
+        }
+        if (row === risk) {
+          await expect(label).toHaveCSS("text-transform", "uppercase");
+        }
         const layout = await buttons.evaluateAll((nodes) => nodes.map((node) => {
           const button = node as HTMLButtonElement;
           const box = button.getBoundingClientRect();
@@ -520,6 +536,7 @@ test.describe("Adaptive settings at narrow and desktop widths", () => {
           };
         }));
         expect(layout.map(({ label }) => label)).toEqual(names);
+        rowWidths.push(layout[0].right - layout[0].left);
         for (const [index, box] of layout.entries()) {
           expect(box.right - box.left, `${width}px: ${box.label} touch width`).toBeGreaterThanOrEqual(70);
           expect(box.bottom - box.top, `${width}px: ${box.label} touch height`).toBeGreaterThanOrEqual(40);
@@ -530,26 +547,21 @@ test.describe("Adaptive settings at narrow and desktop widths", () => {
           if (index > 0) {
             expect(box.top, `${width}px: ${box.label} stays in one row`).toBeCloseTo(layout[0].top, 0);
             expect(box.left, `${width}px: ${box.label} does not overlap`).toBeGreaterThanOrEqual(layout[index - 1].right);
+            expect(Math.abs((box.right - box.left) - (layout[0].right - layout[0].left)), `${width}px: buttons share one width`).toBeLessThanOrEqual(1);
           }
         }
       }
-      await expect(explanation).not.toHaveAttribute("open", "");
-      const summary = explanation.locator("summary");
-      await expect(summary).toBeVisible();
-      const box = await explanation.boundingBox();
-      expect(box, `${width}px: collapsed explanation is laid out`).not.toBeNull();
-      expect(box!.height, `${width}px: closed explanation remains compact`).toBeLessThanOrEqual(44);
-      await summary.click();
-      await expect(explanation).toHaveAttribute("open", "");
-      await expect(explanation.locator("p").first()).toBeVisible();
-      await summary.click();
-      await expect(explanation).not.toHaveAttribute("open", "");
+      expect(Math.abs(rowWidths[0] - rowWidths[1]), `${width}px: account and risk buttons align`).toBeLessThanOrEqual(1);
       await expect(card).toBeVisible();
       await testInfo.attach(`adaptive-settings-${width}px`, {
         body: await card.screenshot(),
         contentType: "image/png",
       });
     }
+    await page.getByTestId("button-adaptive-explanation").click();
+    await expect(page.getByTestId("adaptive-risk-style-details")).toBeVisible();
+    await expect(page.getByTestId("adaptive-risk-style-details")).toContainText("Conservative");
+    await page.keyboard.press("Escape");
   });
 });
 

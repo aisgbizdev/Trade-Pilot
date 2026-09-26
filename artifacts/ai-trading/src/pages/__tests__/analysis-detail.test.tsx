@@ -810,7 +810,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
 
     await screen.findByTestId("card-adaptive-position-plan");
-    const risk = screen.getByTestId("adaptive-risk-explanation") as HTMLDetailsElement;
     const dayTrade = screen.getByTestId("adaptive-daytrade-only");
     const toggle = screen.getByTestId("button-language-toggle");
     const livePanel = screen.getByTestId("card-indicators-section");
@@ -824,14 +823,17 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     expect(screen.queryByTestId("adaptive-account-explanation")).not.toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-funds-explanation")).not.toBeInTheDocument();
-    expect(risk.open).toBe(false);
+    expect(screen.queryByTestId("adaptive-risk-explanation")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-risk-style-details")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-risk-style-selector").firstElementChild).toHaveClass("uppercase");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveAccessibleName(/^Trading capital/);
     expect(screen.getByTestId("input-adaptive-maximum-loss")).toHaveAccessibleName(/^Loss limit/);
-    expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).not.toBeVisible();
     expect(screen.queryByTestId("adaptive-broker-details")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     const disclaimer = screen.getByTestId("adaptive-disclaimer");
     const broker = screen.getByTestId("adaptive-broker-details");
+    const riskDetails = screen.getByTestId("adaptive-risk-style-details");
+    expect(riskDetails).toHaveTextContent(/Uses at most 50% of the loss ceiling/);
     expect(broker).toHaveTextContent(/Minimum 0.10 lot · \$100 margin/);
     expect(broker).toHaveTextContent(/Enter the funds available for this trading plan/);
     expect(broker).toHaveTextContent(/maximum USD loss you accept for the entire plan/);
@@ -852,6 +854,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(broker).toHaveTextContent(/Masukkan dana yang tersedia untuk rencana trading ini/);
     expect(broker).toHaveTextContent(/kerugian maksimum dalam USD untuk seluruh rencana/);
     expect(broker).not.toHaveTextContent(/Enter the funds available for this trading plan/);
+    expect(riskDetails).toHaveTextContent(/Memakai maksimal 50% batas rugi/);
+    expect(riskDetails).not.toHaveTextContent(/Uses at most 50% of the loss ceiling/);
     expect(disclaimer).toBeVisible();
     expect(disclaimer).toHaveTextContent(/bukan jaminan profit atau order otomatis/);
     expect(dayTrade).toBeVisible();
@@ -866,37 +870,35 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-adaptive-account-regular"));
     expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
-    fireEvent.click(within(risk).getByText("Lihat penjelasan gaya risiko"));
-    expect(risk.open).toBe(true);
-    expect(within(risk).getByText(/Memakai maksimal 75% batas rugi/)).toBeVisible();
-    expect(within(risk).queryByText(/Memakai maksimal 50% batas rugi/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-risk-style-details")).toHaveTextContent(/Memakai maksimal 75% batas rugi/);
+    expect(screen.getByTestId("adaptive-risk-style-details")).not.toHaveTextContent(/Memakai maksimal 50% batas rugi/);
+    fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-aggressive"));
-    expect(within(risk).getByText(/Dapat memakai sampai 100% batas rugi.*dana bebas/)).toBeVisible();
-
-    fireEvent.click(within(risk).getByText("Lihat penjelasan gaya risiko"));
-    expect(risk.open).toBe(false);
-    expect(within(risk).getByText(/Dapat memakai sampai 100% batas rugi/)).not.toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-risk-style-details")).toHaveTextContent(/Dapat memakai sampai 100% batas rugi.*dana bebas/);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByTestId("adaptive-risk-style-details")).not.toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-disclaimer")).not.toBeInTheDocument();
     expect(dayTrade).toBeVisible();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAccessibleName("Switch to Indonesian");
-    expect(risk.open).toBe(false);
-    expect(within(risk).getByText("Show risk style explanation")).toBeVisible();
-    expect(within(risk).getByText(/May use up to 100% of the loss ceiling.*free funds/)).not.toBeVisible();
+    expect(screen.queryByTestId("adaptive-risk-explanation")).not.toBeInTheDocument();
     expect(dayTrade).toBeVisible();
     expect(dayTrade).toHaveTextContent(/overnight positions are not covered/);
 
-    fireEvent.click(within(risk).getByText("Show risk style explanation"));
-    expect(within(risk).getByText(/May use up to 100% of the loss ceiling.*free funds/)).toBeVisible();
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
     fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     expect(screen.getByTestId("adaptive-broker-details")).toHaveTextContent(/Minimum 0.01 lot · \$10 margin/);
+    expect(screen.getByTestId("adaptive-risk-style-details")).toHaveTextContent(/May use up to 100% of the loss ceiling with a larger initial allocation/);
     fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
-    expect(within(risk).getByText(/Uses at most 75% of the loss ceiling/)).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-risk-style-details")).toHaveTextContent(/Uses at most 75% of the loss ceiling/);
+    fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-conservative"));
-    expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).toBeVisible();
+    expect(screen.getByTestId("button-adaptive-risk-style-conservative")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("defaults to Mini, supports all account tiers, and keeps separate Buy and Sell ladders", async () => {
@@ -931,11 +933,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
     const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
-    const riskExplanation = screen.getByTestId("adaptive-risk-explanation") as HTMLDetailsElement;
     expect(screen.queryByTestId("adaptive-account-explanation")).not.toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-funds-explanation")).not.toBeInTheDocument();
-    expect(riskExplanation.open).toBe(false);
-    expect(within(riskExplanation).getByText(/at most 50%/i)).not.toBeVisible();
+    expect(screen.queryByTestId("adaptive-risk-explanation")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-risk-style-details")).not.toBeInTheDocument();
     expect(screen.getByTestId("button-adaptive-account-mini")).toHaveTextContent(/^Mini$/);
     expect(screen.getByTestId("button-adaptive-risk-style-conservative")).toHaveTextContent(/^Conservative$/);
     expect(margin).toBeVisible();
@@ -947,9 +948,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Maximum 0.9 lot applies to each position/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/supports XAU\/USD, BRENT, HSI, and NIKKEI analyses/i);
     expect(screen.getByTestId("adaptive-broker-details")).toHaveTextContent(/Enter the funds available for this trading plan/i);
+    expect(screen.getByTestId("adaptive-risk-style-details")).toHaveTextContent(/at most 50%/i);
     fireEvent.keyDown(document, { key: "Escape" });
-    fireEvent.click(within(riskExplanation).getByText("Show risk style explanation"));
-    expect(within(riskExplanation).getByText(/at most 50%/i)).toBeVisible();
     const tradePlanCard = screen.getByTestId("card-trade-plan");
     expect(tradePlanCard).toBeInTheDocument();
     expect(screen.queryByTestId("card-trade-setup-summary")).not.toBeInTheDocument();
@@ -1006,7 +1006,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
     expect(screen.getByTestId("button-adaptive-risk-style-balanced")).toHaveAttribute("aria-pressed", "true");
-    expect(within(riskExplanation).getByText(/at most 75%/i)).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-risk-style-details")).toHaveTextContent(/at most 75%/i);
+    fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-conservative"));
     expect(screen.queryByTestId("adaptive-account-rule")).not.toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-disclaimer")).not.toBeInTheDocument();
