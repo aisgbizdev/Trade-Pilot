@@ -2210,7 +2210,59 @@ export default function AnalysisDetailPage({
   const selectedDetail = detailSections.find((section) => section.key === activeSection && section.visible);
 
   const tradePlan = analysis.tradePlan ?? null;
+  const hasAdaptive = Boolean(tradePlan && isAdaptivePositionInstrument(analysis.instrument));
   const indicatorTimeframe = asIndicatorTimeframe(analysis.timeframe);
+  const adaptiveSupportingDetails = hasAdaptive ? (
+    <section className="space-y-3 border-t border-border pt-4 text-xs leading-relaxed" data-testid="adaptive-supporting-details">
+      <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h3>
+      {invalidationItems.length > 0 && (
+        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-red-900 dark:border-red-800 dark:bg-red-950/20 dark:text-red-200">
+          <h4 className="font-bold">{t.analysis_detail.invalidation_title}</h4>
+          <ul className="mt-2 list-disc space-y-1 pl-4" data-testid="list-invalidation">
+            {invalidationItems.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {(analysis.opportunity || analysis.risk) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {analysis.opportunity && <div><h4 className="font-bold">{t.analysis_detail.opportunity_title}</h4><p className="mt-1 whitespace-pre-wrap text-muted-foreground">{analysis.opportunity}</p></div>}
+          {analysis.risk && <div><h4 className="font-bold text-amber-700 dark:text-amber-300">{t.analysis_detail.risk_title}</h4><p className="mt-1 whitespace-pre-wrap">{analysis.risk}</p></div>}
+        </div>
+      )}
+      <div className="space-y-2">
+        <h4 className="font-bold">{t.analysis_detail.scenarios_section}</h4>
+        {scenarioAContent && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_a}: </strong>{scenarioAContent}</p>}
+        {scenarioBContent && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_b}: </strong>{scenarioBContent}</p>}
+        <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_c}: </strong>{scenarioCText(bias ?? "neutral", t)}</p>
+      </div>
+      {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
+        <div className="space-y-2">
+          {analysis.keyDriversTechnical && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_technical}: </strong>{analysis.keyDriversTechnical}</p>}
+          {analysis.keyDriversFundamental && <div><p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_fundamental}: </strong>{analysis.keyDriversFundamental}</p><CitationChips citations={analysis.fundamentalCitations} context={analysis.fundamentalContext} t={t} /></div>}
+          {analysis.marketContext && <div><p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_market_context}: </strong>{analysis.marketContext}</p><CitationChips citations={analysis.fundamentalCitations} context={analysis.fundamentalContext} t={t} /></div>}
+        </div>
+      )}
+      <div className="space-y-2">
+        <h4 className="font-bold">{t.analysis_detail.execution_insight_title}</h4>
+        <p><strong>{t.analysis_detail.execution_scenario_a_label}: </strong>{executionScenarioAText(bias ?? "neutral", t)}</p>
+        <p><strong>{t.analysis_detail.execution_scenario_b_label}: </strong>{t.analysis_detail.execution_scenario_b_template}</p>
+        <p><strong>{t.analysis_detail.execution_scenario_c_label}: </strong>{t.analysis_detail.execution_scenario_c_template}</p>
+      </div>
+    </section>
+  ) : null;
+  const liveIndicatorPanel = indicatorTimeframe ? (
+    <Card className="p-4 space-y-3" data-testid="card-indicators-section">
+      <div>
+        <h3 className="text-sm font-bold text-foreground">
+          {hasAdaptive ? t.analysis_detail.indicators_current_title : t.analysis_detail.indicators_section_title}
+        </h3>
+        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+          {hasAdaptive ? t.analysis_detail.indicators_current_note : t.analysis_detail.indicators_section_note}
+        </p>
+      </div>
+      <TechnicalIndicatorsPanel instrument={analysis.instrument} mode={isBeginnerMode ? "beginner" : "pro"} timeframe={indicatorTimeframe} />
+    </Card>
+  ) : null;
   // No-op wrapper when embedded elsewhere, so the host page's own <Layout>
   // (header/nav) isn't doubled up.
   const Wrap = embedded ? Fragment : Layout;
@@ -2592,7 +2644,7 @@ export default function AnalysisDetailPage({
 
         {/* Deterministic, situation-aware scaling plan. It reads the saved
             analysis context but never changes Standard Plan levels or executes orders. */}
-        {tradePlan && isAdaptivePositionInstrument(analysis.instrument) && (
+        {tradePlan && hasAdaptive && (
           <AdaptivePositionPlan
             analysisId={analysis.id}
             instrument={analysis.instrument}
@@ -2613,6 +2665,8 @@ export default function AnalysisDetailPage({
             }}
             lang={lang}
             copy={t.analysis_detail}
+            supportingDetails={adaptiveSupportingDetails}
+            invalidationCount={invalidationItems.length}
           />
         )}
 
@@ -2621,7 +2675,7 @@ export default function AnalysisDetailPage({
             Hidden unless the analysis has a trade plan AND the user has
             already enabled push notifications (otherwise the toggle would
             be a dead end). */}
-        {tradePlan && (
+        {tradePlan && !hasAdaptive && (
           <AnalysisAlertsCard analysisId={analysis.id} t={t} />
         )}
 
@@ -2638,27 +2692,9 @@ export default function AnalysisDetailPage({
             />
           )}
 
-        {/* Live Technical Indicators panel — moved from the Analyze tab so
-            users get the full indicator picture in ONE place (the saved
-            analysis). Data is live (re-fetched from the upstream feed) so we
-            warn that it may differ from the snapshot the AI saw. */}
-        {indicatorTimeframe && (
-          <Card className="p-4 space-y-3" data-testid="card-indicators-section">
-            <div>
-              <h3 className="text-sm font-bold text-foreground">
-                {t.analysis_detail.indicators_section_title}
-              </h3>
-              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                {t.analysis_detail.indicators_section_note}
-              </p>
-            </div>
-            <TechnicalIndicatorsPanel
-              instrument={analysis.instrument}
-              mode={isBeginnerMode ? "beginner" : "pro"}
-              timeframe={indicatorTimeframe}
-            />
-          </Card>
-        )}
+        {/* This is a current-market check, not an input to the saved Adaptive plan. */}
+        {liveIndicatorPanel}
+        {tradePlan && hasAdaptive && <AnalysisAlertsCard analysisId={analysis.id} t={t} />}
 
         {analysis.userInputContext && (
           <Card className="p-4 space-y-2" data-testid="card-user-notes">
@@ -2687,7 +2723,7 @@ export default function AnalysisDetailPage({
         )}
 
         {/* Safety-first scan: a single detail surface keeps the narrative off the main path. */}
-        <div className="min-w-0 space-y-2.5">
+        {!hasAdaptive && <div className="min-w-0 space-y-2.5">
           <div className="relative min-w-0">
             <div
               role="group"
@@ -2880,7 +2916,7 @@ export default function AnalysisDetailPage({
               )}
             </Card>
           )}
-        </div>
+        </div>}
 
         <Card className="p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
           <div className="flex gap-2">
