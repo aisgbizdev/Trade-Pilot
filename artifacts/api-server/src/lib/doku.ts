@@ -67,7 +67,6 @@ export interface CreateDokuCheckoutParams {
   amountRupiah: number;
   callbackUrl: string;
   callbackUrlCancel: string;
-  notificationUrl: string;
   paymentDueDateMinutes?: number;
 }
 
@@ -105,15 +104,14 @@ export async function createDokuCheckout(params: CreateDokuCheckoutParams): Prom
       payment_due_date: params.paymentDueDateMinutes ?? 60,
       type: "SALE",
     },
-    // Ties every checkout to our own notification endpoint explicitly
-    // rather than relying solely on whatever is configured in DOKU Back
-    // Office, which could drift between environments. Per DOKU's docs this
-    // MUST be nested under additional_info — a top-level
-    // override_notification_url is silently ignored (DOKU falls back to
-    // whatever Notification URL is configured in Back Office instead).
-    additional_info: {
-      override_notification_url: params.notificationUrl,
-    },
+    // NOT setting additional_info.override_notification_url here — per
+    // DOKU's docs, that field can only swap the DOMAIN of an ALREADY
+    // dashboard-configured Notification URL (the path must match exactly),
+    // it can't establish a path from scratch. This app only ever runs one
+    // production DOKU environment, so there's no domain to swap between —
+    // the Notification URL configured in DOKU Back Office (Checkout
+    // Settings) is the single source of truth for where the payment
+    // notification webhook goes.
   };
   const bodyJson = JSON.stringify(body);
 

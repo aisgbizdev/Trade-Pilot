@@ -226,7 +226,6 @@ router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (re
       amountRupiah: totalChargeRupiah,
       callbackUrl: `${publicBaseUrl}/topup?doku=success&id=${inserted!.id}`,
       callbackUrlCancel: `${publicBaseUrl}/topup?doku=cancel&id=${inserted!.id}`,
-      notificationUrl: `${publicBaseUrl}${DOKU_NOTIFICATION_PATH}`,
       paymentDueDateMinutes,
     });
 
