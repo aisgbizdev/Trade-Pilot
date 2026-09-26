@@ -2,7 +2,6 @@ import { useLocation, Link } from "wouter";
 import {
   ChevronLeft,
   Clock,
-  AlertTriangle,
   ThumbsUp,
   ThumbsDown,
   Loader2,
@@ -2920,22 +2919,10 @@ export default function AnalysisDetailPage({
           )}
         </div>}
 
-        <Card className="p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
-          <div className="flex gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-            <div className="space-y-1.5">
-              <p
-                className="text-xs font-bold text-amber-800 dark:text-amber-300 leading-relaxed"
-                data-testid="text-risk-disclaimer-short"
-              >
-                {t.analysis_detail.risk_disclaimer_short}
-              </p>
-              <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                {t.analysis_detail.disclaimer_full}
-              </p>
-            </div>
-          </div>
-        </Card>
+        <div className="sr-only" data-testid="risk-disclaimer-accessible">
+          <p data-testid="text-risk-disclaimer-short">{t.analysis_detail.risk_disclaimer_short}</p>
+          <p>{t.analysis_detail.disclaimer_full}</p>
+        </div>
 
         <Card className="p-4">
           <h3 className="text-sm font-semibold text-foreground mb-3">

@@ -322,8 +322,8 @@ function AdaptiveDecisionSummary({
       {preferred?.fit === "limited" && (
         <p className="text-xs font-medium text-amber-700 dark:text-amber-300">{copy.adaptive_compare_limited_next.replace("{target}", formatMoney(preferred.effectiveBudget, lang))}</p>
       )}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 text-xs sm:grid-cols-3">
-        {maximumLoss != null && <div><span className="block text-muted-foreground">{copy.adaptive_compare_hard_max}</span><strong className="tabular-nums">{formatMoney(maximumLoss, lang)}</strong></div>}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 text-xs">
+        {maximumLoss != null && <div className="sr-only" data-testid="adaptive-hard-loss-summary"><span className="block text-muted-foreground">{copy.adaptive_compare_hard_max}</span><strong className="tabular-nums">{formatMoney(maximumLoss, lang)}</strong></div>}
         {preferred?.riskAtStop != null && <div><span className="block text-muted-foreground">{copy.adaptive_compare_min_risk}</span><strong className="tabular-nums">{formatMoney(preferred.riskAtStop, lang)}</strong></div>}
         {preferred?.fundsAtStop != null && <div><span className="block text-muted-foreground">{copy.adaptive_compare_broker_funds}</span><strong className="tabular-nums">{formatRequiredFunds(preferred.fundsAtStop, lang)}</strong></div>}
       </div>
@@ -1464,7 +1464,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <span className="block rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-[10px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-daytrade-only">{copy.adaptive_day_trade_only}</span>
           {isRulesLoading && <p className="text-[11px] text-muted-foreground" data-testid="adaptive-plan-rules-loading">{copy.adaptive_rules_loading}</p>}
           {selectedRule && availableMargin != null && availableMargin > 0 && (
-            <div className="rounded-md border border-border p-2.5 text-[11px] leading-relaxed" data-testid="adaptive-margin-capacity">
+            <div className="sr-only" data-testid="adaptive-margin-capacity">
               <p className="font-semibold text-foreground">{copy.adaptive_capacity_title}</p>
               <p className="mt-0.5 text-muted-foreground">
                 {marginCapacity > 0

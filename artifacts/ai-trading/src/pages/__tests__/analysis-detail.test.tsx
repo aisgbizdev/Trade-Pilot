@@ -331,7 +331,8 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(risk).toHaveTextContent("Risk");
     expect(screen.queryByTestId("list-invalidation")).not.toBeInTheDocument();
     expect(screen.queryByTestId("card-risk")).not.toBeInTheDocument();
-    expect(screen.getByTestId("text-risk-disclaimer-short")).toBeVisible();
+    expect(screen.getByTestId("risk-disclaimer-accessible")).toHaveClass("sr-only");
+    expect(screen.getByTestId("text-risk-disclaimer-short")).toHaveTextContent("Trading involves risk");
 
     fireEvent.click(invalidation);
     expect(invalidation).toHaveAttribute("aria-expanded", "true");
@@ -342,7 +343,8 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(screen.getByTestId("card-risk")).toHaveTextContent(/break below support/i);
     fireEvent.click(risk);
     expect(screen.queryByTestId("card-risk")).not.toBeInTheDocument();
-    expect(screen.getByTestId("text-risk-disclaimer-short")).toBeVisible();
+    expect(screen.getByTestId("risk-disclaimer-accessible")).toHaveClass("sr-only");
+    expect(screen.getByTestId("risk-disclaimer-accessible")).toHaveTextContent("decision-support tool");
   });
 
   it("renders the instrument header, bias label, confidence range and risk level from the payload", async () => {
@@ -1131,6 +1133,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "100000" } });
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "500" } });
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    expect(screen.getByTestId("adaptive-margin-capacity")).toHaveClass("sr-only");
+    expect(screen.getByTestId("adaptive-margin-capacity")).toHaveTextContent(/lot per position/i);
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(await screen.findByTestId("adaptive-plan-snapshot")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
@@ -1710,6 +1714,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-selected-limited")).toHaveTextContent("Limited option only");
     expect(screen.getByTestId("adaptive-selected-decision")).toHaveTextContent("$150");
     expect(screen.getByTestId("adaptive-selected-decision")).toHaveTextContent("$200");
+    expect(screen.getByTestId("adaptive-hard-loss-summary")).toHaveClass("sr-only");
+    expect(screen.getByTestId("adaptive-hard-loss-summary")).toHaveTextContent("$200");
     expect(screen.getByTestId("adaptive-selected-decision")).toHaveAccessibleName("Adaptive decision");
     expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
     expect(screen.queryByText("Account tier comparison")).not.toBeInTheDocument();

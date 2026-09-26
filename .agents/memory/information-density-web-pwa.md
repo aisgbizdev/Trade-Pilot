@@ -14,3 +14,9 @@ For the lower analysis page beginning at Adaptive, treat saved-analysis narrativ
 **Why:** The user found the separate explanation menus crowded and explicitly restricted the redesign to Adaptive and below. After seeing the built version, the user confirmed that arrangement was good.
 
 **How to apply:** Keep one explanation entry near the Adaptive decision; group optional topics within it. Position the live check soon after Adaptive without changing the analysis above or implying that live indicators recalculated the saved plan.
+
+The user later explicitly asked that the margin-capacity estimate, duplicate hard-loss summary, and bottom generic disclaimer not be shown visually. Keep the capacity and loss calculations intact, preserve the disclaimer for assistive technology, and continue to show actionable risk/invalidation conditions.
+
+**Why:** Those three blocks were identified in screenshots as redundant screen content, not as logic to remove. This is a specific exception to the general rule to keep safety-critical information visible.
+
+**How to apply:** Do not restore those visual blocks as part of general information-density or safety cleanups; keep the other concrete risk and decision cues visible.
