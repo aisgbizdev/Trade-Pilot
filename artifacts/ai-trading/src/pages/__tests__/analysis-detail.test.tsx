@@ -1302,6 +1302,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("adaptive-scenarios-review-explanation")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-plan-invalid").querySelector("details")).toBeNull();
     expect(screen.queryByTestId("adaptive-plan-method")).not.toBeInTheDocument();
+    const explanationFooter = screen.getByTestId("adaptive-explanation-footer");
+    expect(screen.getByTestId("adaptive-plan-scenarios-review").compareDocumentPosition(explanationFooter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId("adaptive-review-side-buy")).not.toContainElement(screen.getByTestId("button-adaptive-explanation"));
     fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     expect(screen.getByTestId("adaptive-plan-method")).toHaveTextContent(/not an instruction to enter/i);
     expect(screen.getByTestId("adaptive-supporting-details")).toHaveTextContent(/Invalid if/i);
@@ -1474,6 +1477,12 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(positionDetails.querySelector(":scope > summary")).toHaveTextContent("View plan details");
     expect(screen.getByTestId("adaptive-fill-scenarios-buy")).toHaveTextContent("If entries fill");
     expect(positionDetails).toHaveTextContent("More calculation details");
+    const explanationFooter = screen.getByTestId("adaptive-explanation-footer");
+    const explanationButton = screen.getByTestId("button-adaptive-explanation");
+    expect(positionDetails.compareDocumentPosition(explanationFooter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId("adaptive-plan-valid")).not.toContainElement(explanationButton);
+    expect(explanationButton).toHaveClass("min-h-12");
+    expect(explanationButton.querySelector("span")).toHaveClass("text-base", "text-primary");
     fireEvent.click(positionDetails.querySelector(":scope > summary")!);
     expect(positionDetails).toHaveAttribute("open");
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Margin this position/i);

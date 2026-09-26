@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { AlertTriangle, Calculator, Check, Copy, Image as ImageIcon, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, Check, ChevronRight, Copy, Image as ImageIcon, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1509,9 +1509,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             {copy.adaptive_invalidation_cue.replace("{count}", String(invalidationCount))}
           </p>
         )}
-        <Button type="button" size="sm" variant="outline" onClick={() => setDetailsOpen(true)} data-testid="button-adaptive-explanation" className="text-xs">
-          {copy.adaptive_education_title}
-        </Button>
         {recommendation && tightStops.map((side) => (
           <p key={side} className="text-[11px] font-medium text-amber-700 dark:text-amber-300" role="status">
             {copy.adaptive_volatility_tight_short.replace("{side}", side.toUpperCase())}
@@ -1858,6 +1855,18 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <p className="text-xs leading-relaxed text-muted-foreground">{copy.adaptive_manual_only}</p>
           <p className="text-xs leading-relaxed text-muted-foreground">{copy.adaptive_external_liquidation}</p>
         </div>}
+        <div className="border-t border-border pt-4" data-testid="adaptive-explanation-footer">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setDetailsOpen(true)}
+            data-testid="button-adaptive-explanation"
+            className="group h-auto min-h-12 w-full justify-between gap-3 rounded-lg border-primary/40 bg-primary/[0.05] px-4 py-3 text-left hover:border-primary/70 hover:bg-primary/[0.10] sm:w-auto"
+          >
+            <span className="text-base font-semibold leading-snug text-primary">{copy.adaptive_education_title}</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </Button>
+        </div>
       </div>
     </Card>
   );
