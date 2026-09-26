@@ -1089,7 +1089,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-supporting-details")).toHaveTextContent(/Invalid if/i);
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByTestId("adaptive-supporting-details")).not.toBeInTheDocument();
-    expect(screen.getByTestId("adaptive-invalidation-cue")).toHaveTextContent(/2 invalidation conditions/i);
+    expect(screen.getByTestId("adaptive-invalidation-cue")).toHaveTextContent(/2 invalidation rules/i);
+    expect(screen.getByTestId("button-adaptive-explanation")).toContainElement(screen.getByTestId("adaptive-invalidation-cue"));
+    expect(screen.getByTestId("button-adaptive-explanation")).toHaveAccessibleName("Understand the details. 2 invalidation rules");
+    expect(screen.getByTestId("adaptive-invalidation-cue")).not.toHaveClass("border-red-300");
     expect(screen.queryByTestId("invalidation-heading")).not.toBeInTheDocument();
     expect(screen.queryByTestId("opportunity-trigger")).not.toBeInTheDocument();
     expect(screen.queryByTestId("scenarios-trigger")).not.toBeInTheDocument();

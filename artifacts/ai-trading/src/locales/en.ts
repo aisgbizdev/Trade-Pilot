@@ -1091,7 +1091,7 @@ export const en = {
     adaptive_share_snapshot_note: "This plan uses the saved analysis snapshot. Live indicators do not automatically recalculate it; check current market conditions and risk before deciding.",
     adaptive_share_text_copied: "Adaptive details copied",
     adaptive_share_failed: "Couldn't share the Adaptive details. Please try again.",
-    adaptive_invalidation_cue: "{count} invalidation conditions from the saved analysis. Open Understand the details before making a decision.",
+    adaptive_invalidation_cue: "{count} invalidation rules",
     adaptive_insight_reasoning: "Why",
     adaptive_insight_volatility: "Volatility",
     adaptive_insight_alternative: "Scenario",

@@ -1093,7 +1093,7 @@ export const id: Translations = {
     adaptive_share_snapshot_note: "Plan ini memakai snapshot analisis tersimpan. Indikator live tidak otomatis menghitung ulang plan; cek kondisi pasar dan risiko terbaru sebelum mengambil keputusan.",
     adaptive_share_text_copied: "Detail Adaptive disalin",
     adaptive_share_failed: "Gagal membagikan detail Adaptive. Coba lagi.",
-    adaptive_invalidation_cue: "{count} kondisi pembatalan dari analisis tersimpan. Buka Pahami detailnya sebelum mengambil keputusan.",
+    adaptive_invalidation_cue: "{count} kondisi batal",
     adaptive_insight_reasoning: "Alasan",
     adaptive_insight_volatility: "Volatilitas",
     adaptive_insight_alternative: "Skenario",
