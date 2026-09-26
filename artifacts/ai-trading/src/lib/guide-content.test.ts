@@ -49,6 +49,25 @@ describe("guide content for current features", () => {
     expect(indonesian).toContain("running price");
   });
 
+  it("explains the separate chart, Standard level, and Adaptive summary sharing actions in both languages", () => {
+    const chart = article("levels-chart");
+    const standard = article("standard-plan");
+    const adaptive = article("adaptive-position-plan");
+
+    expect(text(chart.content_en)).toContain("Share chart and choose Copy analysis image or Save PNG");
+    expect(text(chart.content_id)).toContain("Bagikan grafik lalu pilih Salin gambar analisis atau Simpan PNG");
+    expect(text(standard.content_en)).toContain("Copy levels sits beside Rationale");
+    expect(text(standard.content_id)).toContain("Salin level berada sejajar dengan Alasan");
+    expect(text(adaptive.content_en)).toContain("Conditional scenario · not actionable now");
+    expect(text(adaptive.content_en)).toContain("Share plan and choose Copy plan image or Save PNG");
+    expect(text(adaptive.content_id)).toContain("Skenario kondisional · belum dapat ditindaklanjuti");
+    expect(text(adaptive.content_id)).toContain("Bagikan plan lalu pilih Salin gambar plan atau Simpan PNG");
+    expect(text(adaptive.content_id)).toContain("bukan grafik atau penjelasan panjang");
+    expect(chart.keywords).toContain("bagikan grafik");
+    expect(standard.keywords).toContain("salin level");
+    expect(adaptive.keywords).toContain("bagikan plan");
+  });
+
   it("documents private discipline progression without outcome-based XP", () => {
     const progression = article("personal-progression");
     const english = text(progression.content_en);
