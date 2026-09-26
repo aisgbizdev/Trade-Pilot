@@ -1477,10 +1477,6 @@ function FundamentalContextCard({
       </div>
 
       {driftBanner}
-      <p className="text-xs text-muted-foreground" data-testid="fundamental-counts">
-        {t.analysis_detail.fundamental_counts.replace("{news}", String(news.length)).replace("{events}", String(events.length))}
-        {" · "}{refreshState ? t.analysis_detail.fundamental_status_refreshed : t.analysis_detail.fundamental_status_snapshot}
-      </p>
       {news.length === 0 && events.length === 0 && (
         <p className="text-xs text-muted-foreground leading-relaxed">
           {t.analysis_detail.fundamental_empty.replace("{instrument}", instrument)}
@@ -1497,7 +1493,6 @@ function FundamentalContextCard({
           <span className="min-w-0 flex-1 text-xs font-semibold leading-tight text-foreground">
             {t.analysis_detail.fundamental_news_title}
           </span>
-          <span className="shrink-0 text-xs text-muted-foreground">({news.length})</span>
           {newsOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
         </button>
         <button type="button" id="fundamental-calendar-toggle-button" data-testid="fundamental-calendar-toggle"
@@ -1509,7 +1504,6 @@ function FundamentalContextCard({
           <span className="min-w-0 flex-1 text-xs font-semibold leading-tight text-foreground">
             {t.analysis_detail.fundamental_calendar_title}
           </span>
-          <span className="shrink-0 text-xs text-muted-foreground">({events.length})</span>
           {calendarOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
         </button>
       </div>

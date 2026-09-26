@@ -795,7 +795,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const toggle = screen.getByTestId("button-language-toggle");
     const intro = screen.getByTestId("adaptive-intro");
     expect(intro).toBeVisible();
-    expect(intro).toHaveTextContent(/Review an analysis-driven, manual position plan/i);
+    expect(intro).toHaveTextContent(/Simulate entries, lot sizes, and risk from this analysis/i);
     expect(intro.querySelector("summary")).toBeNull();
 
     expect(screen.queryByTestId("adaptive-account-explanation")).not.toBeInTheDocument();
@@ -819,7 +819,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAccessibleName("Beralih ke Bahasa Inggris");
     expect(intro).toBeVisible();
-    expect(intro).toHaveTextContent(/Susun ukuran posisi manual/i);
+    expect(intro).toHaveTextContent(/Simulasi entry, lot, dan risiko dari analisis ini/i);
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveAccessibleName(/^Modal trading/);
     expect(screen.getByTestId("input-adaptive-maximum-loss")).toHaveAccessibleName(/^Batas rugi/);
     expect(broker).toHaveTextContent(/Minimum 0,10 lot · margin \$100/);
@@ -2201,9 +2201,9 @@ describe("AnalysisDetailPage: not-found branch", () => {
 
 describe("AnalysisDetailPage: fundamental context card", () => {
   it.each([
-    ["id", "Berita Terkini", "Kalender Ekonomi", "Daftar tersimpan"],
-    ["en", "Recent News", "Economic Calendar", "Saved list"],
-  ])("provides %s-language keyboard-accessible controls and honest saved status", async (lang, newsTitle, calendarTitle, status) => {
+    ["id", "Berita Terkini", "Kalender Ekonomi", "Berita & event terkait analisis ini."],
+    ["en", "Recent News", "Economic Calendar", "News & events related to this analysis."],
+  ])("provides %s-language keyboard-accessible controls and concise context", async (lang, newsTitle, calendarTitle, subtitle) => {
     localStorage.setItem("app_lang", lang);
     installFetchMock([getAnalysisHandler({ body: {
       ...ANALYSIS_PAYLOAD,
@@ -2215,13 +2215,14 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
     const card = await screen.findByTestId("card-fundamental-context");
-    expect(card).toHaveTextContent(status);
+    expect(card).toHaveTextContent(subtitle);
+    expect(screen.queryByTestId("fundamental-counts")).not.toBeInTheDocument();
     const news = screen.getByTestId("fundamental-news-toggle");
     const calendar = screen.getByTestId("fundamental-calendar-toggle");
     expect(news.tagName).toBe("BUTTON");
     expect(news).toHaveAttribute("type", "button");
-    expect(news).toHaveAccessibleName(`${newsTitle} (0)`);
-    expect(calendar).toHaveAccessibleName(`${calendarTitle} (1)`);
+    expect(news).toHaveAccessibleName(newsTitle);
+    expect(calendar).toHaveAccessibleName(calendarTitle);
     expect(screen.getByTestId("fundamental-section-buttons")).toHaveClass("grid-cols-2");
     expect(screen.queryByTestId("fundamental-news-list")).not.toBeInTheDocument();
     expect(screen.queryByTestId("fundamental-calendar-list")).not.toBeInTheDocument();
@@ -2339,7 +2340,7 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(newsToggle).toHaveAttribute("aria-expanded", "false");
     expect(calendarToggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByTestId("fundamental-news-list")).not.toBeInTheDocument();
-    expect(card).toHaveTextContent("5 news");
+    expect(screen.queryByTestId("fundamental-counts")).not.toBeInTheDocument();
     fireEvent.click(newsToggle);
     expect(newsToggle).toHaveAttribute("aria-expanded", "true");
     expect(calendarToggle).toHaveAttribute("aria-expanded", "false");
@@ -2433,8 +2434,8 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     // task requires (no silent omission of the section).
     const card = await screen.findByTestId("card-fundamental-context");
     expect(card).toBeInTheDocument();
-    expect(card).toHaveTextContent("0 news");
-    expect(card).toHaveTextContent("not live news");
+    expect(card).toHaveTextContent("News & events related to this analysis.");
+    expect(card).toHaveTextContent("in this snapshot");
     // News + calendar list wrappers should NOT render in the empty state.
     expect(
       screen.queryByTestId("fundamental-news-list"),
