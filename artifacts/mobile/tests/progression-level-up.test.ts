@@ -72,11 +72,18 @@ describe("mobile progression level-up deduplication", () => {
   });
 
   it.each([["en", en], ["id", id]] as const)(
-    "labels all unavailable mobile actions as TradePilot.id web in %s",
+    "points to real mobile actions while retaining web-only actions in %s",
     (_language, locale) => {
       for (const { copyKey } of PROGRESSION_XP_SOURCES) {
-        expect(locale.progression[copyKey]).toContain("TradePilot.id");
+        if (["leveling_journal", "leveling_safe_wait"].includes(copyKey)) {
+          expect(locale.progression[copyKey]).toContain("TradePilot.id");
+        } else {
+          expect(locale.progression[copyKey]).not.toContain("available on TradePilot.id web");
+        }
       }
+      expect(locale.progression.leveling_checklist).toContain(locale.activities.checklist_start);
+      expect(locale.progression.leveling_feedback).toContain(locale.activities.feedback_save);
+      expect(locale.progression.leveling_guide).toContain(locale.activities.open_guides);
       expect(locale.progression.leveling_daily_cap).toContain("{count}");
       expect(locale.progression.leveling_feedback.toLowerCase()).toContain(
         _language === "id" ? "opsional" : "optional",

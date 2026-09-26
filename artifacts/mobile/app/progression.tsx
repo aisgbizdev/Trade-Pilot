@@ -219,6 +219,8 @@ export default function ProgressionScreen() {
     },
     levelingRule: { flexDirection: "row", alignItems: "flex-start", gap: 9 },
     levelingRuleText: { flex: 1, color: colors.foreground, fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16 },
+    guideLink: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 8 },
+    guideLinkText: { color: colors.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 },
     levelingRewards: { alignItems: "flex-end", minWidth: 74 },
     levelingReward: { color: colors.primary, fontFamily: "Inter_700Bold", fontSize: 11 },
     levelingCap: { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 9, marginTop: 2 },
@@ -485,6 +487,11 @@ export default function ProgressionScreen() {
                   </View>
                 </View>
               ))}
+              <Pressable testID="progression-open-guides" accessibilityRole="button"
+                style={styles.guideLink} onPress={() => router.push("/guides" as never)}>
+                <Text style={styles.guideLinkText}>{t.activities.open_guides}</Text>
+                <Feather name="arrow-right" size={16} color={colors.primary} />
+              </Pressable>
             </View>
           ) : null}
           <View style={styles.streakRow}>

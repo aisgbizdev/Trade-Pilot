@@ -36,3 +36,4 @@
 - [Symbol-scoped news feeds](symbol-scoped-news-feeds.md) — per-symbol RSS can contain unrelated company stories; require explicit instrument and market context before citing or showing a headline.
 - [Disclosure prop audit](disclosure-prop-audit.md) — trace shared-card subtitle props to each caller so short fixed copy is not missed when auditing collapsed explanations.
 - [Shareable analysis exports](shareable-analysis-exports.md) — export the full saved rationale with timestamp and snapshot-matched citations; never capture only the visible part of a scrolling dialog.
+- [Retryable capped XP evidence](retryable-capped-xp-evidence.md) — a daily-cap rejection must not permanently consume a one-time activity; only awarded evidence stays deduplicated.

@@ -1,4 +1,5 @@
 import { ProgressionEmblem } from "@/components/ProgressionEmblem";
+import { PreAnalysisChecklist } from "@/components/PreAnalysisChecklist";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
@@ -367,6 +368,7 @@ export default function AnalyzeScreen() {
               </Pressable>
             ))}
           </View>
+          <PreAnalysisChecklist instrument={instrument} timeframe={timeframe} />
         </View>
 
         {error ? (

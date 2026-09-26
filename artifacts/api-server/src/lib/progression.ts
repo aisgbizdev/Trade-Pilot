@@ -114,17 +114,38 @@ export async function awardProgression(input: {
   const dayBucket = localDay(occurredAt, frozenProfile?.timezone || initialTimezone);
   const result = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(104, ${input.userId})`);
-    const proof = await tx.insert(progressionProofs).values({
-      userId: input.userId, source: input.source, sourceEventId: input.sourceEventId,
-      qualityScore: input.qualityScore ?? 0, metadata: input.metadata ?? {}, occurredAt,
-    }).onConflictDoNothing().returning({ id: progressionProofs.id });
-    if (!proof[0]) return { awarded: false, xp: 0, reason: "duplicate" };
+    const proofKey = and(
+      eq(progressionProofs.userId, input.userId),
+      eq(progressionProofs.source, input.source),
+      eq(progressionProofs.sourceEventId, input.sourceEventId),
+    );
+    const [existingProof] = await tx.select({
+      id: progressionProofs.id,
+      decision: progressionProofs.decision,
+      rejectionReason: progressionProofs.rejectionReason,
+    }).from(progressionProofs).where(proofKey).limit(1);
+    if (existingProof && (existingProof.decision !== "rejected" || existingProof.rejectionReason !== "daily_cap")) {
+      return { awarded: false, xp: 0, reason: "duplicate" };
+    }
     const [usage] = await tx.select({ total: sql<number>`coalesce(sum(${xpLedger.xp}), 0)::int` }).from(xpLedger)
       .where(and(eq(xpLedger.userId, input.userId), eq(xpLedger.source, input.source), eq(xpLedger.dayBucket, dayBucket)));
     if (!withinDailySourceCap(Number(usage?.total ?? 0), input.source)) {
-      await tx.update(progressionProofs).set({ decision: "rejected", rejectionReason: "daily_cap" }).where(eq(progressionProofs.id, proof[0].id));
+      if (!existingProof) await tx.insert(progressionProofs).values({
+        userId: input.userId, source: input.source, sourceEventId: input.sourceEventId,
+        qualityScore: input.qualityScore ?? 0, metadata: input.metadata ?? {}, occurredAt,
+        decision: "rejected", rejectionReason: "daily_cap",
+      });
       return { awarded: false, xp: 0, reason: "daily_cap" };
     }
+    const proof = existingProof
+      ? await tx.update(progressionProofs).set({
+        decision: "accepted", rejectionReason: null, occurredAt,
+        qualityScore: input.qualityScore ?? 0, metadata: input.metadata ?? {},
+      }).where(eq(progressionProofs.id, existingProof.id)).returning({ id: progressionProofs.id })
+      : await tx.insert(progressionProofs).values({
+        userId: input.userId, source: input.source, sourceEventId: input.sourceEventId,
+        qualityScore: input.qualityScore ?? 0, metadata: input.metadata ?? {}, occurredAt,
+      }).returning({ id: progressionProofs.id });
     const ledger = await tx.insert(xpLedger).values({ userId: input.userId, source: input.source, sourceEventId: input.sourceEventId, proofId: proof[0].id, xp: rule.xp, dayBucket, ruleVersion: input.ruleVersion ?? PROGRESSION_RULE_VERSION, metadata: input.metadata ?? {} }).returning();
     const [prior] = await tx.select().from(progressionProfiles).where(eq(progressionProfiles.userId, input.userId)).limit(1);
     const [aggregate] = await tx.select({ total: sql<number>`coalesce(sum(${xpLedger.xp}), 0)::int` }).from(xpLedger).where(eq(xpLedger.userId, input.userId));

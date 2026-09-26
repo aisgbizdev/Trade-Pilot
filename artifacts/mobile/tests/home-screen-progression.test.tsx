@@ -68,6 +68,11 @@ vi.mock("@/components/ProgressionEmblem", async () => {
       ReactModule.createElement("ProgressionEmblem", props),
   };
 });
+vi.mock("@/components/PreAnalysisChecklist", async () => {
+  const ReactModule = await import("react");
+  return { PreAnalysisChecklist: () => ReactModule.createElement("PreAnalysisChecklist") };
+});
+vi.mock("expo-glass-effect", () => ({ isLiquidGlassAvailable: () => false }));
 
 vi.mock("@/context/AuthContext", () => ({
   useAuth: () => ({

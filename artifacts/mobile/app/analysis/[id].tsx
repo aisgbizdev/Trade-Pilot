@@ -1,8 +1,11 @@
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
-import { useGetAnalysis } from "@workspace/api-client-react";
+import { refreshProgression } from "@/lib/progression-queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { getGetAnalysisQueryKey, useGetAnalysis, useSubmitFeedback } from "@workspace/api-client-react";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -10,6 +13,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -43,7 +47,60 @@ type Analysis = {
   tradePlan: TradePlan;
   validUntil: string;
   createdAt: string;
+  feedback?: { feedbackType: "useful" | "not_useful"; note: string | null } | null;
 };
+
+function AnalysisFeedback({ analysis, colors }: { analysis: Analysis; colors: ReturnType<typeof useColors> }) {
+  const { t } = useLang();
+  const queryClient = useQueryClient();
+  const submit = useSubmitFeedback();
+  const [choice, setChoice] = useState<"useful" | "not_useful" | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const selected = choice ?? analysis.feedback?.feedbackType ?? null;
+  const save = async () => {
+    if (!selected || submit.isPending) return;
+    try {
+      await submit.mutateAsync({ id: analysis.id, data: { feedbackType: selected, note: note ?? analysis.feedback?.note ?? undefined } });
+      setMessage(t.activities.feedback_saved);
+      void queryClient.invalidateQueries({ queryKey: getGetAnalysisQueryKey(analysis.id) });
+      refreshProgression(queryClient);
+    } catch {
+      setMessage(t.activities.save_error);
+    }
+  };
+  const s = StyleSheet.create({
+    hint: { color: colors.mutedForeground, fontSize: 12, lineHeight: 18, marginBottom: 12 },
+    choices: { flexDirection: "row", gap: 8, marginBottom: 12 },
+    choice: { flex: 1, minHeight: 44, borderRadius: colors.radius, borderWidth: 1, borderColor: colors.border, justifyContent: "center", alignItems: "center" },
+    choiceText: { color: colors.foreground, fontSize: 13 },
+    input: { minHeight: 68, padding: 10, borderRadius: colors.radius, borderWidth: 1, borderColor: colors.border, color: colors.foreground, textAlignVertical: "top" },
+    button: { minHeight: 44, marginTop: 12, borderRadius: colors.radius, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  });
+  return (
+    <Section title={t.activities.feedback_title} colors={colors}>
+      <Text style={s.hint}>{t.activities.feedback_hint}</Text>
+      <View style={s.choices}>
+        {(["useful", "not_useful"] as const).map((value) => (
+          <Pressable key={value} testID={`feedback-${value}`} accessibilityRole="radio"
+            accessibilityState={{ checked: selected === value }} onPress={() => { setChoice(value); setMessage(""); }}
+            style={[s.choice, selected === value && { borderColor: colors.primary, backgroundColor: colors.primary + "14" }]}>
+            <Text style={s.choiceText}>{value === "useful" ? t.activities.feedback_useful : t.activities.feedback_not_useful}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <TextInput testID="feedback-note" accessibilityLabel={t.activities.feedback_note}
+        placeholder={t.activities.feedback_note} placeholderTextColor={colors.mutedForeground}
+        value={note ?? analysis.feedback?.note ?? ""} onChangeText={setNote}
+        multiline maxLength={1000} style={s.input} />
+      <Pressable testID="feedback-save" accessibilityRole="button" disabled={!selected || submit.isPending}
+        onPress={() => void save()} style={[s.button, (!selected || submit.isPending) && { opacity: 0.5 }]}>
+        <Text style={{ color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }}>{t.activities.feedback_save}</Text>
+      </Pressable>
+      {message ? <Text accessibilityRole="alert" style={[s.hint, { marginTop: 10 }]}>{message}</Text> : null}
+    </Section>
+  );
+}
 
 function Section({ title, children, colors }: {
   title: string;
@@ -318,6 +375,7 @@ export default function AnalysisDetailScreen() {
               <Text style={s.bodyText}>{analysis.failureConditions}</Text>
             </Section>
           ) : null}
+          <AnalysisFeedback analysis={analysis} colors={colors} />
 
           <Text
             style={{

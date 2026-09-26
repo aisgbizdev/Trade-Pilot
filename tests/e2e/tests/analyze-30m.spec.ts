@@ -268,10 +268,10 @@ test.describe("Analyze flow — 30m timeframe (real Chromium)", () => {
     const fundamentalCard = page.getByTestId("card-fundamental-context");
     await expect(fundamentalCard).toBeVisible();
     await fundamentalCard.getByTestId("fundamental-news-toggle").click();
-    await fundamentalCard.getByTestId("fundamental-calendar-toggle").click();
     await expect(fundamentalCard).toContainText(
       "Gold edges higher as dollar slips on Fed rate cut bets",
     );
+    await fundamentalCard.getByTestId("fundamental-calendar-toggle").click();
     await expect(fundamentalCard).toContainText("FOMC Rate Decision");
   });
 });
