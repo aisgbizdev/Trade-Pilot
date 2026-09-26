@@ -660,6 +660,33 @@ test.describe("Adaptive result layout (authenticated Chromium)", () => {
 
     for (const width of [320, 390, 1280]) {
       await page.setViewportSize({ width, height: 844 });
+      await margin.fill("1234567890");
+      await loss.fill("1234567890");
+      const fundsFields = await page.getByTestId("adaptive-funds-fields").locator("label").evaluateAll((labels) =>
+        labels.map((label) => {
+          const caption = label.querySelector(":scope > span:first-child")!;
+          const input = label.querySelector("input")!;
+          const captionBox = caption.getBoundingClientRect();
+          const inputBox = input.getBoundingClientRect();
+          const style = getComputedStyle(input);
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d")!;
+          context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+          return {
+            captionRight: captionBox.right,
+            inputLeft: inputBox.left,
+            inputRight: inputBox.right,
+            textWidth: context.measureText(input.value).width,
+            availableWidth: inputBox.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 20,
+          };
+        }),
+      );
+      expect(fundsFields).toHaveLength(2);
+      for (const field of fundsFields) {
+        expect(field.captionRight, `${width}px: label stays beside its input`).toBeLessThanOrEqual(field.inputLeft);
+        expect(field.inputRight, `${width}px: input stays on screen`).toBeLessThanOrEqual(width + 1);
+        expect(field.textWidth, `${width}px: ten digits fit before the number controls`).toBeLessThanOrEqual(field.availableWidth);
+      }
       await margin.fill("20000");
       await loss.fill("2000");
       await page.getByTestId("button-calculate-adaptive-plan").click();

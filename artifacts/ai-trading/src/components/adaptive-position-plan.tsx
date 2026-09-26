@@ -1476,19 +1476,19 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             )}
           </ExpandableExplanation>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block space-y-1">
+        <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3" data-testid="adaptive-funds-fields">
+          <label className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(9rem,58%)] items-center gap-2 sm:grid-cols-[auto_minmax(0,1fr)]">
             <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_available_margin}</span>
-            <span className="relative block">
+            <span className="relative block min-w-0">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">$</span>
-              <Input ref={availableMarginInputRef} type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-available-margin" />
+              <Input ref={availableMarginInputRef} type="number" min="0" step="any" value={form.availableMargin} placeholder="0" onChange={(event) => updateField("availableMargin", event.target.value)} className="h-9 min-w-0 w-full pl-7 pr-1 text-sm tabular-nums" data-testid="input-adaptive-available-margin" />
             </span>
           </label>
-          <label className="block space-y-1">
+          <label className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(9rem,58%)] items-center gap-2 sm:grid-cols-[auto_minmax(0,1fr)]">
             <span className="text-xs font-medium text-muted-foreground">{copy.adaptive_maximum_loss}</span>
-            <span className="relative block">
+            <span className="relative block min-w-0">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">$</span>
-              <Input ref={maximumLossInputRef} type="number" min="0" step="any" value={form.maximumLoss} placeholder="0" onChange={(event) => updateField("maximumLoss", event.target.value)} className="h-9 pl-7 text-sm" data-testid="input-adaptive-maximum-loss" />
+              <Input ref={maximumLossInputRef} type="number" min="0" step="any" value={form.maximumLoss} placeholder="0" onChange={(event) => updateField("maximumLoss", event.target.value)} className="h-9 min-w-0 w-full pl-7 pr-1 text-sm tabular-nums" data-testid="input-adaptive-maximum-loss" />
             </span>
           </label>
         </div>
