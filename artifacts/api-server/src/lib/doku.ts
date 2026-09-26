@@ -107,8 +107,13 @@ export async function createDokuCheckout(params: CreateDokuCheckoutParams): Prom
     },
     // Ties every checkout to our own notification endpoint explicitly
     // rather than relying solely on whatever is configured in DOKU Back
-    // Office, which could drift between environments.
-    override_notification_url: params.notificationUrl,
+    // Office, which could drift between environments. Per DOKU's docs this
+    // MUST be nested under additional_info — a top-level
+    // override_notification_url is silently ignored (DOKU falls back to
+    // whatever Notification URL is configured in Back Office instead).
+    additional_info: {
+      override_notification_url: params.notificationUrl,
+    },
   };
   const bodyJson = JSON.stringify(body);
 
