@@ -572,7 +572,7 @@ function DirectionSwitch({
     <div className="space-y-1.5" data-testid="adaptive-direction-tabs">
       <div>
         <p className="text-xs font-bold text-foreground">{copy.adaptive_direction_title}</p>
-        <ExpandableExplanation>{copy.adaptive_direction_help}</ExpandableExplanation>
+        <ExpandableExplanation inline>{copy.adaptive_direction_help}</ExpandableExplanation>
       </div>
       <div className="inline-flex max-w-full rounded-md bg-muted p-1" role="group" aria-label={copy.adaptive_direction_title}>
         {([
@@ -680,7 +680,7 @@ function PlanSide({
             {conditional ? (
               <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">{copy.adaptive_snapshot_wait}</p>
             ) : (
-              <ExpandableExplanation className="mt-0.5" testId="adaptive-snapshot-explanation">
+              <ExpandableExplanation inline className="mt-0.5" testId="adaptive-snapshot-explanation">
                 {copy.adaptive_snapshot_ready}
               </ExpandableExplanation>
             )}
@@ -1295,7 +1295,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         <Calculator className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-foreground">{copy.adaptive_title}</p>
-          <ExpandableExplanation className="mt-0.5">{copy.adaptive_subtitle}</ExpandableExplanation>
+          <ExpandableExplanation inline className="mt-0.5" testId="adaptive-intro">{copy.adaptive_subtitle}</ExpandableExplanation>
         </div>
         <AnalysisGuideLink article="adaptive-position-plan" compact />
       </div>
@@ -1727,7 +1727,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
          {recommendation && !recommendation.result.valid && (
            <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
              <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
-             <ExpandableExplanation testId="adaptive-scenarios-review-explanation">
+             <ExpandableExplanation inline testId="adaptive-scenarios-review-explanation">
                {copy.adaptive_scenarios_review_help}
              </ExpandableExplanation>
               {directionControl}

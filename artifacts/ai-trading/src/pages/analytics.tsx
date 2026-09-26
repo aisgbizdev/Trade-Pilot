@@ -77,7 +77,7 @@ export default function AnalyticsPage() {
       <Layout>
         <div className="px-4 py-5">
           <h1 className="text-xl font-bold text-foreground mb-1">{t.analytics.title}</h1>
-          <ExpandableExplanation className="mb-8">{t.analytics.subtitle}</ExpandableExplanation>
+          <ExpandableExplanation inline className="mb-8">{t.analytics.subtitle}</ExpandableExplanation>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <BarChart3 className="w-12 h-12 text-muted-foreground opacity-40 mb-3" />
             <p className="text-sm font-medium text-foreground">{t.analytics.no_data_title}</p>
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
       <div className="px-4 py-5 space-y-5 md:px-6">
         <div>
           <h1 className="text-xl font-bold text-foreground">{t.analytics.title}</h1>
-          <ExpandableExplanation>{t.analytics.subtitle}</ExpandableExplanation>
+          <ExpandableExplanation inline>{t.analytics.subtitle}</ExpandableExplanation>
         </div>
 
         <div className="grid grid-cols-3 gap-2 sm:gap-3">

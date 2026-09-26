@@ -688,6 +688,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const disclaimer = screen.getByTestId("adaptive-disclaimer");
     const dayTrade = screen.getByTestId("adaptive-daytrade-only");
     const toggle = screen.getByTestId("button-language-toggle");
+    const intro = screen.getByTestId("adaptive-intro");
+    expect(intro).toBeVisible();
+    expect(intro).toHaveTextContent(/Review an analysis-driven, manual position plan/i);
+    expect(intro.querySelector("summary")).toBeNull();
 
     expect(account.open).toBe(false);
     expect(funds.open).toBe(false);
@@ -712,6 +716,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAccessibleName("Beralih ke Bahasa Inggris");
+    expect(intro).toBeVisible();
+    expect(intro).toHaveTextContent(/Susun ukuran posisi manual/i);
     expect(account.open).toBe(true);
     expect(funds.open).toBe(true);
     expect(risk.open).toBe(true);
@@ -897,11 +903,11 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     const snapshot = await screen.findByTestId("adaptive-plan-snapshot");
-    const snapshotExplanation = screen.getByTestId("adaptive-snapshot-explanation") as HTMLDetailsElement;
-    expect(snapshotExplanation.open).toBe(false);
+    const snapshotExplanation = screen.getByTestId("adaptive-snapshot-explanation");
+    expect(snapshotExplanation).toBeVisible();
     expect(snapshot).toHaveTextContent(/Stop Loss/i);
-    fireEvent.click(within(snapshotExplanation).getByText("Show explanation"));
-    expect(snapshotExplanation.open).toBe(true);
+    expect(snapshotExplanation).toHaveTextContent(/selected tier and risk style/i);
+    expect(snapshotExplanation.querySelector("summary")).toBeNull();
     const whyButton = await screen.findByTestId("adaptive-insight-button-reasoning");
     const volatilityButton = screen.getByTestId("adaptive-insight-button-volatility");
     expect(whyButton).toHaveAttribute("aria-expanded", "false");
@@ -1248,10 +1254,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/Buy and Sell scenarios available/i);
-    const reviewExplanation = screen.getByTestId("adaptive-scenarios-review-explanation") as HTMLDetailsElement;
-    expect(reviewExplanation.open).toBe(false);
-    fireEvent.click(within(reviewExplanation).getByText("Show explanation"));
-    expect(reviewExplanation.open).toBe(true);
+    const reviewExplanation = screen.getByTestId("adaptive-scenarios-review-explanation");
+    expect(reviewExplanation).toBeVisible();
+    expect(reviewExplanation.querySelector("summary")).toBeNull();
     expect(reviewExplanation).toHaveTextContent(/not an instruction to enter/i);
     const alternativeButton = screen.getByTestId("adaptive-insight-button-alternative");
     expect(alternativeButton).toHaveAttribute("aria-expanded", "false");

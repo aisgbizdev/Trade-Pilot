@@ -293,7 +293,7 @@ export default function GuidePage() {
                   <BookOpen className="w-4 h-4 text-primary" />
                   {t.guide.title}
                 </h1>
-                 <ExpandableExplanation>{t.guide.subtitle}</ExpandableExplanation>
+                 <ExpandableExplanation inline>{t.guide.subtitle}</ExpandableExplanation>
               </div>
             </div>
 
@@ -326,7 +326,7 @@ export default function GuidePage() {
                       <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
                       {t.guide.quick_start}
                     </h2>
-                     <ExpandableExplanation>{t.guide.quick_start_hint}</ExpandableExplanation>
+                     <ExpandableExplanation inline>{t.guide.quick_start_hint}</ExpandableExplanation>
                   </div>
                 </div>
                 <div className="grid gap-2 md:grid-cols-3">
@@ -400,7 +400,7 @@ export default function GuidePage() {
               >
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>
-               <ExpandableExplanation className="px-4 md:hidden">{t.guide.browse_categories}</ExpandableExplanation>
+               <ExpandableExplanation inline className="px-4 md:hidden">{t.guide.browse_categories}</ExpandableExplanation>
             </div>
 
             {!searchQuery.trim() && selectedCategory === null && (
@@ -420,7 +420,7 @@ export default function GuidePage() {
                 <span className="hidden text-xs font-semibold text-primary sm:block">{t.guide.psychology_action}</span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               </button>
-              <ExpandableExplanation className="px-3">{t.guide.psychology_hint}</ExpandableExplanation>
+              <ExpandableExplanation inline className="px-3">{t.guide.psychology_hint}</ExpandableExplanation>
               </div>
             )}
 

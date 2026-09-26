@@ -670,7 +670,7 @@ export default function HistoryPage() {
               </div>
               <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
                 <p className="text-xs font-semibold text-foreground">{t.history.choose_instruments}</p>
-                 <ExpandableExplanation className="mb-2.5"><p>{t.history.choose_instruments_hint}</p></ExpandableExplanation>
+                 <ExpandableExplanation inline className="mb-2.5"><p>{t.history.choose_instruments_hint}</p></ExpandableExplanation>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-5 gap-2">
                   {PRIMARY_INSTRUMENTS.map((inst) => {
                     const active = filters.instruments.includes(inst);

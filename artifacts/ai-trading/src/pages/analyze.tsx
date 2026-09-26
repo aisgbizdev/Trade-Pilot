@@ -214,7 +214,7 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
         </ul>
       )}
       <div className="pt-1 mt-1 border-t border-border/40">
-        <ExpandableExplanation>
+        <ExpandableExplanation inline>
           <p className="flex items-start gap-1 text-xs text-muted-foreground italic leading-relaxed">
             <Info className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
             <span>{t.analyze.calendar_preview_note}</span>
@@ -431,7 +431,7 @@ function EconomicCalendarSection() {
         </div>
       </div>
       <div className="pt-1 space-y-2">
-        <ExpandableExplanation>
+        <ExpandableExplanation inline>
           {t.analyze.economic_calendar_section_hint}
         </ExpandableExplanation>
         <div
@@ -635,7 +635,7 @@ function TimeframeRiskMapSection({
             <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
             {t.risk_map.title}
           </h2>
-          <ExpandableExplanation className="mt-1">
+          <ExpandableExplanation inline className="mt-1">
             {t.risk_map.desc}
           </ExpandableExplanation>
         </div>

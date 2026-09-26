@@ -48,7 +48,7 @@ export default function MirrorPage() {
               {tm.title}
             </h1>
           </div>
-           <ExpandableExplanation>{tm.subtitle}</ExpandableExplanation>
+           <ExpandableExplanation inline>{tm.subtitle}</ExpandableExplanation>
         </header>
 
         {isLoading && (
@@ -197,7 +197,7 @@ function CategoryCard({
         <div className="text-muted-foreground mt-0.5">{icon}</div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-           <ExpandableExplanation>{subtitle}</ExpandableExplanation>
+           <ExpandableExplanation inline>{subtitle}</ExpandableExplanation>
         </div>
       </div>
       {block.gated ? (
@@ -324,7 +324,7 @@ function PostLossCard({
           <h3 className="text-sm font-semibold text-foreground">
             {tm.post_loss_title}
           </h3>
-           <ExpandableExplanation>{tm.post_loss_subtitle}</ExpandableExplanation>
+           <ExpandableExplanation inline>{tm.post_loss_subtitle}</ExpandableExplanation>
         </div>
       </div>
       {block.gated ? (
@@ -383,7 +383,7 @@ function ExitDisciplineCard({
           <h3 className="text-sm font-semibold text-foreground">
             {tm.exit_title}
           </h3>
-           <ExpandableExplanation>{tm.exit_subtitle}</ExpandableExplanation>
+           <ExpandableExplanation inline>{tm.exit_subtitle}</ExpandableExplanation>
         </div>
       </div>
       {block.gated ? (

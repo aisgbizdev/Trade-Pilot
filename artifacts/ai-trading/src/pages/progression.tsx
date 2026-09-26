@@ -97,7 +97,7 @@ export default function ProgressionPage() {
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-foreground truncate">{t.progression.title}</h1>
-             <ExpandableExplanation>{t.progression.subtitle}</ExpandableExplanation>
+             <ExpandableExplanation inline>{t.progression.subtitle}</ExpandableExplanation>
           </div>
         </div>
 

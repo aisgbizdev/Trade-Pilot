@@ -148,7 +148,7 @@ export default function DashboardPage() {
               <p className="text-sm font-bold text-foreground">
                 {t.outcomes.summary_title.replace("{days}", String(outcomesData.rangeDays))}
               </p>
-              <ExpandableExplanation><p>{t.outcomes.summary_subtitle}</p></ExpandableExplanation>
+              <ExpandableExplanation inline><p>{t.outcomes.summary_subtitle}</p></ExpandableExplanation>
             </div>
             {(outcomesData.invalidated > 0 || outcomesData.pending > 0) && (
               <div className="flex flex-wrap gap-3 text-xs font-medium text-foreground">

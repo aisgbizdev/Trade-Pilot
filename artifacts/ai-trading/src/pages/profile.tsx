@@ -561,7 +561,7 @@ export default function ProfilePage() {
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
-               <ExpandableExplanation className="px-3.5 pb-2">{t.profile_extra.notifications_link_subtitle}</ExpandableExplanation>
+               <ExpandableExplanation inline className="px-3.5 pb-2">{t.profile_extra.notifications_link_subtitle}</ExpandableExplanation>
                </div>
               <button
                 type="button"
@@ -635,7 +635,7 @@ export default function ProfilePage() {
                  <p className="text-xs text-muted-foreground mb-3 leading-snug">
                   {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
                 </p>
-                 <ExpandableExplanation className="mb-4">{t.brand.open_account_subtitle}</ExpandableExplanation>
+                 <ExpandableExplanation inline className="mb-4">{t.brand.open_account_subtitle}</ExpandableExplanation>
                 <Button asChild className="w-full btn-premium font-semibold h-11">
                   <a
                     href="https://www.sg-berjangka.com"

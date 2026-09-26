@@ -233,7 +233,7 @@ export default function PerformancePage() {
             <Activity className="w-5 h-5 text-primary" />
             <h1 className="text-xl font-bold text-foreground leading-tight">{tp.title}</h1>
           </div>
-          <ExpandableExplanation testId="performance-intro">{tp.subtitle}</ExpandableExplanation>
+          <ExpandableExplanation inline testId="performance-intro">{tp.subtitle}</ExpandableExplanation>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div
               role="tablist"

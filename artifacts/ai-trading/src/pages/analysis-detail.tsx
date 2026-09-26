@@ -132,8 +132,7 @@ function TimeframeRiskDialog({
             <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
             {t.risk_map.title}
           </DialogTitle>
-          <DialogDescription className="sr-only">{t.risk_map.desc}</DialogDescription>
-          <ExpandableExplanation>{t.risk_map.desc}</ExpandableExplanation>
+          <DialogDescription className="text-xs leading-relaxed text-muted-foreground">{t.risk_map.desc}</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -839,7 +838,7 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
             <Target className="w-3.5 h-3.5 text-primary" />
             {t.analysis_detail.trade_plan_title}
           </h3>
-          <ExpandableExplanation className="mt-0.5">
+          <ExpandableExplanation inline className="mt-0.5">
             {t.analysis_detail.trade_plan_subtitle}
           </ExpandableExplanation>
         </div>
@@ -1465,7 +1464,7 @@ function FundamentalContextCard({
           </div>
           {refreshButton}
         </div>
-        <ExpandableExplanation className="mt-0.5">
+        <ExpandableExplanation inline className="mt-0.5">
           {t.analysis_detail.fundamental_context_subtitle}
         </ExpandableExplanation>
       </div>

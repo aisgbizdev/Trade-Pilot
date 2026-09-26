@@ -195,7 +195,7 @@ export default function JournalPage() {
               >
                 {t.journal.title}
               </h1>
-              <ExpandableExplanation>{t.journal.subtitle}</ExpandableExplanation>
+              <ExpandableExplanation inline>{t.journal.subtitle}</ExpandableExplanation>
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">

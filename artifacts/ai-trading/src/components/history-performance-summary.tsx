@@ -221,7 +221,7 @@ export function HistoryPerformanceSummary() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold">{t.history.instrument_performance}</h2>
-               <ExpandableExplanation><p>{t.history.instrument_performance_hint}</p></ExpandableExplanation>
+               <ExpandableExplanation inline><p>{t.history.instrument_performance_hint}</p></ExpandableExplanation>
             </div>
             {(focusedInstrument || instruments.length > 0) && (
               <button
@@ -281,7 +281,7 @@ export function HistoryPerformanceSummary() {
                      )}
                   </button>
                    {row.instrument === OTHER_INSTRUMENT_BUCKET_KEY && (
-                     <ExpandableExplanation className="mt-2"><p>{t.history.other_instruments_hint}</p></ExpandableExplanation>
+                     <ExpandableExplanation inline className="mt-2"><p>{t.history.other_instruments_hint}</p></ExpandableExplanation>
                    )}
                   <button
                      onClick={() => drill(undefined, undefined, row.filterInstruments)}
