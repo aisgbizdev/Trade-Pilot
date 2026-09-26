@@ -679,14 +679,14 @@ test.describe("Adaptive result layout (authenticated Chromium)", () => {
       const ladder = page.getByTestId("adaptive-ladder-buy");
       const fillScenarios = page.getByTestId("adaptive-fill-scenarios-buy");
       await expect(ladder).not.toHaveAttribute("open", "");
-      await expect(fillScenarios).not.toHaveAttribute("open", "");
+      await expect(fillScenarios).toBeHidden();
       await ladder.locator("summary").first().click();
       await expect(ladder).toHaveAttribute("open", "");
       await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toBeVisible();
-      await ladder.locator("summary").first().click();
-      await fillScenarios.locator("summary").click();
       await expect(fillScenarios.locator("dd").first()).toBeVisible();
-      await fillScenarios.locator("summary").click();
+      await expectTextFits("adaptive-fill-scenarios-buy", width);
+      await ladder.locator("summary").first().click();
+      await expect(fillScenarios).toBeHidden();
 
       // A funds-only next position has a long, visible broker message.
       await page.getByTestId("button-adaptive-risk-style-balanced").click();
@@ -830,7 +830,8 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const maximumLossInput = page.getByTestId("input-adaptive-maximum-loss");
     await expect(marginInput).toBeVisible();
     const accountRule = page.getByTestId("adaptive-account-rule");
-    await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/day trade only/i);
+    await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/intraday \(day trade\)/i);
+    await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/overnight positions are not covered|posisi overnight tidak tercakup/i);
     await expect(accountRule).toContainText("Mini");
     await expect(accountRule).toContainText(/0[.,]1(?:0)? lot/);
     await expect(accountRule).toContainText(/100/);
@@ -895,10 +896,16 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-plan-valid")).toHaveCount(0);
     await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$110/);
     await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$62[.,]5/);
-    await expect(page.getByTestId("adaptive-insight-button-buy")).toContainText(/Blocked|Diblokir/i);
-    await expect(page.getByTestId("adaptive-insight-button-sell")).toContainText(/Conditional|Kondisional/i);
+    await expect(page.getByTestId("adaptive-direction-buy")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("adaptive-review-side-sell")).toHaveCount(0);
+    await page.getByTestId("adaptive-direction-sell").click();
+    await expect(page.getByTestId("adaptive-review-side-sell")).toContainText(/Conditional|Kondisional/i);
+    await expect(page.getByTestId("adaptive-review-side-buy")).toHaveCount(0);
+    await page.getByTestId("adaptive-direction-buy").click();
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$110/);
     await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
-    await page.getByTestId("adaptive-insight-button-reasoning").click();
+    await page.getByTestId("button-adaptive-explanation").click();
+    await expect(page.getByTestId("adaptive-education-panel")).toBeVisible();
     await expect(page.getByTestId("adaptive-plan-reasoning")).toContainText(/high-impact|dampak tinggi/i);
 
     // Standard Plan levels remain the source plan throughout; only the
