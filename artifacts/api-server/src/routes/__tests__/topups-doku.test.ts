@@ -143,7 +143,7 @@ beforeEach(() => {
   mockCreateCheckout.mockReset();
 });
 
-describe("POST /topups — manual path now restricted to the below-DOKU-threshold package", () => {
+describe("POST /topups — manual/QRIS path (TEMPORARY fallback for every package while DOKU QRIS/e-wallet is pending verification)", () => {
   it("still accepts the smallest package (Rp5.000)", async () => {
     const user = await createUser();
     const res = await request(app)
@@ -154,14 +154,19 @@ describe("POST /topups — manual path now restricted to the below-DOKU-threshol
     expect(res.body.paymentProvider).toBe("manual");
   });
 
-  it("rejects a DOKU-tier amount (Rp20.000) with a 400 pointing at the DOKU endpoint", async () => {
+  it("also accepts a DOKU-tier amount (Rp20.000) via the manual/QRIS fallback, with NO admin fee added", async () => {
     const user = await createUser();
     const res = await request(app)
       .post("/api/topups")
       .set(...authHeader(user))
       .send({ amountRupiah: PKG_20K.amountRupiah, proofObjectPath: "objects/proof.jpg" });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/DOKU/i);
+    expect(res.status).toBe(201);
+    expect(res.body.paymentProvider).toBe("manual");
+    // The full package amount, unlike the DOKU/VA path which adds
+    // DOKU_ADMIN_FEE_RUPIAH — a manual bank transfer has no DOKU fee to
+    // cover.
+    expect(res.body.amountRupiah).toBe(PKG_20K.amountRupiah);
+    expect(res.body.creditsGranted).toBe(PKG_20K.credits);
   });
 });
 

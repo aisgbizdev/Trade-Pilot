@@ -103,15 +103,13 @@ router.post("/topups", requireAuth, async (req: AuthRequest, res) => {
     });
     return;
   }
-  // Product decision (see chat): only the smallest package stays on this
-  // manual, unverified-proof path. Anything at/above the threshold must go
-  // through the real, verified DOKU Checkout flow (POST /topups/doku/checkout).
-  if (pkg.amountRupiah >= DOKU_MIN_AMOUNT_RUPIAH) {
-    res.status(400).json({
-      error: "Nominal ini hanya tersedia lewat pembayaran DOKU. Gunakan endpoint checkout DOKU.",
-    });
-    return;
-  }
+  // TEMPORARY (see chat): every DOKU-tier package (>= DOKU_MIN_AMOUNT_RUPIAH)
+  // also offers this manual/QRIS path as a fallback method choice while
+  // DOKU's own QRIS/e-wallet channels are still pending verification (only
+  // Virtual Account is live so far). No admin fee is added here — that fee
+  // only exists to cover DOKU's own VA transaction cost, which doesn't
+  // apply to a manual bank transfer. Revisit once DOKU QRIS is verified:
+  // either retire this fallback or keep it as a permanent alternative.
   const creditsRequested = pkg.credits;
   // Recorded for audit/history purposes only (what this specific package's
   // effective per-credit price was at the time) — no longer a globally

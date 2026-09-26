@@ -1,8 +1,12 @@
 /**
- * DOKU Checkout redirect flow on the top-up page: selecting a
- * DOKU-tier package (>= Rp20.000) skips the QRIS/proof-upload UI and
- * redirects the browser straight to DOKU's hosted checkout page, and the
- * page correctly reads the ?doku=success|cancel&id=N return.
+ * Payment-method choice + DOKU Checkout redirect flow on the top-up page:
+ * selecting a DOKU-tier package (>= Rp20.000) opens a VA-vs-QRIS method
+ * dialog (TEMPORARY — see chat — while DOKU's own QRIS/e-wallet channels
+ * are pending verification). Choosing VA redirects to DOKU's hosted
+ * checkout page (with the admin fee); choosing QRIS falls back to the same
+ * manual/QRIS flow the Rp5.000 package always used, for the full package
+ * amount with no fee. Also covers the page correctly reading the
+ * ?doku=success|cancel&id=N return.
  */
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -32,8 +36,43 @@ afterEach(() => {
   window.history.replaceState({}, "", "/topup");
 });
 
-describe("TopupPage — DOKU Checkout redirect", () => {
-  it("selecting a DOKU package and continuing calls the checkout endpoint and redirects, skipping the QRIS/proof step", async () => {
+describe("TopupPage — payment-method choice for a DOKU-tier package", () => {
+  it("opens a method dialog instead of redirecting immediately, showing the admin fee only on the VA option", async () => {
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+      ],
+      { strict: false },
+    );
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-preset-20000"));
+    });
+    // No fee shown on the plain package-select screen anymore — it's
+    // decided by which method the customer picks in the dialog below.
+    expect(screen.queryByTestId("text-preset-admin-fee-20000")).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-continue-topup"));
+    });
+
+    expect(await screen.findByTestId("dialog-payment-method")).toBeInTheDocument();
+    expect(screen.getByTestId("text-method-va-fee")).toHaveTextContent("5.000");
+    expect(screen.getByTestId("text-method-va-fee")).toHaveTextContent("25.000");
+    // Never redirects or reveals QRIS just from opening the dialog.
+    expect(screen.queryByTestId("card-qris")).not.toBeInTheDocument();
+  });
+
+  it("choosing VA calls the DOKU checkout endpoint (package amount only) and redirects", async () => {
     let checkoutRequestBody: unknown = null;
     installFetchMock(
       [
@@ -84,19 +123,14 @@ describe("TopupPage — DOKU Checkout redirect", () => {
       </Wrapper>,
     );
 
-    // Shows the flat admin fee note on the package button before it's even
-    // selected — the customer sees this before committing to anything.
-    expect(await screen.findByTestId("text-preset-admin-fee-20000")).toHaveTextContent("5.000");
-
     await act(async () => {
-      fireEvent.click(screen.getByTestId("button-preset-20000"));
+      fireEvent.click(await screen.findByTestId("button-preset-20000"));
     });
-    // And the total (package + fee) once selected, distinct from the bare
-    // package price — the customer is never surprised by DOKU's own total.
-    expect(await screen.findByTestId("text-credits-preview")).toHaveTextContent("25.000");
-
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-continue-topup"));
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-method-va"));
     });
 
     await waitFor(() => {
@@ -106,11 +140,43 @@ describe("TopupPage — DOKU Checkout redirect", () => {
     // fee on top — the request to our own checkout endpoint still just
     // names the package.
     expect(checkoutRequestBody).toEqual({ amountRupiah: 20000 });
-    // Never reveals the QRIS/proof-upload UI for a DOKU package.
     expect(screen.queryByTestId("card-qris")).not.toBeInTheDocument();
   });
 
-  it("still shows the QRIS/proof step for the manual (Rp5.000) package", async () => {
+  it("choosing QRIS falls back to the manual/QRIS flow for the full package amount, no fee", async () => {
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+      ],
+      { strict: false },
+    );
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-preset-20000"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-continue-topup"));
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-method-qris"));
+    });
+
+    expect(await screen.findByTestId("card-qris")).toBeInTheDocument();
+    // The full package amount (Rp20.000), not package + fee.
+    expect(screen.getByTestId("text-pay-summary")).toHaveTextContent("20.000");
+    expect(screen.queryByTestId("dialog-payment-method")).not.toBeInTheDocument();
+  });
+
+  it("still skips straight to the QRIS/proof step for the manual-only (Rp5.000) package — no method dialog", async () => {
     installFetchMock(
       [
         (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
@@ -135,6 +201,7 @@ describe("TopupPage — DOKU Checkout redirect", () => {
     });
 
     expect(await screen.findByTestId("card-qris")).toBeInTheDocument();
+    expect(screen.queryByTestId("dialog-payment-method")).not.toBeInTheDocument();
   });
 });
 

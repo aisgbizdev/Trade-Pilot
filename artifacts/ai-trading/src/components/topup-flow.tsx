@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Upload, Landmark, QrCode } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,13 @@ export function TopupFlow({ onSubmitted }: { onSubmitted?: () => void }) {
   const [proofObjectPath, setProofObjectPath] = useState<string | null>(null);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [showProofNotice, setShowProofNotice] = useState(false);
+  // Only relevant for a "doku"-tier package (>= Rp20.000) — TEMPORARY (see
+  // chat) while DOKU's own QRIS/e-wallet channels are still pending
+  // verification: offers a choice between the real DOKU/VA checkout (which
+  // carries the admin fee) and the same manual/QRIS fallback the Rp5.000
+  // package always used (no fee, since there's no DOKU transaction to
+  // cover the cost of).
+  const [showMethodDialog, setShowMethodDialog] = useState(false);
 
   const createTopup = useCreateTopupRequest();
   const createDokuCheckout = useCreateDokuCheckout();
@@ -95,28 +102,44 @@ export function TopupFlow({ onSubmitted }: { onSubmitted?: () => void }) {
     }
   };
 
-  // DOKU packages skip the "pay" step (QRIS image + proof upload) entirely
-  // — the browser leaves the app for DOKU's own hosted checkout page, so
-  // there's no in-app payment UI to show for them.
-  const handleContinue = async () => {
+  // A "doku"-tier package first offers a payment-method choice (VA vs.
+  // manual/QRIS fallback — see showMethodDialog above); the Rp5.000
+  // manual-only package skips straight to the QRIS/proof-upload step since
+  // there's nothing to choose.
+  const handleContinue = () => {
     if (!selectedPackage) {
       toast({ title: t.topup.amount_too_small, variant: "destructive" });
       return;
     }
     if (selectedPackage.provider === "doku") {
-      try {
-        const result = await createDokuCheckout.mutateAsync({
-          data: { amountRupiah: selectedPackage.amountRupiah },
-        });
-        window.location.href = result.paymentUrl;
-      } catch (err: unknown) {
-        toast({
-          title: ((err as { data?: { error?: string } })?.data?.error) ?? t.topup.doku_checkout_failed,
-          variant: "destructive",
-        });
-      }
+      setShowMethodDialog(true);
       return;
     }
+    setStep("pay");
+    setShowProofNotice(true);
+  };
+
+  // VA/DOKU choice: leaves the app entirely for DOKU's own hosted checkout
+  // page, so there's no in-app payment UI to show for it.
+  const handleChooseVA = async () => {
+    if (!selectedPackage) return;
+    try {
+      const result = await createDokuCheckout.mutateAsync({
+        data: { amountRupiah: selectedPackage.amountRupiah },
+      });
+      window.location.href = result.paymentUrl;
+    } catch (err: unknown) {
+      toast({
+        title: ((err as { data?: { error?: string } })?.data?.error) ?? t.topup.doku_checkout_failed,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // QRIS/manual choice: same in-app flow the Rp5.000 package always used —
+  // for the package's own amount, with no admin fee added.
+  const handleChooseQris = () => {
+    setShowMethodDialog(false);
     setStep("pay");
     setShowProofNotice(true);
   };
@@ -182,25 +205,13 @@ export function TopupFlow({ onSubmitted }: { onSubmitted?: () => void }) {
                   >
                     {t.topup.amount_credits_preview.replace("{n}", String(pkg.credits))}
                   </span>
-                  {pkg.adminFeeRupiah > 0 && (
-                    <span
-                      className="block text-[10px] opacity-70 mt-0.5"
-                      data-testid={`text-preset-admin-fee-${pkg.amountRupiah}`}
-                    >
-                      {t.topup.admin_fee_note.replace("{fee}", pkg.adminFeeRupiah.toLocaleString("id-ID"))}
-                    </span>
-                  )}
                 </button>
               );
             })}
           </div>
           {selectedPackage && (
             <p className="text-xs text-muted-foreground" data-testid="text-credits-preview">
-              {selectedPackage.adminFeeRupiah > 0
-                ? t.topup.total_with_fee_preview
-                    .replace("{n}", String(creditsPreview))
-                    .replace("{total}", (amountNumber + selectedPackage.adminFeeRupiah).toLocaleString("id-ID"))
-                : t.topup.amount_credits_preview.replace("{n}", String(creditsPreview))}
+              {t.topup.amount_credits_preview.replace("{n}", String(creditsPreview))}
             </p>
           )}
           <Button
@@ -358,6 +369,54 @@ export function TopupFlow({ onSubmitted }: { onSubmitted?: () => void }) {
               {t.topup.proof_notice_ack}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showMethodDialog} onOpenChange={setShowMethodDialog}>
+        <DialogContent data-testid="dialog-payment-method">
+          <DialogHeader>
+            <DialogTitle>{t.topup.method_dialog_title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2.5">
+            <button
+              type="button"
+              onClick={handleChooseVA}
+              disabled={createDokuCheckout.isPending}
+              className="w-full flex items-start gap-3 rounded-lg border border-border p-3 text-left hover:border-primary/50 hover:bg-muted transition-colors disabled:opacity-60"
+              data-testid="button-method-va"
+            >
+              <Landmark className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden="true" />
+              <span className="min-w-0">
+                <span className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">{t.topup.method_va_title}</span>
+                  {createDokuCheckout.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                </span>
+                <span className="block text-xs text-muted-foreground mt-0.5">{t.topup.method_va_desc}</span>
+                {selectedPackage && selectedPackage.adminFeeRupiah > 0 && (
+                  <span className="block text-[11px] text-amber-700 dark:text-amber-400 mt-1" data-testid="text-method-va-fee">
+                    {t.topup.method_va_fee_note
+                      .replace("{fee}", selectedPackage.adminFeeRupiah.toLocaleString("id-ID"))
+                      .replace("{total}", (amountNumber + selectedPackage.adminFeeRupiah).toLocaleString("id-ID"))}
+                  </span>
+                )}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={handleChooseQris}
+              className="w-full flex items-start gap-3 rounded-lg border border-border p-3 text-left hover:border-primary/50 hover:bg-muted transition-colors"
+              data-testid="button-method-qris"
+            >
+              <QrCode className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden="true" />
+              <span className="min-w-0">
+                <span className="text-sm font-medium text-foreground">{t.topup.method_qris_title}</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">{t.topup.method_qris_desc}</span>
+                <span className="block text-[11px] text-emerald-600 dark:text-emerald-400 mt-1">
+                  {t.topup.method_qris_no_fee_note}
+                </span>
+              </span>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </>
