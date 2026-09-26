@@ -162,6 +162,56 @@ paths:
           description: Invalid amount
           content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
         "401": { description: Not authenticated }
+  /topups/doku/checkout:
+    post:
+      operationId: createDokuCheckout
+      tags: [topups]
+      summary: Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+      description: >-
+        Only accepts packages that are NOT eligible for the manual/QRIS
+        path (POST /topups accepts only the one below the threshold).
+        Returns a hosted DOKU payment page URL to redirect the browser to;
+        credits are granted only once POST /topups/doku/notify confirms
+        the payment.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateDokuCheckoutBody" } } }
+      responses:
+        "201":
+          description: Checkout session created
+          content: { application/json: { schema: { $ref: "#/components/schemas/DokuCheckoutSession" } } }
+        "400":
+          description: Invalid amount
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "401": { description: Not authenticated }
+        "502":
+          description: DOKU checkout creation failed
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "503":
+          description: DOKU not configured
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /topups/doku/{id}/status:
+    get:
+      operationId: getDokuTopupStatus
+      tags: [topups]
+      summary: Poll a DOKU checkout request's status (owner-only)
+      description: >-
+        For the frontend to poll right after the browser returns from
+        DOKU's checkout page, in case the payment notification webhook
+        hasn't landed yet.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Current status
+          content: { application/json: { schema: { $ref: "#/components/schemas/DokuTopupStatus" } } }
+        "400":
+          description: Invalid id
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "401": { description: Not authenticated }
+        "404":
+          description: Not found, or not owned by the caller
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
   /topups/mine:
     get:
       operationId: getMyTopupRequests
@@ -5117,7 +5167,14 @@ components:
           type: integer
         credits:
           type: integer
-      required: [amountRupiah, credits]
+        provider:
+          type: string
+          enum: [manual, doku]
+          description: >-
+            Which payment path this package must use — "manual" packages go
+            through POST /topups (QRIS + proof upload), "doku" packages go
+            through POST /topups/doku/checkout. Never both.
+      required: [amountRupiah, credits, provider]
 
     TopupConfig:
       type: object
@@ -5219,6 +5276,16 @@ components:
         createdAt:
           type: string
           format: date-time
+        paymentProvider:
+          type: string
+          enum: [manual, doku]
+        dokuPaymentUrl:
+          type: string
+          nullable: true
+          description: >-
+            The DOKU hosted checkout page URL — present only while a "doku"
+            request is still "pending" (lets the frontend offer a "resume
+            payment" link); null otherwise.
       required:
         - id
         - userId
@@ -5233,6 +5300,45 @@ components:
         - reviewNote
         - creditsGranted
         - createdAt
+        - paymentProvider
+        - dokuPaymentUrl
+
+    CreateDokuCheckoutBody:
+      type: object
+      properties:
+        amountRupiah:
+          type: integer
+          description: Must match one of the fixed packages at/above the DOKU-only threshold.
+      required:
+        - amountRupiah
+
+    DokuCheckoutSession:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The credit_topup_requests row id (poll via GET /topups/doku/{id}/status).
+        paymentUrl:
+          type: string
+          description: DOKU's hosted checkout page — redirect the browser here.
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - paymentUrl
+        - expiresAt
+
+    DokuTopupStatus:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: "#/components/schemas/TopupRequestStatus"
+      required:
+        - id
+        - status
 
     DeleteTopupResponse:
       type: object

@@ -60,6 +60,7 @@ import 'package:trade_pilot_api_client/src/model/change_password_body.dart';
 import 'package:trade_pilot_api_client/src/model/change_security_question_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_analysis_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_analysis_result.dart';
+import 'package:trade_pilot_api_client/src/model/create_doku_checkout_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_filter_preset_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_journal_entry_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_journal_entry_body_entry_price.dart';
@@ -74,6 +75,8 @@ import 'package:trade_pilot_api_client/src/model/daily_summary_settings_update.d
 import 'package:trade_pilot_api_client/src/model/daily_summary_today.dart';
 import 'package:trade_pilot_api_client/src/model/delete_account_body.dart';
 import 'package:trade_pilot_api_client/src/model/delete_topup_response.dart';
+import 'package:trade_pilot_api_client/src/model/doku_checkout_session.dart';
+import 'package:trade_pilot_api_client/src/model/doku_topup_status.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/feedback.dart';
 import 'package:trade_pilot_api_client/src/model/feedback_body.dart';
@@ -253,6 +256,7 @@ part 'serializers.g.dart';
   ChangeSecurityQuestionBody,
   CreateAnalysisBody,
   CreateAnalysisResult,
+  CreateDokuCheckoutBody,
   CreateFilterPresetBody,
   CreateJournalEntryBody,
   CreateJournalEntryBodyEntryPrice,
@@ -267,6 +271,8 @@ part 'serializers.g.dart';
   DailySummaryToday,
   DeleteAccountBody,
   DeleteTopupResponse,
+  DokuCheckoutSession,
+  DokuTopupStatus,
   ErrorResponse,
   Feedback,
   FeedbackBody,

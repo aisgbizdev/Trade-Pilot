@@ -77,6 +77,7 @@ export 'package:trade_pilot_api_client/src/model/change_password_body.dart';
 export 'package:trade_pilot_api_client/src/model/change_security_question_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_analysis_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_analysis_result.dart';
+export 'package:trade_pilot_api_client/src/model/create_doku_checkout_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_filter_preset_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_journal_entry_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_journal_entry_body_entry_price.dart';
@@ -91,6 +92,8 @@ export 'package:trade_pilot_api_client/src/model/daily_summary_settings_update.d
 export 'package:trade_pilot_api_client/src/model/daily_summary_today.dart';
 export 'package:trade_pilot_api_client/src/model/delete_account_body.dart';
 export 'package:trade_pilot_api_client/src/model/delete_topup_response.dart';
+export 'package:trade_pilot_api_client/src/model/doku_checkout_session.dart';
+export 'package:trade_pilot_api_client/src/model/doku_topup_status.dart';
 export 'package:trade_pilot_api_client/src/model/error_response.dart';
 export 'package:trade_pilot_api_client/src/model/feedback.dart';
 export 'package:trade_pilot_api_client/src/model/feedback_body.dart';

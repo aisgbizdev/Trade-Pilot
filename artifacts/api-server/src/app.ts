@@ -102,7 +102,18 @@ app.use(
   })
 );
 app.use(cookieParser());
-app.use(express.json());
+app.use(
+  express.json({
+    // Stashes the exact raw bytes DOKU sent onto req.rawBody, alongside the
+    // normal parsed req.body — POST /topups/doku/notify's signature check
+    // hashes the raw body verbatim (DOKU signs the literal bytes it sent;
+    // re-serializing the parsed JSON could reorder keys/whitespace and
+    // break the digest). See lib/doku.ts.
+    verify: (req, _res, buf) => {
+      (req as Request & { rawBody?: Buffer }).rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);

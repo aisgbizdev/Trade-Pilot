@@ -29,6 +29,15 @@ const TOPUP_PACKAGES: readonly TopupPackage[] = [
 // Real GoPay QRIS image, served statically from artifacts/ai-trading/public/.
 const QRIS_IMAGE_URL = "/qris-gopay.jpeg";
 
+// Product decision (see chat): only the smallest package stays on the
+// manual proof-upload path (POST /topups, currently auto-approved without
+// actually verifying the uploaded image — a known, accepted fraud surface
+// at this one low value). Every package at or above this threshold must go
+// through DOKU Checkout (POST /topups/doku/checkout) instead, which is a
+// real, verified payment. Keep in sync with the fact that only the
+// Rp5.000 package sits below it.
+export const DOKU_MIN_AMOUNT_RUPIAH = 20_000;
+
 export function getTopupPackages(): readonly TopupPackage[] {
   return TOPUP_PACKAGES;
 }
@@ -39,8 +48,16 @@ export function findTopupPackage(amountRupiah: number): TopupPackage | null {
   return TOPUP_PACKAGES.find((p) => p.amountRupiah === amountRupiah) ?? null;
 }
 
-export function getTopupConfig(): { packages: readonly TopupPackage[]; qrisImageUrl: string } {
-  return { packages: TOPUP_PACKAGES, qrisImageUrl: QRIS_IMAGE_URL };
+export interface TopupPackageOption extends TopupPackage {
+  provider: "manual" | "doku";
+}
+
+export function getTopupConfig(): { packages: readonly TopupPackageOption[]; qrisImageUrl: string } {
+  const packages = TOPUP_PACKAGES.map((p) => ({
+    ...p,
+    provider: p.amountRupiah >= DOKU_MIN_AMOUNT_RUPIAH ? ("doku" as const) : ("manual" as const),
+  }));
+  return { packages, qrisImageUrl: QRIS_IMAGE_URL };
 }
 
 export async function getCreditBalanceForUser(userId: number): Promise<number> {

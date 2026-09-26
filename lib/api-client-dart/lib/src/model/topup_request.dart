@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:trade_pilot_api_client/src/model/topup_request_status.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -25,6 +26,8 @@ part 'topup_request.g.dart';
 /// * [reviewNote] 
 /// * [creditsGranted] 
 /// * [createdAt] 
+/// * [paymentProvider] 
+/// * [dokuPaymentUrl] - The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.
 @BuiltValue(instantiable: false)
 abstract class TopupRequest  {
   @BuiltValueField(wireName: r'id')
@@ -66,6 +69,14 @@ abstract class TopupRequest  {
 
   @BuiltValueField(wireName: r'createdAt')
   DateTime get createdAt;
+
+  @BuiltValueField(wireName: r'paymentProvider')
+  TopupRequestPaymentProviderEnum get paymentProvider;
+  // enum paymentProviderEnum {  manual,  doku,  };
+
+  /// The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.
+  @BuiltValueField(wireName: r'dokuPaymentUrl')
+  String get dokuPaymentUrl;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<TopupRequest> get serializer => _$TopupRequestSerializer();
@@ -147,6 +158,16 @@ class _$TopupRequestSerializer implements PrimitiveSerializer<TopupRequest> {
     yield serializers.serialize(
       object.createdAt,
       specifiedType: const FullType(DateTime),
+    );
+    yield r'paymentProvider';
+    yield serializers.serialize(
+      object.paymentProvider,
+      specifiedType: const FullType(TopupRequestPaymentProviderEnum),
+    );
+    yield r'dokuPaymentUrl';
+    yield serializers.serialize(
+      object.dokuPaymentUrl,
+      specifiedType: const FullType(String),
     );
   }
 
@@ -302,6 +323,20 @@ class _$$TopupRequestSerializer implements PrimitiveSerializer<$TopupRequest> {
           ) as DateTime;
           result.createdAt = valueDes;
           break;
+        case r'paymentProvider':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(TopupRequestPaymentProviderEnum),
+          ) as TopupRequestPaymentProviderEnum;
+          result.paymentProvider = valueDes;
+          break;
+        case r'dokuPaymentUrl':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.dokuPaymentUrl = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -329,5 +364,20 @@ class _$$TopupRequestSerializer implements PrimitiveSerializer<$TopupRequest> {
     );
     return result.build();
   }
+}
+
+class TopupRequestPaymentProviderEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'manual')
+  static const TopupRequestPaymentProviderEnum manual = _$topupRequestPaymentProviderEnum_manual;
+  @BuiltValueEnumConst(wireName: r'doku')
+  static const TopupRequestPaymentProviderEnum doku = _$topupRequestPaymentProviderEnum_doku;
+
+  static Serializer<TopupRequestPaymentProviderEnum> get serializer => _$topupRequestPaymentProviderEnumSerializer;
+
+  const TopupRequestPaymentProviderEnum._(String name): super(name);
+
+  static BuiltSet<TopupRequestPaymentProviderEnum> get values => _$topupRequestPaymentProviderEnumValues;
+  static TopupRequestPaymentProviderEnum valueOf(String name) => _$topupRequestPaymentProviderEnumValueOf(name);
 }
 

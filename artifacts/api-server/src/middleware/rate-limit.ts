@@ -335,6 +335,29 @@ export const trackEventLimiter = buildLimiter({
   keyFn: (req) => clientIp(req),
 });
 
+// POST /topups/doku/checkout — per-user (mounted after requireAuth). A
+// legit top-up is an occasional action; this budget just guards against a
+// buggy client retry-looping DOKU checkout-session creation.
+export const dokuCheckoutLimiter = buildLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  keyFn: (req) => {
+    const id = (req as Request & { userId?: number }).userId;
+    return typeof id === "number" ? `user-${id}` : clientIp(req);
+  },
+  message: "Terlalu banyak percobaan top-up. Coba lagi dalam beberapa menit.",
+});
+
+// POST /topups/doku/notify — DOKU's own servers call this, not end users,
+// so this is a generous ceiling meant only to absorb a burst/retry storm
+// (DOKU retries up to 6x per its docs), not to rate-limit legitimate
+// traffic. Per-IP since there's no authenticated user on this route.
+export const dokuNotifyLimiter = buildLimiter({
+  windowMs: 60 * 1000,
+  max: 120,
+  keyFn: (req) => clientIp(req),
+});
+
 setInterval(() => {
   const now = Date.now();
   for (const limiter of [
@@ -351,6 +374,8 @@ setInterval(() => {
     performanceLimiter,
     landingPreviewLimiter,
     trackEventLimiter,
+    dokuCheckoutLimiter,
+    dokuNotifyLimiter,
   ]) {
     for (const [k, b] of limiter.store) {
       if (b.resetAt <= now) limiter.store.delete(k);

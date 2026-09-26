@@ -43,6 +43,7 @@ import type {
   ChangeSecurityQuestionBody,
   CreateAnalysisBody,
   CreateAnalysisResult,
+  CreateDokuCheckoutBody,
   CreateFilterPresetBody,
   CreateJournalEntryBody,
   CreateTopupRequestBody,
@@ -54,6 +55,8 @@ import type {
   DailySummarySettingsUpdate,
   DeleteAccountBody,
   DeleteTopupResponse,
+  DokuCheckoutSession,
+  DokuTopupStatus,
   ErrorResponse,
   Feedback,
   FeedbackBody,
@@ -1085,6 +1088,198 @@ export const useCreateTopupRequest = <
 > => {
   return useMutation(getCreateTopupRequestMutationOptions(options));
 };
+
+export const getCreateDokuCheckoutUrl = () => {
+  return `/api/topups/doku/checkout`;
+};
+
+/**
+ * Only accepts packages that are NOT eligible for the manual/QRIS path (POST /topups accepts only the one below the threshold). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
+ * @summary Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+ */
+export const createDokuCheckout = async (
+  createDokuCheckoutBody: CreateDokuCheckoutBody,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<DokuCheckoutSession> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<DokuCheckoutSession>(getCreateDokuCheckoutUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(createDokuCheckoutBody),
+  });
+};
+
+export const getCreateDokuCheckoutMutationKey = () =>
+  ["createDokuCheckout"] as const;
+
+export const getCreateDokuCheckoutMutationOptions = <
+  TError = ErrorType<ErrorResponse | void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDokuCheckout>>,
+    TError,
+    CreateDokuCheckoutMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDokuCheckout>>,
+  TError,
+  CreateDokuCheckoutMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateDokuCheckoutMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDokuCheckout>>,
+    CreateDokuCheckoutMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDokuCheckout(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDokuCheckoutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDokuCheckout>>
+>;
+export type CreateDokuCheckoutMutationBody = BodyType<CreateDokuCheckoutBody>;
+export type CreateDokuCheckoutMutationError = ErrorType<ErrorResponse | void>;
+export type CreateDokuCheckoutMutationVariables = {
+  data: BodyType<CreateDokuCheckoutBody>;
+};
+
+/**
+ * @summary Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+ */
+export const useCreateDokuCheckout = <
+  TError = ErrorType<ErrorResponse | void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDokuCheckout>>,
+    TError,
+    CreateDokuCheckoutMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createDokuCheckout>>,
+  TError,
+  CreateDokuCheckoutMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateDokuCheckoutMutationOptions(options));
+};
+
+export const getGetDokuTopupStatusUrl = (id: number) => {
+  return `/api/topups/doku/${id}/status`;
+};
+
+/**
+ * For the frontend to poll right after the browser returns from DOKU's checkout page, in case the payment notification webhook hasn't landed yet.
+ * @summary Poll a DOKU checkout request's status (owner-only)
+ */
+export const getDokuTopupStatus = async (
+  id: number,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<DokuTopupStatus> => {
+  return customFetch<DokuTopupStatus>(getGetDokuTopupStatusUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDokuTopupStatusQueryKey = (id: number) => {
+  return [`/api/topups/doku/${id}/status`] as const;
+};
+
+export const getGetDokuTopupStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDokuTopupStatus>>,
+  TError = ErrorType<ErrorResponse | void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDokuTopupStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDokuTopupStatusQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDokuTopupStatus>>
+  > = ({ signal }) => getDokuTopupStatus(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDokuTopupStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDokuTopupStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDokuTopupStatus>>
+>;
+export type GetDokuTopupStatusQueryError = ErrorType<ErrorResponse | void>;
+
+/**
+ * @summary Poll a DOKU checkout request's status (owner-only)
+ */
+
+export function useGetDokuTopupStatus<
+  TData = Awaited<ReturnType<typeof getDokuTopupStatus>>,
+  TError = ErrorType<ErrorResponse | void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDokuTopupStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDokuTopupStatusQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetMyTopupRequestsUrl = (params?: GetMyTopupRequestsParams) => {
   const normalizedParams = new URLSearchParams();

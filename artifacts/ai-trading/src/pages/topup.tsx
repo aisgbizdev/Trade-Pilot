@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
-import { Wallet } from "lucide-react";
+import { Wallet, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout";
+import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { TopupFlow, WhatsAppGlyph, buildWhatsAppSupportUrl } from "@/components/topup-flow";
 import {
@@ -11,14 +13,78 @@ import {
   getGetCreditBalanceQueryKey,
   useGetMyTopupRequests,
   getGetMyTopupRequestsQueryKey,
+  useGetDokuTopupStatus,
   type TopupRequestStatus,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const STATUS_BADGE: Record<TopupRequestStatus, "secondary" | "default" | "destructive"> = {
   pending: "secondary",
   approved: "default",
   rejected: "destructive",
 };
+
+// After DOKU's hosted checkout page redirects back, the id.tradepilot.app
+// domain has already left and returned — read the outcome purely from the
+// URL (?doku=success|cancel&id=N), never from component state that would
+// have been lost across that navigation.
+function useDokuReturnStatus() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [pendingId, setPendingId] = useState<number | null>(null);
+  const [outcome, setOutcome] = useState<"cancelled" | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const dokuParam = params.get("doku");
+    const idParam = Number(params.get("id"));
+    if (!dokuParam) return;
+    // Strip the query string so a page refresh doesn't re-trigger this.
+    window.history.replaceState({}, "", window.location.pathname);
+    if (dokuParam === "success" && Number.isFinite(idParam) && idParam > 0) {
+      setPendingId(idParam);
+    } else if (dokuParam === "cancel") {
+      setOutcome("cancelled");
+      toast({ title: t.topup.doku_status_cancelled });
+    }
+    // Only ever read on first mount — this is a one-shot redirect landing,
+    // not something that should re-run on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const { data: statusData } = useGetDokuTopupStatus(pendingId ?? 0, {
+    query: {
+      queryKey: ["doku-topup-status", pendingId],
+      enabled: pendingId !== null,
+      refetchInterval: (query) => (query.state.data?.status === "pending" ? 2000 : false),
+    },
+  });
+
+  useEffect(() => {
+    if (!statusData || statusData.status === "pending") return;
+    queryClient.invalidateQueries({ queryKey: getGetMyTopupRequestsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetCreditBalanceQueryKey() });
+    if (statusData.status === "approved") {
+      toast({ title: t.topup.doku_status_success });
+    } else if (statusData.status === "rejected") {
+      toast({ title: t.topup.doku_status_failed, variant: "destructive" });
+    }
+    setPendingId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusData?.status]);
+
+  if (outcome === "cancelled") {
+    return { icon: XCircle as typeof XCircle, text: t.topup.doku_status_cancelled, tone: "muted" as const };
+  }
+  if (pendingId !== null) {
+    if (statusData?.status === "approved") {
+      return { icon: CheckCircle2, text: t.topup.doku_status_success, tone: "success" as const };
+    }
+    return { icon: Loader2, text: t.topup.doku_status_processing, tone: "pending" as const };
+  }
+  return null;
+}
 
 export default function TopupPage() {
   const { t, lang } = useTranslation();
@@ -29,6 +95,7 @@ export default function TopupPage() {
     { page: 1, limit: 20 },
     { query: { queryKey: getGetMyTopupRequestsQueryKey({ page: 1, limit: 20 }) } },
   );
+  const dokuReturn = useDokuReturnStatus();
 
   return (
     <Layout>
@@ -48,6 +115,32 @@ export default function TopupPage() {
             </div>
           </div>
         </Card>
+
+        {dokuReturn && (
+          <Card
+            className={
+              "p-4 flex items-center gap-3 " +
+              (dokuReturn.tone === "success"
+                ? "border-emerald-500/40 bg-emerald-500/5"
+                : dokuReturn.tone === "pending"
+                  ? "border-amber-500/40 bg-amber-500/5"
+                  : "")
+            }
+            data-testid="card-doku-return-status"
+          >
+            <dokuReturn.icon
+              className={
+                "w-5 h-5 shrink-0 " +
+                (dokuReturn.tone === "success"
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : dokuReturn.tone === "pending"
+                    ? "text-amber-600 dark:text-amber-400 animate-spin"
+                    : "text-muted-foreground")
+              }
+            />
+            <p className="text-sm text-foreground">{dokuReturn.text}</p>
+          </Card>
+        )}
 
         <TopupFlow />
 
@@ -69,6 +162,15 @@ export default function TopupPage() {
                       </p>
                       {r.reviewNote && (
                         <p className="text-xs text-muted-foreground mt-1 italic">"{r.reviewNote}"</p>
+                      )}
+                      {r.paymentProvider === "doku" && r.status === "pending" && r.dokuPaymentUrl && (
+                        <a
+                          href={r.dokuPaymentUrl}
+                          className="inline-block mt-1 text-xs font-medium text-primary hover:underline"
+                          data-testid={`link-resume-doku-payment-${r.id}`}
+                        >
+                          {t.topup.doku_resume_payment}
+                        </a>
                       )}
                     </div>
                     <Badge variant={STATUS_BADGE[r.status]} className="text-[10px] px-1.5 py-0 shrink-0">

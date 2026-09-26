@@ -193,6 +193,11 @@ export const GetTopupConfigResponse = zod.object({
         .object({
           amountRupiah: zod.number().int(),
           credits: zod.number().int(),
+          provider: zod
+            .enum(["manual", "doku"])
+            .describe(
+              'Which payment path this package must use — \"manual\" packages go through POST \/topups (QRIS + proof upload), \"doku\" packages go through POST \/topups\/doku\/checkout. Never both.',
+            ),
         })
         .describe(
           "One fixed top-up package (see lib\/credits.ts) — bigger packages give a better effective per-credit rate.",
@@ -246,6 +251,52 @@ export const CreateTopupRequestResponse = zod.object({
   reviewNote: zod.string().nullable(),
   creditsGranted: zod.number().int().nullable(),
   createdAt: zod.coerce.date(),
+  paymentProvider: zod.enum(["manual", "doku"]),
+  dokuPaymentUrl: zod
+    .string()
+    .nullable()
+    .describe(
+      'The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.',
+    ),
+});
+
+/**
+ * Only accepts packages that are NOT eligible for the manual/QRIS path (POST /topups accepts only the one below the threshold). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
+ * @summary Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+ */
+export const CreateDokuCheckoutBody = zod.object({
+  amountRupiah: zod
+    .number()
+    .int()
+    .describe(
+      "Must match one of the fixed packages at\/above the DOKU-only threshold.",
+    ),
+});
+
+export const CreateDokuCheckoutResponse = zod.object({
+  id: zod
+    .number()
+    .int()
+    .describe(
+      "The credit_topup_requests row id (poll via GET \/topups\/doku\/{id}\/status).",
+    ),
+  paymentUrl: zod
+    .string()
+    .describe("DOKU's hosted checkout page — redirect the browser here."),
+  expiresAt: zod.coerce.date(),
+});
+
+/**
+ * For the frontend to poll right after the browser returns from DOKU's checkout page, in case the payment notification webhook hasn't landed yet.
+ * @summary Poll a DOKU checkout request's status (owner-only)
+ */
+export const GetDokuTopupStatusParams = zod.object({
+  id: zod.coerce.number().int(),
+});
+
+export const GetDokuTopupStatusResponse = zod.object({
+  id: zod.number().int(),
+  status: zod.enum(["pending", "approved", "rejected"]),
 });
 
 /**
@@ -275,6 +326,13 @@ export const GetMyTopupRequestsResponse = zod.object({
       reviewNote: zod.string().nullable(),
       creditsGranted: zod.number().int().nullable(),
       createdAt: zod.coerce.date(),
+      paymentProvider: zod.enum(["manual", "doku"]),
+      dokuPaymentUrl: zod
+        .string()
+        .nullable()
+        .describe(
+          'The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.',
+        ),
     }),
   ),
   total: zod.number().int(),
@@ -321,6 +379,13 @@ export const GetPendingTopupRequestsResponse = zod.object({
         reviewNote: zod.string().nullable(),
         creditsGranted: zod.number().int().nullable(),
         createdAt: zod.coerce.date(),
+        paymentProvider: zod.enum(["manual", "doku"]),
+        dokuPaymentUrl: zod
+          .string()
+          .nullable()
+          .describe(
+            'The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.',
+          ),
       })
       .and(
         zod.object({
@@ -361,6 +426,13 @@ export const ReviewCreditTopupRequestResponse = zod.object({
   reviewNote: zod.string().nullable(),
   creditsGranted: zod.number().int().nullable(),
   createdAt: zod.coerce.date(),
+  paymentProvider: zod.enum(["manual", "doku"]),
+  dokuPaymentUrl: zod
+    .string()
+    .nullable()
+    .describe(
+      'The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.',
+    ),
 });
 
 /**
@@ -422,6 +494,13 @@ export const CreateManualTopupResponse = zod.object({
   reviewNote: zod.string().nullable(),
   creditsGranted: zod.number().int().nullable(),
   createdAt: zod.coerce.date(),
+  paymentProvider: zod.enum(["manual", "doku"]),
+  dokuPaymentUrl: zod
+    .string()
+    .nullable()
+    .describe(
+      'The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.',
+    ),
 });
 
 /**

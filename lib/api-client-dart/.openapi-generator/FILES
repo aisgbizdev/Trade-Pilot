@@ -50,6 +50,7 @@ doc/ChangePasswordBody.md
 doc/ChangeSecurityQuestionBody.md
 doc/CreateAnalysisBody.md
 doc/CreateAnalysisResult.md
+doc/CreateDokuCheckoutBody.md
 doc/CreateFilterPresetBody.md
 doc/CreateJournalEntryBody.md
 doc/CreateJournalEntryBodyEntryPrice.md
@@ -65,6 +66,8 @@ doc/DailySummarySettingsUpdate.md
 doc/DailySummaryToday.md
 doc/DeleteAccountBody.md
 doc/DeleteTopupResponse.md
+doc/DokuCheckoutSession.md
+doc/DokuTopupStatus.md
 doc/ErrorResponse.md
 doc/EventsApi.md
 doc/Feedback.md
@@ -284,6 +287,7 @@ lib/src/model/change_password_body.dart
 lib/src/model/change_security_question_body.dart
 lib/src/model/create_analysis_body.dart
 lib/src/model/create_analysis_result.dart
+lib/src/model/create_doku_checkout_body.dart
 lib/src/model/create_filter_preset_body.dart
 lib/src/model/create_journal_entry_body.dart
 lib/src/model/create_journal_entry_body_entry_price.dart
@@ -299,6 +303,8 @@ lib/src/model/daily_summary_today.dart
 lib/src/model/date.dart
 lib/src/model/delete_account_body.dart
 lib/src/model/delete_topup_response.dart
+lib/src/model/doku_checkout_session.dart
+lib/src/model/doku_topup_status.dart
 lib/src/model/error_response.dart
 lib/src/model/feedback.dart
 lib/src/model/feedback_body.dart
@@ -431,4 +437,6 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/analytics_token_stats_by_segment_inner_test.dart
+test/create_doku_checkout_body_test.dart
+test/doku_checkout_session_test.dart
+test/doku_topup_status_test.dart

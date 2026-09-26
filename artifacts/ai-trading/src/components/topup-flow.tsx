@@ -17,6 +17,7 @@ import {
   useGetTopupConfig,
   getGetTopupConfigQueryKey,
   useCreateTopupRequest,
+  useCreateDokuCheckout,
   getGetMyTopupRequestsQueryKey,
   getGetCreditBalanceQueryKey,
   type TopupPackageOption,
@@ -66,6 +67,7 @@ export function TopupFlow({ onSubmitted }: { onSubmitted?: () => void }) {
   const [showProofNotice, setShowProofNotice] = useState(false);
 
   const createTopup = useCreateTopupRequest();
+  const createDokuCheckout = useCreateDokuCheckout();
 
   const packages = config?.packages ?? [];
   const amountNumber = selectedPackage?.amountRupiah ?? 0;
@@ -93,9 +95,26 @@ export function TopupFlow({ onSubmitted }: { onSubmitted?: () => void }) {
     }
   };
 
-  const handleContinue = () => {
+  // DOKU packages skip the "pay" step (QRIS image + proof upload) entirely
+  // — the browser leaves the app for DOKU's own hosted checkout page, so
+  // there's no in-app payment UI to show for them.
+  const handleContinue = async () => {
     if (!selectedPackage) {
       toast({ title: t.topup.amount_too_small, variant: "destructive" });
+      return;
+    }
+    if (selectedPackage.provider === "doku") {
+      try {
+        const result = await createDokuCheckout.mutateAsync({
+          data: { amountRupiah: selectedPackage.amountRupiah },
+        });
+        window.location.href = result.paymentUrl;
+      } catch (err: unknown) {
+        toast({
+          title: ((err as { data?: { error?: string } })?.data?.error) ?? t.topup.doku_checkout_failed,
+          variant: "destructive",
+        });
+      }
       return;
     }
     setStep("pay");
@@ -175,9 +194,13 @@ export function TopupFlow({ onSubmitted }: { onSubmitted?: () => void }) {
           <Button
             className="w-full"
             onClick={handleContinue}
+            disabled={createDokuCheckout.isPending}
             data-testid="button-continue-topup"
           >
-            {t.topup.continue_button}
+            {createDokuCheckout.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            {selectedPackage?.provider === "doku"
+              ? t.topup.continue_button_doku
+              : t.topup.continue_button}
           </Button>
         </Card>
       ) : (

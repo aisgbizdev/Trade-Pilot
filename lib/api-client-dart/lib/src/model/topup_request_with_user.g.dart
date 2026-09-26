@@ -6,6 +6,68 @@ part of 'topup_request_with_user.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const TopupRequestWithUserPaymentProviderEnum
+    _$topupRequestWithUserPaymentProviderEnum_manual =
+    const TopupRequestWithUserPaymentProviderEnum._('manual');
+const TopupRequestWithUserPaymentProviderEnum
+    _$topupRequestWithUserPaymentProviderEnum_doku =
+    const TopupRequestWithUserPaymentProviderEnum._('doku');
+
+TopupRequestWithUserPaymentProviderEnum
+    _$topupRequestWithUserPaymentProviderEnumValueOf(String name) {
+  switch (name) {
+    case 'manual':
+      return _$topupRequestWithUserPaymentProviderEnum_manual;
+    case 'doku':
+      return _$topupRequestWithUserPaymentProviderEnum_doku;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<TopupRequestWithUserPaymentProviderEnum>
+    _$topupRequestWithUserPaymentProviderEnumValues = BuiltSet<
+        TopupRequestWithUserPaymentProviderEnum>(const <TopupRequestWithUserPaymentProviderEnum>[
+  _$topupRequestWithUserPaymentProviderEnum_manual,
+  _$topupRequestWithUserPaymentProviderEnum_doku,
+]);
+
+Serializer<TopupRequestWithUserPaymentProviderEnum>
+    _$topupRequestWithUserPaymentProviderEnumSerializer =
+    _$TopupRequestWithUserPaymentProviderEnumSerializer();
+
+class _$TopupRequestWithUserPaymentProviderEnumSerializer
+    implements PrimitiveSerializer<TopupRequestWithUserPaymentProviderEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'manual': 'manual',
+    'doku': 'doku',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'manual': 'manual',
+    'doku': 'doku',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    TopupRequestWithUserPaymentProviderEnum
+  ];
+  @override
+  final String wireName = 'TopupRequestWithUserPaymentProviderEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          TopupRequestWithUserPaymentProviderEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  TopupRequestWithUserPaymentProviderEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      TopupRequestWithUserPaymentProviderEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$TopupRequestWithUser extends TopupRequestWithUser {
   @override
   final String userDisplayName;
@@ -37,6 +99,10 @@ class _$TopupRequestWithUser extends TopupRequestWithUser {
   final int creditsGranted;
   @override
   final DateTime createdAt;
+  @override
+  final TopupRequestPaymentProviderEnum paymentProvider;
+  @override
+  final String dokuPaymentUrl;
 
   factory _$TopupRequestWithUser(
           [void Function(TopupRequestWithUserBuilder)? updates]) =>
@@ -57,7 +123,9 @@ class _$TopupRequestWithUser extends TopupRequestWithUser {
       required this.reviewedAt,
       required this.reviewNote,
       required this.creditsGranted,
-      required this.createdAt})
+      required this.createdAt,
+      required this.paymentProvider,
+      required this.dokuPaymentUrl})
       : super._();
   @override
   TopupRequestWithUser rebuild(
@@ -86,7 +154,9 @@ class _$TopupRequestWithUser extends TopupRequestWithUser {
         reviewedAt == other.reviewedAt &&
         reviewNote == other.reviewNote &&
         creditsGranted == other.creditsGranted &&
-        createdAt == other.createdAt;
+        createdAt == other.createdAt &&
+        paymentProvider == other.paymentProvider &&
+        dokuPaymentUrl == other.dokuPaymentUrl;
   }
 
   @override
@@ -107,6 +177,8 @@ class _$TopupRequestWithUser extends TopupRequestWithUser {
     _$hash = $jc(_$hash, reviewNote.hashCode);
     _$hash = $jc(_$hash, creditsGranted.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
+    _$hash = $jc(_$hash, paymentProvider.hashCode);
+    _$hash = $jc(_$hash, dokuPaymentUrl.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -128,7 +200,9 @@ class _$TopupRequestWithUser extends TopupRequestWithUser {
           ..add('reviewedAt', reviewedAt)
           ..add('reviewNote', reviewNote)
           ..add('creditsGranted', creditsGranted)
-          ..add('createdAt', createdAt))
+          ..add('createdAt', createdAt)
+          ..add('paymentProvider', paymentProvider)
+          ..add('dokuPaymentUrl', dokuPaymentUrl))
         .toString();
   }
 }
@@ -209,6 +283,18 @@ class TopupRequestWithUserBuilder
   DateTime? get createdAt => _$this._createdAt;
   set createdAt(covariant DateTime? createdAt) => _$this._createdAt = createdAt;
 
+  TopupRequestPaymentProviderEnum? _paymentProvider;
+  TopupRequestPaymentProviderEnum? get paymentProvider =>
+      _$this._paymentProvider;
+  set paymentProvider(
+          covariant TopupRequestPaymentProviderEnum? paymentProvider) =>
+      _$this._paymentProvider = paymentProvider;
+
+  String? _dokuPaymentUrl;
+  String? get dokuPaymentUrl => _$this._dokuPaymentUrl;
+  set dokuPaymentUrl(covariant String? dokuPaymentUrl) =>
+      _$this._dokuPaymentUrl = dokuPaymentUrl;
+
   TopupRequestWithUserBuilder() {
     TopupRequestWithUser._defaults(this);
   }
@@ -231,6 +317,8 @@ class TopupRequestWithUserBuilder
       _reviewNote = $v.reviewNote;
       _creditsGranted = $v.creditsGranted;
       _createdAt = $v.createdAt;
+      _paymentProvider = $v.paymentProvider;
+      _dokuPaymentUrl = $v.dokuPaymentUrl;
       _$v = null;
     }
     return this;
@@ -286,6 +374,10 @@ class TopupRequestWithUserBuilder
               creditsGranted, r'TopupRequestWithUser', 'creditsGranted'),
           createdAt: BuiltValueNullFieldError.checkNotNull(
               createdAt, r'TopupRequestWithUser', 'createdAt'),
+          paymentProvider: BuiltValueNullFieldError.checkNotNull(
+              paymentProvider, r'TopupRequestWithUser', 'paymentProvider'),
+          dokuPaymentUrl: BuiltValueNullFieldError.checkNotNull(
+              dokuPaymentUrl, r'TopupRequestWithUser', 'dokuPaymentUrl'),
         );
     replace(_$result);
     return _$result;

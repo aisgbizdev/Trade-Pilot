@@ -1078,12 +1078,16 @@ export const progressionEvidenceSessions = pgTable("progression_evidence_session
 });
 
 export const creditTopupStatusEnum = pgEnum("credit_topup_status", ["pending", "approved", "rejected"]);
+export const creditTopupProviderEnum = pgEnum("credit_topup_provider", ["manual", "doku"]);
 
-// One row per top-up attempt — the manual submit-then-admin-review workflow.
-// Money is stored as a whole-Rupiah integer (no subunit in practice), not a
-// float. creditsRequested/conversionRateSnapshot are frozen at submission
-// time so a later rate change can't retroactively alter what an
-// already-submitted request is worth.
+// One row per top-up attempt. Two payment paths now share this table:
+// "manual" (submit proof of a QRIS/bank transfer, currently auto-approved —
+// see routes/topups.ts) and "doku" (DOKU Checkout hosted payment page,
+// approved by an incoming webhook once DOKU confirms payment). Money is
+// stored as a whole-Rupiah integer (no subunit in practice), not a float.
+// creditsRequested/conversionRateSnapshot are frozen at submission time so
+// a later rate change can't retroactively alter what an already-submitted
+// request is worth.
 export const creditTopupRequests = pgTable("credit_topup_requests", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -1098,6 +1102,16 @@ export const creditTopupRequests = pgTable("credit_topup_requests", {
   reviewNote: text("review_note"),
   creditsGranted: integer("credits_granted"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  paymentProvider: creditTopupProviderEnum("payment_provider").notNull().default("manual"),
+  // DOKU-only fields below — null for "manual" rows. dokuInvoiceNumber is
+  // the order.invoice_number sent to DOKU Checkout and echoed back in the
+  // payment notification; it's how the webhook finds this row (never the
+  // DOKU-side session_id/token_id, which we also keep only for support
+  // lookups). Unique so DOKU can never accidentally be given a duplicate.
+  dokuInvoiceNumber: text("doku_invoice_number").unique(),
+  dokuSessionId: text("doku_session_id"),
+  dokuPaymentUrl: text("doku_payment_url"),
+  dokuExpiresAt: timestamp("doku_expires_at"),
   // Soft delete only (DELETE /admin/topups/:id) — the row is never
   // physically removed because credit_ledger.topupRequestId references it
   // with onDelete "restrict" once approved, and even for a never-approved

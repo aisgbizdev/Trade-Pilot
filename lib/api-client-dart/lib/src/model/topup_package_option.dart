@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -13,6 +14,7 @@ part 'topup_package_option.g.dart';
 /// Properties:
 /// * [amountRupiah] 
 /// * [credits] 
+/// * [provider] - Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
 @BuiltValue()
 abstract class TopupPackageOption implements Built<TopupPackageOption, TopupPackageOptionBuilder> {
   @BuiltValueField(wireName: r'amountRupiah')
@@ -20,6 +22,11 @@ abstract class TopupPackageOption implements Built<TopupPackageOption, TopupPack
 
   @BuiltValueField(wireName: r'credits')
   int get credits;
+
+  /// Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
+  @BuiltValueField(wireName: r'provider')
+  TopupPackageOptionProviderEnum get provider;
+  // enum providerEnum {  manual,  doku,  };
 
   TopupPackageOption._();
 
@@ -53,6 +60,11 @@ class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackage
     yield serializers.serialize(
       object.credits,
       specifiedType: const FullType(int),
+    );
+    yield r'provider';
+    yield serializers.serialize(
+      object.provider,
+      specifiedType: const FullType(TopupPackageOptionProviderEnum),
     );
   }
 
@@ -91,6 +103,13 @@ class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackage
           ) as int;
           result.credits = valueDes;
           break;
+        case r'provider':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(TopupPackageOptionProviderEnum),
+          ) as TopupPackageOptionProviderEnum;
+          result.provider = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -118,5 +137,22 @@ class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackage
     );
     return result.build();
   }
+}
+
+class TopupPackageOptionProviderEnum extends EnumClass {
+
+  /// Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
+  @BuiltValueEnumConst(wireName: r'manual')
+  static const TopupPackageOptionProviderEnum manual = _$topupPackageOptionProviderEnum_manual;
+  /// Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
+  @BuiltValueEnumConst(wireName: r'doku')
+  static const TopupPackageOptionProviderEnum doku = _$topupPackageOptionProviderEnum_doku;
+
+  static Serializer<TopupPackageOptionProviderEnum> get serializer => _$topupPackageOptionProviderEnumSerializer;
+
+  const TopupPackageOptionProviderEnum._(String name): super(name);
+
+  static BuiltSet<TopupPackageOptionProviderEnum> get values => _$topupPackageOptionProviderEnumValues;
+  static TopupPackageOptionProviderEnum valueOf(String name) => _$topupPackageOptionProviderEnumValueOf(name);
 }
 

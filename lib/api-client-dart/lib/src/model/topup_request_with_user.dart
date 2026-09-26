@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:trade_pilot_api_client/src/model/topup_request_status.dart';
 import 'package:trade_pilot_api_client/src/model/topup_request.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -26,6 +27,8 @@ part 'topup_request_with_user.g.dart';
 /// * [reviewNote] 
 /// * [creditsGranted] 
 /// * [createdAt] 
+/// * [paymentProvider] 
+/// * [dokuPaymentUrl] - The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.
 /// * [userEmail] 
 /// * [userDisplayName] 
 @BuiltValue()
@@ -103,6 +106,16 @@ class _$TopupRequestWithUserSerializer implements PrimitiveSerializer<TopupReque
     yield serializers.serialize(
       object.reviewNote,
       specifiedType: const FullType(String),
+    );
+    yield r'dokuPaymentUrl';
+    yield serializers.serialize(
+      object.dokuPaymentUrl,
+      specifiedType: const FullType(String),
+    );
+    yield r'paymentProvider';
+    yield serializers.serialize(
+      object.paymentProvider,
+      specifiedType: const FullType(TopupRequestPaymentProviderEnum),
     );
     yield r'proofObjectPath';
     yield serializers.serialize(
@@ -220,6 +233,20 @@ class _$TopupRequestWithUserSerializer implements PrimitiveSerializer<TopupReque
           ) as String;
           result.reviewNote = valueDes;
           break;
+        case r'dokuPaymentUrl':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.dokuPaymentUrl = valueDes;
+          break;
+        case r'paymentProvider':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(TopupRequestPaymentProviderEnum),
+          ) as TopupRequestPaymentProviderEnum;
+          result.paymentProvider = valueDes;
+          break;
         case r'proofObjectPath':
           final valueDes = serializers.deserialize(
             value,
@@ -289,5 +316,20 @@ class _$TopupRequestWithUserSerializer implements PrimitiveSerializer<TopupReque
     );
     return result.build();
   }
+}
+
+class TopupRequestWithUserPaymentProviderEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'manual')
+  static const TopupRequestWithUserPaymentProviderEnum manual = _$topupRequestWithUserPaymentProviderEnum_manual;
+  @BuiltValueEnumConst(wireName: r'doku')
+  static const TopupRequestWithUserPaymentProviderEnum doku = _$topupRequestWithUserPaymentProviderEnum_doku;
+
+  static Serializer<TopupRequestWithUserPaymentProviderEnum> get serializer => _$topupRequestWithUserPaymentProviderEnumSerializer;
+
+  const TopupRequestWithUserPaymentProviderEnum._(String name): super(name);
+
+  static BuiltSet<TopupRequestWithUserPaymentProviderEnum> get values => _$topupRequestWithUserPaymentProviderEnumValues;
+  static TopupRequestWithUserPaymentProviderEnum valueOf(String name) => _$topupRequestWithUserPaymentProviderEnumValueOf(name);
 }
 

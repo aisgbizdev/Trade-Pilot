@@ -128,10 +128,12 @@ afterAll(async () => {
 });
 
 describe("GET /topups/config", () => {
-  it("returns the fixed packages and QRIS image url", async () => {
+  it("returns the fixed packages (with provider) and QRIS image url", async () => {
     const res = await request(app).get("/api/topups/config").set(...authHeader(alice));
     expect(res.status).toBe(200);
-    expect(res.body.packages).toEqual(getTopupPackages());
+    expect(res.body.packages).toEqual(
+      getTopupPackages().map((p) => ({ ...p, provider: p.amountRupiah >= 20_000 ? "doku" : "manual" })),
+    );
     expect(typeof res.body.qrisImageUrl).toBe("string");
   });
 });
@@ -184,27 +186,27 @@ describe("POST /topups", () => {
       .post("/api/topups")
       .set(...authHeader(alice))
       .send({
-        amountRupiah: PKG_20K.amountRupiah,
+        amountRupiah: PKG_5K.amountRupiah,
         paymentReferenceNote: `note-${RUN_ID}`,
         proofObjectPath: PROOF_PATH,
       });
     expect(res.status).toBe(201);
     expect(res.body.status).toBe("approved");
-    expect(res.body.creditsRequested).toBe(PKG_20K.credits);
-    expect(res.body.creditsGranted).toBe(PKG_20K.credits);
-    expect(res.body.conversionRateSnapshot).toBe(Math.round(PKG_20K.amountRupiah / PKG_20K.credits));
+    expect(res.body.creditsRequested).toBe(PKG_5K.credits);
+    expect(res.body.creditsGranted).toBe(PKG_5K.credits);
+    expect(res.body.conversionRateSnapshot).toBe(Math.round(PKG_5K.amountRupiah / PKG_5K.credits));
     expect(res.body.proofObjectPath).toBe(PROOF_PATH);
     seededRequestIds.push(res.body.id);
 
     const after = await request(app).get("/api/topups/balance").set(...authHeader(alice));
-    expect(after.body.balance).toBe(before.body.balance + PKG_20K.credits);
+    expect(after.body.balance).toBe(before.body.balance + PKG_5K.credits);
 
     const ledgerRows = await db
       .select()
       .from(creditLedger)
       .where(eq(creditLedger.topupRequestId, res.body.id));
     expect(ledgerRows).toHaveLength(1);
-    expect(ledgerRows[0]!.amount).toBe(PKG_20K.credits);
+    expect(ledgerRows[0]!.amount).toBe(PKG_5K.credits);
 
     // Fresh test users default to users.lang = "en", so the notification is
     // sent in English, not Indonesian.
@@ -415,25 +417,28 @@ describe("GET /admin/topups/summary", () => {
   it("sums only approved rows, grouped by user, excluding pending/rejected", async () => {
     const bob = await createUser("user");
 
-    // POST /topups now auto-approves, so "submit" alone gets the request
-    // into the "approved" state with creditsGranted == creditsRequested —
-    // there is no separate admin-approval step to call anymore.
+    // POST /topups (manual, auto-approve) is now restricted to only the
+    // package below the DOKU threshold (see the "manual path restricted"
+    // describe block above) — everything else has to go through DOKU
+    // Checkout, which this file doesn't mock. Drive every amount here
+    // through the admin-approve path instead (insertPendingTopup bypasses
+    // fixed-package validation entirely), which reaches the exact same
+    // "approved" end state this test actually cares about.
     async function submitAndApprove(user: SeedUser, amountRupiah: number, creditsGranted: number) {
-      const created = await request(app)
-        .post("/api/topups")
-        .set(...authHeader(user))
-        .send({ amountRupiah, proofObjectPath: PROOF_PATH });
-      expect(created.status).toBe(201);
-      expect(created.body.status).toBe("approved");
-      expect(created.body.creditsGranted).toBe(creditsGranted);
-      seededRequestIds.push(created.body.id);
-      return created.body.id as number;
+      const id = await insertPendingTopup(user, amountRupiah, creditsGranted);
+      const res = await request(app)
+        .patch(`/api/admin/topups/${id}/status`)
+        .set(...authHeader(superAdmin))
+        .send({ status: "approved" });
+      expect(res.status).toBe(200);
+      expect(res.body.creditsGranted).toBe(creditsGranted);
+      return id;
     }
 
-    // Rejected/pending rows can no longer be produced through the public
-    // API (see above) — seed a pending row directly, then (for "reject")
-    // drive it through the real admin endpoint. Arbitrary amounts here —
-    // insertPendingTopup bypasses the fixed-package validation.
+    // Rejected/pending rows — seed a pending row directly, then (for
+    // "reject") drive it through the real admin endpoint. Arbitrary
+    // amounts here — insertPendingTopup bypasses the fixed-package
+    // validation.
     async function submitAndReject(user: SeedUser, amountRupiah: number, creditsRequested: number) {
       const id = await insertPendingTopup(user, amountRupiah, creditsRequested);
       await request(app)
@@ -446,8 +451,7 @@ describe("GET /admin/topups/summary", () => {
       await insertPendingTopup(user, amountRupiah, creditsRequested);
     }
 
-    // bob buys the two smaller packages; `other` buys the third. Real
-    // POST /topups calls, so these must be exact package amounts.
+    // bob buys the two smaller packages; `other` buys the third.
     await submitAndApprove(bob, PKG_5K.amountRupiah, PKG_5K.credits);
     await submitAndApprove(bob, PKG_20K.amountRupiah, PKG_20K.credits);
     await submitAndReject(bob, 999_000, 999); // must not count

@@ -1259,11 +1259,24 @@ export interface AnalysisQuota {
 }
 
 /**
+ * Which payment path this package must use — "manual" packages go through POST /topups (QRIS + proof upload), "doku" packages go through POST /topups/doku/checkout. Never both.
+ */
+export type TopupPackageOptionProvider =
+  (typeof TopupPackageOptionProvider)[keyof typeof TopupPackageOptionProvider];
+
+export const TopupPackageOptionProvider = {
+  manual: "manual",
+  doku: "doku",
+} as const;
+
+/**
  * One fixed top-up package (see lib/credits.ts) — bigger packages give a better effective per-credit rate.
  */
 export interface TopupPackageOption {
   amountRupiah: number;
   credits: number;
+  /** Which payment path this package must use — "manual" packages go through POST /topups (QRIS + proof upload), "doku" packages go through POST /topups/doku/checkout. Never both. */
+  provider: TopupPackageOptionProvider;
 }
 
 export interface TopupConfig {
@@ -1315,6 +1328,14 @@ export const TopupRequestStatus = {
   rejected: "rejected",
 } as const;
 
+export type TopupRequestPaymentProvider =
+  (typeof TopupRequestPaymentProvider)[keyof typeof TopupRequestPaymentProvider];
+
+export const TopupRequestPaymentProvider = {
+  manual: "manual",
+  doku: "doku",
+} as const;
+
 export interface TopupRequest {
   id: number;
   userId: number;
@@ -1329,6 +1350,27 @@ export interface TopupRequest {
   reviewNote: string | null;
   creditsGranted: number | null;
   createdAt: string;
+  paymentProvider: TopupRequestPaymentProvider;
+  /** The DOKU hosted checkout page URL — present only while a "doku" request is still "pending" (lets the frontend offer a "resume payment" link); null otherwise. */
+  dokuPaymentUrl: string | null;
+}
+
+export interface CreateDokuCheckoutBody {
+  /** Must match one of the fixed packages at/above the DOKU-only threshold. */
+  amountRupiah: number;
+}
+
+export interface DokuCheckoutSession {
+  /** The credit_topup_requests row id (poll via GET /topups/doku/{id}/status). */
+  id: number;
+  /** DOKU's hosted checkout page — redirect the browser here. */
+  paymentUrl: string;
+  expiresAt: string;
+}
+
+export interface DokuTopupStatus {
+  id: number;
+  status: TopupRequestStatus;
 }
 
 export interface DeleteTopupResponse {

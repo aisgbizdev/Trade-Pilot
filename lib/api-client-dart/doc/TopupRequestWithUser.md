@@ -21,6 +21,8 @@ Name | Type | Description | Notes
 **reviewNote** | **String** |  | 
 **creditsGranted** | **int** |  | 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
+**paymentProvider** | **String** |  | 
+**dokuPaymentUrl** | **String** | The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise. | 
 **userEmail** | **String** |  | 
 **userDisplayName** | **String** |  | 
 

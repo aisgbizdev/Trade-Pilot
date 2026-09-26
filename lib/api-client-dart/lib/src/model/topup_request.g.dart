@@ -6,6 +6,64 @@ part of 'topup_request.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const TopupRequestPaymentProviderEnum _$topupRequestPaymentProviderEnum_manual =
+    const TopupRequestPaymentProviderEnum._('manual');
+const TopupRequestPaymentProviderEnum _$topupRequestPaymentProviderEnum_doku =
+    const TopupRequestPaymentProviderEnum._('doku');
+
+TopupRequestPaymentProviderEnum _$topupRequestPaymentProviderEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'manual':
+      return _$topupRequestPaymentProviderEnum_manual;
+    case 'doku':
+      return _$topupRequestPaymentProviderEnum_doku;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<TopupRequestPaymentProviderEnum>
+    _$topupRequestPaymentProviderEnumValues = BuiltSet<
+        TopupRequestPaymentProviderEnum>(const <TopupRequestPaymentProviderEnum>[
+  _$topupRequestPaymentProviderEnum_manual,
+  _$topupRequestPaymentProviderEnum_doku,
+]);
+
+Serializer<TopupRequestPaymentProviderEnum>
+    _$topupRequestPaymentProviderEnumSerializer =
+    _$TopupRequestPaymentProviderEnumSerializer();
+
+class _$TopupRequestPaymentProviderEnumSerializer
+    implements PrimitiveSerializer<TopupRequestPaymentProviderEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'manual': 'manual',
+    'doku': 'doku',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'manual': 'manual',
+    'doku': 'doku',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[TopupRequestPaymentProviderEnum];
+  @override
+  final String wireName = 'TopupRequestPaymentProviderEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, TopupRequestPaymentProviderEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  TopupRequestPaymentProviderEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      TopupRequestPaymentProviderEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 abstract class TopupRequestBuilder {
   void replace(TopupRequest other);
   void update(void Function(TopupRequestBuilder) updates);
@@ -47,6 +105,12 @@ abstract class TopupRequestBuilder {
 
   DateTime? get createdAt;
   set createdAt(DateTime? createdAt);
+
+  TopupRequestPaymentProviderEnum? get paymentProvider;
+  set paymentProvider(TopupRequestPaymentProviderEnum? paymentProvider);
+
+  String? get dokuPaymentUrl;
+  set dokuPaymentUrl(String? dokuPaymentUrl);
 }
 
 class _$$TopupRequest extends $TopupRequest {
@@ -76,6 +140,10 @@ class _$$TopupRequest extends $TopupRequest {
   final int creditsGranted;
   @override
   final DateTime createdAt;
+  @override
+  final TopupRequestPaymentProviderEnum paymentProvider;
+  @override
+  final String dokuPaymentUrl;
 
   factory _$$TopupRequest([void Function($TopupRequestBuilder)? updates]) =>
       ($TopupRequestBuilder()..update(updates))._build();
@@ -93,7 +161,9 @@ class _$$TopupRequest extends $TopupRequest {
       required this.reviewedAt,
       required this.reviewNote,
       required this.creditsGranted,
-      required this.createdAt})
+      required this.createdAt,
+      required this.paymentProvider,
+      required this.dokuPaymentUrl})
       : super._();
   @override
   $TopupRequest rebuild(void Function($TopupRequestBuilder) updates) =>
@@ -118,7 +188,9 @@ class _$$TopupRequest extends $TopupRequest {
         reviewedAt == other.reviewedAt &&
         reviewNote == other.reviewNote &&
         creditsGranted == other.creditsGranted &&
-        createdAt == other.createdAt;
+        createdAt == other.createdAt &&
+        paymentProvider == other.paymentProvider &&
+        dokuPaymentUrl == other.dokuPaymentUrl;
   }
 
   @override
@@ -137,6 +209,8 @@ class _$$TopupRequest extends $TopupRequest {
     _$hash = $jc(_$hash, reviewNote.hashCode);
     _$hash = $jc(_$hash, creditsGranted.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
+    _$hash = $jc(_$hash, paymentProvider.hashCode);
+    _$hash = $jc(_$hash, dokuPaymentUrl.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -156,7 +230,9 @@ class _$$TopupRequest extends $TopupRequest {
           ..add('reviewedAt', reviewedAt)
           ..add('reviewNote', reviewNote)
           ..add('creditsGranted', creditsGranted)
-          ..add('createdAt', createdAt))
+          ..add('createdAt', createdAt)
+          ..add('paymentProvider', paymentProvider)
+          ..add('dokuPaymentUrl', dokuPaymentUrl))
         .toString();
   }
 }
@@ -228,6 +304,18 @@ class $TopupRequestBuilder
   DateTime? get createdAt => _$this._createdAt;
   set createdAt(covariant DateTime? createdAt) => _$this._createdAt = createdAt;
 
+  TopupRequestPaymentProviderEnum? _paymentProvider;
+  TopupRequestPaymentProviderEnum? get paymentProvider =>
+      _$this._paymentProvider;
+  set paymentProvider(
+          covariant TopupRequestPaymentProviderEnum? paymentProvider) =>
+      _$this._paymentProvider = paymentProvider;
+
+  String? _dokuPaymentUrl;
+  String? get dokuPaymentUrl => _$this._dokuPaymentUrl;
+  set dokuPaymentUrl(covariant String? dokuPaymentUrl) =>
+      _$this._dokuPaymentUrl = dokuPaymentUrl;
+
   $TopupRequestBuilder() {
     $TopupRequest._defaults(this);
   }
@@ -248,6 +336,8 @@ class $TopupRequestBuilder
       _reviewNote = $v.reviewNote;
       _creditsGranted = $v.creditsGranted;
       _createdAt = $v.createdAt;
+      _paymentProvider = $v.paymentProvider;
+      _dokuPaymentUrl = $v.dokuPaymentUrl;
       _$v = null;
     }
     return this;
@@ -296,6 +386,10 @@ class $TopupRequestBuilder
               creditsGranted, r'$TopupRequest', 'creditsGranted'),
           createdAt: BuiltValueNullFieldError.checkNotNull(
               createdAt, r'$TopupRequest', 'createdAt'),
+          paymentProvider: BuiltValueNullFieldError.checkNotNull(
+              paymentProvider, r'$TopupRequest', 'paymentProvider'),
+          dokuPaymentUrl: BuiltValueNullFieldError.checkNotNull(
+              dokuPaymentUrl, r'$TopupRequest', 'dokuPaymentUrl'),
         );
     replace(_$result);
     return _$result;
