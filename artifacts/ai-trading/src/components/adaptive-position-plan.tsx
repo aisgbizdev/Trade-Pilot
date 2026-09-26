@@ -1439,42 +1439,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               </button>
             ))}
           </div>
-          <ExpandableExplanation label={copy.adaptive_account_explanation_label} testId="adaptive-account-explanation">
-            <p>{form.accountTier === "micro" ? copy.adaptive_account_micro_desc : form.accountTier === "mini" ? copy.adaptive_account_mini_desc : copy.adaptive_account_regular_desc}</p>
-            {selectedRule && (
-            <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-account-rule">
-              <p className="mb-1 font-bold text-foreground">{copy.adaptive_fixed_scope}</p>
-              <p>{(selectedRule.maximumLot == null ? copy.adaptive_account_rule_uncapped : copy.adaptive_account_rule)
-                .replace("{tier}", accountTierLabel(form.accountTier, copy))
-                .replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))
-                .replace("{maximum}", selectedRule.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))
-                .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))
-                .replace("{size}", formatNumber(selectedRule.contractSize, lang, 2))
-                .replace("{unit}", selectedRule.contractUnit)}</p>
-              <p className="mt-1">{copy.adaptive_contract_minimum_basis.replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))}</p>
-              {tierContracts.every((rule) => rule != null) && (
-                <div className="mt-2" data-testid="adaptive-contract-table">
-                  <p className="font-semibold text-foreground">{copy.adaptive_contract_table_title}</p>
-                  <table className="mt-1 w-full text-left">
-                    <thead><tr><th scope="col">{copy.adaptive_contract_tier}</th><th scope="col">{copy.adaptive_contract_value}</th></tr></thead>
-                    <tbody>
-                      {tierContracts.map((rule) => rule && (
-                        <tr key={rule.accountTier} data-testid={`adaptive-contract-${rule.accountTier}`}>
-                          <th scope="row" className="font-medium">{accountTierLabel(rule.accountTier, copy)}</th>
-                          <td>{formatNumber(rule.contractSize, lang, 2)} {rule.contractUnit}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p className="mt-1">{copy.adaptive_contract_micro_assumption}</p>
-                </div>
-              )}
-              {selectedRule.minimumOpeningFunds != null && (
-                <p className="mt-1">{copy.adaptive_account_opening_minimum.replace("{amount}", formatMoney(selectedRule.minimumOpeningFunds, lang))}</p>
-              )}
-            </div>
-            )}
-          </ExpandableExplanation>
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3" data-testid="adaptive-funds-fields">
           <label className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(9rem,58%)] items-center gap-2 sm:grid-cols-[auto_minmax(0,1fr)]">
@@ -1492,12 +1456,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </span>
           </label>
         </div>
-        <ExpandableExplanation label={copy.adaptive_funds_explanation_label} testId="adaptive-funds-explanation">
-          <div className="space-y-2">
-            <p><strong className="text-foreground">{copy.adaptive_available_margin}:</strong> {copy.adaptive_available_margin_help}</p>
-            <p><strong className="text-foreground">{copy.adaptive_maximum_loss}:</strong> {copy.adaptive_maximum_loss_help}</p>
-          </div>
-        </ExpandableExplanation>
         <div className="space-y-2" data-testid="adaptive-risk-style-selector">
           <p className="text-xs font-medium text-foreground">{copy.adaptive_risk_style_title}</p>
           <div className="grid grid-cols-3 gap-2 max-[359px]:-mx-3" role="group" aria-label={copy.adaptive_risk_style_title}>
@@ -1637,6 +1595,45 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                   <p>{copy.adaptive_chart_confirmation}</p>
                 </div>
                 <p data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
+              </section>
+              <section className="space-y-2 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-broker-details">
+                <h3 className="font-bold text-foreground">{copy.adaptive_account_title}</h3>
+                <p>{form.accountTier === "micro" ? copy.adaptive_account_micro_desc : form.accountTier === "mini" ? copy.adaptive_account_mini_desc : copy.adaptive_account_regular_desc}</p>
+                {selectedRule && (
+                  <div className="rounded-md border border-primary/20 bg-primary/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-account-rule">
+                    <p className="mb-1 font-bold text-foreground">{copy.adaptive_fixed_scope}</p>
+                    <p>{(selectedRule.maximumLot == null ? copy.adaptive_account_rule_uncapped : copy.adaptive_account_rule)
+                      .replace("{tier}", accountTierLabel(form.accountTier, copy))
+                      .replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))
+                      .replace("{maximum}", selectedRule.maximumLot == null ? copy.adaptive_no_fixed_cap : formatNumber(selectedRule.maximumLot, lang, 2))
+                      .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))
+                      .replace("{size}", formatNumber(selectedRule.contractSize, lang, 2))
+                      .replace("{unit}", selectedRule.contractUnit)}</p>
+                    <p className="mt-1">{copy.adaptive_contract_minimum_basis.replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))}</p>
+                    {tierContracts.every((rule) => rule != null) && (
+                      <div className="mt-2" data-testid="adaptive-contract-table">
+                        <p className="font-semibold text-foreground">{copy.adaptive_contract_table_title}</p>
+                        <table className="mt-1 w-full text-left">
+                          <thead><tr><th scope="col">{copy.adaptive_contract_tier}</th><th scope="col">{copy.adaptive_contract_value}</th></tr></thead>
+                          <tbody>
+                            {tierContracts.map((rule) => rule && (
+                              <tr key={rule.accountTier} data-testid={`adaptive-contract-${rule.accountTier}`}>
+                                <th scope="row" className="font-medium">{accountTierLabel(rule.accountTier, copy)}</th>
+                                <td>{formatNumber(rule.contractSize, lang, 2)} {rule.contractUnit}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <p className="mt-1">{copy.adaptive_contract_micro_assumption}</p>
+                      </div>
+                    )}
+                    {selectedRule.minimumOpeningFunds != null && (
+                      <p className="mt-1">{copy.adaptive_account_opening_minimum.replace("{amount}", formatMoney(selectedRule.minimumOpeningFunds, lang))}</p>
+                    )}
+                  </div>
+                )}
+                <p><strong className="text-foreground">{copy.adaptive_available_margin}:</strong> {copy.adaptive_available_margin_help}</p>
+                <p><strong className="text-foreground">{copy.adaptive_maximum_loss}:</strong> {copy.adaptive_maximum_loss_help}</p>
               </section>
               {recommendation && (
                 <section className="space-y-3 border-t border-border pt-4">

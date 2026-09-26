@@ -762,6 +762,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     expect(await screen.findByTestId("card-adaptive-position-plan")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(
       /contract size is 100 barrel/i,
     );
@@ -788,8 +789,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
 
-    const account = await screen.findByTestId("adaptive-account-explanation") as HTMLDetailsElement;
-    const funds = screen.getByTestId("adaptive-funds-explanation") as HTMLDetailsElement;
+    await screen.findByTestId("card-adaptive-position-plan");
     const risk = screen.getByTestId("adaptive-risk-explanation") as HTMLDetailsElement;
     const dayTrade = screen.getByTestId("adaptive-daytrade-only");
     const toggle = screen.getByTestId("button-language-toggle");
@@ -798,103 +798,75 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(intro).toHaveTextContent(/Review an analysis-driven, manual position plan/i);
     expect(intro.querySelector("summary")).toBeNull();
 
-    expect(account.open).toBe(false);
-    expect(funds.open).toBe(false);
+    expect(screen.queryByTestId("adaptive-account-explanation")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-funds-explanation")).not.toBeInTheDocument();
     expect(risk.open).toBe(false);
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveAccessibleName(/^Trading capital/);
     expect(screen.getByTestId("input-adaptive-maximum-loss")).toHaveAccessibleName(/^Loss limit/);
-    expect(within(account).getByText("Minimum 0.10 lot · $100 margin")).not.toBeVisible();
-    expect(within(funds).getByText(/Enter the funds available for this trading plan/)).not.toBeVisible();
     expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).not.toBeVisible();
-    expect(screen.queryByTestId("adaptive-plan-method")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-broker-details")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     const disclaimer = screen.getByTestId("adaptive-disclaimer");
+    const broker = screen.getByTestId("adaptive-broker-details");
+    expect(broker).toHaveTextContent(/Minimum 0.10 lot · \$100 margin/);
+    expect(broker).toHaveTextContent(/Enter the funds available for this trading plan/);
+    expect(broker).toHaveTextContent(/maximum USD loss you accept for the entire plan/);
     expect(disclaimer).toHaveTextContent(/not a profit guarantee or automatic order/);
     expect(disclaimer).toBeVisible();
     expect(dayTrade).toBeVisible();
     expect(dayTrade).toHaveTextContent(/overnight positions are not covered/);
-
-    fireEvent.click(within(account).getByText("Show account explanation"));
-    fireEvent.click(within(funds).getByText("Show capital and risk explanation"));
-    fireEvent.click(within(risk).getByText("Show risk style explanation"));
-    expect(account.open).toBe(true);
-    expect(funds.open).toBe(true);
-    expect(risk.open).toBe(true);
-    expect(within(account).getByText("Minimum 0.10 lot · $100 margin")).toBeVisible();
-    expect(within(funds).getByText(/Enter the funds available for this trading plan/)).toBeVisible();
-    expect(within(funds).getByText(/maximum USD loss you accept for the entire plan/)).toBeVisible();
-    expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).toBeVisible();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAccessibleName("Beralih ke Bahasa Inggris");
     expect(intro).toBeVisible();
     expect(intro).toHaveTextContent(/Susun ukuran posisi manual/i);
-    expect(account.open).toBe(true);
-    expect(funds.open).toBe(true);
-    expect(risk.open).toBe(true);
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveAccessibleName(/^Modal trading/);
     expect(screen.getByTestId("input-adaptive-maximum-loss")).toHaveAccessibleName(/^Batas rugi/);
-    expect(within(account).getByText("Lihat penjelasan tipe akun")).toBeVisible();
-    expect(within(funds).getByText("Lihat penjelasan modal dan risiko")).toBeVisible();
-    expect(within(risk).getByText("Lihat penjelasan gaya risiko")).toBeVisible();
-    expect(within(account).getByText("Minimum 0,10 lot · margin $100")).toBeVisible();
-    expect(within(account).queryByText("Minimum 0.10 lot · $100 margin")).not.toBeInTheDocument();
-    expect(within(funds).getByText(/Masukkan dana yang tersedia untuk rencana trading ini/)).toBeVisible();
-    expect(within(funds).getByText(/kerugian maksimum dalam USD untuk seluruh rencana/)).toBeVisible();
-    expect(within(funds).queryByText(/Enter the funds available for this trading plan/)).not.toBeInTheDocument();
-    expect(within(risk).getByText(/Memakai maksimal 50% batas rugi/)).toBeVisible();
-    expect(within(risk).queryByText(/Uses at most 50% of the loss ceiling/)).not.toBeInTheDocument();
+    expect(broker).toHaveTextContent(/Minimum 0,10 lot · margin \$100/);
+    expect(broker).toHaveTextContent(/Masukkan dana yang tersedia untuk rencana trading ini/);
+    expect(broker).toHaveTextContent(/kerugian maksimum dalam USD untuk seluruh rencana/);
+    expect(broker).not.toHaveTextContent(/Enter the funds available for this trading plan/);
     expect(disclaimer).toBeVisible();
     expect(disclaimer).toHaveTextContent(/bukan jaminan profit atau order otomatis/);
     expect(dayTrade).toBeVisible();
     expect(dayTrade).toHaveTextContent(/posisi overnight tidak tercakup/);
 
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByTestId("adaptive-broker-details")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
-    expect(within(account).getByText("Minimum 0,01 lot · margin $10")).toBeVisible();
-    expect(within(account).queryByText("Minimum 0,10 lot · margin $100")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-broker-details")).toHaveTextContent(/Minimum 0,01 lot · margin \$10/);
+    fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("button-adaptive-account-regular"));
-    expect(within(account).getByText("Minimum 1,00 lot · margin $1.000")).toBeVisible();
+    expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
+    fireEvent.click(within(risk).getByText("Lihat penjelasan gaya risiko"));
+    expect(risk.open).toBe(true);
     expect(within(risk).getByText(/Memakai maksimal 75% batas rugi/)).toBeVisible();
     expect(within(risk).queryByText(/Memakai maksimal 50% batas rugi/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-aggressive"));
     expect(within(risk).getByText(/Dapat memakai sampai 100% batas rugi.*dana bebas/)).toBeVisible();
 
-    fireEvent.click(within(account).getByText("Lihat penjelasan tipe akun"));
-    fireEvent.click(within(funds).getByText("Lihat penjelasan modal dan risiko"));
     fireEvent.click(within(risk).getByText("Lihat penjelasan gaya risiko"));
-    expect(account.open).toBe(false);
-    expect(funds.open).toBe(false);
     expect(risk.open).toBe(false);
-    expect(within(account).getByText("Minimum 1,00 lot · margin $1.000")).not.toBeVisible();
-    expect(within(funds).getByText(/Masukkan dana yang tersedia untuk rencana trading ini/)).not.toBeVisible();
     expect(within(risk).getByText(/Dapat memakai sampai 100% batas rugi/)).not.toBeVisible();
-    expect(disclaimer).toBeVisible();
+    expect(screen.queryByTestId("adaptive-disclaimer")).not.toBeInTheDocument();
     expect(dayTrade).toBeVisible();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAccessibleName("Switch to Indonesian");
-    expect(account.open).toBe(false);
-    expect(funds.open).toBe(false);
     expect(risk.open).toBe(false);
-    expect(within(account).getByText("Show account explanation")).toBeVisible();
-    expect(within(funds).getByText("Show capital and risk explanation")).toBeVisible();
     expect(within(risk).getByText("Show risk style explanation")).toBeVisible();
-    expect(within(account).getByText("Minimum 1.00 lot · $1,000 margin")).not.toBeVisible();
     expect(within(risk).getByText(/May use up to 100% of the loss ceiling.*free funds/)).not.toBeVisible();
-    expect(disclaimer).toBeVisible();
-    expect(disclaimer).toHaveTextContent(/not a profit guarantee or automatic order/);
     expect(dayTrade).toBeVisible();
     expect(dayTrade).toHaveTextContent(/overnight positions are not covered/);
 
-    fireEvent.click(within(account).getByText("Show account explanation"));
-    fireEvent.click(within(funds).getByText("Show capital and risk explanation"));
     fireEvent.click(within(risk).getByText("Show risk style explanation"));
-    expect(within(account).getByText("Minimum 1.00 lot · $1,000 margin")).toBeVisible();
-    expect(within(funds).getByText(/Enter the funds available for this trading plan/)).toBeVisible();
     expect(within(risk).getByText(/May use up to 100% of the loss ceiling.*free funds/)).toBeVisible();
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
-    expect(within(account).getByText("Minimum 0.01 lot · $10 margin")).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-broker-details")).toHaveTextContent(/Minimum 0.01 lot · \$10 margin/);
+    fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
     expect(within(risk).getByText(/Uses at most 75% of the loss ceiling/)).toBeVisible();
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-conservative"));
@@ -933,31 +905,25 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
     const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
-    const accountExplanation = screen.getByTestId("adaptive-account-explanation") as HTMLDetailsElement;
-    const fundsExplanation = screen.getByTestId("adaptive-funds-explanation") as HTMLDetailsElement;
     const riskExplanation = screen.getByTestId("adaptive-risk-explanation") as HTMLDetailsElement;
-    expect(accountExplanation.open).toBe(false);
-    expect(fundsExplanation.open).toBe(false);
+    expect(screen.queryByTestId("adaptive-account-explanation")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-funds-explanation")).not.toBeInTheDocument();
     expect(riskExplanation.open).toBe(false);
-    expect(within(accountExplanation).getByText(/Minimum 0.10 lot · \$100 margin/i)).not.toBeVisible();
-    expect(within(fundsExplanation).getByText(/Enter the funds available for this trading plan/i)).not.toBeVisible();
     expect(within(riskExplanation).getByText(/at most 50%/i)).not.toBeVisible();
     expect(screen.getByTestId("button-adaptive-account-mini")).toHaveTextContent(/^Mini$/);
     expect(screen.getByTestId("button-adaptive-risk-style-conservative")).toHaveTextContent(/^Conservative$/);
     expect(margin).toBeVisible();
     expect(maximumLoss).toBeVisible();
     expect(screen.queryByTestId("adaptive-disclaimer")).not.toBeInTheDocument();
-    fireEvent.click(within(accountExplanation).getByText("Show account explanation"));
-    expect(accountExplanation.open).toBe(true);
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     expect(await screen.findByTestId("adaptive-account-rule")).toBeVisible();
-    fireEvent.click(within(fundsExplanation).getByText("Show capital and risk explanation"));
-    expect(within(fundsExplanation).getByText(/Enter the funds available for this trading plan/i)).toBeVisible();
-    fireEvent.click(within(riskExplanation).getByText("Show risk style explanation"));
-    expect(within(riskExplanation).getByText(/at most 50%/i)).toBeVisible();
-    expect(screen.queryByTestId("adaptive-plan-method")).not.toBeInTheDocument();
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Maximum 0.9 lot applies to each position/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/supports XAU\/USD, BRENT, HSI, and NIKKEI analyses/i);
+    expect(screen.getByTestId("adaptive-broker-details")).toHaveTextContent(/Enter the funds available for this trading plan/i);
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(within(riskExplanation).getByText("Show risk style explanation"));
+    expect(within(riskExplanation).getByText(/at most 50%/i)).toBeVisible();
     const tradePlanCard = screen.getByTestId("card-trade-plan");
     expect(tradePlanCard).toBeInTheDocument();
     expect(screen.queryByTestId("card-trade-setup-summary")).not.toBeInTheDocument();
@@ -992,7 +958,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
     expect(screen.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("button-adaptive-account-micro")).toHaveAttribute("aria-pressed", "true");
-    expect(within(accountExplanation).getByText(/Minimum 0.01 lot · \$10 margin/i)).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-broker-details")).toHaveTextContent(/Minimum 0.01 lot · \$10 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Micro: a minimum 0.01 lot requires \$10 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Maximum 0.09 lot applies to each position/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Contract size is 1 troy ounce/i);
@@ -1001,20 +968,21 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-contract-mini")).toHaveTextContent(/10 troy ounce/i);
     expect(screen.getByTestId("adaptive-contract-regular")).toHaveTextContent(/100 troy ounce/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/minimum to open a Micro account is \$50/i);
+    fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("button-adaptive-account-regular"));
     expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-pressed", "true");
-    expect(within(accountExplanation).getByText(/Minimum 1.00 lot · \$1,000 margin/i)).toBeVisible();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-broker-details")).toHaveTextContent(/Minimum 1.00 lot · \$1,000 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Regular: a minimum 1 lot requires \$1,000 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/no per-position maximum for Regular/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Contract size is 100 troy ounce/i);
+    fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
     expect(screen.getByTestId("button-adaptive-risk-style-balanced")).toHaveAttribute("aria-pressed", "true");
     expect(within(riskExplanation).getByText(/at most 75%/i)).toBeVisible();
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-conservative"));
-    fireEvent.click(within(accountExplanation).getByText("Show account explanation"));
-    expect(accountExplanation.open).toBe(false);
-    expect(screen.getByTestId("adaptive-account-rule")).not.toBeVisible();
+    expect(screen.queryByTestId("adaptive-account-rule")).not.toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-disclaimer")).not.toBeInTheDocument();
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.change(maximumLoss, { target: { value: "500" } });
@@ -1286,7 +1254,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
     expect(screen.getByTestId("adaptive-candle-source-time")).toHaveTextContent(/Analysis candle snapshot fetched/i);
     expect(screen.queryByTestId("button-refresh-adaptive-candles")).not.toBeInTheDocument();
-    await screen.findByTestId("adaptive-account-rule");
     fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "20000" } });
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "2000" } });
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
@@ -1308,7 +1275,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
     expect(screen.getByTestId("adaptive-snapshot-warning")).toHaveTextContent(/cannot confirm candle-based swings or volatility/i);
-    await screen.findByTestId("adaptive-account-rule");
     fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "20000" } });
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "2000" } });
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
@@ -1523,13 +1489,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
     const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
-    await screen.findByTestId("adaptive-account-rule");
     fireEvent.change(margin, { target: { value: "20000" } });
     fireEvent.change(maximumLoss, { target: { value: "2000" } });
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
-
-    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
-    expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/contract size is 10 troy ounce/i);
 
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
@@ -1618,7 +1580,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
       const margin = await screen.findByTestId("input-adaptive-available-margin");
       const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
-      await screen.findByTestId("adaptive-account-rule");
       fireEvent.click(screen.getByTestId(`button-adaptive-account-${tier}`));
       fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
       fireEvent.change(margin, { target: { value: funds } });
@@ -1954,10 +1915,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       </Wrapper>,
     );
 
-    await screen.findByTestId("adaptive-account-rule");
+    await screen.findByTestId("input-adaptive-available-margin");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v24:${ANALYSIS_ID}`)).toBeNull();
+    await waitFor(() => expect(localStorage.getItem(`trade-pilot:adaptive-plan:v24:${ANALYSIS_ID}`)).toBeNull());
   });
 
   it("does not restore an adaptive plan saved under the cumulative-cap v12 namespace", async () => {
@@ -1984,7 +1945,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       </Wrapper>,
     );
 
-    await screen.findByTestId("adaptive-account-rule");
+    await screen.findByTestId("input-adaptive-available-margin");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.getByTestId("button-adaptive-risk-style-conservative")).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
@@ -2200,6 +2161,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Take Profit 1/i);
     expect(screen.getByTestId("card-trade-plan")).toHaveTextContent(/Take Profit 2/i);
     expect(await screen.findByTestId("input-adaptive-available-margin")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     expect(await screen.findByTestId("adaptive-account-rule")).toHaveTextContent(ruleText);
     expect(screen.getByTestId("adaptive-contract-micro")).toHaveTextContent(/0.5 USD\/point/i);
     expect(screen.getByTestId("adaptive-contract-mini")).toHaveTextContent(/5 USD\/point/i);

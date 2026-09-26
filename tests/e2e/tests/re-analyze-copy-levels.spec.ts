@@ -495,11 +495,9 @@ test.describe("Adaptive settings at narrow and desktop widths", () => {
     await expect(card).toBeVisible();
     const account = page.getByTestId("adaptive-account-selector");
     const risk = page.getByTestId("adaptive-risk-style-selector");
-    const explanations = [
-      page.getByTestId("adaptive-account-explanation"),
-      page.getByTestId("adaptive-funds-explanation"),
-      page.getByTestId("adaptive-risk-explanation"),
-    ];
+    const explanation = page.getByTestId("adaptive-risk-explanation");
+    await expect(page.getByTestId("adaptive-account-explanation")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-funds-explanation")).toHaveCount(0);
 
     for (const width of [320, 390, 1280]) {
       await page.setViewportSize({ width, height: 800 });
@@ -535,19 +533,17 @@ test.describe("Adaptive settings at narrow and desktop widths", () => {
           }
         }
       }
-      for (const details of explanations) {
-        await expect(details).not.toHaveAttribute("open", "");
-        const summary = details.locator("summary");
-        await expect(summary).toBeVisible();
-        const box = await details.boundingBox();
-        expect(box, `${width}px: collapsed explanation is laid out`).not.toBeNull();
-        expect(box!.height, `${width}px: closed explanation remains compact`).toBeLessThanOrEqual(44);
-        await summary.click();
-        await expect(details).toHaveAttribute("open", "");
-        await expect(details.locator("p").first()).toBeVisible();
-        await summary.click();
-        await expect(details).not.toHaveAttribute("open", "");
-      }
+      await expect(explanation).not.toHaveAttribute("open", "");
+      const summary = explanation.locator("summary");
+      await expect(summary).toBeVisible();
+      const box = await explanation.boundingBox();
+      expect(box, `${width}px: collapsed explanation is laid out`).not.toBeNull();
+      expect(box!.height, `${width}px: closed explanation remains compact`).toBeLessThanOrEqual(44);
+      await summary.click();
+      await expect(explanation).toHaveAttribute("open", "");
+      await expect(explanation.locator("p").first()).toBeVisible();
+      await summary.click();
+      await expect(explanation).not.toHaveAttribute("open", "");
       await expect(card).toBeVisible();
       await testInfo.attach(`adaptive-settings-${width}px`, {
         body: await card.screenshot(),
@@ -856,6 +852,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const marginInput = page.getByTestId("input-adaptive-available-margin");
     const maximumLossInput = page.getByTestId("input-adaptive-maximum-loss");
     await expect(marginInput).toBeVisible();
+    await page.getByTestId("button-adaptive-explanation").click();
     const accountRule = page.getByTestId("adaptive-account-rule");
     await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/intraday \(day trade\)/i);
     await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/overnight positions are not covered|posisi overnight tidak tercakup/i);
@@ -864,6 +861,8 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(accountRule).toContainText(/100/);
     await expect(accountRule).toContainText(/0[.,]9(?:0)? lot/);
     await expect(accountRule).toContainText(/each position|setiap posisi/i);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("adaptive-education-panel")).toBeHidden();
 
     await marginInput.fill("5000");
     await maximumLossInput.fill("125");
