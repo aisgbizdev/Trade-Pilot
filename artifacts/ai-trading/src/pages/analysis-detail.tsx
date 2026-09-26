@@ -22,6 +22,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Image as ImageIcon,
   Activity,
   Plus,
 } from "lucide-react";
@@ -94,6 +95,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
+import { buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
@@ -2072,7 +2074,73 @@ export default function AnalysisDetailPage({
     : analysis.uncertaintyNotes;
   const confidenceBasis = isBeginnerMode ? analysis.mainScenario : analysis.keyDriversTechnical;
   const confidenceFundamentals = isBeginnerMode ? null : analysis.keyDriversFundamental;
-  const confidenceHasDetails = Boolean(confidenceBasis || confidenceFundamentals || analysis.risk || invalidationItems.length);
+  const confidenceSections: ConfidenceShareData["sections"] = [];
+  if (confidenceBasis) confidenceSections.push({
+    title: isBeginnerMode ? t.analysis_detail.confidence_reason_basis : t.analysis_detail.confidence_reason_technical,
+    body: confidenceBasis,
+  });
+  if (confidenceFundamentals) confidenceSections.push({
+    title: t.analysis_detail.confidence_reason_fundamental,
+    body: confidenceFundamentals,
+  });
+  if (analysis.risk) confidenceSections.push({ title: t.analysis_detail.confidence_reason_risk, body: analysis.risk });
+  if (invalidationItems.length) confidenceSections.push({
+    title: t.analysis_detail.confidence_reason_invalidation,
+    body: invalidationItems.slice(0, 3).map((item) => `• ${item}`).join("\n"),
+  });
+  const citedNews = (analysis.fundamentalCitations?.newsTitles ?? []).flatMap((title) => {
+    const item = findCitedNews(title, analysis.fundamentalContext?.newsItems ?? []);
+    return item ? [{ label: item.title, url: safeHttpUrl(item.url) ?? undefined }] : [];
+  });
+  const citedEvents = (analysis.fundamentalCitations?.calendarEvents ?? []).flatMap((name) => {
+    const hit = findCitedEvent(name, analysis.fundamentalContext?.calendarEvents ?? []);
+    return hit ? [{ label: `${hit.ev.event} · ${hit.ev.date}` }] : [];
+  });
+  const confidenceShareData: ConfidenceShareData = {
+    title: t.analysis_detail.confidence_reason_label,
+    instrument: analysis.instrument,
+    timeframe: analysis.timeframe,
+    analyzedAt: format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
+      locale: lang === "id" ? idLocale : undefined,
+    }),
+    summary: confidenceReason ?? "",
+    sections: confidenceSections,
+    sourcesTitle: t.analysis_detail.citations_label,
+    sources: [...citedNews, ...citedEvents],
+    disclaimer: t.analysis_detail.confidence_share_disclaimer,
+  };
+  const copyConfidenceText = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(buildConfidenceShareText(confidenceShareData));
+      toast({ title: t.analysis_detail.confidence_share_text_copied });
+    } catch {
+      toast({ title: t.analysis_detail.confidence_share_failed, variant: "destructive" });
+    }
+  };
+  const copyConfidenceImage = async () => {
+    try {
+      const { blob, url } = renderConfidenceSharePng(confidenceShareData);
+      if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast({ title: t.analysis_detail.confidence_share_image_copied });
+          return;
+        } catch {
+          // iOS and some browsers reject image clipboard writes; offer a PNG instead.
+        }
+      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tradepilot-${analysis.instrument.replace(/[^a-z0-9-]/gi, "-")}-${analysis.timeframe}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast({ title: t.analysis_detail.confidence_share_image_downloaded });
+    } catch {
+      toast({ title: t.analysis_detail.confidence_share_failed, variant: "destructive" });
+    }
+  };
 
   const scenarioAContent = isBeginnerMode ? analysis.mainScenario : analysis.baseCase;
   const scenarioBContent = isBeginnerMode
@@ -2390,7 +2458,6 @@ export default function AnalysisDetailPage({
                     t={t}
                   />
                 )}
-                {confidenceHasDetails && (
                   <Dialog key={id}>
                     <DialogTrigger asChild>
                       <button type="button" className="mt-2 rounded text-xs font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" data-testid="confidence-reason-disclosure">
@@ -2399,7 +2466,7 @@ export default function AnalysisDetailPage({
                     </DialogTrigger>
                     <DialogContent
                       closeLabel={t.analysis_detail.disclosure_collapse}
-                      className="grid max-h-[85dvh] w-[calc(100vw-2rem)] max-w-xl grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden rounded-xl p-4 sm:p-6"
+                      className="grid max-h-[85dvh] w-[calc(100vw-2rem)] max-w-xl grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden rounded-xl p-4 sm:p-6"
                       data-testid="confidence-reason-dialog"
                     >
                       <DialogHeader className="pr-7 text-left">
@@ -2411,6 +2478,7 @@ export default function AnalysisDetailPage({
                         </DialogDescription>
                       </DialogHeader>
                     <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1 text-sm leading-relaxed" data-testid="confidence-reason-details">
+                      <p className="whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-foreground">{confidenceReason}</p>
                       {confidenceBasis && (
                         <p><strong className="text-foreground">{isBeginnerMode
                           ? t.analysis_detail.confidence_reason_basis
@@ -2441,9 +2509,18 @@ export default function AnalysisDetailPage({
                         </div>
                       )}
                     </div>
+                    <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row" data-testid="confidence-share-actions">
+                      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={copyConfidenceText} data-testid="confidence-copy-text">
+                        <Copy className="mr-2 h-4 w-4" />
+                        {t.analysis_detail.confidence_share_copy_text}
+                      </Button>
+                      <Button type="button" className="w-full sm:w-auto" onClick={copyConfidenceImage} data-testid="confidence-copy-image">
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        {t.analysis_detail.confidence_share_copy_image}
+                      </Button>
+                    </div>
                     </DialogContent>
                   </Dialog>
-                )}
               </div>
             </div>
           )}

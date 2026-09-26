@@ -35,3 +35,4 @@
 - [Production database health probes](production-db-health-probes.md) — a successful read-only production replica query does not clear connection failures in the deployed app; compare runtime logs before declaring recovery.
 - [Symbol-scoped news feeds](symbol-scoped-news-feeds.md) — per-symbol RSS can contain unrelated company stories; require explicit instrument and market context before citing or showing a headline.
 - [Disclosure prop audit](disclosure-prop-audit.md) — trace shared-card subtitle props to each caller so short fixed copy is not missed when auditing collapsed explanations.
+- [Shareable analysis exports](shareable-analysis-exports.md) — export the full saved rationale with timestamp and snapshot-matched citations; never capture only the visible part of a scrolling dialog.

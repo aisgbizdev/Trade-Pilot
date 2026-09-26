@@ -258,6 +258,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("AnalysisDetailPage: happy-path render", () => {
@@ -429,7 +430,10 @@ describe("AnalysisDetailPage: happy-path render", () => {
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
 
     expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(/data is mixed/i);
-    expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("confidence-reason-disclosure"));
+    expect(screen.getByTestId("confidence-reason-details")).toHaveTextContent(/data is mixed/i);
+    expect(screen.getByTestId("confidence-copy-text")).toBeInTheDocument();
+    expect(screen.getByTestId("confidence-copy-image")).toBeInTheDocument();
   });
 
   it("uses the saved product and timeframe evidence in the optional pro breakdown", async () => {
@@ -459,6 +463,74 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(details).toHaveTextContent("A scheduled oil inventory report");
     expect(details).toHaveTextContent("4h close below the range");
     expect(details).not.toHaveTextContent(/Fed|Gold/);
+  });
+
+  it("copies the full explanation and only cited sources found in the saved snapshot", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    installFetchMock([getAnalysisHandler({
+      body: {
+        ...ANALYSIS_PAYLOAD,
+        whyReason: "• Basis: Harga 1h masih didukung struktur naik.\n• Batasan: Risiko event tetap ada.",
+        fundamentalContext: {
+          newsItems: [{ id: "n-1", title: "Gold rallies after statement", url: "https://example.com/gold", publishedAt: new Date(NOW).toISOString() }],
+          calendarEvents: [{ date: "2026-09-27", time: "12:00", currency: "USD", event: "Inventory report", impact: "★★" }],
+        },
+        fundamentalCitations: {
+          newsTitles: ["Gold rallies after statement", "Unverified invented headline"],
+          calendarEvents: ["Inventory report"],
+        },
+      },
+    }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    fireEvent.click(await screen.findByTestId("confidence-reason-disclosure"));
+    fireEvent.click(screen.getByTestId("confidence-copy-text"));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const copied = String(writeText.mock.calls[0]?.[0]);
+    expect(copied).toContain("XAU/USD · 1h");
+    expect(copied).toContain("• Batasan: Risiko event tetap ada.");
+    expect(copied).toContain("Price likely continues higher into resistance.");
+    expect(copied).toContain("H1 close below 2300");
+    expect(copied).toContain("Gold rallies after statement — https://example.com/gold");
+    expect(copied).toContain("Inventory report · 2026-09-27");
+    expect(copied).not.toContain("Unverified invented headline");
+  });
+
+  it("copies a PNG when supported and downloads one if the browser rejects image clipboard access", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      fillRect: vi.fn(),
+      fillText: vi.fn(),
+      measureText: (text: string) => ({ width: text.length * 12 }),
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue("data:image/png;base64,UE5H");
+    const downloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this.download);
+    });
+    class TestClipboardItem {
+      constructor(public readonly items: Record<string, Blob>) {}
+    }
+    vi.stubGlobal("ClipboardItem", TestClipboardItem);
+    const write = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("Permission denied"));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { write } });
+    installFetchMock([getAnalysisHandler({ body: ANALYSIS_PAYLOAD }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    fireEvent.click(await screen.findByTestId("confidence-reason-disclosure"));
+    const button = screen.getByTestId("confidence-copy-image");
+    fireEvent.click(button);
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    const item = write.mock.calls[0]?.[0]?.[0] as TestClipboardItem;
+    expect(item.items["image/png"]).toHaveProperty("type", "image/png");
+    expect(item.items["image/png"].size).toBeGreaterThan(0);
+    expect(downloads).toHaveLength(0);
+
+    fireEvent.click(button);
+    await waitFor(() => expect(downloads).toEqual(["tradepilot-XAU-USD-1h.png"]));
+    expect(screen.getByTestId("confidence-reason-dialog")).toBeInTheDocument();
   });
 
   it("uses progressive disclosure for scenarios, pro factors, and execution insight", async () => {
