@@ -1296,9 +1296,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         <AnalysisGuideLink article="adaptive-position-plan" compact />
       </div>
       <div className="p-4 space-y-4" data-testid="adaptive-plan-content">
-        <ExpandableExplanation>{copy.adaptive_ready}</ExpandableExplanation>
         <details className="rounded-md border border-border/70 bg-muted/20 px-3 py-2" data-testid="adaptive-plan-method">
           <summary className="cursor-pointer text-xs font-semibold text-foreground">{copy.adaptive_method_summary}</summary>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.adaptive_method_help}</p>
           <div className="mt-2 space-y-1.5 rounded-md border border-primary/20 bg-primary/[0.03] p-2.5 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-analysis-basis">
             <p className="font-semibold text-foreground">{copy.adaptive_analysis_basis_title}</p>

@@ -1,5 +1,6 @@
 import { Bell, Trash2, TrendingUp, TrendingDown } from "lucide-react";
 import { Layout } from "@/components/layout";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -51,9 +52,7 @@ export default function MyAlertsPage() {
             <Bell className="w-5 h-5 text-primary" />
             {t.alerts.page_title}
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            {t.alerts.page_subtitle}
-          </p>
+          <ExpandableExplanation className="mt-1" testId="alerts-intro">{t.alerts.page_subtitle}</ExpandableExplanation>
         </div>
 
         {isLoading ? (
