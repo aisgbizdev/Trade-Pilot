@@ -709,8 +709,8 @@ function PlanSide({
               {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
             </Badge>}
           </div>
-          <div className="rounded-md bg-background/70 p-2.5" data-testid={`adaptive-snapshot-positions-${plan.side}`}>
-            <p className="text-[11px] font-bold">{copy.adaptive_position_prices_title}</p>
+          <div className="border-t border-border/60 pt-3" data-testid={`adaptive-snapshot-positions-${plan.side}`}>
+            <p className="text-xs font-bold">{copy.adaptive_position_prices_title}</p>
             <ol className="mt-2 divide-y divide-border/60">
               {plan.ladder.map((level) => (
                 <li key={`${plan.side}-summary-${level.level}`} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-1.5 text-[11px]" data-testid={`adaptive-snapshot-position-${plan.side}-${level.level}`}>
@@ -723,40 +723,40 @@ function PlanSide({
               {copy.adaptive_if_all_filled}: {plan.ladder.length} {plan.ladder.length === 1 ? copy.adaptive_position_singular : copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.adaptive_final_stop}</p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3">
+              <div className="border-t border-border/60 pt-2">
+                <p className="text-xs text-muted-foreground">{copy.adaptive_final_stop}</p>
               <p className="mt-0.5 text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</p>
             </div>
-            <div className="rounded-md bg-background/70 p-2">
-              <p className="text-[10px] text-muted-foreground">{copy.adaptive_cycle_loss}</p>
+              <div className="border-t border-border/60 pt-2">
+                <p className="text-xs text-muted-foreground">{copy.adaptive_cycle_loss}</p>
               <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
             </div>
-              {summary && <div className="rounded-md bg-background/70 p-2" data-testid="adaptive-usable-risk-budget">
-                <p className="text-[10px] text-muted-foreground">{copy.adaptive_usable_risk_budget}</p>
+              {summary && <div className="border-t border-border/60 pt-2" data-testid="adaptive-usable-risk-budget">
+                <p className="text-xs text-muted-foreground">{copy.adaptive_usable_risk_budget}</p>
                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.usableRiskBudget, lang)}</p>
-                <p className="mt-1 text-[10px] text-muted-foreground">
+                <p className="mt-1 text-[11px] text-muted-foreground">
                   {copy.adaptive_risk_budget_rate.replace("{rate}", formatNumber(summary.riskUtilizationRate * 100, lang, 0))}
                 </p>
               </div>}
-              {summary && <div className="rounded-md bg-background/70 p-2" data-testid="adaptive-unused-risk-buffer">
-                <p className="text-[10px] text-muted-foreground">{copy.adaptive_unused_risk_buffer}</p>
+              {summary && <div className="border-t border-border/60 pt-2" data-testid="adaptive-unused-risk-buffer">
+                <p className="text-xs text-muted-foreground">{copy.adaptive_unused_risk_buffer}</p>
                 <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.unusedRiskBuffer, lang)}</p>
               </div>}
             {plan.takeProfit1 != null && (
-              <div className="rounded-md bg-background/70 p-2" data-testid={`adaptive-take-profit-${plan.side}-1`}>
-                <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp1}</p>
+              <div className="border-t border-border/60 pt-2" data-testid={`adaptive-take-profit-${plan.side}-1`}>
+                <p className="text-xs text-muted-foreground">{copy.trade_plan_tp1}</p>
                 <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
-                <p className="mt-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-1`}>
+                <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-1`}>
                   {copy.adaptive_tp_profit}: {formatProfit(plan.profitToTakeProfit1, lang)}
                 </p>
               </div>
             )}
             {plan.takeProfit2 != null && (
-              <div className="rounded-md bg-background/70 p-2" data-testid={`adaptive-take-profit-${plan.side}-2`}>
-                <p className="text-[10px] text-muted-foreground">{copy.trade_plan_tp2}</p>
+              <div className="border-t border-border/60 pt-2" data-testid={`adaptive-take-profit-${plan.side}-2`}>
+                <p className="text-xs text-muted-foreground">{copy.trade_plan_tp2}</p>
                 <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
-                <p className="mt-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-2`}>
+                <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-2`}>
                   {copy.adaptive_tp_profit}: {formatProfit(plan.profitToTakeProfit2, lang)}
                 </p>
               </div>
@@ -764,9 +764,9 @@ function PlanSide({
           </div>
         </div>
       )}
-      <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">
-        {conditional || plan.ladder.length === 1 ? stageGuidance : copy.adaptive_additional_reminder}
-      </p>
+      {!conditional && <p className="text-xs leading-relaxed text-muted-foreground border-t border-border/60 pt-2">
+        {plan.ladder.length === 1 ? stageGuidance : copy.adaptive_additional_reminder}
+      </p>}
       {!conditional && nextCandidate && (
         <div className="rounded-md border border-amber-300/70 bg-amber-50/60 p-2.5 text-[11px] dark:border-amber-900 dark:bg-amber-950/20" data-testid={`adaptive-next-layer-${plan.side}`}>
           {fundsOnlyCandidate ? (
@@ -1463,7 +1463,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           </ExpandableExplanation>
         </div>
         <div className="space-y-2">
-          <span className="block rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-[10px] leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-daytrade-only">{copy.adaptive_day_trade_only}</span>
+          <p className="text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-daytrade-only">{copy.adaptive_day_trade_only}</p>
           {isRulesLoading && <p className="text-[11px] text-muted-foreground" data-testid="adaptive-plan-rules-loading">{copy.adaptive_rules_loading}</p>}
           {selectedRule && availableMargin != null && availableMargin > 0 && (
             <div className="sr-only" data-testid="adaptive-margin-capacity">
@@ -1748,9 +1748,10 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </div>
           </DialogContent>
         </Dialog>
-        {recommendation && !recommendation.result.valid && <div className="border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 space-y-2" data-testid="adaptive-plan-invalid">
-          <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{hasConditionalScenarios ? copy.adaptive_conditional_overview_title : copy.adaptive_invalid_title}</p>
-          <p className="text-[11px] font-medium text-amber-800 dark:text-amber-300">{hasConditionalScenarios ? copy.adaptive_minimum_action_wait : copy.adaptive_invalid_description}</p>
+        {recommendation && !recommendation.result.valid && <div className="border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 space-y-1.5" data-testid="adaptive-plan-invalid" role="alert">
+          <p className="text-sm font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{hasConditionalScenarios ? copy.adaptive_conditional_overview_title : copy.adaptive_invalid_title}</p>
+          {hasConditionalScenarios && <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">{copy.adaptive_conditional_not_actionable}</p>}
+          <p className="text-xs font-medium leading-relaxed text-amber-800 dark:text-amber-300">{hasConditionalScenarios ? copy.adaptive_minimum_action_wait : copy.adaptive_invalid_description}</p>
         </div>}
          {recommendation && !recommendation.result.valid && (
            <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
@@ -1772,10 +1773,10 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                          : copy.adaptive_snapshot_unavailable;
                    return (
                      <div key={side} className="space-y-2 rounded-md border border-border p-2.5" data-testid={`adaptive-review-side-${side}`}>
-                       <p className="text-xs font-bold text-foreground">{side === "buy" ? copy.adaptive_buy : copy.adaptive_sell}</p>
-                       <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" role="status">
-                         {copy.adaptive_conditional_not_actionable}
-                       </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-bold text-foreground">{side === "buy" ? copy.adaptive_buy : copy.adaptive_sell}</p>
+                          <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-200">{copy.adaptive_conditional_status}</Badge>
+                        </div>
                        {plan ? <PlanSide
                          plan={plan}
                          lang={lang}
@@ -1829,8 +1830,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                     : copyStatus === "success" ? copy.adaptive_copy_success : copy.adaptive_copy}
                </Button>
              </div>
-            {primaryPlan && recommendation.sideEvaluations[primaryPlan.side].status !== "viable" && (
-              <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200" role="status">
+             {primaryPlan && recommendation.sideEvaluations[primaryPlan.side].status !== "viable" && (
+               <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300" role="status">
                 {copy.adaptive_conditional_not_actionable}
               </p>
             )}

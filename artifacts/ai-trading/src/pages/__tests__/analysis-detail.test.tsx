@@ -1015,6 +1015,14 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("scenarios-trigger")).not.toBeInTheDocument();
     const adaptiveCard = screen.getByTestId("card-adaptive-position-plan");
     const liveIndicators = screen.getByTestId("card-indicators-section");
+    const savedMarketContext = screen.getByTestId("card-market-context");
+    const analysisTime = screen.getByTestId("analysis-created-at");
+    const priceAlerts = screen.getByTestId("card-price-alerts");
+    expect(analysisTime).toHaveTextContent(/Analyzed/i);
+    expect(analysisTime.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(savedMarketContext.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(adaptiveCard.compareDocumentPosition(priceAlerts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(priceAlerts.compareDocumentPosition(liveIndicators) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(liveIndicators).toHaveTextContent("Current market conditions");
     expect(liveIndicators).toHaveTextContent(/do not automatically change the saved analysis or Adaptive plan/i);
     expect(adaptiveCard.compareDocumentPosition(liveIndicators) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -1299,6 +1307,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/Entry direction is unconfirmed/i);
+    expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/copying as an entry plan is disabled/i);
     expect(screen.queryByTestId("adaptive-scenarios-review-explanation")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-plan-invalid").querySelector("details")).toBeNull();
     expect(screen.queryByTestId("adaptive-plan-method")).not.toBeInTheDocument();
@@ -1317,6 +1326,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-side-status-sell")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Conditional scenario/i);
+    expect(within(screen.getByTestId("adaptive-review-side-buy")).queryByText(/copying as an entry plan is disabled/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-review-side-sell")).not.toBeInTheDocument();
     for (const side of ["buy", "sell"] as const) {
       fireEvent.click(screen.getByTestId(`adaptive-direction-${side}`));
@@ -1324,6 +1334,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       expect(screen.queryByTestId(`adaptive-review-side-${side === "buy" ? "sell" : "buy"}`)).not.toBeInTheDocument();
       expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Answer at a glance/i);
       expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Reference numbers only/i);
+      expect(within(review).getByTestId("adaptive-snapshot-positions-" + side)).toHaveClass("border-t");
+      expect(within(review).getByTestId("adaptive-usable-risk-budget")).toHaveClass("border-t");
       expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Entry point/i);
       expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/One final Stop Loss/i);
       expect(within(review).getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/\$1,000/);

@@ -2303,6 +2303,12 @@ export default function AnalysisDetailPage({
                 size="md"
               />
             </div>
+            <p className="mt-1 text-xs text-muted-foreground" data-testid="analysis-created-at">
+              {t.analysis_detail.analyzed_prefix}{" "}
+              {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
+                locale: lang === "id" ? idLocale : undefined,
+              })}
+            </p>
           </div>
           {/* The "Analisis" nav tab + the header back button both land here
               (the last analysis) so reopening costs no AI tokens. Starting a
@@ -2578,13 +2584,6 @@ export default function AnalysisDetailPage({
             </div>
           )}
 
-          <div className="text-xs text-muted-foreground">
-            {t.analysis_detail.analyzed_prefix}{" "}
-            {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
-              locale: lang === "id" ? idLocale : undefined,
-            })}
-          </div>
-
           {isExpired && (
             <Button
               className="mt-2 w-auto min-w-40 px-6"
@@ -2641,6 +2640,19 @@ export default function AnalysisDetailPage({
           </div>
         )}
 
+        {/* Saved indicator-tally snapshot belongs with the original analysis,
+            before Adaptive rather than among the current-market checks. */}
+        {analysis.techBuyCount != null &&
+          analysis.techSellCount != null &&
+          analysis.techNeutralCount != null && (
+            <MarketContextSummary
+              buy={analysis.techBuyCount}
+              sell={analysis.techSellCount}
+              neutral={analysis.techNeutralCount}
+              mode={isBeginnerMode ? "beginner" : "pro"}
+            />
+          )}
+
         {/* Deterministic, situation-aware scaling plan. It reads the saved
             analysis context but never changes Standard Plan levels or executes orders. */}
         {tradePlan && hasAdaptive && (
@@ -2670,32 +2682,18 @@ export default function AnalysisDetailPage({
             shareSources={confidenceShareData.sources}
           />
         )}
-
         {/* Price alerts — opt-in push notifications that fire the first
             time live price touches one of the AI's entry / SL / TP levels.
             Hidden unless the analysis has a trade plan AND the user has
             already enabled push notifications (otherwise the toggle would
             be a dead end). */}
+        {tradePlan && hasAdaptive && <AnalysisAlertsCard analysisId={analysis.id} t={t} />}
         {tradePlan && !hasAdaptive && (
           <AnalysisAlertsCard analysisId={analysis.id} t={t} />
         )}
 
-        {/* Market Context Summary — same card the user saw on the Analyze tab,
-            rendered from the indicator-tally snapshot stored at analysis time. */}
-        {analysis.techBuyCount != null &&
-          analysis.techSellCount != null &&
-          analysis.techNeutralCount != null && (
-            <MarketContextSummary
-              buy={analysis.techBuyCount}
-              sell={analysis.techSellCount}
-              neutral={analysis.techNeutralCount}
-              mode={isBeginnerMode ? "beginner" : "pro"}
-            />
-          )}
-
         {/* This is a current-market check, not an input to the saved Adaptive plan. */}
         {liveIndicatorPanel}
-        {tradePlan && hasAdaptive && <AnalysisAlertsCard analysisId={analysis.id} t={t} />}
 
         {analysis.userInputContext && (
           <Card className="p-4 space-y-2" data-testid="card-user-notes">

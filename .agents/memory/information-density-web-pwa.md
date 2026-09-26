@@ -15,6 +15,12 @@ For the lower analysis page beginning at Adaptive, treat saved-analysis narrativ
 
 **How to apply:** Keep one explanation entry after the scenario and its optional plan details, outside the Buy/Sell-specific card; make its title clearly legible. Keep direction/invalidation warnings before the scenario. Position the live check soon after Adaptive without changing the analysis above or implying that live indicators recalculated the saved plan.
 
+Keep the saved market-context summary with the original analysis, before Adaptive, while current-market indicators remain after Adaptive.
+
+**Why:** The user approved separating the stored indicator snapshot from the live check; placing both below Adaptive made their freshness and relationship to the plan hard to understand.
+
+**How to apply:** When reordering analysis-detail sections, preserve this saved-versus-live distinction. Do not imply that current indicators automatically revise a stored recommendation.
+
 The user later explicitly asked that the margin-capacity estimate, duplicate hard-loss summary, and bottom generic disclaimer not be shown visually. Keep the capacity and loss calculations intact, preserve the disclaimer for assistive technology, and continue to show actionable risk/invalidation conditions.
 
 **Why:** Those three blocks were identified in screenshots as redundant screen content, not as logic to remove. This is a specific exception to the general rule to keep safety-critical information visible.
