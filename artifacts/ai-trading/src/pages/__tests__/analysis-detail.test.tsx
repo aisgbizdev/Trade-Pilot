@@ -1019,10 +1019,13 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const analysisTime = screen.getByTestId("analysis-created-at");
     const priceAlerts = screen.getByTestId("card-price-alerts");
     const timeframeOptions = screen.getByTestId("quick-timeframe-options");
-    expect(screen.getByTestId("card-quick-timeframe")).toHaveTextContent(/Choosing another timeframe immediately starts a new analysis/i);
-    expect(within(timeframeOptions).getAllByRole("button")).toHaveLength(8);
-    expect(timeframeOptions).not.toContainElement(screen.getByTestId("button-detail-risk-map"));
-    expect(screen.getByTestId("quick-timeframe-header")).toContainElement(screen.getByTestId("button-detail-risk-map"));
+    const timeframeCard = screen.getByTestId("card-quick-timeframe");
+    expect(timeframeCard).toHaveTextContent(/Choosing another timeframe immediately starts a new analysis/i);
+    expect(within(timeframeCard).queryByText("Change Timeframe")).not.toBeInTheDocument();
+    expect(timeframeOptions).toHaveAttribute("aria-label", "Change Timeframe");
+    expect(within(timeframeOptions).getAllByRole("button")).toHaveLength(9);
+    expect(timeframeOptions).toContainElement(screen.getByTestId("button-detail-risk-map"));
+    expect(screen.getByTestId("button-detail-risk-map")).toHaveClass("border");
     expect(within(screen.getByTestId("card-quick-timeframe")).queryByTestId("live-price-chip")).not.toBeInTheDocument();
     expect(within(screen.getByTestId("card-analysis-chart")).getByTestId("chart-live-quote")).toBeInTheDocument();
     expect(analysisTime).toHaveTextContent(/Analyzed/i);

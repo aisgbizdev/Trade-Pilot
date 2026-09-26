@@ -27,6 +27,12 @@ Keep a single instrument-level running quote near the price chart rather than re
 
 **How to apply:** On analysis-detail layouts, treat the chart quote as the price reference and keep comparison as a secondary action within the timeframe controls.
 
+When compacting timeframe controls, the visible warning that choosing another timeframe immediately starts a new analysis must remain, even if the controls' heading is removed.
+
+**Why:** The user explicitly considers this immediate-action message an important disclaimer, not optional instructional copy.
+
+**How to apply:** Keep it adjacent to the timeframe buttons on web and PWA; do not hide it in a tooltip or collapsed explanation.
+
 The user later explicitly asked that the margin-capacity estimate, duplicate hard-loss summary, and bottom generic disclaimer not be shown visually. Keep the capacity and loss calculations intact, preserve the disclaimer for assistive technology, and continue to show actionable risk/invalidation conditions.
 
 **Why:** Those three blocks were identified in screenshots as redundant screen content, not as logic to remove. This is a specific exception to the general rule to keep safety-critical information visible.
