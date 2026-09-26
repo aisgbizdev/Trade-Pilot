@@ -799,8 +799,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(account.open).toBe(false);
     expect(funds.open).toBe(false);
     expect(risk.open).toBe(false);
+    expect(screen.getByTestId("input-adaptive-available-margin")).toHaveAccessibleName(/^Trading capital/);
+    expect(screen.getByTestId("input-adaptive-maximum-loss")).toHaveAccessibleName(/^Loss limit/);
     expect(within(account).getByText("Minimum 0.10 lot · $100 margin")).not.toBeVisible();
-    expect(within(funds).getByText(/Enter free funds that can cover/)).not.toBeVisible();
+    expect(within(funds).getByText(/Enter the funds available for this trading plan/)).not.toBeVisible();
     expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).not.toBeVisible();
     expect(screen.queryByTestId("adaptive-plan-method")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
@@ -811,13 +813,14 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(dayTrade).toHaveTextContent(/overnight positions are not covered/);
 
     fireEvent.click(within(account).getByText("Show account explanation"));
-    fireEvent.click(within(funds).getByText("Show funds and risk explanation"));
+    fireEvent.click(within(funds).getByText("Show capital and risk explanation"));
     fireEvent.click(within(risk).getByText("Show risk style explanation"));
     expect(account.open).toBe(true);
     expect(funds.open).toBe(true);
     expect(risk.open).toBe(true);
     expect(within(account).getByText("Minimum 0.10 lot · $100 margin")).toBeVisible();
-    expect(within(funds).getByText(/Enter free funds that can cover/)).toBeVisible();
+    expect(within(funds).getByText(/Enter the funds available for this trading plan/)).toBeVisible();
+    expect(within(funds).getByText(/maximum USD loss you accept for the entire plan/)).toBeVisible();
     expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).toBeVisible();
 
     fireEvent.click(toggle);
@@ -827,13 +830,16 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(account.open).toBe(true);
     expect(funds.open).toBe(true);
     expect(risk.open).toBe(true);
+    expect(screen.getByTestId("input-adaptive-available-margin")).toHaveAccessibleName(/^Modal trading/);
+    expect(screen.getByTestId("input-adaptive-maximum-loss")).toHaveAccessibleName(/^Batas rugi/);
     expect(within(account).getByText("Lihat penjelasan tipe akun")).toBeVisible();
-    expect(within(funds).getByText("Lihat penjelasan dana dan risiko")).toBeVisible();
+    expect(within(funds).getByText("Lihat penjelasan modal dan risiko")).toBeVisible();
     expect(within(risk).getByText("Lihat penjelasan gaya risiko")).toBeVisible();
     expect(within(account).getByText("Minimum 0,10 lot · margin $100")).toBeVisible();
     expect(within(account).queryByText("Minimum 0.10 lot · $100 margin")).not.toBeInTheDocument();
-    expect(within(funds).getByText(/Masukkan dana bebas yang dapat menutup/)).toBeVisible();
-    expect(within(funds).queryByText(/Enter free funds that can cover/)).not.toBeInTheDocument();
+    expect(within(funds).getByText(/Masukkan dana yang tersedia untuk rencana trading ini/)).toBeVisible();
+    expect(within(funds).getByText(/kerugian maksimum dalam USD untuk seluruh rencana/)).toBeVisible();
+    expect(within(funds).queryByText(/Enter the funds available for this trading plan/)).not.toBeInTheDocument();
     expect(within(risk).getByText(/Memakai maksimal 50% batas rugi/)).toBeVisible();
     expect(within(risk).queryByText(/Uses at most 50% of the loss ceiling/)).not.toBeInTheDocument();
     expect(disclaimer).toBeVisible();
@@ -853,13 +859,13 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(within(risk).getByText(/Dapat memakai sampai 100% batas rugi.*dana bebas/)).toBeVisible();
 
     fireEvent.click(within(account).getByText("Lihat penjelasan tipe akun"));
-    fireEvent.click(within(funds).getByText("Lihat penjelasan dana dan risiko"));
+    fireEvent.click(within(funds).getByText("Lihat penjelasan modal dan risiko"));
     fireEvent.click(within(risk).getByText("Lihat penjelasan gaya risiko"));
     expect(account.open).toBe(false);
     expect(funds.open).toBe(false);
     expect(risk.open).toBe(false);
     expect(within(account).getByText("Minimum 1,00 lot · margin $1.000")).not.toBeVisible();
-    expect(within(funds).getByText(/Masukkan dana bebas yang dapat menutup/)).not.toBeVisible();
+    expect(within(funds).getByText(/Masukkan dana yang tersedia untuk rencana trading ini/)).not.toBeVisible();
     expect(within(risk).getByText(/Dapat memakai sampai 100% batas rugi/)).not.toBeVisible();
     expect(disclaimer).toBeVisible();
     expect(dayTrade).toBeVisible();
@@ -870,7 +876,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(funds.open).toBe(false);
     expect(risk.open).toBe(false);
     expect(within(account).getByText("Show account explanation")).toBeVisible();
-    expect(within(funds).getByText("Show funds and risk explanation")).toBeVisible();
+    expect(within(funds).getByText("Show capital and risk explanation")).toBeVisible();
     expect(within(risk).getByText("Show risk style explanation")).toBeVisible();
     expect(within(account).getByText("Minimum 1.00 lot · $1,000 margin")).not.toBeVisible();
     expect(within(risk).getByText(/May use up to 100% of the loss ceiling.*free funds/)).not.toBeVisible();
@@ -880,10 +886,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(dayTrade).toHaveTextContent(/overnight positions are not covered/);
 
     fireEvent.click(within(account).getByText("Show account explanation"));
-    fireEvent.click(within(funds).getByText("Show funds and risk explanation"));
+    fireEvent.click(within(funds).getByText("Show capital and risk explanation"));
     fireEvent.click(within(risk).getByText("Show risk style explanation"));
     expect(within(account).getByText("Minimum 1.00 lot · $1,000 margin")).toBeVisible();
-    expect(within(funds).getByText(/Enter free funds that can cover/)).toBeVisible();
+    expect(within(funds).getByText(/Enter the funds available for this trading plan/)).toBeVisible();
     expect(within(risk).getByText(/May use up to 100% of the loss ceiling.*free funds/)).toBeVisible();
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
     expect(within(account).getByText("Minimum 0.01 lot · $10 margin")).toBeVisible();
@@ -932,7 +938,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(fundsExplanation.open).toBe(false);
     expect(riskExplanation.open).toBe(false);
     expect(within(accountExplanation).getByText(/Minimum 0.10 lot · \$100 margin/i)).not.toBeVisible();
-    expect(within(fundsExplanation).getByText(/Enter free funds that can cover/i)).not.toBeVisible();
+    expect(within(fundsExplanation).getByText(/Enter the funds available for this trading plan/i)).not.toBeVisible();
     expect(within(riskExplanation).getByText(/at most 50%/i)).not.toBeVisible();
     expect(screen.getByTestId("button-adaptive-account-mini")).toHaveTextContent(/^Mini$/);
     expect(screen.getByTestId("button-adaptive-risk-style-conservative")).toHaveTextContent(/^Conservative$/);
@@ -942,8 +948,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(within(accountExplanation).getByText("Show account explanation"));
     expect(accountExplanation.open).toBe(true);
     expect(await screen.findByTestId("adaptive-account-rule")).toBeVisible();
-    fireEvent.click(within(fundsExplanation).getByText("Show funds and risk explanation"));
-    expect(within(fundsExplanation).getByText(/Enter free funds that can cover/i)).toBeVisible();
+    fireEvent.click(within(fundsExplanation).getByText("Show capital and risk explanation"));
+    expect(within(fundsExplanation).getByText(/Enter the funds available for this trading plan/i)).toBeVisible();
     fireEvent.click(within(riskExplanation).getByText("Show risk style explanation"));
     expect(within(riskExplanation).getByText(/at most 50%/i)).toBeVisible();
     expect(screen.queryByTestId("adaptive-plan-method")).not.toBeInTheDocument();
