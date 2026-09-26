@@ -15,6 +15,7 @@ part 'topup_package_option.g.dart';
 /// * [amountRupiah] 
 /// * [credits] 
 /// * [provider] - Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
+/// * [adminFeeRupiah] - 0 for \"manual\" packages. For \"doku\" packages, a flat fee added on top of amountRupiah to cover DOKU's own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package's own `credits`).
 @BuiltValue()
 abstract class TopupPackageOption implements Built<TopupPackageOption, TopupPackageOptionBuilder> {
   @BuiltValueField(wireName: r'amountRupiah')
@@ -27,6 +28,10 @@ abstract class TopupPackageOption implements Built<TopupPackageOption, TopupPack
   @BuiltValueField(wireName: r'provider')
   TopupPackageOptionProviderEnum get provider;
   // enum providerEnum {  manual,  doku,  };
+
+  /// 0 for \"manual\" packages. For \"doku\" packages, a flat fee added on top of amountRupiah to cover DOKU's own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package's own `credits`).
+  @BuiltValueField(wireName: r'adminFeeRupiah')
+  int get adminFeeRupiah;
 
   TopupPackageOption._();
 
@@ -65,6 +70,11 @@ class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackage
     yield serializers.serialize(
       object.provider,
       specifiedType: const FullType(TopupPackageOptionProviderEnum),
+    );
+    yield r'adminFeeRupiah';
+    yield serializers.serialize(
+      object.adminFeeRupiah,
+      specifiedType: const FullType(int),
     );
   }
 
@@ -109,6 +119,13 @@ class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackage
             specifiedType: const FullType(TopupPackageOptionProviderEnum),
           ) as TopupPackageOptionProviderEnum;
           result.provider = valueDes;
+          break;
+        case r'adminFeeRupiah':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.adminFeeRupiah = valueDes;
           break;
         default:
           unhandled.add(key);

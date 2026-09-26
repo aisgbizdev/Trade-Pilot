@@ -1277,6 +1277,8 @@ export interface TopupPackageOption {
   credits: number;
   /** Which payment path this package must use — "manual" packages go through POST /topups (QRIS + proof upload), "doku" packages go through POST /topups/doku/checkout. Never both. */
   provider: TopupPackageOptionProvider;
+  /** 0 for "manual" packages. For "doku" packages, a flat fee added on top of amountRupiah to cover DOKU's own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package's own `credits`). */
+  adminFeeRupiah: number;
 }
 
 export interface TopupConfig {

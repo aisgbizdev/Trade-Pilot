@@ -71,6 +71,8 @@ class _$TopupPackageOption extends TopupPackageOption {
   final int credits;
   @override
   final TopupPackageOptionProviderEnum provider;
+  @override
+  final int adminFeeRupiah;
 
   factory _$TopupPackageOption(
           [void Function(TopupPackageOptionBuilder)? updates]) =>
@@ -79,7 +81,8 @@ class _$TopupPackageOption extends TopupPackageOption {
   _$TopupPackageOption._(
       {required this.amountRupiah,
       required this.credits,
-      required this.provider})
+      required this.provider,
+      required this.adminFeeRupiah})
       : super._();
   @override
   TopupPackageOption rebuild(
@@ -96,7 +99,8 @@ class _$TopupPackageOption extends TopupPackageOption {
     return other is TopupPackageOption &&
         amountRupiah == other.amountRupiah &&
         credits == other.credits &&
-        provider == other.provider;
+        provider == other.provider &&
+        adminFeeRupiah == other.adminFeeRupiah;
   }
 
   @override
@@ -105,6 +109,7 @@ class _$TopupPackageOption extends TopupPackageOption {
     _$hash = $jc(_$hash, amountRupiah.hashCode);
     _$hash = $jc(_$hash, credits.hashCode);
     _$hash = $jc(_$hash, provider.hashCode);
+    _$hash = $jc(_$hash, adminFeeRupiah.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -114,7 +119,8 @@ class _$TopupPackageOption extends TopupPackageOption {
     return (newBuiltValueToStringHelper(r'TopupPackageOption')
           ..add('amountRupiah', amountRupiah)
           ..add('credits', credits)
-          ..add('provider', provider))
+          ..add('provider', provider)
+          ..add('adminFeeRupiah', adminFeeRupiah))
         .toString();
   }
 }
@@ -136,6 +142,11 @@ class TopupPackageOptionBuilder
   set provider(TopupPackageOptionProviderEnum? provider) =>
       _$this._provider = provider;
 
+  int? _adminFeeRupiah;
+  int? get adminFeeRupiah => _$this._adminFeeRupiah;
+  set adminFeeRupiah(int? adminFeeRupiah) =>
+      _$this._adminFeeRupiah = adminFeeRupiah;
+
   TopupPackageOptionBuilder() {
     TopupPackageOption._defaults(this);
   }
@@ -146,6 +157,7 @@ class TopupPackageOptionBuilder
       _amountRupiah = $v.amountRupiah;
       _credits = $v.credits;
       _provider = $v.provider;
+      _adminFeeRupiah = $v.adminFeeRupiah;
       _$v = null;
     }
     return this;
@@ -173,6 +185,8 @@ class TopupPackageOptionBuilder
               credits, r'TopupPackageOption', 'credits'),
           provider: BuiltValueNullFieldError.checkNotNull(
               provider, r'TopupPackageOption', 'provider'),
+          adminFeeRupiah: BuiltValueNullFieldError.checkNotNull(
+              adminFeeRupiah, r'TopupPackageOption', 'adminFeeRupiah'),
         );
     replace(_$result);
     return _$result;

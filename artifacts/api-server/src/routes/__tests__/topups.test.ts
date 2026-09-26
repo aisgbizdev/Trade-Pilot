@@ -132,7 +132,10 @@ describe("GET /topups/config", () => {
     const res = await request(app).get("/api/topups/config").set(...authHeader(alice));
     expect(res.status).toBe(200);
     expect(res.body.packages).toEqual(
-      getTopupPackages().map((p) => ({ ...p, provider: p.amountRupiah >= 20_000 ? "doku" : "manual" })),
+      getTopupPackages().map((p) => {
+        const provider = p.amountRupiah >= 20_000 ? "doku" : "manual";
+        return { ...p, provider, adminFeeRupiah: provider === "doku" ? 5_000 : 0 };
+      }),
     );
     expect(typeof res.body.qrisImageUrl).toBe("string");
   });

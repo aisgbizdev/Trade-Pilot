@@ -1752,6 +1752,8 @@ export const id: Translations = {
     amount_step_title: "Pilih Nominal Top Up",
     qris_card_title: "Scan QRIS & Bayar",
     amount_credits_preview: "{n} kredit",
+    admin_fee_note: "+Rp{fee} biaya admin",
+    total_with_fee_preview: "{n} kredit — total dibayar Rp{total} (termasuk biaya admin)",
     amount_too_small: "Pilih salah satu paket top up dulu",
     continue_button: "Lanjut ke Pembayaran",
     continue_button_doku: "Bayar Sekarang",

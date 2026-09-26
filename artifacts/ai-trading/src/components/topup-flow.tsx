@@ -182,13 +182,25 @@ export function TopupFlow({ onSubmitted }: { onSubmitted?: () => void }) {
                   >
                     {t.topup.amount_credits_preview.replace("{n}", String(pkg.credits))}
                   </span>
+                  {pkg.adminFeeRupiah > 0 && (
+                    <span
+                      className="block text-[10px] opacity-70 mt-0.5"
+                      data-testid={`text-preset-admin-fee-${pkg.amountRupiah}`}
+                    >
+                      {t.topup.admin_fee_note.replace("{fee}", pkg.adminFeeRupiah.toLocaleString("id-ID"))}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
           {selectedPackage && (
             <p className="text-xs text-muted-foreground" data-testid="text-credits-preview">
-              {t.topup.amount_credits_preview.replace("{n}", String(creditsPreview))}
+              {selectedPackage.adminFeeRupiah > 0
+                ? t.topup.total_with_fee_preview
+                    .replace("{n}", String(creditsPreview))
+                    .replace("{total}", (amountNumber + selectedPackage.adminFeeRupiah).toLocaleString("id-ID"))
+                : t.topup.amount_credits_preview.replace("{n}", String(creditsPreview))}
             </p>
           )}
           <Button

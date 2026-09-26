@@ -23,7 +23,7 @@ const { db } = await import("../../lib/db");
 const { users, sessions, creditTopupRequests, creditLedger, creditBalances, notifications } = await import(
   "@workspace/db/schema"
 );
-const { getTopupPackages } = await import("../../lib/credits");
+const { getTopupPackages, DOKU_ADMIN_FEE_RUPIAH } = await import("../../lib/credits");
 const { createDokuCheckout } = await import("../../lib/doku");
 
 const mockCreateCheckout = vi.mocked(createDokuCheckout);
@@ -206,12 +206,18 @@ describe("POST /topups/doku/checkout", () => {
     expect(row).toMatchObject({
       status: "pending",
       paymentProvider: "doku",
-      amountRupiah: PKG_20K.amountRupiah,
+      // The row (and what's actually sent to DOKU) is the package price
+      // PLUS the flat admin fee that covers DOKU's own transaction fee —
+      // credits granted stay tied to the package alone (see below).
+      amountRupiah: PKG_20K.amountRupiah + DOKU_ADMIN_FEE_RUPIAH,
       creditsRequested: PKG_20K.credits,
       dokuSessionId: fake.sessionId,
       dokuPaymentUrl: fake.paymentUrl,
     });
     expect(row!.dokuInvoiceNumber).toBeTruthy();
+    expect(mockCreateCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ amountRupiah: PKG_20K.amountRupiah + DOKU_ADMIN_FEE_RUPIAH }),
+    );
   });
 
   it("marks the request rejected and returns 502 when DOKU's API call fails", async () => {

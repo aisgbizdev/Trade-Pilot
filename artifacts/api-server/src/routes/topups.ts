@@ -8,6 +8,7 @@ import { createNotification } from "../lib/create-notification";
 import {
   applyCreditLedgerEntry,
   CREDIT_BALANCE_LOCK_NAMESPACE,
+  DOKU_ADMIN_FEE_RUPIAH,
   DOKU_MIN_AMOUNT_RUPIAH,
   findTopupPackage,
   getCreditBalanceForUser,
@@ -193,14 +194,24 @@ router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (re
   // format (TP-<base36 timestamp>-<8 hex chars>) stays well under that
   // regardless of package, and needs no DB round-trip to generate.
   const invoiceNumber = `TP-${Date.now().toString(36)}-${randomBytes(4).toString("hex")}`;
+  // conversionRateSnapshot reflects the PACKAGE's own advertised per-credit
+  // price — never inflated by the admin fee below, which pays for DOKU's
+  // cut, not credits.
   const conversionRateSnapshot = Math.round(pkg.amountRupiah / pkg.credits);
   const paymentDueDateMinutes = 60;
+  // DOKU's VA fee (~Rp4.440 = Rp4.000 + 11% PPN) is deducted from what DOKU
+  // settles to us, not added to the customer's charge automatically — so
+  // we add it ourselves here rather than absorb it out of margin. Credits
+  // granted stay exactly `pkg.credits` either way. `amountRupiah` on the
+  // row is the TOTAL actually charged (package + fee), matching what
+  // really lands via DOKU — this is what admin revenue reports should sum.
+  const totalChargeRupiah = pkg.amountRupiah + DOKU_ADMIN_FEE_RUPIAH;
 
   const [inserted] = await db
     .insert(creditTopupRequests)
     .values({
       userId,
-      amountRupiah: pkg.amountRupiah,
+      amountRupiah: totalChargeRupiah,
       creditsRequested: pkg.credits,
       conversionRateSnapshot,
       status: "pending",
@@ -212,7 +223,7 @@ router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (re
   try {
     const checkout = await createDokuCheckout({
       invoiceNumber,
-      amountRupiah: pkg.amountRupiah,
+      amountRupiah: totalChargeRupiah,
       callbackUrl: `${publicBaseUrl}/topup?doku=success&id=${inserted!.id}`,
       callbackUrlCancel: `${publicBaseUrl}/topup?doku=cancel&id=${inserted!.id}`,
       notificationUrl: `${publicBaseUrl}${DOKU_NOTIFICATION_PATH}`,

@@ -1750,6 +1750,8 @@ export const en = {
     amount_step_title: "Choose a Top-up Package",
     qris_card_title: "Scan QRIS & Pay",
     amount_credits_preview: "{n} credits",
+    admin_fee_note: "+Rp{fee} admin fee",
+    total_with_fee_preview: "{n} credits — total charged Rp{total} (admin fee included)",
     amount_too_small: "Pick a top-up package first",
     continue_button: "Continue to Payment",
     continue_button_doku: "Pay Now",

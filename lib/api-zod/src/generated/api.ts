@@ -198,6 +198,12 @@ export const GetTopupConfigResponse = zod.object({
             .describe(
               'Which payment path this package must use — \"manual\" packages go through POST \/topups (QRIS + proof upload), \"doku\" packages go through POST \/topups\/doku\/checkout. Never both.',
             ),
+          adminFeeRupiah: zod
+            .number()
+            .int()
+            .describe(
+              '0 for \"manual\" packages. For \"doku\" packages, a flat fee added on top of amountRupiah to cover DOKU\'s own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package\'s own `credits`).',
+            ),
         })
         .describe(
           "One fixed top-up package (see lib\/credits.ts) — bigger packages give a better effective per-credit rate.",

@@ -437,6 +437,3 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/create_doku_checkout_body_test.dart
-test/doku_checkout_session_test.dart
-test/doku_topup_status_test.dart

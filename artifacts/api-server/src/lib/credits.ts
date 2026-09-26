@@ -38,6 +38,15 @@ const QRIS_IMAGE_URL = "/qris-gopay.jpeg";
 // Rp5.000 package sits below it.
 export const DOKU_MIN_AMOUNT_RUPIAH = 20_000;
 
+// DOKU's Virtual Account fee is Rp4.000 + 11% PPN on that fee (~Rp4.440
+// total), deducted from what DOKU settles to us — never added to what the
+// customer is charged automatically. Product decision (see chat): pass a
+// flat Rp5.000 admin fee on to the customer for every DOKU package instead
+// of absorbing it, so the full advertised package price still lands net.
+// The customer pays package + fee; the credits granted are only ever the
+// package's own amount, completely unaffected by this.
+export const DOKU_ADMIN_FEE_RUPIAH = 5_000;
+
 export function getTopupPackages(): readonly TopupPackage[] {
   return TOPUP_PACKAGES;
 }
@@ -50,13 +59,15 @@ export function findTopupPackage(amountRupiah: number): TopupPackage | null {
 
 export interface TopupPackageOption extends TopupPackage {
   provider: "manual" | "doku";
+  /** 0 for "manual" packages — only DOKU packages carry this fee. */
+  adminFeeRupiah: number;
 }
 
 export function getTopupConfig(): { packages: readonly TopupPackageOption[]; qrisImageUrl: string } {
-  const packages = TOPUP_PACKAGES.map((p) => ({
-    ...p,
-    provider: p.amountRupiah >= DOKU_MIN_AMOUNT_RUPIAH ? ("doku" as const) : ("manual" as const),
-  }));
+  const packages = TOPUP_PACKAGES.map((p) => {
+    const provider = p.amountRupiah >= DOKU_MIN_AMOUNT_RUPIAH ? ("doku" as const) : ("manual" as const);
+    return { ...p, provider, adminFeeRupiah: provider === "doku" ? DOKU_ADMIN_FEE_RUPIAH : 0 };
+  });
   return { packages, qrisImageUrl: QRIS_IMAGE_URL };
 }
 

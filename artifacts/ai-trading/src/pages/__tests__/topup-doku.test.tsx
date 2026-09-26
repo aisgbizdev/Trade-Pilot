@@ -12,10 +12,10 @@ import { installFetchMock, jsonResponse, makeWrapper } from "./test-helpers";
 
 const CONFIG_PAYLOAD = {
   packages: [
-    { amountRupiah: 5000, credits: 15, provider: "manual" },
-    { amountRupiah: 20000, credits: 70, provider: "doku" },
-    { amountRupiah: 40000, credits: 150, provider: "doku" },
-    { amountRupiah: 80000, credits: 320, provider: "doku" },
+    { amountRupiah: 5000, credits: 15, provider: "manual", adminFeeRupiah: 0 },
+    { amountRupiah: 20000, credits: 70, provider: "doku", adminFeeRupiah: 5000 },
+    { amountRupiah: 40000, credits: 150, provider: "doku", adminFeeRupiah: 5000 },
+    { amountRupiah: 80000, credits: 320, provider: "doku", adminFeeRupiah: 5000 },
   ],
   qrisImageUrl: "/qris-gopay.jpeg",
 };
@@ -84,9 +84,17 @@ describe("TopupPage — DOKU Checkout redirect", () => {
       </Wrapper>,
     );
 
+    // Shows the flat admin fee note on the package button before it's even
+    // selected — the customer sees this before committing to anything.
+    expect(await screen.findByTestId("text-preset-admin-fee-20000")).toHaveTextContent("5.000");
+
     await act(async () => {
-      fireEvent.click(await screen.findByTestId("button-preset-20000"));
+      fireEvent.click(screen.getByTestId("button-preset-20000"));
     });
+    // And the total (package + fee) once selected, distinct from the bare
+    // package price — the customer is never surprised by DOKU's own total.
+    expect(await screen.findByTestId("text-credits-preview")).toHaveTextContent("25.000");
+
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-continue-topup"));
     });
@@ -94,6 +102,9 @@ describe("TopupPage — DOKU Checkout redirect", () => {
     await waitFor(() => {
       expect(hrefSetter).toHaveBeenCalledWith("https://sandbox.doku.com/checkout-link-v2/abc123");
     });
+    // The backend (not the frontend) is responsible for adding the admin
+    // fee on top — the request to our own checkout endpoint still just
+    // names the package.
     expect(checkoutRequestBody).toEqual({ amountRupiah: 20000 });
     // Never reveals the QRIS/proof-upload UI for a DOKU package.
     expect(screen.queryByTestId("card-qris")).not.toBeInTheDocument();
