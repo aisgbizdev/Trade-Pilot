@@ -787,6 +787,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const funds = screen.getByTestId("adaptive-funds-explanation") as HTMLDetailsElement;
     const risk = screen.getByTestId("adaptive-risk-explanation") as HTMLDetailsElement;
     const disclaimer = screen.getByTestId("adaptive-disclaimer");
+    const method = screen.getByTestId("adaptive-plan-method") as HTMLDetailsElement;
     const dayTrade = screen.getByTestId("adaptive-daytrade-only");
     const toggle = screen.getByTestId("button-language-toggle");
     const intro = screen.getByTestId("adaptive-intro");
@@ -800,8 +801,11 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(within(account).getByText("Minimum 0.10 lot · $100 margin")).not.toBeVisible();
     expect(within(funds).getByText(/Enter free funds that can cover/)).not.toBeVisible();
     expect(within(risk).getByText(/Uses at most 50% of the loss ceiling/)).not.toBeVisible();
-    expect(disclaimer).toBeVisible();
+    expect(method.open).toBe(false);
+    expect(disclaimer).not.toBeVisible();
     expect(disclaimer).toHaveTextContent(/not a profit guarantee or automatic order/);
+    fireEvent.click(method.querySelector("summary")!);
+    expect(disclaimer).toBeVisible();
     expect(dayTrade).toBeVisible();
     expect(dayTrade).toHaveTextContent(/Overnight holding and rollover fees are excluded/);
 
@@ -933,7 +937,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("button-adaptive-risk-style-conservative")).toHaveTextContent(/^Conservative$/);
     expect(margin).toBeVisible();
     expect(maximumLoss).toBeVisible();
-    expect(screen.getByTestId("adaptive-disclaimer")).toBeVisible();
+    expect(screen.getByTestId("adaptive-disclaimer")).not.toBeVisible();
     fireEvent.click(within(accountExplanation).getByText("Show account explanation"));
     expect(accountExplanation.open).toBe(true);
     expect(screen.getByTestId("adaptive-account-rule")).toBeVisible();
@@ -995,10 +999,14 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(within(accountExplanation).getByText("Show account explanation"));
     expect(accountExplanation.open).toBe(false);
     expect(screen.getByTestId("adaptive-account-rule")).not.toBeVisible();
-    expect(screen.getByTestId("adaptive-disclaimer")).toBeVisible();
+    expect(screen.getByTestId("adaptive-disclaimer")).not.toBeVisible();
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.change(maximumLoss, { target: { value: "500" } });
     await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i));
+    expect(screen.getByTestId("adaptive-chart-candidate-status")).not.toBeVisible();
+    fireEvent.click(methodDetails.querySelector("summary")!);
+    expect(screen.getByTestId("adaptive-chart-candidate-status")).toBeVisible();
+    expect(screen.getByTestId("adaptive-disclaimer")).toBeVisible();
     expect(screen.getByTestId("adaptive-candle-source-time")).toHaveTextContent(/Analysis candle snapshot fetched/i);
     expect(screen.queryByTestId("adaptive-plan-comparison")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
@@ -1206,11 +1214,11 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/Entry direction is unconfirmed/i);
-    const reviewExplanation = screen.getByTestId("adaptive-scenarios-review-explanation");
-    expect(reviewExplanation).toBeInTheDocument();
-    expect(reviewExplanation.querySelector("summary")).not.toBeNull();
-    expect(reviewExplanation).not.toHaveAttribute("open");
-    expect(reviewExplanation).toHaveTextContent(/not an instruction to enter/i);
+    expect(screen.queryByTestId("adaptive-scenarios-review-explanation")).not.toBeInTheDocument();
+    const warningExplanation = screen.getByTestId("adaptive-plan-invalid").querySelector("details") as HTMLDetailsElement;
+    expect(warningExplanation).not.toHaveAttribute("open");
+    expect(screen.getByTestId("adaptive-plan-method")).toHaveTextContent(/not an instruction to enter/i);
+    expect(screen.getByTestId("adaptive-plan-scenarios-review")).not.toHaveTextContent(/Check Buy or Sell scenarios/i);
     expect(screen.getByTestId("adaptive-direction-buy")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("adaptive-review-side-buy")).toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-review-side-sell")).not.toBeInTheDocument();

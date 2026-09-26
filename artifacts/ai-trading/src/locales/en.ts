@@ -90,7 +90,7 @@ export const en = {
     hero_kicker: "TradePilot.id",
     tagline_part1: "Universe",
     tagline_part2: "Comes To Us",
-    subtitle_full: "An AI trading assistant for active traders — structured market analysis, not blind signals.",
+    subtitle_full: "Not a broker or trader. A reliable AI trading assistant for objective, data-driven market analysis.",
     always_free_note: "Try TradePilot with included free analyses.",
     cta_start: "Start Your First Analysis",
     cta_login: "Already have an account? Sign In",

@@ -92,7 +92,7 @@ export const id: Translations = {
     hero_kicker: "TradePilot.id",
     tagline_part1: "Universe",
     tagline_part2: "Comes To Us",
-    subtitle_full: "Asisten trading berbasis AI untuk trader aktif — analisis pasar yang terstruktur, bukan sinyal buta.",
+    subtitle_full: "Bukan broker atau trader. Asisten trading AI andal dengan analisis pasar objektif berbasis data.",
     always_free_note: "Coba TradePilot dengan analisis gratis yang disertakan.",
     cta_start: "Mulai Analisis Pertamamu",
     cta_login: "Sudah punya akun? Masuk",

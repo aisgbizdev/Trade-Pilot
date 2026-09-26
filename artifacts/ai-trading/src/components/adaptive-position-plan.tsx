@@ -589,7 +589,6 @@ function DirectionSwitch({
     <div className="space-y-1.5" data-testid="adaptive-direction-tabs">
       <div>
         <p className="text-xs font-bold text-foreground">{copy.adaptive_direction_title}</p>
-        <ExpandableExplanation>{copy.adaptive_direction_help}</ExpandableExplanation>
       </div>
       <div className="inline-flex max-w-full rounded-md bg-muted p-1" role="group" aria-label={copy.adaptive_direction_title}>
         {([
@@ -1257,26 +1256,33 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <summary className="cursor-pointer text-xs font-semibold text-foreground">{copy.adaptive_method_summary}</summary>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.adaptive_ready}</p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.adaptive_method_help}</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-chart-candidate-status">
+            {isAnalysisExpired
+              ? copy.adaptive_analysis_expired
+              : chartCandidateState.status === "loading" || chartCandidateState.scope !== chartScope
+              ? copy.adaptive_chart_candidates_loading
+              : chartCandidateState.status === "error"
+                ? copy.adaptive_rules_error
+                : chartCandidateState.basis === "levels"
+                  ? copy.adaptive_snapshot_levels_only
+                  : copy.adaptive_snapshot_candidates
+                      .replace("{buy}", String(chartCandidateState.prices.buy.length))
+                      .replace("{sell}", String(chartCandidateState.prices.sell.length))}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.adaptive_direction_help}</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.adaptive_scenarios_review_help}</p>
           <div className="mt-2 space-y-1.5 rounded-md border border-primary/20 bg-primary/[0.03] p-2.5 text-[11px] leading-relaxed text-muted-foreground" data-testid="adaptive-analysis-basis">
             <p className="font-semibold text-foreground">{copy.adaptive_analysis_basis_title}</p>
             <p>{copy.adaptive_analysis_basis}</p>
             <p>{copy.adaptive_chart_confirmation}</p>
           </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
         </details>
-        <p className="text-xs font-medium text-foreground" data-testid="adaptive-chart-candidate-status">
-          {isAnalysisExpired
-            ? copy.adaptive_analysis_expired
-            : chartCandidateState.status === "loading" || chartCandidateState.scope !== chartScope
-            ? copy.adaptive_chart_candidates_loading
-            : chartCandidateState.status === "error"
-              ? copy.adaptive_rules_error
-              : chartCandidateState.basis === "levels"
-                ? copy.adaptive_snapshot_levels_only
-                : copy.adaptive_snapshot_candidates
-                    .replace("{buy}", String(chartCandidateState.prices.buy.length))
-                    .replace("{sell}", String(chartCandidateState.prices.sell.length))}
-        </p>
-        <p className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-xs leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
+        {!isAnalysisExpired && (chartCandidateState.status === "loading" || chartCandidateState.scope !== chartScope || chartCandidateState.status === "error") && (
+          <p className="text-xs text-muted-foreground" role="status">
+            {chartCandidateState.status === "error" ? copy.adaptive_rules_error : copy.adaptive_chart_candidates_loading}
+          </p>
+        )}
         <div className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.adaptive_account_title}</h4>
           <div className="grid grid-cols-3 gap-2 max-[359px]:-mx-3" role="group" aria-label={copy.adaptive_account_title} data-testid="adaptive-account-selector">
@@ -1671,10 +1677,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         </div>}
          {recommendation && !recommendation.result.valid && (
            <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
-             <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
-              <ExpandableExplanation testId="adaptive-scenarios-review-explanation">
-               {copy.adaptive_scenarios_review_help}
-             </ExpandableExplanation>
               {directionControl}
                  {reviewSides.map((side) => {
                    const plan = recommendation.result[side] ?? recommendation.sideEvaluations[side].conditionalPlan;
