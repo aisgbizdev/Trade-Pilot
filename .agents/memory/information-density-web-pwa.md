@@ -21,6 +21,12 @@ Keep the saved market-context summary with the original analysis, before Adaptiv
 
 **How to apply:** When reordering analysis-detail sections, preserve this saved-versus-live distinction. Do not imply that current indicators automatically revise a stored recommendation.
 
+Keep a single instrument-level running quote near the price chart rather than repeating it in timeframe controls; place timeframe comparison alongside the timeframe heading.
+
+**Why:** The user found duplicate XAU/USD prices distracting and preferred the chart-adjacent quote. Removing the duplicate otherwise stranded the comparison action in its own row.
+
+**How to apply:** On analysis-detail layouts, treat the chart quote as the price reference and keep comparison as a secondary action within the timeframe controls.
+
 The user later explicitly asked that the margin-capacity estimate, duplicate hard-loss summary, and bottom generic disclaimer not be shown visually. Keep the capacity and loss calculations intact, preserve the disclaimer for assistive technology, and continue to show actionable risk/invalidation conditions.
 
 **Why:** Those three blocks were identified in screenshots as redundant screen content, not as logic to remove. This is a specific exception to the general rule to keep safety-critical information visible.

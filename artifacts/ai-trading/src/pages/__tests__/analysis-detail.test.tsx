@@ -940,7 +940,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("adaptive-disclaimer")).not.toBeInTheDocument();
     fireEvent.click(within(accountExplanation).getByText("Show account explanation"));
     expect(accountExplanation.open).toBe(true);
-    expect(screen.getByTestId("adaptive-account-rule")).toBeVisible();
+    expect(await screen.findByTestId("adaptive-account-rule")).toBeVisible();
     fireEvent.click(within(fundsExplanation).getByText("Show funds and risk explanation"));
     expect(within(fundsExplanation).getByText(/Enter free funds that can cover/i)).toBeVisible();
     fireEvent.click(within(riskExplanation).getByText("Show risk style explanation"));
@@ -1022,7 +1022,9 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("card-quick-timeframe")).toHaveTextContent(/Choosing another timeframe immediately starts a new analysis/i);
     expect(within(timeframeOptions).getAllByRole("button")).toHaveLength(8);
     expect(timeframeOptions).not.toContainElement(screen.getByTestId("button-detail-risk-map"));
-    expect(screen.getByTestId("quick-timeframe-tools")).toContainElement(screen.getByTestId("button-detail-risk-map"));
+    expect(screen.getByTestId("quick-timeframe-header")).toContainElement(screen.getByTestId("button-detail-risk-map"));
+    expect(within(screen.getByTestId("card-quick-timeframe")).queryByTestId("live-price-chip")).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("card-analysis-chart")).getByTestId("chart-live-quote")).toBeInTheDocument();
     expect(analysisTime).toHaveTextContent(/Analyzed/i);
     expect(analysisTime.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(savedMarketContext.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

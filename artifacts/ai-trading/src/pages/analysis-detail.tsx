@@ -51,7 +51,6 @@ import { MarketContextSummary } from "@/components/market-context-summary";
 import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { SignalSpeedometer } from "@/components/signal-speedometer";
-import { LivePriceChip } from "@/components/live-price-chip";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
 import type { IndicatorTimeframe } from "@/hooks/use-technical-indicators";
 import {
@@ -2332,43 +2331,15 @@ export default function AnalysisDetailPage({
             or re-selecting the instrument. The manual button remains as a
             retry fallback when the automatic request fails. */}
         <Card className="space-y-2 p-3" data-testid="card-quick-timeframe">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <div className="min-w-[180px] flex-1">
-              <p className="text-xs font-semibold text-foreground">
-                {t.analysis_detail.quick_timeframe_title}
-              </p>
-              <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                {t.analysis_detail.quick_timeframe_hint}
-              </p>
-            </div>
-            <div className="grid w-full grid-cols-4 gap-1.5 sm:w-auto sm:grid-cols-8" role="group" aria-label={t.analysis_detail.quick_timeframe_title} data-testid="quick-timeframe-options">
-              {QUICK_TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf}
-                  type="button"
-                  onClick={() => handleQuickTimeframeSelect(tf)}
-                  disabled={isRefreshing}
-                  aria-pressed={quickTimeframe === tf}
-                  className={cn(
-                    "min-h-9 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50",
-                    quickTimeframe === tf
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/40 text-foreground border-border hover:bg-muted",
-                  )}
-                  data-testid={`button-quick-timeframe-${tf}`}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
-          </div>
-          {isAdaptivePositionInstrument(analysis.instrument) && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2" data-testid="quick-timeframe-tools">
-              <LivePriceChip instrument={analysis.instrument} showLabel className="h-8" />
+          <div className="flex items-center justify-between gap-2" data-testid="quick-timeframe-header">
+            <p className="text-xs font-semibold text-foreground">
+              {t.analysis_detail.quick_timeframe_title}
+            </p>
+            {isAdaptivePositionInstrument(analysis.instrument) && (
               <Button
                 size="sm"
-                variant="outline"
-                className="h-8 shrink-0 gap-1.5 px-2.5 text-xs font-semibold text-primary"
+                variant="ghost"
+                className="h-9 shrink-0 gap-1.5 px-2 text-xs font-semibold text-primary hover:text-primary"
                 onClick={() => setRiskMapOpen(true)}
                 disabled={isRefreshing}
                 data-testid="button-detail-risk-map"
@@ -2376,8 +2347,31 @@ export default function AnalysisDetailPage({
                 <Activity className="h-3.5 w-3.5" aria-hidden="true" />
                 {t.risk_map.btn_compare}
               </Button>
-            </div>
-          )}
+            )}
+          </div>
+          <p className="text-xs leading-snug text-muted-foreground">
+            {t.analysis_detail.quick_timeframe_hint}
+          </p>
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-8" role="group" aria-label={t.analysis_detail.quick_timeframe_title} data-testid="quick-timeframe-options">
+            {QUICK_TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                type="button"
+                onClick={() => handleQuickTimeframeSelect(tf)}
+                disabled={isRefreshing}
+                aria-pressed={quickTimeframe === tf}
+                className={cn(
+                  "min-h-9 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50",
+                  quickTimeframe === tf
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 text-foreground border-border hover:bg-muted",
+                )}
+                data-testid={`button-quick-timeframe-${tf}`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
           {quickTimeframeStatus === "error" && (
             <div
               className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[11px] text-destructive"
