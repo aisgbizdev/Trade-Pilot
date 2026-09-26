@@ -1022,7 +1022,7 @@ export const en = {
     alerts_arm_error: "Alerts can't be armed: this instrument is not supported by the live feed or the analysis has no usable levels. Notification settings aren't the cause.",
     alerts_retry_error: "Couldn't arm alerts because the service is temporarily unavailable. Try again.",
     alerts_cancel_error: "Couldn't cancel alerts. Try again in a moment.",
-    alerts_no_push: "Push notifications aren't enabled for this account. Enable them to arm price alerts.",
+    alerts_no_push: "Push notifications aren't enabled for this account. Enable them in Notifications to receive price alerts.",
     alerts_enable_notifications: "Enable notifications",
     alerts_level_entry: "Entry",
     alerts_level_sl: "Stop Loss",

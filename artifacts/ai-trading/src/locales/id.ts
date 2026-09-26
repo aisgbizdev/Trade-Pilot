@@ -1024,7 +1024,7 @@ export const id: Translations = {
     alerts_arm_error: "Alert belum bisa dipasang: instrumen tidak didukung feed live atau analisis tidak punya level yang layak. Pengaturan notifikasi bukan penyebabnya.",
     alerts_retry_error: "Alert belum bisa dipasang karena layanan sedang bermasalah. Coba lagi.",
     alerts_cancel_error: "Gagal membatalkan alert. Coba lagi sebentar.",
-    alerts_no_push: "Notifikasi push belum aktif untuk akun ini. Aktifkan untuk memasang alert harga.",
+    alerts_no_push: "Notifikasi push belum aktif untuk akun ini. Aktifkan di menu Notifikasi agar alert harga dapat dikirim.",
     alerts_enable_notifications: "Aktifkan notifikasi",
     alerts_level_entry: "Entry",
     alerts_level_sl: "Stop Loss",

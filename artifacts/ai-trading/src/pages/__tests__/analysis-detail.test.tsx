@@ -249,16 +249,22 @@ function alertsHandler(pushEnabled: boolean, armStatus = 201): FetchHandler {
 }
 
 describe("AnalysisDetailPage: price alert guidance", () => {
-  it("routes inactive push to notification settings with an analysis return link, in both languages", async () => {
+  it("shows the notification setup route before an unavailable alert toggle is clicked, in both languages", async () => {
     const mock = installFetchMock([getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }), alertsHandler(false)], { strict: false });
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
     const card = await screen.findByTestId("card-price-alerts");
+    const feedback = screen.getByTestId("button-feedback-useful");
+    const liveIndicators = screen.getByTestId("card-indicators-section");
+    expect(liveIndicators.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.compareDocumentPosition(feedback) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await waitFor(() => expect(mock.calls.some((c) => c.url.includes("/api/push/subscription-status"))).toBe(true));
-    fireEvent.click(within(card).getByTestId("switch-price-alerts"));
-    expect(within(card).getByRole("alert")).toHaveTextContent(en.analysis_detail.alerts_no_push);
+    expect(await within(card).findByTestId("price-alerts-setup")).toHaveTextContent(en.analysis_detail.alerts_no_push);
+    expect(within(card).getByTestId("switch-price-alerts")).toBeDisabled();
+    expect(within(card).getByTestId("switch-price-alerts")).toHaveAttribute("aria-describedby", "price-alerts-setup-hint");
+    expect(within(card).queryByTestId("price-alerts-error")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-language-toggle"));
-    expect(within(card).getByRole("alert")).toHaveTextContent(id.analysis_detail.alerts_no_push);
+    expect(within(card).getByTestId("price-alerts-setup")).toHaveTextContent(id.analysis_detail.alerts_no_push);
     fireEvent.click(within(card).getByTestId("button-enable-alert-notifications"));
     expect(window.location.pathname + window.location.search + window.location.hash)
       .toBe(`/notifications?returnTo=%2Fanalyses%2F${ANALYSIS_ID}#settings`);
@@ -271,6 +277,7 @@ describe("AnalysisDetailPage: price alert guidance", () => {
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
     const card = await screen.findByTestId("card-price-alerts");
     await waitFor(() => expect(mock.calls.some((c) => c.url.includes("/api/push/subscription-status"))).toBe(true));
+    expect(within(card).queryByTestId("price-alerts-setup")).not.toBeInTheDocument();
     fireEvent.click(within(card).getByTestId("switch-price-alerts"));
     const error = await within(card).findByRole("alert");
     expect(error).toHaveTextContent(status === 422 ? en.analysis_detail.alerts_arm_error : en.analysis_detail.alerts_retry_error);

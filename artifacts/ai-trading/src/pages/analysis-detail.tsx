@@ -1251,7 +1251,7 @@ function AnalysisAlertsCard({
   const queryClient = useQueryClient();
   const statusQuery = useGetAnalysisAlerts(analysisId);
   const pushStatusQuery = useGetPushSubscriptionStatus();
-  const [alertError, setAlertError] = useState<"no_push" | "unavailable" | "retry" | null>(null);
+  const [alertError, setAlertError] = useState<"unavailable" | "retry" | null>(null);
   const armMutation = useArmAnalysisAlerts();
   const cancelMutation = useCancelAnalysisAlerts();
 
@@ -1271,10 +1271,7 @@ function AnalysisAlertsCard({
         setAlertError("retry");
         return;
       }
-      if (!hasPush) {
-        setAlertError("no_push");
-        return;
-      }
+      if (!hasPush) return;
       setAlertError(null);
       armMutation.mutate(
         { id: analysisId },
@@ -1363,30 +1360,28 @@ function AnalysisAlertsCard({
         <Switch
           checked={enabled}
           onCheckedChange={handleToggle}
-          disabled={busy || statusQuery.isLoading}
+          disabled={busy || statusQuery.isLoading || (!enabled && pushStatusQuery.isSuccess && !hasPush)}
           data-testid="switch-price-alerts"
           aria-label={enabled ? t.analysis_detail.alerts_on : t.analysis_detail.alerts_off}
+          aria-describedby={!enabled && pushStatusQuery.isSuccess && !hasPush ? "price-alerts-setup-hint" : undefined}
         />
       </div>
+      {pushStatusQuery.isSuccess && !hasPush && (
+        <div className="space-y-2 text-xs text-muted-foreground" data-testid="price-alerts-setup">
+          <p id="price-alerts-setup-hint">{t.analysis_detail.alerts_no_push}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            data-testid="button-enable-alert-notifications"
+            onClick={() => setLocation(`/notifications?returnTo=${encodeURIComponent(`/analyses/${analysisId}`)}#settings`)}
+          >
+            {t.analysis_detail.alerts_enable_notifications}
+          </Button>
+        </div>
+      )}
       {alertError && (
         <div className="text-xs text-destructive space-y-2" role="alert" data-testid="price-alerts-error">
-          <p>
-            {alertError === "no_push"
-              ? t.analysis_detail.alerts_no_push
-              : alertError === "unavailable"
-                ? t.analysis_detail.alerts_arm_error
-                : t.analysis_detail.alerts_retry_error}
-          </p>
-          {alertError === "no_push" && (
-            <Button
-              size="sm"
-              variant="outline"
-              data-testid="button-enable-alert-notifications"
-              onClick={() => setLocation(`/notifications?returnTo=${encodeURIComponent(`/analyses/${analysisId}`)}#settings`)}
-            >
-              {t.analysis_detail.alerts_enable_notifications}
-            </Button>
-          )}
+          <p>{alertError === "unavailable" ? t.analysis_detail.alerts_arm_error : t.analysis_detail.alerts_retry_error}</p>
         </div>
       )}
       <div className="flex items-center gap-2 flex-wrap" data-testid="price-alerts-summary">
@@ -2704,16 +2699,6 @@ export default function AnalysisDetailPage({
             shareSources={confidenceShareData.sources}
           />
         )}
-        {/* Price alerts — opt-in push notifications that fire the first
-            time live price touches one of the AI's entry / SL / TP levels.
-            Hidden unless the analysis has a trade plan AND the user has
-            already enabled push notifications (otherwise the toggle would
-            be a dead end). */}
-        {tradePlan && hasAdaptive && <AnalysisAlertsCard analysisId={analysis.id} t={t} />}
-        {tradePlan && !hasAdaptive && (
-          <AnalysisAlertsCard analysisId={analysis.id} t={t} />
-        )}
-
         {/* This is a current-market check, not an input to the saved Adaptive plan. */}
         {liveIndicatorPanel}
 
@@ -2943,6 +2928,10 @@ export default function AnalysisDetailPage({
           <p data-testid="text-risk-disclaimer-short">{t.analysis_detail.risk_disclaimer_short}</p>
           <p>{t.analysis_detail.disclaimer_full}</p>
         </div>
+
+        {/* Price alerts stay near the end of the analysis, before feedback.
+            The card handles push eligibility and leaves its toggle behavior unchanged. */}
+        {tradePlan && <AnalysisAlertsCard analysisId={analysis.id} t={t} />}
 
         <Card className="p-2.5 sm:p-3">
           <fieldset className="min-w-0">
