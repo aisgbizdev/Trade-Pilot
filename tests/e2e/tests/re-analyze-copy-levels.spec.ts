@@ -853,12 +853,14 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-plan-invalid")).toBeVisible();
     await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/minimum-lot loss|rugi lot minimum/i);
     await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$110/);
-    await maximumLossInput.fill("");
-    await expect(maximumLossInput).toHaveValue("");
+    await expect(page.getByTestId("adaptive-blocked-dialog")).toBeVisible();
+    await expect(page.getByTestId("adaptive-blocked-figures")).toContainText(/\$110/);
+    await page.getByTestId("adaptive-blocked-edit-loss").click();
+    await expect(page.getByTestId("adaptive-blocked-dialog")).toBeHidden();
     await maximumLossInput.fill("125");
     await expect(maximumLossInput).toHaveValue("125");
     await page.getByTestId("button-calculate-adaptive-plan").click();
-    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/positions|posisi/i);
+    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/position|posisi/i);
     await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/Final Stop Loss|Stop Loss final/i);
     await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toContainText(/Margin this position|Margin posisi ini/i);
     await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toContainText(/Funds remaining|Sisa dana/i);
@@ -887,11 +889,15 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     expect(storedAfterRefresh).toBeNull();
 
     await page.getByTestId("button-calculate-adaptive-plan").click();
+    await expect(page.getByTestId("adaptive-plan-invalid")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-valid")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$110/);
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$62[.,]5/);
+    await expect(page.getByTestId("adaptive-insight-button-buy")).toContainText(/Blocked|Diblokir/i);
+    await expect(page.getByTestId("adaptive-insight-button-sell")).toContainText(/Conditional|Kondisional/i);
+    await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
+    await page.getByTestId("adaptive-insight-button-reasoning").click();
     await expect(page.getByTestId("adaptive-plan-reasoning")).toContainText(/high-impact|dampak tinggi/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
-    await page.getByTestId("adaptive-rejected-buy").locator("summary").click();
-    await expect(page.getByTestId("adaptive-rejected-layer-financial-buy-1")).toContainText(/Risk at final SL so far|Risiko di SL final sampai sini/i);
-    await expect(page.getByTestId("adaptive-rejected-layer-financial-buy-1")).toContainText(/Funds remaining|Sisa dana/i);
 
     // Standard Plan levels remain the source plan throughout; only the
     // optional adaptive recommendation has been discarded and re-evaluated.

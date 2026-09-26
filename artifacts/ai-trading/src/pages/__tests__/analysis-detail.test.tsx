@@ -389,18 +389,25 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(screen.getByTestId("button-feedback-not-useful")).toBeInTheDocument();
   });
 
-  it("starts with long optional confidence rationale closed, but keeps the confidence range available", async () => {
+  it("keeps long free-form confidence rationale visible alongside the confidence range", async () => {
     const longReason = "Trend structure aligns across H1 and H4. The candle pattern and momentum readings point in the same direction over several sessions, which explains the confidence estimate.";
     installFetchMock([getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, whyReason: longReason } }), feedbackHandler()]);
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
 
-    const rationale = await screen.findByTestId("confidence-reason-disclosure") as HTMLDetailsElement;
-    expect(rationale.open).toBe(false);
+    expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(longReason);
     expect(screen.getByTestId("text-confidence")).toBeVisible();
-    fireEvent.click(within(rationale).getByText(en.analysis_detail.confidence_reason_label));
-    expect(rationale.open).toBe(true);
-    expect(rationale).toHaveTextContent(longReason);
+    expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
+  });
+
+  it("keeps a long warning visible even without any fixed safety keywords", async () => {
+    const warning = "Signal reliability is poor because historical pricing is incomplete; execution may slip materially, so this setup is unsuitable for live orders. Review the source data before acting.";
+    installFetchMock([getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, whyReason: warning } }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(warning);
+    expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
   });
 
   it("does not hide a caution inside AI-written confidence rationale", async () => {

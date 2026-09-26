@@ -36,34 +36,34 @@ args = "typecheck"
 name = "api-server-test"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/api-server run test"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm --filter @workspace/api-server run test"
 
 [[workflows.workflow]]
 name = "ai-trading-test"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/ai-trading run test"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm --filter @workspace/ai-trading run test"
 
 [[workflows.workflow]]
 name = "e2e-test"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/e2e run test"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm --filter @workspace/e2e run test"
 
 [[workflows.workflow]]
 name = "typecheck"
