@@ -1,13 +1,10 @@
 /**
- * E2E tests for the Re-Analyze button and Copy Levels button introduced in
- * the analysis detail page.
+ * E2E tests for the current Analyze flow, Copy Levels, Standard Plan, and
+ * Adaptive Plan safeguards.
  *
- * Re-Analyze (data-testid="button-re-analyze"):
- *   1. The button is visible on the detail page.
- *   2. Its href encodes the analysis instrument and timeframe as URL params.
- *   3. Clicking it navigates to /analyze with ?instrument= and ?timeframe=
- *      pre-filled, and the correct instrument tab (futures for XAU/USD) is
- *      auto-selected.
+ * Analyze now uses a quick instrument chooser with a 1h default timeframe.
+ * A completed result is embedded inline; choosing another instrument
+ * re-analyzes in place rather than navigating to /analyses/:id.
  *
  * Copy Levels (data-testid="button-copy-levels-buy"):
  *   1. The button is visible when a trade plan is present.
@@ -18,7 +15,7 @@
  * Network strategy: same as analyze-30m.spec.ts and log-trade-button-flip.spec.ts.
  *   - POST /api/analyses → stubbed (no OpenAI call required).
  *   - GET  /api/analyses/:id → stubbed with a known tradePlan so the
- *     TradePlanCard (and its copy button) renders on the detail page.
+ *     TradePlanCard (and its copy button) renders in the embedded result.
  *   - All other endpoints fall back to the real server.
  */
 import { test, expect, request as pwRequest, type Page, type Route } from "@playwright/test";
@@ -77,8 +74,7 @@ const STUB_ID_HSI_ADAPTIVE = 9_999_930;
 const STUB_ID_UNSUPPORTED_ADAPTIVE = 9_999_920;
 const STUB_ID_RESPONSIVE_ADAPTIVE = 9_999_910;
 
-const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
-const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
+const QUICK_INSTRUMENTS = ["XAU/USD", "BRENT", "HSI", "NIKKEI"];
 
 function isIgnorableTradingViewConsoleError(message: string): boolean {
   // TradingView's embed loader reports an unavailable optional widget-sheriff
@@ -159,8 +155,8 @@ type AdaptiveRefreshAnalysis = Omit<
   };
 };
 
-/** Navigate to the analysis detail page via the Analyze form submit flow. */
-async function reachDetailPage(
+/** Create an analysis through Analyze and wait for its inline result. */
+async function reachInlineAnalysis(
   page: Page,
   stubAnalysisId: number,
   stubAnalysis: ReturnType<typeof buildStubAnalysis>,
@@ -191,74 +187,80 @@ async function reachDetailPage(
 
   await page.goto("/analyze");
 
-  // XAU/USD lives in the Futures tab (default).
-  await page.getByTestId("button-instrument-XAU/USD").click();
-  // Match the stubbed analysis and exercise the same explicit selection a
-  // user makes before submitting, rather than relying on the page's 1D default.
-  await page.getByTestId("button-timeframe-1h").click();
-  // This helper sets up detail-page tests. Invoke the DOM click directly so
-  // TradingView iframe layout shifts cannot swallow the coordinate-based click.
+  // XAU/USD and 1h are selected by default in the current quick chooser.
+  await expect(page.getByTestId("button-instrument-XAU/USD")).toHaveClass(/bg-primary\/10/);
+  await expect(page.getByTestId("instrument-chart-layout")).toContainText(/Timeframe:\s*1h/);
+  // Invoke the DOM click directly so TradingView iframe layout shifts cannot
+  // swallow the coordinate-based click.
   await page.getByTestId("button-submit-analysis").evaluate((button) => {
     (button as HTMLButtonElement).click();
   });
 
-  // A successful create navigates directly to the full analysis detail page.
-  await page.waitForURL(new RegExp(`/analyses/${stubAnalysisId}$`), {
-    timeout: 30_000,
-  });
+  // The result is embedded below the Analyze form; the URL remains /analyze.
+  await expect(page.getByTestId("embedded-analysis-result")).toBeVisible({ timeout: 30_000 });
 
-  // Wait for the page to be fully rendered before any assertions.
+  // Wait for the embedded detail to finish rendering.
   await expect(page.getByTestId("bias-gauge")).toBeAttached({ timeout: 15_000 });
 }
 
 // ---------------------------------------------------------------------------
 
-test.describe("Re-Analyze button (real Chromium + stubbed analysis)", () => {
-  test("button is visible, href encodes instrument+timeframe, and clicking pre-fills the Analyze page", async ({
+test.describe("Re-Analyze through the quick instrument chooser (real Chromium + stubbed analysis)", () => {
+  test("choosing another instrument re-analyzes inline using the default 1h timeframe", async ({
     page,
     baseURL,
   }) => {
-    const stubAnalysis = buildStubAnalysis(STUB_ID_RE_ANALYZE);
+    const initialAnalysis = buildStubAnalysis(STUB_ID_RE_ANALYZE);
+    const secondAnalysis = {
+      ...buildStubAnalysis(STUB_ID_RE_ANALYZE - 1),
+      instrument: "BRENT",
+    };
 
     const user = await registerUser(baseURL!, "re-analyze");
     await signIn(page, user);
-    await reachDetailPage(page, STUB_ID_RE_ANALYZE, stubAnalysis);
+    await reachInlineAnalysis(page, STUB_ID_RE_ANALYZE, initialAnalysis);
 
-    // 1. The Re-Analyze button must be present on the detail page.
-    const reAnalyzeBtn = page.getByTestId("button-re-analyze");
-    await expect(reAnalyzeBtn).toBeVisible({ timeout: 10_000 });
+    const secondRequests: Array<{ instrument?: string; timeframe?: string }> = [];
+    await page.route("**/api/analyses", async (route: Route) => {
+      if (route.request().method() === "POST") {
+        secondRequests.push(route.request().postDataJSON());
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify(secondAnalysis),
+        });
+        return;
+      }
+      await route.fallback();
+    });
+    await page.route(`**/api/analyses/${secondAnalysis.id}`, async (route: Route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(secondAnalysis),
+        });
+        return;
+      }
+      await route.fallback();
+    });
 
-    // 2. Its href must encode the analysis instrument and timeframe.
-    const href = await reAnalyzeBtn.getAttribute("href");
-    expect(href).not.toBeNull();
-    // The Link href is a client-side path; URL-encoded XAU/USD → XAU%2FUSD.
-    expect(decodeURIComponent(href!)).toContain("instrument=XAU/USD");
-    expect(href!).toContain("timeframe=1h");
-
-    // 3. Clicking navigates to /analyze with the correct query params.
-    await reAnalyzeBtn.click();
-    await page.waitForURL(/\/analyze\?/, { timeout: 10_000 });
-
-    const url = new URL(page.url());
-    expect(decodeURIComponent(url.searchParams.get("instrument") ?? "")).toBe("XAU/USD");
-    expect(url.searchParams.get("timeframe")).toBe("1h");
-
-    // 4. The "futures" tab must be auto-selected for XAU/USD (a futures
-    //    instrument). The active tab renders with bg-primary CSS class.
-    const futuresTab = page.getByTestId("tab-futures");
-    await expect(futuresTab).toBeVisible({ timeout: 5_000 });
-    await expect(futuresTab).toHaveClass(/bg-primary/);
-
-    // 5. The instrument button is visible in the grid (confirming the correct
-    //    tab is shown and the instrument list is rendered).
-    await expect(page.getByTestId("button-instrument-XAU/USD")).toBeVisible();
+    // Switching a preset instrument after a result is present starts a new
+    // analysis automatically, without a detail-page route transition.
+    await page.getByTestId("button-instrument-BRENT").click();
+    await expect(page.getByTestId("text-instrument")).toHaveText("BRENT", { timeout: 30_000 });
+    expect(new URL(page.url()).pathname).toBe("/analyze");
+    expect(new URL(page.url()).searchParams.get("result")).toBe(String(secondAnalysis.id));
+    expect(secondRequests[0]?.instrument).toBe("BRENT");
+    expect(secondRequests[0]?.timeframe).toBe("1h");
+    await expect(page.getByTestId("embedded-analysis-result")).toBeVisible();
   });
 });
 
 // ---------------------------------------------------------------------------
 
-test.describe("Analyze instrument accordion (authenticated Chromium)", () => {
-  test("keeps the category selector correct at desktop and mobile widths", async ({
+test.describe("Analyze quick instrument chooser (authenticated Chromium)", () => {
+  test("keeps the available instruments and current selection clear at desktop and mobile widths", async ({
     page,
     baseURL,
   }) => {
@@ -286,7 +288,7 @@ test.describe("Analyze instrument accordion (authenticated Chromium)", () => {
       browserErrors.push(`pageerror: ${error.message}`);
     });
 
-    const user = await registerUser(baseURL!, "accordion");
+    const user = await registerUser(baseURL!, "quick-instrument");
     await signIn(page, user);
     // Login intentionally makes an unauthenticated /api/auth/me request
     // before the session exists. Only collect errors from /analyze below.
@@ -308,44 +310,23 @@ test.describe("Analyze instrument accordion (authenticated Chromium)", () => {
       await page.setViewportSize(viewport);
       await page.goto("/analyze");
 
-      const futuresTab = page.getByTestId("tab-futures");
-      const forexTab = page.getByTestId("tab-forex");
       const instrumentOptions = page.getByTestId("instrument-options");
 
-      // Futures is the initial category and its complete product list is
-      // rendered before the user makes a selection.
-      await expect(futuresTab).toHaveAttribute("aria-expanded", "true");
+      // The current allowlist presents its available preset instruments
+      // directly; there are no empty category tabs to expand.
       await expect(instrumentOptions).toBeVisible();
       await expect(
         instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
-      ).toHaveText(FUTURES_INSTRUMENTS);
+      ).toHaveText(QUICK_INSTRUMENTS);
 
-      // Opening Forex replaces the options rather than appending another
-      // category's products to the existing list.
-      await forexTab.click();
-      await expect(futuresTab).toHaveAttribute("aria-expanded", "false");
-      await expect(forexTab).toHaveAttribute("aria-expanded", "true");
-      await expect(instrumentOptions).toBeVisible();
-      await expect(
-        instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
-      ).toHaveText(FOREX_INSTRUMENTS);
-      await expect(page.getByTestId("button-instrument-XAU/USD")).toHaveCount(0);
-
-      // A selected Forex instrument survives closing and reopening its
-      // accordion panel.
-      const selectedForex = page.getByTestId("button-instrument-EUR/USD");
-      await selectedForex.click();
-      await forexTab.click();
-      await expect(forexTab).toHaveAttribute("aria-expanded", "false");
-      await expect(instrumentOptions).toHaveCount(0);
-
-      await forexTab.click();
-      await expect(forexTab).toHaveAttribute("aria-expanded", "true");
-      await expect(selectedForex).toBeVisible();
-      await expect(selectedForex).toHaveClass(/bg-primary\/10/);
-      await expect(
-        instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
-      ).toHaveText(FOREX_INSTRUMENTS);
+      const initialSelection = page.getByTestId("button-instrument-XAU/USD");
+      await expect(initialSelection).toHaveClass(/bg-primary\/10/);
+      const otherSelection = page.getByTestId("button-instrument-BRENT");
+      await otherSelection.click();
+      await expect(otherSelection).toHaveClass(/bg-primary\/10/);
+      await expect(initialSelection).not.toHaveClass(/bg-primary\/10/);
+      await initialSelection.click();
+      await expect(initialSelection).toHaveClass(/bg-primary\/10/);
     }
 
     expect(browserErrors, browserErrors.join("\n")).toEqual([]);
@@ -368,7 +349,7 @@ test.describe("Copy Levels button (real Chromium + stubbed analysis)", () => {
 
     const user = await registerUser(baseURL!, "copy-levels");
     await signIn(page, user);
-    await reachDetailPage(page, STUB_ID_COPY_LEVELS, stubAnalysis);
+    await reachInlineAnalysis(page, STUB_ID_COPY_LEVELS, stubAnalysis);
 
     // 1. The copy buttons must be visible (requires a tradePlan to be present).
     const copyBuyBtn = page.getByTestId("button-copy-levels-buy");
@@ -410,7 +391,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     const stubAnalysis = buildStubAnalysis(STUB_ID_STANDARD_REGRESSION);
     const user = await registerUser(baseURL!, "adaptive-refresh");
     await signIn(page, user);
-    await reachDetailPage(page, STUB_ID_STANDARD_REGRESSION, stubAnalysis);
+    await reachInlineAnalysis(page, STUB_ID_STANDARD_REGRESSION, stubAnalysis);
 
     await expect(page.getByTestId("card-trade-plan")).toBeVisible();
     await expect(page.getByTestId("trade-plan-buy")).toBeVisible();
@@ -523,7 +504,7 @@ test.describe("Adaptive settings at narrow and desktop widths", () => {
       await page.setViewportSize({ width, height: 800 });
       for (const [group, names] of [
         [account, ["Micro", "Mini", "Regular"]],
-        [risk, ["Conservative", "Balanced", "Aggressive"]],
+        [risk, ["Conservative", "Moderate", "Aggressive"]],
       ] as const) {
         const buttons = group.getByRole("button");
         await expect(buttons).toHaveCount(3);
@@ -828,19 +809,21 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
             low,
             close: high,
           })),
+          sourceFetchedAt: new Date().toISOString(),
+          sourceMaxAgeMs: 5 * 60_000,
+          isStale: false,
+          staleReason: null,
         }),
       });
     });
 
     await page.goto("/analyze");
     await page.getByTestId("button-instrument-XAU/USD").click();
-    await page.getByTestId("button-timeframe-1h").click();
+    await expect(page.getByTestId("instrument-chart-layout")).toContainText(/Timeframe:\s*1h/);
     await page.getByTestId("button-submit-analysis").evaluate((button) => {
       (button as HTMLButtonElement).click();
     });
-    await page.waitForURL(new RegExp(`/analyses/${STUB_ID_ADAPTIVE_REFRESH}$`), {
-      timeout: 30_000,
-    });
+    await expect(page.getByTestId("embedded-analysis-result")).toBeVisible({ timeout: 30_000 });
 
     const marginInput = page.getByTestId("input-adaptive-available-margin");
     const maximumLossInput = page.getByTestId("input-adaptive-maximum-loss");
@@ -867,10 +850,13 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-unused-risk-buffer")).toContainText(/0/);
     await maximumLossInput.fill("15");
     await page.getByTestId("button-calculate-adaptive-plan").click();
-    await page.getByTestId("adaptive-rejected-buy").locator("summary").click();
-    await expect(page.getByTestId("adaptive-conditional-buy-1")).toContainText(/Conditional financial plan|Rencana finansial bersyarat/i);
-    await expect(page.getByTestId("adaptive-conditional-buy-1")).toContainText(/Additional loss budget needed|Tambahan batas rugi yang dibutuhkan/i);
+    await expect(page.getByTestId("adaptive-plan-invalid")).toBeVisible();
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/minimum-lot loss|rugi lot minimum/i);
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$110/);
+    await maximumLossInput.fill("");
+    await expect(maximumLossInput).toHaveValue("");
     await maximumLossInput.fill("125");
+    await expect(maximumLossInput).toHaveValue("125");
     await page.getByTestId("button-calculate-adaptive-plan").click();
     await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/positions|posisi/i);
     await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/Final Stop Loss|Stop Loss final/i);
@@ -881,7 +867,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v20:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v23:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
@@ -895,7 +881,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v20:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v23:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();
