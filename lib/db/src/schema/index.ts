@@ -290,10 +290,6 @@ export const users = pgTable("users", {
   // itself admin-configurable). A non-null value overrides just this one
   // user, independent of the global setting.
   customQuotaPerDay: integer("custom_quota_per_day"),
-  // Legacy production fields retained to preserve existing per-user data.
-  // Do not remove until a separate, explicitly approved data migration.
-  customQuotaPerHour: integer("custom_quota_per_hour"),
-  freeTimeframeSwitchesUsed: integer("free_timeframe_switches_used").notNull().default(0),
   // Store-readiness (P2-B4.1): three more push categories, following the
   // exact opt-out pattern as every other `push*` column above — false
   // suppresses OS push only, the in-app notification row still lands.
