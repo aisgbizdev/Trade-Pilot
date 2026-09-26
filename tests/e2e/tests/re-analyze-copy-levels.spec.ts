@@ -656,6 +656,22 @@ test.describe("Adaptive result layout (authenticated Chromium)", () => {
 
     for (const width of [320, 390, 1280]) {
       await page.setViewportSize({ width, height: 844 });
+      const liveLabel = page.getByTestId("card-indicators-section").getByRole("heading", {
+        name: "Live indicators · Saved analysis and plan do not update automatically",
+      });
+      await expect(liveLabel).toBeVisible();
+      const liveLabelBounds = await liveLabel.evaluate((element) => {
+        const panel = element.closest('[data-testid="card-indicators-section"]')!;
+        const text = document.createRange();
+        text.selectNodeContents(element);
+        return {
+          textRight: Math.max(...Array.from(text.getClientRects(), (rect) => rect.right)),
+          panelRight: panel.getBoundingClientRect().right,
+          viewportRight: document.documentElement.clientWidth,
+        };
+      });
+      expect(liveLabelBounds.textRight, `${width}px: live indicator label fits in panel`)
+        .toBeLessThanOrEqual(Math.min(liveLabelBounds.panelRight, liveLabelBounds.viewportRight) + 1);
       await margin.fill("1234567890");
       await loss.fill("1234567890");
       const fundsFields = await page.getByTestId("adaptive-funds-fields").locator("label").evaluateAll((labels) =>

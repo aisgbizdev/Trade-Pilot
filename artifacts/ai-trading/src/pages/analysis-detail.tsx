@@ -2248,14 +2248,20 @@ export default function AnalysisDetailPage({
   ) : null;
   const liveIndicatorPanel = indicatorTimeframe ? (
     <Card className="p-4 space-y-3" data-testid="card-indicators-section">
-      <div>
-        <h3 className="text-sm font-bold text-foreground">
-          {hasAdaptive ? t.analysis_detail.indicators_current_title : t.analysis_detail.indicators_section_title}
+      {hasAdaptive ? (
+        <h3 className="text-xs font-medium leading-snug text-muted-foreground break-words">
+          {t.analysis_detail.indicators_live_snapshot_label}
         </h3>
-        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-          {hasAdaptive ? t.analysis_detail.indicators_current_note : t.analysis_detail.indicators_section_note}
-        </p>
-      </div>
+      ) : (
+        <div>
+          <h3 className="text-sm font-bold text-foreground">
+            {t.analysis_detail.indicators_section_title}
+          </h3>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+            {t.analysis_detail.indicators_section_note}
+          </p>
+        </div>
+      )}
       <TechnicalIndicatorsPanel instrument={analysis.instrument} mode={isBeginnerMode ? "beginner" : "pro"} timeframe={indicatorTimeframe} />
     </Card>
   ) : null;

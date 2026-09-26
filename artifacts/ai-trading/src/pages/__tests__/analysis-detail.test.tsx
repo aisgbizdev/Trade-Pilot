@@ -8,6 +8,7 @@ import AnalysisDetailPage from "../analysis-detail";
 import { AdaptivePositionPlan } from "../../components/adaptive-position-plan";
 import * as adaptiveShare from "../../lib/adaptive-plan-share";
 import { en } from "../../locales/en";
+import { id } from "../../locales/id";
 import {
   installFetchMock,
   jsonResponse,
@@ -263,6 +264,25 @@ afterEach(() => {
 });
 
 describe("AnalysisDetailPage: happy-path render", () => {
+  it("keeps the original indicator heading and note without Adaptive in both languages", async () => {
+    installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, instrument: "EUR/USD", tradePlan: TRADE_PLAN } }),
+      feedbackHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    const panel = await screen.findByTestId("card-indicators-section");
+    expect(within(panel).getByRole("heading", { level: 3, name: en.analysis_detail.indicators_section_title })).toBeInTheDocument();
+    expect(panel).toHaveTextContent(en.analysis_detail.indicators_section_note);
+    expect(panel).not.toHaveTextContent(en.analysis_detail.indicators_live_snapshot_label);
+
+    fireEvent.click(screen.getByTestId("button-language-toggle"));
+    expect(within(panel).getByRole("heading", { level: 3, name: id.analysis_detail.indicators_section_title })).toBeInTheDocument();
+    expect(panel).toHaveTextContent(id.analysis_detail.indicators_section_note);
+    expect(panel).not.toHaveTextContent(id.analysis_detail.indicators_live_snapshot_label);
+  });
+
   it("explains a legacy 1h side without levels instead of offering n/a as a plan", async () => {
     installFetchMock([getAnalysisHandler({
       body: {
@@ -793,6 +813,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const risk = screen.getByTestId("adaptive-risk-explanation") as HTMLDetailsElement;
     const dayTrade = screen.getByTestId("adaptive-daytrade-only");
     const toggle = screen.getByTestId("button-language-toggle");
+    const livePanel = screen.getByTestId("card-indicators-section");
+    const liveHeading = within(livePanel).getByRole("heading", { level: 3, name: en.analysis_detail.indicators_live_snapshot_label });
+    expect(liveHeading).toHaveClass("break-words");
+    expect(liveHeading).toBe(livePanel.firstElementChild);
     const intro = screen.getByTestId("adaptive-intro");
     expect(intro).toBeVisible();
     expect(intro).toHaveTextContent(/Simulate entries, lot sizes, and risk from this analysis/i);
@@ -817,6 +841,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(dayTrade).toHaveTextContent(/overnight positions are not covered/);
 
     fireEvent.click(toggle);
+    expect(within(livePanel).getByText(id.analysis_detail.indicators_live_snapshot_label)).toBeInTheDocument();
+    expect(livePanel).not.toHaveTextContent(en.analysis_detail.indicators_live_snapshot_label);
     expect(toggle).toHaveAccessibleName("Beralih ke Bahasa Inggris");
     expect(intro).toBeVisible();
     expect(intro).toHaveTextContent(/Simulasi entry, lot, dan risiko dari analisis ini/i);
@@ -1020,8 +1046,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(savedMarketContext.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(adaptiveCard.compareDocumentPosition(priceAlerts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(priceAlerts.compareDocumentPosition(liveIndicators) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(liveIndicators).toHaveTextContent("Current market conditions");
-    expect(liveIndicators).toHaveTextContent(/do not automatically change the saved analysis or Adaptive plan/i);
+    expect(within(liveIndicators).getByRole("heading", { level: 3, name: en.analysis_detail.indicators_live_snapshot_label })).toBeInTheDocument();
+    expect(liveIndicators.firstElementChild?.tagName).toBe("H3");
     expect(adaptiveCard.compareDocumentPosition(liveIndicators) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(liveIndicators.compareDocumentPosition(screen.getByTestId("text-risk-disclaimer-short")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByTestId("adaptive-candle-source-time")).toHaveTextContent(/Analysis candle snapshot fetched/i);
