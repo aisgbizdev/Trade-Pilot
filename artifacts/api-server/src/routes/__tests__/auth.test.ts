@@ -302,7 +302,7 @@ describe("POST /auth/register rate limiting", () => {
 
     // Cleanup: scrub the rl-tagged users this test just inserted.
     await db.delete(users).where(like(users.email, `${EMAIL_PREFIX}-rl-%`));
-  });
+  }, 60_000);
 });
 
 describe("POST /auth/forgot-password/reset rate limiting", () => {

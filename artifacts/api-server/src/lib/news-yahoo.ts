@@ -10,6 +10,7 @@ const YAHOO_RSS_BASE =
 // instruments fall back to `getYahooFinanceMacroNews`.
 const INSTRUMENT_TO_YAHOO_SYMBOL: Record<string, string> = {
   "XAU/USD": "GC=F",
+  "XAG/USD": "SI=F",
   "BRENT": "BZ=F",
   "EUR/USD": "EURUSD=X",
   "GBP/USD": "GBPUSD=X",
@@ -19,6 +20,9 @@ const INSTRUMENT_TO_YAHOO_SYMBOL: Record<string, string> = {
   "AUD/USD": "AUDUSD=X",
   "USD/CHF": "CHF=X",
   "HSI": "^HSI",
+  "NIKKEI": "^N225",
+  "DJIA": "^DJI",
+  "NASDAQ": "^IXIC",
   // Crypto: Yahoo serves per-symbol headlines under the same RSS shape
   // we use for FX, just with `BTC-USD` etc. as the symbol.
   "BTC/USD": "BTC-USD",

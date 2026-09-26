@@ -95,7 +95,6 @@ import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
-import { prioritizeNewsSources } from "@/lib/news-source-priority";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { useLiveQuoteSnapshotByInstrument } from "@/hooks/use-live-quotes";
 
@@ -552,17 +551,14 @@ function findCitedEvent(
 // view + briefly highlight it. Falls back to a no-op when the target
 // isn't on the page (e.g. AI cited a row that didn't survive into the
 // persisted snapshot — rare but possible).
-function scrollToCitation(id: string): void {
+function scrollToCitation(id: string, kind: "news" | "calendar"): void {
   if (typeof document === "undefined") return;
-  const el = document.getElementById(id);
-  if (!el) return;
-  const collapsedContent = el.closest<HTMLElement>('[data-state="closed"]');
-  const trigger = collapsedContent?.previousElementSibling;
-  if (trigger instanceof HTMLElement && trigger.getAttribute("aria-expanded") === "false") {
-    trigger.click();
-  }
+  const trigger = document.querySelector<HTMLButtonElement>(`[data-testid="fundamental-${kind}-toggle"]`);
+  if (trigger?.getAttribute("aria-expanded") === "false") trigger.click();
 
   window.requestAnimationFrame(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     // Add a one-shot highlight ring so the eye lands on the row even if
     // the card was already on screen and didn't need to scroll.
@@ -635,6 +631,7 @@ function CitationChips({
             <a
               key={slug}
               href={safeUrl}
+              onClick={() => scrollToCitation(slug, "news")}
               target="_blank"
               rel="noopener noreferrer"
               className={className}
@@ -651,7 +648,7 @@ function CitationChips({
           <button
             key={slug}
             type="button"
-            onClick={() => scrollToCitation(slug)}
+            onClick={() => scrollToCitation(slug, "news")}
             className={className}
             data-testid="citation-chip-news"
             title={item.title}
@@ -669,7 +666,7 @@ function CitationChips({
           <button
             key={slug}
             type="button"
-            onClick={() => scrollToCitation(slug)}
+            onClick={() => scrollToCitation(slug, "calendar")}
             className={cn(
               "inline-flex items-center gap-1 max-w-[220px] truncate text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors",
               eventImpactClass(ev.impact),
@@ -1422,7 +1419,11 @@ function FundamentalContextCard({
   isRefreshing: boolean;
   refreshState: { refreshedAt: string; drift: FundamentalDrift } | null;
 }) {
-  const news = prioritizeNewsSources(ctx.newsItems ?? [], 3);
+  const [newsOpen, setNewsOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  // The saved snapshot is exactly what the AI saw; do not reorder it in the
+  // audit view or a citation could point to an item no longer displayed.
+  const news = (ctx.newsItems ?? []).slice(0, 5);
   const events = (ctx.calendarEvents ?? []).slice(0, 5);
   const refreshButton = (
     <Button
@@ -1452,29 +1453,10 @@ function FundamentalContextCard({
     <FundamentalDriftBanner state={refreshState} t={t} lang={lang} />
   ) : null;
 
-  if (news.length === 0 && events.length === 0) {
-    return (
-      <Card className="p-4 space-y-2" data-testid="card-fundamental-context">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Newspaper className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-bold text-foreground">
-              {t.analysis_detail.fundamental_context_title}
-            </h3>
-          </div>
-          {refreshButton}
-        </div>
-        {driftBanner}
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          {t.analysis_detail.fundamental_empty.replace("{instrument}", instrument)}
-        </p>
-      </Card>
-    );
-  }
   return (
     <Card className="p-4 space-y-4" data-testid="card-fundamental-context">
       <div>
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <Newspaper className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-bold text-foreground">
@@ -1489,19 +1471,29 @@ function FundamentalContextCard({
       </div>
 
       {driftBanner}
+      <p className="text-xs text-muted-foreground" data-testid="fundamental-counts">
+        {t.analysis_detail.fundamental_counts.replace("{news}", String(news.length)).replace("{events}", String(events.length))}
+        {" · "}{refreshState ? t.analysis_detail.fundamental_status_refreshed : t.analysis_detail.fundamental_status_snapshot}
+      </p>
+      {news.length === 0 && events.length === 0 && (
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t.analysis_detail.fundamental_empty.replace("{instrument}", instrument)}
+        </p>
+      )}
 
-      {news.length > 0 && (
-        <section className="px-2" data-testid="fundamental-news">
-          <div className="flex items-center gap-1.5 py-2">
-            <Newspaper className="w-3.5 h-3.5 shrink-0" />
-            <h4 className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
+      <section className="min-w-0" data-testid="fundamental-news">
+          <button type="button" data-testid="fundamental-news-toggle" aria-expanded={newsOpen}
+            aria-controls="fundamental-news-list" onClick={() => setNewsOpen(!newsOpen)}
+            className="flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Newspaper className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 flex-1 text-xs font-semibold text-foreground">
               {t.analysis_detail.fundamental_news_title}
-            </h4>
-            <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-              ({news.length})
             </span>
-          </div>
-          <div className="pb-1 pt-1" data-testid="fundamental-news-list">
+            <span className="text-xs text-muted-foreground">({news.length})</span>
+            {newsOpen ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
+          </button>
+          {newsOpen && <div id="fundamental-news-list" className="px-2 pb-1 pt-3" data-testid="fundamental-news-list">
+            {news.length === 0 ? <p className="text-xs text-muted-foreground">{t.analysis_detail.fundamental_news_empty}</p> :
             <ul className="space-y-2">
               {news.map((n) => (
                 <FundamentalNewsRow
@@ -1513,22 +1505,23 @@ function FundamentalContextCard({
                 />
               ))}
             </ul>
-          </div>
+            }
+          </div>}
         </section>
-      )}
 
-      {events.length > 0 && (
-        <section className="px-2" data-testid="fundamental-calendar">
-          <div className="flex items-center gap-1.5 py-2">
-            <CalendarClock className="w-3.5 h-3.5 shrink-0" />
-            <h4 className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
+      <section className="min-w-0" data-testid="fundamental-calendar">
+          <button type="button" data-testid="fundamental-calendar-toggle" aria-expanded={calendarOpen}
+            aria-controls="fundamental-calendar-list" onClick={() => setCalendarOpen(!calendarOpen)}
+            className="flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <CalendarClock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 flex-1 text-xs font-semibold text-foreground">
               {t.analysis_detail.fundamental_calendar_title}
-            </h4>
-            <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-              ({events.length})
             </span>
-          </div>
-          <div className="pb-1 pt-1" data-testid="fundamental-calendar-list">
+            <span className="text-xs text-muted-foreground">({events.length})</span>
+            {calendarOpen ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
+          </button>
+          {calendarOpen && <div id="fundamental-calendar-list" className="px-2 pb-1 pt-3" data-testid="fundamental-calendar-list">
+            {events.length === 0 ? <p className="text-xs text-muted-foreground">{t.analysis_detail.fundamental_calendar_empty}</p> :
             <ul className="space-y-2">
               {events.map((e, i) => (
                 <FundamentalCalendarRow
@@ -1539,9 +1532,9 @@ function FundamentalContextCard({
                 />
               ))}
             </ul>
-          </div>
+            }
+          </div>}
         </section>
-      )}
     </Card>
   );
 }

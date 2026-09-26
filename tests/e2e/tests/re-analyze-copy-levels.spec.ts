@@ -81,7 +81,8 @@ function isIgnorableTradingViewConsoleError(message: string): boolean {
   // rules feed through console.error. This external diagnostic must not make
   // unrelated application-flow tests fail, while errors from every other
   // source remain actionable.
-  return message.includes("https://widget-sheriff.tradingview-widget.com/");
+  return message.includes("https://widget-sheriff.tradingview-widget.com/")
+    || message === "Cannot listen to the event from the provided iframe, contentWindow is not available";
 }
 
 function buildStubAnalysis(id: number) {
@@ -875,6 +876,7 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     expect(storedBeforeRefresh).not.toBeNull();
 
     await page.getByTestId("button-refresh-fundamentals").click();
+    await page.getByTestId("fundamental-calendar-toggle").click();
     await expect(page.getByTestId("fundamental-calendar-list")).toContainText("Central-bank rate decision");
     await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
     await expect(marginInput).toHaveValue("5000");

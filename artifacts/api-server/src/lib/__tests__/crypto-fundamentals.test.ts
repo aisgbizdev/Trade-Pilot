@@ -83,7 +83,7 @@ describe("crypto news — Yahoo per-symbol + crypto macro fallback", () => {
           data: [
             {
               id: 1,
-              title: "Spot ETF approval lifts risk assets",
+              title: "Crypto spot ETF approval lifts digital asset prices",
               summary: "Investors cheer the green light",
               url: "https://news.example/etf",
               published_at: new Date().toISOString(),
@@ -97,8 +97,8 @@ describe("crypto news — Yahoo per-symbol + crypto macro fallback", () => {
     expect(items.length).toBeGreaterThan(0);
     // The Yahoo BTC-USD headline must come through.
     expect(items.some((i) => /bitcoin/i.test(i.title))).toBe(true);
-    // The crypto-macro fallback should retain the ETF headline even
-    // though it never says "bitcoin".
+    // The crypto-macro fallback retains a clearly crypto-linked ETF headline
+    // even though it never says "bitcoin".
     expect(items.some((i) => /spot etf/i.test(i.title))).toBe(true);
   });
 });

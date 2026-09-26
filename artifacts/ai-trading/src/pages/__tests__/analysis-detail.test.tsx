@@ -2077,6 +2077,39 @@ describe("AnalysisDetailPage: not-found branch", () => {
 });
 
 describe("AnalysisDetailPage: fundamental context card", () => {
+  it.each([
+    ["id", "Berita Terkini", "Kalender Ekonomi", "Daftar tersimpan"],
+    ["en", "Recent News", "Economic Calendar", "Saved list"],
+  ])("provides %s-language keyboard-accessible controls and honest saved status", async (lang, newsTitle, calendarTitle, status) => {
+    localStorage.setItem("app_lang", lang);
+    installFetchMock([getAnalysisHandler({ body: {
+      ...ANALYSIS_PAYLOAD,
+      fundamentalContext: { newsItems: [], calendarEvents: [{
+        date: "2026-04-30", time: "12:00", currency: "USD", event: "FOMC rate decision",
+        impact: "★★★", actual: null, forecast: null, previous: null,
+      }] },
+    } }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const card = await screen.findByTestId("card-fundamental-context");
+    expect(card).toHaveTextContent(status);
+    const news = screen.getByTestId("fundamental-news-toggle");
+    const calendar = screen.getByTestId("fundamental-calendar-toggle");
+    expect(news.tagName).toBe("BUTTON");
+    expect(news).toHaveAttribute("type", "button");
+    expect(news).toHaveAccessibleName(`${newsTitle} (0)`);
+    expect(calendar).toHaveAccessibleName(`${calendarTitle} (1)`);
+    fireEvent.click(news);
+    expect(screen.getByTestId("fundamental-news-list")).toHaveTextContent(
+      lang === "id" ? "Belum ada berita relevan" : "No relevant news",
+    );
+    expect(calendar).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(calendar);
+    expect(screen.getByTestId("fundamental-calendar-list")).toHaveTextContent("FOMC rate decision");
+    fireEvent.click(news);
+    expect(screen.queryByTestId("fundamental-news-list")).not.toBeInTheDocument();
+  });
+
   it("renders natural trader terminology for Indonesian calendar and trade-plan copy", async () => {
     localStorage.setItem("app_lang", "id");
     installFetchMock([
@@ -2122,6 +2155,8 @@ describe("AnalysisDetailPage: fundamental context card", () => {
 
     const card = await screen.findByTestId("card-fundamental-context");
     expect(card).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("fundamental-news-toggle"));
+    fireEvent.click(screen.getByTestId("fundamental-calendar-toggle"));
     expect(card.textContent).toMatch(/Gold rallies as Fed signals pause/);
     expect(card.textContent).toMatch(/FOMC rate decision/);
     expect(card).toHaveTextContent(/Forecast/);
@@ -2133,9 +2168,8 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(tradePlan).not.toHaveTextContent(/titik masuk|batas berhenti/i);
   });
 
-  it("caps news at 3 items and calendar at 5 items, and opens news links in a new tab with safe rel attrs", async () => {
-    // 5 news items + 7 calendar events — only 3 + 5 should render.
-    const newsItems = Array.from({ length: 5 }).map((_, i) => ({
+  it("starts closed, opens panels independently and caps both lists at 5 with safe news links", async () => {
+    const newsItems = Array.from({ length: 7 }).map((_, i) => ({
       id: `news-${i}`,
       title: `Headline number ${i}`,
       summary: `Summary ${i}`,
@@ -2171,14 +2205,20 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     );
 
     const card = await screen.findByTestId("card-fundamental-context");
-    expect(screen.queryByTestId("fundamental-news-toggle")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("fundamental-calendar-toggle")).not.toBeInTheDocument();
-    expect(screen.getByTestId("fundamental-news-list")).toBeVisible();
-    expect(screen.getByTestId("fundamental-calendar-list")).toBeVisible();
+    const newsToggle = screen.getByTestId("fundamental-news-toggle");
+    const calendarToggle = screen.getByTestId("fundamental-calendar-toggle");
+    expect(newsToggle).toHaveAttribute("aria-expanded", "false");
+    expect(calendarToggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("fundamental-news-list")).not.toBeInTheDocument();
+    expect(card).toHaveTextContent("5 news");
+    fireEvent.click(newsToggle);
+    expect(newsToggle).toHaveAttribute("aria-expanded", "true");
+    expect(calendarToggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(calendarToggle);
 
     // News link rows are tagged `fundamental-news-link` (the anchor).
     const links = card.querySelectorAll("[data-testid='fundamental-news-link']");
-    expect(links.length).toBe(3);
+    expect(links.length).toBe(5);
     // Each link must open in a new tab with the noopener noreferrer
     // protection — outbound feed links are upstream-controlled and we
     // never want them tab-napping the user.
@@ -2199,7 +2239,7 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(eventRows.length).toBe(5);
   });
 
-  it("prioritizes Newsmaker and keeps only one Yahoo headline in the visible fundamental list", async () => {
+  it("preserves the saved AI snapshot order and count without replacing cited items", async () => {
     const newsItems = [
       "Yahoo Finance",
       "Newsmaker.id",
@@ -2232,12 +2272,13 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     );
 
     const card = await screen.findByTestId("card-fundamental-context");
+    fireEvent.click(screen.getByTestId("fundamental-news-toggle"));
     expect(card).toHaveTextContent("Yahoo Finance headline 0");
     expect(card).toHaveTextContent("Newsmaker.id headline 1");
     expect(card).toHaveTextContent("Newsmaker.id headline 3");
-    expect(card).not.toHaveTextContent("Yahoo Finance headline 2");
-    expect(card).not.toHaveTextContent("Newsmaker.id headline 4");
-    expect(screen.getAllByTestId("fundamental-news-link")).toHaveLength(3);
+    expect(card).toHaveTextContent("Yahoo Finance headline 2");
+    expect(card).toHaveTextContent("Newsmaker.id headline 4");
+    expect(screen.getAllByTestId("fundamental-news-link")).toHaveLength(5);
   });
 
   it("renders the empty-state message when fundamentalContext is present with empty arrays", async () => {
@@ -2263,6 +2304,8 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     // task requires (no silent omission of the section).
     const card = await screen.findByTestId("card-fundamental-context");
     expect(card).toBeInTheDocument();
+    expect(card).toHaveTextContent("0 news");
+    expect(card).toHaveTextContent("not live news");
     // News + calendar list wrappers should NOT render in the empty state.
     expect(
       screen.queryByTestId("fundamental-news-list"),
@@ -2270,6 +2313,11 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(
       screen.queryByTestId("fundamental-calendar-list"),
     ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("fundamental-news-toggle"));
+    expect(screen.getByTestId("fundamental-news-list")).toHaveTextContent("No relevant news");
+    fireEvent.click(screen.getByTestId("fundamental-calendar-toggle"));
+    expect(screen.getByTestId("fundamental-calendar-list")).toHaveTextContent("No relevant economic events");
+    expect(screen.getByTestId("button-refresh-fundamentals")).toBeEnabled();
   });
 });
 
@@ -2486,18 +2534,15 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     expect(newsChip).not.toBeNull();
     expect(newsChip).not.toHaveAttribute("href");
 
-    const newsList = screen.getByTestId("fundamental-news-list");
-    expect(screen.queryByTestId("fundamental-news-toggle")).not.toBeInTheDocument();
-    expect(newsList).toBeVisible();
-
-    const newsRow = document.getElementById(
-      "cite-news-gold-rallies-as-fed-signals-pause",
-    );
-    expect(newsRow).not.toBeNull();
+    expect(screen.getByTestId("fundamental-news-toggle")).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("fundamental-news-list")).not.toBeInTheDocument();
 
     fireEvent.click(newsChip as HTMLButtonElement);
 
     await waitFor(() => {
+      expect(screen.getByTestId("fundamental-news-toggle")).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByTestId("fundamental-news-list")).toBeVisible();
+      const newsRow = document.getElementById("cite-news-gold-rallies-as-fed-signals-pause");
       expect(newsRow).toHaveClass("ring-2", "ring-primary/60", "rounded-md");
     });
   });
@@ -2567,9 +2612,8 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     ) as HTMLElement | null;
     expect(eventChip).not.toBeNull();
 
-    const calendarList = screen.getByTestId("fundamental-calendar-list");
-    expect(screen.queryByTestId("fundamental-calendar-toggle")).not.toBeInTheDocument();
-    expect(calendarList).toBeVisible();
+    expect(screen.getByTestId("fundamental-calendar-toggle")).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("fundamental-calendar-list")).not.toBeInTheDocument();
 
     // Build the slug the same way the component does, using the
     // ORIGINAL index (2) for the third event in the snapshot.
@@ -2584,12 +2628,11 @@ describe("AnalysisDetailPage: inline citation chips", () => {
     // The same slug must exist as an `id` somewhere in the calendar
     // card (i.e. on the matching <li> row), proving the chip click
     // would actually find a target.
-    const target = document.getElementById(expectedSlug);
-    expect(target).not.toBeNull();
-
     fireEvent.click(eventChip as HTMLElement);
 
     await waitFor(() => {
+      expect(screen.getByTestId("fundamental-calendar-toggle")).toHaveAttribute("aria-expanded", "true");
+      const target = document.getElementById(expectedSlug);
       expect(target).toHaveClass("ring-2", "ring-primary/60", "rounded-md");
     });
   });

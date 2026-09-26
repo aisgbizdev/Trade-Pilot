@@ -1,10 +1,8 @@
 // Multi-source fundamental-news aggregator: Newsmaker.id + Yahoo
-// Finance per-symbol RSS, deduped, scored, with a macro keyword
-// fallback (FOMC / CPI / NFP / ECB / BoJ / OPEC) when per-instrument
-// matches are sparse.
+// Finance per-symbol RSS, deduped and scored for direct instrument
+// relevance before the saved analysis snapshot is assembled.
 
 import { getYahooFinanceNews, type YahooNewsItem } from "./news-yahoo";
-import { isCryptoInstrument } from "./crypto-instruments";
 
 const NEWS_API = "https://endpoapi-production-3202.up.railway.app/api/news-id";
 const NEWSMAKER_SOURCE = "Newsmaker.id";
@@ -24,38 +22,33 @@ const TICKER_YAHOO_INSTRUMENTS = [
 ] as const;
 let tickerCache: { data: NewsItem[]; fetchedAt: number } | null = null;
 
-const INSTRUMENT_KEYWORDS: Record<string, string[]> = {
-  "XAU/USD": ["emas", "gold", "xau", "dolar", "fed", "inflasi", "safe haven", "logam mulia"],
-  "BRENT":   ["minyak", "brent", "crude", "opec", "energi", "bbm", "petroleum", "oil"],
-  "EUR/USD": ["euro", "eur", "ecb", "eropa", "dolar", "inflasi", "fed"],
-  "GBP/USD": ["pound", "gbp", "inggris", "boe", "sterling", "brexit", "uk"],
-  "USD/JPY": ["yen", "jpy", "jepang", "boj", "bank of japan", "dolar"],
-  "USD/IDR": ["rupiah", "idr", "indonesia", "bi", "bank indonesia", "dolar"],
-  "DXY":     ["dolar", "fed", "inflasi", "cpi", "nfp", "fomc", "usd"],
-  "AUD/USD": ["australia", "aud", "rba", "dolar", "komoditas"],
-  "USD/CHF": ["swiss", "chf", "franc", "snb", "safe haven"],
-  "HSI":     ["hongkong", "china", "tiongkok", "yuan", "hang seng", "csi"],
-  // Crypto: blend coin-specific terms with the cross-cutting macro
-  // crypto vocabulary so a generic "spot ETF approved" or "SEC sues
-  // exchange" headline still scores even when it doesn't name the coin.
-  "BTC/USD": ["bitcoin", "btc", "spot etf", "halving", "sec", "crypto", "kripto", "blockchain", "mining"],
-  "ETH/USD": ["ethereum", "eth", "ether", "merge", "shapella", "pectra", "staking", "layer 2", "l2", "crypto", "kripto"],
-  "SOL/USD": ["solana", "sol", "phantom", "jito", "dex", "memecoin", "crypto", "kripto"],
-  "BNB/USD": ["binance", "bnb", "cz", "changpeng", "bsc", "bnb chain", "crypto", "kripto"],
-  "XRP/USD": ["ripple", "xrp", "sec", "ondc", "cbdc", "remittance", "crypto", "kripto"],
+// Strong instrument anchors only. Shared words such as "dollar", "energy",
+// "SEC" and "crypto" must not make unrelated company news relevant.
+const INSTRUMENT_ANCHORS: Record<string, RegExp> = {
+  "XAU/USD": /\b(gold|emas|xau|bullion|logam mulia)\b/i,
+  "XAG/USD": /\b(silver|perak|xag)\b/i,
+  "BRENT": /\b(brent|crude|oil|minyak|opec)\b/i,
+  "EUR/USD": /\b(eur\/usd|euro|ecb)\b/i,
+  "GBP/USD": /\b(gbp\/usd|pound|sterling|boe)\b/i,
+  "USD/JPY": /\b(usd\/jpy|yen|jpy|boj|bank of japan)\b/i,
+  "USD/IDR": /\b(usd\/idr|rupiah|idr|bank indonesia)\b/i,
+  "DXY": /\b(dxy|dollar index|indeks dolar|us dollar|dolar as)\b/i,
+  "AUD/USD": /\b(aud\/usd|australian dollar|aussie dollar|rba)\b/i,
+  "USD/CHF": /\b(usd\/chf|swiss franc|snb|franc swiss)\b/i,
+  "HSI": /\b(hang seng|hsi|hong kong stocks|hong kong index)\b/i,
+  "NIKKEI": /\b(nikkei|nikkei 225|japan(?:ese)? stocks?|japan(?:ese)? equities)\b/i,
+  "DJIA": /\b(djia|dow jones|dow industrials)\b/i,
+  "NASDAQ": /\b(nasdaq|nasdaq 100|nasdaq composite)\b/i,
+  "BTC/USD": /\b(bitcoin|btc)\b/i,
+  "ETH/USD": /\b(ethereum|ether|eth)\b/i,
+  "SOL/USD": /\b(solana|sol)\b/i,
+  "BNB/USD": /\b(bnb|binance coin|bnb chain)\b/i,
+  "XRP/USD": /\b(xrp|ripple)\b/i,
 };
-
-// Crypto macro fallback. Surfaces broad crypto-market headlines (ETF
-// flows, exchange enforcement, regulator action) on any crypto pair
-// even when the coin-specific keyword set didn't score — mirrors the
-// per-asset macro fallback we use for forex / commodities.
-const CRYPTO_MACRO_PATTERN =
-  /\b(bitcoin|btc|ethereum|eth\b|crypto|kripto|spot\s+etf|halving|sec\b|cftc\b|coinbase|binance|stablecoin|usdt|usdc|defi|onchain|on[-\s]?chain|exchange\s+(?:hack|outage)|ripple)\b/i;
-
-// Macro keywords that surface an item even when the per-instrument
-// keyword filter scored zero. Lower-cased for case-insensitive match.
-const MACRO_FALLBACK_PATTERN =
-  /\b(fomc|fed\b|federal\s+reserve|cpi|nfp|non[\s-]?farm|inflation|inflasi|rate\s+(?:cut|hike|decision)|interest\s+rate|payroll|gdp|ppi|ecb|boj|bank\s+of\s+japan|opec|geopolitik|geopolitical|war|perang)\b/i;
+const MARKET_CONTEXT = /\b(price|prices|harga|trading|trades|traded|rally|rallies|ticks?|extends?|breaks?|ath|highs?|lows?|rises?|rose|gains?|surges?|falls?|fell|drops?|slips?|slides?|weakens?|strengthens?|climbs?|tumbles?|futures|market|pasar|kurs|nilai tukar|exchange rate|yields?|demand|supply|output|production|barrels?|inventory|inventories|stocks?|index|indeks|etf|flows?|inflows?|outflows?|rates?|suku bunga|inflation|inflasi|policy|kebijakan|minutes|cut|hike|decision|keputusan|fed|fomc|cpi|nfp|payroll|gdp|ppi|opec|naik|turun|menguat|melemah|melonjak|merosot|terkoreksi|saham|berjangka|imbal hasil)\b/i;
+const CORPORATE_CONTEXT = /\b(company|corp|corporation|firm|shares?|earnings|revenue|profit|ceo|acquisition|merger|startup|perusahaan|saham emiten|laba|pendapatan)\b/i;
+const USD_MACRO = /\b(fomc|fed|federal reserve|us cpi|u\.s\. cpi|us inflation|us payroll|nfp|non[\s-]?farm|us interest rate|us rate decision)\b/i;
+const CRYPTO_MACRO = /\b(crypto|kripto|digital assets?)\b/i;
 
 // Public shape returned to the route layer; persisted as JSONB on
 // `analyses.fundamentalContext` and re-rendered on the detail page.
@@ -138,9 +131,26 @@ interface ScoredItem {
   score: number;
 }
 
-function scoreItem(item: NewsItem, keywords: string[]): number {
-  const text = `${item.title} ${item.summary}`.toLowerCase();
-  return keywords.reduce((s, kw) => s + (text.includes(kw) ? 1 : 0), 0);
+function relevanceScore(item: NewsItem, instrument: string): number {
+  const title = item.title;
+  const summary = item.summary;
+  const anchor = INSTRUMENT_ANCHORS[instrument];
+  if (!anchor) return 0; // No generic fallback for unknown instruments.
+  const inTitle = anchor.test(title);
+  const inSummary = anchor.test(summary);
+  const titleMarket = MARKET_CONTEXT.test(title);
+  // Company coverage mentioning an asset in passing is not instrument news.
+  if (CORPORATE_CONTEXT.test(title) && !/\b(gold|oil|brent|bitcoin|euro|yen|pound|rupiah)\s+(prices?|harga|futures|market)\b/i.test(title)) return 0;
+  if (inTitle && (titleMarket || MARKET_CONTEXT.test(summary))) return 4;
+  if (inSummary && titleMarket) return 2;
+  // Instrument-linked macro releases can move USD pairs and gold even
+  // without repeating the ticker; oil and crypto use their own catalysts.
+  if (["XAU/USD", "EUR/USD", "GBP/USD", "USD/JPY", "USD/IDR", "DXY", "AUD/USD", "USD/CHF"].includes(instrument)
+    && USD_MACRO.test(title) && !CORPORATE_CONTEXT.test(title)) return 1;
+  if (instrument === "BRENT" && /\bopec\b/i.test(title) && titleMarket) return 1;
+  if (instrument.endsWith("/USD") && ["BTC/USD", "ETH/USD", "SOL/USD", "BNB/USD", "XRP/USD"].includes(instrument)
+    && CRYPTO_MACRO.test(title) && titleMarket) return 1;
+  return 0;
 }
 
 // Recency policy for "Recent News". Without these bounds, an older
@@ -244,13 +254,6 @@ export async function getRelevantNews(
   instrument: string,
   maxItems = 5,
 ): Promise<NewsItem[]> {
-  const keywords = INSTRUMENT_KEYWORDS[instrument] ?? [
-    "forex",
-    "trading",
-    "pasar",
-    "ekonomi",
-  ];
-
   const [newsmakerRes, yahooRes] = await Promise.allSettled([
     fetchNewsmaker(),
     getYahooFinanceNews(instrument, 8),
@@ -264,36 +267,9 @@ export async function getRelevantNews(
     for (const raw of yahooRes.value) collected.push(yahooToItem(raw));
   }
 
-  // Dedupe by URL first, then by normalized title — same headline
-  // syndicated to both sources should only appear once.
-  const deduped = dedupeNews(collected);
-
-  // Score everything. Yahoo items get a +1 baseline because they are
-  // already symbol-scoped at the feed level — without that boost a
-  // perfectly relevant headline would get filtered out merely because
-  // it didn't repeat the keyword in its title.
-  const scored: ScoredItem[] = deduped.map((item) => ({
-    item,
-    score:
-      scoreItem(item, keywords) + (item.source === YAHOO_SOURCE ? 1 : 0),
-  }));
-
-  // First pass: keep items with score > 0 (per-instrument relevant).
-  let kept = scored.filter((s) => s.score > 0);
-
-  // Macro fallback: if scored set is too thin, pull in items whose
-  // title mentions a market-moving macro event regardless of the
-  // per-instrument keyword overlap. Crypto instruments use a different
-  // macro vocabulary (ETF flows, regulatory action, exchange events).
-  if (kept.length < 2) {
-    const macroPattern = isCryptoInstrument(instrument)
-      ? CRYPTO_MACRO_PATTERN
-      : MACRO_FALLBACK_PATTERN;
-    const macroFallback = scored.filter(
-      (s) => s.score === 0 && macroPattern.test(s.item.title),
-    );
-    kept = [...kept, ...macroFallback];
-  }
+  let kept: ScoredItem[] = collected
+    .map((item) => ({ item, score: relevanceScore(item, instrument) }))
+    .filter(({ score }) => score > 0);
 
   // Hard recency cutoff. Anything older than NEWS_MAX_AGE_MS is dropped
   // outright — better to return [] (UI shows an honest empty state) than
@@ -301,27 +277,28 @@ export async function getRelevantNews(
   // an unparseable / missing date get publishedAtMs=0 and are filtered
   // out by the same rule, which is the safe default.
   const now = Date.now();
-  kept = kept.filter((s) => now - publishedAtMs(s.item) <= NEWS_MAX_AGE_MS);
+  kept = kept.filter((s) => {
+    const age = now - publishedAtMs(s.item);
+    return age >= 0 && age <= NEWS_MAX_AGE_MS;
+  });
 
-  // Two-tier ranking: items ≤ NEWS_FRESH_TIER_MS old form the "fresh"
-  // tier and are always ranked above the older tier, regardless of
-  // keyword density. Within the fresh tier we sort by recency (newest
-  // first) so the freshest market-moving headline always wins. The
-  // older tier still uses score-then-recency, so that on a quiet news
-  // day we surface the most relevant of the slightly-older items
-  // instead of an arbitrary one. Without this two-tier rule, a
-  // keyword-dense 10-day-old headline outranks a terse fresh one.
+  // Direct instrument coverage outranks broad macro context. Within
+  // each relevance level, prefer fresh items, then relevant Newsmaker
+  // coverage, then publication time.
   kept.sort((a, b) => {
     const at = publishedAtMs(a.item);
     const bt = publishedAtMs(b.item);
     const aTier = now - at <= NEWS_FRESH_TIER_MS ? 0 : 1;
     const bTier = now - bt <= NEWS_FRESH_TIER_MS ? 0 : 1;
+    if (a.score !== b.score) return b.score - a.score;
     if (aTier !== bTier) return aTier - bTier;
-    if (aTier === 0) return bt - at; // fresh tier: pure recency
-    return b.score - a.score || bt - at; // older tier: score, then recency
+    if (a.item.source !== b.item.source) {
+      return a.item.source === NEWSMAKER_SOURCE ? -1 : 1;
+    }
+    return bt - at;
   });
 
-  return kept.slice(0, maxItems).map((s) => s.item);
+  return dedupeNews(kept.map((s) => s.item)).slice(0, maxItems);
 }
 
 /**
