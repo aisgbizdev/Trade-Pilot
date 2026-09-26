@@ -415,7 +415,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("card-log-trade")).toHaveCount(0);
     await expect(page.getByTestId("card-user-journal-note")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
-      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v17:${analysisId}`),
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v23:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
