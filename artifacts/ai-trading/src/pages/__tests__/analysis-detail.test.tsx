@@ -385,7 +385,19 @@ describe("AnalysisDetailPage: happy-path render", () => {
 
     expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(longReason);
     expect(screen.getByTestId("text-confidence")).toBeVisible();
-    expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
+    const trigger = screen.getByTestId("confidence-reason-disclosure");
+    expect(trigger).toHaveTextContent("See full reasoning");
+    expect(screen.queryByTestId("confidence-reason-dialog")).not.toBeInTheDocument();
+    fireEvent.click(trigger);
+    const dialog = screen.getByTestId("confidence-reason-dialog");
+    expect(dialog).toHaveAttribute("role", "dialog");
+    expect(within(dialog).getByTestId("confidence-reason-details")).toHaveTextContent("Price likely continues higher");
+    expect(within(dialog).getByTestId("confidence-reason-details")).toHaveTextContent("H1 close below 2300");
+    expect(dialog).toHaveTextContent("XAU/USD · 1h");
+    expect(within(dialog).getByTestId("confidence-reason-details")).toHaveClass("overflow-y-auto");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Collapse" }));
+    expect(screen.queryByTestId("confidence-reason-dialog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("confidence-reason-safety")).toHaveTextContent(longReason);
   });
 
   it("keeps a long warning visible even without any fixed safety keywords", async () => {
@@ -395,7 +407,7 @@ describe("AnalysisDetailPage: happy-path render", () => {
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
 
     expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(warning);
-    expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("confidence-reason-dialog")).not.toBeInTheDocument();
   });
 
   it("does not hide a caution inside AI-written confidence rationale", async () => {
@@ -406,7 +418,7 @@ describe("AnalysisDetailPage: happy-path render", () => {
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
 
     expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(/stop loss must be respected/i);
-    expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("confidence-reason-dialog")).not.toBeInTheDocument();
   });
 
   it("keeps short rationale and pro uncertainty notes visible without requiring an extra click", async () => {
@@ -418,6 +430,35 @@ describe("AnalysisDetailPage: happy-path render", () => {
 
     expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(/data is mixed/i);
     expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
+  });
+
+  it("uses the saved product and timeframe evidence in the optional pro breakdown", async () => {
+    installFetchMock([getAnalysisHandler({
+      body: {
+        ...ANALYSIS_PAYLOAD,
+        instrument: "BRENT",
+        timeframe: "4h",
+        mode: "pro",
+        uncertaintyNotes: "• Basis: BRENT 4h momentum is improving.\n• Limit: Event risk remains.",
+        keyDriversTechnical: "BRENT 4h closed above its prior range.",
+        keyDriversFundamental: "A scheduled oil inventory report may shift the setup.",
+        risk: "A break below the range would weaken this thesis.",
+        invalidationConditions: "4h close below the range; Oil inventory surprise",
+      },
+    }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(/BRENT 4h momentum/);
+    expect(screen.queryByTestId("confidence-reason-dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("confidence-reason-disclosure"));
+    const dialog = screen.getByTestId("confidence-reason-dialog");
+    const details = within(dialog).getByTestId("confidence-reason-details");
+    expect(dialog).toHaveTextContent("BRENT · 4h");
+    expect(details).toHaveTextContent("BRENT 4h closed above its prior range.");
+    expect(details).toHaveTextContent("A scheduled oil inventory report");
+    expect(details).toHaveTextContent("4h close below the range");
+    expect(details).not.toHaveTextContent(/Fed|Gold/);
   });
 
   it("uses progressive disclosure for scenarios, pro factors, and execution insight", async () => {

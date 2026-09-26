@@ -115,7 +115,8 @@ Aturan output:
 - Gunakan seluruh ringkasan timeframe yang benar-benar tersedia di DATA TEKNIKAL / indicatorContext. Bandingkan keselarasan atau konflik timeframe lebih tinggi dan timeframe analisis; jelaskan bukti timeframe mana yang paling mendukung pilihan preferredSide. Jangan mengarang data timeframe yang tidak diberikan.
 - Main/alternative scenario harus menerangkan kenapa satu sisi lebih diutamakan dan kapan skenario opposite yang kondisional baru valid. Skenario opposite wajib fair dan berbasis bukti/level yang tersedia, bukan sekadar kebalikan mekanis atau disamakan probabilitasnya.
 - failureConditions HARUS berisi minimum 2 kondisi konkret (pisahkan dengan "; " atau bullet "• ") yang membuat analisis batal
-- whyReason HARUS menjelaskan KENAPA confidence tidak lebih tinggi (faktor ketidakpastian)
+- whyReason HARUS menjelaskan KENAPA confidence tidak lebih tinggi. Tulis TEPAT dua poin singkat dipisahkan newline: "• Dasar: ..." (bukti spesifik untuk instrumen + timeframe ini yang mendukung skenario) dan "• Batasan: ..." (ketidakpastian paling menentukan, mengapa confidence dibatasi). Masing-masing satu kalimat padat, bukan paragraf generik. Jangan memotong peringatan penting demi singkatnya format.
+- Dasar tiap instrumen berbeda: kaitkan hanya struktur harga/indikator/timeframe, berita yang sudah terbit, dan event kalender yang benar-benar tersedia untuk instrumen ini. Jelaskan hubungan sebab-akibatnya, jangan menyalin alasan emas/Fed ke minyak, indeks, forex, atau kripto tanpa bukti relevan. Kalau sumber tidak tersedia atau sinyal bertentangan, akui secara eksplisit; jangan mengarang harga, berita masa depan, hasil event terjadwal, atau data timeframe yang tidak diberikan.
 - Gunakan bahasa sederhana yang mudah dipahami pemula
 - WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Untuk timeframe 1W...") di mainScenario, alternativeScenario, opportunity, dan risk — supaya pengguna tahu sinyal ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
 
@@ -156,7 +157,7 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "risk": "string (risiko utama: skenario merugikan dan ketidakpastian yang harus diwaspadai, 1-2 kalimat)",
   "mainScenario": "string (Skenario A — skenario utama yang paling mungkin, 2-3 kalimat. Bicara struktur/arah, bukan angka spesifik — angka ada di tradePlan)",
   "alternativeScenario": "string (Skenario B — skenario alternatif jika asumsi tidak terjadi, 1-2 kalimat)",
-  "whyReason": "string (alasan mengapa skenario ini mungkin terjadi DAN kenapa confidence tidak lebih tinggi, 2-3 kalimat. Sebutkan news/event spesifik kalau ada di input.)",
+  "whyReason": "string (tepat dua poin singkat pada dua baris: • Dasar: bukti spesifik instrumen/timeframe yang tersedia; • Batasan: sumber ketidakpastian dan mengapa confidence tidak lebih tinggi. Sebut event/berita spesifik hanya bila tersedia di input.)",
   "failureConditions": "string (minimum 2 kondisi konkret yang membatalkan analisis ini, dipisah '; ' — contoh: 'Harga break support 4650; Volume turun > 30%; News fundamental berubah')",
   "fundamentalCitations": {
     "newsTitles": ["string (judul berita yang dirujuk — harus persis seperti di blok BERITA TERKINI RELEVAN, atau [] kalau tidak ada blok / tidak menyebut)"],
@@ -197,7 +198,8 @@ Aturan output:
 - Gunakan semua ringkasan timeframe yang benar-benar tersedia di DATA TEKNIKAL / indicatorContext untuk menilai alignment/divergence. Bandingkan timeframe analisis dengan timeframe lebih tinggi yang disuplai dan sebut bukti spesifik; jangan mengarang timeframe/indikator yang tidak ada.
 - Tegaskan mengapa preferredSide lebih didukung oleh confluence teknikal/fundamental dan konteks multi-timeframe, sementara skenario opposite tetap kondisional, berbasis bukti, dan menyebut pemicu validasinya (bukan sekadar inversi mekanis atau probabilitas setara).
 - invalidationConditions HARUS berisi minimum 2 kondisi konkret (pisahkan dengan "; " atau bullet "• ") yang membuat tesis batal
-- uncertaintyNotes HARUS menjelaskan KENAPA confidence tidak lebih tinggi (faktor ketidakpastian utama)
+- uncertaintyNotes HARUS menjelaskan KENAPA confidence tidak lebih tinggi dalam TEPAT dua poin singkat dipisahkan newline: "• Dasar: ..." (bukti utama untuk instrumen dan timeframe ini) dan "• Batasan: ..." (ketidakpastian/konflik yang membatasi confidence). Masing-masing satu kalimat padat, bukan paragraf generik; jangan sembunyikan peringatan penting.
+- Jangan pakai narasi lintas-produk yang sama: hanya kaitkan harga, indikator, berita yang sudah terbit, dan event terjadwal yang benar-benar relevan dan disuplai untuk instrumen ini. Sebut hubungan kausal dengan skenario; akui data yang kosong/bertentangan. Event terjadwal bukan berita yang belum terbit: jangan mengarang hasilnya atau berita masa depan.
 - Sertakan konteks makro dan faktor fundamental relevan
 - WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Bias bullish pada 1W...") di baseCase, bullishScenario, bearishScenario, opportunity, dan risk — supaya pengguna tahu bias ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
 
@@ -244,7 +246,7 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "keyDriversFundamental": "string (faktor fundamental utama yang relevan — KAITKAN dengan sisi teknikal, JANGAN cuma daftar event)",
   "marketContext": "string (konteks makro/kondisi pasar saat ini)",
   "invalidationConditions": "string (minimum 2 kondisi konkret yang membatalkan tesis, dipisah '; ' — contoh: 'Break support 4650 dengan close H1; Volume drop > 30%; FOMC surprise hawkish')",
-  "uncertaintyNotes": "string (ketidakpastian utama dan KENAPA confidence tidak lebih tinggi, 1-2 kalimat)",
+  "uncertaintyNotes": "string (tepat dua poin singkat pada dua baris: • Dasar: bukti spesifik instrumen/timeframe yang tersedia; • Batasan: ketidakpastian utama dan KENAPA confidence tidak lebih tinggi)",
   "fundamentalCitations": {
     "newsTitles": ["string (judul berita yang dirujuk — persis seperti di blok BERITA, [] kalau tidak ada)"],
     "calendarEvents": ["string (nama event yang dirujuk — persis seperti di blok KALENDER, [] kalau tidak ada)"]

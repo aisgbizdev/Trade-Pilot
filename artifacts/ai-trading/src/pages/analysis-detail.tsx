@@ -42,6 +42,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
 import { LogTradeDialog } from "@/components/log-trade-dialog";
@@ -2069,6 +2070,9 @@ export default function AnalysisDetailPage({
   const confidenceReason = isBeginnerMode
     ? analysis.whyReason
     : analysis.uncertaintyNotes;
+  const confidenceBasis = isBeginnerMode ? analysis.mainScenario : analysis.keyDriversTechnical;
+  const confidenceFundamentals = isBeginnerMode ? null : analysis.keyDriversFundamental;
+  const confidenceHasDetails = Boolean(confidenceBasis || confidenceFundamentals || analysis.risk || invalidationItems.length);
 
   const scenarioAContent = isBeginnerMode ? analysis.mainScenario : analysis.baseCase;
   const scenarioBContent = isBeginnerMode
@@ -2385,6 +2389,60 @@ export default function AnalysisDetailPage({
                     context={analysis.fundamentalContext}
                     t={t}
                   />
+                )}
+                {confidenceHasDetails && (
+                  <Dialog key={id}>
+                    <DialogTrigger asChild>
+                      <button type="button" className="mt-2 rounded text-xs font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" data-testid="confidence-reason-disclosure">
+                        {t.analysis_detail.confidence_reason_more}
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent
+                      closeLabel={t.analysis_detail.disclosure_collapse}
+                      className="grid max-h-[85dvh] w-[calc(100vw-2rem)] max-w-xl grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden rounded-xl p-4 sm:p-6"
+                      data-testid="confidence-reason-dialog"
+                    >
+                      <DialogHeader className="pr-7 text-left">
+                        <DialogTitle className="text-base leading-snug">{t.analysis_detail.confidence_reason_label}</DialogTitle>
+                        <DialogDescription>
+                          {t.analysis_detail.confidence_reason_context
+                            .replace("{instrument}", analysis.instrument)
+                            .replace("{timeframe}", analysis.timeframe)}
+                        </DialogDescription>
+                      </DialogHeader>
+                    <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1 text-sm leading-relaxed" data-testid="confidence-reason-details">
+                      {confidenceBasis && (
+                        <p><strong className="text-foreground">{isBeginnerMode
+                          ? t.analysis_detail.confidence_reason_basis
+                          : t.analysis_detail.confidence_reason_technical}:</strong>{" "}
+                          <span className="text-muted-foreground">{confidenceBasis}</span></p>
+                      )}
+                      {confidenceFundamentals && (
+                        <div>
+                          <p><strong className="text-foreground">{t.analysis_detail.confidence_reason_fundamental}:</strong>{" "}
+                            <span className="text-muted-foreground">{confidenceFundamentals}</span></p>
+                          <CitationChips
+                            citations={analysis.fundamentalCitations}
+                            context={analysis.fundamentalContext}
+                            t={t}
+                          />
+                        </div>
+                      )}
+                      {analysis.risk && (
+                        <p><strong className="text-foreground">{t.analysis_detail.confidence_reason_risk}:</strong>{" "}
+                          <span className="text-muted-foreground">{analysis.risk}</span></p>
+                      )}
+                      {invalidationItems.length > 0 && (
+                        <div>
+                          <p className="font-semibold text-foreground">{t.analysis_detail.confidence_reason_invalidation}:</p>
+                          <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
+                            {invalidationItems.slice(0, 3).map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    </DialogContent>
+                  </Dialog>
                 )}
               </div>
             </div>

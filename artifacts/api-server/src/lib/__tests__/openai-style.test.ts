@@ -13,13 +13,16 @@ afterEach(() => {
 
 async function runAndCaptureUserMessage(
   mode: "beginner" | "pro",
+  role: "user" | "system" = "user",
+  instrument = "XAU/USD",
+  timeframe = "1H",
 ): Promise<string> {
   const captured: string[] = [];
   vi.spyOn(openai.chat.completions, "create").mockImplementation((async (
     params: any,
   ) => {
       const userMsg = params.messages.find(
-        (m: { role: string }) => m.role === "user",
+        (m: { role: string }) => m.role === role,
       );
       if (userMsg) captured.push(userMsg.content as string);
       // Minimum-viable beginner-shaped response so generateAnalysis
@@ -52,7 +55,7 @@ async function runAndCaptureUserMessage(
       } as any;
   }) as any);
   try {
-    await generateAnalysis("XAU/USD", "1H", mode);
+    await generateAnalysis(instrument, timeframe, mode);
   } catch {
     // Validation may still throw for missing mode-specific fields;
     // we already captured the user message we care about.
@@ -79,4 +82,15 @@ describe("Indonesian-native style guide is injected on every analysis", () => {
       expect(msg).toMatch(/ANALOGI WAJIB JUSTIFIED/);
     },
   );
+});
+
+describe("confidence reasoning is grounded in the selected market", () => {
+  it.each(["beginner", "pro"] as const)("mode=%s requires product-specific evidence and a concise caveat", async (mode) => {
+    const system = await runAndCaptureUserMessage(mode, "system", "BRENT", "4h");
+    expect(system).toMatch(/• Dasar:.*• Batasan:/s);
+    expect(system).toMatch(/instrumen.*timeframe/i);
+    expect(system).toMatch(/jangan mengarang.*berita masa depan|jangan mengarang.*berita/i);
+    const user = await runAndCaptureUserMessage(mode, "user", "BRENT", "4h");
+    expect(user).toContain("instrumen: BRENT, timeframe: 4h");
+  });
 });
