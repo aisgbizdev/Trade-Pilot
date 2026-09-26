@@ -222,8 +222,10 @@ function normalizeStoredRecommendation(
 }
 
 function preferredAvailableSide(recommendation: AdaptivePlanRecommendation): "buy" | "sell" | "none" {
-  if (recommendation.decision.preferredSide === "sell" && recommendation.result.sell) return "sell";
-  if (recommendation.decision.preferredSide === "buy" && recommendation.result.buy) return "buy";
+  if (recommendation.decision.preferredSide === "sell" &&
+      (recommendation.result.sell || recommendation.sideEvaluations.sell.conditionalPlan)) return "sell";
+  if (recommendation.decision.preferredSide === "buy" &&
+      (recommendation.result.buy || recommendation.sideEvaluations.buy.conditionalPlan)) return "buy";
   return "none";
 }
 
@@ -579,7 +581,7 @@ function DirectionSwitch({
     <div className="space-y-1.5" data-testid="adaptive-direction-tabs">
       <div>
         <p className="text-xs font-bold text-foreground">{copy.adaptive_direction_title}</p>
-        <ExpandableExplanation inline>{copy.adaptive_direction_help}</ExpandableExplanation>
+        <ExpandableExplanation>{copy.adaptive_direction_help}</ExpandableExplanation>
       </div>
       <div className="inline-flex max-w-full rounded-md bg-muted p-1" role="group" aria-label={copy.adaptive_direction_title}>
         {([
@@ -1160,9 +1162,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       null
     : null;
   const reviewSides = recommendation && !recommendation.result.valid
-    ? activeSide === "none"
-      ? (["buy", "sell"] as const)
-      : ([activeSide] as ("buy" | "sell")[])
+    ? activeSide === "none" ? [] : [activeSide]
     : [];
   const snapshotForSide = (side: "buy" | "sell"): AdaptiveSnapshotBudget | null => {
     if (!recommendation) return null;
@@ -1195,12 +1195,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         recommendation.decision.preferredSide === side)
     : [];
   const directionControl = recommendation &&
-    (recommendation.result.buy || recommendation.result.sell ||
+    (!recommendation.result.valid || recommendation.result.buy || recommendation.result.sell ||
       recommendation.sideEvaluations.buy.conditionalPlan || recommendation.sideEvaluations.sell.conditionalPlan) ? (
     <DirectionSwitch
       activeSide={activeSide}
-      hasBuy={recommendation.result.buy !== null || recommendation.sideEvaluations.buy.conditionalPlan !== null}
-      hasSell={recommendation.result.sell !== null || recommendation.sideEvaluations.sell.conditionalPlan !== null}
+      hasBuy={!recommendation.result.valid || recommendation.result.buy !== null || recommendation.sideEvaluations.buy.conditionalPlan !== null}
+      hasSell={!recommendation.result.valid || recommendation.result.sell !== null || recommendation.sideEvaluations.sell.conditionalPlan !== null}
       copy={copy}
       onChange={(side) => {
         setActiveSide(side);
@@ -1500,11 +1500,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 {copy.adaptive_volatility_unavailable_short}
               </p>
             )}
-            {showAlternative && recommendation.candleAlternative.status !== "available" && (
-              <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300" role="status">
-                {financialOnlyBlock ? copy.adaptive_compare_financial_no_alternative : copy.adaptive_alternative_unavailable_short}
-              </p>
-            )}
           </div>
         )}
         {recommendation && activeInsight === "reasoning" && (
@@ -1664,15 +1659,16 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         )}
         {recommendation && !recommendation.result.valid && <div className="border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 space-y-2" data-testid="adaptive-plan-invalid">
           <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" />{hasConditionalScenarios ? copy.adaptive_conditional_overview_title : copy.adaptive_invalid_title}</p>
-          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">{hasConditionalScenarios ? copy.adaptive_conditional_overview_help : copy.adaptive_invalid_description}</p>
+          <ExpandableExplanation className="text-amber-800 dark:text-amber-300" contentClassName="text-amber-800 dark:text-amber-300">{hasConditionalScenarios ? copy.adaptive_conditional_overview_help : copy.adaptive_invalid_description}</ExpandableExplanation>
         </div>}
          {recommendation && !recommendation.result.valid && (
            <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
              <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
-             <ExpandableExplanation inline testId="adaptive-scenarios-review-explanation">
+              <ExpandableExplanation testId="adaptive-scenarios-review-explanation">
                {copy.adaptive_scenarios_review_help}
              </ExpandableExplanation>
               {directionControl}
+               {activeSide === "none" && <p className="text-[11px] text-muted-foreground" data-testid="adaptive-choose-direction">{copy.adaptive_choose_direction}</p>}
                  {reviewSides.map((side) => {
                    const plan = recommendation.result[side] ?? recommendation.sideEvaluations[side].conditionalPlan;
                    const diagnostic = recommendation.sideEvaluations[side].diagnostic;
