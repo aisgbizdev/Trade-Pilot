@@ -9,7 +9,8 @@ import {
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { logger } from "./logger";
 import { createNotification } from "./create-notification";
-import { getLiveQuotes } from "./live-prices";
+import { getLiveQuotes, LIVE_FEED_SPOT_INSTRUMENTS } from "./live-prices";
+import { isCryptoInstrument } from "./crypto-instruments";
 import { parsePlanLevel } from "./outcomes";
 
 export type AlertLevel = "entry" | "sl" | "tp1" | "tp2";
@@ -114,10 +115,9 @@ export async function armAlertsForAnalysis(analysisId: number): Promise<number> 
   const candidates = extractLevels(sidePlan);
   if (candidates.length === 0) return 0;
 
-  // We need the *current* spot price to know which side of each level
-  // we're firing from. If live prices are unavailable (upstream down or
-  // instrument not in the SYMBOL_MAP), we can't arm — return 0 so the
-  // caller can surface that to the user.
+  // We need the current spot price to know which side of each level
+  // we're firing from. A missing quote for a mapped instrument is a
+  // temporary feed failure, not proof that the instrument is unsupported.
   let spot: number | null = null;
   try {
     const quotes = await getLiveQuotes();
@@ -128,8 +128,14 @@ export async function armAlertsForAnalysis(analysisId: number): Promise<number> 
     }
   } catch (err) {
     logger.warn({ err, instrument: row.instrument }, "Live-price lookup failed during arm");
+    throw err;
   }
-  if (spot == null) return 0;
+  if (spot == null) {
+    if (LIVE_FEED_SPOT_INSTRUMENTS.has(row.instrument) || row.instrument === "HK50" || isCryptoInstrument(row.instrument)) {
+      throw new Error("Live price unavailable for mapped instrument");
+    }
+    return 0;
+  }
 
   // Cancel any prior rows for this analysis that have NOT yet triggered
   // (e.g. user toggled off and back on) so re-arming gives a clean

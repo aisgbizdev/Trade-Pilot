@@ -1979,6 +1979,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Live price service or quote temporarily unavailable; retry later
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       operationId: cancelAnalysisAlerts
       tags: [analyses]

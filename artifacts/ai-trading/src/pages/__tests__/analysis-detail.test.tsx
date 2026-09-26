@@ -234,6 +234,71 @@ function feedbackHandler(): FetchHandler {
   };
 }
 
+function alertsHandler(pushEnabled: boolean, armStatus = 201): FetchHandler {
+  return (url, init) => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (url.includes("/api/push/subscription-status")) return jsonResponse({ subscribed: pushEnabled });
+    if (new RegExp(`/api/analyses/${ANALYSIS_ID}/alerts(?:\\?|$)`).test(url)) {
+      if (method === "POST") return jsonResponse(armStatus === 201
+        ? { enabled: true, armedCount: 1, levels: [] }
+        : { error: "Alert failed" }, armStatus);
+      if (method === "GET") return jsonResponse({ enabled: false, armedCount: 0, levels: [] });
+    }
+    return null;
+  };
+}
+
+describe("AnalysisDetailPage: price alert guidance", () => {
+  it("routes inactive push to notification settings with an analysis return link, in both languages", async () => {
+    const mock = installFetchMock([getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }), alertsHandler(false)], { strict: false });
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const card = await screen.findByTestId("card-price-alerts");
+    await waitFor(() => expect(mock.calls.some((c) => c.url.includes("/api/push/subscription-status"))).toBe(true));
+    fireEvent.click(within(card).getByTestId("switch-price-alerts"));
+    expect(within(card).getByRole("alert")).toHaveTextContent(en.analysis_detail.alerts_no_push);
+    fireEvent.click(screen.getByTestId("button-language-toggle"));
+    expect(within(card).getByRole("alert")).toHaveTextContent(id.analysis_detail.alerts_no_push);
+    fireEvent.click(within(card).getByTestId("button-enable-alert-notifications"));
+    expect(window.location.pathname + window.location.search + window.location.hash)
+      .toBe(`/notifications?returnTo=%2Fanalyses%2F${ANALYSIS_ID}#settings`);
+    expect(mock.calls.filter((c) => c.method === "POST" && c.url.endsWith("/alerts"))).toHaveLength(0);
+  });
+
+  it.each([422, 503, 500])("keeps the server toggle off and separates HTTP %i from push settings", async (status) => {
+    const mock = installFetchMock([getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }), alertsHandler(true, status)], { strict: false });
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const card = await screen.findByTestId("card-price-alerts");
+    await waitFor(() => expect(mock.calls.some((c) => c.url.includes("/api/push/subscription-status"))).toBe(true));
+    fireEvent.click(within(card).getByTestId("switch-price-alerts"));
+    const error = await within(card).findByRole("alert");
+    expect(error).toHaveTextContent(status === 422 ? en.analysis_detail.alerts_arm_error : en.analysis_detail.alerts_retry_error);
+    expect(within(card).queryByTestId("button-enable-alert-notifications")).not.toBeInTheDocument();
+    expect(within(card).getByTestId("switch-price-alerts")).toHaveAttribute("data-state", "unchecked");
+    fireEvent.click(screen.getByTestId("button-language-toggle"));
+    expect(error).toHaveTextContent(status === 422 ? id.analysis_detail.alerts_arm_error : id.analysis_detail.alerts_retry_error);
+    fireEvent.click(screen.getByTestId("switch-price-alerts"));
+    await waitFor(() => expect(mock.calls.filter((c) => c.method === "POST" && c.url.endsWith("/alerts"))).toHaveLength(2));
+  });
+
+  it("treats a failed network request as retryable rather than an unsupported instrument", async () => {
+    const handler: FetchHandler = (url, init) =>
+      url.endsWith(`/api/analyses/${ANALYSIS_ID}/alerts`) && init?.method === "POST"
+        ? Promise.reject(new TypeError("Network unavailable"))
+        : null;
+    installFetchMock([getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }), handler, alertsHandler(true)], { strict: false });
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const card = await screen.findByTestId("card-price-alerts");
+    await waitFor(() => expect(within(card).getByTestId("switch-price-alerts")).not.toBeDisabled());
+    fireEvent.click(within(card).getByTestId("switch-price-alerts"));
+    expect(await within(card).findByRole("alert")).toHaveTextContent(en.analysis_detail.alerts_retry_error);
+    expect(within(card).queryByTestId("button-enable-alert-notifications")).not.toBeInTheDocument();
+    expect(within(card).getByTestId("switch-price-alerts")).toHaveAttribute("data-state", "unchecked");
+  });
+});
+
 function createAnalysisHandler(
   respond: (
     body: Record<string, unknown>,

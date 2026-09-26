@@ -1430,7 +1430,14 @@ router.post("/analyses/:id/alerts", requireAuth, async (req: AuthRequest, res) =
     res.status(404).json({ error: "Analisis tidak ditemukan" });
     return;
   }
-  const armed = await armAlertsForAnalysis(id);
+  let armed: number;
+  try {
+    armed = await armAlertsForAnalysis(id);
+  } catch (err) {
+    req.log.warn({ err, analysisId: id }, "Price alert live feed unavailable");
+    res.status(503).json({ error: "Layanan harga live sedang tidak tersedia. Coba lagi nanti." });
+    return;
+  }
   if (armed === 0) {
     // Most common cause: instrument isn't covered by the live-quotes
     // upstream (e.g. NIKKEI variants we don't map). Surface a 422 so

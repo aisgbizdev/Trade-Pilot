@@ -1246,10 +1246,12 @@ function AnalysisAlertsCard({
   t: T;
 }) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const trackEvent = useTrackEvent();
   const queryClient = useQueryClient();
   const statusQuery = useGetAnalysisAlerts(analysisId);
   const pushStatusQuery = useGetPushSubscriptionStatus();
+  const [alertError, setAlertError] = useState<"no_push" | "unavailable" | "retry" | null>(null);
   const armMutation = useArmAnalysisAlerts();
   const cancelMutation = useCancelAnalysisAlerts();
 
@@ -1265,22 +1267,27 @@ function AnalysisAlertsCard({
   const handleToggle = (checked: boolean) => {
     if (busy) return;
     if (checked) {
-      if (!hasPush) {
-        toast({ title: t.analysis_detail.alerts_no_push, variant: "destructive" });
+      if (pushStatusQuery.isPending || pushStatusQuery.isError) {
+        setAlertError("retry");
         return;
       }
+      if (!hasPush) {
+        setAlertError("no_push");
+        return;
+      }
+      setAlertError(null);
       armMutation.mutate(
         { id: analysisId },
         {
           onSuccess: () => {
+            setAlertError(null);
             trackEvent("alert_armed", { analysisId });
             invalidate();
           },
-          onError: () =>
-            toast({
-              title: t.analysis_detail.alerts_arm_error,
-              variant: "destructive",
-            }),
+          onError: (error) => {
+            setAlertError((error as { status?: number }).status === 422 ? "unavailable" : "retry");
+            invalidate();
+          },
         },
       );
     } else {
@@ -1361,6 +1368,27 @@ function AnalysisAlertsCard({
           aria-label={enabled ? t.analysis_detail.alerts_on : t.analysis_detail.alerts_off}
         />
       </div>
+      {alertError && (
+        <div className="text-xs text-destructive space-y-2" role="alert" data-testid="price-alerts-error">
+          <p>
+            {alertError === "no_push"
+              ? t.analysis_detail.alerts_no_push
+              : alertError === "unavailable"
+                ? t.analysis_detail.alerts_arm_error
+                : t.analysis_detail.alerts_retry_error}
+          </p>
+          {alertError === "no_push" && (
+            <Button
+              size="sm"
+              variant="outline"
+              data-testid="button-enable-alert-notifications"
+              onClick={() => setLocation(`/notifications?returnTo=${encodeURIComponent(`/analyses/${analysisId}`)}#settings`)}
+            >
+              {t.analysis_detail.alerts_enable_notifications}
+            </Button>
+          )}
+        </div>
+      )}
       <div className="flex items-center gap-2 flex-wrap" data-testid="price-alerts-summary">
         <span
           className={cn(

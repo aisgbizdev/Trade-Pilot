@@ -59,6 +59,8 @@ export default function NotificationsPage() {
   const { canInstall, prompt: triggerInstall } = useInstallPrompt();
   const { standalone } = useStandalone();
   const showInstallCta = canInstall && !standalone;
+  const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+  const returnAnalysisId = returnTo?.match(/^\/analyses\/([1-9]\d*)$/)?.[1];
   const [activeTab, setActiveTab] = useState<"inbox" | "settings">(() =>
     typeof window !== "undefined" && window.location.hash === "#settings"
       ? "settings"
@@ -238,6 +240,15 @@ export default function NotificationsPage() {
   return (
     <Layout>
       <div className="px-4 py-5 md:max-w-3xl md:mx-auto lg:max-w-none">
+        {returnAnalysisId && (
+          <Link
+            href={`/analyses/${returnAnalysisId}`}
+            className="inline-flex items-center text-sm text-primary mb-4"
+            data-testid="link-return-to-analysis"
+          >
+            {t.notifications.return_to_analysis}
+          </Link>
+        )}
         <div className="flex items-center justify-between mb-5">
           <div>
             <h1 className="text-xl font-bold text-foreground">{t.notifications.title}</h1>
