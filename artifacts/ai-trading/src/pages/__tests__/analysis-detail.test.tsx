@@ -1018,6 +1018,11 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const savedMarketContext = screen.getByTestId("card-market-context");
     const analysisTime = screen.getByTestId("analysis-created-at");
     const priceAlerts = screen.getByTestId("card-price-alerts");
+    const timeframeOptions = screen.getByTestId("quick-timeframe-options");
+    expect(screen.getByTestId("card-quick-timeframe")).toHaveTextContent(/Choosing another timeframe immediately starts a new analysis/i);
+    expect(within(timeframeOptions).getAllByRole("button")).toHaveLength(8);
+    expect(timeframeOptions).not.toContainElement(screen.getByTestId("button-detail-risk-map"));
+    expect(screen.getByTestId("quick-timeframe-tools")).toContainElement(screen.getByTestId("button-detail-risk-map"));
     expect(analysisTime).toHaveTextContent(/Analyzed/i);
     expect(analysisTime.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(savedMarketContext.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

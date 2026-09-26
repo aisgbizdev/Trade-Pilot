@@ -1424,7 +1424,7 @@ export const id: Translations = {
     copy_levels: "Salin level",
     copy_levels_copied: "Tersalin!",
     quick_timeframe_title: "Ganti Timeframe",
-    quick_timeframe_hint: "Instrumen sama, timeframe berbeda — tap salah satu untuk langsung dianalisis.",
+    quick_timeframe_hint: "Memilih timeframe lain langsung memulai analisis baru untuk instrumen ini.",
     quick_timeframe_btn: "Analisis timeframe ini",
     quick_timeframe_retry: "Coba lagi",
     quick_timeframe_scheduled: "Menyiapkan analisis timeframe baru…",

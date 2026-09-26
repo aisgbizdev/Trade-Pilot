@@ -1422,7 +1422,7 @@ export const en = {
     copy_levels: "Copy levels",
     copy_levels_copied: "Copied!",
     quick_timeframe_title: "Change Timeframe",
-    quick_timeframe_hint: "Same instrument, different timeframe — tap one to analyze it automatically.",
+    quick_timeframe_hint: "Choosing another timeframe immediately starts a new analysis for this instrument.",
     quick_timeframe_btn: "Analyze this timeframe",
     quick_timeframe_retry: "Try again",
     quick_timeframe_scheduled: "Preparing the new timeframe analysis…",
