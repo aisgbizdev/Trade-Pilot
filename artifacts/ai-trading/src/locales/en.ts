@@ -352,6 +352,7 @@ export const en = {
     current_price: "Current price",
     timeframe_label: "Timeframe",
     submit_btn: "Analyze",
+    loading_btn: "Processing",
     disclaimer: "This analysis is for decision support only, not financial advice or a trading signal.",
     risk_disclaimer_short: "Not investment advice. Trading involves risk.",
     loading: [
@@ -1274,7 +1275,6 @@ export const en = {
     adaptive_invalid_description: "No approved side currently has a safe plan. Review each side's status and minimum-lot figures below; diagnostic numbers are not valid entry plans. Change financial inputs only when independently affordable and acceptable, or wait/skip.",
     adaptive_scenarios_review_title: "Review a Buy or Sell scenario",
     adaptive_scenarios_review_help: "These calculations explain the blocked or wait state; they are not an instruction to enter. Use the reasons above and make the final decision yourself.",
-    adaptive_choose_direction: "Choose Buy or Sell to view one scenario.",
     adaptive_valid: "Plan ready to review",
     adaptive_side_ready: "{side} is viable under the selected account tier and safety limits.",
     adaptive_side_blocked: "{side} is not safe at the broker minimum lot.",

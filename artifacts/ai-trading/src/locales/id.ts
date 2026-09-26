@@ -354,6 +354,7 @@ export const id: Translations = {
     current_price: "Harga saat ini",
     timeframe_label: "Timeframe",
     submit_btn: "Analisis",
+    loading_btn: "Memproses",
     disclaimer: "Hasil analisis ini hanya untuk mendukung keputusan, bukan saran keuangan atau sinyal trading.",
     risk_disclaimer_short: "Bukan rekomendasi investasi. Trading mengandung risiko.",
     loading: [
@@ -1276,7 +1277,6 @@ export const id: Translations = {
     adaptive_invalid_description: "Belum ada sisi yang memiliki plan aman dan disetujui. Periksa status dan angka lot minimum tiap sisi di bawah; angka diagnostik bukan plan entry yang valid. Ubah input finansial hanya jika terjangkau dan dapat diterima secara mandiri, atau tunggu/skip.",
     adaptive_scenarios_review_title: "Cek skenario Buy atau Sell",
     adaptive_scenarios_review_help: "Status di bawah menunjukkan apakah setup masih menunggu atau terblokir, bukan instruksi Entry. Keputusan akhir tetap di tangan kamu.",
-    adaptive_choose_direction: "Pilih Buy atau Sell untuk melihat satu skenario.",
     adaptive_valid: "Plan siap dicek",
     adaptive_side_ready: "Skenario {side} layak berdasarkan tier akun dan batas keselamatan yang dipilih.",
     adaptive_side_blocked: "{side} belum aman pada lot minimum broker.",

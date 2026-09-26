@@ -1259,18 +1259,29 @@ export default function AnalyzePage() {
             {resultAnalysisId == null && (
               <div className="mt-3">
                 <Button
-                  className="h-12 w-full px-8 text-base font-bold"
+                  className="min-h-12 w-full min-w-0 px-3 text-base font-bold"
                   onClick={() => handleSubmit()}
                   disabled={isLoading || !finalInstrument || !selectedTimeframe}
                   data-testid="button-submit-analysis"
                 >
                   {isLoading ? (
-                    <div className="flex items-center gap-3">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
-                    </div>
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                      <span className="min-w-0 text-sm whitespace-normal text-center leading-tight">{t.analyze.loading_btn}</span>
+                    </>
                   ) : t.analyze.submit_btn}
                 </Button>
+                {isLoading && (
+                  <p
+                    className="mt-2 max-w-full text-center text-xs leading-relaxed text-muted-foreground break-words"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    data-testid="analysis-loading-status"
+                  >
+                    {t.analyze.loading[loadingMsgIndex]}
+                  </p>
+                )}
               </div>
             )}
           </div>

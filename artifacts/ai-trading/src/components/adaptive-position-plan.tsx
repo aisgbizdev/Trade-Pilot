@@ -221,12 +221,20 @@ function normalizeStoredRecommendation(
   };
 }
 
-function preferredAvailableSide(recommendation: AdaptivePlanRecommendation): "buy" | "sell" | "none" {
-  if (recommendation.decision.preferredSide === "sell" &&
-      (recommendation.result.sell || recommendation.sideEvaluations.sell.conditionalPlan)) return "sell";
-  if (recommendation.decision.preferredSide === "buy" &&
-      (recommendation.result.buy || recommendation.sideEvaluations.buy.conditionalPlan)) return "buy";
-  return "none";
+function preferredAvailableSide(recommendation: AdaptivePlanRecommendation, tradePlan: TradePlan): "buy" | "sell" {
+  const available = (side: "buy" | "sell") =>
+    !recommendation.result.valid ||
+    recommendation.result[side] !== null ||
+    recommendation.sideEvaluations[side].conditionalPlan !== null;
+  const decisionSide = recommendation.decision.preferredSide;
+  if ((decisionSide === "buy" || decisionSide === "sell") && available(decisionSide)) return decisionSide;
+  // The saved analysis is the next best guide when Adaptive's guardrails say
+  // wait. A neutral analysis has no recommended entry: show the first
+  // inspectable side, never both, while retaining the conditional warning.
+  const analysisSide = tradePlan.preferredSide;
+  if ((analysisSide === "buy" || analysisSide === "sell") && available(analysisSide)) return analysisSide;
+  if (available("buy")) return "buy";
+  return "sell";
 }
 
 function numberValue(value: string): number | null {
@@ -1061,7 +1069,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           context.validUntil != null && new Date(context.validUntil).getTime() > Date.now()) {
         const restored = normalizeStoredRecommendation(parsed.recommendation);
         setRecommendation(restored);
-        setActiveSide(preferredAvailableSide(restored));
+        setActiveSide(preferredAvailableSide(restored, tradePlan));
       }
     } catch {
       // A malformed local draft should not block Standard Analysis.
@@ -1116,7 +1124,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       });
     }
     setRecommendation(next);
-    setActiveSide(preferredAvailableSide(next));
+    setActiveSide(preferredAvailableSide(next, tradePlan));
     setActiveInsight(null);
     localStorage.setItem(storageKey(analysisId), JSON.stringify({
       fingerprint, form, recommendation: next, sourceFetchedAt: chartCandidateState.source.sourceFetchedAt,
@@ -1668,7 +1676,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                {copy.adaptive_scenarios_review_help}
              </ExpandableExplanation>
               {directionControl}
-               {activeSide === "none" && <p className="text-[11px] text-muted-foreground" data-testid="adaptive-choose-direction">{copy.adaptive_choose_direction}</p>}
                  {reviewSides.map((side) => {
                    const plan = recommendation.result[side] ?? recommendation.sideEvaluations[side].conditionalPlan;
                    const diagnostic = recommendation.sideEvaluations[side].diagnostic;

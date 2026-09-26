@@ -1418,8 +1418,9 @@ function FundamentalContextCard({
   isRefreshing: boolean;
   refreshState: { refreshedAt: string; drift: FundamentalDrift } | null;
 }) {
-  const [newsOpen, setNewsOpen] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [openSection, setOpenSection] = useState<"news" | "calendar" | null>(null);
+  const newsOpen = openSection === "news";
+  const calendarOpen = openSection === "calendar";
   // The saved snapshot is exactly what the AI saw; do not reorder it in the
   // audit view or a citation could point to an item no longer displayed.
   const news = (ctx.newsItems ?? []).slice(0, 5);
@@ -1480,18 +1481,35 @@ function FundamentalContextCard({
         </p>
       )}
 
-      <section className="min-w-0" data-testid="fundamental-news">
-          <button type="button" data-testid="fundamental-news-toggle" aria-expanded={newsOpen}
-            aria-controls="fundamental-news-list" onClick={() => setNewsOpen(!newsOpen)}
-            className="flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <Newspaper className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span className="min-w-0 flex-1 text-xs font-semibold text-foreground">
-              {t.analysis_detail.fundamental_news_title}
-            </span>
-            <span className="text-xs text-muted-foreground">({news.length})</span>
-            {newsOpen ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
-          </button>
-          {newsOpen && <div id="fundamental-news-list" className="px-2 pb-1 pt-3" data-testid="fundamental-news-list">
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label={t.analysis_detail.fundamental_context_title} data-testid="fundamental-section-buttons">
+        <button type="button" id="fundamental-news-toggle-button" data-testid="fundamental-news-toggle"
+          aria-expanded={newsOpen} aria-controls="fundamental-news-list"
+          onClick={() => setOpenSection(newsOpen ? null : "news")}
+          className={cn("flex min-h-12 min-w-0 items-center gap-1.5 rounded-md border px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            newsOpen ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50")}>
+          <Newspaper className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 text-xs font-semibold leading-tight text-foreground">
+            {t.analysis_detail.fundamental_news_title}
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground">({news.length})</span>
+          {newsOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+        </button>
+        <button type="button" id="fundamental-calendar-toggle-button" data-testid="fundamental-calendar-toggle"
+          aria-expanded={calendarOpen} aria-controls="fundamental-calendar-list"
+          onClick={() => setOpenSection(calendarOpen ? null : "calendar")}
+          className={cn("flex min-h-12 min-w-0 items-center gap-1.5 rounded-md border px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            calendarOpen ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50")}>
+          <CalendarClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 text-xs font-semibold leading-tight text-foreground">
+            {t.analysis_detail.fundamental_calendar_title}
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground">({events.length})</span>
+          {calendarOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+        </button>
+      </div>
+      {newsOpen && (
+        <section id="fundamental-news-list" role="region" aria-labelledby="fundamental-news-toggle-button"
+          className="min-w-0 px-2 pb-1" data-testid="fundamental-news-list">
             {news.length === 0 ? <p className="text-xs text-muted-foreground">{t.analysis_detail.fundamental_news_empty}</p> :
             <ul className="space-y-2">
               {news.map((n) => (
@@ -1505,21 +1523,11 @@ function FundamentalContextCard({
               ))}
             </ul>
             }
-          </div>}
         </section>
-
-      <section className="min-w-0" data-testid="fundamental-calendar">
-          <button type="button" data-testid="fundamental-calendar-toggle" aria-expanded={calendarOpen}
-            aria-controls="fundamental-calendar-list" onClick={() => setCalendarOpen(!calendarOpen)}
-            className="flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <CalendarClock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span className="min-w-0 flex-1 text-xs font-semibold text-foreground">
-              {t.analysis_detail.fundamental_calendar_title}
-            </span>
-            <span className="text-xs text-muted-foreground">({events.length})</span>
-            {calendarOpen ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
-          </button>
-          {calendarOpen && <div id="fundamental-calendar-list" className="px-2 pb-1 pt-3" data-testid="fundamental-calendar-list">
+      )}
+      {calendarOpen && (
+        <section id="fundamental-calendar-list" role="region" aria-labelledby="fundamental-calendar-toggle-button"
+          className="min-w-0 px-2 pb-1" data-testid="fundamental-calendar-list">
             {events.length === 0 ? <p className="text-xs text-muted-foreground">{t.analysis_detail.fundamental_calendar_empty}</p> :
             <ul className="space-y-2">
               {events.map((e, i) => (
@@ -1532,8 +1540,8 @@ function FundamentalContextCard({
               ))}
             </ul>
             }
-          </div>}
         </section>
+      )}
     </Card>
   );
 }

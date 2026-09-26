@@ -1098,8 +1098,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(reviewExplanation.querySelector("summary")).not.toBeNull();
     expect(reviewExplanation).not.toHaveAttribute("open");
     expect(reviewExplanation).toHaveTextContent(/not an instruction to enter/i);
-    expect(screen.getByTestId("adaptive-choose-direction")).toBeVisible();
-    expect(screen.queryByTestId("adaptive-review-side-buy")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-direction-buy")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("adaptive-review-side-buy")).toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-review-side-sell")).not.toBeInTheDocument();
     const alternativeButton = screen.getByTestId("adaptive-insight-button-alternative");
     expect(alternativeButton).toHaveAttribute("aria-expanded", "false");
@@ -1110,7 +1110,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("adaptive-alternative")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-side-status-buy")).toHaveTextContent(/BUY/i);
     expect(screen.queryByTestId("adaptive-side-status-sell")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("adaptive-direction-buy"));
     expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Conditional scenario/i);
     expect(screen.queryByTestId("adaptive-review-side-sell")).not.toBeInTheDocument();
     for (const side of ["buy", "sell"] as const) {
@@ -1131,15 +1130,42 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     view.unmount();
     const restored = makeWrapper();
     render(<restored.Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></restored.Wrapper>);
-    await waitFor(() => expect(screen.getByTestId("adaptive-choose-direction")).toBeVisible());
-    expect(screen.queryByTestId("adaptive-plan-snapshot")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("adaptive-direction-buy"));
+    await waitFor(() => expect(screen.getByTestId("adaptive-review-side-buy")).toBeInTheDocument());
+    expect(screen.getAllByTestId("adaptive-plan-snapshot")).toHaveLength(1);
+    expect(screen.getByTestId("adaptive-direction-buy")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("adaptive-review-side-buy")).toHaveTextContent(/Reference numbers only/i);
     expect(screen.queryByTestId("adaptive-review-side-sell")).not.toBeInTheDocument();
     expect(screen.queryByTestId("button-copy-adaptive-plan")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("adaptive-direction-sell"));
     expect(screen.getByTestId("adaptive-review-side-sell")).toBeInTheDocument();
     expect(screen.queryByTestId("adaptive-review-side-buy")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { preferredSide: "sell", initialSide: "sell" },
+    { preferredSide: "wait", initialSide: "buy" },
+  ])("defaults to $initialSide for a neutral analysis with saved $preferredSide preference", async ({ preferredSide, initialSide }) => {
+    installFetchMock([
+      getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          tradingBias: "neutral",
+          marketCondition: "ranging",
+          tradePlan: { ...TRADE_PLAN, preferredSide },
+        },
+      }),
+      feedbackHandler(), standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "20000" } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "2000" } });
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(screen.getByTestId(`adaptive-direction-${initialSide}`)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(`adaptive-review-side-${initialSide}`)).toHaveTextContent(/Conditional scenario/i);
+    expect(screen.queryByTestId(`adaptive-review-side-${initialSide === "buy" ? "sell" : "buy"}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/Entry direction is unconfirmed/i);
   });
 
   it("does not invent figures for an uncalculable side alongside a conditional plan", async () => {
@@ -1940,6 +1966,9 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(news).toHaveAttribute("type", "button");
     expect(news).toHaveAccessibleName(`${newsTitle} (0)`);
     expect(calendar).toHaveAccessibleName(`${calendarTitle} (1)`);
+    expect(screen.getByTestId("fundamental-section-buttons")).toHaveClass("grid-cols-2");
+    expect(screen.queryByTestId("fundamental-news-list")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("fundamental-calendar-list")).not.toBeInTheDocument();
     fireEvent.click(news);
     expect(screen.getByTestId("fundamental-news-list")).toHaveTextContent(
       lang === "id" ? "Belum ada berita relevan" : "No relevant news",
@@ -1947,8 +1976,10 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     expect(calendar).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(calendar);
     expect(screen.getByTestId("fundamental-calendar-list")).toHaveTextContent("FOMC rate decision");
-    fireEvent.click(news);
     expect(screen.queryByTestId("fundamental-news-list")).not.toBeInTheDocument();
+    expect(news).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(calendar);
+    expect(screen.queryByTestId("fundamental-calendar-list")).not.toBeInTheDocument();
   });
 
   it("renders natural trader terminology for Indonesian calendar and trade-plan copy", async () => {
@@ -1997,8 +2028,9 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     const card = await screen.findByTestId("card-fundamental-context");
     expect(card).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("fundamental-news-toggle"));
-    fireEvent.click(screen.getByTestId("fundamental-calendar-toggle"));
     expect(card.textContent).toMatch(/Gold rallies as Fed signals pause/);
+    fireEvent.click(screen.getByTestId("fundamental-calendar-toggle"));
+    expect(card.textContent).not.toMatch(/Gold rallies as Fed signals pause/);
     expect(card.textContent).toMatch(/FOMC rate decision/);
     expect(card).toHaveTextContent(/Forecast/);
     expect(card).toHaveTextContent(/Actual/);
@@ -2055,8 +2087,6 @@ describe("AnalysisDetailPage: fundamental context card", () => {
     fireEvent.click(newsToggle);
     expect(newsToggle).toHaveAttribute("aria-expanded", "true");
     expect(calendarToggle).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(calendarToggle);
-
     // News link rows are tagged `fundamental-news-link` (the anchor).
     const links = card.querySelectorAll("[data-testid='fundamental-news-link']");
     expect(links.length).toBe(5);
@@ -2068,6 +2098,8 @@ describe("AnalysisDetailPage: fundamental context card", () => {
       expect(a.getAttribute("rel") ?? "").toMatch(/noopener/);
       expect(a.getAttribute("rel") ?? "").toMatch(/noreferrer/);
     });
+    fireEvent.click(calendarToggle);
+    expect(screen.queryByTestId("fundamental-news-list")).not.toBeInTheDocument();
 
     // Calendar list under the card should render exactly 5 of the 7
     // events (top-N cap) — count the impact badges as a stand-in for

@@ -175,6 +175,34 @@ afterEach(() => {
 });
 
 describe("AnalyzePage: happy-path render", () => {
+  it("keeps long progress messages below the narrow submit button", async () => {
+    let finishAnalysis!: (response: Response) => void;
+    const pendingAnalysis = new Promise<Response>((resolve) => { finishAnalysis = resolve; });
+    installFetchMock([
+      (url, init) => (init?.method ?? "GET").toUpperCase() === "POST" &&
+        /\/api\/analyses(\?|$)/.test(url) ? pendingAnalysis : null,
+      ...pageHandlers({}),
+    ], { strict: false });
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalyzePage /></Wrapper>);
+
+    const button = await screen.findByTestId("button-submit-analysis");
+    fireEvent.click(button);
+    const progress = await screen.findByTestId("analysis-loading-status");
+    expect(progress).toHaveAttribute("role", "status");
+    expect(progress).toHaveTextContent(/Analyzing market conditions/i);
+    expect(button).toHaveTextContent("Processing");
+    expect(button).not.toHaveTextContent(/Analyzing market conditions/i);
+
+    await act(async () => {
+      finishAnalysis(jsonResponse({
+        id: 42, instrument: "XAU/USD", timeframe: "1h",
+        createdAt: new Date().toISOString(), tradePlan: null,
+      }));
+    });
+    expect(screen.queryByTestId("analysis-loading-status")).not.toBeInTheDocument();
+  });
+
   it(
     "renders XAU/USD and its chart by default with the analysis action ready",
     async () => {
