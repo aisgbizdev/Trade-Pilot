@@ -1153,7 +1153,7 @@ export const en = {
     adaptive_layer_cumulative_profit_tp1: "Cumulative profit to TP1",
     adaptive_layer_cumulative_profit_tp2: "Cumulative profit to TP2",
     adaptive_more_calculation_details: "More calculation details",
-    adaptive_day_trade_only: "Day trade only: margin, lot size, and Stop Loss risk calculations use day/initial margin. Overnight holding and rollover fees are excluded.",
+    adaptive_day_trade_only: "This calculation applies only to intraday (day trade) positions; overnight positions are not covered.",
     adaptive_margin_rule: "The standard rule uses {amount} margin for each 1 lot.",
     adaptive_account_title: "Fixed account rules profile",
     adaptive_account_micro: "Micro",

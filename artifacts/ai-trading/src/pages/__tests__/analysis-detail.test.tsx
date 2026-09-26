@@ -970,7 +970,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       expect(copyButton).toHaveClass("absolute", "right-0");
       expect(reason.querySelector("summary")).toHaveTextContent(en.analysis_detail.trade_plan_rationale);
     }
-    expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(/Day trade only/i);
+    expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(en.analysis_detail.adaptive_day_trade_only);
     expect(screen.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("button-adaptive-account-micro")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-pressed", "false");

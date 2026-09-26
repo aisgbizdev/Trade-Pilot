@@ -1155,7 +1155,7 @@ export const id: Translations = {
     adaptive_layer_cumulative_profit_tp1: "Profit kumulatif ke TP1",
     adaptive_layer_cumulative_profit_tp2: "Profit kumulatif ke TP2",
     adaptive_more_calculation_details: "Detail perhitungan lainnya",
-    adaptive_day_trade_only: "Khusus day trade: perhitungan margin, lot, dan risiko Stop Loss memakai margin day/awal. Posisi overnight dan biaya menginap tidak dihitung.",
+    adaptive_day_trade_only: "Perhitungan ini khusus untuk posisi intraday (day trade); posisi overnight tidak tercakup.",
     adaptive_margin_rule: "Aturan standar memakai margin {amount} untuk setiap 1 lot.",
     adaptive_account_title: "Tipe akun",
     adaptive_account_micro: "Micro",
