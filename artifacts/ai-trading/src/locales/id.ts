@@ -1123,7 +1123,7 @@ export const id: Translations = {
     adaptive_position_singular: "posisi",
     adaptive_additional_short: "Tambahan",
     adaptive_if_all_filled: "Jika semua entry terisi",
-    adaptive_position_details: "Lihat rincian posisi",
+    adaptive_position_details: "Lihat rincian plan",
     adaptive_additional_reminder: "Posisi tambahan manual: cek chart dan setup sebelum tiap penambahan.",
     adaptive_next_funds: "Posisi {position} · {price} · {lot} lot: perkiraan perlu tambahan dana bebas broker {amount} untuk ditinjau.",
     adaptive_next_funds_note: "Belum masuk plan saat ini. Jika dana itu benar-benar tersedia di broker, perbarui dana bebas di atas dan hitung ulang; cek lagi chart dan risiko. Ini bukan top up kredit analisis TradePilot.",

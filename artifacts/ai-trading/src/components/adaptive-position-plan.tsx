@@ -764,31 +764,6 @@ function PlanSide({
           </div>
         </div>
       )}
-      {summary && first && (
-        <details className="rounded-md border border-border/70 bg-background p-3" data-testid={`adaptive-fill-scenarios-${plan.side}`}>
-          <summary className="cursor-pointer text-xs font-bold">{copy.adaptive_fill_range_title}</summary>
-          <div className="mt-2 space-y-2">
-          <dl className="space-y-2 text-[11px]">
-            <div>
-              <dt className="font-semibold">{copy.adaptive_fill_first}</dt>
-              <dd className="text-muted-foreground">{fillDescription(1, first.lot, first.dayMarginForLot, first.riskToStopForLot, first.profitToTakeProfit2)}</dd>
-            </div>
-            {plan.ladder.length > 1 && (
-              <div>
-                <dt className="font-semibold">{copy.adaptive_fill_all}</dt>
-                <dd className="text-muted-foreground">{fillDescription(plan.ladder.length, plan.totalLots, plan.marginRequired, plan.estimatedCycleLoss, plan.profitToTakeProfit2)}</dd>
-              </div>
-            )}
-          </dl>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_fill_uncertain}</p>
-          {summary.maximumLoss - plan.estimatedCycleLoss > 0.01 && (
-            <p className="border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground" data-testid="adaptive-unused-reason">
-              <strong className="text-foreground">{copy.adaptive_unused_reason_title}:</strong> {unusedReason}
-            </p>
-          )}
-          </div>
-        </details>
-      )}
       <p className="text-[11px] leading-relaxed text-muted-foreground border-t border-border/60 pt-2">
         {conditional || plan.ladder.length === 1 ? stageGuidance : copy.adaptive_additional_reminder}
       </p>
@@ -815,10 +790,36 @@ function PlanSide({
           )}
         </div>
       )}
-      <details className="space-y-2 border-t border-border/60 pt-2" data-testid={`adaptive-ladder-${plan.side}`}>
+      <details className="rounded-md border border-border/70 bg-background p-3" data-testid={`adaptive-ladder-${plan.side}`}>
         <summary className="cursor-pointer text-xs font-semibold">{copy.adaptive_position_details}</summary>
-        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{stageGuidance}</p>
-          <ExpandableExplanation>{copy.adaptive_layer_financial_help}</ExpandableExplanation>
+        <div className="mt-3 space-y-3">
+          <p className="text-[11px] leading-relaxed text-muted-foreground">{stageGuidance}</p>
+      {summary && first && (
+        <section className="rounded-md bg-muted/30 p-2.5" data-testid={`adaptive-fill-scenarios-${plan.side}`}>
+          <h5 className="text-xs font-bold">{copy.adaptive_fill_range_title}</h5>
+          <div className="mt-2 space-y-2">
+          <dl className="space-y-2 text-[11px]">
+            <div>
+              <dt className="font-semibold">{copy.adaptive_fill_first}</dt>
+              <dd className="text-muted-foreground">{fillDescription(1, first.lot, first.dayMarginForLot, first.riskToStopForLot, first.profitToTakeProfit2)}</dd>
+            </div>
+            {plan.ladder.length > 1 && (
+              <div>
+                <dt className="font-semibold">{copy.adaptive_fill_all}</dt>
+                <dd className="text-muted-foreground">{fillDescription(plan.ladder.length, plan.totalLots, plan.marginRequired, plan.estimatedCycleLoss, plan.profitToTakeProfit2)}</dd>
+              </div>
+            )}
+          </dl>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">{copy.adaptive_fill_uncertain}</p>
+          {summary.maximumLoss - plan.estimatedCycleLoss > 0.01 && (
+            <p className="border-t border-border/60 pt-2 text-[10px] leading-relaxed text-muted-foreground" data-testid="adaptive-unused-reason">
+              <strong className="text-foreground">{copy.adaptive_unused_reason_title}:</strong> {unusedReason}
+            </p>
+          )}
+          </div>
+        </section>
+      )}
+      <ExpandableExplanation>{copy.adaptive_layer_financial_help}</ExpandableExplanation>
         <ol className="space-y-1.5">
           {plan.ladder.map((level) => (
             <li key={`${plan.side}-${level.level}`} className="rounded-md bg-background/70 px-2.5 py-2">
@@ -882,14 +883,15 @@ function PlanSide({
             </div>
           </details>
         )}
-      </details>
-      <details className="border-t border-border/60 pt-2">
-        <summary className="cursor-pointer text-[10px] font-semibold text-muted-foreground">{copy.adaptive_more_calculation_details}</summary>
+      <section className="border-t border-border/60 pt-2">
+        <h5 className="text-[10px] font-semibold text-muted-foreground">{copy.adaptive_more_calculation_details}</h5>
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
           <dt className="text-muted-foreground">{copy.adaptive_weighted_entry}</dt><dd className="text-right font-semibold tabular-nums">{formatNumber(plan.weightedAverageEntry, lang, 4)}</dd>
           <dt className="text-muted-foreground">{copy.adaptive_margin_required}</dt><dd className="text-right font-semibold tabular-nums">{formatMoney(plan.marginRequired, lang)}</dd>
           <dt className="text-muted-foreground">{copy.adaptive_funds_at_stop}</dt><dd className="text-right font-semibold tabular-nums">{formatMoney(plan.totalFundsAtStop, lang)}</dd>
         </dl>
+      </section>
+        </div>
       </details>
     </div>
   );

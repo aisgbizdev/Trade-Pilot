@@ -1121,7 +1121,7 @@ export const en = {
     adaptive_position_singular: "position",
     adaptive_additional_short: "Additional",
     adaptive_if_all_filled: "If all entries fill",
-    adaptive_position_details: "View position calculations",
+    adaptive_position_details: "View plan details",
     adaptive_additional_reminder: "Extra positions are manual: confirm the chart and setup before each one.",
     adaptive_next_funds: "Position {position} · {price} · {lot} lot: about {amount} more free broker funds needed to review.",
     adaptive_next_funds_note: "Not in the current plan. If those broker funds are actually available, update free funds above and recalculate; recheck the chart and risk. This is not a TradePilot analysis-credit top-up.",

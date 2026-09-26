@@ -1468,8 +1468,14 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-snapshot-all-filled-buy")).toHaveTextContent(
       new RegExp(`If all entries fill: ${positions.length} positions`),
     );
-    expect(screen.getByTestId("adaptive-ladder-buy")).not.toHaveAttribute("open");
-    expect(screen.getByTestId("adaptive-fill-scenarios-buy")).not.toHaveAttribute("open");
+    const positionDetails = screen.getByTestId("adaptive-ladder-buy") as HTMLDetailsElement;
+    expect(positionDetails).not.toHaveAttribute("open");
+    expect(positionDetails.querySelectorAll(":scope > summary")).toHaveLength(1);
+    expect(positionDetails.querySelector(":scope > summary")).toHaveTextContent("View plan details");
+    expect(screen.getByTestId("adaptive-fill-scenarios-buy")).toHaveTextContent("If entries fill");
+    expect(positionDetails).toHaveTextContent("More calculation details");
+    fireEvent.click(positionDetails.querySelector(":scope > summary")!);
+    expect(positionDetails).toHaveAttribute("open");
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Margin this position/i);
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Risk this position at final SL/i);
     expect(screen.getByTestId("adaptive-layer-financial-buy-0")).toHaveTextContent(/Funds remaining/i);
