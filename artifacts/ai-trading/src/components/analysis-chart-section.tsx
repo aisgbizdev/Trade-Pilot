@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Maximize2, AlertTriangle, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Maximize2, AlertTriangle, ArrowUp, ArrowDown, Minus, Copy, Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,8 @@ import { useTranslation } from "@/lib/i18n";
 import type { TradePlan } from "@workspace/api-client-react";
 import type { LiveQuote } from "@/hooks/use-live-quotes";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { renderChartSharePng } from "@/lib/chart-share";
 
 interface AnalysisChartSectionProps {
   instrument: string;
@@ -29,6 +31,7 @@ interface AnalysisChartSectionProps {
   analysisCreatedAt?: string | Date | null;
   liveQuote?: LiveQuote;
   liveQuoteReceivedAt?: number;
+  savedBias?: string;
 }
 
 export const LIVE_QUOTE_STALE_AFTER_MS = 20_000;
@@ -136,13 +139,16 @@ export function AnalysisChartSection({
   analysisCreatedAt = null,
   liveQuote,
   liveQuoteReceivedAt,
+  savedBias,
 }: AnalysisChartSectionProps) {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const { toast } = useToast();
   const [overviewFailed, setOverviewFailed] = useState<string | null>(null);
   const [advancedFailed, setAdvancedFailed] = useState<string | null>(null);
   const [levelsInlineFailed, setLevelsInlineFailed] = useState<string | null>(null);
   const [levelsModalFailed, setLevelsModalFailed] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
 
   const tvSymbol = instrumentToTradingViewSymbol(instrument);
   const tvInterval = timeframeToTradingViewInterval(timeframe);
@@ -169,6 +175,71 @@ export function AnalysisChartSection({
     !!tradePlan && LEVELS_SUPPORTED_TIMEFRAMES.has(timeframe);
   const inlineUsesLevels = canRenderLevels && !levelsInlineFailed;
   const modalUsesLevels = canRenderLevels && !levelsModalFailed;
+  const canShareChart = !!analysisCreatedAt && LEVELS_SUPPORTED_TIMEFRAMES.has(timeframe);
+
+  const shareChart = async (action: "copy" | "download") => {
+    if (!canShareChart || shareBusy) return;
+    setShareBusy(true);
+    try {
+      const { blob, url } = await renderChartSharePng({
+        instrument, timeframe, analyzedAt: analysisCreatedAt!,
+        bias: savedBias || t.analysis_detail.bias_unknown,
+        plan: tradePlan,
+        locale: lang === "id" ? "id-ID" : "en-US",
+        copy: {
+          title: t.analysis_detail.chart_share_title,
+          analyzed: t.analysis_detail.chart_share_analyzed,
+          made: t.analysis_detail.chart_share_made,
+          bias: t.analysis_detail.bias_title,
+          suggested: t.analysis_detail.chart_share_suggested,
+          buy: t.analysis_detail.trade_plan_side_buy,
+          sell: t.analysis_detail.trade_plan_side_sell,
+          both: t.analysis_detail.chart_share_wait,
+          entry: t.analysis_detail.trade_plan_entry,
+          stop: t.analysis_detail.trade_plan_sl,
+          tp1: t.analysis_detail.trade_plan_tp1,
+          tp2: t.analysis_detail.trade_plan_tp2,
+          sourceNote: t.analysis_detail.chart_share_source_note,
+          warning: t.analysis_detail.chart_share_warning,
+        },
+      });
+      if (action === "copy" && navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast({ title: t.analysis_detail.chart_share_copied });
+          return;
+        } catch {
+          // Copy is unsupported on some mobile browsers; download the same PNG.
+        }
+      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tradepilot-grafik-${instrument.replace(/[^a-z0-9-]/gi, "-")}-${timeframe}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast({ title: t.analysis_detail.chart_share_downloaded });
+    } catch {
+      toast({ title: t.analysis_detail.chart_share_failed, variant: "destructive" });
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const shareActions = (location: "inline" | "full") => canShareChart ? (
+    <div className="flex flex-wrap justify-end gap-1.5" data-testid={`chart-share-actions-${location}`}>
+      <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-xs" disabled={shareBusy} onClick={() => void shareChart("copy")} data-testid={`button-chart-share-copy-${location}`}>
+        <Copy className="h-3.5 w-3.5" aria-hidden="true" />{t.analysis_detail.chart_share_copy}
+      </Button>
+      <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-xs" disabled={shareBusy} onClick={() => void shareChart("download")} data-testid={`button-chart-share-download-${location}`}>
+        <Download className="h-3.5 w-3.5" aria-hidden="true" />{t.analysis_detail.chart_share_download}
+      </Button>
+    </div>
+  ) : (
+    <p className="text-xs text-muted-foreground" data-testid={`chart-share-unavailable-${location}`}>
+      {t.analysis_detail.chart_share_unavailable}
+    </p>
+  );
 
   return (
     <Card
@@ -230,6 +301,7 @@ export function AnalysisChartSection({
           onLoadFailed={handleOverviewFail}
         />
       )}
+      {shareActions("inline")}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
@@ -245,6 +317,7 @@ export function AnalysisChartSection({
             </DialogTitle>
             <ChartQuote instrument={instrument} quote={liveQuote} receivedAt={liveQuoteReceivedAt} />
           </DialogHeader>
+          {shareActions("full")}
           <div className="flex-1 min-h-0">
             {modalUsesLevels ? (
               <div className="h-full w-full">

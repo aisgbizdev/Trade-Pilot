@@ -2604,6 +2604,7 @@ export default function AnalysisDetailPage({
              timeframe={analysis.timeframe}
              tradePlan={tradePlan}
              analysisCreatedAt={analysis.createdAt}
+             savedBias={bias ? biasLabel(bias, isBeginnerMode ? "beginner" : "pro", t) : t.analysis_detail.bias_unknown}
               liveQuote={liveQuoteSnapshot.quote}
               liveQuoteReceivedAt={liveQuoteSnapshot.dataUpdatedAt}
            />

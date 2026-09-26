@@ -117,7 +117,7 @@ function parsePriceLevel(raw: string | null | undefined): number | null {
   return (nums[0] + nums[1]) / 2;
 }
 
-interface LevelDef {
+export interface LevelDef {
   key: string;
   price: number;
   label: string;
@@ -126,7 +126,7 @@ interface LevelDef {
   lineStyle: LineStyle;
 }
 
-type LevelDisplayMode = "buy" | "sell" | "both";
+export type LevelDisplayMode = "buy" | "sell" | "both";
 
 function buildLevels(
   plan: TradePlan,
@@ -192,7 +192,7 @@ function buildLevels(
   return levels;
 }
 
-function buildDisplayedLevels(plan: TradePlan | null, mode: LevelDisplayMode): LevelDef[] {
+export function buildDisplayedLevels(plan: TradePlan | null, mode: LevelDisplayMode): LevelDef[] {
   if (!plan) return [];
   const sides: TradePlanPreferredSide[] = mode === "both" ? ["buy", "sell"] : [mode];
   return sides.flatMap((side) => buildLevels(plan, side, mode === "both"));
