@@ -37,3 +37,4 @@
 - [Disclosure prop audit](disclosure-prop-audit.md) — trace shared-card subtitle props to each caller so short fixed copy is not missed when auditing collapsed explanations.
 - [Shareable analysis exports](shareable-analysis-exports.md) — export the full saved rationale with timestamp and snapshot-matched citations; never capture only the visible part of a scrolling dialog.
 - [Retryable capped XP evidence](retryable-capped-xp-evidence.md) — a daily-cap rejection must not permanently consume a one-time activity; only awarded evidence stays deduplicated.
+- [History timeframe default focus](history-performance-default-focus.md) — keep XAU/USD as the intentional timeframe default even when the overview covers all instruments; clarify reset labels instead.

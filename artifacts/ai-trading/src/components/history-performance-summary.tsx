@@ -167,6 +167,9 @@ export function HistoryPerformanceSummary() {
 
   const o = summary.overall;
   const instrumentRows = groupInstrumentRows(summary.byInstrument ?? []);
+  const hasInstrumentFilter = instruments.length > 0;
+  const hasNonDefaultFocus = focusedInstrument !== null && focusedInstrument !== "XAU/USD";
+  const hasDefaultInstrument = instrumentRows.some((row) => row.instrument === "XAU/USD");
   const stats = [
     { label: t.history.summary_total, value: o.total, icon: Target, outcome: undefined },
     { label: t.history.summary_valid, value: o.activeValid, icon: Clock3, outcome: "pending" },
@@ -218,18 +221,22 @@ export function HistoryPerformanceSummary() {
 
       <Card className="overflow-hidden">
         <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold">{t.history.instrument_performance}</h2>
                <ExpandableExplanation inline><p>{t.history.instrument_performance_hint}</p></ExpandableExplanation>
             </div>
-            {(focusedInstrument || instruments.length > 0) && (
+            {(hasInstrumentFilter || hasNonDefaultFocus) && (
               <button
-                className="text-xs text-primary hover:underline shrink-0"
+                className="ml-auto text-xs text-primary hover:underline shrink-0"
                 onClick={() => update({ focusInstrument: null, instruments: null })}
                 data-testid="button-show-all-instruments"
               >
-                {t.history.show_all_instruments}
+                {hasInstrumentFilter
+                  ? t.history.clear_instrument_filter
+                  : hasDefaultInstrument
+                    ? t.history.return_to_xau
+                    : t.history.return_to_default}
               </button>
             )}
           </div>
