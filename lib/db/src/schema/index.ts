@@ -69,6 +69,25 @@ export type FundamentalCitationsShape = {
   calendarEvents: string[];
 };
 
+// Selected-timeframe market data captured when an analysis was generated.
+// sourceFetchedAt is null only when the candle feed could not provide bars;
+// sourceStatus distinguishes unavailable and stale data from a fresh fetch.
+export type MarketSnapshotShape = {
+  instrument: string;
+  timeframe: string;
+  capturedAt: string;
+  sourceFetchedAt: string | null;
+  candles: Array<{
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  }>;
+  priceAtAnalysis: number | null;
+  sourceStatus: string;
+};
+
 export const roleEnum = pgEnum("role", ["user", "admin", "super_admin"]);
 export const modeEnum = pgEnum("mode", ["beginner", "pro"]);
 export const marketConditionEnum = pgEnum("market_condition", [
@@ -476,6 +495,9 @@ export const analyses = pgTable("analyses", {
   // without re-prompting the model. Nullable for legacy rows + cases where
   // no anchor price was available at analysis time.
   tradePlan: jsonb("trade_plan").$type<TradePlanShape>(),
+  // Selected-timeframe candle data and its source freshness at creation time.
+  // Nullable for legacy rows and timeframes with no candle feed.
+  marketSnapshot: jsonb("market_snapshot").$type<MarketSnapshotShape>(),
   // Snapshot of the news headlines + economic-calendar events the AI
   // saw when generating this analysis (task #88). Lets the saved
   // analysis page render the *same* fundamental context the model used,

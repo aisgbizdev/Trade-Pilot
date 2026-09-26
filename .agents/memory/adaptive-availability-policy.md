@@ -3,8 +3,8 @@ name: Adaptive availability without added cost
 description: Product constraint for Adaptive outage handling, cost, and safe recovery.
 ---
 
-Recover Adaptive from the same saved analysis using existing, genuinely fresh market data and local computation. Do not add paid data sources, replay OpenAI, spend another credit, or automatically refund an already successful AI analysis to mask an upstream outage.
+Recover Adaptive from the same saved analysis and its captured market/fundamental inputs using local computation. Do not independently fetch new candles in Adaptive, add paid data sources, replay OpenAI, spend another credit, or automatically refund a successful AI analysis to mask an upstream outage.
 
-**Why:** The owner explicitly requires maximum availability without unapproved operating costs. A refund after successful AI generation shifts incurred cost to the owner; a stale candle disguised as fresh can produce an unsafe trading recommendation. Full availability cannot be guaranteed while every upstream feed is unavailable.
+**Why:** The owner explicitly requires maximum availability and consistency with the analysis without unapproved operating costs. A refund after successful AI generation shifts incurred cost to the owner; stale candles disguised as current can produce an unsafe trading recommendation.
 
-**How to apply:** Prefer a fresh shared source and bounded retries. If no safe source exists, keep the Standard Plan visible, explain the temporary Adaptive status, and allow recovery on the existing analysis. Propose a new paid provider or compensation policy only with explicit owner approval.
+**How to apply:** Capture provenance during analysis generation. When saved candles are missing or invalid, use only saved Standard Plan levels for explicitly limited sizing, not candle-derived signals. Propose a new paid provider or compensation policy only with explicit owner approval.

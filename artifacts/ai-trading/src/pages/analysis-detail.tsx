@@ -2452,6 +2452,7 @@ export default function AnalysisDetailPage({
             analysisId={analysis.id}
             instrument={analysis.instrument}
             tradePlan={tradePlan}
+            marketSnapshot={analysis.marketSnapshot}
             context={{
               timeframe: analysis.timeframe,
               validUntil: analysis.validUntil,

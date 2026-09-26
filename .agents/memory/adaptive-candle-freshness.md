@@ -1,10 +1,10 @@
 ---
-name: Adaptive candle freshness
-description: Distinguish selected-timeframe candle recency from actual upstream fetch freshness in Adaptive plans.
+name: Adaptive analysis snapshot
+description: Keep Adaptive market inputs identical to the saved analysis instead of fetching again.
 ---
 
-Treat the last candle timestamp only as an upper bound on how old price evidence may be. It does not prove when the upstream source was fetched. A new Adaptive recommendation requires both a bar recent enough for its timeframe and a verifiably fresh upstream fetch; failure fallbacks never count as fresh.
+Adaptive must calculate from the saved analysis's own market snapshot, timeframe, trade levels, and fundamental context. Do not silently refresh candles or running prices when Adaptive opens. Record the upstream retrieval time separately from bar time and analysis time; a cached or failed source cannot be relabelled fresh. Missing legacy candles may support a levels-only sizing scenario, never fabricated swing or volatility confirmation.
 
-**Why:** A 1W or 1D bar can be old by design, while an intraday bar from days ago should not support a new entry. A just-served cache entry can also hide an old or failed feed. Claiming the latest bar date or response time is fetch time misleads traders.
+**Why:** The owner confirmed Adaptive is a continuation of the analysis, in open and closed markets alike. Independently refreshing its market inputs can shift prices away from the plan users just read; rejecting it solely because the market closed contradicts a successfully generated analysis. Old snapshots still must not be represented as current entry prices.
 
-**How to apply:** Whenever Adaptive uses chart data to propose checkpoints, volatility comparisons, or alternatives, respect the saved analysis timeframe and validity; compare the upstream retrieval timestamp and latest valid bar separately, and explain which one blocks the plan.
+**How to apply:** Capture coherent inputs when generating a new analysis; pass its immutable saved snapshot to Adaptive for checkpoints and sizing. Preserve explicit validity and as-of labels, distinguish user's later risk/broker inputs, and request a new analysis rather than swapping in new market data.

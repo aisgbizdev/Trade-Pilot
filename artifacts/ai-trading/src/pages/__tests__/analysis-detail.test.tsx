@@ -16,6 +16,23 @@ import {
 
 const ANALYSIS_ID = 555;
 const NOW = Date.now();
+const SAVED_MARKET_SNAPSHOT = {
+  instrument: "XAU/USD",
+  timeframe: "1h",
+  capturedAt: new Date(NOW - 60_000).toISOString(),
+  sourceFetchedAt: new Date(NOW - 2 * 60 * 60_000).toISOString(),
+  priceAtAnalysis: 2304,
+  sourceStatus: "fresh",
+  candles: [
+    { date: new Date(NOW - 7 * 3_600_000).toISOString(), open: 2304, high: 2305, low: 2300, close: 2302 },
+    { date: new Date(NOW - 6 * 3_600_000).toISOString(), open: 2302, high: 2304, low: 2298, close: 2300 },
+    { date: new Date(NOW - 5 * 3_600_000).toISOString(), open: 2300, high: 2302, low: 2295, close: 2297 },
+    { date: new Date(NOW - 4 * 3_600_000).toISOString(), open: 2297, high: 2301, low: 2297, close: 2300 },
+    { date: new Date(NOW - 3 * 3_600_000).toISOString(), open: 2300, high: 2307, low: 2299, close: 2305 },
+    { date: new Date(NOW - 2 * 3_600_000).toISOString(), open: 2305, high: 2309, low: 2301, close: 2303 },
+    { date: new Date(NOW - 3_600_000).toISOString(), open: 2303, high: 2306, low: 2299, close: 2301 },
+  ],
+};
 
 const TRADE_PLAN = {
   preferredSide: "buy",
@@ -57,6 +74,7 @@ const ANALYSIS_PAYLOAD = {
   techSellCount: 4,
   techNeutralCount: 6,
   feedback: null,
+  marketSnapshot: SAVED_MARKET_SNAPSHOT,
 };
 
 const STANDARD_RULES_PAYLOAD = {
@@ -163,19 +181,6 @@ const STANDARD_RULES_PAYLOAD = {
   relationshipDisclosure: { id: "Test disclosure", en: "Test disclosure" },
 };
 
-function candleSnapshot(sourceFetchedAt = NOW, staleReason: "source_age" | "feed_unavailable" | null = null) {
-  return {
-    sourceFetchedAt: new Date(sourceFetchedAt).toISOString(),
-    sourceMaxAgeMs: 5 * 60_000,
-    isStale: staleReason !== null,
-    staleReason,
-    candles: [
-      { date: new Date(NOW - 2 * 3_600_000).toISOString(), open: 2300, high: 2305, low: 2295, close: 2301 },
-      { date: new Date(NOW - 3_600_000).toISOString(), open: 2301, high: 2307, low: 2298, close: 2304 },
-    ],
-  };
-}
-
 function standardRulesHandler(status = 200): FetchHandler {
   return (url, init) => {
     if ((init?.method ?? "GET").toUpperCase() !== "GET") return null;
@@ -184,23 +189,6 @@ function standardRulesHandler(status = 200): FetchHandler {
         status >= 400 ? { error: "Rules temporarily unavailable" } : STANDARD_RULES_PAYLOAD,
         status,
       );
-    }
-    if (url.includes("/api/historical/candles") && url.includes("purpose=adaptive-layering")) {
-      return jsonResponse({
-        sourceFetchedAt: new Date(NOW).toISOString(),
-        sourceMaxAgeMs: 5 * 60_000,
-        isStale: false,
-        staleReason: null,
-        candles: [
-          { open: 2304, high: 2305, low: 2300, close: 2302 },
-          { open: 2302, high: 2304, low: 2298, close: 2300 },
-          { open: 2300, high: 2302, low: 2295, close: 2297 },
-          { open: 2297, high: 2301, low: 2297, close: 2300 },
-          { open: 2300, high: 2307, low: 2299, close: 2305 },
-          { open: 2305, high: 2309, low: 2301, close: 2303 },
-          { open: 2303, high: 2306, low: 2299, close: 2301 },
-        ].map((candle, index) => ({ ...candle, date: new Date(NOW - (7 - index) * 3_600_000).toISOString() })),
-      });
     }
     return null;
   };
@@ -897,8 +885,8 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-disclaimer")).toBeVisible();
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.change(maximumLoss, { target: { value: "500" } });
-    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
-    expect(screen.getByTestId("adaptive-candle-source-time")).toHaveTextContent(/Candle feed retrieved/i);
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i));
+    expect(screen.getByTestId("adaptive-candle-source-time")).toHaveTextContent(/Analysis candle snapshot fetched/i);
     expect(screen.queryByTestId("adaptive-plan-comparison")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
@@ -994,7 +982,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-copy-status")).toHaveTextContent("Copy failed");
     expect(execCommand).toHaveBeenCalledWith("copy");
 
-    const storedKey = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
+    const storedKey = `trade-pilot:adaptive-plan:v24:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(storedKey)).not.toBeNull());
     expect(JSON.parse(localStorage.getItem(storedKey)!).form.accountTier).toBe("micro");
 
@@ -1003,212 +991,66 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(localStorage.getItem(storedKey)).toBeNull();
   });
 
-  it("keeps visible account inputs when chart candidates finish loading", async () => {
-    const candleResolvers: Array<(response: Response) => void> = [];
-    const delayedCandles: FetchHandler = (url, init) => {
-      if ((init?.method ?? "GET").toUpperCase() !== "GET") return null;
-      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
-      return new Promise<Response>((resolve) => candleResolvers.push(resolve));
-    };
-    installFetchMock([
-      getAnalysisHandler({
-        body: {
-          ...ANALYSIS_PAYLOAD,
-          tradePlan: TRADE_PLAN,
-          fundamentalContext: { newsItems: [], calendarEvents: [] },
-        },
-      }),
-      feedbackHandler(),
-      delayedCandles,
-      standardRulesHandler(),
-    ]);
-    const { Wrapper } = makeWrapper();
-
-    render(
-      <Wrapper>
-        <AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} />
-      </Wrapper>,
-    );
-
-    const margin = await screen.findByTestId("input-adaptive-available-margin");
-    const maximumLoss = screen.getByTestId("input-adaptive-maximum-loss");
-    await screen.findByTestId("adaptive-account-rule", {}, { timeout: 5_000 });
-    fireEvent.change(margin, { target: { value: "5000" } });
-    fireEvent.change(maximumLoss, { target: { value: "250" } });
-    expect(screen.queryByTestId("input-adaptive-existing-exposure")).not.toBeInTheDocument();
-    await waitFor(() => expect(candleResolvers.length).toBeGreaterThan(0));
-
-    await act(async () => {
-      candleResolvers.forEach((resolve) => resolve(jsonResponse({ candles: [] })));
-      await Promise.resolve();
-    });
-
-    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/fresh candle snapshot/i));
-    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
-    expect(margin).toHaveValue(5000);
-    expect(maximumLoss).toHaveValue(250);
-  });
-
-  it("blocks Adaptive when a recent bar came from a failed upstream feed", async () => {
-    const failedFeed: FetchHandler = (url) => {
-      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
-      return jsonResponse({
-        sourceFetchedAt: new Date(NOW).toISOString(),
-        sourceMaxAgeMs: 5 * 60_000,
-        isStale: true,
-        staleReason: "feed_unavailable",
-        candles: [{ date: new Date(NOW - 60_000).toISOString(), open: 2300, high: 2305, low: 2295, close: 2301 }],
-      });
-    };
-    installFetchMock([
+  it("uses the analysis's persisted market snapshot without a separate candle request", async () => {
+    const { calls } = installFetchMock([
       getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
       feedbackHandler(),
-      failedFeed,
       standardRulesHandler(),
     ]);
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
-    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/upstream feed failed/i));
-    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
-    expect(screen.getByTestId("adaptive-candle-source-time")).toBeInTheDocument();
-  });
 
-  it("automatically refetches when the candle snapshot expires, clearing the old recommendation but keeping account inputs", async () => {
-    let candleRequests = 0;
-    let finishRefetch: ((response: Response) => void) | undefined;
-    const candles: FetchHandler = (url) => {
-      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
-      candleRequests++;
-      if (candleRequests === 1) return jsonResponse(candleSnapshot());
-      return new Promise<Response>((resolve) => { finishRefetch = resolve; });
-    };
-    const timers = vi.spyOn(window, "setTimeout");
-    installFetchMock([
-      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN, fundamentalContext: { newsItems: [], calendarEvents: [] } } }),
-      feedbackHandler(), candles, standardRulesHandler(),
-    ]);
-    const { Wrapper } = makeWrapper();
-    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
-
-    const margin = await screen.findByTestId("input-adaptive-available-margin");
-    fireEvent.change(margin, { target: { value: "20000" } });
+    expect(ANALYSIS_PAYLOAD.marketSnapshot).toMatchObject({
+      instrument: "XAU/USD",
+      timeframe: "1h",
+      capturedAt: expect.any(String),
+      sourceFetchedAt: expect.any(String),
+      candles: expect.any(Array),
+      priceAtAnalysis: 2304,
+    });
+    expect(await screen.findByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i);
+    expect(screen.getByTestId("adaptive-candle-source-time")).toHaveTextContent(/Analysis candle snapshot fetched/i);
+    expect(screen.queryByTestId("button-refresh-adaptive-candles")).not.toBeInTheDocument();
+    await screen.findByTestId("adaptive-account-rule");
+    fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "20000" } });
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "2000" } });
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
-    expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
-    const standardPlan = screen.getByTestId("card-trade-plan").textContent;
-    const storedKey = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
-    expect(localStorage.getItem(storedKey)).not.toBeNull();
+    await waitFor(() => expect(
+      screen.queryByTestId("adaptive-plan-valid") ?? screen.queryByTestId("adaptive-plan-invalid"),
+    ).not.toBeNull());
+    expect(calls.filter((call) => call.url.includes("/api/historical/candles") && call.url.includes("purpose=adaptive-layering"))).toHaveLength(0);
+  });
 
-    const expiry = timers.mock.calls.find(([callback, delay]) =>
-      typeof callback === "function" && callback.name === "requestFreshCandles" &&
-      typeof delay === "number" && delay > 280_000 && delay <= 300_000);
-    expect(expiry).toBeDefined();
-    vi.spyOn(Date, "now").mockReturnValue(NOW + 300_001);
-    act(() => { (expiry![0] as () => void)(); });
-    await waitFor(() => expect(candleRequests).toBe(2));
-    expect(screen.queryByTestId("adaptive-plan-valid")).not.toBeInTheDocument();
-    expect(localStorage.getItem(storedKey)).toBeNull();
-    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
-    expect(margin).toHaveValue(20000);
-    expect(screen.getByTestId("card-trade-plan").textContent).toBe(standardPlan);
+  it("calculates a legacy analysis from saved Standard Plan levels without claiming candle-derived swings", async () => {
+    const { calls } = installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, marketSnapshot: null, tradePlan: TRADE_PLAN } }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
 
-    await act(async () => {
-      finishRefetch!(jsonResponse(candleSnapshot(NOW + 300_001)));
-    });
+    expect(await screen.findByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Using the saved Standard Plan levels/i);
+    expect(screen.getByTestId("adaptive-snapshot-warning")).toHaveTextContent(/candle-based swing and volatility confirmation are unavailable/i);
+    await screen.findByTestId("adaptive-account-rule");
+    fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "20000" } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "2000" } });
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
-    expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
-    expect(margin).toHaveValue(20000);
+    await waitFor(() => expect(
+      screen.queryByTestId("adaptive-plan-valid") ?? screen.queryByTestId("adaptive-plan-invalid"),
+    ).not.toBeNull());
+    expect(screen.getByTestId("adaptive-plan-buy")).toHaveTextContent(/2,300/);
+    fireEvent.click(screen.getByTestId("adaptive-insight-button-volatility"));
+    expect(screen.getByTestId("adaptive-timeframe-volatility")).toHaveTextContent(/Comparable candle data is unavailable/i);
+    expect(calls.filter((call) => call.url.includes("/api/historical/candles") && call.url.includes("purpose=adaptive-layering"))).toHaveLength(0);
   });
 
-  it("keeps stale and failed feeds blocked, then recovers through the retry button without changing inputs", async () => {
-    let candleRequests = 0;
-    const candles: FetchHandler = (url) => {
-      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
-      candleRequests++;
-      if (candleRequests === 1) return jsonResponse(candleSnapshot(NOW - 10 * 60_000, "source_age"));
-      if (candleRequests === 2) return jsonResponse({ error: "upstream unavailable" }, 502);
-      return jsonResponse(candleSnapshot());
-    };
-    installFetchMock([
-      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
-      feedbackHandler(), candles, standardRulesHandler(),
-    ]);
-    const { Wrapper } = makeWrapper();
-    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
-    const margin = await screen.findByTestId("input-adaptive-available-margin");
-    fireEvent.change(margin, { target: { value: "20000" } });
-    await waitFor(() => expect(screen.getByTestId("adaptive-candle-warning")).toHaveTextContent(/retrieved too long ago/i));
-    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
-    fireEvent.click(screen.getByTestId("button-refresh-adaptive-candles"));
-    await waitFor(() => expect(screen.getByTestId("adaptive-candle-warning")).toHaveTextContent(/upstream feed failed/i));
-    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
-    fireEvent.click(screen.getByTestId("button-refresh-adaptive-candles"));
-    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
-    expect(candleRequests).toBe(3);
-    expect(margin).toHaveValue(20000);
-  });
-
-  it("automatically retries a temporary Adaptive outage once on the same saved analysis", async () => {
-    let candleRequests = 0;
-    const candles: FetchHandler = (url) => {
-      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
-      candleRequests++;
-      return candleRequests === 1
-        ? jsonResponse({ error: "feed unavailable" }, 502)
-        : jsonResponse(candleSnapshot());
-    };
-    const { calls } = installFetchMock([
-      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
-      feedbackHandler(), candles, standardRulesHandler(),
-    ]);
-    const timers = vi.spyOn(window, "setTimeout");
-    const { Wrapper } = makeWrapper();
-    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
-    await screen.findByTestId("adaptive-candle-warning");
-    const retry = timers.mock.calls.find(([callback, delay]) =>
-      typeof callback === "function" && callback.name === "requestFreshCandles" && delay === 4_000);
-    expect(retry).toBeDefined();
-    act(() => { (retry![0] as () => void)(); });
-    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
-    expect(candleRequests).toBe(2);
-    expect(calls.filter((call) => (call.init?.method ?? "GET") === "POST" && /\/api\/analyses(?:\?|$)/.test(call.url))).toHaveLength(0);
-  });
-
-  it("ignores a late candle response after switching instrument and timeframe", async () => {
-    let finishOld: ((response: Response) => void) | undefined;
-    const candles: FetchHandler = (url) => {
-      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
-      if (url.includes("XAU%2FUSD")) {
-        return new Promise<Response>((resolve) => { finishOld = resolve; });
-      }
-      return jsonResponse({ ...candleSnapshot(), sourceMaxAgeMs: 15 * 60_000 });
-    };
-    installFetchMock([candles, standardRulesHandler()]);
-    const { Wrapper } = makeWrapper();
-    const context = { timeframe: "1h", validUntil: ANALYSIS_PAYLOAD.validUntil };
-    const props = {
-      analysisId: ANALYSIS_ID,
-      instrument: "XAU/USD",
-      tradePlan: TRADE_PLAN as Parameters<typeof AdaptivePositionPlan>[0]["tradePlan"],
-      context,
-      lang: "en" as const,
-      copy: en.analysis_detail,
-    };
-    const { rerender } = render(<Wrapper><AdaptivePositionPlan {...props} /></Wrapper>);
-    await waitFor(() => expect(finishOld).toBeDefined());
-    rerender(<Wrapper><AdaptivePositionPlan {...props} instrument="BRENT" context={{ ...context, timeframe: "4h" }} /></Wrapper>);
-    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
-    await act(async () => { finishOld!(jsonResponse(candleSnapshot(NOW - 20 * 60_000, "source_age"))); });
-    expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled();
-    expect(screen.queryByTestId("adaptive-candle-warning")).not.toBeInTheDocument();
-  });
-
-  it("requires a new analysis after expiry rather than retrying the candle feed", async () => {
+  it("requires a new analysis after expiry without requesting a candle feed", async () => {
     const { calls } = installFetchMock([standardRulesHandler()]);
     const { Wrapper } = makeWrapper();
-    const key = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v24:${ANALYSIS_ID}`;
     localStorage.setItem(key, JSON.stringify({ recommendation: { valid: true } }));
     render(
       <Wrapper>
@@ -1226,14 +1068,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeDisabled();
     expect(screen.queryByTestId("button-refresh-adaptive-candles")).not.toBeInTheDocument();
     expect(localStorage.getItem(key)).toBeNull();
-    expect(calls.filter((call) => call.url.includes("/api/historical/candles"))).toHaveLength(0);
+    expect(calls.filter((call) => call.url.includes("/api/historical/candles") && call.url.includes("purpose=adaptive-layering"))).toHaveLength(0);
   });
 
   it("shows both conditional Buy and Sell plans immediately when the main analysis says Neutral/Wait", async () => {
-    const candles: FetchHandler = (url) =>
-      url.includes("/api/historical/candles") && url.includes("purpose=adaptive-layering")
-        ? jsonResponse(candleSnapshot())
-        : null;
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -1244,7 +1082,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
           fundamentalContext: { newsItems: [], calendarEvents: [] },
         },
       }),
-      feedbackHandler(), candles, standardRulesHandler(),
+      feedbackHandler(), standardRulesHandler(),
     ]);
     const { Wrapper } = makeWrapper();
     const view = render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
@@ -1295,10 +1133,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
   });
 
   it("does not invent figures for an uncalculable side alongside a conditional plan", async () => {
-    const candles: FetchHandler = (url) =>
-      url.includes("/api/historical/candles") && url.includes("purpose=adaptive-layering")
-        ? jsonResponse(candleSnapshot())
-        : null;
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -1309,7 +1143,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
           fundamentalContext: { newsItems: [], calendarEvents: [] },
         },
       }),
-      feedbackHandler(), candles, standardRulesHandler(),
+      feedbackHandler(), standardRulesHandler(),
     ]);
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
@@ -1323,15 +1157,10 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.queryByTestId("button-copy-adaptive-plan")).not.toBeInTheDocument();
   });
 
-  it("does not restore a saved recommendation against a newer source snapshot with unchanged bars", async () => {
-    let fetchedAt = NOW;
-    const candles: FetchHandler = (url) => {
-      if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
-      return jsonResponse(candleSnapshot(fetchedAt));
-    };
-    installFetchMock([
+  it("keeps calculations tied to the saved snapshot rather than a later clock or feed", async () => {
+    const { calls } = installFetchMock([
       getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN, fundamentalContext: { newsItems: [], calendarEvents: [] } } }),
-      feedbackHandler(), candles, standardRulesHandler(),
+      feedbackHandler(), standardRulesHandler(),
     ]);
     const first = makeWrapper();
     const view = render(<first.Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></first.Wrapper>);
@@ -1340,17 +1169,17 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId("adaptive-plan-valid")).toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v24:${ANALYSIS_ID}`;
     expect(localStorage.getItem(key)).not.toBeNull();
 
     view.unmount();
-    fetchedAt += 10_000;
+    vi.spyOn(Date, "now").mockReturnValue(NOW + 60 * 60_000);
     const second = makeWrapper();
     render(<second.Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></second.Wrapper>);
-    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
-    expect(screen.queryByTestId("adaptive-plan-valid")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(20000);
-    expect(localStorage.getItem(key)).toBeNull();
+    expect(localStorage.getItem(key)).not.toBeNull();
+    expect(calls.filter((call) => call.url.includes("/api/historical/candles") && call.url.includes("purpose=adaptive-layering"))).toHaveLength(0);
   });
 
   it("renders a valid fixed-Mini recommendation from explicit limits", async () => {
@@ -1378,7 +1207,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     fireEvent.change(margin, { target: { value: "20000" } });
     fireEvent.change(maximumLoss, { target: { value: "2000" } });
-    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i));
 
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/Mini: a minimum 0.1 lot requires \$100 margin/i);
     expect(screen.getByTestId("adaptive-account-rule")).toHaveTextContent(/contract size is 10 troy ounce/i);
@@ -1463,7 +1292,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
       fireEvent.change(margin, { target: { value: funds } });
       fireEvent.change(maximumLoss, { target: { value: loss } });
-      await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+      await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i));
       fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
       expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
@@ -1499,23 +1328,17 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
   ] as const)(
     "keeps the $tier Sell funding alternative tied to Sell checkpoints",
     async ({ tier, funds, loss, nextPosition, nextLot, riskBlockedLoss }) => {
-      const sellSwingCandles: FetchHandler = (url) => {
-        if (!url.includes("/api/historical/candles") || !url.includes("purpose=adaptive-layering")) return null;
-        return jsonResponse({
-          sourceFetchedAt: new Date(NOW).toISOString(),
-          sourceMaxAgeMs: 5 * 60_000,
-          isStale: false,
-          staleReason: null,
-          candles: [2301, 2302, 2304, 2302, 2301, 2302, 2306, 2302, 2301].map((high, index) => ({
-            date: new Date(NOW - (9 - index) * 3_600_000).toISOString(),
-            open: 2301, high, low: 2300, close: 2301,
-          })),
-        });
-      };
       installFetchMock([
         getAnalysisHandler({
           body: {
             ...ANALYSIS_PAYLOAD,
+            marketSnapshot: {
+              ...SAVED_MARKET_SNAPSHOT,
+              candles: [2301, 2302, 2304, 2302, 2301, 2302, 2306, 2302, 2301].map((high, index) => ({
+                date: new Date(NOW - (9 - index) * 3_600_000).toISOString(),
+                open: 2301, high, low: 2300, close: 2301,
+              })),
+            },
             tradePlan: { ...TRADE_PLAN, preferredSide: "sell" },
             marketCondition: "trending_down",
             tradingBias: "bearish_strong",
@@ -1528,7 +1351,6 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
           },
         }),
         feedbackHandler(),
-        sellSwingCandles,
         standardRulesHandler(),
       ]);
       const { Wrapper } = makeWrapper();
@@ -1539,7 +1361,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
       fireEvent.change(margin, { target: { value: funds } });
       fireEvent.change(maximumLoss, { target: { value: loss } });
-      await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+      await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i));
       fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
       expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
@@ -1605,7 +1427,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
     fireEvent.change(margin, { target: { value: funds } });
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: loss } });
-    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i));
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
     expect(screen.getByTestId(`adaptive-review-side-${side}`)).toHaveTextContent(/Conditional scenario/i);
     expect(screen.queryByTestId("adaptive-blocked-dialog")).not.toBeInTheDocument();
@@ -1776,7 +1598,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
 
   it("ignores malformed saved adaptive-plan data instead of crashing the analysis page", async () => {
     localStorage.setItem(
-      `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`,
+      `trade-pilot:adaptive-plan:v24:${ANALYSIS_ID}`,
       JSON.stringify({ form: { availableMargin: "100000" }, recommendation: {} }),
     );
     installFetchMock([
@@ -1801,7 +1623,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await screen.findByTestId("adaptive-account-rule");
     expect(screen.getByTestId("input-adaptive-available-margin")).toHaveValue(null);
     expect(screen.queryByTestId("adaptive-plan-reasoning")).not.toBeInTheDocument();
-    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`)).toBeNull();
+    expect(localStorage.getItem(`trade-pilot:adaptive-plan:v24:${ANALYSIS_ID}`)).toBeNull();
   });
 
   it("does not restore an adaptive plan saved under the cumulative-cap v12 namespace", async () => {
@@ -1854,7 +1676,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     );
 
     const margin = await screen.findByTestId("input-adaptive-available-margin");
-    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i));
     fireEvent.change(margin, { target: { value: "100000" } });
     fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "500" } });
     fireEvent.click(screen.getByTestId("button-adaptive-risk-style-balanced"));
@@ -1864,7 +1686,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-valid")).toBeInTheDocument();
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Moderate style/i);
     expect(screen.queryByTestId("adaptive-lot-profile-active")).not.toBeInTheDocument();
-    const key = `trade-pilot:adaptive-plan:v23:${ANALYSIS_ID}`;
+    const key = `trade-pilot:adaptive-plan:v24:${ANALYSIS_ID}`;
     await waitFor(() => expect(localStorage.getItem(key)).not.toBeNull());
     const stored = JSON.parse(localStorage.getItem(key)!) as {
       recommendation: {
@@ -1926,7 +1748,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       </second.Wrapper>,
     );
 
-    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/Current chart candidates found/i));
+    await waitFor(() => expect(screen.getByTestId("adaptive-chart-candidate-status")).toHaveTextContent(/From this analysis snapshot:/i));
     await waitFor(() => expect(screen.getByTestId("adaptive-direction-sell")).toHaveAttribute("aria-pressed", "true"));
     expect(screen.getByTestId("button-adaptive-risk-style-balanced")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("adaptive-risk-style-active")).toHaveTextContent(/Moderate style/i);

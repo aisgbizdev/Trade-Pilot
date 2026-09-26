@@ -94,6 +94,8 @@ doc/JournalStats.md
 doc/JournalStatsTotals.md
 doc/LoginBody.md
 doc/ManualTopupBody.md
+doc/MarketSnapshot.md
+doc/MarketSnapshotCandle.md
 doc/MessageResponse.md
 doc/MirrorGatedInsight.md
 doc/MirrorGroupStat.md
@@ -320,6 +322,8 @@ lib/src/model/journal_stats.dart
 lib/src/model/journal_stats_totals.dart
 lib/src/model/login_body.dart
 lib/src/model/manual_topup_body.dart
+lib/src/model/market_snapshot.dart
+lib/src/model/market_snapshot_candle.dart
 lib/src/model/message_response.dart
 lib/src/model/mirror_gated_insight.dart
 lib/src/model/mirror_group_stat.dart
@@ -421,3 +425,5 @@ lib/src/model/watchlist_item.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
+test/market_snapshot_candle_test.dart
+test/market_snapshot_test.dart

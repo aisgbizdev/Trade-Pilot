@@ -232,6 +232,9 @@ abstract class AnalysisBuilder {
   TradePlanBuilder get tradePlan;
   set tradePlan(TradePlanBuilder? tradePlan);
 
+  MarketSnapshotBuilder get marketSnapshot;
+  set marketSnapshot(MarketSnapshotBuilder? marketSnapshot);
+
   FundamentalContextBuilder get fundamentalContext;
   set fundamentalContext(FundamentalContextBuilder? fundamentalContext);
 
@@ -331,6 +334,8 @@ class _$$Analysis extends $Analysis {
   @override
   final TradePlan? tradePlan;
   @override
+  final MarketSnapshot? marketSnapshot;
+  @override
   final FundamentalContext? fundamentalContext;
   @override
   final FundamentalCitations? fundamentalCitations;
@@ -389,6 +394,7 @@ class _$$Analysis extends $Analysis {
       this.techSellCount,
       this.techNeutralCount,
       this.tradePlan,
+      this.marketSnapshot,
       this.fundamentalContext,
       this.fundamentalCitations,
       this.outcomeStatus,
@@ -443,6 +449,7 @@ class _$$Analysis extends $Analysis {
         techSellCount == other.techSellCount &&
         techNeutralCount == other.techNeutralCount &&
         tradePlan == other.tradePlan &&
+        marketSnapshot == other.marketSnapshot &&
         fundamentalContext == other.fundamentalContext &&
         fundamentalCitations == other.fundamentalCitations &&
         outcomeStatus == other.outcomeStatus &&
@@ -490,6 +497,7 @@ class _$$Analysis extends $Analysis {
     _$hash = $jc(_$hash, techSellCount.hashCode);
     _$hash = $jc(_$hash, techNeutralCount.hashCode);
     _$hash = $jc(_$hash, tradePlan.hashCode);
+    _$hash = $jc(_$hash, marketSnapshot.hashCode);
     _$hash = $jc(_$hash, fundamentalContext.hashCode);
     _$hash = $jc(_$hash, fundamentalCitations.hashCode);
     _$hash = $jc(_$hash, outcomeStatus.hashCode);
@@ -539,6 +547,7 @@ class _$$Analysis extends $Analysis {
           ..add('techSellCount', techSellCount)
           ..add('techNeutralCount', techNeutralCount)
           ..add('tradePlan', tradePlan)
+          ..add('marketSnapshot', marketSnapshot)
           ..add('fundamentalContext', fundamentalContext)
           ..add('fundamentalCitations', fundamentalCitations)
           ..add('outcomeStatus', outcomeStatus)
@@ -701,6 +710,12 @@ class $AnalysisBuilder
   set tradePlan(covariant TradePlanBuilder? tradePlan) =>
       _$this._tradePlan = tradePlan;
 
+  MarketSnapshotBuilder? _marketSnapshot;
+  MarketSnapshotBuilder get marketSnapshot =>
+      _$this._marketSnapshot ??= MarketSnapshotBuilder();
+  set marketSnapshot(covariant MarketSnapshotBuilder? marketSnapshot) =>
+      _$this._marketSnapshot = marketSnapshot;
+
   FundamentalContextBuilder? _fundamentalContext;
   FundamentalContextBuilder get fundamentalContext =>
       _$this._fundamentalContext ??= FundamentalContextBuilder();
@@ -799,6 +814,7 @@ class $AnalysisBuilder
       _techSellCount = $v.techSellCount;
       _techNeutralCount = $v.techNeutralCount;
       _tradePlan = $v.tradePlan?.toBuilder();
+      _marketSnapshot = $v.marketSnapshot?.toBuilder();
       _fundamentalContext = $v.fundamentalContext?.toBuilder();
       _fundamentalCitations = $v.fundamentalCitations?.toBuilder();
       _outcomeStatus = $v.outcomeStatus;
@@ -869,6 +885,7 @@ class $AnalysisBuilder
             techSellCount: techSellCount,
             techNeutralCount: techNeutralCount,
             tradePlan: _tradePlan?.build(),
+            marketSnapshot: _marketSnapshot?.build(),
             fundamentalContext: _fundamentalContext?.build(),
             fundamentalCitations: _fundamentalCitations?.build(),
             outcomeStatus: outcomeStatus,
@@ -888,6 +905,8 @@ class $AnalysisBuilder
       try {
         _$failedField = 'tradePlan';
         _tradePlan?.build();
+        _$failedField = 'marketSnapshot';
+        _marketSnapshot?.build();
         _$failedField = 'fundamentalContext';
         _fundamentalContext?.build();
         _$failedField = 'fundamentalCitations';

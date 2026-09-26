@@ -50,6 +50,19 @@ vi.mock("../../lib/historical", async () => {
   const actual = await vi.importActual<typeof import("../../lib/historical")>("../../lib/historical");
   return {
     ...actual,
+    getCandleSnapshot: vi.fn(async () => ({
+      candles: [{
+        date: "2026-04-29T10:00:00.000Z",
+        open: 1.085,
+        high: 1.087,
+        low: 1.084,
+        close: 1.086,
+      }],
+      sourceFetchedAt: "2026-04-29T10:00:00.000Z",
+      sourceMaxAgeMs: 4 * 60 * 1000,
+      isStale: false,
+      staleReason: null,
+    })),
     getIndicators: vi.fn(async (symbol: string) => ({
       symbol,
       lastClose: 1.0852,
@@ -114,7 +127,7 @@ const app = (await import("../../app")).default;
 const { db } = await import("../../lib/db");
 const { users, sessions, analyses } = await import("@workspace/db/schema");
 const { generateAnalysis } = await import("../../lib/openai");
-const { getIndicators } = await import("../../lib/historical");
+const { getCandleSnapshot, getIndicators } = await import("../../lib/historical");
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `analyses-30m-test-${RUN_ID}`;
@@ -183,6 +196,14 @@ describe("POST /api/analyses with timeframe 30m", () => {
     expect(res.body.timeframe).toBe("30m");
     expect(res.body.instrument).toBe(INSTRUMENT);
     expect(res.body.mode).toBe("beginner");
+    expect(res.body.marketSnapshot).toMatchObject({
+      instrument: INSTRUMENT,
+      timeframe: "30m",
+      sourceFetchedAt: "2026-04-29T10:00:00.000Z",
+      candles: [{ close: 1.086 }],
+      priceAtAnalysis: 1.086,
+      sourceStatus: "fresh",
+    });
     // Indicator snapshot from the mocked getIndicators flows through into
     // the saved row so the saved analysis page can render the same gauge.
     expect(res.body.techBuyCount).toBe(6);
@@ -196,6 +217,7 @@ describe("POST /api/analyses with timeframe 30m", () => {
     });
 
     expect(getIndicators).toHaveBeenCalledWith(INSTRUMENT, "30m");
+    expect(getCandleSnapshot).toHaveBeenCalledWith(INSTRUMENT, "30m");
     // Sixth arg is the fundamental snapshot passed for citation grounding —
     // assert its shape rather than identity so future field tweaks don't
     // turn this into a brittle test.
@@ -213,12 +235,17 @@ describe("POST /api/analyses with timeframe 30m", () => {
           expect.objectContaining({ event: "FOMC Rate Decision" }),
         ]),
       }),
-      // Seventh arg is the live-price anchor. The live feed isn't mocked
-      // here so getLivePriceFor resolves to null; the selected timeframe
-      // indicator close is passed separately as the eighth arg.
-      null,
-      1.0852,
+      // The selected candle's close is both the AI anchor and the value
+      // persisted into marketSnapshot.
+      1.086,
+      1.086,
     );
+
+    const detail = await request(app)
+      .get(`/api/analyses/${res.body.id}`)
+      .set("Authorization", `Bearer ${alice.token}`);
+    expect(detail.status).toBe(200);
+    expect(detail.body.marketSnapshot).toEqual(res.body.marketSnapshot);
 
     // The persisted snapshot is also returned in the response so the
     // saved-analysis page can render the same fundamental context the

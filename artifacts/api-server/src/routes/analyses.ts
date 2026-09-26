@@ -18,8 +18,7 @@ import {
   PRIMARY_INSTRUMENTS,
 } from "@workspace/instrument-taxonomy";
 import { estimateCostUsd } from "../lib/model-pricing";
-import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe, type IndicatorTimeframe } from "../lib/historical";
-import { checkAdaptiveReadiness, offersAdaptive } from "../lib/adaptive-readiness";
+import { getCandleSnapshot, getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe, type IndicatorTimeframe } from "../lib/historical";
 import { getLivePriceFor } from "../lib/live-prices";
 import {
   getRelevantNews,
@@ -597,18 +596,6 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   const isPrivilegedRole = req.userRole === "admin" || req.userRole === "super_admin";
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
 
-  // Adaptive is an optional sizing layer. A temporary candle outage must not
-  // prevent the core market analysis from being created. The detail view keeps
-  // Adaptive unavailable until it can obtain a genuinely fresh snapshot.
-  if (offersAdaptive(instrument)) {
-    const readiness = isSupportedIndicatorTimeframe(timeframe)
-      ? await checkAdaptiveReadiness(instrument, timeframe)
-      : "feed_unavailable";
-    if (readiness !== "ready") {
-      logger.warn({ instrument, timeframe, reason: readiness }, "[analyses] Adaptive snapshot unavailable; continuing core analysis");
-    }
-  }
-
   // External context fetches are pure HTTP — do them outside any transaction.
   // Indicators only support daily/weekly today; skip them for intraday timeframes
   // so the AI is not fed stale daily data labelled as e.g. "1h".
@@ -654,7 +641,25 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     getLivePriceFor(instrument),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
   ]);
+  const candleSnapshotRequest: Promise<Awaited<ReturnType<typeof getCandleSnapshot>>> =
+    indicatorTf
+      ? new Promise((resolve) => {
+          const timeout = setTimeout(() => resolve(null), 5500);
+          getCandleSnapshot(instrument, indicatorTf).then(
+            (snapshot) => {
+              clearTimeout(timeout);
+              resolve(snapshot);
+            },
+            (err) => {
+              clearTimeout(timeout);
+              logger.warn({ err, instrument, timeframe }, "[analyses] Selected-timeframe candle snapshot unavailable");
+              resolve(null);
+            },
+          );
+        })
+      : Promise.resolve(null);
   await Promise.allSettled([
+    candleSnapshotRequest,
     livePriceAnchor.then((p) => {
       livePrice = p;
     }),
@@ -698,6 +703,45 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           if (events.length) contextParts.push(formatCalendarForPrompt(events, instrument));
         }),
   ]);
+  const candleSnapshot = await candleSnapshotRequest;
+  // The exact same selected-timeframe price anchor is persisted with the bars.
+  // Prefer the close from the captured snapshot when its upstream retrieval is
+  // fresh; stale cached candles remain explicitly stale and do not override an
+  // independent live quote.
+  if (candleSnapshot && !candleSnapshot.isStale) {
+    const capturedClose = candleSnapshot.candles.at(-1)?.close;
+    if (typeof capturedClose === "number" && Number.isFinite(capturedClose) && capturedClose > 0) {
+      livePrice = capturedClose;
+      selectedTimeframePrice = capturedClose;
+    }
+  }
+  const priceAtAnalysis =
+    typeof livePrice === "number" && Number.isFinite(livePrice) && livePrice > 0
+      ? livePrice
+      : typeof selectedTimeframePrice === "number" &&
+          Number.isFinite(selectedTimeframePrice) &&
+          selectedTimeframePrice > 0
+        ? selectedTimeframePrice
+        : null;
+  const marketSnapshot = indicatorTf
+    ? {
+        instrument,
+        timeframe,
+        capturedAt: new Date().toISOString(),
+        sourceFetchedAt: candleSnapshot?.sourceFetchedAt ?? null,
+        // Retain a bounded recent history for Adaptive without persisting the
+        // full upstream multi-year response.
+        candles: candleSnapshot?.candles.slice(-300) ?? [],
+        priceAtAnalysis,
+        sourceStatus: candleSnapshot
+          ? candleSnapshot.isStale
+            ? candleSnapshot.staleReason === "source_age"
+              ? "stale_source_age"
+              : "stale_feed_unavailable"
+            : "fresh"
+          : "feed_unavailable",
+      }
+    : null;
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
   // Always persist as `{ newsItems: [], calendarEvents: [] }` (never
   // null) so the saved-analysis page renders an honest empty-state
@@ -747,6 +791,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       techSellCount: techCounts?.sell ?? null,
       techNeutralCount: techCounts?.neutral ?? null,
       tradePlan: aiResult.tradePlan ?? null,
+      marketSnapshot,
       fundamentalContext: fundamentalSnapshot,
       // Provenance trail emitted by the AI: which news titles + event
       // names from `fundamentalSnapshot` it actually cited in the

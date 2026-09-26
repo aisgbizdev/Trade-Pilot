@@ -125,6 +125,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(JournalStatsTotals.serializer)
       ..add(LoginBody.serializer)
       ..add(ManualTopupBody.serializer)
+      ..add(MarketSnapshot.serializer)
+      ..add(MarketSnapshotCandle.serializer)
+      ..add(MarketSnapshotSourceStatusEnum.serializer)
       ..add(MessageResponse.serializer)
       ..add(MirrorGatedInsight.serializer)
       ..add(MirrorGatedInsightReasonEnum.serializer)
@@ -360,6 +363,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(JournalEntry)]),
           () => ListBuilder<JournalEntry>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(MarketSnapshotCandle)]),
+          () => ListBuilder<MarketSnapshotCandle>())
       ..addBuilderFactory(
           const FullType(BuiltList,
               const [const FullType(NativePushTestResultFailuresEnum)]),

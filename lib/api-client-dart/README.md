@@ -263,6 +263,8 @@ Class | Method | HTTP request | Description
  - [JournalStatsTotals](doc/JournalStatsTotals.md)
  - [LoginBody](doc/LoginBody.md)
  - [ManualTopupBody](doc/ManualTopupBody.md)
+ - [MarketSnapshot](doc/MarketSnapshot.md)
+ - [MarketSnapshotCandle](doc/MarketSnapshotCandle.md)
  - [MessageResponse](doc/MessageResponse.md)
  - [MirrorGatedInsight](doc/MirrorGatedInsight.md)
  - [MirrorGroupStat](doc/MirrorGroupStat.md)

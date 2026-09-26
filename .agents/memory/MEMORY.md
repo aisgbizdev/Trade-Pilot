@@ -25,9 +25,9 @@
 - [Replit static SPA deep links](replit-static-spa-deep-links.md) — static artifact hosting may raw-404 client routes despite emitted 404/200 files; use a process server with history fallback for direct URLs.
 - [Deployment image size](deployment-image-size.md) — Playwright traces/videos can exceed Replit's 8 GiB limit; exclude test outputs/caches, but retain node_modules because runtime packaging depends on them.
 - [Expo tab-bar inset modes](expo-tab-bar-insets.md) — reserve full bottom clearance for absolute classic tabs, but not for iOS NativeTabs, which applies system content insets.
-- [Adaptive candle freshness](adaptive-candle-freshness.md) — a candle's latest bar time is not fetch time; fail closed when too old until the API exposes source freshness.
+- [Adaptive analysis snapshot](adaptive-candle-freshness.md) — Adaptive uses the saved analysis's market/fundamental snapshot, never a separate candle refresh; distinguish historical plans from current entry.
 - [Managed workflow port collisions](managed-workflow-port-collisions.md) — a surviving shell-launched server can occupy an artifact's managed port; identify its process group before stopping it.
-- [Adaptive availability without added cost](adaptive-availability-policy.md) — recover on the saved analysis using existing fresh feeds; fail closed rather than buying uptime or replaying AI.
+- [Adaptive availability without added cost](adaptive-availability-policy.md) — recover from saved analysis inputs without paid feeds or replaying AI; legacy levels-only plans cannot claim candle confirmation.
 - [Information density on web and PWA](information-density-web-pwa.md) — optional explanations start closed on desktop and mobile; safety-critical status stays visible.
 - [Adaptive decision display](adaptive-decision-display.md) — show one concise decision for the chosen broker account; keep other-tier simulations inside the engine, not on the result screen.
 - [Two-sided market advisor](two-sided-market-advisor.md) — rank the strongest setup, but give fair conditional Buy and Sell guidance so the user can choose.

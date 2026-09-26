@@ -11,7 +11,6 @@ import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { compareAdaptiveAccountTiers, type AdaptiveTierRow } from "@/lib/adaptive-tier-comparison";
 import {
-  assessAdaptiveCandleFreshness,
   buildAdaptivePlanRecommendation,
   createAdaptivePlanFingerprint,
   getAdaptiveChartCandidatePrices,
@@ -30,7 +29,6 @@ import {
   type AdaptivePlanRecommendation,
   type AdaptivePlanReasonCode,
   type AdaptiveChartCandle,
-  type AdaptiveCandleFreshnessReason,
   type AdaptiveSidePositionPlan,
   type AdaptiveRiskStyle,
   type AccountTier,
@@ -55,6 +53,15 @@ interface Props {
   instrument: string;
   tradePlan: TradePlan;
   context: AdaptiveAnalysisContext;
+  marketSnapshot?: {
+    instrument: string;
+    timeframe: string;
+    capturedAt: string;
+    sourceFetchedAt: string | null;
+    candles: AdaptiveChartCandle[];
+    priceAtAnalysis?: number | null;
+    sourceStatus: "fresh" | "stale_source_age" | "stale_feed_unavailable" | "feed_unavailable";
+  } | null;
   lang: "en" | "id";
   copy: AdaptiveCopy;
 }
@@ -76,7 +83,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 function storageKey(analysisId: number): string {
-  return `trade-pilot:adaptive-plan:v23:${analysisId}`;
+  return `trade-pilot:adaptive-plan:v24:${analysisId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -879,7 +886,7 @@ export function AdaptivePositionPlan(props: Props) {
   return <AdaptivePositionPlanContent {...props} />;
 }
 
-function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, context, lang, copy }: Props) {
+function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, context, marketSnapshot, lang, copy }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
   const [financialBlock, setFinancialBlock] = useState<FinancialBlock | null>(null);
@@ -889,12 +896,10 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const [activeSide, setActiveSide] = useState<"buy" | "sell" | "none">("none");
   const [activeInsight, setActiveInsight] = useState<AdaptiveInsight | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
-  const [reloadToken, setReloadToken] = useState(0);
   const [analysisExpired, setAnalysisExpired] = useState(false);
   const chartScope = `${analysisId}:${instrument}:${context.timeframe ?? ""}`;
   const copyResetTimerRef = useRef<number | null>(null);
   const restoredStateKeyRef = useRef<string | null>(null);
-  const autoRetryRef = useRef({ scope: "", attempted: false });
   useEffect(() => {
     restoredStateKeyRef.current = null;
     setForm(DEFAULT_FORM);
@@ -929,23 +934,14 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     scope: string;
     prices: { buy: number[]; sell: number[] };
     candles: AdaptiveChartCandle[];
-    source: { sourceFetchedAt?: unknown; sourceMaxAgeMs?: unknown; isStale?: unknown; staleReason?: unknown };
-    reason: AdaptiveCandleFreshnessReason | null;
-  }>({ status: "loading", scope: "", prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null });
-  const emptyChartState = (reason: AdaptiveCandleFreshnessReason | null = null) => ({
-    status: "error" as const, scope: chartScope, prices: { buy: [], sell: [] }, candles: [], source: {}, reason,
+    source: { sourceFetchedAt?: string };
+    basis: "snapshot" | "levels";
+  }>({ status: "loading", scope: "", prices: { buy: [], sell: [] }, candles: [], source: {}, basis: "levels" });
+  const emptyChartState = () => ({
+    status: "error" as const, scope: chartScope, prices: { buy: [], sell: [] }, candles: [], source: {}, basis: "levels" as const,
   });
   const isAnalysisExpired = analysisExpired || context.validUntil == null ||
     new Date(context.validUntil).getTime() <= Date.now();
-  const requestFreshCandles = () => {
-    if (context.validUntil == null || new Date(context.validUntil).getTime() <= Date.now()) return;
-    setRecommendation(null);
-    localStorage.removeItem(storageKey(analysisId));
-    setChartCandidateState({
-      status: "loading", scope: chartScope, prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null,
-    });
-    setReloadToken((previous) => previous + 1);
-  };
   const { data: standardRules, isLoading: isRulesLoading, isError: isRulesError, refetch: refetchRules } = useGetStandardTradingRules({
     query: { queryKey: ["/api/trading-rules/standard"], staleTime: 5 * 60_000 },
   });
@@ -960,92 +956,43 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
     : null;
   useEffect(() => {
     if (isRulesLoading) return;
-    if (!rulesAvailable || !context.timeframe || !selectedRule || isAnalysisExpired) {
+    if (!rulesAvailable || !selectedRule || isAnalysisExpired) {
       setChartCandidateState(emptyChartState());
       return;
     }
-    let cancelled = false;
-    const controller = new AbortController();
+    // The saved analysis is the only source for market candles. A legacy
+    // analysis without the snapshot can still size its saved Standard Plan,
+    // but cannot claim candle-derived swing checkpoints or volatility.
+    const matchingSnapshot = marketSnapshot?.instrument === instrument &&
+      marketSnapshot.timeframe?.toLowerCase() === context.timeframe?.toLowerCase() &&
+      marketSnapshot.sourceStatus === "fresh" &&
+      typeof marketSnapshot.sourceFetchedAt === "string" &&
+      Number.isFinite(Date.parse(marketSnapshot.capturedAt)) &&
+      Number.isFinite(Date.parse(marketSnapshot.sourceFetchedAt));
+    const candles = matchingSnapshot && Array.isArray(marketSnapshot.candles)
+      ? marketSnapshot.candles
+        .filter((value): value is AdaptiveChartCandle => {
+          if (!isRecord(value)) return false;
+          return typeof value.high === "number" && Number.isFinite(value.high) &&
+            typeof value.low === "number" && Number.isFinite(value.low) &&
+            value.low > 0 && value.high >= value.low &&
+            typeof value.open === "number" && Number.isFinite(value.open) &&
+            value.open >= value.low && value.open <= value.high &&
+            typeof value.close === "number" && Number.isFinite(value.close) &&
+            value.close >= value.low && value.close <= value.high &&
+            typeof value.date === "string" && Number.isFinite(Date.parse(value.date));
+        })
+        .sort((a, b) => Date.parse(a.date!) - Date.parse(b.date!))
+      : [];
     setChartCandidateState({
-      status: "loading", scope: chartScope, prices: { buy: [], sell: [] }, candles: [], source: {}, reason: null,
+      status: "ready",
+      scope: chartScope,
+      prices: getAdaptiveChartCandidatePrices(candles, tradePlan, selectedRule.minMovement),
+      candles,
+      source: candles.length ? { sourceFetchedAt: marketSnapshot!.sourceFetchedAt! } : {},
+      basis: candles.length ? "snapshot" : "levels",
     });
-    fetch(
-      `/api/historical/candles?instrument=${encodeURIComponent(instrument)}&timeframe=${encodeURIComponent(context.timeframe)}&purpose=adaptive-layering`,
-      { credentials: "include", cache: "no-store", signal: controller.signal },
-    )
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json() as Promise<{
-          candles?: unknown[]; sourceFetchedAt?: unknown; sourceMaxAgeMs?: unknown;
-          isStale?: unknown; staleReason?: unknown;
-        }>;
-      })
-      .then((payload) => {
-        if (cancelled) return;
-        const candles = (Array.isArray(payload.candles) ? payload.candles : [])
-          .filter((value): value is AdaptiveChartCandle => {
-            if (!isRecord(value)) return false;
-            return typeof value.high === "number" &&
-              Number.isFinite(value.high) &&
-              typeof value.low === "number" &&
-              Number.isFinite(value.low) &&
-              value.low > 0 && value.high >= value.low &&
-              typeof value.open === "number" && Number.isFinite(value.open) &&
-              value.open >= value.low && value.open <= value.high &&
-              typeof value.close === "number" && Number.isFinite(value.close) &&
-              value.close >= value.low && value.close <= value.high &&
-              typeof value.date === "string" && Number.isFinite(Date.parse(value.date));
-          })
-          .sort((a, b) => Date.parse(a.date!) - Date.parse(b.date!));
-        const freshness = assessAdaptiveCandleFreshness(candles, context.timeframe, payload);
-        if (freshness.reason) {
-          setChartCandidateState({ ...emptyChartState(freshness.reason), source: payload });
-          return;
-        }
-        setChartCandidateState({
-          status: "ready",
-          scope: chartScope,
-          prices: getAdaptiveChartCandidatePrices(candles, tradePlan, selectedRule.minMovement),
-          candles,
-          source: payload,
-          reason: null,
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setChartCandidateState(emptyChartState("feed_unavailable"));
-      });
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [analysisId, context.timeframe, context.validUntil, instrument, isAnalysisExpired, isRulesLoading, rulesAvailable, selectedRule?.minMovement, tradePlan, reloadToken]);
-  useEffect(() => {
-    if (chartCandidateState.status !== "ready" || chartCandidateState.scope !== chartScope || isAnalysisExpired) return;
-    const expiresAt = assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).expiresAt;
-    if (expiresAt == null || expiresAt <= Date.now()) {
-      requestFreshCandles();
-      return;
-    }
-    const timer = window.setTimeout(requestFreshCandles, Math.min(expiresAt - Date.now(), 2_147_483_647));
-    return () => window.clearTimeout(timer);
-  }, [analysisId, chartCandidateState, context.timeframe, context.validUntil, instrument, isAnalysisExpired]);
-  useEffect(() => {
-    if (autoRetryRef.current.scope !== chartScope) {
-      autoRetryRef.current = { scope: chartScope, attempted: false };
-    }
-    if (chartCandidateState.scope !== chartScope || isAnalysisExpired) return;
-    if (chartCandidateState.status === "ready") {
-      autoRetryRef.current.attempted = false;
-      return;
-    }
-    if (chartCandidateState.status !== "error" || !chartCandidateState.reason ||
-        autoRetryRef.current.attempted || !rulesAvailable) return;
-    autoRetryRef.current.attempted = true;
-    // One bounded retry per failure episode. A persistent outage stays visible
-    // with a manual retry instead of repeatedly polling the upstream feed.
-    const timer = window.setTimeout(requestFreshCandles, 4_000);
-    return () => window.clearTimeout(timer);
-  }, [chartCandidateState.status, chartCandidateState.reason, chartCandidateState.scope, chartScope, isAnalysisExpired, rulesAvailable]);
+  }, [analysisId, context.timeframe, instrument, isAnalysisExpired, isRulesLoading, rulesAvailable, selectedRule?.minMovement, tradePlan, marketSnapshot]);
   const marginCapacity = getAdaptiveMarginCapacity(availableMargin, selectedRule);
   const fingerprint = createAdaptivePlanFingerprint({
     instrument,
@@ -1128,8 +1075,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const calculate = () => {
     setFinancialBlock(null);
     if (!rulesAvailable || isAnalysisExpired || chartCandidateState.status !== "ready" ||
-        chartCandidateState.scope !== chartScope ||
-        assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).reason !== null) {
+        chartCandidateState.scope !== chartScope) {
       setRecommendation(null);
       localStorage.removeItem(storageKey(analysisId));
       return;
@@ -1186,8 +1132,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   // changed form values, chart retrievals, expired analysis or broker rules.
   const tierComparison = useMemo(() => {
     if (!recommendation || !rulesAvailable || isAnalysisExpired ||
-        chartCandidateState.status !== "ready" || chartCandidateState.scope !== chartScope ||
-        assessAdaptiveCandleFreshness(chartCandidateState.candles, context.timeframe, chartCandidateState.source).reason !== null) return null;
+        chartCandidateState.status !== "ready" || chartCandidateState.scope !== chartScope) return null;
     return compareAdaptiveAccountTiers({
       instrument, tradePlan, availableMargin, maximumLoss, existingExposure,
       standardRule, context, checkpointPrices: chartCandidateState.prices,
@@ -1316,12 +1261,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             : chartCandidateState.status === "loading" || chartCandidateState.scope !== chartScope
             ? copy.adaptive_chart_candidates_loading
             : chartCandidateState.status === "error"
-              ? `${copy.adaptive_chart_candidates_unavailable} ${chartCandidateState.reason
-                  ? copy[`adaptive_candle_${chartCandidateState.reason}`]
-                  : ""}`
-              : copy.adaptive_chart_candidates_ready
-                  .replace("{buy}", String(chartCandidateState.prices.buy.length))
-                  .replace("{sell}", String(chartCandidateState.prices.sell.length))}
+              ? copy.adaptive_rules_error
+              : chartCandidateState.basis === "levels"
+                ? copy.adaptive_snapshot_levels_only
+                : copy.adaptive_snapshot_candidates
+                    .replace("{buy}", String(chartCandidateState.prices.buy.length))
+                    .replace("{sell}", String(chartCandidateState.prices.sell.length))}
         </p>
         <p className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-2 text-xs leading-relaxed text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
         <div className="space-y-2">
@@ -1463,9 +1408,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               {copy.adaptive_analysis_expired}
             </p>
           )}
-          {!isAnalysisExpired && chartCandidateState.status === "error" && chartCandidateState.reason && (
-            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300" data-testid="adaptive-candle-warning">
-              {copy.adaptive_chart_candidates_unavailable} {copy[`adaptive_candle_${chartCandidateState.reason}`]}
+          {!isAnalysisExpired && chartCandidateState.status === "ready" && chartCandidateState.basis === "levels" && (
+            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300" data-testid="adaptive-snapshot-warning">
+              {copy.adaptive_snapshot_levels_only_detail}
             </p>
           )}
           {typeof chartCandidateState.source.sourceFetchedAt === "string" &&
@@ -1479,9 +1424,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           <Button type="button" size="sm" onClick={calculate} disabled={!rulesAvailable || isAnalysisExpired || chartCandidateState.status !== "ready" || chartCandidateState.scope !== chartScope} data-testid="button-calculate-adaptive-plan"><ShieldCheck className="w-4 h-4 mr-1.5" />{copy.adaptive_calculate}</Button>
           {!isAnalysisExpired && rulesUnavailable && (
             <Button type="button" size="sm" variant="outline" onClick={() => void refetchRules()} data-testid="button-refresh-adaptive-rules">{copy.adaptive_refresh_rules}</Button>
-          )}
-          {!isAnalysisExpired && chartCandidateState.status === "error" && (
-            <Button type="button" size="sm" variant="outline" onClick={requestFreshCandles} disabled={!rulesAvailable || chartCandidateState.scope !== chartScope} data-testid="button-refresh-adaptive-candles">{copy.adaptive_refresh_candles}</Button>
           )}
           <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
