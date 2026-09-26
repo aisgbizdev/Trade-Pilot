@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Maximize2, AlertTriangle, ArrowUp, ArrowDown, Minus, Copy, Download } from "lucide-react";
+import { Maximize2, AlertTriangle, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import type { LiveQuote } from "@/hooks/use-live-quotes";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { renderChartSharePng } from "@/lib/chart-share";
+import { ImageExportMenu } from "@/components/image-export-menu";
 
 interface AnalysisChartSectionProps {
   instrument: string;
@@ -227,13 +228,18 @@ export function AnalysisChartSection({
   };
 
   const shareActions = (location: "inline" | "full") => canShareChart ? (
-    <div className="flex flex-wrap justify-end gap-1.5" data-testid={`chart-share-actions-${location}`}>
-      <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-xs" disabled={shareBusy} onClick={() => void shareChart("copy")} data-testid={`button-chart-share-copy-${location}`}>
-        <Copy className="h-3.5 w-3.5" aria-hidden="true" />{t.analysis_detail.chart_share_copy}
-      </Button>
-      <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-xs" disabled={shareBusy} onClick={() => void shareChart("download")} data-testid={`button-chart-share-download-${location}`}>
-        <Download className="h-3.5 w-3.5" aria-hidden="true" />{t.analysis_detail.chart_share_download}
-      </Button>
+    <div className="flex justify-end" data-testid={`chart-share-actions-${location}`}>
+      <ImageExportMenu
+        label={t.analysis_detail.chart_share_menu}
+        copyLabel={t.analysis_detail.chart_share_copy}
+        downloadLabel={t.analysis_detail.chart_share_download}
+        disabled={shareBusy}
+        onCopy={() => void shareChart("copy")}
+        onDownload={() => void shareChart("download")}
+        triggerTestId={`button-chart-share-menu-${location}`}
+        copyTestId={`button-chart-share-copy-${location}`}
+        downloadTestId={`button-chart-share-download-${location}`}
+      />
     </div>
   ) : (
     <p className="text-xs text-muted-foreground" data-testid={`chart-share-unavailable-${location}`}>

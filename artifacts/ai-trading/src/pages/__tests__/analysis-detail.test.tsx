@@ -1083,10 +1083,23 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getAllByTestId("adaptive-direction-tabs")).toHaveLength(1);
     expect(screen.getByTestId("adaptive-plan-valid").firstElementChild).toBe(screen.getByTestId("adaptive-direction-tabs"));
     expect(screen.queryByTestId("adaptive-plan-sell")).not.toBeInTheDocument();
+    expect(screen.getByTestId("adaptive-snapshot-status-buy")).toHaveTextContent("Plan ready to review");
+    expect(screen.getByTestId("adaptive-snapshot-status-buy")).toHaveClass("border-sky-200");
+    const entryGroup = screen.getByTestId("adaptive-snapshot-positions-buy");
+    const stopGroup = screen.getByTestId("adaptive-snapshot-stop-risk-buy");
+    const budgetGroup = screen.getByTestId("adaptive-snapshot-budget-buy");
+    const targetGroup = screen.getByTestId("adaptive-snapshot-targets-buy");
+    expect(stopGroup).toHaveClass("grid-cols-1", "sm:grid-cols-2");
+    expect(entryGroup.compareDocumentPosition(stopGroup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(stopGroup.compareDocumentPosition(budgetGroup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(budgetGroup.compareDocumentPosition(targetGroup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const download = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     const shareImage = vi.spyOn(adaptiveShare, "renderAdaptivePlanSharePng").mockReturnValue({
       blob: new Blob(["png"], { type: "image/png" }), url: "data:image/png;base64,cG5n",
     });
+    expect(screen.queryByTestId("adaptive-share-summary-download-buy")).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByTestId("adaptive-share-summary-menu-buy"), { key: "Enter", code: "Enter" });
+    expect(await screen.findByTestId("adaptive-share-summary-copy-buy")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("adaptive-share-summary-download-buy"));
     expect(shareImage).toHaveBeenCalledTimes(1);
     expect(shareImage.mock.calls[0][0]).toMatchObject({
@@ -1112,13 +1125,16 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const sellPlan = screen.getByTestId("adaptive-plan-sell");
     expect(screen.getByTestId("adaptive-direction-sell")).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByTestId("adaptive-plan-buy")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("adaptive-share-summary-download-buy")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("adaptive-share-summary-download-sell"));
+    expect(screen.queryByTestId("adaptive-share-summary-menu-buy")).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByTestId("adaptive-share-summary-menu-sell"), { key: "Enter", code: "Enter" });
+    expect(await screen.findByTestId("adaptive-share-summary-copy-sell")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("adaptive-share-summary-copy-sell"));
     expect(shareImage).toHaveBeenCalledTimes(2);
     expect(shareImage.mock.calls[1][0]).toMatchObject({
       side: "sell", actionable: false, instrument: "XAU/USD",
     });
     expect(shareImage.mock.calls[1][0].status).toContain("not actionable");
+    expect(screen.getByTestId("adaptive-snapshot-status-sell")).toHaveClass("border-amber-300");
     expect(sellPlan.textContent).toMatch(/Conditional scenario · not actionable now/i);
     expect(sellPlan.textContent).toMatch(/One final Stop Loss/i);
     expect(sellPlan.textContent).toMatch(/\$/);
@@ -1363,7 +1379,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Answer at a glance/i);
       expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Reference numbers only/i);
       expect(within(review).getByTestId("adaptive-snapshot-positions-" + side)).toHaveClass("border-t");
-      expect(within(review).getByTestId("adaptive-usable-risk-budget")).toHaveClass("border-t");
+      expect(within(review).getByTestId(`adaptive-snapshot-budget-${side}`)).toHaveClass("border-t");
       expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/Entry point/i);
       expect(within(review).getByTestId("adaptive-plan-snapshot")).toHaveTextContent(/One final Stop Loss/i);
       expect(within(review).getByTestId("adaptive-usable-risk-budget")).toHaveTextContent(/\$1,000/);

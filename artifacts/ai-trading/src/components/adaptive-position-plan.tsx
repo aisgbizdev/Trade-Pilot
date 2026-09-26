@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { AlertTriangle, Calculator, Check, ChevronRight, Copy, Download, Image as ImageIcon, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, Check, ChevronRight, Copy, Image as ImageIcon, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { useToast } from "@/hooks/use-toast";
 import { buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
 import { buildAdaptivePlanShareData, renderAdaptivePlanSharePng } from "@/lib/adaptive-plan-share";
+import { ImageExportMenu } from "@/components/image-export-menu";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { compareAdaptiveAccountTiers, type AdaptiveTierRow } from "@/lib/adaptive-tier-comparison";
 import {
@@ -700,88 +701,114 @@ function PlanSide({
           {isBuy ? copy.adaptive_buy : copy.adaptive_sell}
         </h4>
       </div>
-      {(
-        <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
-          <div>
-            <p className="text-xs font-bold text-foreground">{copy.adaptive_snapshot_title}</p>
-            {conditional ? (
-              <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">{copy.adaptive_snapshot_wait}</p>
-            ) : (
-              <ExpandableExplanation inline className="mt-0.5" testId="adaptive-snapshot-explanation">
-                {copy.adaptive_snapshot_ready}
-              </ExpandableExplanation>
-            )}
-            {summary && <Badge variant="outline" className="mt-2 text-[10px]" data-testid="adaptive-risk-style-active">
-              {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
-            </Badge>}
-          </div>
-          <div className="border-t border-border/60 pt-3" data-testid={`adaptive-snapshot-positions-${plan.side}`}>
-            <p className="text-xs font-bold">{copy.adaptive_position_prices_title}</p>
-            <ol className="mt-2 divide-y divide-border/60">
-              {plan.ladder.map((level) => (
-                <li key={`${plan.side}-summary-${level.level}`} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-1.5 text-[11px]" data-testid={`adaptive-snapshot-position-${plan.side}-${level.level}`}>
-                  <span className="font-medium">{copy.adaptive_position} {level.level + 1} · {level.level === 0 ? copy.adaptive_initial : copy.adaptive_additional_short}</span>
-                  <span className="font-semibold tabular-nums">{formatNumber(level.price, lang, 4)} · {formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-1 border-t border-border/70 pt-2 text-[11px] font-semibold" data-testid={`adaptive-snapshot-all-filled-${plan.side}`}>
-              {copy.adaptive_if_all_filled}: {plan.ladder.length} {plan.ladder.length === 1 ? copy.adaptive_position_singular : copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
+      <div className="rounded-md border border-border bg-background/60 p-3 space-y-4" data-testid="adaptive-plan-snapshot">
+        <div>
+          <p className="text-xs font-bold text-foreground">{copy.adaptive_snapshot_title}</p>
+          <div
+            className={`mt-2 rounded-md border px-3 py-2.5 ${
+              conditional
+                ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                : "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200"
+            }`}
+            data-testid={`adaptive-snapshot-status-${plan.side}`}
+          >
+            <p className="text-xs font-bold leading-relaxed">
+              {conditional ? copy.adaptive_conditional_status : copy.adaptive_valid}
             </p>
+            {conditional && <p className="mt-1 text-[11px] leading-relaxed">{copy.adaptive_snapshot_wait}</p>}
           </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3">
-              <div className="border-t border-border/60 pt-2">
-                <p className="text-xs text-muted-foreground">{copy.adaptive_final_stop}</p>
-              <p className="mt-0.5 text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</p>
-            </div>
-              <div className="border-t border-border/60 pt-2">
-                <p className="text-xs text-muted-foreground">{copy.adaptive_cycle_loss}</p>
-              <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
-            </div>
-              {summary && <div className="border-t border-border/60 pt-2" data-testid="adaptive-usable-risk-budget">
+          {!conditional && (
+            <ExpandableExplanation inline className="mt-2" testId="adaptive-snapshot-explanation">
+              {copy.adaptive_snapshot_ready}
+            </ExpandableExplanation>
+          )}
+          {summary && <Badge variant="outline" className="mt-2 text-[10px]" data-testid="adaptive-risk-style-active">
+            {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
+          </Badge>}
+        </div>
+        <div className="border-t border-border/60 pt-3" data-testid={`adaptive-snapshot-positions-${plan.side}`}>
+          <p className="text-xs font-bold">{copy.adaptive_position_prices_title}</p>
+          <ol className="mt-2 divide-y divide-border/60">
+            {plan.ladder.map((level) => (
+              <li key={`${plan.side}-summary-${level.level}`} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2 text-xs" data-testid={`adaptive-snapshot-position-${plan.side}-${level.level}`}>
+                <span className="font-medium">{copy.adaptive_position} {level.level + 1} · {level.level === 0 ? copy.adaptive_initial : copy.adaptive_additional_short}</span>
+                <span className="font-semibold tabular-nums">{formatNumber(level.price, lang, 4)} · {formatNumber(level.lot, lang)} {copy.adaptive_lot}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-1 border-t border-border/70 pt-2.5 text-xs font-semibold" data-testid={`adaptive-snapshot-all-filled-${plan.side}`}>
+            {copy.adaptive_if_all_filled}: {plan.ladder.length} {plan.ladder.length === 1 ? copy.adaptive_position_singular : copy.adaptive_snapshot_layers} · {formatNumber(plan.totalLots, lang)} {copy.adaptive_lot}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2" data-testid={`adaptive-snapshot-stop-risk-${plan.side}`}>
+          <div className="rounded-md border border-border/60 bg-muted/30 p-2.5">
+            <p className="text-xs text-muted-foreground">{copy.adaptive_final_stop}</p>
+            <p className="mt-1 text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{formatNumber(plan.stopLoss, lang, 4)}</p>
+          </div>
+          <div className="rounded-md border border-border/60 bg-muted/30 p-2.5">
+            <p className="text-xs text-muted-foreground">{copy.adaptive_cycle_loss}</p>
+            <p className="mt-1 text-sm font-bold tabular-nums">{formatMoney(plan.estimatedCycleLoss, lang)}</p>
+          </div>
+        </div>
+        {summary && (
+          <section className="space-y-2 border-t border-border/60 pt-3" data-testid={`adaptive-snapshot-budget-${plan.side}`}>
+            <p className="text-xs font-bold">{copy.adaptive_copy_risk_context}</p>
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="rounded-md border border-border/60 bg-muted/30 p-2.5" data-testid="adaptive-usable-risk-budget">
                 <p className="text-xs text-muted-foreground">{copy.adaptive_usable_risk_budget}</p>
-                <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.usableRiskBudget, lang)}</p>
+                <p className="mt-1 text-sm font-bold tabular-nums">{formatMoney(summary.usableRiskBudget, lang)}</p>
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   {copy.adaptive_risk_budget_rate.replace("{rate}", formatNumber(summary.riskUtilizationRate * 100, lang, 0))}
                 </p>
-              </div>}
-              {summary && <div className="border-t border-border/60 pt-2" data-testid="adaptive-unused-risk-buffer">
+              </div>
+              <div className="rounded-md border border-border/60 bg-muted/30 p-2.5" data-testid="adaptive-unused-risk-buffer">
                 <p className="text-xs text-muted-foreground">{copy.adaptive_unused_risk_buffer}</p>
-                <p className="mt-0.5 text-sm font-bold tabular-nums">{formatMoney(summary.unusedRiskBuffer, lang)}</p>
-              </div>}
-            {plan.takeProfit1 != null && (
-              <div className="border-t border-border/60 pt-2" data-testid={`adaptive-take-profit-${plan.side}-1`}>
-                <p className="text-xs text-muted-foreground">{copy.trade_plan_tp1}</p>
-                <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
-                <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-1`}>
-                  {copy.adaptive_tp_profit}: {formatProfit(plan.profitToTakeProfit1, lang)}
-                </p>
+                <p className="mt-1 text-sm font-bold tabular-nums">{formatMoney(summary.unusedRiskBuffer, lang)}</p>
               </div>
-            )}
-            {plan.takeProfit2 != null && (
-              <div className="border-t border-border/60 pt-2" data-testid={`adaptive-take-profit-${plan.side}-2`}>
-                <p className="text-xs text-muted-foreground">{copy.trade_plan_tp2}</p>
-                <p className="mt-0.5 text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
-                <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-2`}>
-                  {copy.adaptive_tp_profit}: {formatProfit(plan.profitToTakeProfit2, lang)}
-                </p>
-              </div>
-            )}
+            </div>
+          </section>
+        )}
+        {(plan.takeProfit1 != null || plan.takeProfit2 != null) && (
+          <section className="space-y-2 border-t border-border/60 pt-3" data-testid={`adaptive-snapshot-targets-${plan.side}`}>
+            <p className="text-xs font-bold">{copy.adaptive_targets_title}</p>
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {plan.takeProfit1 != null && (
+                <div className="rounded-md border border-border/60 bg-muted/30 p-2.5" data-testid={`adaptive-take-profit-${plan.side}-1`}>
+                  <p className="text-xs text-muted-foreground">{copy.trade_plan_tp1}</p>
+                  <p className="mt-1 text-sm font-bold tabular-nums">{formatNumber(plan.takeProfit1, lang, 4)}</p>
+                  <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-1`}>
+                    {copy.adaptive_tp_profit}: {formatProfit(plan.profitToTakeProfit1, lang)}
+                  </p>
+                </div>
+              )}
+              {plan.takeProfit2 != null && (
+                <div className="rounded-md border border-border/60 bg-muted/30 p-2.5" data-testid={`adaptive-take-profit-${plan.side}-2`}>
+                  <p className="text-xs text-muted-foreground">{copy.trade_plan_tp2}</p>
+                  <p className="mt-1 text-sm font-bold tabular-nums">{formatNumber(plan.takeProfit2, lang, 4)}</p>
+                  <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums" data-testid={`adaptive-tp-profit-${plan.side}-2`}>
+                    {copy.adaptive_tp_profit}: {formatProfit(plan.profitToTakeProfit2, lang)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+        {onShare && (
+          <div className="flex justify-end border-t border-border/60 pt-3" data-testid={`adaptive-share-summary-${plan.side}`}>
+            <ImageExportMenu
+              label={copy.adaptive_share_summary_menu}
+              copyLabel={copy.adaptive_share_summary_copy}
+              downloadLabel={copy.adaptive_share_summary_download}
+              disabled={shareBusy}
+              onCopy={() => onShare("copy", plan)}
+              onDownload={() => onShare("download", plan)}
+              triggerTestId={`adaptive-share-summary-menu-${plan.side}`}
+              copyTestId={`adaptive-share-summary-copy-${plan.side}`}
+              downloadTestId={`adaptive-share-summary-download-${plan.side}`}
+            />
           </div>
-            {onShare && (
-              <div className="flex flex-wrap justify-end gap-2 border-t border-border/60 pt-3" data-testid={`adaptive-share-summary-${plan.side}`}>
-                <Button type="button" size="sm" variant="outline" disabled={shareBusy} onClick={() => onShare("copy", plan)} data-testid={`adaptive-share-summary-copy-${plan.side}`}>
-                  <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                  {copy.adaptive_share_summary_copy}
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={shareBusy} onClick={() => onShare("download", plan)} data-testid={`adaptive-share-summary-download-${plan.side}`}>
-                  <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                  {copy.adaptive_share_summary_download}
-                </Button>
-              </div>
-            )}
-        </div>
-      )}
+        )}
+      </div>
       {!conditional && <p className="text-xs leading-relaxed text-muted-foreground border-t border-border/60 pt-2">
         {plan.ladder.length === 1 ? stageGuidance : copy.adaptive_additional_reminder}
       </p>}
@@ -1853,7 +1880,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             {directionControl}
            <div className="flex flex-wrap items-center justify-between gap-2">
               {primaryPlan && recommendation.sideEvaluations[primaryPlan.side].status === "viable"
-                ? <Badge className="bg-emerald-600 hover:bg-emerald-600">{copy.adaptive_valid}</Badge>
+                ? <Badge variant="outline" className="border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">{copy.adaptive_valid}</Badge>
                 : <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-200">{copy.adaptive_conditional_status}</Badge>}
              <div className="flex items-center gap-2">
                {copyStatus !== "idle" && (

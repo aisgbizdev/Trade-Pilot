@@ -76,7 +76,9 @@ it("offers the same standard chart PNG from the card and full-chart dialog", asy
         />
       </LanguageProvider>,
     );
-    expect(screen.getByTestId("button-chart-share-copy-inline")).toBeInTheDocument();
+    expect(screen.queryByTestId("button-chart-share-copy-inline")).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByTestId("button-chart-share-menu-inline"), { key: "Enter", code: "Enter" });
+    expect(await screen.findByTestId("button-chart-share-copy-inline")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-chart-share-download-inline"));
     await waitFor(() => expect(renderChartSharePng).toHaveBeenCalledTimes(1));
     expect(vi.mocked(renderChartSharePng).mock.calls[0][0]).toMatchObject({
@@ -86,11 +88,15 @@ it("offers the same standard chart PNG from the card and full-chart dialog", asy
       bias: "Neutral / Wait",
     });
     expect(click).toHaveBeenCalled();
-    fireEvent.click(screen.getByTestId("button-open-full-chart"));
-    expect(screen.getByTestId("button-chart-share-copy-full")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("button-chart-share-download-full"));
+    fireEvent.keyDown(screen.getByTestId("button-chart-share-menu-inline"), { key: "Enter", code: "Enter" });
+    fireEvent.click(await screen.findByTestId("button-chart-share-copy-inline"));
     await waitFor(() => expect(renderChartSharePng).toHaveBeenCalledTimes(2));
-    expect(vi.mocked(renderChartSharePng).mock.calls[1][0]).toEqual(vi.mocked(renderChartSharePng).mock.calls[0][0]);
+    fireEvent.click(screen.getByTestId("button-open-full-chart"));
+    fireEvent.keyDown(screen.getByTestId("button-chart-share-menu-full"), { key: "Enter", code: "Enter" });
+    expect(await screen.findByTestId("button-chart-share-copy-full")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-chart-share-download-full"));
+    await waitFor(() => expect(renderChartSharePng).toHaveBeenCalledTimes(3));
+    expect(vi.mocked(renderChartSharePng).mock.calls[2][0]).toEqual(vi.mocked(renderChartSharePng).mock.calls[0][0]);
   } finally {
     click.mockRestore();
   }
@@ -105,7 +111,7 @@ it("does not offer a misleading chart image for an unsupported timeframe", () =>
   expect(screen.getByTestId("chart-share-unavailable-inline")).toBeInTheDocument();
   fireEvent.click(screen.getByTestId("button-open-full-chart"));
   expect(screen.getByTestId("chart-share-unavailable-full")).toBeInTheDocument();
-  expect(screen.queryByTestId("button-chart-share-download-full")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("button-chart-share-menu-full")).not.toBeInTheDocument();
 });
 
 describe("AnalysisChartSection live quote snapshot", () => {
