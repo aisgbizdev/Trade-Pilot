@@ -1184,14 +1184,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       fingerprint, form, recommendation: next, sourceFetchedAt: chartCandidateState.source.sourceFetchedAt,
     }));
   };
-  const reset = () => {
-    setForm(DEFAULT_FORM);
-    setRecommendation(null);
-    setFinancialBlock(null);
-    setActiveSide("none");
-    setDetailsOpen(false);
-    localStorage.removeItem(storageKey(analysisId));
-  };
   // The comparison is local to this calculation. Never reuse its result across
   // changed form values, chart retrievals, expired analysis or broker rules.
   const tierComparison = useMemo(() => {
@@ -1579,7 +1571,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           {!isAnalysisExpired && rulesUnavailable && (
             <Button type="button" size="sm" variant="outline" onClick={() => void refetchRules()} data-testid="button-refresh-adaptive-rules">{copy.adaptive_refresh_rules}</Button>
           )}
-          <Button type="button" size="sm" variant="ghost" onClick={reset} data-testid="button-reset-adaptive-plan">{copy.adaptive_reset}</Button>
         </div>
         {recommendation && tierComparison && (
           <AdaptiveDecisionSummary rows={tierComparison} selectedTier={form.accountTier}

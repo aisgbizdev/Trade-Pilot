@@ -1233,7 +1233,6 @@ export const en = {
     adaptive_preference_active: "High Risk",
     adaptive_preference_active_desc: "May reserve up to 75% of available funds, with up to six additions and a hard loss ceiling of 30% of that reserved plan margin.",
     adaptive_calculate: "Create recommendation",
-    adaptive_reset: "Start over",
     adaptive_ready: "Enter your free trading funds and hard maximum loss. The calculation uses these values directly.",
     adaptive_disclaimer: "TradePilot provides an objective, non-executing suggestion—not a profit guarantee or automatic order. Profit figures are scenarios based on the saved AI analysis; you decide whether and when to trade.",
     adaptive_comparison_title: "All tier and risk choices",

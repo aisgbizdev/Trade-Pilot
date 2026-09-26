@@ -808,7 +808,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(disclaimer).toHaveTextContent(/not a profit guarantee or automatic order/);
     expect(disclaimer).toBeVisible();
     expect(dayTrade).toBeVisible();
-    expect(dayTrade).toHaveTextContent(/Overnight holding and rollover fees are excluded/);
+    expect(dayTrade).toHaveTextContent(/overnight positions are not covered/);
 
     fireEvent.click(within(account).getByText("Show account explanation"));
     fireEvent.click(within(funds).getByText("Show funds and risk explanation"));
@@ -839,7 +839,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(disclaimer).toBeVisible();
     expect(disclaimer).toHaveTextContent(/bukan jaminan profit atau order otomatis/);
     expect(dayTrade).toBeVisible();
-    expect(dayTrade).toHaveTextContent(/Posisi overnight dan biaya menginap tidak dihitung/);
+    expect(dayTrade).toHaveTextContent(/posisi overnight tidak tercakup/);
 
     fireEvent.click(screen.getByTestId("button-adaptive-account-micro"));
     expect(within(account).getByText("Minimum 0,01 lot · margin $10")).toBeVisible();
@@ -877,7 +877,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(disclaimer).toBeVisible();
     expect(disclaimer).toHaveTextContent(/not a profit guarantee or automatic order/);
     expect(dayTrade).toBeVisible();
-    expect(dayTrade).toHaveTextContent(/Overnight holding and rollover fees are excluded/);
+    expect(dayTrade).toHaveTextContent(/overnight positions are not covered/);
 
     fireEvent.click(within(account).getByText("Show account explanation"));
     fireEvent.click(within(funds).getByText("Show funds and risk explanation"));
@@ -971,6 +971,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
       expect(reason.querySelector("summary")).toHaveTextContent(en.analysis_detail.trade_plan_rationale);
     }
     expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(en.analysis_detail.adaptive_day_trade_only);
+    expect(screen.queryByTestId("button-reset-adaptive-plan")).not.toBeInTheDocument();
     expect(screen.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("button-adaptive-account-micro")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId("button-adaptive-account-regular")).toHaveAttribute("aria-pressed", "false");
