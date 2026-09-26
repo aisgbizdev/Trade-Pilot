@@ -2668,6 +2668,7 @@ export default function AnalysisDetailPage({
             supportingDetails={adaptiveSupportingDetails}
             invalidationCount={invalidationItems.length}
             analyzedAt={confidenceShareData.analyzedAt}
+            analysisCreatedAt={analysis.createdAt}
             shareSources={confidenceShareData.sources}
           />
         )}

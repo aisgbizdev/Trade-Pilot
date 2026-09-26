@@ -14,3 +14,9 @@ Use a standardized, context-bearing chart image from both the inline price chart
 **Why:** The user chose the compact chart image for sharing from either location. Current zoom can crop out Stop Loss or the wait status, and live quotes can be mistaken for levels from the saved analysis.
 
 **How to apply:** Preserve original analysis time and saved status/levels, distinguish historical candles fetched later from live prices, and include a visible safety warning. If candles at the analysis time are unavailable, fail explicitly instead of substituting today's chart or trying to capture a third-party iframe.
+
+Adaptive Plan sharing is separate from chart sharing. Export only the active Buy or Sell **Ringkasan plan** card, not the entire Adaptive panel or its education dialog.
+
+**Why:** The user clarified that Adaptive is a different menu and wants only its compact plan summary shared. Without the selected side and its conditional/not-actionable status, entry and lot figures could be mistaken for a ready trading instruction.
+
+**How to apply:** Keep each side's accepted positions and risk figures together with the original analysis time, prominent actionability status, and one short safety warning; never merge Buy and Sell or replace saved values with live prices.

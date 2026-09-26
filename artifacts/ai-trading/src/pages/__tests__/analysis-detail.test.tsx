@@ -6,6 +6,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 
 import AnalysisDetailPage from "../analysis-detail";
 import { AdaptivePositionPlan } from "../../components/adaptive-position-plan";
+import * as adaptiveShare from "../../lib/adaptive-plan-share";
 import { en } from "../../locales/en";
 import {
   installFetchMock,
@@ -1082,6 +1083,16 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getAllByTestId("adaptive-direction-tabs")).toHaveLength(1);
     expect(screen.getByTestId("adaptive-plan-valid").firstElementChild).toBe(screen.getByTestId("adaptive-direction-tabs"));
     expect(screen.queryByTestId("adaptive-plan-sell")).not.toBeInTheDocument();
+    const download = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const shareImage = vi.spyOn(adaptiveShare, "renderAdaptivePlanSharePng").mockReturnValue({
+      blob: new Blob(["png"], { type: "image/png" }), url: "data:image/png;base64,cG5n",
+    });
+    fireEvent.click(screen.getByTestId("adaptive-share-summary-download-buy"));
+    expect(shareImage).toHaveBeenCalledTimes(1);
+    expect(shareImage.mock.calls[0][0]).toMatchObject({
+      side: "buy", actionable: true, instrument: "XAU/USD",
+    });
+    expect(download).toHaveBeenCalled();
 
     fireEvent.click(screen.getByTestId("button-copy-adaptive-plan"));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
@@ -1101,6 +1112,13 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const sellPlan = screen.getByTestId("adaptive-plan-sell");
     expect(screen.getByTestId("adaptive-direction-sell")).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByTestId("adaptive-plan-buy")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-share-summary-download-buy")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("adaptive-share-summary-download-sell"));
+    expect(shareImage).toHaveBeenCalledTimes(2);
+    expect(shareImage.mock.calls[1][0]).toMatchObject({
+      side: "sell", actionable: false, instrument: "XAU/USD",
+    });
+    expect(shareImage.mock.calls[1][0].status).toContain("not actionable");
     expect(sellPlan.textContent).toMatch(/Conditional scenario · not actionable now/i);
     expect(sellPlan.textContent).toMatch(/One final Stop Loss/i);
     expect(sellPlan.textContent).toMatch(/\$/);

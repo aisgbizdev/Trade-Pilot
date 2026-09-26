@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { AlertTriangle, Calculator, Check, ChevronRight, Copy, Image as ImageIcon, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, Check, ChevronRight, Copy, Download, Image as ImageIcon, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { useToast } from "@/hooks/use-toast";
 import { buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
+import { buildAdaptivePlanShareData, renderAdaptivePlanSharePng } from "@/lib/adaptive-plan-share";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { compareAdaptiveAccountTiers, type AdaptiveTierRow } from "@/lib/adaptive-tier-comparison";
 import {
@@ -68,6 +69,7 @@ interface Props {
   supportingDetails?: ReactNode;
   invalidationCount?: number;
   analyzedAt: string;
+  analysisCreatedAt: string;
   shareSources: ConfidenceShareData["sources"];
 }
 
@@ -637,6 +639,8 @@ function PlanSide({
   decision,
   summary,
   conditional = false,
+  onShare,
+  shareBusy = false,
 }: {
   plan: AdaptiveSidePositionPlan;
   lang: "en" | "id";
@@ -644,6 +648,8 @@ function PlanSide({
   decision: AdaptivePlanDecision;
   summary?: AdaptiveSnapshotBudget | null;
   conditional?: boolean;
+  onShare?: (action: "copy" | "download", plan: AdaptiveSidePositionPlan) => void;
+  shareBusy?: boolean;
 }) {
   const isBuy = plan.side === "buy";
   const scenarioIsPreferred = decision.preferredSide === "both" || decision.preferredSide === plan.side;
@@ -762,6 +768,18 @@ function PlanSide({
               </div>
             )}
           </div>
+            {onShare && (
+              <div className="flex flex-wrap justify-end gap-2 border-t border-border/60 pt-3" data-testid={`adaptive-share-summary-${plan.side}`}>
+                <Button type="button" size="sm" variant="outline" disabled={shareBusy} onClick={() => onShare("copy", plan)} data-testid={`adaptive-share-summary-copy-${plan.side}`}>
+                  <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  {copy.adaptive_share_summary_copy}
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={shareBusy} onClick={() => onShare("download", plan)} data-testid={`adaptive-share-summary-download-${plan.side}`}>
+                  <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  {copy.adaptive_share_summary_download}
+                </Button>
+              </div>
+            )}
         </div>
       )}
       {!conditional && <p className="text-xs leading-relaxed text-muted-foreground border-t border-border/60 pt-2">
@@ -902,7 +920,7 @@ export function AdaptivePositionPlan(props: Props) {
   return <AdaptivePositionPlanContent {...props} />;
 }
 
-function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, context, marketSnapshot, lang, copy, supportingDetails, invalidationCount = 0, analyzedAt, shareSources }: Props) {
+function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, context, marketSnapshot, lang, copy, supportingDetails, invalidationCount = 0, analyzedAt, analysisCreatedAt, shareSources }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
   const [financialBlock, setFinancialBlock] = useState<FinancialBlock | null>(null);
@@ -1322,6 +1340,42 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       toast({ title: copy.confidence_share_image_downloaded });
     } catch {
       toast({ title: copy.adaptive_share_failed, variant: "destructive" });
+    } finally {
+      setShareBusy(false);
+    }
+  };
+  const shareSummaryImage = async (action: "copy" | "download", plan: AdaptiveSidePositionPlan) => {
+    if (shareBusy || isAnalysisExpired || !recommendation || activeSide !== plan.side || !primaryPlan) return;
+    setShareBusy(true);
+    try {
+      const actionable = recommendation.result.valid &&
+        recommendation.sideEvaluations[plan.side].status === "viable" &&
+        recommendation.result[plan.side] != null;
+      const data = buildAdaptivePlanShareData({
+        instrument, timeframe: context.timeframe ?? "—", analysisCreatedAt,
+        accountTier: form.accountTier, riskStyle: form.riskStyle,
+        plan, budget: snapshotForSide(plan.side), actionable,
+        lang, copy,
+      });
+      const { blob, url } = renderAdaptivePlanSharePng(data, lang);
+      if (action === "copy" && navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast({ title: copy.adaptive_share_summary_copied });
+          return;
+        } catch {
+          // Image clipboard support varies; offer the same PNG as a download.
+        }
+      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tradepilot-adaptive-${instrument.replace(/[^a-z0-9-]/gi, "-")}-${plan.side}-${(context.timeframe ?? "unknown").replace(/[^a-z0-9-]/gi, "-")}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast({ title: copy.adaptive_share_summary_downloaded });
+    } catch {
+      toast({ title: copy.adaptive_share_summary_failed, variant: "destructive" });
     } finally {
       setShareBusy(false);
     }
@@ -1784,6 +1838,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                          decision={recommendation.decision}
                          summary={snapshotForSide(side)}
                          conditional
+                          onShare={(action, selectedPlan) => void shareSummaryImage(action, selectedPlan)}
+                          shareBusy={shareBusy}
                        /> : <div className="rounded-md border border-border bg-muted/20 p-3 space-y-1" data-testid={`adaptive-plan-snapshot-unavailable-${side}`}>
                          <p className="text-xs font-bold">{copy.adaptive_snapshot_title}</p>
                          <p className="text-[11px] text-muted-foreground">{blockedReason}</p>
@@ -1843,6 +1899,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               decision={recommendation.decision}
                summary={snapshotForSide(primaryPlan.side)}
               conditional={recommendation.sideEvaluations[primaryPlan.side].status !== "viable"}
+               onShare={(action, selectedPlan) => void shareSummaryImage(action, selectedPlan)}
+               shareBusy={shareBusy}
             />}
           <details className="rounded-md border border-border p-3" data-testid="adaptive-risk-details">
             <summary className="cursor-pointer text-xs font-bold text-foreground">{copy.adaptive_how_to_use}</summary>
