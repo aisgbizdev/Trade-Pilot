@@ -11,6 +11,6 @@ Present the decision and its current safety implications first. Keep optional ed
 
 For the lower analysis page beginning at Adaptive, treat saved-analysis narratives and Adaptive's diagnostics as one educational destination rather than parallel menu rows. Keep invalidation and conditional-entry status visible, and label live technical indicators as current-market context distinct from the saved plan.
 
-**Why:** The user found the separate explanation menus crowded and explicitly restricted the redesign to Adaptive and below.
+**Why:** The user found the separate explanation menus crowded and explicitly restricted the redesign to Adaptive and below. After seeing the built version, the user confirmed that arrangement was good.
 
 **How to apply:** Keep one explanation entry near the Adaptive decision; group optional topics within it. Position the live check soon after Adaptive without changing the analysis above or implying that live indicators recalculated the saved plan.

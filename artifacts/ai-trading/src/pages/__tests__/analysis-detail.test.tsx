@@ -1108,6 +1108,90 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(localStorage.getItem(storedKey)).toBeNull();
   });
 
+  it("copies the whole Adaptive explanation with saved-analysis evidence and safety context", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    installFetchMock([
+      getAnalysisHandler({ body: {
+        ...ANALYSIS_PAYLOAD,
+        tradePlan: TRADE_PLAN,
+        opportunity: "The trend can continue.",
+        risk: "A break below support invalidates the setup.",
+        fundamentalContext: {
+          newsItems: [{ id: "n-1", title: "Gold rallies after statement", url: "https://example.com/gold", publishedAt: new Date(NOW).toISOString() }],
+          calendarEvents: [],
+        },
+        fundamentalCitations: { newsTitles: ["Gold rallies after statement", "Invented headline"], calendarEvents: [] },
+      } }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.change(await screen.findByTestId("input-adaptive-available-margin"), { target: { value: "100000" } });
+    fireEvent.change(screen.getByTestId("input-adaptive-maximum-loss"), { target: { value: "500" } });
+    await waitFor(() => expect(screen.getByTestId("button-calculate-adaptive-plan")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
+    expect(await screen.findByTestId("adaptive-plan-snapshot")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
+    expect(screen.getByTestId("adaptive-share-actions")).toBeVisible();
+    fireEvent.click(screen.getByTestId("adaptive-copy-details-text"));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const shared = String(writeText.mock.calls[0]?.[0]);
+    expect(shared).toContain("TradePilot.id — Understand the details");
+    expect(shared).toMatch(/XAU\/USD · 1h · /);
+    expect(shared).toContain("Why this plan was chosen");
+    expect(shared).toContain("Typical candle range");
+    expect(shared).toContain("H1 close below 2300");
+    expect(shared).toContain("Live indicators do not automatically recalculate it");
+    expect(shared).toContain("A break below support invalidates the setup.");
+    expect(shared).toContain("Price likely continues higher into resistance.");
+    expect(shared).toContain("Gold rallies after statement — https://example.com/gold");
+    expect(shared).not.toContain("Invented headline");
+    expect(shared).not.toContain("Open Understand the details before");
+    expect(shared).toContain("not a profit guarantee or automatic order");
+  });
+
+  it("shares the full Adaptive image or downloads a PNG when clipboard images are blocked", async () => {
+    const fillText = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      fillRect: vi.fn(),
+      fillText,
+      measureText: (text: string) => ({ width: text.length * 12 }),
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue("data:image/png;base64,UE5H");
+    const downloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this.download);
+    });
+    class TestClipboardItem {
+      constructor(public readonly items: Record<string, Blob>) {}
+    }
+    vi.stubGlobal("ClipboardItem", TestClipboardItem);
+    const write = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("Permission denied"));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { write } });
+    installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.click(await screen.findByTestId("button-adaptive-explanation"));
+    const button = screen.getByTestId("adaptive-copy-details-image");
+    fireEvent.click(button);
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect((write.mock.calls[0]?.[0]?.[0] as TestClipboardItem).items["image/png"].size).toBeGreaterThan(0);
+    expect(downloads).toHaveLength(0);
+    const drawn = fillText.mock.calls.map(([text]) => String(text)).join(" ");
+    expect(drawn).toContain("H1 close below 2300");
+    expect(drawn).toContain("Price likely continues higher into resistance.");
+
+    fireEvent.click(button);
+    await waitFor(() => expect(downloads).toEqual(["tradepilot-adaptive-XAU-USD-1h.png"]));
+    expect(screen.getByTestId("adaptive-education-panel")).toBeInTheDocument();
+  });
+
   it("uses the analysis's persisted market snapshot without a separate candle request", async () => {
     const { calls } = installFetchMock([
       getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),

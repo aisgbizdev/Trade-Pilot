@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { AlertTriangle, Calculator, Check, Copy, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, Check, Copy, Image as ImageIcon, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-client-react";
 import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
+import { useToast } from "@/hooks/use-toast";
+import { buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { compareAdaptiveAccountTiers, type AdaptiveTierRow } from "@/lib/adaptive-tier-comparison";
 import {
@@ -65,6 +67,8 @@ interface Props {
   copy: AdaptiveCopy;
   supportingDetails?: ReactNode;
   invalidationCount?: number;
+  analyzedAt: string;
+  shareSources: ConfidenceShareData["sources"];
 }
 
 interface FormState {
@@ -896,7 +900,7 @@ export function AdaptivePositionPlan(props: Props) {
   return <AdaptivePositionPlanContent {...props} />;
 }
 
-function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, context, marketSnapshot, lang, copy, supportingDetails, invalidationCount = 0 }: Props) {
+function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, context, marketSnapshot, lang, copy, supportingDetails, invalidationCount = 0, analyzedAt, shareSources }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [recommendation, setRecommendation] = useState<AdaptivePlanRecommendation | null>(null);
   const [financialBlock, setFinancialBlock] = useState<FinancialBlock | null>(null);
@@ -905,6 +909,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const maximumLossInputRef = useRef<HTMLInputElement>(null);
   const [activeSide, setActiveSide] = useState<"buy" | "sell" | "none">("none");
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+  const educationContentRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
   const [analysisExpired, setAnalysisExpired] = useState(false);
   const chartScope = `${analysisId}:${instrument}:${context.timeframe ?? ""}`;
@@ -1241,6 +1248,82 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       2500,
     );
   };
+  const educationShareData = (): ConfidenceShareData => {
+    if (!educationContentRef.current) throw new Error("Explanation is not open");
+    const sections = Array.from(educationContentRef.current.children)
+      .filter((node) => node.tagName === "SECTION")
+      .map((section) => ({
+        title: section.querySelector("h3")?.textContent?.trim() ?? "",
+        body: Array.from(section.querySelectorAll("h4, p, li"))
+          .filter((node) => !node.closest("li") || node.tagName === "LI")
+          .map((node) => node.textContent?.trim() ?? "")
+          .filter(Boolean)
+          .join("\n"),
+      }))
+      .filter(({ title, body }) => title && body);
+    if (!sections.length) throw new Error("Explanation has no content");
+    const decision = isAnalysisExpired
+      ? copy.adaptive_analysis_expired
+      : !recommendation
+        ? copy.adaptive_ready
+        : !recommendation.result.valid
+          ? hasConditionalScenarios ? copy.adaptive_conditional_not_actionable : copy.adaptive_invalid_description
+          : copy.adaptive_valid;
+    return {
+      title: copy.adaptive_education_title,
+      instrument,
+      timeframe: context.timeframe ?? "—",
+      analyzedAt,
+      summary: [
+        decision,
+        invalidationCount > 0 ? copy.adaptive_share_invalidation.replace("{count}", String(invalidationCount)) : null,
+        copy.adaptive_share_snapshot_note,
+      ].filter(Boolean).join("\n"),
+      sections,
+      sourcesTitle: copy.citations_label,
+      sources: shareSources,
+      disclaimer: copy.adaptive_disclaimer,
+    };
+  };
+  const copyEducationText = async () => {
+    if (shareBusy) return;
+    setShareBusy(true);
+    try {
+      await writeClipboardText(buildConfidenceShareText(educationShareData()));
+      toast({ title: copy.adaptive_share_text_copied });
+    } catch {
+      toast({ title: copy.adaptive_share_failed, variant: "destructive" });
+    } finally {
+      setShareBusy(false);
+    }
+  };
+  const copyEducationImage = async () => {
+    if (shareBusy) return;
+    setShareBusy(true);
+    try {
+      const { blob, url } = renderConfidenceSharePng(educationShareData());
+      if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast({ title: copy.confidence_share_image_copied });
+          return;
+        } catch {
+          // Image clipboard permission is not universal; provide the same PNG as a download.
+        }
+      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tradepilot-adaptive-${instrument.replace(/[^a-z0-9-]/gi, "-")}-${(context.timeframe ?? "unknown").replace(/[^a-z0-9-]/gi, "-")}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast({ title: copy.confidence_share_image_downloaded });
+    } catch {
+      toast({ title: copy.adaptive_share_failed, variant: "destructive" });
+    } finally {
+      setShareBusy(false);
+    }
+  };
 
   return (
     <Card className="overflow-hidden" data-testid="card-adaptive-position-plan">
@@ -1452,12 +1535,12 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           }}
           lang={lang} copy={copy} />
         <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl" data-testid="adaptive-education-panel">
-            <DialogHeader>
+          <DialogContent className="grid max-h-[85dvh] w-[calc(100vw-2rem)] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden rounded-xl p-4 sm:p-6" data-testid="adaptive-education-panel">
+            <DialogHeader className="pr-7 text-left">
               <DialogTitle>{copy.adaptive_education_title}</DialogTitle>
               <DialogDescription>{copy.adaptive_education_intro}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div ref={educationContentRef} className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1" data-testid="adaptive-education-content">
               <section className="space-y-2 text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-plan-method">
                 <h3 className="font-bold text-foreground">{copy.adaptive_method_summary}</h3>
                 <p>{copy.adaptive_ready}</p>
@@ -1653,6 +1736,16 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               )}
               {supportingDetails}
               <AnalysisGuideLink article="adaptive-position-plan" compact />
+            </div>
+            <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row" data-testid="adaptive-share-actions">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" disabled={shareBusy} onClick={copyEducationText} data-testid="adaptive-copy-details-text">
+                <Copy className="mr-2 h-4 w-4" />
+                {copy.confidence_share_copy_text}
+              </Button>
+              <Button type="button" className="w-full sm:w-auto" disabled={shareBusy} onClick={copyEducationImage} data-testid="adaptive-copy-details-image">
+                <ImageIcon className="mr-2 h-4 w-4" />
+                {copy.confidence_share_copy_image}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
