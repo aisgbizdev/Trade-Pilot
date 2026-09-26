@@ -1797,6 +1797,7 @@ export const id: Translations = {
     overall_title: "Total ({days} hari terakhir)",
     overall_win_rate: "Win rate",
     overall_hit_rate: "Hit rate",
+    overall_explain_label: "Apa arti kedua angka ini?",
     overall_win_rate_explain: "Dari trade yang benar-benar tertrigger (TP atau SL kena).",
     overall_hit_rate_explain: "Dari semua analisis resolved, termasuk yang expired tanpa pergerakan.",
     overall_breakdown: "{wins} TP · {losses} SL · {expired} expired",

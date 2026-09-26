@@ -445,7 +445,7 @@ function narrativePreview(content: string): string {
 function hasSafetyCue(content: string): boolean {
   // AI-written rationale is free-form. Keep the full text visible if it might
   // qualify the decision; only purely explanatory rationale may be collapsed.
-  return /\b(risk|warning|caution|invalidat(?:e|ed|ion)|stop[\s-]?loss|wait|avoid|volatile|liquidat(?:e|ion)|margin call|stale|unavailable)\b|risiko|peringatan|waspada|batal|pembatalan|tunggu|jangan|rugi|volatil|kedaluwarsa|tidak layak|belum layak|tidak tersedia/i.test(content);
+  return /\b(risk|warning|caution|invalidat(?:e|ed|ion)|stop[\s-]?loss|wait|avoid|volatile|liquidat(?:e|ion)|margin call|stale|unavailable|unsafe|revers(?:e|al)|do not|no trade|not (?:recommended|suitable|confirmed|valid))\b|risiko|peringatan|waspada|batal|pembatalan|tunggu|jangan|rugi|volatil|kedaluwarsa|hindari|tidak (?:layak|tersedia|disarankan|aman)|belum (?:layak|terkonfirmasi|aman)/i.test(content);
 }
 
 function NarrativeDisclosure({
@@ -2374,7 +2374,7 @@ export default function AnalysisDetailPage({
             <div className="bg-muted/40 rounded-md p-2.5 flex gap-2" data-testid="card-confidence-reason">
               <HelpCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
-                {hasSafetyCue(confidenceReason) ? (
+                {!isBeginnerMode || confidenceReason.length <= 140 || hasSafetyCue(confidenceReason) ? (
                   <>
                     <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
                       {t.analysis_detail.confidence_reason_label}

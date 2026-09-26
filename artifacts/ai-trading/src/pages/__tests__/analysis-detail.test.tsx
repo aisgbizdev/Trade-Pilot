@@ -389,6 +389,42 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(screen.getByTestId("button-feedback-not-useful")).toBeInTheDocument();
   });
 
+  it("starts with long optional confidence rationale closed, but keeps the confidence range available", async () => {
+    const longReason = "Trend structure aligns across H1 and H4. The candle pattern and momentum readings point in the same direction over several sessions, which explains the confidence estimate.";
+    installFetchMock([getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, whyReason: longReason } }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    const rationale = await screen.findByTestId("confidence-reason-disclosure") as HTMLDetailsElement;
+    expect(rationale.open).toBe(false);
+    expect(screen.getByTestId("text-confidence")).toBeVisible();
+    fireEvent.click(within(rationale).getByText(en.analysis_detail.confidence_reason_label));
+    expect(rationale.open).toBe(true);
+    expect(rationale).toHaveTextContent(longReason);
+  });
+
+  it("does not hide a caution inside AI-written confidence rationale", async () => {
+    installFetchMock([getAnalysisHandler({
+      body: { ...ANALYSIS_PAYLOAD, whyReason: "Momentum is strong, but stop loss must be respected." },
+    }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(/stop loss must be respected/i);
+    expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
+  });
+
+  it("keeps short rationale and pro uncertainty notes visible without requiring an extra click", async () => {
+    installFetchMock([getAnalysisHandler({
+      body: { ...ANALYSIS_PAYLOAD, mode: "pro", uncertaintyNotes: "The data is mixed, so the estimate depends on confirmation." },
+    }), feedbackHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+
+    expect(await screen.findByTestId("confidence-reason-safety")).toHaveTextContent(/data is mixed/i);
+    expect(screen.queryByTestId("confidence-reason-disclosure")).not.toBeInTheDocument();
+  });
+
   it("uses progressive disclosure for scenarios, pro factors, and execution insight", async () => {
     installFetchMock([
       getAnalysisHandler({
@@ -447,6 +483,13 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(screen.queryByTestId("execution-insight-content")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("execution-insight-trigger"));
     expect(screen.getByTestId("execution-insight-content")).toBeVisible();
+    const scenarioA = screen.getByTestId("exec-scenario-a") as HTMLDetailsElement;
+    const scenarioB = screen.getByTestId("exec-scenario-b") as HTMLDetailsElement;
+    expect(scenarioA.open).toBe(false);
+    expect(scenarioB.open).toBe(false);
+    fireEvent.click(within(scenarioA).getByText(en.analysis_detail.execution_scenario_a_label));
+    expect(scenarioA.open).toBe(true);
+    expect(scenarioB.open).toBe(false);
   });
 
   it("turns legacy 1m wait-plan n/a values into actionable observation guidance", async () => {
@@ -847,6 +890,11 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     const snapshot = await screen.findByTestId("adaptive-plan-snapshot");
+    const snapshotExplanation = screen.getByTestId("adaptive-snapshot-explanation") as HTMLDetailsElement;
+    expect(snapshotExplanation.open).toBe(false);
+    expect(snapshot).toHaveTextContent(/Stop Loss/i);
+    fireEvent.click(within(snapshotExplanation).getByText("Show explanation"));
+    expect(snapshotExplanation.open).toBe(true);
     const whyButton = await screen.findByTestId("adaptive-insight-button-reasoning");
     const volatilityButton = screen.getByTestId("adaptive-insight-button-volatility");
     expect(whyButton).toHaveAttribute("aria-expanded", "false");
@@ -1193,6 +1241,11 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     fireEvent.click(screen.getByTestId("button-calculate-adaptive-plan"));
 
     expect(screen.getByTestId("adaptive-plan-invalid")).toHaveTextContent(/Buy and Sell scenarios available/i);
+    const reviewExplanation = screen.getByTestId("adaptive-scenarios-review-explanation") as HTMLDetailsElement;
+    expect(reviewExplanation.open).toBe(false);
+    fireEvent.click(within(reviewExplanation).getByText("Show explanation"));
+    expect(reviewExplanation.open).toBe(true);
+    expect(reviewExplanation).toHaveTextContent(/not an instruction to enter/i);
     const alternativeButton = screen.getByTestId("adaptive-insight-button-alternative");
     expect(alternativeButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByTestId("adaptive-alternative")).not.toBeInTheDocument();

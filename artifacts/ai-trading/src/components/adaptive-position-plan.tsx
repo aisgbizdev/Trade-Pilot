@@ -677,9 +677,13 @@ function PlanSide({
         <div className="rounded-md border border-primary/30 bg-primary/[0.05] p-3 space-y-3" data-testid="adaptive-plan-snapshot">
           <div>
             <p className="text-xs font-bold text-foreground">{copy.adaptive_snapshot_title}</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {conditional ? copy.adaptive_snapshot_wait : copy.adaptive_snapshot_ready}
-            </p>
+            {conditional ? (
+              <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">{copy.adaptive_snapshot_wait}</p>
+            ) : (
+              <ExpandableExplanation className="mt-0.5" testId="adaptive-snapshot-explanation">
+                {copy.adaptive_snapshot_ready}
+              </ExpandableExplanation>
+            )}
             {summary && <Badge variant="outline" className="mt-2 text-[10px]" data-testid="adaptive-risk-style-active">
               {copy.adaptive_risk_style_active.replace("{style}", riskStyleLabel(summary.riskStyle, copy))}
             </Badge>}
@@ -1723,7 +1727,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
          {recommendation && !recommendation.result.valid && (
            <div className="space-y-2" data-testid="adaptive-plan-scenarios-review">
              <p className="text-xs font-bold text-foreground">{copy.adaptive_scenarios_review_title}</p>
-             <p className="text-[11px] leading-relaxed text-muted-foreground">{copy.adaptive_scenarios_review_help}</p>
+             <ExpandableExplanation testId="adaptive-scenarios-review-explanation">
+               {copy.adaptive_scenarios_review_help}
+             </ExpandableExplanation>
               {directionControl}
                  {reviewSides.map((side) => {
                    const plan = recommendation.result[side] ?? recommendation.sideEvaluations[side].conditionalPlan;

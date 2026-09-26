@@ -1795,6 +1795,7 @@ export const en = {
     overall_title: "Overall (rolling {days}d)",
     overall_win_rate: "Win rate",
     overall_hit_rate: "Hit rate",
+    overall_explain_label: "What do these rates mean?",
     overall_win_rate_explain: "Of trades that actually triggered (TP or SL touch).",
     overall_hit_rate_explain: "Of every resolved analysis, including ones that expired untouched.",
     overall_breakdown: "{wins} TP · {losses} SL · {expired} expired",
