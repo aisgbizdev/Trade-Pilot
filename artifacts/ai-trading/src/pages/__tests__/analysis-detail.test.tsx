@@ -961,6 +961,15 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(tradePlanCard).toHaveTextContent(/Take Profit 2/i);
     expect(screen.getByTestId("button-copy-levels-buy")).toBeInTheDocument();
     expect(screen.getByTestId("button-copy-levels-sell")).toBeInTheDocument();
+    for (const side of ["buy", "sell"] as const) {
+      const footer = screen.getByTestId(`trade-plan-actions-${side}`);
+      const reason = screen.getByTestId(`trade-plan-reason-${side}`);
+      const copyButton = screen.getByTestId(`button-copy-levels-${side}`);
+      expect(footer).toContainElement(reason);
+      expect(footer).toContainElement(copyButton);
+      expect(copyButton).toHaveClass("absolute", "right-0");
+      expect(reason.querySelector("summary")).toHaveTextContent(en.analysis_detail.trade_plan_rationale);
+    }
     expect(screen.getByTestId("adaptive-daytrade-only")).toHaveTextContent(/Day trade only/i);
     expect(screen.getByTestId("button-adaptive-account-mini")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("button-adaptive-account-micro")).toHaveAttribute("aria-pressed", "false");

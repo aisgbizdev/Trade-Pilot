@@ -811,23 +811,27 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_rr}</dt>
           <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-rr`}>{visibleSide.riskRewardRatio}</dd>
         </dl>
-        <div className="mt-auto border-t border-border/60 pt-1">
-          <ExpandableExplanation label={t.analysis_detail.trade_plan_rationale}>
+        <div className="relative mt-auto border-t border-border/60 pt-1" data-testid={`trade-plan-actions-${kind}`}>
+          <ExpandableExplanation
+            label={t.analysis_detail.trade_plan_rationale}
+            className={!pending ? "[&>summary]:pr-28" : undefined}
+            testId={`trade-plan-reason-${kind}`}
+          >
             {side.rationale}
           </ExpandableExplanation>
+          {!pending && <button
+            type="button"
+            onClick={() => copyLevels(side, kind)}
+            className="absolute right-0 top-1 inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            data-testid={`button-copy-levels-${kind}`}
+          >
+            {copied === kind ? (
+              <><Check className="h-3.5 w-3.5 text-green-500" aria-hidden="true" /><span className="text-green-500">{t.analysis_detail.copy_levels_copied}</span></>
+            ) : (
+              <><Copy className="h-3.5 w-3.5" aria-hidden="true" /><span>{t.analysis_detail.copy_levels}</span></>
+            )}
+          </button>}
         </div>
-        {!pending && <button
-          type="button"
-          onClick={() => copyLevels(side, kind)}
-          className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-          data-testid={`button-copy-levels-${kind}`}
-        >
-          {copied === kind ? (
-            <><Check className="w-3 h-3 text-green-500" /><span className="text-green-500">{t.analysis_detail.copy_levels_copied}</span></>
-          ) : (
-            <><Copy className="w-3 h-3" /><span>{t.analysis_detail.copy_levels}</span></>
-          )}
-        </button>}
       </div>
     );
   };
