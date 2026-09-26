@@ -28,6 +28,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ### AI Trading Assistant MVP (`artifacts/ai-trading`)
 Mobile-first PWA (React+Vite) for trading decision-support (NOT a signal generator).
+The PWA is the current way to view and use the product conveniently on phones while iterating; the intended longer-term direction is a native phone app. Treat the PWA as the present experience, not as a direct substitute for native implementation.
 
 **Features:**
 - Custom auth: register/login with httpOnly cookies, security questions, remember me (30d/24h), show/hide password
