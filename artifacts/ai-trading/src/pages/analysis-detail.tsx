@@ -2232,7 +2232,7 @@ export default function AnalysisDetailPage({
   const hasAdaptive = Boolean(tradePlan && isAdaptivePositionInstrument(analysis.instrument));
   const indicatorTimeframe = asIndicatorTimeframe(analysis.timeframe);
   const adaptiveSupportingDetails = hasAdaptive ? (
-    <section className="space-y-3 border-t border-border pt-4 text-xs leading-relaxed" data-testid="adaptive-supporting-details">
+    <section className="space-y-3 border-b border-border pb-4 text-xs leading-relaxed" data-testid="adaptive-supporting-details">
       <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h3>
       {invalidationItems.length > 0 && (
         <div className="rounded-md border border-red-300 bg-red-50 p-3 text-red-900 dark:border-red-800 dark:bg-red-950/20 dark:text-red-200">
@@ -2243,30 +2243,38 @@ export default function AnalysisDetailPage({
         </div>
       )}
       {(analysis.opportunity || analysis.risk) && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {analysis.opportunity && <div><h4 className="font-bold">{t.analysis_detail.opportunity_title}</h4><p className="mt-1 whitespace-pre-wrap text-muted-foreground">{analysis.opportunity}</p></div>}
+        <div className="grid gap-3 sm:grid-cols-2" data-testid="adaptive-analysis-findings">
+          {analysis.opportunity && <div><h4 className="font-bold text-foreground">{t.analysis_detail.opportunity_title}</h4><p className="mt-1 whitespace-pre-wrap text-muted-foreground">{analysis.opportunity}</p></div>}
           {analysis.risk && <div><h4 className="font-bold text-amber-700 dark:text-amber-300">{t.analysis_detail.risk_title}</h4><p className="mt-1 whitespace-pre-wrap">{analysis.risk}</p></div>}
         </div>
       )}
-      <div className="space-y-2">
-        <h4 className="font-bold">{t.analysis_detail.scenarios_section}</h4>
-        {scenarioAContent && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_a}: </strong>{scenarioAContent}</p>}
-        {scenarioBContent && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_b}: </strong>{scenarioBContent}</p>}
-        <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_c}: </strong>{scenarioCText(bias ?? "neutral", t)}</p>
-      </div>
-      {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
-        <div className="space-y-2">
-          {analysis.keyDriversTechnical && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_technical}: </strong>{analysis.keyDriversTechnical}</p>}
-          {analysis.keyDriversFundamental && <div><p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_fundamental}: </strong>{analysis.keyDriversFundamental}</p><CitationChips citations={analysis.fundamentalCitations} context={analysis.fundamentalContext} t={t} /></div>}
-          {analysis.marketContext && <div><p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_market_context}: </strong>{analysis.marketContext}</p><CitationChips citations={analysis.fundamentalCitations} context={analysis.fundamentalContext} t={t} /></div>}
+      <details className="group rounded-lg border border-border px-3 py-2.5" data-testid="adaptive-saved-analysis-disclosure">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+          {t.analysis_detail.adaptive_narrative_more}
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="mt-3 space-y-4 border-t border-border pt-3">
+          <div className="space-y-2">
+            <h4 className="font-bold">{t.analysis_detail.scenarios_section}</h4>
+            {scenarioAContent && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_a}: </strong>{scenarioAContent}</p>}
+            {scenarioBContent && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_b}: </strong>{scenarioBContent}</p>}
+            <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_c}: </strong>{scenarioCText(bias ?? "neutral", t)}</p>
+          </div>
+          {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
+            <div className="space-y-2">
+              {analysis.keyDriversTechnical && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_technical}: </strong>{analysis.keyDriversTechnical}</p>}
+              {analysis.keyDriversFundamental && <div><p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_fundamental}: </strong>{analysis.keyDriversFundamental}</p><CitationChips citations={analysis.fundamentalCitations} context={analysis.fundamentalContext} t={t} /></div>}
+              {analysis.marketContext && <div><p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_market_context}: </strong>{analysis.marketContext}</p><CitationChips citations={analysis.fundamentalCitations} context={analysis.fundamentalContext} t={t} /></div>}
+            </div>
+          )}
+          <div className="space-y-2">
+            <h4 className="font-bold">{t.analysis_detail.execution_insight_title}</h4>
+            <p><strong>{t.analysis_detail.execution_scenario_a_label}: </strong>{executionScenarioAText(bias ?? "neutral", t)}</p>
+            <p><strong>{t.analysis_detail.execution_scenario_b_label}: </strong>{t.analysis_detail.execution_scenario_b_template}</p>
+            <p><strong>{t.analysis_detail.execution_scenario_c_label}: </strong>{t.analysis_detail.execution_scenario_c_template}</p>
+          </div>
         </div>
-      )}
-      <div className="space-y-2">
-        <h4 className="font-bold">{t.analysis_detail.execution_insight_title}</h4>
-        <p><strong>{t.analysis_detail.execution_scenario_a_label}: </strong>{executionScenarioAText(bias ?? "neutral", t)}</p>
-        <p><strong>{t.analysis_detail.execution_scenario_b_label}: </strong>{t.analysis_detail.execution_scenario_b_template}</p>
-        <p><strong>{t.analysis_detail.execution_scenario_c_label}: </strong>{t.analysis_detail.execution_scenario_c_template}</p>
-      </div>
+      </details>
     </section>
   ) : null;
   const liveIndicatorPanel = indicatorTimeframe ? (

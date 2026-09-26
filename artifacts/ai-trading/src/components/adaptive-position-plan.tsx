@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { AlertTriangle, Calculator, Check, ChevronRight, Copy, Image as ImageIcon, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Calculator, Check, ChevronDown, ChevronRight, Copy, Image as ImageIcon, Printer, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,7 +9,8 @@ import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-clien
 import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { useToast } from "@/hooks/use-toast";
-import { buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
+import { buildConfidencePrintHtml, buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
+import { renderChartSharePng } from "@/lib/chart-share";
 import { buildAdaptivePlanShareData, renderAdaptivePlanSharePng } from "@/lib/adaptive-plan-share";
 import { ImageExportMenu } from "@/components/image-export-menu";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
@@ -1289,18 +1290,55 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   };
   const educationShareData = (): ConfidenceShareData => {
     if (!educationContentRef.current) throw new Error("Explanation is not open");
-    const sections = Array.from(educationContentRef.current.children)
+    const sections: ConfidenceShareData["sections"] = Array.from(educationContentRef.current.children)
       .filter((node) => node.tagName === "SECTION")
-      .map((section) => ({
-        title: section.querySelector("h3")?.textContent?.trim() ?? "",
-        body: Array.from(section.querySelectorAll("h4, p, li"))
-          .filter((node) => !node.closest("li") || node.tagName === "LI")
-          .map((node) => node.textContent?.trim() ?? "")
-          .filter(Boolean)
-          .join("\n"),
-      }))
+      .map((section) => {
+        const blocks = Array.from(section.querySelectorAll("h4, p, li"))
+          .filter((node) => (!node.closest("li") || node.tagName === "LI") &&
+            !node.closest('[data-testid="adaptive-disclaimer"]'))
+          .map((node) => ({
+            kind: node.tagName === "H4" ? "subheading" as const : node.tagName === "LI" ? "item" as const : "paragraph" as const,
+            text: node.textContent?.trim() ?? "",
+          }))
+          .filter(({ text }) => Boolean(text));
+        return {
+          title: section.querySelector("h3")?.textContent?.trim() ?? "",
+          body: blocks.map(({ text }) => text).join("\n"),
+          blocks,
+        };
+      })
       .filter(({ title, body }) => title && body);
     if (!sections.length) throw new Error("Explanation has no content");
+    const actionable = !isAnalysisExpired && primaryPlan && selected && recommendation?.result.valid &&
+      recommendation.sideEvaluations[primaryPlan.side].status === "viable" &&
+      recommendation.result[primaryPlan.side] != null;
+    const planBlocks: NonNullable<ConfidenceShareData["sections"][number]["blocks"]> = actionable ? [
+      { kind: "paragraph", text: `${copy.adaptive_guide_review_status.replace("{side}", primaryPlan.side.toUpperCase())} · ${riskStyleLabel(selected.riskStyle, copy)}` },
+      { kind: "subheading", text: copy.adaptive_layer_plan_title },
+      ...primaryPlan.ladder.map((level) => ({
+        kind: "item" as const,
+        text: `${level.level + 1}. ${formatNumber(level.price, lang, 4)} · ${formatNumber(level.lot, lang)} ${copy.adaptive_lot}`,
+      })),
+      { kind: "paragraph", text: `SL: ${formatNumber(primaryPlan.stopLoss, lang, 4)}${primaryPlan.takeProfit1 == null ? "" : ` · TP1: ${formatNumber(primaryPlan.takeProfit1, lang, 4)}`}${primaryPlan.takeProfit2 == null ? "" : ` · TP2: ${formatNumber(primaryPlan.takeProfit2, lang, 4)}`}` },
+      { kind: "paragraph", text: `${copy.adaptive_snapshot_total_lots}: ${formatNumber(primaryPlan.totalLots, lang)} ${copy.adaptive_lot}` },
+      { kind: "subheading", text: copy.adaptive_copy_risk_context },
+      { kind: "paragraph", text: `${copy.adaptive_margin_required}: ${formatMoney(primaryPlan.marginRequired, lang)} · ${copy.adaptive_cycle_loss}: ${formatMoney(primaryPlan.estimatedCycleLoss, lang)} · ${copy.adaptive_usable_risk_budget}: ${formatMoney(selected.usableRiskBudget, lang)}` },
+      { kind: "paragraph", text: copy.adaptive_copy_manual_context },
+    ] : [{
+      kind: "paragraph",
+      text: isAnalysisExpired
+        ? copy.adaptive_analysis_expired
+        : !recommendation
+          ? copy.adaptive_guide_no_plan
+          : hasConditionalScenarios ? copy.adaptive_conditional_not_actionable : copy.adaptive_invalid_description,
+    }];
+    const planSection = {
+      title: copy.adaptive_guide_direction_title,
+      body: planBlocks.map(({ text }) => text).join("\n"),
+      blocks: planBlocks,
+    };
+    const reasoningIndex = sections.findIndex(({ title }) => title === copy.adaptive_reasoning_title);
+    sections.splice(reasoningIndex < 0 ? 0 : reasoningIndex + 1, 0, planSection);
     const decision = isAnalysisExpired
       ? copy.adaptive_analysis_expired
       : !recommendation
@@ -1309,11 +1347,14 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
           ? hasConditionalScenarios ? copy.adaptive_conditional_not_actionable : copy.adaptive_invalid_description
           : copy.adaptive_valid;
     return {
-      title: copy.adaptive_education_title,
+      title: copy.adaptive_guide_title,
       instrument,
       timeframe: context.timeframe ?? "—",
       analyzedAt,
       summary: [
+        copy.adaptive_guide_opening
+          .replace("{instrument}", instrument)
+          .replace("{timeframe}", context.timeframe ?? "—"),
         decision,
         invalidationCount > 0 ? copy.adaptive_share_invalidation.replace("{count}", String(invalidationCount)) : null,
         copy.adaptive_share_snapshot_note,
@@ -1321,7 +1362,13 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       sections,
       sourcesTitle: copy.citations_label,
       sources: shareSources,
-      disclaimer: copy.adaptive_disclaimer,
+      disclaimerTitle: copy.adaptive_guide_disclaimer_title,
+      disclaimer: `${copy.adaptive_guide_disclaimer} ${copy.adaptive_share_audience_note}`,
+      visit: {
+        title: copy.adaptive_guide_visit_title,
+        url: "https://tradepilot.id",
+        storesNote: copy.adaptive_guide_stores_note,
+      },
     };
   };
   const copyEducationText = async () => {
@@ -1358,6 +1405,69 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       link.remove();
       toast({ title: copy.confidence_share_image_downloaded });
     } catch {
+      toast({ title: copy.adaptive_share_failed, variant: "destructive" });
+    } finally {
+      setShareBusy(false);
+    }
+  };
+  const printEducationGuide = async () => {
+    if (shareBusy) return;
+    let tab: Window | null = null;
+    try {
+      const data = educationShareData();
+      tab = window.open("", "_blank");
+      if (!tab) throw new Error("Print preview was blocked");
+      tab.opener = null;
+      tab.document.title = copy.adaptive_guide_title;
+      tab.document.body.textContent = copy.adaptive_guide_preparing;
+      setShareBusy(true);
+      let chart: { title: string; caption: string; src?: string; unavailable?: string };
+      const chartLabels = {
+        title: copy.chart_share_title,
+        caption: copy.adaptive_guide_chart_caption,
+      };
+      try {
+        const result = await renderChartSharePng({
+          instrument,
+          timeframe: context.timeframe ?? "",
+          analyzedAt: analysisCreatedAt,
+          bias: context.tradingBias === "bullish" ? copy.bias_bullish
+            : context.tradingBias === "bearish" ? copy.bias_bearish
+              : context.tradingBias === "neutral" ? copy.bias_neutral : copy.bias_unknown,
+          plan: tradePlan,
+          locale: lang === "id" ? "id-ID" : "en-US",
+          copy: {
+            title: copy.chart_share_title,
+            analyzed: copy.chart_share_analyzed,
+            made: copy.chart_share_made,
+            bias: copy.bias_title,
+            suggested: copy.adaptive_guide_chart_scenario,
+            buy: copy.trade_plan_side_buy,
+            sell: copy.trade_plan_side_sell,
+            both: copy.chart_share_wait,
+            entry: copy.trade_plan_entry,
+            stop: copy.trade_plan_sl,
+            tp1: copy.trade_plan_tp1,
+            tp2: copy.trade_plan_tp2,
+            sourceNote: copy.chart_share_source_note,
+            warning: copy.chart_share_warning,
+          },
+        });
+        chart = { ...chartLabels, src: result.url };
+      } catch {
+        chart = { ...chartLabels, unavailable: copy.adaptive_guide_chart_unavailable };
+      }
+      const html = buildConfidencePrintHtml(data, {
+        lang,
+        printLabel: copy.adaptive_print_details,
+        briefLabel: copy.adaptive_briefing_title,
+        chart,
+      });
+      tab.document.open();
+      tab.document.write(html);
+      tab.document.close();
+    } catch {
+      tab?.close();
       toast({ title: copy.adaptive_share_failed, variant: "destructive" });
     } finally {
       setShareBusy(false);
@@ -1553,11 +1663,36 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               <DialogDescription>{copy.adaptive_education_intro}</DialogDescription>
             </DialogHeader>
             <div ref={educationContentRef} className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1" data-testid="adaptive-education-content">
-              <section className="space-y-2 text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-plan-method">
-                <h3 className="font-bold text-foreground">{copy.adaptive_method_summary}</h3>
-                <p>{copy.adaptive_ready}</p>
-                <p>{copy.adaptive_method_help}</p>
-                <p data-testid="adaptive-chart-candidate-status">
+              {supportingDetails}
+              {recommendation && (
+                <section id="adaptive-insight-panel-reasoning" role="region" aria-label={copy.adaptive_reasoning_title} className="rounded-lg border border-primary/20 bg-primary/[0.03] p-3" data-testid="adaptive-plan-reasoning">
+                  <h3 className="text-sm font-bold text-foreground">{copy.adaptive_reasoning_title}</h3>
+                  <div className="mt-2 flex items-start justify-between gap-3">
+                    <p className="text-xs leading-relaxed text-foreground">
+                      {recommendation.decision.posture === "scaling_allowed"
+                        ? copy.adaptive_posture_scaling_allowed
+                        : recommendation.decision.posture === "entry_only"
+                          ? copy.adaptive_posture_entry_only
+                          : copy.adaptive_posture_not_recommended}
+                    </p>
+                    <Badge variant="outline" className="shrink-0 text-[10px]">{recommendation.context.timeframe ?? copy.adaptive_context_missing}</Badge>
+                  </div>
+                  <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground">
+                    {[...new Set(recommendation.decision.reasonCodes)].map((code) => (
+                      <li key={code} className="flex gap-1.5"><span aria-hidden="true">•</span><span>{reasonText(code, recommendation.context, copy)}</span></li>
+                    ))}
+                  </ul>
+                  <div className="mt-3 grid gap-1 border-t border-border/60 pt-2 text-[11px] text-muted-foreground">
+                    <p>{copy.adaptive_context_technical.replace("{buy}", String(recommendation.context.technical?.buy ?? "—")).replace("{sell}", String(recommendation.context.technical?.sell ?? "—")).replace("{neutral}", String(recommendation.context.technical?.neutral ?? "—"))}</p>
+                    <p>{recommendation.context.fundamental.available
+                      ? copy.adaptive_context_fundamental.replace("{news}", String(recommendation.context.fundamental.newsCount)).replace("{events}", String(recommendation.context.fundamental.eventCount)).replace("{highImpact}", String(recommendation.context.fundamental.highImpactCount))
+                      : copy.adaptive_context_fundamental_unavailable}</p>
+                  </div>
+                </section>
+              )}
+              <section className="space-y-3 text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-plan-method">
+                <h3 className="text-sm font-bold text-foreground">{copy.adaptive_method_summary}</h3>
+                <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-foreground" data-testid="adaptive-chart-candidate-status">
                   {isAnalysisExpired
                     ? copy.adaptive_analysis_expired
                     : chartCandidateState.status === "loading" || chartCandidateState.scope !== chartScope
@@ -1570,14 +1705,19 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                             .replace("{buy}", String(chartCandidateState.prices.buy.length))
                             .replace("{sell}", String(chartCandidateState.prices.sell.length))}
                 </p>
-                <p>{copy.adaptive_direction_help}</p>
                 <p>{copy.adaptive_scenarios_review_help}</p>
-                <div className="space-y-1.5 rounded-md border border-primary/20 bg-primary/[0.03] p-2.5" data-testid="adaptive-analysis-basis">
-                  <p className="font-semibold text-foreground">{copy.adaptive_analysis_basis_title}</p>
-                  <p>{copy.adaptive_analysis_basis}</p>
-                  <p>{copy.adaptive_chart_confirmation}</p>
-                </div>
-                <p data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
+                <details className="group rounded-lg border border-border px-3 py-2.5" data-testid="adaptive-analysis-basis">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+                    {copy.adaptive_analysis_basis_title}
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+                  </summary>
+                  <div className="mt-2 space-y-2 border-t border-border pt-2">
+                    <p>{copy.adaptive_analysis_basis}</p>
+                    <p>{copy.adaptive_chart_confirmation}</p>
+                    <p>{copy.adaptive_direction_help}</p>
+                  </div>
+                </details>
+                <p className="border-l-2 border-amber-500 pl-3" data-testid="adaptive-disclaimer">{copy.adaptive_disclaimer}</p>
               </section>
               <section className="space-y-2 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground" data-testid="adaptive-broker-details">
                 <h3 className="font-bold text-foreground">{copy.adaptive_account_title}</h3>
@@ -1592,10 +1732,13 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                       .replace("{amount}", formatMoney(selectedRule.marginAtMinimumLot, lang))
                       .replace("{size}", formatNumber(selectedRule.contractSize, lang, 2))
                       .replace("{unit}", selectedRule.contractUnit)}</p>
-                    <p className="mt-1">{copy.adaptive_contract_minimum_basis.replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))}</p>
                     {tierContracts.every((rule) => rule != null) && (
-                      <div className="mt-2" data-testid="adaptive-contract-table">
-                        <p className="font-semibold text-foreground">{copy.adaptive_contract_table_title}</p>
+                      <details className="group mt-2 rounded-md border border-border px-2.5 py-2" data-testid="adaptive-contract-table">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+                          {copy.adaptive_contract_table_title}
+                          <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+                        </summary>
+                        <p className="mt-2">{copy.adaptive_contract_minimum_basis.replace("{lot}", formatNumber(selectedRule.minimumLot, lang, 2))}</p>
                         <table className="mt-1 w-full text-left">
                           <thead><tr><th scope="col">{copy.adaptive_contract_tier}</th><th scope="col">{copy.adaptive_contract_value}</th></tr></thead>
                           <tbody>
@@ -1608,7 +1751,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                           </tbody>
                         </table>
                         <p className="mt-1">{copy.adaptive_contract_micro_assumption}</p>
-                      </div>
+                      </details>
                     )}
                     {selectedRule.minimumOpeningFunds != null && (
                       <p className="mt-1">{copy.adaptive_account_opening_minimum.replace("{amount}", formatMoney(selectedRule.minimumOpeningFunds, lang))}</p>
@@ -1640,34 +1783,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                     </p>
                   )}
                   <div className="space-y-3" data-testid="adaptive-insights">
-        {recommendation && (
-          <div id="adaptive-insight-panel-reasoning" role="region" aria-label={copy.adaptive_reasoning_title} className="rounded-md border border-primary/20 bg-primary/[0.03] p-3" data-testid="adaptive-plan-reasoning">
-            <h4 className="text-xs font-bold text-foreground">{copy.adaptive_reasoning_title}</h4>
-            <div className="mt-2.5 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  {recommendation.decision.posture === "scaling_allowed"
-                    ? copy.adaptive_posture_scaling_allowed
-                    : recommendation.decision.posture === "entry_only"
-                      ? copy.adaptive_posture_entry_only
-                      : copy.adaptive_posture_not_recommended}
-                </p>
-              </div>
-              <Badge variant="outline" className="shrink-0 text-[10px]">{recommendation.context.timeframe ?? copy.adaptive_context_missing}</Badge>
-            </div>
-            <ul className="mt-2.5 space-y-1.5 text-[11px] leading-relaxed text-muted-foreground">
-              {[...new Set(recommendation.decision.reasonCodes)].map((code) => (
-                <li key={code} className="flex gap-1.5"><span aria-hidden="true">•</span><span>{reasonText(code, recommendation.context, copy)}</span></li>
-              ))}
-            </ul>
-            <div className="mt-2.5 border-t border-border/60 pt-2 grid gap-1 text-[10px] text-muted-foreground">
-              <p>{copy.adaptive_context_technical.replace("{buy}", String(recommendation.context.technical?.buy ?? "—")).replace("{sell}", String(recommendation.context.technical?.sell ?? "—")).replace("{neutral}", String(recommendation.context.technical?.neutral ?? "—"))}</p>
-              <p>{recommendation.context.fundamental.available
-                ? copy.adaptive_context_fundamental.replace("{news}", String(recommendation.context.fundamental.newsCount)).replace("{events}", String(recommendation.context.fundamental.eventCount)).replace("{highImpact}", String(recommendation.context.fundamental.highImpactCount))
-                : copy.adaptive_context_fundamental_unavailable}</p>
-            </div>
-          </div>
-        )}
         {recommendation && (
           <div id="adaptive-insight-panel-volatility" role="region" aria-label={copy.adaptive_volatility_title.replace("{timeframe}", recommendation.context.timeframe ?? "—")} className="rounded-md border border-border p-3 text-[11px] leading-relaxed" data-testid="adaptive-timeframe-volatility">
               <h4 className="text-xs font-bold text-foreground">
@@ -1798,7 +1913,6 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                   </div>
                 </section>
               )}
-              {supportingDetails}
               <AnalysisGuideLink article="adaptive-position-plan" compact />
             </div>
             <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row" data-testid="adaptive-share-actions">
@@ -1806,9 +1920,13 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
                 <Copy className="mr-2 h-4 w-4" />
                 {copy.confidence_share_copy_text}
               </Button>
-              <Button type="button" className="w-full sm:w-auto" disabled={shareBusy} onClick={copyEducationImage} data-testid="adaptive-copy-details-image">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" disabled={shareBusy} onClick={copyEducationImage} data-testid="adaptive-copy-details-image">
                 <ImageIcon className="mr-2 h-4 w-4" />
                 {copy.confidence_share_copy_image}
+              </Button>
+              <Button type="button" className="w-full sm:w-auto" disabled={shareBusy} onClick={printEducationGuide} data-testid="adaptive-print-details">
+                <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
+                {copy.adaptive_print_details}
               </Button>
             </div>
           </DialogContent>

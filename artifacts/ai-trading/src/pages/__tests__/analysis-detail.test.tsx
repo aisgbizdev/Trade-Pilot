@@ -7,6 +7,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import AnalysisDetailPage from "../analysis-detail";
 import { AdaptivePositionPlan } from "../../components/adaptive-position-plan";
 import * as adaptiveShare from "../../lib/adaptive-plan-share";
+import * as chartShare from "../../lib/chart-share";
 import { en } from "../../locales/en";
 import { id } from "../../locales/id";
 import {
@@ -1122,7 +1123,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(analysisTime.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(savedMarketContext.compareDocumentPosition(adaptiveCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(adaptiveCard.compareDocumentPosition(priceAlerts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(priceAlerts.compareDocumentPosition(liveIndicators) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(liveIndicators.compareDocumentPosition(priceAlerts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(liveIndicators).getByRole("heading", { level: 3, name: en.analysis_detail.indicators_live_snapshot_label })).toBeInTheDocument();
     expect(liveIndicators.firstElementChild?.tagName).toBe("H3");
     expect(adaptiveCard.compareDocumentPosition(liveIndicators) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -1280,21 +1281,71 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-snapshot")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     expect(screen.getByTestId("adaptive-share-actions")).toBeVisible();
+    expect(screen.getByTestId("adaptive-analysis-findings")).toBeVisible();
+    expect(screen.getByTestId("adaptive-saved-analysis-disclosure")).not.toHaveAttribute("open");
     fireEvent.click(screen.getByTestId("adaptive-copy-details-text"));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     const shared = String(writeText.mock.calls[0]?.[0]);
-    expect(shared).toContain("TradePilot.id — Understand the details");
+    expect(shared).toContain("TradePilot.id — Analysis & Adaptive plan guide");
     expect(shared).toMatch(/XAU\/USD · 1h · /);
     expect(shared).toContain("Why this plan was chosen");
+    expect(shared.indexOf("Why this analysis")).toBeLessThan(shared.indexOf("Why this plan was chosen"));
+    expect(shared).toContain("Adaptive scenario under review");
+    expect(shared).toContain("not an instruction or invitation to take a particular position");
+    expect(shared).toContain("The TradePilot.id app will be available on the Play Store and App Store");
+    expect(shared).toContain("https://tradepilot.id");
+    expect(shared).toContain("BUY");
     expect(shared).toContain("Typical candle range");
     expect(shared).toContain("H1 close below 2300");
-    expect(shared).toContain("Live indicators do not automatically recalculate it");
+    expect(shared).toContain("This guide captures the market at analysis time, not live prices");
     expect(shared).toContain("A break below support invalidates the setup.");
     expect(shared).toContain("Price likely continues higher into resistance.");
     expect(shared).toContain("Gold rallies after statement — https://example.com/gold");
     expect(shared).not.toContain("Invented headline");
     expect(shared).not.toContain("Open Understand the details before");
     expect(shared).toContain("not a profit guarantee or automatic order");
+
+    const previewDocument = { title: "", body: { textContent: "" }, open: vi.fn(), write: vi.fn(), close: vi.fn() };
+    const open = vi.spyOn(window, "open").mockReturnValue({ opener: window, document: previewDocument } as unknown as Window);
+    vi.spyOn(chartShare, "renderChartSharePng").mockResolvedValue({
+      blob: new Blob(["PNG"], { type: "image/png" }),
+      url: "data:image/png;base64,UE5H",
+    });
+    fireEvent.click(screen.getByTestId("adaptive-print-details"));
+    expect(open).toHaveBeenCalledWith("", "_blank");
+    await waitFor(() => expect(previewDocument.write).toHaveBeenCalledOnce());
+    const printHtml = String(previewDocument.write.mock.calls[0]?.[0]);
+    expect(printHtml).toContain('src="data:image/png;base64,UE5H"');
+    expect(printHtml).toContain("Adaptive scenario under review");
+    expect(printHtml).toContain("Important note");
+    expect(printHtml).toContain("Gold rallies after statement");
+    expect(printHtml).toContain("H1 close below 2300");
+    expect(printHtml).toContain("Print / save PDF");
+    vi.mocked(chartShare.renderChartSharePng).mockRejectedValueOnce(new Error("Historical candles unavailable"));
+    fireEvent.click(screen.getByTestId("adaptive-print-details"));
+    await waitFor(() => expect(previewDocument.write).toHaveBeenCalledTimes(2));
+    expect(String(previewDocument.write.mock.calls[1]?.[0])).toContain("A chart from this analysis time is unavailable");
+    expect(String(previewDocument.write.mock.calls[1]?.[0])).not.toContain('src="data:image/png;base64,UE5H"');
+  });
+
+  it("does not turn an uncalculated Adaptive scenario into a Buy or Sell instruction in the guide", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      feedbackHandler(),
+      standardRulesHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.click(await screen.findByTestId("button-adaptive-explanation"));
+    fireEvent.click(screen.getByTestId("adaptive-copy-details-text"));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const guide = String(writeText.mock.calls[0]?.[0]);
+    expect(guide).toContain("Adaptive scenario under review");
+    expect(guide).toContain("Neither Buy nor Sell can be presented as ready yet.");
+    expect(guide).not.toContain("BUY scenario for review");
+    expect(guide).toContain("not an instruction or invitation to take a particular position");
   });
 
   it("shares the full Adaptive image or downloads a PNG when clipboard images are blocked", async () => {
