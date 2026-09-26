@@ -3,11 +3,11 @@ name: Publish schema drift safety
 description: Safely repair development/production schema drift without deleting production objects or development data.
 ---
 
-When Publish proposes dropping a production table or enum that is still defined by the application schema, treat it as development schema drift. Restore the missing structure in development and recompute the Publish diff; do not approve the drop.
+When Publish proposes dropping a production table, enum, or column, treat it as a data-preservation problem even if the object is no longer defined in source. Restore the missing structure in development and, where necessary, retain its declaration in source until an explicitly approved data migration; do not approve the drop as a side effect of an unrelated feature.
 
-**Why:** Publish diffs development against production. If a source-defined object exists only in production because development missed a schema sync, the generated migration incorrectly appears destructive even though the application still needs the object.
+**Why:** Publish diffs development against production. A source-to-development audit can pass yet miss production-only legacy columns holding real user data. An unrelated feature publish can then silently offer to delete those columns.
 
-**How to apply:** Confirm the object exists in source and production, inspect production read-only, then use the supported development-side schema path. Require a final diff with no removed tables/columns, truncation, or structural data-loss warning.
+**How to apply:** Inspect production read-only and compare the full Publish diff in both directions; restore legacy structure through the supported development-side schema path. Require a final diff with no removed tables/columns, truncation, or structural data-loss warning.
 
 Never accept a Drizzle prompt that offers to truncate a populated table merely to add a nullable column or unique constraint.
 

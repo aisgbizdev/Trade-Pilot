@@ -290,6 +290,10 @@ export const users = pgTable("users", {
   // itself admin-configurable). A non-null value overrides just this one
   // user, independent of the global setting.
   customQuotaPerDay: integer("custom_quota_per_day"),
+  // Legacy production fields retained to preserve existing per-user data.
+  // Do not remove until a separate, explicitly approved data migration.
+  customQuotaPerHour: integer("custom_quota_per_hour"),
+  freeTimeframeSwitchesUsed: integer("free_timeframe_switches_used").notNull().default(0),
   // Store-readiness (P2-B4.1): three more push categories, following the
   // exact opt-out pattern as every other `push*` column above — false
   // suppresses OS push only, the in-app notification row still lands.
@@ -357,7 +361,7 @@ export const authEventTypeEnum = pgEnum("auth_event_type", ["login", "logout"]);
 
 export const authEvents = pgTable("auth_events", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull(),
   eventType: authEventTypeEnum("event_type").notNull(),
   platform: sessionPlatformEnum("platform").notNull(),
   // Only meaningful for "logout": "user_initiated" (POST /auth/logout),
@@ -368,6 +372,11 @@ export const authEvents = pgTable("auth_events", {
   reason: text("reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => ({
+  userFk: foreignKey({
+    name: "auth_events_user_id_fkey",
+    columns: [t.userId],
+    foreignColumns: [users.id],
+  }).onDelete("cascade"),
   createdAtIdx: index("auth_events_created_at_idx").on(t.createdAt),
 }));
 
@@ -464,7 +473,7 @@ export const mobileOauthTransactions = pgTable("mobile_oauth_transactions", {
   // this IS the CSRF/session-binding check (equivalent to the web flow's
   // cookie-equals-query-param comparison), so the raw value is never
   // stored.
-  stateHash: text("state_hash").notNull().unique(),
+  stateHash: text("state_hash").notNull().unique("mobile_oauth_transactions_state_hash_key"),
   provider: text("provider").notNull(), // "facebook" | "tiktok"
   // Validated once at /mobile/start against MOBILE_OAUTH_REDIRECT_URIS
   // (exact-match allowlist, never re-validated from client input again) —
@@ -478,14 +487,20 @@ export const mobileOauthTransactions = pgTable("mobile_oauth_transactions", {
   // back to a different backend instance, so it lives here instead.
   // Unused for Facebook (no provider-side PKCE in this app's flow).
   providerCodeVerifier: text("provider_code_verifier"),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  userId: integer("user_id"),
   isNewUser: boolean("is_new_user").notNull().default(false),
-  exchangeCodeHash: text("exchange_code_hash").unique(),
+  exchangeCodeHash: text("exchange_code_hash").unique("mobile_oauth_transactions_exchange_code_hash_key"),
   codeExpiresAt: timestamp("code_expires_at"),
   consumedAt: timestamp("consumed_at"),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  userFk: foreignKey({
+    name: "mobile_oauth_transactions_user_id_fkey",
+    columns: [t.userId],
+    foreignColumns: [users.id],
+  }).onDelete("cascade"),
+}));
 
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
@@ -1120,10 +1135,15 @@ export const creditTopupRequests = pgTable("credit_topup_requests", {
   // credit_ledger entry (source "topup_reversal") clawing back the granted
   // credits before setting this — see routes/topups.ts.
   deletedAt: timestamp("deleted_at"),
-  deletedByUserId: integer("deleted_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  deletedByUserId: integer("deleted_by_user_id"),
 }, (t) => ({
   statusIdx: index("credit_topup_requests_status_idx").on(t.status),
   userIdx: index("credit_topup_requests_user_idx").on(t.userId),
+  deletedByUserFk: foreignKey({
+    name: "credit_topup_requests_deleted_by_user_id_fkey",
+    columns: [t.deletedByUserId],
+    foreignColumns: [users.id],
+  }).onDelete("set null"),
 }));
 
 // Append-only ledger of every credit movement (top-up approvals, analysis
