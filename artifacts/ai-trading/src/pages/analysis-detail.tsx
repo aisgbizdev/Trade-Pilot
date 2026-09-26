@@ -2916,41 +2916,42 @@ export default function AnalysisDetailPage({
           <p>{t.analysis_detail.disclaimer_full}</p>
         </div>
 
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">
-            {existingFeedback || feedbackSubmitted
-              ? t.analysis_detail.feedback_your
-              : t.analysis_detail.feedback_title}
-          </h3>
-
-          <div className="flex gap-2 mb-3">
-            <button
-              onClick={() => setFeedbackType("useful")}
-              data-testid="button-feedback-useful"
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all",
-                displayFeedbackType === "useful"
-                  ? "bg-green-50 dark:bg-green-900/20 border-green-500 text-green-700 dark:text-green-400"
-                  : "border-border text-muted-foreground hover:border-green-400"
-              )}
-            >
-              <ThumbsUp className="w-4 h-4" />
-              {t.analysis_detail.feedback_useful}
-            </button>
-            <button
-              onClick={() => setFeedbackType("not_useful")}
-              data-testid="button-feedback-not-useful"
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all",
-                displayFeedbackType === "not_useful"
-                  ? "bg-red-50 dark:bg-red-900/20 border-red-500 text-red-700 dark:text-red-400"
-                  : "border-border text-muted-foreground hover:border-red-400"
-              )}
-            >
-              <ThumbsDown className="w-4 h-4" />
-              {t.analysis_detail.feedback_not_useful}
-            </button>
-          </div>
+        <Card className="p-2.5 sm:p-3">
+          <fieldset className="min-w-0">
+            <legend className="sr-only">{t.analysis_detail.feedback_title}</legend>
+            <div className={cn("flex gap-2", (feedbackType || existingFeedback) && "mb-3")}>
+              <button
+                type="button"
+                onClick={() => setFeedbackType("useful")}
+                data-testid="button-feedback-useful"
+                aria-pressed={displayFeedbackType === "useful"}
+                className={cn(
+                  "flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-2 sm:text-sm",
+                  displayFeedbackType === "useful"
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-500 text-green-700 dark:text-green-400"
+                    : "border-border text-muted-foreground hover:border-green-400"
+                )}
+              >
+                <ThumbsUp className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {t.analysis_detail.feedback_useful}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedbackType("not_useful")}
+                data-testid="button-feedback-not-useful"
+                aria-pressed={displayFeedbackType === "not_useful"}
+                className={cn(
+                  "flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-2 sm:text-sm",
+                  displayFeedbackType === "not_useful"
+                    ? "bg-red-50 dark:bg-red-900/20 border-red-500 text-red-700 dark:text-red-400"
+                    : "border-border text-muted-foreground hover:border-red-400"
+                )}
+              >
+                <ThumbsDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {t.analysis_detail.feedback_not_useful}
+              </button>
+            </div>
+          </fieldset>
 
           {(feedbackType || existingFeedback) && (
             <div className="space-y-3">

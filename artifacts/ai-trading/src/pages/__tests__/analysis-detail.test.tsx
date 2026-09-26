@@ -377,8 +377,10 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(risk.textContent?.trim().length ?? 0).toBeGreaterThan(0);
 
     // Feedback CTAs render — the user can pick useful / not-useful.
-    expect(screen.getByTestId("button-feedback-useful")).toBeInTheDocument();
-    expect(screen.getByTestId("button-feedback-not-useful")).toBeInTheDocument();
+    const feedbackOptions = screen.getByRole("group", { name: "How was this analysis?" });
+    expect(within(feedbackOptions).getByRole("button", { name: "Useful" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(feedbackOptions).getByRole("button", { name: "Not Useful" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(feedbackOptions).getByText("How was this analysis?")).toHaveClass("sr-only");
   });
 
   it("keeps long free-form confidence rationale visible alongside the confidence range", async () => {
@@ -3164,10 +3166,17 @@ describe("AnalysisDetailPage: user actions", () => {
     );
 
     const useful = await screen.findByTestId("button-feedback-useful");
+    expect(screen.getByRole("group", { name: "How was this analysis?" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-language-toggle"));
+    expect(screen.getByRole("group", { name: "Bagaimana Analisis Ini?" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("button-language-toggle"));
+    expect(screen.getByRole("group", { name: "How was this analysis?" })).toBeInTheDocument();
+    expect(useful).toHaveAttribute("aria-pressed", "false");
 
     await act(async () => {
       fireEvent.click(useful);
     });
+    expect(useful).toHaveAttribute("aria-pressed", "true");
 
     // After picking a feedback type the submit button materialises.
     const submit = await screen.findByTestId("button-submit-feedback");
