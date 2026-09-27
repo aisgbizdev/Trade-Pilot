@@ -2633,6 +2633,10 @@ export const GetTimeframeRiskMapInstrument = {
   BRENT: "BRENT",
   HSI: "HSI",
   NIKKEI: "NIKKEI",
+  "EUR/USD": "EUR/USD",
+  "GBP/USD": "GBP/USD",
+  "AUD/USD": "AUD/USD",
+  "USD/JPY": "USD/JPY",
 } as const;
 
 export type GetAnalysisHistorySummaryParams = {

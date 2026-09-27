@@ -105,7 +105,7 @@ const { getRelevantCalendar } = await import("../../lib/calendar");
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `analyses-refresh-fund-${RUN_ID}`;
-const INSTRUMENT = `INST-${RUN_ID}-RF`;
+const INSTRUMENT = "XAU/USD";
 
 interface SeedUser {
   id: number;
@@ -193,13 +193,13 @@ afterAll(async () => {
 
 describe("POST /api/analyses/:id/refresh-fundamentals", () => {
   it("returns 401 when no Authorization header is sent", async () => {
-    const id = await seedAnalysis(alice.token, `${INSTRUMENT}-401`);
+    const id = await seedAnalysis(alice.token, INSTRUMENT);
     const res = await request(app).post(`/api/analyses/${id}/refresh-fundamentals`);
     expect(res.status).toBe(401);
   });
 
   it("returns 404 when the analysis is owned by a different user", async () => {
-    const id = await seedAnalysis(alice.token, `${INSTRUMENT}-403`);
+    const id = await seedAnalysis(alice.token, INSTRUMENT);
     const res = await request(app)
       .post(`/api/analyses/${id}/refresh-fundamentals`)
       .set("Authorization", `Bearer ${bob.token}`);
@@ -216,7 +216,7 @@ describe("POST /api/analyses/:id/refresh-fundamentals", () => {
   it(
     "re-fetches news + calendar, persists the fresh snapshot, reports drift, and never calls the AI",
     async () => {
-      const id = await seedAnalysis(alice.token, `${INSTRUMENT}-OK`);
+      const id = await seedAnalysis(alice.token, INSTRUMENT);
 
       // Reset the AI mock's call count so we can prove the refresh route
       // never invokes it. (Seed already triggered the AI once.)
@@ -302,7 +302,7 @@ describe("POST /api/analyses/:id/refresh-fundamentals", () => {
   );
 
   it("treats a malformed rawAiOutput as zero original citations and still succeeds", async () => {
-    const id = await seedAnalysis(alice.token, `${INSTRUMENT}-MALFORMED`);
+    const id = await seedAnalysis(alice.token, INSTRUMENT);
     // Corrupt the persisted rawAiOutput so JSON.parse will throw inside
     // the refresh route — defensive parsing must keep the response alive
     // and report `totalCitations: 0` instead of 5xx-ing the user.
@@ -321,7 +321,7 @@ describe("POST /api/analyses/:id/refresh-fundamentals", () => {
   });
 
   it("returns zero drift when the fresh window still contains every cited item", async () => {
-    const id = await seedAnalysis(alice.token, `${INSTRUMENT}-NODRIFT`);
+    const id = await seedAnalysis(alice.token, INSTRUMENT);
     // Leave the upstream data exactly as the seed left it — every
     // original citation should still match.
     const res = await request(app)

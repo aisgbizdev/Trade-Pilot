@@ -91,6 +91,10 @@ const ADVANCED_ANALYSIS_INSTRUMENTS = new Set<GetTimeframeRiskMapInstrument>([
   "BRENT",
   "HSI",
   "NIKKEI",
+  "EUR/USD",
+  "GBP/USD",
+  "AUD/USD",
+  "USD/JPY",
 ]);
 
 // These instruments use broker-specific TradingView CFDs whose prices can

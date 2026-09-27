@@ -109,7 +109,7 @@ describe("POST /analyses free timeframe-switch bonus", () => {
     const user = await createZeroQuotaUser();
     await seedTopup(user.id);
 
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${user.token}`)
@@ -137,7 +137,7 @@ describe("POST /analyses free timeframe-switch bonus", () => {
     const user = await createZeroQuotaUser();
     await seedTopup(user.id);
 
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${user.token}`)
@@ -150,7 +150,7 @@ describe("POST /analyses free timeframe-switch bonus", () => {
   it("does not apply the bonus for a user who has never topped up", async () => {
     const user = await createZeroQuotaUser();
 
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${user.token}`)
@@ -164,7 +164,7 @@ describe("POST /analyses free timeframe-switch bonus", () => {
     const user = await createZeroQuotaUser({ freeTimeframeSwitchesUsed: FREE_TIMEFRAME_SWITCH_LIMIT });
     await seedTopup(user.id);
 
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${user.token}`)
@@ -193,7 +193,7 @@ describe("POST /analyses free timeframe-switch bonus", () => {
       });
     });
 
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${user.token}`)

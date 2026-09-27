@@ -131,7 +131,7 @@ const { getCandleSnapshot, getIndicators } = await import("../../lib/historical"
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `analyses-30m-test-${RUN_ID}`;
-const INSTRUMENT = `INST-${RUN_ID}-30M`;
+const INSTRUMENT = "XAU/USD";
 
 interface SeedUser {
   id: number;

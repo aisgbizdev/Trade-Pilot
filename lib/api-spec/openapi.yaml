@@ -1644,8 +1644,8 @@ paths:
         - sessionCookie: []
       summary: Compare deterministic technical risk across supported timeframes
       description: |
-        Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI,
-        and NIKKEI only. It uses the shared getIndicators cache/pipeline; it
+        Authenticated, read-only technical comparison for all eight verified
+        analysis instruments. It uses the shared getIndicators cache/pipeline; it
         never creates an analysis, consumes quota, calls AI, or writes user
         history. Missing or stale/insufficient data is explicitly reported and
         is not a low-risk result.
@@ -1657,7 +1657,7 @@ paths:
             type: string
             minLength: 1
             maxLength: 32
-            enum: ["XAU/USD", "BRENT", "HSI", "NIKKEI"]
+            enum: ["XAU/USD", "BRENT", "HSI", "NIKKEI", "EUR/USD", "GBP/USD", "AUD/USD", "USD/JPY"]
       responses:
         "200":
           description: Bounded multi-timeframe technical risk map

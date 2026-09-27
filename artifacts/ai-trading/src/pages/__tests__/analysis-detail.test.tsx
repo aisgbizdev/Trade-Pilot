@@ -361,6 +361,10 @@ describe("AnalysisDetailPage: non-Adaptive print", () => {
         },
       })], { strict: false });
       const writes: string[] = [];
+      vi.spyOn(chartShare, "renderChartSharePng").mockResolvedValue({
+        url: "data:image/png;base64,UE5H",
+        blob: new Blob(["chart"], { type: "image/png" }),
+      });
       const popup = {
         opener: window,
         document: { open: vi.fn(), write: vi.fn((html: string) => writes.push(html)), close: vi.fn() },
@@ -368,18 +372,29 @@ describe("AnalysisDetailPage: non-Adaptive print", () => {
       vi.spyOn(window, "open").mockReturnValue(popup);
       const { Wrapper } = makeWrapper();
       render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
-      const button = await screen.findByTestId("non-adaptive-print-details");
+      const detailTrigger = await screen.findByTestId("button-non-adaptive-explanation");
+      expect(screen.getByTestId("button-detail-risk-map")).toBeInTheDocument();
+      const card = screen.getByTestId("card-non-adaptive-analysis");
+      const liveIndicators = screen.getByTestId("card-indicators-section");
+      expect(card.compareDocumentPosition(liveIndicators) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(screen.queryByTestId("non-adaptive-print-details")).not.toBeInTheDocument();
+      fireEvent.click(detailTrigger);
+      const panel = screen.getByTestId("non-adaptive-education-panel");
+      const button = within(panel).getByTestId("non-adaptive-print-details");
+      await waitFor(() => expect(within(panel).getByTestId("non-adaptive-analysis-chart").querySelector("img")).not.toBeNull());
+      expect(within(panel).getByTestId("non-adaptive-analysis-chart")).toHaveTextContent(en.analysis_detail.print_chart_caption);
       expect(button).toHaveTextContent(en.analysis_detail.adaptive_print_details);
       // Printing must not depend on which detail disclosure happens to be open.
       expect(screen.queryByTestId("card-invalidation")).not.toBeInTheDocument();
       fireEvent.click(button);
-      expect(writes).toHaveLength(1);
+      await waitFor(() => expect(writes).toHaveLength(1));
+      expect(writes[0]).toContain('<img src="data:image/png;base64,UE5H"');
       expect(writes[0]).toContain(`>${instrument} · 1h ·`);
       expect(writes[0]).toContain("First invalidation");
       expect(writes[0]).toContain("Fourth invalidation");
       expect(writes[0]).toContain("Saved opportunity only");
       expect(writes[0]).toContain("Saved risk only");
-      expect(writes[0]).toContain("Saved market context only");
+      expect(writes[0]).not.toContain("Saved market context only");
       expect(writes[0]).toContain("My saved note");
       expect(writes[0]).toContain("Price likely continues higher into resistance.");
       expect(writes[0]).toContain("If we lose the swing low, scenario flips bearish.");
@@ -393,7 +408,7 @@ describe("AnalysisDetailPage: non-Adaptive print", () => {
       fireEvent.click(screen.getByTestId("button-language-toggle"));
       expect(button).toHaveTextContent(id.analysis_detail.adaptive_print_details);
       fireEvent.click(button);
-      expect(writes).toHaveLength(2);
+      await waitFor(() => expect(writes).toHaveLength(2));
       expect(writes[1]).toContain('lang="id"');
       expect(writes[1]).toContain(id.analysis_detail.print_snapshot_note);
       expect(writes[1]).toContain(`<h1>${id.analysis_detail.print_analysis_title}</h1>`);
@@ -410,10 +425,47 @@ describe("AnalysisDetailPage: non-Adaptive print", () => {
     } as unknown as Window);
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
-    fireEvent.click(await screen.findByTestId("non-adaptive-print-details"));
+    fireEvent.click(await screen.findByTestId("button-non-adaptive-explanation"));
+    fireEvent.click(screen.getByTestId("non-adaptive-print-details"));
+    await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toContain(en.analysis_detail.print_snapshot_note);
+    expect(writes[0]).toContain(en.analysis_detail.print_chart_unavailable);
     expect(writes[0]).not.toContain(`<h2>${en.analysis_detail.trade_plan_title}</h2>`);
     expect(writes[0]).not.toContain(`<h2>${en.analysis_detail.citations_label}</h2>`);
+  });
+
+  it("includes the saved pro-factor breakdown from the same detail dialog", async () => {
+    installFetchMock([getAnalysisHandler({ body: {
+      ...ANALYSIS_PAYLOAD,
+      instrument: "GBP/USD",
+      mode: "pro",
+      baseCase: "Saved pro base case",
+      bearishScenario: "Saved pro bearish alternative",
+      uncertaintyNotes: "Saved uncertainty",
+      invalidationConditions: "First pro invalidation; Second pro invalidation",
+      keyDriversTechnical: "Saved technical factors",
+      keyDriversFundamental: "Saved fundamental factors",
+      marketContext: "Saved market context",
+    } })], { strict: false });
+    const writes: string[] = [];
+    vi.spyOn(window, "open").mockReturnValue({
+      opener: window,
+      document: { open: vi.fn(), write: vi.fn((html: string) => writes.push(html)), close: vi.fn() },
+    } as unknown as Window);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.click(await screen.findByTestId("button-non-adaptive-explanation"));
+    const panel = screen.getByTestId("non-adaptive-education-panel");
+    fireEvent.click(within(panel).getByText(en.analysis_detail.adaptive_narrative_more));
+    expect(panel).toHaveTextContent("Saved technical factors");
+    fireEvent.click(within(panel).getByTestId("non-adaptive-print-details"));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toContain("Saved pro base case");
+    expect(writes[0]).toContain("Saved pro bearish alternative");
+    expect(writes[0]).toContain("Saved technical factors");
+    expect(writes[0]).toContain("Saved fundamental factors");
+    expect(writes[0]).toContain("Saved market context");
+    expect(writes[0]).toContain("Second pro invalidation");
   });
 });
 
@@ -488,7 +540,7 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(screen.queryByTestId("button-copy-levels-sell")).not.toBeInTheDocument();
   });
 
-  it("keeps invalidation and risk cues visible while opening one compact detail at a time", async () => {
+  it("shows the same saved-analysis detail structure as core products, without the old chip menu", async () => {
     installFetchMock([getAnalysisHandler({
       body: {
         ...ANALYSIS_PAYLOAD,
@@ -499,25 +551,22 @@ describe("AnalysisDetailPage: happy-path render", () => {
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
 
-    const invalidation = await screen.findByTestId("invalidation-heading");
-    const risk = screen.getByTestId("risk-heading");
-    expect(invalidation).toHaveTextContent("2");
-    expect(invalidation).toHaveAttribute("aria-expanded", "false");
-    expect(risk).toHaveTextContent("Risk");
-    expect(screen.queryByTestId("list-invalidation")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("card-risk")).not.toBeInTheDocument();
+    const detailTrigger = await screen.findByTestId("button-non-adaptive-explanation");
+    expect(detailTrigger).toHaveTextContent(en.analysis_detail.adaptive_education_title);
+    expect(detailTrigger).toHaveAccessibleName(/2 invalidation/i);
+    expect(screen.queryByTestId("invalidation-heading")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("non-adaptive-education-panel")).not.toBeInTheDocument();
     expect(screen.getByTestId("risk-disclaimer-accessible")).toHaveClass("sr-only");
     expect(screen.getByTestId("text-risk-disclaimer-short")).toHaveTextContent("Trading involves risk");
 
-    fireEvent.click(invalidation);
-    expect(invalidation).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId("list-invalidation").children).toHaveLength(2);
-    fireEvent.click(risk);
-    expect(invalidation).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByTestId("list-invalidation")).not.toBeInTheDocument();
-    expect(screen.getByTestId("card-risk")).toHaveTextContent(/break below support/i);
-    fireEvent.click(risk);
-    expect(screen.queryByTestId("card-risk")).not.toBeInTheDocument();
+    fireEvent.click(detailTrigger);
+    const panel = screen.getByTestId("non-adaptive-education-panel");
+    expect(within(panel).getByTestId("list-invalidation").children).toHaveLength(2);
+    expect(within(panel).getByTestId("adaptive-analysis-findings")).toHaveTextContent(/break below support/i);
+    expect(within(panel).getByTestId("adaptive-analysis-findings")).toHaveTextContent("The trend can continue.");
+    expect(within(panel).getByTestId("adaptive-saved-analysis-disclosure")).not.toHaveAttribute("open");
+    fireEvent.click(within(panel).getByText(en.analysis_detail.adaptive_narrative_more));
+    expect(within(panel).getByTestId("adaptive-saved-analysis-disclosure")).toHaveAttribute("open");
     expect(screen.getByTestId("risk-disclaimer-accessible")).toHaveClass("sr-only");
     expect(screen.getByTestId("risk-disclaimer-accessible")).toHaveTextContent("decision-support tool");
   });
@@ -712,7 +761,7 @@ describe("AnalysisDetailPage: happy-path render", () => {
     expect(screen.getByTestId("confidence-reason-dialog")).toBeInTheDocument();
   });
 
-  it("uses progressive disclosure for scenarios, pro factors, and execution insight", async () => {
+  it("shows saved scenarios, pro factors, and execution insight together in the same detail layout as core products", async () => {
     installFetchMock([
       getAnalysisHandler({
         body: {
@@ -735,48 +784,17 @@ describe("AnalysisDetailPage: happy-path render", () => {
       </Wrapper>,
     );
 
-    // The Scenarios card itself is a collapsed section now — open it first.
-    fireEvent.click(await screen.findByTestId("scenarios-trigger"));
-
-    expect(await screen.findByTestId("scenario-a-disclosure-content")).toHaveTextContent(
-      /primary bullish path/i,
-    );
-    expect(screen.getByTestId("scenario-b-disclosure-content")).not.toBeVisible();
-    expect(screen.getByTestId("scenario-c-disclosure-content")).not.toBeVisible();
-
-    fireEvent.click(screen.getByTestId("scenario-b-disclosure-trigger"));
-    expect(screen.getByTestId("scenario-a-disclosure-content")).not.toBeVisible();
-    expect(screen.getByTestId("scenario-b-disclosure-content")).toHaveTextContent(
-      /shift the path bearish/i,
-    );
-    expect(screen.getByTestId("scenario-b-disclosure-content")).toBeVisible();
-
-    // "Why this analysis" is likewise a collapsed section — open it first.
-    fireEvent.click(screen.getByTestId("pro-details-trigger"));
-
-    expect(screen.getByTestId("pro-factor-technical-content")).not.toBeVisible();
-    expect(screen.getByTestId("pro-factor-fundamental-content")).not.toBeVisible();
-    fireEvent.click(screen.getByTestId("pro-factor-technical-trigger"));
-    expect(screen.getByTestId("pro-factor-technical-content")).toHaveTextContent(
-      /momentum and trend structure/i,
-    );
-    fireEvent.click(screen.getByTestId("pro-factor-fundamental-trigger"));
-    expect(screen.getByTestId("pro-factor-technical-content")).not.toBeVisible();
-    expect(screen.getByTestId("pro-factor-fundamental-content")).toHaveTextContent(
-      /macro releases/i,
-    );
-    expect(screen.getByTestId("pro-factor-fundamental-content")).toBeVisible();
-
-    expect(screen.queryByTestId("execution-insight-content")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("execution-insight-trigger"));
-    expect(screen.getByTestId("execution-insight-content")).toBeVisible();
-    const scenarioA = screen.getByTestId("exec-scenario-a") as HTMLDetailsElement;
-    const scenarioB = screen.getByTestId("exec-scenario-b") as HTMLDetailsElement;
-    expect(scenarioA.open).toBe(false);
-    expect(scenarioB.open).toBe(false);
-    fireEvent.click(within(scenarioA).getByText(en.analysis_detail.execution_scenario_a_label));
-    expect(scenarioA.open).toBe(true);
-    expect(scenarioB.open).toBe(false);
+    fireEvent.click(await screen.findByTestId("button-non-adaptive-explanation"));
+    const panel = screen.getByTestId("non-adaptive-education-panel");
+    expect(within(panel).getByTestId("adaptive-saved-analysis-disclosure")).not.toHaveAttribute("open");
+    fireEvent.click(within(panel).getByText(en.analysis_detail.adaptive_narrative_more));
+    const content = within(panel).getByTestId("non-adaptive-education-content");
+    expect(content).toHaveTextContent(/primary bullish path/i);
+    expect(content).toHaveTextContent(/shift the path bearish/i);
+    expect(content).toHaveTextContent(/momentum and trend structure/i);
+    expect(content).toHaveTextContent(/macro releases/i);
+    expect(content).toHaveTextContent(en.analysis_detail.execution_scenario_b_template);
+    expect(screen.queryByTestId("scenarios-trigger")).not.toBeInTheDocument();
   });
 
   it("turns legacy 1m wait-plan n/a values into actionable observation guidance", async () => {

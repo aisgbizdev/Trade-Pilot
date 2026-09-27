@@ -36,6 +36,7 @@
 - [Symbol-scoped news feeds](symbol-scoped-news-feeds.md) — per-symbol RSS can contain unrelated company stories; require explicit instrument and market context before citing or showing a headline.
 - [Disclosure prop audit](disclosure-prop-audit.md) — trace shared-card subtitle props to each caller so short fixed copy is not missed when auditing collapsed explanations.
 - [Shareable analysis exports](shareable-analysis-exports.md) — export the full saved rationale with timestamp and snapshot-matched citations; never capture only the visible part of a scrolling dialog.
+- [Analysis detail parity](analysis-detail-parity.md) — non-core instruments should keep the same detail layout and menu placement as the four main products; omit only Adaptive.
 - [Retryable capped XP evidence](retryable-capped-xp-evidence.md) — a daily-cap rejection must not permanently consume a one-time activity; only awarded evidence stays deduplicated.
 - [History timeframe default focus](history-performance-default-focus.md) — keep XAU/USD as the intentional timeframe default even when the overview covers all instruments; clarify reset labels instead.
 - [Bilingual copy assertions](bilingual-copy-assertions.md) — language-toggle tests may check the same copy again after toggling back; search every old-phrase assertion when changing localized text.

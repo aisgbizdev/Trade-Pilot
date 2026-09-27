@@ -2,7 +2,10 @@ import type { IndicatorTimeframe } from "./historical";
 import type { TechnicalIndicators } from "./indicators";
 
 export const RISK_MAP_TIMEFRAMES: readonly IndicatorTimeframe[] = ["15m", "1h", "4h", "1D", "1W"];
-export const RISK_MAP_INSTRUMENTS = ["XAU/USD", "BRENT", "HSI", "NIKKEI"] as const;
+export const RISK_MAP_INSTRUMENTS = [
+  "XAU/USD", "BRENT", "HSI", "NIKKEI",
+  "EUR/USD", "GBP/USD", "AUD/USD", "USD/JPY",
+] as const;
 export type RiskMapInstrument = typeof RISK_MAP_INSTRUMENTS[number];
 
 export function isRiskMapInstrument(instrument: string): instrument is RiskMapInstrument {

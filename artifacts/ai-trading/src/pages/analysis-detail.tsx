@@ -12,9 +12,7 @@ import {
   Minus,
   ChevronDown,
   ChevronRight,
-  ShieldAlert,
   Target,
-  AlertOctagon,
   HelpCircle,
   Newspaper,
   CalendarClock,
@@ -96,6 +94,7 @@ import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
 import { buildConfidencePrintHtml, buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
+import { renderChartSharePng } from "@/lib/chart-share";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
@@ -438,61 +437,6 @@ function ValidityBadge({ validUntil }: { validUntil: string }) {
   );
 }
 
-function narrativePreview(content: string): string {
-  const preview = content.replace(/\s+/g, " ").trim();
-  return preview.length > 120 ? `${preview.slice(0, 120).trimEnd()}…` : preview;
-}
-
-function NarrativeDisclosure({
-  title,
-  content,
-  citations,
-  open,
-  onOpenChange,
-  testId,
-  t,
-}: {
-  title: string;
-  content?: string | null;
-  citations?: React.ReactNode;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  testId: string;
-  t: T;
-}) {
-  if (!content) return null;
-  return (
-    <Collapsible open={open} onOpenChange={onOpenChange} data-testid={testId}>
-      <CollapsibleTrigger
-        className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        data-testid={`${testId}-trigger`}
-        aria-label={`${open ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${title}`}
-      >
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-foreground">{title}</span>
-          {!open && (
-            <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted-foreground">
-              {narrativePreview(content)}
-            </span>
-          )}
-        </span>
-        {open ? (
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        ) : (
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        )}
-      </CollapsibleTrigger>
-      <CollapsibleContent
-        className="px-3 pb-3 pt-1"
-        data-testid={`${testId}-content`}
-      >
-        <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{content}</p>
-        {citations}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
 // Stable, ASCII-safe slug for a string. Used to generate the DOM `id`
 // for a row inside the FundamentalContextCard so the inline citation
 // chips can scroll the matching row into view via #anchor on click.
@@ -709,6 +653,10 @@ function scenarioCText(bias: BiasKey, t: T): string {
 }
 
 const QUICK_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
+const RISK_MAP_INSTRUMENTS = new Set([
+  "XAU/USD", "BRENT", "HSI", "NIKKEI",
+  "EUR/USD", "GBP/USD", "AUD/USD", "USD/JPY",
+]);
 
 const INDICATOR_TIMEFRAMES = new Set<IndicatorTimeframe>(["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"]);
 function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
@@ -1857,9 +1805,7 @@ export default function AnalysisDetailPage({
   // bleed into analysis #42.
   useEffect(() => {
     setFundamentalRefresh(null);
-    setOpenScenario("a");
-    setOpenProFactor(null);
-    setActiveSection(null);
+    setNonAdaptiveDetailsOpen(false);
   }, [id]);
 
   const [feedbackType, setFeedbackType] = useState<"useful" | "not_useful" | null>(null);
@@ -1874,13 +1820,12 @@ export default function AnalysisDetailPage({
   const [quickTimeframeStatus, setQuickTimeframeStatus] = useState<
     "idle" | "scheduled" | "loading" | "error"
   >("idle");
-  const [openScenario, setOpenScenario] = useState<"a" | "b" | "c" | null>("a");
-  const [openProFactor, setOpenProFactor] = useState<
-    "technical" | "fundamental" | "market" | null
-  >(null);
-  const [activeSection, setActiveSection] = useState<
-    "invalidation" | "opportunity" | "risk" | "scenarios" | "pro-details" | "execution-insight" | null
-  >(null);
+  const [nonAdaptiveDetailsOpen, setNonAdaptiveDetailsOpen] = useState(false);
+  const [nonAdaptiveChart, setNonAdaptiveChart] = useState<{
+    key: string;
+    status: "loading" | "ready" | "unavailable";
+    url?: string;
+  } | null>(null);
   const quickTimeframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickTimeframeTargetRef = useRef<string | null>(null);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -2171,67 +2116,47 @@ export default function AnalysisDetailPage({
         ? analysis.bullishScenario
         : analysis.bearishScenario);
 
-  const detailSections = [
-    {
-      key: "invalidation",
-      label: t.analysis_detail.invalidation_short,
-      title: t.analysis_detail.invalidation_title,
-      icon: AlertOctagon,
-      visible: invalidationItems.length > 0,
-      triggerTestId: "invalidation-heading",
-      cardTestId: "card-invalidation",
-    },
-    {
-      key: "opportunity",
-      label: t.analysis_detail.opportunity_title,
-      title: t.analysis_detail.opportunity_title,
-      icon: Target,
-      visible: Boolean(analysis.opportunity),
-      triggerTestId: "opportunity-trigger",
-      cardTestId: "card-opportunity",
-    },
-    {
-      key: "risk",
-      label: t.analysis_detail.risk_title,
-      title: t.analysis_detail.risk_title,
-      icon: ShieldAlert,
-      visible: Boolean(analysis.risk),
-      triggerTestId: "risk-heading",
-      cardTestId: "card-risk",
-    },
-    {
-      key: "scenarios",
-      label: t.analysis_detail.scenarios_section,
-      title: t.analysis_detail.scenarios_section,
-      icon: ChevronRight,
-      visible: true,
-      triggerTestId: "scenarios-trigger",
-      cardTestId: "card-scenarios",
-    },
-    {
-      key: "pro-details",
-      label: t.analysis_detail.narrative_details_short,
-      title: t.analysis_detail.narrative_details_title,
-      icon: BookOpen,
-      visible: !isBeginnerMode && Boolean(analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext),
-      triggerTestId: "pro-details-trigger",
-      cardTestId: "card-pro-details",
-    },
-    {
-      key: "execution-insight",
-      label: t.analysis_detail.execution_insight_short,
-      title: t.analysis_detail.execution_insight_title,
-      icon: Activity,
-      visible: true,
-      triggerTestId: "execution-insight-trigger",
-      cardTestId: "card-execution-insight",
-    },
-  ] as const;
-  const selectedDetail = detailSections.find((section) => section.key === activeSection && section.visible);
-
   const tradePlan = analysis.tradePlan ?? null;
   const hasAdaptive = Boolean(tradePlan && isAdaptivePositionInstrument(analysis.instrument));
-  const printNonAdaptiveDetails = () => {
+  const chartKey = `${analysis.id}:${lang}`;
+  const renderNonAdaptiveChart = async () => {
+    const result = await renderChartSharePng({
+      instrument: analysis.instrument,
+      timeframe: analysis.timeframe,
+      analyzedAt: analysis.createdAt,
+      bias: bias ? biasLabel(bias, isBeginnerMode ? "beginner" : "pro", t) : t.analysis_detail.bias_unknown,
+      plan: tradePlan,
+      locale: lang === "id" ? "id-ID" : "en-US",
+      copy: {
+        title: t.analysis_detail.chart_share_title,
+        analyzed: t.analysis_detail.chart_share_analyzed,
+        made: t.analysis_detail.chart_share_made,
+        bias: t.analysis_detail.bias_title,
+        suggested: t.analysis_detail.chart_share_suggested,
+        buy: t.analysis_detail.trade_plan_side_buy,
+        sell: t.analysis_detail.trade_plan_side_sell,
+        both: t.analysis_detail.chart_share_wait,
+        entry: t.analysis_detail.trade_plan_entry,
+        stop: t.analysis_detail.trade_plan_sl,
+        tp1: t.analysis_detail.trade_plan_tp1,
+        tp2: t.analysis_detail.trade_plan_tp2,
+        sourceNote: t.analysis_detail.chart_share_source_note,
+        warning: t.analysis_detail.chart_share_warning,
+      },
+    });
+    return result.url;
+  };
+  const openNonAdaptiveDetails = () => {
+    setNonAdaptiveDetailsOpen(true);
+    if (nonAdaptiveChart?.key === chartKey) return;
+    setNonAdaptiveChart({ key: chartKey, status: "loading" });
+    void renderNonAdaptiveChart().then((url) => {
+      setNonAdaptiveChart({ key: chartKey, status: "ready", url });
+    }).catch(() => {
+      setNonAdaptiveChart({ key: chartKey, status: "unavailable" });
+    });
+  };
+  const printNonAdaptiveDetails = async () => {
     if (hasAdaptive) return;
     let tab: Window | null = null;
     try {
@@ -2241,7 +2166,6 @@ export default function AnalysisDetailPage({
         if (body?.trim()) sections.push({ title, body });
       };
       addSection(t.analysis_detail.confidence_reason_label, confidenceReason);
-      addSection(t.analysis_detail.market_condition, analysis.marketContext);
       addSection(t.analysis_detail.scenario_a, scenarioAContent);
       addSection(t.analysis_detail.scenario_b, scenarioBContent);
       addSection(t.analysis_detail.scenario_c, scenarioCText(bias ?? "neutral", t));
@@ -2255,7 +2179,7 @@ export default function AnalysisDetailPage({
       if (!isBeginnerMode) {
         addSection(t.analysis_detail.pro_factor_technical, analysis.keyDriversTechnical);
         addSection(t.analysis_detail.pro_factor_fundamental, analysis.keyDriversFundamental);
-        // Market context appears above, regardless of which chip is selected.
+        addSection(t.analysis_detail.pro_factor_market_context, analysis.marketContext);
       }
       sections.push({
         title: t.analysis_detail.execution_insight_title,
@@ -2307,14 +2231,30 @@ export default function AnalysisDetailPage({
         disclaimerTitle: t.analysis_detail.print_snapshot_title,
         disclaimer: `${t.analysis_detail.print_snapshot_note} ${t.analysis_detail.disclaimer_full}`,
       };
+      tab = window.open("", "_blank");
+      if (!tab) throw new Error("Print preview was blocked");
+      tab.opener = null;
+      let chartUrl = nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "ready"
+        ? nonAdaptiveChart.url : undefined;
+      if (!chartUrl) {
+        try {
+          chartUrl = await renderNonAdaptiveChart();
+          setNonAdaptiveChart({ key: chartKey, status: "ready", url: chartUrl });
+        } catch {
+          setNonAdaptiveChart({ key: chartKey, status: "unavailable" });
+        }
+      }
       const html = buildConfidencePrintHtml(data, {
         lang,
         printLabel: t.analysis_detail.adaptive_print_details,
         briefLabel: t.analysis_detail.summary,
+        chart: {
+          title: t.analysis_detail.chart_share_title,
+          caption: t.analysis_detail.print_chart_caption,
+          src: chartUrl,
+          unavailable: t.analysis_detail.print_chart_unavailable,
+        },
       });
-      tab = window.open("", "_blank");
-      if (!tab) throw new Error("Print preview was blocked");
-      tab.opener = null;
       tab.document.open();
       tab.document.write(html);
       tab.document.close();
@@ -2478,7 +2418,7 @@ export default function AnalysisDetailPage({
                 {tf}
               </button>
             ))}
-            {isAdaptivePositionInstrument(analysis.instrument) && (
+            {RISK_MAP_INSTRUMENTS.has(analysis.instrument) && (
               <Button
                 size="sm"
                 variant="outline"
@@ -2520,7 +2460,7 @@ export default function AnalysisDetailPage({
           )}
         </Card>
 
-        {isAdaptivePositionInstrument(analysis.instrument) && (
+        {RISK_MAP_INSTRUMENTS.has(analysis.instrument) && (
           <TimeframeRiskDialog
             open={riskMapOpen}
             instrument={analysis.instrument as GetTimeframeRiskMapInstrument}
@@ -2800,6 +2740,76 @@ export default function AnalysisDetailPage({
             shareSources={confidenceShareData.sources}
           />
         )}
+        {!hasAdaptive && (
+          <Card className="overflow-hidden" data-testid="card-non-adaptive-analysis">
+            <div className="flex items-start gap-2 border-b border-border p-4">
+              <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-foreground">{t.analysis_detail.print_analysis_title}</h2>
+                <p className="mt-1 text-xs text-muted-foreground">{t.analysis_detail.print_snapshot_note}</p>
+              </div>
+            </div>
+            <div className="p-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openNonAdaptiveDetails}
+                aria-label={invalidationItems.length > 0
+                  ? `${t.analysis_detail.adaptive_education_title}. ${t.analysis_detail.adaptive_invalidation_cue.replace("{count}", String(invalidationItems.length))}`
+                  : undefined}
+                data-testid="button-non-adaptive-explanation"
+                className="group h-auto min-h-12 w-full justify-between gap-2 rounded-lg border-primary/40 bg-primary/[0.05] px-3 py-3 text-left hover:border-primary/70 hover:bg-primary/[0.10] sm:w-auto sm:px-4"
+              >
+                <span className="min-w-0 text-base font-semibold leading-snug text-primary">{t.analysis_detail.adaptive_education_title}</span>
+                {invalidationItems.length > 0 && (
+                  <span className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/60 px-2 py-1 text-[11px] font-medium leading-none text-muted-foreground" aria-hidden="true">
+                    <span className="sm:hidden">{invalidationItems.length}</span>
+                    <span className="hidden sm:inline">{t.analysis_detail.adaptive_invalidation_cue.replace("{count}", String(invalidationItems.length))}</span>
+                  </span>
+                )}
+                <ChevronRight className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              </Button>
+            </div>
+            <Dialog open={nonAdaptiveDetailsOpen} onOpenChange={setNonAdaptiveDetailsOpen}>
+              <DialogContent
+                closeLabel={t.analysis_detail.disclosure_collapse}
+                className="grid max-h-[85dvh] w-[calc(100vw-2rem)] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden rounded-xl p-4 sm:p-6"
+                data-testid="non-adaptive-education-panel"
+              >
+                <DialogHeader className="pr-7 text-left">
+                  <DialogTitle>{t.analysis_detail.print_analysis_title}</DialogTitle>
+                  <DialogDescription>{t.analysis_detail.print_snapshot_note}</DialogDescription>
+                </DialogHeader>
+                <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1" data-testid="non-adaptive-education-content">
+                  <section className="space-y-2 rounded-lg border border-border p-3 text-xs" data-testid="non-adaptive-analysis-snapshot">
+                    <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.summary}</h3>
+                    <p className="text-muted-foreground">{analysis.instrument} · {analysis.timeframe} · {confidenceShareData.analyzedAt}</p>
+                    <p className="text-foreground">{t.analysis_detail.bias_title}: {bias ? biasLabel(bias, isBeginnerMode ? "beginner" : "pro", t) : t.analysis_detail.bias_unknown} · {t.analysis_detail.confidence}: {analysis.confidenceMin ?? "—"}% – {analysis.confidenceMax ?? "—"}%{rl ? ` · ${t.analysis_detail.risk_title}: ${rl.label}` : ""}</p>
+                    {confidenceReason && <p className="whitespace-pre-wrap text-muted-foreground">{confidenceReason}</p>}
+                  </section>
+                  <section className="space-y-2" data-testid="non-adaptive-analysis-chart">
+                    <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.chart_share_title}</h3>
+                    {nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "ready" && nonAdaptiveChart.url
+                      ? <img src={nonAdaptiveChart.url} alt={t.analysis_detail.print_chart_caption} className="w-full rounded-lg border border-border" />
+                      : <p role="status" className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                        {nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "loading"
+                          ? t.analysis_detail.print_chart_loading
+                          : t.analysis_detail.print_chart_unavailable}
+                      </p>}
+                    <p className="text-xs text-muted-foreground">{t.analysis_detail.print_chart_caption}</p>
+                  </section>
+                  {savedAnalysisDetails}
+                </div>
+                <div className="flex justify-end border-t border-border pt-3">
+                  <Button type="button" onClick={printNonAdaptiveDetails} data-testid="non-adaptive-print-details">
+                    <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
+                    {t.analysis_detail.adaptive_print_details}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </Card>
+        )}
         {/* This is a current-market check, not an input to the saved Adaptive plan. */}
         {liveIndicatorPanel}
 
@@ -2828,19 +2838,6 @@ export default function AnalysisDetailPage({
             </p>
           </Card>
         )}
-
-        {/* Match the saved-analysis layout used by the core instruments, without Adaptive calculations. */}
-        {!hasAdaptive && <div className="min-w-0 space-y-2.5">
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" onClick={printNonAdaptiveDetails} data-testid="non-adaptive-print-details">
-              <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
-              {t.analysis_detail.adaptive_print_details}
-            </Button>
-          </div>
-          <Card className="p-4 sm:p-5" data-testid="non-adaptive-analysis-details">
-            {savedAnalysisDetails}
-          </Card>
-        </div>}
 
         <div className="sr-only" data-testid="risk-disclaimer-accessible">
           <p data-testid="text-risk-disclaimer-short">{t.analysis_detail.risk_disclaimer_short}</p>

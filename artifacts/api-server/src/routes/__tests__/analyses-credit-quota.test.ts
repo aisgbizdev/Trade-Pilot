@@ -157,7 +157,7 @@ describe("POST /analyses credit fallback", () => {
 
   it("still 429s exactly as before when the user has zero credits", async () => {
     const user = await createZeroQuotaUser();
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${user.token}`)
@@ -172,7 +172,7 @@ describe("POST /analyses credit fallback", () => {
     const user = await createZeroQuotaUser();
     await seedCredits(user.id, 3);
 
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${user.token}`)
@@ -205,7 +205,7 @@ describe("POST /analyses credit fallback", () => {
     const user = await createZeroQuotaUser();
     await seedCredits(user.id, 2);
 
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${user.token}`)

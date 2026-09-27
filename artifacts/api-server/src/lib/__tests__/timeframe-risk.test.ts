@@ -26,7 +26,9 @@ describe("timeframe risk model", () => {
     expect(isRiskMapInstrument("BRENT")).toBe(true);
     expect(isRiskMapInstrument("HSI")).toBe(true);
     expect(isRiskMapInstrument("NIKKEI")).toBe(true);
-    expect(isRiskMapInstrument("EUR/USD")).toBe(false);
+    for (const instrument of ["EUR/USD", "GBP/USD", "AUD/USD", "USD/JPY"]) {
+      expect(isRiskMapInstrument(instrument)).toBe(true);
+    }
     expect(isRiskMapInstrument("CUSTOM")).toBe(false);
   });
 
