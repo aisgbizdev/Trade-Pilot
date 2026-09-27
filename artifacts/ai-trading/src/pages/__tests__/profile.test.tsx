@@ -122,6 +122,9 @@ describe("ProfilePage: happy-path render", () => {
     const settings = screen.getByTestId("profile-settings-group");
     expect(settings).toContainElement(screen.getByTestId("button-toggle-password-section"));
     expect(settings).toContainElement(screen.getByTestId("button-toggle-security-section"));
+    expect(settings).toContainElement(screen.getByTestId("button-go-privacy-security"));
+    expect(screen.queryByTestId("card-delete-account")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("button-open-delete-account")).not.toBeInTheDocument();
     expect(settings).toContainElement(screen.getByTestId("button-go-my-alerts"));
     expect(settings).toContainElement(screen.getByTestId("button-go-notification-settings"));
     expect(screen.getByTestId("button-go-my-alerts")).toHaveTextContent("View and manage your price alerts");

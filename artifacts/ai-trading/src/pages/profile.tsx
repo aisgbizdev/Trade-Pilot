@@ -5,17 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
 import { useTheme } from "@/components/theme-provider";
@@ -26,7 +15,6 @@ import {
   useChangePassword,
   useChangeSecurityQuestion,
   useLogout,
-  useDeleteAccount,
   getGetMeQueryKey,
   useGetProgressionSummary,
   useGetCreditBalance,
@@ -53,11 +41,6 @@ export default function ProfilePage() {
   const changePassword = useChangePassword();
   const changeSecurityQuestion = useChangeSecurityQuestion();
   const logout = useLogout();
-  const deleteAccount = useDeleteAccount();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.displayName ?? "");
@@ -206,22 +189,6 @@ export default function ProfilePage() {
     // dev-mode 401 overlay caused by zombie refetches after the
     // session cookie is cleared.
     window.location.assign("/");
-  };
-
-  const handleDeleteAccount = async () => {
-    setDeleteError(null);
-    try {
-      await deleteAccount.mutateAsync({ data: { currentPassword: deletePassword } });
-      // Same full-teardown pattern as logout: the account (and its
-      // session) is already gone server-side, so there's nothing left to
-      // cancel/clear beyond forcing every mounted component to unmount.
-      queryClient.cancelQueries();
-      queryClient.clear();
-      window.location.assign("/");
-    } catch (err) {
-      const apiErr = err as { data?: { error?: string } };
-      setDeleteError(apiErr?.data?.error ?? t.profile.delete_account_error_generic);
-    }
   };
 
   return (
@@ -561,6 +528,19 @@ export default function ProfilePage() {
               <button
                 type="button"
                 className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => setLocation("/profile/privacy-security")}
+                data-testid="button-go-privacy-security"
+              >
+                <Shield className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{t.profile.privacy_security_title}</span>
+                  <span className="block text-xs leading-relaxed text-muted-foreground">{t.profile.privacy_security_subtitle}</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+              <button
+                type="button"
+                className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => setLocation("/my-alerts")}
                 data-testid="button-go-my-alerts"
               >
@@ -684,98 +664,6 @@ export default function ProfilePage() {
               </Card>
             )}
 
-            <div className="border-t border-destructive/20 pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-testid="card-delete-account">
-              <div className="max-w-xl">
-                <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
-                  <Trash2 className="w-4 h-4" />
-                  {t.profile.delete_account_title}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                  {t.profile.delete_account_description}
-                </p>
-              </div>
-              <AlertDialog
-                open={deleteDialogOpen}
-                onOpenChange={(open) => {
-                  setDeleteDialogOpen(open);
-                  if (!open) {
-                    setDeletePassword("");
-                    setDeleteConfirmed(false);
-                    setDeleteError(null);
-                  }
-                }}
-              >
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto h-10 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    data-testid="button-open-delete-account"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {t.profile.delete_account_button}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent data-testid="dialog-delete-account">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t.profile.delete_account_confirm_title}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t.profile.delete_account_confirm_description}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="space-y-3 my-2">
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="delete-account-password"
-                        className="text-xs font-medium text-foreground"
-                      >
-                        {t.profile.delete_account_password_label}
-                      </label>
-                      <Input
-                        id="delete-account-password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
-                        data-testid="input-delete-account-password"
-                        className="h-10"
-                      />
-                    </div>
-                    <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer pt-1">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={deleteConfirmed}
-                        onChange={(e) => setDeleteConfirmed(e.target.checked)}
-                        data-testid="checkbox-delete-account-confirm"
-                      />
-                      <span className="leading-snug">{t.profile.delete_account_checkbox_label}</span>
-                    </label>
-                    {deleteError && (
-                      <p className="text-xs text-destructive font-medium" data-testid="text-delete-account-error">
-                        {deleteError}
-                      </p>
-                    )}
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel data-testid="button-cancel-delete-account">
-                      {t.common.cancel}
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      data-testid="button-confirm-delete-account"
-                      disabled={!deletePassword || !deleteConfirmed || deleteAccount.isPending}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        void handleDeleteAccount();
-                      }}
-                    >
-                      {deleteAccount.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                      {t.profile.delete_account_confirm_button}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
           </div>
         </div>
 

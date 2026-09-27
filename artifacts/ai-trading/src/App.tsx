@@ -12,6 +12,7 @@ import { EmbedProvider } from "@/lib/embed-mode";
 import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
+import PrivacySecurityPage from "@/pages/privacy-security";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
@@ -128,6 +129,11 @@ function Router() {
         </Route>
         <Route path="/analytics">
           <Redirect to="/history?view=summary" />
+        </Route>
+        <Route path="/profile/privacy-security">
+          <ProtectedRoute>
+            <PrivacySecurityPage />
+          </ProtectedRoute>
         </Route>
         <Route path="/profile">
           <ProtectedRoute>
