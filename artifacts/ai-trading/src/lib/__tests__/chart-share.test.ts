@@ -7,6 +7,17 @@ const candle = (hour: number) => ({
   open: 2300 + hour, high: 2302 + hour, low: 2299 + hour, close: 2301 + hour,
 });
 
+const copy = {
+  title: "Analysis chart", analyzed: "Analyzed", made: "Image created",
+  bias: "Bias", suggested: "Suggested", buy: "Buy scenario", sell: "Sell scenario",
+  both: "WAIT — review Buy & Sell", entry: "Entry", stop: "Stop Loss", tp1: "TP1", tp2: "TP2",
+  sourceNote: "Historical candles before analysis. Levels from saved analysis.",
+  warning: "Not an entry instruction. Check risks and invalidation.",
+  accessibleRange: "Historical candles from {start} to {end} ({count} candles).",
+  accessibleLevels: "Standard Plan levels drawn: {levels}.",
+  accessibleNoLevels: "No Standard Plan levels are drawn.",
+};
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -74,13 +85,7 @@ it("renders the saved WAIT status, both plan sides, original time and warnings i
     bias: "Neutral / Wait",
     plan,
     locale: "en-US",
-    copy: {
-      title: "Analysis chart", analyzed: "Analyzed", made: "Image created",
-      bias: "Bias", suggested: "Suggested", buy: "Buy scenario", sell: "Sell scenario",
-      both: "WAIT — review Buy & Sell", entry: "Entry", stop: "Stop Loss", tp1: "TP1", tp2: "TP2",
-      sourceNote: "Historical candles before analysis. Levels from saved analysis.",
-      warning: "Not an entry instruction. Check risks and invalidation.",
-    },
+    copy,
   });
   const drawn = text.mock.calls.map(([value]) => String(value)).join(" | ");
   expect(drawn).toContain("Neutral / Wait");
@@ -92,4 +97,37 @@ it("renders the saved WAIT status, both plan sides, original time and warnings i
   expect(drawn).toContain("Image created");
   expect(result.blob.type).toBe("image/png");
   expect(result.blob.size).toBeGreaterThan(0);
+  expect(result.description).toContain("Historical candles from Sep 9, 2026, 12:00 AM UTC to Sep 9, 2026, 09:00 AM UTC (10 candles)");
+  expect(result.description).toContain("Buy scenario Entry: 2,300");
+  expect(result.description).toContain("Sell scenario TP2: 2,340");
+  expect(result.description).not.toContain("live price");
+});
+
+it("describes an Indonesian historical chart without inventing plan levels", async () => {
+  const ctx = {
+    fillText: vi.fn(), fillRect: vi.fn(), stroke: vi.fn(), beginPath: vi.fn(),
+    moveTo: vi.fn(), lineTo: vi.fn(), setLineDash: vi.fn(),
+    measureText: (value: string) => ({ width: value.length * 10 }),
+  };
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue("data:image/png;base64,aW1hZ2U=");
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ candles: Array.from({ length: 14 }, (_, i) => candle(i)) }),
+  }));
+  const result = await renderChartSharePng({
+    instrument: "XAU/USD", timeframe: "1h", analyzedAt: "2026-09-09T10:25:00.000Z",
+    bias: "Netral", plan: null, locale: "id-ID",
+    copy: {
+      ...copy,
+      title: "Grafik analisis",
+      accessibleRange: "Candle historis dari {start} sampai {end} ({count} candle).",
+      accessibleNoLevels: "Tidak ada level Standard Plan yang digambar.",
+      sourceNote: "Bukan harga live.",
+    },
+  });
+  expect(result.description).toContain("Candle historis dari 9 Sep 2026");
+  expect(result.description).toContain("(10 candle)");
+  expect(result.description).toContain("Tidak ada level Standard Plan yang digambar.");
+  expect(result.description).toContain("Bukan harga live.");
 });

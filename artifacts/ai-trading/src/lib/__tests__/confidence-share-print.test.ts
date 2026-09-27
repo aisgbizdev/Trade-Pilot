@@ -37,6 +37,7 @@ describe("printable analysis guide", () => {
         title: "Grafik analisis",
         caption: "Candle sebelum analisis, bukan harga live.",
         src: "data:image/png;base64,UE5H",
+        description: 'Candle historis 1–9 Sep 2026; Buy Entry: 2.300 & SL: 2.290. Bukan harga live. <script>alert(1)</script>',
       },
     });
     expect(html).toContain("@page { size: A4");
@@ -48,6 +49,7 @@ describe("printable analysis guide", () => {
     expect(html).toContain('href="https://tradepilot.id"');
     expect(html).toContain("Tautan toko resmi tersedia melalui situs saat dirilis.");
     expect(html).toContain('<img src="data:image/png;base64,UE5H"');
+    expect(html).toContain('alt="Candle historis 1–9 Sep 2026; Buy Entry: 2.300 &amp; SL: 2.290. Bukan harga live. &lt;script&gt;alert(1)&lt;/script&gt;"');
     expect(html).toContain("<h2>Kenapa analisis ini?</h2>");
     expect(html).toContain("<h3>Risiko</h3>");
     expect(html).toContain("<strong>2300</strong>");
@@ -65,7 +67,7 @@ describe("printable analysis guide", () => {
     })).toContain("Grafik lama tidak tersedia.");
     expect(() => buildConfidencePrintHtml(data, {
       lang: "id", printLabel: "Cetak", briefLabel: "Ringkasan",
-      chart: { title: "Grafik", caption: "Bukan live", src: "javascript:alert(1)" },
+      chart: { title: "Grafik", caption: "Bukan live", src: "javascript:alert(1)", description: "Grafik" },
     })).toThrow("Invalid chart image");
   });
 });

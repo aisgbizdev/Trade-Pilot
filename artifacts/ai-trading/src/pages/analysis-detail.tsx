@@ -1825,6 +1825,7 @@ export default function AnalysisDetailPage({
     key: string;
     status: "loading" | "ready" | "unavailable";
     url?: string;
+    description?: string;
   } | null>(null);
   const quickTimeframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickTimeframeTargetRef = useRef<string | null>(null);
@@ -2142,16 +2143,19 @@ export default function AnalysisDetailPage({
         tp2: t.analysis_detail.trade_plan_tp2,
         sourceNote: t.analysis_detail.chart_share_source_note,
         warning: t.analysis_detail.chart_share_warning,
+        accessibleRange: t.analysis_detail.chart_share_accessible_range,
+        accessibleLevels: t.analysis_detail.chart_share_accessible_levels,
+        accessibleNoLevels: t.analysis_detail.chart_share_accessible_no_levels,
       },
     });
-    return result.url;
+    return { url: result.url, description: result.description };
   };
   const openNonAdaptiveDetails = () => {
     setNonAdaptiveDetailsOpen(true);
     if (nonAdaptiveChart?.key === chartKey) return;
     setNonAdaptiveChart({ key: chartKey, status: "loading" });
-    void renderNonAdaptiveChart().then((url) => {
-      setNonAdaptiveChart({ key: chartKey, status: "ready", url });
+    void renderNonAdaptiveChart().then(({ url, description }) => {
+      setNonAdaptiveChart({ key: chartKey, status: "ready", url, description });
     }).catch(() => {
       setNonAdaptiveChart({ key: chartKey, status: "unavailable" });
     });
@@ -2234,12 +2238,13 @@ export default function AnalysisDetailPage({
       tab = window.open("", "_blank");
       if (!tab) throw new Error("Print preview was blocked");
       tab.opener = null;
-      let chartUrl = nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "ready"
-        ? nonAdaptiveChart.url : undefined;
-      if (!chartUrl) {
+      let chartImage = nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "ready" &&
+        nonAdaptiveChart.url && nonAdaptiveChart.description
+        ? { url: nonAdaptiveChart.url, description: nonAdaptiveChart.description } : undefined;
+      if (!chartImage) {
         try {
-          chartUrl = await renderNonAdaptiveChart();
-          setNonAdaptiveChart({ key: chartKey, status: "ready", url: chartUrl });
+          chartImage = await renderNonAdaptiveChart();
+          setNonAdaptiveChart({ key: chartKey, status: "ready", ...chartImage });
         } catch {
           setNonAdaptiveChart({ key: chartKey, status: "unavailable" });
         }
@@ -2248,10 +2253,14 @@ export default function AnalysisDetailPage({
         lang,
         printLabel: t.analysis_detail.adaptive_print_details,
         briefLabel: t.analysis_detail.summary,
-        chart: {
+        chart: chartImage ? {
           title: t.analysis_detail.chart_share_title,
           caption: t.analysis_detail.print_chart_caption,
-          src: chartUrl,
+          src: chartImage.url,
+          description: chartImage.description,
+        } : {
+          title: t.analysis_detail.chart_share_title,
+          caption: t.analysis_detail.print_chart_caption,
           unavailable: t.analysis_detail.print_chart_unavailable,
         },
       });
@@ -2789,8 +2798,8 @@ export default function AnalysisDetailPage({
                   </section>
                   <section className="space-y-2" data-testid="non-adaptive-analysis-chart">
                     <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.chart_share_title}</h3>
-                    {nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "ready" && nonAdaptiveChart.url
-                      ? <img src={nonAdaptiveChart.url} alt={t.analysis_detail.print_chart_caption} className="w-full rounded-lg border border-border" />
+                    {nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "ready" && nonAdaptiveChart.url && nonAdaptiveChart.description
+                      ? <img src={nonAdaptiveChart.url} alt={nonAdaptiveChart.description} className="w-full rounded-lg border border-border" />
                       : <p role="status" className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
                         {nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "loading"
                           ? t.analysis_detail.print_chart_loading

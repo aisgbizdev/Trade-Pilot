@@ -42,6 +42,9 @@ export interface ChartShareCopy {
   tp2: string;
   sourceNote: string;
   warning: string;
+  accessibleRange: string;
+  accessibleLevels: string;
+  accessibleNoLevels: string;
 }
 
 export interface ChartShareInput {
@@ -52,6 +55,32 @@ export interface ChartShareInput {
   plan: TradePlan | null;
   copy: ChartShareCopy;
   locale: string;
+}
+
+function describeChart(input: ChartShareInput, candles: Candle[], mode: LevelDisplayMode): string {
+  const date = (value: string) => new Date(value).toLocaleString(input.locale, {
+    year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+    timeZone: "UTC", timeZoneName: "short",
+  });
+  const levels = buildDisplayedLevels(input.plan, mode).map((level) => {
+    const [side, kind] = level.key.split("-");
+    const sideLabel = side === "buy" ? input.copy.buy : input.copy.sell;
+    const levelLabel = kind === "entry" ? input.copy.entry
+      : kind === "sl" ? input.copy.stop
+        : kind === "tp1" ? input.copy.tp1 : input.copy.tp2;
+    return `${sideLabel} ${levelLabel}: ${level.price.toLocaleString(input.locale, { maximumFractionDigits: 5 })}`;
+  });
+  return [
+    `${input.copy.title} · ${input.instrument} · ${input.timeframe}.`,
+    input.copy.accessibleRange
+      .replace("{start}", date(candles[0].date))
+      .replace("{end}", date(candles[candles.length - 1].date))
+      .replace("{count}", candles.length.toLocaleString(input.locale)),
+    levels.length
+      ? input.copy.accessibleLevels.replace("{levels}", levels.join("; "))
+      : input.copy.accessibleNoLevels,
+    input.copy.sourceNote,
+  ].join(" ");
 }
 
 function lines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -193,7 +222,7 @@ function drawPlan(ctx: CanvasRenderingContext2D, input: ChartShareInput, mode: L
   return y + height + 22;
 }
 
-export async function renderChartSharePng(input: ChartShareInput): Promise<{ blob: Blob; url: string }> {
+export async function renderChartSharePng(input: ChartShareInput): Promise<{ blob: Blob; url: string; description: string }> {
   if (!FRAME_MS[input.timeframe]) throw new Error("Unsupported timeframe for chart export");
   const res = await fetch(
     `/api/historical/candles?instrument=${encodeURIComponent(input.instrument)}&timeframe=${encodeURIComponent(input.timeframe)}`,
@@ -259,5 +288,5 @@ export async function renderChartSharePng(input: ChartShareInput): Promise<{ blo
   if (!url.startsWith("data:image/png;base64,")) throw new Error("PNG export failed");
   const binary = atob(url.slice("data:image/png;base64,".length));
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return { blob: new Blob([bytes], { type: "image/png" }), url };
+  return { blob: new Blob([bytes], { type: "image/png" }), url, description: describeChart(input, candles, mode) };
 }

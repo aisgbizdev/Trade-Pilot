@@ -60,6 +60,7 @@ beforeEach(() => {
   vi.mocked(renderChartSharePng).mockResolvedValue({
     blob: new Blob(["image"], { type: "image/png" }),
     url: "data:image/png;base64,aW1hZ2U=",
+    description: "Historical candles and Standard Plan levels.",
   });
 });
 

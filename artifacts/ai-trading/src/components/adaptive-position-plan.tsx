@@ -960,8 +960,8 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const [shareBusy, setShareBusy] = useState(false);
   const educationContentRef = useRef<HTMLDivElement>(null);
   const chartKey = JSON.stringify([analysisId, instrument, context.timeframe, analysisCreatedAt, context.tradingBias, lang, tradePlan]);
-  const [educationChart, setEducationChart] = useState<{ key: string; url?: string; unavailable?: boolean } | null>(null);
-  const chartRequestRef = useRef<{ key: string; promise: Promise<string> } | null>(null);
+  const [educationChart, setEducationChart] = useState<{ key: string; url?: string; description?: string; unavailable?: boolean } | null>(null);
+  const chartRequestRef = useRef<{ key: string; promise: Promise<{ url: string; description: string }> } | null>(null);
   const { toast } = useToast();
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
   const [analysisExpired, setAnalysisExpired] = useState(false);
@@ -1374,7 +1374,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       },
     };
   };
-  const getEducationChart = (): Promise<string> => {
+  const getEducationChart = (): Promise<{ url: string; description: string }> => {
     if (chartRequestRef.current?.key === chartKey) return chartRequestRef.current.promise;
     setEducationChart({ key: chartKey });
     const promise = renderChartSharePng({
@@ -1401,10 +1401,13 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         tp2: copy.trade_plan_tp2,
         sourceNote: copy.chart_share_source_note,
         warning: copy.chart_share_warning,
+        accessibleRange: copy.chart_share_accessible_range,
+        accessibleLevels: copy.chart_share_accessible_levels,
+        accessibleNoLevels: copy.chart_share_accessible_no_levels,
       },
-    }).then(({ url }) => {
-      if (chartRequestRef.current?.key === chartKey) setEducationChart({ key: chartKey, url });
-      return url;
+    }).then(({ url, description }) => {
+      if (chartRequestRef.current?.key === chartKey) setEducationChart({ key: chartKey, url, description });
+      return { url, description };
     }).catch((error: unknown) => {
       if (chartRequestRef.current?.key === chartKey) setEducationChart({ key: chartKey, unavailable: true });
       throw error;
@@ -1429,13 +1432,14 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       tab.document.title = copy.adaptive_guide_title;
       tab.document.body.textContent = copy.adaptive_guide_preparing;
       setShareBusy(true);
-      let chart: { title: string; caption: string; src?: string; unavailable?: string };
       const chartLabels = {
         title: copy.chart_share_title,
         caption: copy.adaptive_guide_chart_caption,
       };
+      let chart: NonNullable<Parameters<typeof buildConfidencePrintHtml>[1]["chart"]>;
       try {
-        chart = { ...chartLabels, src: await getEducationChart() };
+        const { url, description } = await getEducationChart();
+        chart = { ...chartLabels, src: url, description };
       } catch {
         chart = { ...chartLabels, unavailable: copy.adaptive_guide_chart_unavailable };
       }
@@ -1648,9 +1652,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               {supportingDetails}
               <div className="min-w-0 space-y-2 rounded-lg border border-border p-3" data-testid="adaptive-education-chart">
                 <h3 className="text-sm font-bold">{copy.chart_share_title} · {instrument} · {context.timeframe ?? "—"}</h3>
-                {educationChart?.key === chartKey && educationChart.url ? (
+                {educationChart?.key === chartKey && educationChart.url && educationChart.description ? (
                   <div className="max-w-full overflow-x-auto rounded-md">
-                    <img src={educationChart.url} alt={`${copy.chart_share_title} · ${instrument} · ${context.timeframe ?? "—"}`} className="block h-auto w-full min-w-[560px] sm:min-w-0" data-testid="adaptive-education-chart-image" />
+                    <img src={educationChart.url} alt={educationChart.description} className="block h-auto w-full min-w-[560px] sm:min-w-0" data-testid="adaptive-education-chart-image" />
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground" role="status">

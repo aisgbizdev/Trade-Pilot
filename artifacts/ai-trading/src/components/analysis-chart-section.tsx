@@ -202,6 +202,9 @@ export function AnalysisChartSection({
           tp2: t.analysis_detail.trade_plan_tp2,
           sourceNote: t.analysis_detail.chart_share_source_note,
           warning: t.analysis_detail.chart_share_warning,
+          accessibleRange: t.analysis_detail.chart_share_accessible_range,
+          accessibleLevels: t.analysis_detail.chart_share_accessible_levels,
+          accessibleNoLevels: t.analysis_detail.chart_share_accessible_no_levels,
         },
       });
       if (action === "copy" && navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {

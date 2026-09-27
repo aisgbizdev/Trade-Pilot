@@ -364,6 +364,7 @@ describe("AnalysisDetailPage: non-Adaptive print", () => {
       vi.spyOn(chartShare, "renderChartSharePng").mockResolvedValue({
         url: "data:image/png;base64,UE5H",
         blob: new Blob(["chart"], { type: "image/png" }),
+        description: "Historical candles and Standard Plan levels.",
       });
       const popup = {
         opener: window,
@@ -382,6 +383,7 @@ describe("AnalysisDetailPage: non-Adaptive print", () => {
       const panel = screen.getByTestId("non-adaptive-education-panel");
       const button = within(panel).getByTestId("non-adaptive-print-details");
       await waitFor(() => expect(within(panel).getByTestId("non-adaptive-analysis-chart").querySelector("img")).not.toBeNull());
+      expect(within(panel).getByTestId("non-adaptive-analysis-chart").querySelector("img")).toHaveAttribute("alt", "Historical candles and Standard Plan levels.");
       expect(within(panel).getByTestId("non-adaptive-analysis-chart")).toHaveTextContent(en.analysis_detail.print_chart_caption);
       expect(button).toHaveTextContent(en.analysis_detail.adaptive_print_details);
       // Printing must not depend on which detail disclosure happens to be open.
@@ -389,6 +391,7 @@ describe("AnalysisDetailPage: non-Adaptive print", () => {
       fireEvent.click(button);
       await waitFor(() => expect(writes).toHaveLength(1));
       expect(writes[0]).toContain('<img src="data:image/png;base64,UE5H"');
+      expect(writes[0]).toContain('alt="Historical candles and Standard Plan levels."');
       expect(writes[0]).toContain(`>${instrument} · 1h ·`);
       expect(writes[0]).toContain("First invalidation");
       expect(writes[0]).toContain("Fourth invalidation");
@@ -410,6 +413,7 @@ describe("AnalysisDetailPage: non-Adaptive print", () => {
       fireEvent.click(button);
       await waitFor(() => expect(writes).toHaveLength(2));
       expect(writes[1]).toContain('lang="id"');
+      expect(writes[1]).toContain('alt="Historical candles and Standard Plan levels."');
       expect(writes[1]).toContain(id.analysis_detail.print_snapshot_note);
       expect(writes[1]).toContain(`<h1>${id.analysis_detail.print_analysis_title}</h1>`);
       expect(mock.calls.filter((call) => call.method === "POST" && /\/api\/analyses(?:\/|$)/.test(call.url))).toHaveLength(0);
@@ -1355,6 +1359,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const chart = vi.spyOn(chartShare, "renderChartSharePng").mockResolvedValue({
       blob: new Blob(["PNG"], { type: "image/png" }),
       url: "data:image/png;base64,UE5H",
+      description: "Historical candles from Sep 9 to Sep 10; Buy Entry: 2,300. Not a live quote.",
     });
     installFetchMock([
       getAnalysisHandler({ body: {
@@ -1389,6 +1394,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(screen.getByTestId("adaptive-saved-analysis-disclosure")).not.toHaveAttribute("open");
     const image = await screen.findByTestId("adaptive-education-chart-image");
     expect(image).toHaveAttribute("src", "data:image/png;base64,UE5H");
+    expect(image).toHaveAttribute("alt", "Historical candles from Sep 9 to Sep 10; Buy Entry: 2,300. Not a live quote.");
     expect(screen.getByTestId("adaptive-education-chart")).toHaveTextContent("not a live price");
     expect(chart).toHaveBeenCalledOnce();
     expect(chart).toHaveBeenCalledWith(expect.objectContaining({
@@ -1405,6 +1411,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     await waitFor(() => expect(previewDocument.write).toHaveBeenCalledOnce());
     const printHtml = String(previewDocument.write.mock.calls[0]?.[0]);
     expect(printHtml).toContain('src="data:image/png;base64,UE5H"');
+    expect(printHtml).toContain('alt="Historical candles from Sep 9 to Sep 10; Buy Entry: 2,300. Not a live quote."');
     expect(printHtml).toContain("Adaptive scenario under review");
     expect(printHtml).toContain("Important note");
     expect(printHtml).toContain("Gold rallies after statement");

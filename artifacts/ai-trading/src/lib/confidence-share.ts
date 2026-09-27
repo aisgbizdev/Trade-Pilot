@@ -51,7 +51,10 @@ export function buildConfidencePrintHtml(
     lang: "id" | "en";
     printLabel: string;
     briefLabel: string;
-    chart?: { title: string; caption: string; src?: string; unavailable?: string };
+    chart?: { title: string; caption: string } & (
+      { src: string; description: string; unavailable?: never } |
+      { src?: never; description?: never; unavailable: string }
+    );
   },
 ): string {
   if (options.chart?.src && !/^data:image\/png;base64,[a-zA-Z0-9+/=]+$/.test(options.chart.src)) {
@@ -130,7 +133,9 @@ export function buildConfidencePrintHtml(
       <div class="meta">${escapeHtml(data.instrument)} · ${escapeHtml(data.timeframe)} · ${escapeHtml(data.analyzedAt)}</div></header>
     <div class="summary"><div class="summary-label">${escapeHtml(options.briefLabel)}</div>${escapeHtml(data.summary)}</div>
     ${options.chart ? `<section class="chart"><h2>${escapeHtml(options.chart.title)}</h2>${
-      options.chart.src ? `<img src="${options.chart.src}" alt="${escapeHtml(options.chart.caption)}">` : `<p class="chart-unavailable">${escapeHtml(options.chart.unavailable ?? "")}</p>`
+      "src" in options.chart && options.chart.src
+        ? `<img src="${options.chart.src}" alt="${escapeHtml(options.chart.description)}">`
+        : `<p class="chart-unavailable">${escapeHtml(options.chart.unavailable ?? "")}</p>`
     }<p class="caption">${escapeHtml(options.chart.caption)}</p></section>` : ""}
     ${data.sections.map(({ title, body, blocks }) => `<section><h2>${escapeHtml(title)}</h2><div class="body">${
       blocks?.length
