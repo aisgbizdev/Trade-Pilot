@@ -43,32 +43,16 @@ export default function LandingPage() {
       <header className="relative z-10 border-b border-[#f1f0eb]/10">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 py-4 sm:px-8 lg:px-10">
           <BrandLogo variant="horizontal" className="h-8 w-auto sm:h-9" />
-          <nav className="flex items-center gap-2 sm:gap-5" aria-label={t.landing.navigation_label}>
-            <LanguageToggle />
-            <Link
-              href="/login"
-              className="hidden text-sm font-semibold text-[#f1f0eb]/65 transition-colors hover:text-[#f1f0eb] sm:inline-flex"
-              data-testid="link-login"
-            >
-              {t.landing.login}
-            </Link>
-            <Link
-              href="/register"
-              className="hidden min-h-10 items-center justify-center rounded-lg border border-primary/50 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 sm:inline-flex"
-              data-testid="link-register"
-            >
-              {t.landing.register}
-            </Link>
-          </nav>
+          <LanguageToggle />
         </div>
       </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 sm:px-8 lg:px-10">
-        <section className="grid items-center gap-8 py-12 sm:py-16 md:grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] md:gap-10 lg:py-20" aria-labelledby="landing-title">
+        <section className="grid items-center gap-8 py-12 sm:py-16 md:grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] md:gap-10 lg:py-10" aria-labelledby="landing-title">
           <div className="max-w-[690px]">
-            <p className="mb-5 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.23em] text-primary sm:mb-7">
+            <p className="mb-5 flex items-center gap-3 text-xs font-bold tracking-[0.14em] text-primary sm:mb-7" data-testid="text-landing-slogan">
               <span className="h-px w-7 bg-primary" aria-hidden="true" />
-              {t.landing.eyebrow}
+              {t.landing.tagline_part1} {t.landing.tagline_part2}
             </p>
             <h1
               id="landing-title"
