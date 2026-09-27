@@ -20,6 +20,7 @@ import {
 import { estimateCostUsd } from "../lib/model-pricing";
 import { getCandleSnapshot, getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe, type IndicatorTimeframe } from "../lib/historical";
 import { getLivePriceFor } from "../lib/live-prices";
+import { VERIFIED_ANALYSIS_INSTRUMENTS, VERIFIED_OTHER_INSTRUMENTS } from "../lib/verified-instruments";
 import {
   getRelevantNews,
   formatNewsForPrompt,
@@ -590,6 +591,14 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     res.status(400).json({ error: "Mode tidak valid" });
     return;
   }
+  if (typeof instrument !== "string" || !VERIFIED_ANALYSIS_INSTRUMENTS.has(instrument)) {
+    res.status(400).json({ error: "Kode instrumen belum didukung atau harga belum terverifikasi di aplikasi." });
+    return;
+  }
+  if (!isSupportedIndicatorTimeframe(timeframe)) {
+    res.status(400).json({ error: "Timeframe tidak valid" });
+    return;
+  }
 
   const userId = req.userId!;
   const typedMode = mode as "beginner" | "pro";
@@ -704,6 +713,28 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         }),
   ]);
   const candleSnapshot = await candleSnapshotRequest;
+  if (VERIFIED_OTHER_INSTRUMENTS.has(instrument)) {
+    const last = candleSnapshot?.candles.at(-1);
+    const lastCandleTime = last ? Date.parse(last.date) : NaN;
+    const maxCandleAge = timeframe === "1W" ? 11 * 86400000 : timeframe === "1D" ? 5 * 86400000 : 3 * 86400000;
+    if (!candleSnapshot || candleSnapshot.isStale || candleSnapshot.candles.length < 20 ||
+        !last || !Number.isFinite(last.close) || last.close <= 0 ||
+        !Number.isFinite(lastCandleTime) || lastCandleTime > Date.now() + 86400000 ||
+        Date.now() - lastCandleTime > maxCandleAge ||
+        !Number.isFinite(last.low) || !Number.isFinite(last.high) ||
+        last.low <= 0 || last.high < last.low) {
+      res.status(503).json({ error: "Data harga untuk timeframe ini belum terverifikasi saat ini. Analisis tidak dijalankan dan kredit tidak dipakai." });
+      return;
+    }
+    // The two independently sourced spot prices must agree. A feed-scale
+    // mismatch would otherwise create plausible-looking but unsafe levels.
+    if (livePrice !== null &&
+        (!Number.isFinite(livePrice) || livePrice <= 0 ||
+         Math.abs(livePrice - last.close) / last.close > 0.01)) {
+      res.status(503).json({ error: "Sumber harga tidak selaras. Analisis tidak dijalankan dan kredit tidak dipakai." });
+      return;
+    }
+  }
   // The exact same selected-timeframe price anchor is persisted with the bars.
   // Prefer the close from the captured snapshot when its upstream retrieval is
   // fresh; stale cached candles remain explicitly stale and do not override an

@@ -92,6 +92,10 @@ import 'package:trade_pilot_api_client/src/model/google_native_login_body.dart';
 import 'package:trade_pilot_api_client/src/model/google_reauth_body.dart';
 import 'package:trade_pilot_api_client/src/model/google_reauth_response.dart';
 import 'package:trade_pilot_api_client/src/model/health_status.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_input.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_rank.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_ranking.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_receipt.dart';
 import 'package:trade_pilot_api_client/src/model/journal_entry.dart';
 import 'package:trade_pilot_api_client/src/model/journal_entry_list.dart';
 import 'package:trade_pilot_api_client/src/model/journal_group_stat.dart';
@@ -282,6 +286,10 @@ part 'serializers.g.dart';
   GoogleReauthBody,
   GoogleReauthResponse,
   HealthStatus,
+  InstrumentRequestInput,
+  InstrumentRequestRank,
+  InstrumentRequestRanking,
+  InstrumentRequestReceipt,
   JournalEntry,
   JournalEntryList,
   JournalGroupStat,
@@ -535,6 +543,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(JournalEntry)]),
         () => ListBuilder<JournalEntry>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InstrumentRequestRank)]),
+        () => ListBuilder<InstrumentRequestRank>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FeedbackWithDetails)]),

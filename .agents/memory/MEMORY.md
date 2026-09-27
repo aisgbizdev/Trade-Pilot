@@ -39,3 +39,4 @@
 - [Retryable capped XP evidence](retryable-capped-xp-evidence.md) — a daily-cap rejection must not permanently consume a one-time activity; only awarded evidence stays deduplicated.
 - [History timeframe default focus](history-performance-default-focus.md) — keep XAU/USD as the intentional timeframe default even when the overview covers all instruments; clarify reset labels instead.
 - [Bilingual copy assertions](bilingual-copy-assertions.md) — language-toggle tests may check the same copy again after toggling back; search every old-phrase assertion when changing localized text.
+- [Verified FX candle identity](verified-fx-candle-identity.md) — mapped daily FX data may be newest-first and materially diverge from live spot; require same-identity candles and fail closed on stale or mismatched prices.

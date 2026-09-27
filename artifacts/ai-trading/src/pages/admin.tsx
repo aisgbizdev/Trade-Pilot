@@ -1046,6 +1046,164 @@ function TopupsShortcutPanel() {
   );
 }
 
+type AdminInstrumentRequest = {
+  code: string;
+  interestedUsers: number;
+  lastRequestedAt: string;
+};
+
+function InstrumentRequestsPanel() {
+  const { lang } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const [requests, setRequests] = useState<AdminInstrumentRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const dateLocale = lang === "id" ? idLocale : enUS;
+  const isIndonesian = lang === "id";
+
+  useEffect(() => {
+    if (!isOpen || hasLoaded) return;
+    const controller = new AbortController();
+
+    const loadRequests = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch("/api/admin/instrument-requests", {
+          credentials: "include",
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(
+            isIndonesian
+              ? `Gagal memuat permintaan instrumen (HTTP ${response.status})`
+              : `Failed to load instrument requests (HTTP ${response.status})`,
+          );
+        }
+        const result = (await response.json()) as { requests?: AdminInstrumentRequest[] };
+        if (!Array.isArray(result.requests)) {
+          throw new Error(
+            isIndonesian
+              ? "Respons permintaan instrumen tidak valid."
+              : "The instrument request response is invalid.",
+          );
+        }
+        setRequests(result.requests);
+        setHasLoaded(true);
+      } catch (loadError) {
+        if (!controller.signal.aborted) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : isIndonesian
+                ? "Gagal memuat permintaan instrumen."
+                : "Failed to load instrument requests.",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
+    };
+
+    void loadRequests();
+    return () => controller.abort();
+  }, [hasLoaded, isIndonesian, isOpen, retryCount]);
+
+  const mostRecentRequest = requests.reduce<AdminInstrumentRequest | null>(
+    (latest, request) =>
+      !latest || new Date(request.lastRequestedAt).getTime() > new Date(latest.lastRequestedAt).getTime()
+        ? request
+        : latest,
+    null,
+  );
+
+  return (
+    <Card className="p-4 space-y-3" data-testid="card-instrument-requests">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">
+          {isIndonesian ? "Permintaan Kode Instrumen" : "Instrument Code Requests"}
+        </h3>
+        <p className="text-[11px] text-muted-foreground">
+          {isIndonesian
+            ? "Lihat kode instrumen yang paling banyak diminta pengguna."
+            : "See the instrument codes users have requested most."}
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        data-testid="button-view-instrument-requests"
+      >
+        {isOpen
+          ? isIndonesian ? "Sembunyikan permintaan kode" : "Hide code requests"
+          : isIndonesian ? "Lihat permintaan kode" : "View code requests"}
+      </Button>
+
+      {isOpen && (
+        isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-5 text-xs text-muted-foreground" role="status">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            {isIndonesian ? "Memuat permintaan..." : "Loading requests..."}
+          </div>
+        ) : error ? (
+          <div className="space-y-2 text-center" role="alert">
+            <p className="text-xs text-destructive">{error}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setRetryCount((count) => count + 1)}
+              data-testid="button-retry-instrument-requests"
+            >
+              {isIndonesian ? "Coba lagi" : "Retry"}
+            </Button>
+          </div>
+        ) : requests.length === 0 ? (
+          <p className="py-4 text-center text-xs text-muted-foreground">
+            {isIndonesian ? "Belum ada permintaan kode instrumen." : "No instrument code requests yet."}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2">
+              <span className="text-xs font-medium text-foreground">
+                {isIndonesian
+                  ? `${requests.length} kode instrumen diminta`
+                  : `${requests.length} instrument codes requested`}
+              </span>
+              {mostRecentRequest && (
+                <span className="text-[11px] text-muted-foreground">
+                  {isIndonesian ? "Terbaru" : "Most recent"}:{" "}
+                  {format(new Date(mostRecentRequest.lastRequestedAt), "d MMM yyyy, HH:mm", { locale: dateLocale })}
+                </span>
+              )}
+            </div>
+            <div className="divide-y divide-border" data-testid="list-instrument-requests">
+              {requests.map((request) => (
+                <div key={request.code} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">{request.code}</span>
+                  <div className="shrink-0 text-right">
+                    <Badge variant="secondary" className="text-xs">
+                      {request.interestedUsers} {isIndonesian ? "pengguna" : "users"}
+                    </Badge>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      {format(new Date(request.lastRequestedAt), "d MMM yyyy, HH:mm", { locale: dateLocale })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      )}
+    </Card>
+  );
+}
+
 function AdminContent() {
   const [, setLocation] = useLocation();
   const { t, lang } = useTranslation();
@@ -1144,6 +1302,8 @@ function AdminContent() {
         )}
 
         <RecentSignupsPanel />
+
+        <InstrumentRequestsPanel />
 
         <Card className="p-4 space-y-2" data-testid="card-feedback-shortcut">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">

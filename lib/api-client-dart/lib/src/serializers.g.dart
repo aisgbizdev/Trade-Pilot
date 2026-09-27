@@ -115,6 +115,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(GoogleReauthBody.serializer)
       ..add(GoogleReauthResponse.serializer)
       ..add(HealthStatus.serializer)
+      ..add(InstrumentRequestInput.serializer)
+      ..add(InstrumentRequestRank.serializer)
+      ..add(InstrumentRequestRanking.serializer)
+      ..add(InstrumentRequestReceipt.serializer)
       ..add(JournalEntry.serializer)
       ..add(JournalEntryList.serializer)
       ..add(JournalEntryOutcomeEnum.serializer)
@@ -360,6 +364,10 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(FundamentalCalendarEvent)]),
           () => ListBuilder<FundamentalCalendarEvent>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(InstrumentRequestRank)]),
+          () => ListBuilder<InstrumentRequestRank>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(JournalEntry)]),
           () => ListBuilder<JournalEntry>())

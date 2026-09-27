@@ -25,6 +25,7 @@ import landingPreviewRouter from "./landing-preview";
 import timeframeRiskRouter from "./timeframe-risk";
 import progressionRouter from "./progression";
 import topupsRouter from "./topups";
+import instrumentRequestsRouter from "./instrument-requests";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(landingPreviewRouter);
 router.use(timeframeRiskRouter);
 router.use(progressionRouter);
 router.use(topupsRouter);
+router.use(instrumentRequestsRouter);
 
 export default router;

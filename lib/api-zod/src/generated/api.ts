@@ -1920,6 +1920,37 @@ export const GetTraderMirrorInsightsResponse = zod.object({
 });
 
 /**
+ * @summary Register interest in an unsupported instrument code without starting an analysis
+ */
+export const submitInstrumentRequestBodyCodeMin = 2;
+export const submitInstrumentRequestBodyCodeMax = 25;
+
+export const SubmitInstrumentRequestBody = zod.object({
+  code: zod
+    .string()
+    .min(submitInstrumentRequestBodyCodeMin)
+    .max(submitInstrumentRequestBodyCodeMax),
+});
+
+export const SubmitInstrumentRequestResponse = zod.object({
+  code: zod.string(),
+  recorded: zod.boolean(),
+});
+
+/**
+ * @summary Full popularity-ranked list of requested codes
+ */
+export const GetAdminInstrumentRequestsResponse = zod.object({
+  requests: zod.array(
+    zod.object({
+      code: zod.string(),
+      interestedUsers: zod.number().int(),
+      lastRequestedAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
  * @summary Create new analysis (triggers AI)
  */
 export const CreateAnalysisBody = zod.object({

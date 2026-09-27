@@ -1484,6 +1484,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /instrument-requests:
+    post:
+      operationId: submitInstrumentRequest
+      tags: [analyses]
+      summary: Register interest in an unsupported instrument code without starting an analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstrumentRequestInput"
+      responses:
+        "201":
+          description: Interest recorded once per user and code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstrumentRequestReceipt"
+        "400":
+          description: Invalid or already supported code
+        "429":
+          description: Per-user request limit
+  /admin/instrument-requests:
+    get:
+      operationId: getAdminInstrumentRequests
+      tags: [admin]
+      summary: Full popularity-ranked list of requested codes
+      responses:
+        "200":
+          description: Requests ranked by unique interested users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstrumentRequestRanking"
+        "403":
+          description: Admin access required
+
   /analyses:
     post:
       operationId: createAnalysis
@@ -4654,6 +4691,33 @@ components:
           maxLength: 40
       required:
         - name
+
+    InstrumentRequestInput:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, minLength: 2, maxLength: 25 }
+    InstrumentRequestReceipt:
+      type: object
+      required: [code, recorded]
+      properties:
+        code: { type: string }
+        recorded: { type: boolean }
+    InstrumentRequestRank:
+      type: object
+      required: [code, interestedUsers, lastRequestedAt]
+      properties:
+        code: { type: string }
+        interestedUsers: { type: integer }
+        lastRequestedAt: { type: string, format: date-time }
+    InstrumentRequestRanking:
+      type: object
+      required: [requests]
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstrumentRequestRank"
 
     CreateAnalysisBody:
       type: object

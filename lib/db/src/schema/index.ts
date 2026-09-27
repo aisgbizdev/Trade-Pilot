@@ -531,6 +531,17 @@ export const analyses = pgTable("analyses", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const instrumentRequests = pgTable("instrument_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: text("code").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastRequestedAt: timestamp("last_requested_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  userCode: uniqueIndex("instrument_requests_user_code_unique").on(t.userId, t.code),
+  codeIndex: index("instrument_requests_code_idx").on(t.code),
+}));
+
 export const feedback = pgTable("feedback", {
   id: serial("id").primaryKey(),
   analysisId: integer("analysis_id")

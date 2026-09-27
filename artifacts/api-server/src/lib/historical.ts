@@ -1,6 +1,7 @@
 import { calculateIndicators, type TechnicalIndicators, type Candle } from "./indicators.js";
 import { isCryptoInstrument, yahooCryptoSymbolFor } from "./crypto-instruments.js";
 import { getLivePriceFor } from "./live-prices.js";
+import { VERIFIED_OTHER_INSTRUMENTS } from "./verified-instruments.js";
 
 const HISTORICAL_API = "https://endpoapi-production-3202.up.railway.app/api/historical";
 // Yahoo Finance's chart endpoint. Public, unauthenticated, widely used as a
@@ -410,6 +411,19 @@ async function getDailyCandles(
   instrument: string,
   timeframe: DailyTimeframe,
 ): Promise<{ candles: Candle[]; sourceFetchedAt: number } | null> {
+  // The shared daily feed's FX rows arrive newest-first and some of its
+  // prices materially diverge from both Yahoo spot and the live broker quote.
+  // Use the same Yahoo spot identity as intraday for newly admitted FX pairs.
+  if (VERIFIED_OTHER_INSTRUMENTS.has(instrument)) {
+    const yahooSymbol = YAHOO_SYMBOL_MAP[instrument];
+    const params = YAHOO_DAILY_PARAMS[timeframe];
+    const raw = await fetchYahooCandles(yahooSymbol, params.interval, params.range);
+    if (!raw.length) return null;
+    return {
+      candles: timeframe === "1W" ? resampleDailyToWeekly(raw) : raw,
+      sourceFetchedAt: Date.now(),
+    };
+  }
   // Crypto goes straight to Yahoo (the forex/commodity daily feed
   // doesn't carry it). Each call is its own snapshot, so we synth a
   // `sourceFetchedAt` from the current clock — the cache TTL still

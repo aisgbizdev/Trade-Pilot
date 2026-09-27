@@ -215,16 +215,20 @@ describe("AnalyzePage: happy-path render", () => {
         </Wrapper>,
       );
 
-       // The instrument picker is currently scoped to a small futures
-       // allowlist (VISIBLE_INSTRUMENTS in analyze.tsx). With only one
-       // category having any visible instruments, the Futures/Forex/Crypto
-       // tab toggle is skipped entirely and the instruments render
-       // directly.
+      // The default picker retains its four core choices. Additional
+      // verified choices and their search remain collapsed until requested.
       expect(screen.queryByTestId("tab-futures")).not.toBeInTheDocument();
       expect(screen.queryByTestId("tab-forex")).not.toBeInTheDocument();
-       expect(await screen.findByTestId("instrument-options")).toBeInTheDocument();
+      expect(screen.getByTestId("instrument-options")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-XAU/USD")).toBeInTheDocument();
       expect(screen.getByTestId("button-instrument-BRENT")).toBeInTheDocument();
+      expect(screen.getByTestId("button-instrument-HSI")).toBeInTheDocument();
+      expect(screen.getByTestId("button-instrument-NIKKEI")).toBeInTheDocument();
+      expect(screen.getAllByTestId(/^button-instrument-/)).toHaveLength(4);
+      expect(screen.queryByTestId("button-instrument-EUR/USD")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("input-instrument-search")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("other-instrument-options")).not.toBeInTheDocument();
+      expect(screen.getByTestId("button-other-instruments")).toHaveAttribute("aria-expanded", "false");
       expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveClass("border-primary");
       expect(screen.getByTestId("mini-chart-section")).toBeInTheDocument();
       expect(screen.getByTestId("mini-chart-section")).toHaveAttribute(
@@ -247,11 +251,6 @@ describe("AnalyzePage: happy-path render", () => {
       );
       expect(
         screen.queryByTestId("tradingview-advanced-chart"),
-      ).not.toBeInTheDocument();
-
-      // Forex symbols are not yet rendered.
-      expect(
-        screen.queryByTestId("button-instrument-EUR/USD"),
       ).not.toBeInTheDocument();
 
       // The timeframe picker is hidden — every first analysis defaults to
@@ -368,13 +367,8 @@ describe("AnalyzePage: user actions", () => {
     expect(window.location.pathname).toBe("/progression");
   });
 
-   // Skipped: the instrument picker is currently scoped to a futures-only
-   // allowlist (VISIBLE_INSTRUMENTS in analyze.tsx), so the Forex tab this
-   // test switches to no longer renders. Kept rather than deleted/rewritten
-   // so widening the allowlist back to multiple categories restores this
-   // coverage immediately.
-   it.skip("opens one instrument category at a time and preserves the selected instrument", async () => {
-    installFetchMock(pageHandlers({}));
+   it("filters verified instruments by search and preserves the selected choice", async () => {
+    installFetchMock(pageHandlers({}), { strict: false });
     const { Wrapper } = makeWrapper();
 
     render(
@@ -383,32 +377,22 @@ describe("AnalyzePage: user actions", () => {
       </Wrapper>,
     );
 
-     const futuresTab = await screen.findByTestId("tab-futures");
-     const forexTab = screen.getByTestId("tab-forex");
-     fireEvent.click(screen.getByTestId("button-instrument-XAU/USD"));
+    fireEvent.click(await screen.findByTestId("button-instrument-XAU/USD"));
+    fireEvent.click(screen.getByTestId("button-other-instruments"));
+    const search = screen.getByTestId("input-instrument-search");
+    fireEvent.change(search, { target: { value: "EUR" } });
 
-    await act(async () => {
-       fireEvent.click(forexTab);
-    });
+    const filteredOptions = screen.getByTestId("other-instrument-options");
+    expect(filteredOptions).toHaveTextContent("EUR/USD");
+    expect(filteredOptions).not.toHaveTextContent("BRENT");
+    expect(screen.getByTestId("button-request-instrument")).toHaveTextContent("EUR");
+    expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveAttribute("aria-pressed", "true");
 
-    expect(screen.getByTestId("button-instrument-EUR/USD")).toBeInTheDocument();
-    expect(screen.getByTestId("button-instrument-USD/JPY")).toBeInTheDocument();
-     expect(forexTab).toHaveAttribute("aria-expanded", "true");
-     expect(futuresTab).toHaveAttribute("aria-expanded", "false");
-     expect(screen.queryByTestId("button-instrument-BRENT")).not.toBeInTheDocument();
-
-     // Clicking the open category collapses its product list without
-     // changing the selected instrument.
-     fireEvent.click(forexTab);
-     expect(forexTab).toHaveAttribute("aria-expanded", "false");
-     expect(screen.queryByTestId("instrument-options")).not.toBeInTheDocument();
-
-     fireEvent.click(forexTab);
-     expect(screen.getByTestId("button-instrument-EUR/USD")).toBeInTheDocument();
-
-     // Reopening Futures still shows the previously selected XAU/USD.
-     fireEvent.click(futuresTab);
-     expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveClass("border-primary");
+    fireEvent.click(screen.getByTestId("button-instrument-EUR/USD"));
+    expect(screen.getByTestId("button-instrument-EUR/USD")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("button-instrument-EUR/USD")).toHaveTextContent(/^EUR\/USD$/);
+    expect(search).toHaveValue("");
+    expect(screen.getByTestId("button-instrument-XAU/USD")).toBeInTheDocument();
   });
 
   it("enables the submit button once both instrument and timeframe are chosen, renders the result inline (no navigation) on submit", async () => {
@@ -492,7 +476,7 @@ describe("AnalyzePage: user actions", () => {
   // Notes field it used to reveal is separately hidden behind
   // SHOW_NOTES_INPUT. Kept rather than deleted so restoring either toggle
   // brings this coverage back immediately.
-  it("re-analyzes automatically when picking a different instrument after a result already exists (no button tap needed)", async () => {
+  it("does not analyze on instrument selection, including after a result exists", async () => {
     const idByInstrument: Record<string, number> = { "XAU/USD": 4242, "BRENT": 4243 };
 
     const analysisFixture = (id: number, instrument: string) => ({
@@ -533,8 +517,7 @@ describe("AnalyzePage: user actions", () => {
           return null;
         },
         // POST /api/analyses — the id it returns depends on the requested
-        // instrument, so re-analyzing on a different instrument is
-        // observably a *new* analysis rather than a reused one.
+        // instrument, making an explicit follow-up submit observable.
         (url, init) => {
           const method = (init?.method ?? "GET").toUpperCase();
           if (method !== "POST" || !/\/api\/analyses(\?|$)/.test(url)) return null;
@@ -578,24 +561,15 @@ describe("AnalyzePage: user actions", () => {
       ).toHaveLength(1);
     });
 
-    // The Analisis button is no longer needed (and no longer shown) once
-    // a result exists — switching instruments re-analyzes on its own.
-    expect(screen.queryByTestId("button-submit-analysis")).not.toBeInTheDocument();
-
-    // Now that a result exists, picking BRENT re-analyzes immediately —
-    // no second tap on the Analisis button.
+    // Choosing a different verified instrument changes the selection only.
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-instrument-BRENT"));
     });
 
-    await waitFor(() => {
-      const posts = calls.filter(
-        (c) => c.method === "POST" && /\/api\/analyses(\?|$)/.test(c.url),
-      );
-      expect(posts).toHaveLength(2);
-      const payload = posts[1].body ? JSON.parse(posts[1].body) : null;
-      expect(payload?.instrument).toBe("BRENT");
-    });
+    expect(screen.getByTestId("button-instrument-BRENT")).toHaveAttribute("aria-pressed", "true");
+    expect(
+      calls.filter((c) => c.method === "POST" && /\/api\/analyses(\?|$)/.test(c.url)),
+    ).toHaveLength(1);
   });
 
   it("stays on /analyze (no navigation) when using 'Ganti Timeframe' inside the embedded result", async () => {
@@ -788,7 +762,7 @@ describe("AnalyzePage: user actions", () => {
     expect((screen.getByTestId("textarea-notes") as HTMLTextAreaElement).value).toBe("");
   });
 
-  it("disables the submit button while a custom-instrument value is empty after clearing", async () => {
+  it("uses search only to filter verified choices, not as free-text instrument input", async () => {
     installFetchMock(pageHandlers({}));
     const { Wrapper } = makeWrapper();
 
@@ -798,37 +772,94 @@ describe("AnalyzePage: user actions", () => {
       </Wrapper>,
     );
 
-    const customInput = (await screen.findByTestId(
-      "input-custom-instrument",
+    fireEvent.click(await screen.findByTestId("button-other-instruments"));
+    const searchInput = (await screen.findByTestId(
+      "input-instrument-search",
     )) as HTMLInputElement;
 
-    // Type a custom instrument: that should clear any preset selection
-    // *and* the field itself becomes the active instrument.
+    // Search text filters the verified options; it never becomes an
+    // instrument selection or an analysis input.
     await act(async () => {
-      fireEvent.change(customInput, { target: { value: "PLATINUM" } });
+      fireEvent.change(searchInput, { target: { value: "PLATINUM" } });
     });
-    expect(customInput.value).toBe("PLATINUM");
+    expect(searchInput.value).toBe("PLATINUM");
+    expect(screen.getByTestId("instrument-no-match")).toBeInTheDocument();
+    expect(screen.queryByTestId("button-instrument-PLATINUM")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("input-custom-instrument")).not.toBeInTheDocument();
+  });
 
-    // Timeframe defaults to 1h (picker is hidden) — submit is already
-    // eligible off the custom instrument alone.
-    await waitFor(() => {
-      expect(
-        (screen.getByTestId("button-submit-analysis") as HTMLButtonElement)
-          .disabled,
-      ).toBe(false);
-    });
+  it("allows selecting a verified forex instrument without starting an analysis", async () => {
+    const { calls } = installFetchMock(pageHandlers({}));
+    const { Wrapper } = makeWrapper();
 
-    // Clear the custom field — without any preset selected the submit
-    // button must go back to disabled.
-    await act(async () => {
-      fireEvent.change(customInput, { target: { value: "" } });
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    fireEvent.click(await screen.findByTestId("button-other-instruments"));
+    const forex = await screen.findByTestId("button-instrument-EUR/USD");
+    fireEvent.click(forex);
+
+    expect(forex).toHaveAttribute("aria-pressed", "true");
+    expect(forex).toHaveTextContent(/^EUR\/USD$/);
+    expect(screen.getByTestId("selected-instrument-status")).toHaveTextContent(/EUR\/USD.*Analysis only/i);
+    expect(screen.getByTestId("button-submit-analysis")).toBeEnabled();
+    expect(
+      calls.filter((call) => call.method === "POST" && /\/api\/analyses(\?|$)/.test(call.url)),
+    ).toHaveLength(0);
+  });
+
+  it("requires confirmation to request an unsupported code and does not analyze it", async () => {
+    const { calls } = installFetchMock(
+      [
+        (url, init) => {
+          if (
+            url.includes("/api/instrument-requests") &&
+            (init?.method ?? "GET").toUpperCase() === "POST"
+          ) {
+            return jsonResponse({ ok: true });
+          }
+          return null;
+        },
+        ...pageHandlers({}),
+      ],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    fireEvent.click(await screen.findByTestId("button-other-instruments"));
+    fireEvent.change(await screen.findByTestId("input-instrument-search"), {
+      target: { value: "PLATINUM" },
     });
-    await waitFor(() => {
-      expect(
-        (screen.getByTestId("button-submit-analysis") as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
-    });
+    fireEvent.click(screen.getByTestId("button-request-instrument"));
+
+    const dialog = await screen.findByTestId("dialog-request-instrument");
+    expect(dialog).toHaveTextContent("PLATINUM");
+    expect(screen.getByTestId("button-confirm-instrument-request")).toBeInTheDocument();
+    expect(
+      calls.filter((call) => call.method === "POST" && /\/api\/analyses(\?|$)/.test(call.url)),
+    ).toHaveLength(0);
+
+    fireEvent.click(screen.getByTestId("button-confirm-instrument-request"));
+    await screen.findByTestId("instrument-request-status");
+
+    const requests = calls.filter(
+      (call) => call.method === "POST" && call.url.includes("/api/instrument-requests"),
+    );
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.body ? JSON.parse(requests[0].body) : null).toEqual({ code: "PLATINUM" });
+    expect(
+      calls.filter((call) => call.method === "POST" && /\/api\/analyses(\?|$)/.test(call.url)),
+    ).toHaveLength(0);
   });
 });
 
@@ -928,16 +959,16 @@ describe("AnalyzePage: restoring an inline result", () => {
       </Wrapper>,
     );
 
-    const customInstrument = await screen.findByTestId("input-custom-instrument");
-    fireEvent.change(customInstrument, { target: { value: "NIKKEI" } });
-    expect(customInstrument).toHaveValue("NIKKEI");
+    await screen.findByTestId("button-instrument-NIKKEI");
+    fireEvent.click(screen.getByTestId("button-instrument-NIKKEI"));
+    expect(screen.getByTestId("button-instrument-NIKKEI")).toHaveAttribute("aria-pressed", "true");
 
     await act(async () => {
       resolveAnalysis(jsonResponse(restoredAnalysisFixture(analysisId, "BRENT", "4h")));
     });
 
     await waitFor(() => {
-      expect(customInstrument).toHaveValue("NIKKEI");
+      expect(screen.getByTestId("button-instrument-NIKKEI")).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-instrument", "NIKKEI");
     });
   });
@@ -1155,7 +1186,7 @@ describe.skip("AnalyzePage: legacy Timeframe Risk Map placement", () => {
     expect((screen.getByTestId("button-submit-analysis") as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("custom instrument has no advisor", async () => {
+  it("searching for an unsupported instrument does not change the selected advisor", async () => {
     installFetchMock(pageHandlers({}), { strict: false });
     const { Wrapper } = makeWrapper();
     render(
@@ -1169,12 +1200,14 @@ describe.skip("AnalyzePage: legacy Timeframe Risk Map placement", () => {
     // Official instrument has it
     expect(screen.getByTestId("button-open-risk-map")).toBeInTheDocument();
 
-    // Type a custom instrument
+    // An unsupported search is a request action, not a selection.
     await act(async () => {
-      fireEvent.change(screen.getByTestId("input-custom-instrument"), { target: { value: "PLATINUM" } });
+      fireEvent.click(screen.getByTestId("button-other-instruments"));
+      fireEvent.change(screen.getByTestId("input-instrument-search"), { target: { value: "PLATINUM" } });
     });
     
-    // Custom instrument should not have it
-    expect(screen.queryByTestId("button-open-risk-map")).not.toBeInTheDocument();
+    expect(screen.getByTestId("instrument-no-match")).toBeInTheDocument();
+    expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("button-open-risk-map")).toBeInTheDocument();
   });
 });

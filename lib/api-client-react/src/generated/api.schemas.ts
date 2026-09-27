@@ -1048,6 +1048,29 @@ export interface RenameFilterPresetBody {
   name: string;
 }
 
+export interface InstrumentRequestInput {
+  /**
+   * @minLength 2
+   * @maxLength 25
+   */
+  code: string;
+}
+
+export interface InstrumentRequestReceipt {
+  code: string;
+  recorded: boolean;
+}
+
+export interface InstrumentRequestRank {
+  code: string;
+  interestedUsers: number;
+  lastRequestedAt: string;
+}
+
+export interface InstrumentRequestRanking {
+  requests: InstrumentRequestRank[];
+}
+
 export type CreateAnalysisBodyTimeframe =
   (typeof CreateAnalysisBodyTimeframe)[keyof typeof CreateAnalysisBodyTimeframe];
 

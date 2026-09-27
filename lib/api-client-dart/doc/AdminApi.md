@@ -15,6 +15,7 @@ Method | HTTP request | Description
 [**getAdminAnalyticsTokens**](AdminApi.md#getadminanalyticstokens) | **GET** /admin/analytics/tokens | AI (OpenAI) token usage and estimated cost breakdown
 [**getAdminAnalyticsUsage**](AdminApi.md#getadminanalyticsusage) | **GET** /admin/analytics/usage | Feature-usage, device, browser, and country breakdown from analytics events
 [**getAdminFeedback**](AdminApi.md#getadminfeedback) | **GET** /admin/feedback | List user feedback rows (admin only)
+[**getAdminInstrumentRequests**](AdminApi.md#getadmininstrumentrequests) | **GET** /admin/instrument-requests | Full popularity-ranked list of requested codes
 [**getAdminStats**](AdminApi.md#getadminstats) | **GET** /admin/stats | Get admin statistics
 [**getAllAnalyses**](AdminApi.md#getallanalyses) | **GET** /admin/analyses | Get all analyses (admin only)
 [**getBroadcasts**](AdminApi.md#getbroadcasts) | **GET** /admin/broadcasts | Broadcast history
@@ -269,6 +270,43 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**AdminFeedbackList**](AdminFeedbackList.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAdminInstrumentRequests**
+> InstrumentRequestRanking getAdminInstrumentRequests()
+
+Full popularity-ranked list of requested codes
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAdminApi();
+
+try {
+    final response = api.getAdminInstrumentRequests();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminApi->getAdminInstrumentRequests: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**InstrumentRequestRanking**](InstrumentRequestRanking.md)
 
 ### Authorization
 
