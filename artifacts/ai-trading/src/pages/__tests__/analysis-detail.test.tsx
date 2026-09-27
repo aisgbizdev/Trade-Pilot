@@ -336,6 +336,87 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("AnalysisDetailPage: non-Adaptive print", () => {
+  it.each(["EUR/USD", "GBP/USD", "AUD/USD", "USD/JPY"])(
+    "prints the existing complete detail for %s in both languages without starting another analysis",
+    async (instrument) => {
+      const mock = installFetchMock([getAnalysisHandler({
+        body: {
+          ...ANALYSIS_PAYLOAD,
+          instrument,
+          failureConditions: "First invalidation; Second invalidation; Third invalidation; Fourth invalidation",
+          opportunity: "Saved opportunity only",
+          risk: "Saved risk only",
+          marketContext: "Saved market context only",
+          userInputContext: "My saved note",
+          tradePlan: TRADE_PLAN,
+          fundamentalContext: {
+            newsItems: [
+              { id: "matched", title: "Relevant headline", url: "https://example.com/saved", publishedAt: ANALYSIS_PAYLOAD.createdAt },
+              { id: "unmatched", title: "Not cited", url: "https://example.com/live", publishedAt: ANALYSIS_PAYLOAD.createdAt },
+            ],
+            calendarEvents: [],
+          },
+          fundamentalCitations: { newsTitles: ["Relevant headline", "Missing headline"], calendarEvents: [] },
+        },
+      })], { strict: false });
+      const writes: string[] = [];
+      const popup = {
+        opener: window,
+        document: { open: vi.fn(), write: vi.fn((html: string) => writes.push(html)), close: vi.fn() },
+      } as unknown as Window;
+      vi.spyOn(window, "open").mockReturnValue(popup);
+      const { Wrapper } = makeWrapper();
+      render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+      const button = await screen.findByTestId("non-adaptive-print-details");
+      expect(button).toHaveTextContent(en.analysis_detail.adaptive_print_details);
+      // Printing must not depend on which detail disclosure happens to be open.
+      expect(screen.queryByTestId("card-invalidation")).not.toBeInTheDocument();
+      fireEvent.click(button);
+      expect(writes).toHaveLength(1);
+      expect(writes[0]).toContain(`>${instrument} · 1h ·`);
+      expect(writes[0]).toContain("First invalidation");
+      expect(writes[0]).toContain("Fourth invalidation");
+      expect(writes[0]).toContain("Saved opportunity only");
+      expect(writes[0]).toContain("Saved risk only");
+      expect(writes[0]).toContain("Saved market context only");
+      expect(writes[0]).toContain("My saved note");
+      expect(writes[0]).toContain("Price likely continues higher into resistance.");
+      expect(writes[0]).toContain("If we lose the swing low, scenario flips bearish.");
+      expect(writes[0]).toContain("Bullish structure remains intact.");
+      expect(writes[0]).toContain('href="https://example.com/saved"');
+      expect(writes[0]).not.toContain("Missing headline");
+      expect(writes[0]).not.toContain("Not cited");
+      expect(writes[0]).not.toContain("Adaptive");
+      expect(writes[0].split("</style>")[1]).not.toMatch(/\bmargin\b/i);
+      expect(writes[0]).toContain(en.analysis_detail.print_snapshot_note);
+      fireEvent.click(screen.getByTestId("button-language-toggle"));
+      expect(button).toHaveTextContent(id.analysis_detail.adaptive_print_details);
+      fireEvent.click(button);
+      expect(writes).toHaveLength(2);
+      expect(writes[1]).toContain('lang="id"');
+      expect(writes[1]).toContain(id.analysis_detail.print_snapshot_note);
+      expect(writes[1]).toContain(`<h1>${id.analysis_detail.print_analysis_title}</h1>`);
+      expect(mock.calls.filter((call) => call.method === "POST" && /\/api\/analyses(?:\/|$)/.test(call.url))).toHaveLength(0);
+    },
+  );
+
+  it("prints legacy partial rows without inventing missing plan or sources", async () => {
+    installFetchMock([getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, instrument: "EUR/USD", mainScenario: null, alternativeScenario: null, whyReason: null, fundamentalContext: null } })], { strict: false });
+    const writes: string[] = [];
+    vi.spyOn(window, "open").mockReturnValue({
+      opener: window,
+      document: { open: vi.fn(), write: vi.fn((html: string) => writes.push(html)), close: vi.fn() },
+    } as unknown as Window);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    fireEvent.click(await screen.findByTestId("non-adaptive-print-details"));
+    expect(writes[0]).toContain(en.analysis_detail.print_snapshot_note);
+    expect(writes[0]).not.toContain(`<h2>${en.analysis_detail.trade_plan_title}</h2>`);
+    expect(writes[0]).not.toContain(`<h2>${en.analysis_detail.citations_label}</h2>`);
+  });
+});
+
 describe("AnalysisDetailPage: happy-path render", () => {
   it("keeps the original indicator heading and note without Adaptive in both languages", async () => {
     installFetchMock([

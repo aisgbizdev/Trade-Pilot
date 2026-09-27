@@ -24,6 +24,7 @@ import {
   Image as ImageIcon,
   Activity,
   Plus,
+  Printer,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
@@ -94,7 +95,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
-import { buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
+import { buildConfidencePrintHtml, buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
@@ -2230,8 +2231,100 @@ export default function AnalysisDetailPage({
 
   const tradePlan = analysis.tradePlan ?? null;
   const hasAdaptive = Boolean(tradePlan && isAdaptivePositionInstrument(analysis.instrument));
+  const printNonAdaptiveDetails = () => {
+    if (hasAdaptive) return;
+    let tab: Window | null = null;
+    try {
+      // Use the saved row, never the current quote, live chart, or a refreshed AI response.
+      const sections: ConfidenceShareData["sections"] = [];
+      const addSection = (title: string, body?: string | null) => {
+        if (body?.trim()) sections.push({ title, body });
+      };
+      addSection(t.analysis_detail.confidence_reason_label, confidenceReason);
+      addSection(t.analysis_detail.market_condition, analysis.marketContext);
+      addSection(t.analysis_detail.scenario_a, scenarioAContent);
+      addSection(t.analysis_detail.scenario_b, scenarioBContent);
+      addSection(t.analysis_detail.scenario_c, scenarioCText(bias ?? "neutral", t));
+      addSection(t.analysis_detail.opportunity_title, analysis.opportunity);
+      addSection(t.analysis_detail.risk_title, analysis.risk);
+      if (invalidationItems.length) sections.push({
+        title: t.analysis_detail.invalidation_title,
+        body: invalidationItems.join("\n"),
+        blocks: invalidationItems.map((text) => ({ kind: "item", text })),
+      });
+      if (!isBeginnerMode) {
+        addSection(t.analysis_detail.pro_factor_technical, analysis.keyDriversTechnical);
+        addSection(t.analysis_detail.pro_factor_fundamental, analysis.keyDriversFundamental);
+        // Market context appears above, regardless of which chip is selected.
+      }
+      sections.push({
+        title: t.analysis_detail.execution_insight_title,
+        body: "",
+        blocks: [
+          { kind: "paragraph", text: t.analysis_detail.execution_insight_intro },
+          { kind: "subheading", text: t.analysis_detail.execution_scenario_a_label },
+          { kind: "paragraph", text: executionScenarioAText(bias ?? "neutral", t) },
+          { kind: "subheading", text: t.analysis_detail.execution_scenario_b_label },
+          { kind: "paragraph", text: t.analysis_detail.execution_scenario_b_template },
+          { kind: "subheading", text: t.analysis_detail.execution_scenario_c_label },
+          { kind: "paragraph", text: t.analysis_detail.execution_scenario_c_template },
+          { kind: "paragraph", text: t.analysis_detail.execution_insight_disclaimer },
+        ],
+      });
+      if (tradePlan) {
+        const sideBlocks = (side: TradeSide, title: string): NonNullable<ConfidenceShareData["sections"][number]["blocks"]> => [
+          { kind: "subheading", text: title },
+          { kind: "paragraph", text: [
+            `${t.analysis_detail.trade_plan_entry}: ${side.entryZone}`,
+            `${t.analysis_detail.trade_plan_sl}: ${side.stopLoss}`,
+            `${t.analysis_detail.trade_plan_tp1}: ${side.takeProfit1}`,
+            `${t.analysis_detail.trade_plan_tp2}: ${side.takeProfit2}`,
+            `${t.analysis_detail.trade_plan_rr}: ${side.riskRewardRatio}`,
+          ].join("\n") },
+          ...(side.rationale ? [{ kind: "paragraph" as const, text: `${t.analysis_detail.trade_plan_rationale}: ${side.rationale}` }] : []),
+        ];
+        sections.push({
+          title: t.analysis_detail.trade_plan_title,
+          body: "",
+          blocks: [
+            { kind: "paragraph", text: t.analysis_detail.trade_plan_subtitle },
+            ...sideBlocks(tradePlan.buy, t.analysis_detail.trade_plan_side_buy),
+            ...sideBlocks(tradePlan.sell, t.analysis_detail.trade_plan_side_sell),
+            { kind: "paragraph", text: t.analysis_detail.trade_plan_disclaimer },
+          ],
+        });
+      }
+      addSection(t.analysis_detail.your_notes, analysis.userInputContext);
+      const data: ConfidenceShareData = {
+        title: t.analysis_detail.print_analysis_title,
+        instrument: analysis.instrument,
+        timeframe: analysis.timeframe,
+        analyzedAt: confidenceShareData.analyzedAt,
+        summary: scenarioAContent ?? confidenceReason ?? "",
+        sections,
+        sourcesTitle: t.analysis_detail.citations_label,
+        sources: confidenceShareData.sources,
+        disclaimerTitle: t.analysis_detail.print_snapshot_title,
+        disclaimer: `${t.analysis_detail.print_snapshot_note} ${t.analysis_detail.disclaimer_full}`,
+      };
+      const html = buildConfidencePrintHtml(data, {
+        lang,
+        printLabel: t.analysis_detail.adaptive_print_details,
+        briefLabel: t.analysis_detail.summary,
+      });
+      tab = window.open("", "_blank");
+      if (!tab) throw new Error("Print preview was blocked");
+      tab.opener = null;
+      tab.document.open();
+      tab.document.write(html);
+      tab.document.close();
+    } catch {
+      tab?.close();
+      toast({ title: t.analysis_detail.print_analysis_failed, variant: "destructive" });
+    }
+  };
   const indicatorTimeframe = asIndicatorTimeframe(analysis.timeframe);
-  const adaptiveSupportingDetails = hasAdaptive ? (
+  const savedAnalysisDetails = (
     <section className="space-y-3 border-b border-border pb-4 text-xs leading-relaxed" data-testid="adaptive-supporting-details">
       <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h3>
       {invalidationItems.length > 0 && (
@@ -2276,7 +2369,7 @@ export default function AnalysisDetailPage({
         </div>
       </details>
     </section>
-  ) : null;
+  );
   const liveIndicatorPanel = indicatorTimeframe ? (
     <Card className="p-4 space-y-3" data-testid="card-indicators-section">
       {hasAdaptive ? (
@@ -2700,7 +2793,7 @@ export default function AnalysisDetailPage({
             }}
             lang={lang}
             copy={t.analysis_detail}
-            supportingDetails={adaptiveSupportingDetails}
+            supportingDetails={savedAnalysisDetails}
             invalidationCount={invalidationItems.length}
             analyzedAt={confidenceShareData.analyzedAt}
             analysisCreatedAt={analysis.createdAt}
@@ -2736,200 +2829,17 @@ export default function AnalysisDetailPage({
           </Card>
         )}
 
-        {/* Safety-first scan: a single detail surface keeps the narrative off the main path. */}
+        {/* Match the saved-analysis layout used by the core instruments, without Adaptive calculations. */}
         {!hasAdaptive && <div className="min-w-0 space-y-2.5">
-          <div className="relative min-w-0">
-            <div
-              role="group"
-              className="flex items-center gap-2 overflow-x-auto overscroll-x-contain pb-2 pr-7 [scrollbar-width:thin] md:flex-wrap md:overflow-visible md:pb-0 md:pr-0"
-              aria-label={t.analysis_detail.narrative_details_title}
-            >
-              {detailSections.filter((section) => section.visible).map((section) => {
-                const isActive = activeSection === section.key;
-                const isInvalidation = section.key === "invalidation";
-                const isRisk = section.key === "risk";
-                const Icon = section.icon;
-                return (
-                  <button
-                    key={section.key}
-                    type="button"
-                    data-testid={section.triggerTestId}
-                    aria-expanded={isActive}
-                    aria-controls={isActive ? "analysis-narrative-detail" : undefined}
-                    aria-label={`${section.title}${section.key === "invalidation" ? ` (${invalidationItems.length})` : ""}`}
-                    title={section.title}
-                    onClick={() => setActiveSection(isActive ? null : section.key)}
-                    className={cn(
-                      "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] font-semibold leading-tight whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      isInvalidation
-                        ? "border-red-300 bg-red-50 text-red-800 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70"
-                        : isRisk
-                        ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70"
-                        : "border-border bg-card text-foreground hover:bg-muted",
-                      isActive && (isInvalidation
-                        ? "ring-1 ring-red-500 dark:ring-red-400"
-                        : isRisk
-                        ? "ring-1 ring-amber-500 dark:ring-amber-400"
-                        : "border-primary bg-primary/10 text-primary ring-1 ring-primary/50"),
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>{section.label}</span>
-                    {section.key === "invalidation" && (
-                      <span aria-hidden="true" className="rounded bg-red-700 px-1.5 py-0.5 text-[11px] font-bold leading-none text-white dark:bg-red-400 dark:text-red-950">
-                        {invalidationItems.length}
-                      </span>
-                    )}
-                    {isActive && <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex w-8 items-center justify-end bg-gradient-to-l from-background via-background/80 to-transparent pb-2 text-muted-foreground md:hidden" aria-hidden="true">
-              <ChevronRight className="h-4 w-4" />
-            </div>
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={printNonAdaptiveDetails} data-testid="non-adaptive-print-details">
+              <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
+              {t.analysis_detail.adaptive_print_details}
+            </Button>
           </div>
-
-          {selectedDetail && (
-            <Card
-              id="analysis-narrative-detail"
-              role="region"
-              aria-label={selectedDetail.title}
-              data-testid={selectedDetail.cardTestId}
-              className={cn(
-                "overflow-hidden border bg-card",
-                activeSection === "invalidation" &&
-                  "border-red-300 border-l-4 border-l-red-600 bg-red-50/50 dark:border-red-900 dark:border-l-red-400 dark:bg-red-950/20",
-                activeSection === "risk" &&
-                  "border-amber-300 border-l-4 border-l-amber-600 bg-amber-50/50 dark:border-amber-900 dark:border-l-amber-400 dark:bg-amber-950/20",
-              )}
-            >
-              <div className="border-b border-border/70 px-4 py-3">
-                <h2 className={cn(
-                  "text-sm font-bold",
-                  activeSection === "invalidation"
-                    ? "text-red-800 dark:text-red-300"
-                    : activeSection === "risk"
-                    ? "text-amber-900 dark:text-amber-300"
-                    : "text-foreground",
-                )}>
-                  {selectedDetail.title}
-                </h2>
-                {activeSection === "invalidation" && (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{t.analysis_detail.invalidation_subtitle}</p>
-                )}
-              </div>
-
-              {activeSection === "invalidation" && (
-                <ul className="space-y-2 p-4 pt-3" data-testid="list-invalidation">
-                  {invalidationItems.map((item, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-foreground">
-                      <span className="mt-0.5 text-red-600 dark:text-red-400" aria-hidden="true">•</span>
-                      <span className="leading-snug">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {activeSection === "opportunity" && (
-                <p className="whitespace-pre-wrap p-4 text-sm leading-relaxed text-foreground">{analysis.opportunity}</p>
-              )}
-              {activeSection === "risk" && (
-                <p className="whitespace-pre-wrap p-4 text-sm leading-relaxed text-foreground">{analysis.risk}</p>
-              )}
-              {activeSection === "scenarios" && (
-                <div className="space-y-2 p-3 sm:p-4">
-                  {scenarioAContent && (
-                    <NarrativeDisclosure
-                      title={t.analysis_detail.scenario_a}
-                      content={scenarioAContent}
-                      open={openScenario === "a"}
-                      onOpenChange={(open) => setOpenScenario(open ? "a" : null)}
-                      testId="scenario-a-disclosure"
-                      t={t}
-                    />
-                  )}
-                  {scenarioBContent && (
-                    <NarrativeDisclosure
-                      title={t.analysis_detail.scenario_b}
-                      content={scenarioBContent}
-                      open={openScenario === "b"}
-                      onOpenChange={(open) => setOpenScenario(open ? "b" : null)}
-                      testId="scenario-b-disclosure"
-                      t={t}
-                    />
-                  )}
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.scenario_c}
-                    content={scenarioCText(bias ?? "neutral", t)}
-                    open={openScenario === "c"}
-                    onOpenChange={(open) => setOpenScenario(open ? "c" : null)}
-                    testId="scenario-c-disclosure"
-                    t={t}
-                  />
-                </div>
-              )}
-              {activeSection === "pro-details" && (
-                <div className="space-y-2 p-3 sm:p-4">
-                  <p className="text-xs leading-relaxed text-muted-foreground">{t.analysis_detail.narrative_details_intro}</p>
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.pro_factor_technical}
-                    content={analysis.keyDriversTechnical}
-                    open={openProFactor === "technical"}
-                    onOpenChange={(open) => setOpenProFactor(open ? "technical" : null)}
-                    testId="pro-factor-technical"
-                    t={t}
-                  />
-                  {/* Keep citations alongside both narratives because either can discuss fundamental catalysts. */}
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.pro_factor_fundamental}
-                    content={analysis.keyDriversFundamental}
-                    open={openProFactor === "fundamental"}
-                    onOpenChange={(open) => setOpenProFactor(open ? "fundamental" : null)}
-                    testId="pro-factor-fundamental"
-                    t={t}
-                    citations={
-                      <CitationChips
-                        citations={analysis.fundamentalCitations}
-                        context={analysis.fundamentalContext}
-                        t={t}
-                      />
-                    }
-                  />
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.pro_factor_market_context}
-                    content={analysis.marketContext}
-                    open={openProFactor === "market"}
-                    onOpenChange={(open) => setOpenProFactor(open ? "market" : null)}
-                    testId="pro-factor-market-context"
-                    t={t}
-                    citations={
-                      <CitationChips
-                        citations={analysis.fundamentalCitations}
-                        context={analysis.fundamentalContext}
-                        t={t}
-                      />
-                    }
-                  />
-                </div>
-              )}
-              {activeSection === "execution-insight" && (
-                <div className="space-y-3 p-4" data-testid="execution-insight-content">
-                  <p className="text-xs leading-relaxed text-muted-foreground">{t.analysis_detail.execution_insight_intro}</p>
-                  <div className="space-y-1">
-                    <ExpandableExplanation label={t.analysis_detail.execution_scenario_a_label} testId="exec-scenario-a">
-                      <p className="text-sm leading-relaxed text-muted-foreground">{executionScenarioAText(bias ?? "neutral", t)}</p>
-                    </ExpandableExplanation>
-                    <ExpandableExplanation label={t.analysis_detail.execution_scenario_b_label} testId="exec-scenario-b">
-                      <p className="text-sm leading-relaxed text-muted-foreground">{t.analysis_detail.execution_scenario_b_template}</p>
-                    </ExpandableExplanation>
-                    <ExpandableExplanation label={t.analysis_detail.execution_scenario_c_label} testId="exec-scenario-c">
-                      <p className="text-sm leading-relaxed text-muted-foreground">{t.analysis_detail.execution_scenario_c_template}</p>
-                    </ExpandableExplanation>
-                  </div>
-                </div>
-              )}
-            </Card>
-          )}
+          <Card className="p-4 sm:p-5" data-testid="non-adaptive-analysis-details">
+            {savedAnalysisDetails}
+          </Card>
         </div>}
 
         <div className="sr-only" data-testid="risk-disclaimer-accessible">
