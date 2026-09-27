@@ -9,7 +9,7 @@ import { useGetStandardTradingRules, type TradePlan } from "@workspace/api-clien
 import type { Translations } from "@/locales/en";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { useToast } from "@/hooks/use-toast";
-import { buildConfidencePrintHtml, buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
+import { buildConfidencePrintHtml, type ConfidenceShareData } from "@/lib/confidence-share";
 import { renderChartSharePng } from "@/lib/chart-share";
 import { buildAdaptivePlanShareData, renderAdaptivePlanSharePng } from "@/lib/adaptive-plan-share";
 import { ImageExportMenu } from "@/components/image-export-menu";
@@ -959,6 +959,9 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
   const educationContentRef = useRef<HTMLDivElement>(null);
+  const chartKey = JSON.stringify([analysisId, instrument, context.timeframe, analysisCreatedAt, context.tradingBias, lang, tradePlan]);
+  const [educationChart, setEducationChart] = useState<{ key: string; url?: string; unavailable?: boolean } | null>(null);
+  const chartRequestRef = useRef<{ key: string; promise: Promise<string> } | null>(null);
   const { toast } = useToast();
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
   const [analysisExpired, setAnalysisExpired] = useState(false);
@@ -1371,45 +1374,50 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
       },
     };
   };
-  const copyEducationText = async () => {
-    if (shareBusy) return;
-    setShareBusy(true);
-    try {
-      await writeClipboardText(buildConfidenceShareText(educationShareData()));
-      toast({ title: copy.adaptive_share_text_copied });
-    } catch {
-      toast({ title: copy.adaptive_share_failed, variant: "destructive" });
-    } finally {
-      setShareBusy(false);
-    }
+  const getEducationChart = (): Promise<string> => {
+    if (chartRequestRef.current?.key === chartKey) return chartRequestRef.current.promise;
+    setEducationChart({ key: chartKey });
+    const promise = renderChartSharePng({
+      instrument,
+      timeframe: context.timeframe ?? "",
+      analyzedAt: analysisCreatedAt,
+      bias: context.tradingBias === "bullish" ? copy.bias_bullish
+        : context.tradingBias === "bearish" ? copy.bias_bearish
+          : context.tradingBias === "neutral" ? copy.bias_neutral : copy.bias_unknown,
+      plan: tradePlan,
+      locale: lang === "id" ? "id-ID" : "en-US",
+      copy: {
+        title: copy.chart_share_title,
+        analyzed: copy.chart_share_analyzed,
+        made: copy.chart_share_made,
+        bias: copy.bias_title,
+        suggested: copy.adaptive_guide_chart_scenario,
+        buy: copy.trade_plan_side_buy,
+        sell: copy.trade_plan_side_sell,
+        both: copy.chart_share_wait,
+        entry: copy.trade_plan_entry,
+        stop: copy.trade_plan_sl,
+        tp1: copy.trade_plan_tp1,
+        tp2: copy.trade_plan_tp2,
+        sourceNote: copy.chart_share_source_note,
+        warning: copy.chart_share_warning,
+      },
+    }).then(({ url }) => {
+      if (chartRequestRef.current?.key === chartKey) setEducationChart({ key: chartKey, url });
+      return url;
+    }).catch((error: unknown) => {
+      if (chartRequestRef.current?.key === chartKey) setEducationChart({ key: chartKey, unavailable: true });
+      throw error;
+    });
+    chartRequestRef.current = { key: chartKey, promise };
+    return promise;
   };
-  const copyEducationImage = async () => {
-    if (shareBusy) return;
-    setShareBusy(true);
-    try {
-      const { blob, url } = renderConfidenceSharePng(educationShareData());
-      if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          toast({ title: copy.confidence_share_image_copied });
-          return;
-        } catch {
-          // Image clipboard permission is not universal; provide the same PNG as a download.
-        }
-      }
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `tradepilot-adaptive-${instrument.replace(/[^a-z0-9-]/gi, "-")}-${(context.timeframe ?? "unknown").replace(/[^a-z0-9-]/gi, "-")}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast({ title: copy.confidence_share_image_downloaded });
-    } catch {
-      toast({ title: copy.adaptive_share_failed, variant: "destructive" });
-    } finally {
-      setShareBusy(false);
-    }
-  };
+  useEffect(() => {
+    if (!detailsOpen) return;
+    // A failed historical request may recover later; retry only when the panel is reopened.
+    if (educationChart?.key === chartKey && educationChart.unavailable) chartRequestRef.current = null;
+    void getEducationChart().catch(() => {});
+  }, [detailsOpen, chartKey]);
   const printEducationGuide = async () => {
     if (shareBusy) return;
     let tab: Window | null = null;
@@ -1427,33 +1435,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
         caption: copy.adaptive_guide_chart_caption,
       };
       try {
-        const result = await renderChartSharePng({
-          instrument,
-          timeframe: context.timeframe ?? "",
-          analyzedAt: analysisCreatedAt,
-          bias: context.tradingBias === "bullish" ? copy.bias_bullish
-            : context.tradingBias === "bearish" ? copy.bias_bearish
-              : context.tradingBias === "neutral" ? copy.bias_neutral : copy.bias_unknown,
-          plan: tradePlan,
-          locale: lang === "id" ? "id-ID" : "en-US",
-          copy: {
-            title: copy.chart_share_title,
-            analyzed: copy.chart_share_analyzed,
-            made: copy.chart_share_made,
-            bias: copy.bias_title,
-            suggested: copy.adaptive_guide_chart_scenario,
-            buy: copy.trade_plan_side_buy,
-            sell: copy.trade_plan_side_sell,
-            both: copy.chart_share_wait,
-            entry: copy.trade_plan_entry,
-            stop: copy.trade_plan_sl,
-            tp1: copy.trade_plan_tp1,
-            tp2: copy.trade_plan_tp2,
-            sourceNote: copy.chart_share_source_note,
-            warning: copy.chart_share_warning,
-          },
-        });
-        chart = { ...chartLabels, src: result.url };
+        chart = { ...chartLabels, src: await getEducationChart() };
       } catch {
         chart = { ...chartLabels, unavailable: copy.adaptive_guide_chart_unavailable };
       }
@@ -1664,6 +1646,20 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
             </DialogHeader>
             <div ref={educationContentRef} className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1" data-testid="adaptive-education-content">
               {supportingDetails}
+              <div className="min-w-0 space-y-2 rounded-lg border border-border p-3" data-testid="adaptive-education-chart">
+                <h3 className="text-sm font-bold">{copy.chart_share_title} · {instrument} · {context.timeframe ?? "—"}</h3>
+                {educationChart?.key === chartKey && educationChart.url ? (
+                  <div className="max-w-full overflow-x-auto rounded-md">
+                    <img src={educationChart.url} alt={`${copy.chart_share_title} · ${instrument} · ${context.timeframe ?? "—"}`} className="block h-auto w-full min-w-[560px] sm:min-w-0" data-testid="adaptive-education-chart-image" />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground" role="status">
+                    {educationChart?.key === chartKey && educationChart.unavailable
+                      ? copy.adaptive_guide_chart_unavailable : copy.adaptive_guide_preparing}
+                  </p>
+                )}
+                <p className="text-xs leading-relaxed text-muted-foreground">{copy.adaptive_guide_chart_caption}</p>
+              </div>
               {recommendation && (
                 <section id="adaptive-insight-panel-reasoning" role="region" aria-label={copy.adaptive_reasoning_title} className="rounded-lg border border-primary/20 bg-primary/[0.03] p-3" data-testid="adaptive-plan-reasoning">
                   <h3 className="text-sm font-bold text-foreground">{copy.adaptive_reasoning_title}</h3>
@@ -1915,15 +1911,7 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
               )}
               <AnalysisGuideLink article="adaptive-position-plan" compact />
             </div>
-            <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row" data-testid="adaptive-share-actions">
-              <Button type="button" variant="outline" className="w-full sm:w-auto" disabled={shareBusy} onClick={copyEducationText} data-testid="adaptive-copy-details-text">
-                <Copy className="mr-2 h-4 w-4" />
-                {copy.confidence_share_copy_text}
-              </Button>
-              <Button type="button" variant="outline" className="w-full sm:w-auto" disabled={shareBusy} onClick={copyEducationImage} data-testid="adaptive-copy-details-image">
-                <ImageIcon className="mr-2 h-4 w-4" />
-                {copy.confidence_share_copy_image}
-              </Button>
+            <div className="flex justify-end border-t border-border pt-3" data-testid="adaptive-share-actions">
               <Button type="button" className="w-full sm:w-auto" disabled={shareBusy} onClick={printEducationGuide} data-testid="adaptive-print-details">
                 <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
                 {copy.adaptive_print_details}

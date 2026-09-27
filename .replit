@@ -69,12 +69,12 @@ args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm --filter @work
 name = "typecheck"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm run typecheck"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm run typecheck"
 
 [agent]
 stack = "PNPM_WORKSPACE"

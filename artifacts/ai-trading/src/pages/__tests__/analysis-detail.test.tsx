@@ -1351,9 +1351,11 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(localStorage.getItem(storedKey)).toBeNull();
   });
 
-  it("copies the whole Adaptive explanation with saved-analysis evidence and safety context", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  it("shows the analysis-time chart in Adaptive detail and prints the same image with full evidence", async () => {
+    const chart = vi.spyOn(chartShare, "renderChartSharePng").mockResolvedValue({
+      blob: new Blob(["PNG"], { type: "image/png" }),
+      url: "data:image/png;base64,UE5H",
+    });
     installFetchMock([
       getAnalysisHandler({ body: {
         ...ANALYSIS_PAYLOAD,
@@ -1380,36 +1382,24 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(await screen.findByTestId("adaptive-plan-snapshot")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("button-adaptive-explanation"));
     expect(screen.getByTestId("adaptive-share-actions")).toBeVisible();
+    expect(within(screen.getByTestId("adaptive-share-actions")).getAllByRole("button")).toHaveLength(1);
+    expect(screen.queryByTestId("adaptive-copy-details-text")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adaptive-copy-details-image")).not.toBeInTheDocument();
     expect(screen.getByTestId("adaptive-analysis-findings")).toBeVisible();
     expect(screen.getByTestId("adaptive-saved-analysis-disclosure")).not.toHaveAttribute("open");
-    fireEvent.click(screen.getByTestId("adaptive-copy-details-text"));
-    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-    const shared = String(writeText.mock.calls[0]?.[0]);
-    expect(shared).toContain("TradePilot.id — Analysis & Adaptive plan guide");
-    expect(shared).toMatch(/XAU\/USD · 1h · /);
-    expect(shared).toContain("Why this plan was chosen");
-    expect(shared.indexOf("Why this analysis")).toBeLessThan(shared.indexOf("Why this plan was chosen"));
-    expect(shared).toContain("Adaptive scenario under review");
-    expect(shared).toContain("not an instruction or invitation to take a particular position");
-    expect(shared).toContain("The TradePilot.id app will be available on the Play Store and App Store");
-    expect(shared).toContain("https://tradepilot.id");
-    expect(shared).toContain("BUY");
-    expect(shared).toContain("Typical candle range");
-    expect(shared).toContain("H1 close below 2300");
-    expect(shared).toContain("This guide captures the market at analysis time, not live prices");
-    expect(shared).toContain("A break below support invalidates the setup.");
-    expect(shared).toContain("Price likely continues higher into resistance.");
-    expect(shared).toContain("Gold rallies after statement — https://example.com/gold");
-    expect(shared).not.toContain("Invented headline");
-    expect(shared).not.toContain("Open Understand the details before");
-    expect(shared).toContain("not a profit guarantee or automatic order");
+    const image = await screen.findByTestId("adaptive-education-chart-image");
+    expect(image).toHaveAttribute("src", "data:image/png;base64,UE5H");
+    expect(screen.getByTestId("adaptive-education-chart")).toHaveTextContent("not a live price");
+    expect(chart).toHaveBeenCalledOnce();
+    expect(chart).toHaveBeenCalledWith(expect.objectContaining({
+      instrument: "XAU/USD",
+      timeframe: "1h",
+      analyzedAt: ANALYSIS_PAYLOAD.createdAt,
+      plan: TRADE_PLAN,
+    }));
 
     const previewDocument = { title: "", body: { textContent: "" }, open: vi.fn(), write: vi.fn(), close: vi.fn() };
     const open = vi.spyOn(window, "open").mockReturnValue({ opener: window, document: previewDocument } as unknown as Window);
-    vi.spyOn(chartShare, "renderChartSharePng").mockResolvedValue({
-      blob: new Blob(["PNG"], { type: "image/png" }),
-      url: "data:image/png;base64,UE5H",
-    });
     fireEvent.click(screen.getByTestId("adaptive-print-details"));
     expect(open).toHaveBeenCalledWith("", "_blank");
     await waitFor(() => expect(previewDocument.write).toHaveBeenCalledOnce());
@@ -1420,16 +1410,23 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(printHtml).toContain("Gold rallies after statement");
     expect(printHtml).toContain("H1 close below 2300");
     expect(printHtml).toContain("Print / save PDF");
-    vi.mocked(chartShare.renderChartSharePng).mockRejectedValueOnce(new Error("Historical candles unavailable"));
+    expect(printHtml).toContain("Why this plan was chosen");
+    expect(printHtml.indexOf("Why this analysis")).toBeLessThan(printHtml.indexOf("Why this plan was chosen"));
+    expect(printHtml).toContain("The TradePilot.id app will be available on the Play Store and App Store");
+    expect(printHtml).toContain("A break below support invalidates the setup.");
+    expect(printHtml).toContain("Price likely continues higher into resistance.");
+    expect(printHtml).not.toContain("Invented headline");
+    expect(printHtml).toContain("not a profit guarantee or automatic order");
     fireEvent.click(screen.getByTestId("adaptive-print-details"));
     await waitFor(() => expect(previewDocument.write).toHaveBeenCalledTimes(2));
-    expect(String(previewDocument.write.mock.calls[1]?.[0])).toContain("A chart from this analysis time is unavailable");
-    expect(String(previewDocument.write.mock.calls[1]?.[0])).not.toContain('src="data:image/png;base64,UE5H"');
+    expect(String(previewDocument.write.mock.calls[1]?.[0])).toContain('src="data:image/png;base64,UE5H"');
+    expect(chart).toHaveBeenCalledOnce();
   });
 
-  it("does not turn an uncalculated Adaptive scenario into a Buy or Sell instruction in the guide", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  it("does not turn an uncalculated Adaptive scenario into a Buy or Sell instruction in the printed guide", async () => {
+    vi.spyOn(chartShare, "renderChartSharePng").mockRejectedValue(new Error("Historical candles unavailable"));
+    const previewDocument = { title: "", body: { textContent: "" }, open: vi.fn(), write: vi.fn(), close: vi.fn() };
+    vi.spyOn(window, "open").mockReturnValue({ opener: window, document: previewDocument } as unknown as Window);
     installFetchMock([
       getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
       feedbackHandler(),
@@ -1438,53 +1435,16 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     const { Wrapper } = makeWrapper();
     render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
     fireEvent.click(await screen.findByTestId("button-adaptive-explanation"));
-    fireEvent.click(screen.getByTestId("adaptive-copy-details-text"));
-    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
-    const guide = String(writeText.mock.calls[0]?.[0]);
+    expect(await within(screen.getByTestId("adaptive-education-chart")).findByText(/A chart from this analysis time is unavailable/)).toBeVisible();
+    fireEvent.click(screen.getByTestId("adaptive-print-details"));
+    await waitFor(() => expect(previewDocument.write).toHaveBeenCalledOnce());
+    const guide = String(previewDocument.write.mock.calls[0]?.[0]);
     expect(guide).toContain("Adaptive scenario under review");
     expect(guide).toContain("Neither Buy nor Sell can be presented as ready yet.");
     expect(guide).not.toContain("BUY scenario for review");
     expect(guide).toContain("not an instruction or invitation to take a particular position");
-  });
-
-  it("shares the full Adaptive image or downloads a PNG when clipboard images are blocked", async () => {
-    const fillText = vi.fn();
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-      fillRect: vi.fn(),
-      fillText,
-      measureText: (text: string) => ({ width: text.length * 12 }),
-    } as unknown as CanvasRenderingContext2D);
-    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue("data:image/png;base64,UE5H");
-    const downloads: string[] = [];
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
-      downloads.push(this.download);
-    });
-    class TestClipboardItem {
-      constructor(public readonly items: Record<string, Blob>) {}
-    }
-    vi.stubGlobal("ClipboardItem", TestClipboardItem);
-    const write = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("Permission denied"));
-    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { write } });
-    installFetchMock([
-      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
-      feedbackHandler(),
-      standardRulesHandler(),
-    ]);
-    const { Wrapper } = makeWrapper();
-    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
-    fireEvent.click(await screen.findByTestId("button-adaptive-explanation"));
-    const button = screen.getByTestId("adaptive-copy-details-image");
-    fireEvent.click(button);
-    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-    expect((write.mock.calls[0]?.[0]?.[0] as TestClipboardItem).items["image/png"].size).toBeGreaterThan(0);
-    expect(downloads).toHaveLength(0);
-    const drawn = fillText.mock.calls.map(([text]) => String(text)).join(" ");
-    expect(drawn).toContain("H1 close below 2300");
-    expect(drawn).toContain("Price likely continues higher into resistance.");
-
-    fireEvent.click(button);
-    await waitFor(() => expect(downloads).toEqual(["tradepilot-adaptive-XAU-USD-1h.png"]));
-    expect(screen.getByTestId("adaptive-education-panel")).toBeInTheDocument();
+    expect(guide).toContain("A chart from this analysis time is unavailable");
+    expect(guide).not.toContain('src="data:image/png;base64,');
   });
 
   it("uses the analysis's persisted market snapshot without a separate candle request", async () => {

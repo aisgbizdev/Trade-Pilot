@@ -102,17 +102,19 @@ function makeWrapper() {
   };
 }
 
-function getInjectedScript(): HTMLScriptElement {
-  const widgetHost = screen.getByTestId("tradingview-market-quotes");
-  const script = widgetHost.querySelector(
-    'script[src*="embed-widget-market-quotes.js"]',
-  ) as HTMLScriptElement | null;
-  expect(script).not.toBeNull();
-  return script!;
+async function getInjectedScript(): Promise<HTMLScriptElement> {
+  return waitFor(() => {
+    const widgetHost = screen.getByTestId("tradingview-market-quotes");
+    const script = widgetHost.querySelector(
+      'script[src*="embed-widget-market-quotes.js"]',
+    ) as HTMLScriptElement | null;
+    expect(script).not.toBeNull();
+    return script!;
+  });
 }
 
 async function failTradingViewScript() {
-  const script = getInjectedScript();
+  const script = await getInjectedScript();
   await act(async () => {
     const ev = new Event("error");
     script.dispatchEvent(ev);
