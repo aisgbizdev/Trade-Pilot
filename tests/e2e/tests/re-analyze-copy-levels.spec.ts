@@ -246,9 +246,10 @@ test.describe("Re-Analyze through the quick instrument chooser (real Chromium + 
       await route.fallback();
     });
 
-    // Switching a preset instrument after a result is present starts a new
-    // analysis automatically, without a detail-page route transition.
+    // Choosing another instrument does not start a paid analysis on its own.
     await page.getByTestId("button-instrument-BRENT").click();
+    expect(secondRequests).toHaveLength(0);
+    await page.getByTestId("button-submit-analysis").click();
     await expect(page.getByTestId("text-instrument")).toHaveText("BRENT", { timeout: 30_000 });
     expect(new URL(page.url()).pathname).toBe("/analyze");
     expect(new URL(page.url()).searchParams.get("result")).toBe(String(secondAnalysis.id));

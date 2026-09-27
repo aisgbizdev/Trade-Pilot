@@ -73,7 +73,7 @@ const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
 const CORE_ANALYSIS_INSTRUMENTS = ["XAU/USD", "BRENT", "HSI", "NIKKEI"] as const;
 const ANALYSIS_INSTRUMENT_OPTIONS = [
   { code: "XAU/USD", name: "Gold", aliases: ["GOLD", "XAUUSD"] },
-  { code: "BRENT", name: "Brent crude oil", aliases: ["CRUDE", "BRENT OIL", "BCO", "UK OIL"] },
+  { code: "BRENT", name: "Brent crude oil", aliases: ["CRUDE", "BRENT OIL", "BCO", "UK OIL", "UKOIL", "UK-OIL"] },
   { code: "HSI", name: "Hang Seng Index", aliases: ["HANG SENG", "HANGSENG"] },
   { code: "NIKKEI", name: "Nikkei 225", aliases: ["JAPAN 225", "NIKKEI 225"] },
   { code: "EUR/USD", name: "Euro / US dollar", aliases: ["EURUSD", "EURO DOLLAR"] },
@@ -762,11 +762,7 @@ export default function AnalyzePage() {
   const [instrumentRequestOpen, setInstrumentRequestOpen] = useState(false);
   const [instrumentRequestCode, setInstrumentRequestCode] = useState("");
   const [instrumentRequestLoading, setInstrumentRequestLoading] = useState(false);
-  const [instrumentRequestStatus, setInstrumentRequestStatus] = useState<{
-    code: string;
-    kind: "success" | "error";
-    message?: string;
-  } | null>(null);
+  const [instrumentRequestStatus, setInstrumentRequestStatus] = useState<"success" | "error" | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
   const instrumentChoiceVersionRef = useRef(0);
   const timeframeChoiceVersionRef = useRef(0);
@@ -1073,8 +1069,7 @@ export default function AnalyzePage() {
     instrumentChoiceVersionRef.current += 1;
     setSelectedInstrument(inst);
     setInstrumentSearch("");
-    setInstrumentRequestStatus(null);
-    if ((CORE_ANALYSIS_INSTRUMENTS as readonly string[]).includes(inst)) setOtherInstrumentsOpen(false);
+    setOtherInstrumentsOpen(false);
   };
 
   const normalizedSearch = instrumentSearch.trim().toLocaleUpperCase();
@@ -1088,12 +1083,16 @@ export default function AnalyzePage() {
     normalizedSearch &&
     !VERIFIED_ANALYSIS_INSTRUMENTS.has(normalizedSearch) &&
     !["BCO", "UKOIL", "UK-OIL"].includes(normalizedSearch) &&
-    /^[A-Z0-9]{2,12}(?:\/[A-Z0-9]{2,12})?$/.test(normalizedSearch)
+    /^[A-Z0-9]{2,12}(?:[/.:-][A-Z0-9]{1,12})?$/.test(normalizedSearch) &&
+    normalizedSearch.length <= 25
       ? normalizedSearch
       : "";
 
-  const submitInstrumentRequest = async () => {
-    if (!instrumentRequestCode || instrumentRequestLoading) return;
+  const submitInstrumentRequest = async (code: string) => {
+    if (!code || instrumentRequestLoading) return;
+    setInstrumentRequestCode(code);
+    setOtherInstrumentsOpen(false);
+    setInstrumentRequestOpen(true);
     setInstrumentRequestLoading(true);
     setInstrumentRequestStatus(null);
     try {
@@ -1101,28 +1100,28 @@ export default function AnalyzePage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: instrumentRequestCode }),
+        body: JSON.stringify({ code }),
       });
-      let responseBody: { error?: string } | null = null;
-      try {
-        responseBody = await response.json();
-      } catch {
-        responseBody = null;
-      }
       if (!response.ok) {
-        setInstrumentRequestStatus({
-          code: instrumentRequestCode,
-          kind: "error",
-          message: responseBody?.error,
-        });
+        setInstrumentRequestStatus("error");
         return;
       }
-      setInstrumentRequestStatus({ code: instrumentRequestCode, kind: "success" });
-      setInstrumentRequestOpen(false);
+      setInstrumentRequestStatus("success");
     } catch {
-      setInstrumentRequestStatus({ code: instrumentRequestCode, kind: "error" });
+      setInstrumentRequestStatus("error");
     } finally {
       setInstrumentRequestLoading(false);
+    }
+  };
+
+  const handleOtherCodeSubmit = () => {
+    const existing = ANALYSIS_INSTRUMENT_OPTIONS.find((option) =>
+      option.code === normalizedSearch || option.aliases.some((alias) => alias === normalizedSearch),
+    );
+    if (existing) {
+      handleInstrumentClick(existing.code);
+    } else if (unmatchedRequestCode) {
+      void submitInstrumentRequest(unmatchedRequestCode);
     }
   };
 
@@ -1227,88 +1226,30 @@ export default function AnalyzePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setOtherInstrumentsOpen((open) => !open);
                   setInstrumentSearch("");
+                  setOtherInstrumentsOpen(true);
                 }}
                 aria-expanded={otherInstrumentsOpen}
-                aria-controls="other-instrument-options"
+                aria-haspopup="dialog"
                 data-testid="button-other-instruments"
-                className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-left text-sm text-muted-foreground transition-all hover:border-primary/50"
+                className={cn(
+                  "flex w-full items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-left text-sm transition-all hover:border-primary/50",
+                  !(CORE_ANALYSIS_INSTRUMENTS as readonly string[]).includes(selectedInstrument)
+                    ? "border-primary text-primary font-semibold"
+                    : "border-border text-muted-foreground",
+                )}
               >
-                {t.analyze.or_type}
-                <ChevronDown className={cn("h-4 w-4 transition-transform", otherInstrumentsOpen && "rotate-180")} aria-hidden="true" />
+                <span className="min-w-0 truncate">
+                  {(CORE_ANALYSIS_INSTRUMENTS as readonly string[]).includes(selectedInstrument)
+                    ? t.analyze.or_type
+                    : selectedInstrument}
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
               </button>
-              {otherInstrumentsOpen && (
-                <div id="other-instrument-options" className="mt-2 space-y-2">
-                  <input
-                    type="search"
-                    placeholder={t.analyze.instrument_search_placeholder}
-                    value={instrumentSearch}
-                    onChange={(e) => setInstrumentSearch(e.target.value)}
-                    aria-label={t.analyze.instrument_search_placeholder}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                    data-testid="input-instrument-search"
-                  />
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2 sm:grid-cols-1" data-testid="other-instrument-options">
-                    {matchingInstrumentOptions.map((option) => (
-                      <button
-                        key={option.code}
-                        type="button"
-                        onClick={() => handleInstrumentClick(option.code)}
-                        aria-pressed={selectedInstrument === option.code}
-                        data-testid={`button-instrument-${option.code}`}
-                        className={cn(
-                          "w-full py-2 px-3 rounded-lg border text-sm font-medium text-left transition-all",
-                          selectedInstrument === option.code
-                            ? "bg-primary/10 border-primary text-primary"
-                            : "bg-background border-border text-foreground hover:border-primary/50"
-                        )}
-                      >
-                        {option.code}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-muted-foreground">{t.analyze.instrument_source_limitations}</p>
-                  {instrumentSearch.trim() && (
-                    <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3" role="status" data-testid="instrument-request-options">
-                      {matchingInstrumentOptions.length === 0 && (
-                        <p className="text-xs text-muted-foreground" data-testid="instrument-no-match">{t.analyze.instrument_no_match}</p>
-                      )}
-                      {unmatchedRequestCode ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setInstrumentRequestCode(unmatchedRequestCode);
-                            setInstrumentRequestOpen(true);
-                          }}
-                          data-testid="button-request-instrument"
-                        >
-                          {t.analyze.instrument_request_action.replace("{code}", unmatchedRequestCode)}
-                        </Button>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">{t.analyze.instrument_request_hint}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
-            {selectedInstrument && !(CORE_ANALYSIS_INSTRUMENTS as readonly string[]).includes(selectedInstrument) && (
-              <p className="mt-2 text-xs text-muted-foreground" role="status" aria-live="polite" data-testid="selected-instrument-status">
-                {VERIFIED_ANALYSIS_INSTRUMENTS.has(selectedInstrument)
-                  ? `${selectedInstrument} · ${t.analyze.instrument_verified_badge}`
-                  : t.analyze.instrument_legacy_unsupported}
-              </p>
-            )}
-            {instrumentRequestStatus && (
-              <p className={cn("mt-2 text-xs leading-relaxed", instrumentRequestStatus.kind === "success"
-                ? "text-emerald-700 dark:text-emerald-300" : "text-destructive")}
-                role="status" aria-live="polite" data-testid="instrument-request-status">
-                {instrumentRequestStatus.kind === "success"
-                  ? t.analyze.instrument_request_success.replace("{code}", instrumentRequestStatus.code)
-                  : instrumentRequestStatus.message ?? t.analyze.instrument_request_error}
+            {selectedInstrument && !VERIFIED_ANALYSIS_INSTRUMENTS.has(selectedInstrument) && (
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" data-testid="unsupported-restored-instrument">
+                {t.analyze.instrument_legacy_unsupported}
               </p>
             )}
             {finalInstrument && (
@@ -1326,12 +1267,14 @@ export default function AnalyzePage() {
                 </Button>
               </div>
             )}
-            {resultAnalysisId == null && (
+            {(resultAnalysisId == null ||
+              (restoredAnalysis?.id === resultAnalysisId &&
+                (finalInstrument !== restoredAnalysis.instrument || selectedTimeframe !== restoredAnalysis.timeframe))) && (
               <div className="mt-3">
                 <Button
                   className="min-h-12 w-full min-w-0 px-3 text-base font-bold"
                   onClick={() => handleSubmit()}
-                  disabled={isLoading || !finalInstrument || !selectedTimeframe || instrumentSearch.trim().length > 0 || !VERIFIED_ANALYSIS_INSTRUMENTS.has(finalInstrument)}
+                  disabled={isLoading || !finalInstrument || !selectedTimeframe || !VERIFIED_ANALYSIS_INSTRUMENTS.has(finalInstrument)}
                   data-testid="button-submit-analysis"
                 >
                   {isLoading ? (
@@ -1497,7 +1440,7 @@ export default function AnalyzePage() {
           {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist onComplete={handleChecklistComplete} />}
 
           {/* Once a result already exists, picking a different instrument
-              re-analyzes without the submit button (it's hidden above) —
+              can re-analyze through the submit button above —
               show the AI-processing wait state as a popup instead. */}
           <Dialog open={isLoading && resultAnalysisId != null}>
             <DialogContent
@@ -1535,33 +1478,92 @@ export default function AnalyzePage() {
         onOpenChange={setAlertModalOpen}
         instrument={finalInstrument}
       />
-      <Dialog open={instrumentRequestOpen} onOpenChange={setInstrumentRequestOpen}>
-        <DialogContent className="sm:max-w-md" data-testid="dialog-request-instrument">
+      <Dialog open={otherInstrumentsOpen} onOpenChange={(open) => {
+        setOtherInstrumentsOpen(open);
+        if (!open) setInstrumentSearch("");
+      }}>
+        <DialogContent closeLabel={t.analyze.instrument_request_close} className="w-[calc(100%-2rem)] max-h-[80dvh] overflow-y-auto sm:max-w-xs" data-testid="dialog-other-instruments">
+          <DialogHeader>
+            <DialogTitle>{t.analyze.or_type}</DialogTitle>
+            <DialogDescription className="sr-only">{t.analyze.instrument_picker_hint}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            handleOtherCodeSubmit();
+          }} className="space-y-3">
+            <input
+              type="search"
+              autoFocus
+              maxLength={25}
+              placeholder={t.analyze.instrument_search_placeholder}
+              value={instrumentSearch}
+              onChange={(event) => setInstrumentSearch(event.target.value)}
+              aria-label={t.analyze.instrument_search_placeholder}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              data-testid="input-instrument-search"
+            />
+            <div className="grid grid-cols-2 gap-2" data-testid="other-instrument-options">
+              {matchingInstrumentOptions.map((option) => (
+                <button
+                  key={option.code}
+                  type="button"
+                  onClick={() => handleInstrumentClick(option.code)}
+                  aria-pressed={selectedInstrument === option.code}
+                  data-testid={`button-instrument-${option.code}`}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-left text-sm font-medium transition-all hover:border-primary/50",
+                    selectedInstrument === option.code
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background text-foreground",
+                  )}
+                >
+                  {option.code}
+                </button>
+              ))}
+            </div>
+            {unmatchedRequestCode && (
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full"
+                data-testid="button-request-instrument"
+              >
+                {t.analyze.instrument_request_action.replace("{code}", unmatchedRequestCode)}
+              </Button>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={instrumentRequestOpen} onOpenChange={(open) => {
+        if (!instrumentRequestLoading) setInstrumentRequestOpen(open);
+      }}>
+        <DialogContent closeLabel={t.analyze.instrument_request_close} className="w-[calc(100%-2rem)] sm:max-w-xs" data-testid="dialog-request-instrument">
           <DialogHeader>
             <DialogTitle>
-              {t.analyze.instrument_request_title.replace("{code}", instrumentRequestCode)}
+              {instrumentRequestLoading
+                ? t.analyze.instrument_request_sending
+                : instrumentRequestStatus === "error"
+                  ? t.analyze.instrument_request_error
+                  : t.analyze.instrument_request_unavailable.replace("{code}", instrumentRequestCode)}
             </DialogTitle>
-            <DialogDescription>{t.analyze.instrument_request_description}</DialogDescription>
+            <DialogDescription className={instrumentRequestStatus === "success" ? "text-left leading-relaxed" : "sr-only"}>
+              {instrumentRequestStatus === "success"
+                ? t.analyze.instrument_request_short_description
+                : instrumentRequestLoading
+                  ? t.analyze.instrument_request_sending
+                  : t.analyze.instrument_request_error}
+            </DialogDescription>
           </DialogHeader>
-          <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-            {t.analyze.instrument_request_no_credit}
-          </p>
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setInstrumentRequestOpen(false)}
-              disabled={instrumentRequestLoading}
-            >
-              {t.common.cancel}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void submitInstrumentRequest()}
-              disabled={instrumentRequestLoading}
-              data-testid="button-confirm-instrument-request"
-            >
-              {instrumentRequestLoading ? t.analyze.instrument_request_sending : t.analyze.instrument_request_confirm}
+            {instrumentRequestStatus === "error" && (
+              <Button type="button" variant="outline" onClick={() => void submitInstrumentRequest(instrumentRequestCode)}
+                data-testid="button-retry-instrument-request">
+                {t.analyze.instrument_request_retry}
+              </Button>
+            )}
+            <Button type="button" onClick={() => setInstrumentRequestOpen(false)} disabled={instrumentRequestLoading}
+              data-testid="button-close-instrument-notice">
+              {t.analyze.instrument_request_close}
             </Button>
           </div>
         </DialogContent>

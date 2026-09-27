@@ -228,6 +228,7 @@ describe("AnalyzePage: happy-path render", () => {
       expect(screen.queryByTestId("button-instrument-EUR/USD")).not.toBeInTheDocument();
       expect(screen.queryByTestId("input-instrument-search")).not.toBeInTheDocument();
       expect(screen.queryByTestId("other-instrument-options")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("dialog-other-instruments")).not.toBeInTheDocument();
       expect(screen.getByTestId("button-other-instruments")).toHaveAttribute("aria-expanded", "false");
       expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveClass("border-primary");
       expect(screen.getByTestId("mini-chart-section")).toBeInTheDocument();
@@ -379,6 +380,7 @@ describe("AnalyzePage: user actions", () => {
 
     fireEvent.click(await screen.findByTestId("button-instrument-XAU/USD"));
     fireEvent.click(screen.getByTestId("button-other-instruments"));
+    expect(screen.getByTestId("dialog-other-instruments").closest('[data-testid="instrument-chart-layout"]')).toBeNull();
     const search = screen.getByTestId("input-instrument-search");
     fireEvent.change(search, { target: { value: "EUR" } });
 
@@ -389,9 +391,9 @@ describe("AnalyzePage: user actions", () => {
     expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(screen.getByTestId("button-instrument-EUR/USD"));
-    expect(screen.getByTestId("button-instrument-EUR/USD")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("button-instrument-EUR/USD")).toHaveTextContent(/^EUR\/USD$/);
-    expect(search).toHaveValue("");
+    expect(screen.queryByTestId("dialog-other-instruments")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-other-instruments")).toHaveTextContent("EUR/USD");
+    expect(screen.getByTestId("button-other-instruments")).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByTestId("button-instrument-XAU/USD")).toBeInTheDocument();
   });
 
@@ -783,7 +785,7 @@ describe("AnalyzePage: user actions", () => {
       fireEvent.change(searchInput, { target: { value: "PLATINUM" } });
     });
     expect(searchInput.value).toBe("PLATINUM");
-    expect(screen.getByTestId("instrument-no-match")).toBeInTheDocument();
+    expect(screen.getByTestId("button-request-instrument")).toHaveTextContent("PLATINUM");
     expect(screen.queryByTestId("button-instrument-PLATINUM")).not.toBeInTheDocument();
     expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByTestId("input-custom-instrument")).not.toBeInTheDocument();
@@ -803,16 +805,15 @@ describe("AnalyzePage: user actions", () => {
     const forex = await screen.findByTestId("button-instrument-EUR/USD");
     fireEvent.click(forex);
 
-    expect(forex).toHaveAttribute("aria-pressed", "true");
-    expect(forex).toHaveTextContent(/^EUR\/USD$/);
-    expect(screen.getByTestId("selected-instrument-status")).toHaveTextContent(/EUR\/USD.*Analysis only/i);
+    expect(screen.queryByTestId("dialog-other-instruments")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-other-instruments")).toHaveTextContent("EUR/USD");
     expect(screen.getByTestId("button-submit-analysis")).toBeEnabled();
     expect(
       calls.filter((call) => call.method === "POST" && /\/api\/analyses(\?|$)/.test(call.url)),
     ).toHaveLength(0);
   });
 
-  it("requires confirmation to request an unsupported code and does not analyze it", async () => {
+  it("records an unsupported code on submit, then shows a short dismissible notice without analysis", async () => {
     const { calls } = installFetchMock(
       [
         (url, init) => {
@@ -843,23 +844,57 @@ describe("AnalyzePage: user actions", () => {
     fireEvent.click(screen.getByTestId("button-request-instrument"));
 
     const dialog = await screen.findByTestId("dialog-request-instrument");
-    expect(dialog).toHaveTextContent("PLATINUM");
-    expect(screen.getByTestId("button-confirm-instrument-request")).toBeInTheDocument();
+    await waitFor(() => expect(dialog).toHaveTextContent("PLATINUM is not available"));
+    expect(dialog).toHaveTextContent("your request helps us decide what to support next");
+    expect(screen.queryByTestId("dialog-other-instruments")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-other-instruments")).toHaveTextContent("Other instrument");
+    expect(dialog).not.toHaveTextContent("Submitting this request");
     expect(
       calls.filter((call) => call.method === "POST" && /\/api\/analyses(\?|$)/.test(call.url)),
     ).toHaveLength(0);
-
-    fireEvent.click(screen.getByTestId("button-confirm-instrument-request"));
-    await screen.findByTestId("instrument-request-status");
 
     const requests = calls.filter(
       (call) => call.method === "POST" && call.url.includes("/api/instrument-requests"),
     );
     expect(requests).toHaveLength(1);
     expect(requests[0]?.body ? JSON.parse(requests[0].body) : null).toEqual({ code: "PLATINUM" });
+    fireEvent.click(screen.getByTestId("button-close-instrument-notice"));
+    expect(screen.queryByTestId("dialog-request-instrument")).not.toBeInTheDocument();
     expect(
       calls.filter((call) => call.method === "POST" && /\/api\/analyses(\?|$)/.test(call.url)),
     ).toHaveLength(0);
+  });
+
+  it("keeps a failed code request retryable and leaves the selected instrument unchanged", async () => {
+    let attempts = 0;
+    const { calls } = installFetchMock([
+      (url, init) => {
+        if (url.includes("/api/instrument-requests") && (init?.method ?? "GET").toUpperCase() === "POST") {
+          attempts += 1;
+          return attempts === 1 ? jsonResponse({ error: "unavailable" }, 503) : jsonResponse({ recorded: true, code: "XAG/USD" }, 201);
+        }
+        return null;
+      },
+      ...pageHandlers({}),
+    ], { strict: false });
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalyzePage /></Wrapper>);
+
+    fireEvent.click(await screen.findByTestId("button-other-instruments"));
+    const input = screen.getByTestId("input-instrument-search");
+    fireEvent.change(input, { target: { value: "xag/usd" } });
+    fireEvent.submit(input.closest("form")!);
+
+    const notice = await screen.findByTestId("dialog-request-instrument");
+    await waitFor(() => expect(notice).toHaveTextContent("Could not submit the instrument request"));
+    expect(screen.getByTestId("button-other-instruments")).toHaveTextContent("Other instrument");
+    expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByTestId("button-retry-instrument-request"));
+    await waitFor(() => expect(notice).toHaveTextContent("XAG/USD is not available"));
+    expect(attempts).toBe(2);
+    expect(calls.filter((call) => call.method === "POST" && /\/api\/analyses(\?|$)/.test(call.url))).toHaveLength(0);
+    fireEvent.keyDown(notice, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("dialog-request-instrument")).not.toBeInTheDocument());
   });
 });
 
@@ -894,6 +929,31 @@ describe("AnalyzePage: restoring an inline result", () => {
       expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-instrument", "BRENT");
       expect(screen.getByTestId("analysis-levels-chart")).toHaveAttribute("data-timeframe", "4h");
     });
+  });
+
+  it("offers a separate submit after changing the instrument of an existing result", async () => {
+    const analysisId = 7711;
+    window.history.replaceState({}, "", `/analyze?result=${analysisId}`);
+    const { calls } = installFetchMock([
+      (url, init) => {
+        if ((init?.method ?? "GET").toUpperCase() === "GET" && url.includes(`/api/analyses/${analysisId}`)) {
+          return jsonResponse(restoredAnalysisFixture(analysisId, "XAU/USD", "1h"));
+        }
+        return null;
+      },
+      ...pageHandlers({}),
+    ], { strict: false });
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalyzePage /></Wrapper>);
+
+    expect(await screen.findByTestId("embedded-analysis-result")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId("button-submit-analysis")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("button-other-instruments"));
+    fireEvent.click(screen.getByTestId("button-instrument-EUR/USD"));
+    expect(screen.queryByTestId("dialog-other-instruments")).not.toBeInTheDocument();
+    expect(screen.getByTestId("button-other-instruments")).toHaveTextContent("EUR/USD");
+    expect(screen.getByTestId("button-submit-analysis")).toBeEnabled();
+    expect(calls.filter((call) => call.method === "POST" && /\/api\/analyses(\?|$)/.test(call.url))).toHaveLength(0);
   });
 
   it("keeps explicit instrument and timeframe URL parameters ahead of the restored record", async () => {
@@ -1206,7 +1266,7 @@ describe.skip("AnalyzePage: legacy Timeframe Risk Map placement", () => {
       fireEvent.change(screen.getByTestId("input-instrument-search"), { target: { value: "PLATINUM" } });
     });
     
-    expect(screen.getByTestId("instrument-no-match")).toBeInTheDocument();
+    expect(screen.getByTestId("button-request-instrument")).toBeInTheDocument();
     expect(screen.getByTestId("button-instrument-XAU/USD")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("button-open-risk-map")).toBeInTheDocument();
   });
