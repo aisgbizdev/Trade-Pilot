@@ -41,3 +41,4 @@
 - [History timeframe default focus](history-performance-default-focus.md) — keep XAU/USD as the intentional timeframe default even when the overview covers all instruments; clarify reset labels instead.
 - [Bilingual copy assertions](bilingual-copy-assertions.md) — language-toggle tests may check the same copy again after toggling back; search every old-phrase assertion when changing localized text.
 - [Verified FX candle identity](verified-fx-candle-identity.md) — mapped daily FX data may be newest-first and materially diverge from live spot; require same-identity candles and fail closed on stale or mismatched prices.
+- [Landing splash and screenshots](landing-splash-screenshots.md) — instant app-preview screenshots can repeatedly capture the splash instead of the landing; use a short delayed browser capture for visual checks.

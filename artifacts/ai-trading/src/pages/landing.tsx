@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LandingProductPreview } from "@/components/landing-product-preview";
@@ -14,8 +14,7 @@ import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 
 export default function LandingPage() {
   const { t } = useTranslation();
-  const [previewInView, setPreviewInView] = useState(false);
-  const previewSectionRef = useRef<HTMLElement>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const trackOutbound = useTrackOutbound();
   const trackEvent = useTrackEvent();
   const isEmbed = useEmbedMode();
@@ -31,24 +30,6 @@ export default function LandingPage() {
     trackEvent("page_view");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    const section = previewSectionRef.current;
-    if (!section || previewInView || isEmbed) return;
-    if (!("IntersectionObserver" in window)) {
-      setPreviewInView(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting) {
-        setPreviewInView(true);
-        observer.disconnect();
-      }
-    }, { threshold: 0.01 });
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, [isEmbed, previewInView]);
 
   if (isEmbed) return null;
 
@@ -67,7 +48,7 @@ export default function LandingPage() {
       </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 sm:px-8 lg:px-10">
-        <section className="grid min-h-[calc(100dvh-4rem)] items-center gap-8 py-12 sm:py-16 md:grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] md:gap-10 lg:py-10" aria-labelledby="landing-title">
+        <section className="grid flex-1 items-center gap-8 py-10 sm:py-12 md:grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] md:gap-10 lg:py-10" aria-labelledby="landing-title">
           <div className="max-w-[690px]">
             <p className="mb-5 flex items-center gap-3 text-base font-semibold tracking-[0.01em] text-primary sm:mb-7 sm:text-lg" data-testid="text-landing-slogan">
               <span className="h-px w-7 bg-primary" aria-hidden="true" />
@@ -105,6 +86,20 @@ export default function LandingPage() {
             <p className="mt-4 text-xs leading-relaxed text-[#f1f0eb]/45" data-testid="text-always-free-note">
               {t.landing.always_free_note}
             </p>
+            <button
+              type="button"
+              aria-expanded={previewOpen}
+              aria-controls="landing-market-preview"
+              onClick={() => setPreviewOpen((open) => !open)}
+              className="mt-6 inline-flex min-h-11 max-w-full items-center gap-3 rounded-lg border border-[#f1f0eb]/20 px-4 py-2.5 text-left text-[#f1f0eb] transition-colors hover:border-primary/60 hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              data-testid="button-toggle-sample-analysis"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{previewOpen ? t.landing.hide_sample : t.landing.show_sample}</span>
+                <span className="block text-xs text-[#f1f0eb]/55">{t.landing.sample_hint}</span>
+              </span>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-primary transition-transform ${previewOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+            </button>
           </div>
 
           <div className="relative hidden min-h-[310px] items-center justify-center md:flex" aria-hidden="true">
@@ -125,7 +120,8 @@ export default function LandingPage() {
         </section>
 
         <section
-          ref={previewSectionRef}
+          id="landing-market-preview"
+          hidden={!previewOpen}
           className="border-t border-[#f1f0eb]/10 py-10 sm:py-14"
           aria-label={t.landing.view_sample}
           data-testid="section-sample-analysis"
@@ -134,11 +130,7 @@ export default function LandingPage() {
             <h2 className="text-xl font-bold tracking-tight text-[#f1f0eb] sm:text-2xl">{t.landing.view_sample}</h2>
             <p className="mt-1 text-xs text-[#f1f0eb]/55">{t.landing.sample_hint}</p>
             <div className="mt-6">
-              {previewInView ? (
-                <LandingProductPreview />
-              ) : (
-                <p className="py-10 text-sm text-[#f1f0eb]/55" role="status">{t.landing.preview_loading}</p>
-              )}
+              {previewOpen && <LandingProductPreview />}
             </div>
           </div>
         </section>
