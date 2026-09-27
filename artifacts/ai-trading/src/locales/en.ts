@@ -98,7 +98,7 @@ export const en = {
     diagram_top: "Context",
     diagram_middle: "Not commands.",
     diagram_bottom: "The decision stays yours",
-    view_sample: "View sample analysis",
+    view_sample: "Sample analysis",
     hide_sample: "Hide sample analysis",
     sample_hint: "Public XAU/USD · D1 preview",
     login: "Sign In",

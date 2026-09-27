@@ -100,7 +100,7 @@ export const id: Translations = {
     diagram_top: "Konteks",
     diagram_middle: "Bukan perintah.",
     diagram_bottom: "Keputusan tetap milikmu",
-    view_sample: "Lihat contoh analisis",
+    view_sample: "Contoh analisis",
     hide_sample: "Tutup contoh analisis",
     sample_hint: "Pratinjau publik XAU/USD · D1",
     login: "Masuk",

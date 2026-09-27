@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LandingProductPreview } from "@/components/landing-product-preview";
@@ -14,7 +14,8 @@ import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 
 export default function LandingPage() {
   const { t } = useTranslation();
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewInView, setPreviewInView] = useState(false);
+  const previewSectionRef = useRef<HTMLElement>(null);
   const trackOutbound = useTrackOutbound();
   const trackEvent = useTrackEvent();
   const isEmbed = useEmbedMode();
@@ -30,6 +31,24 @@ export default function LandingPage() {
     trackEvent("page_view");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const section = previewSectionRef.current;
+    if (!section || previewInView || isEmbed) return;
+    if (!("IntersectionObserver" in window)) {
+      setPreviewInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) {
+        setPreviewInView(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.01 });
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [isEmbed, previewInView]);
 
   if (isEmbed) return null;
 
@@ -48,9 +67,9 @@ export default function LandingPage() {
       </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 sm:px-8 lg:px-10">
-        <section className="grid items-center gap-8 py-12 sm:py-16 md:grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] md:gap-10 lg:py-10" aria-labelledby="landing-title">
+        <section className="grid min-h-[calc(100dvh-4rem)] items-center gap-8 py-12 sm:py-16 md:grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] md:gap-10 lg:py-10" aria-labelledby="landing-title">
           <div className="max-w-[690px]">
-            <p className="mb-5 flex items-center gap-3 text-xs font-bold tracking-[0.14em] text-primary sm:mb-7" data-testid="text-landing-slogan">
+            <p className="mb-5 flex items-center gap-3 text-base font-semibold tracking-[0.01em] text-primary sm:mb-7 sm:text-lg" data-testid="text-landing-slogan">
               <span className="h-px w-7 bg-primary" aria-hidden="true" />
               {t.landing.tagline_part1} {t.landing.tagline_part2}
             </p>
@@ -105,27 +124,24 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <div className="border-t border-[#f1f0eb]/10 py-5 sm:py-6">
-          <button
-            type="button"
-            aria-expanded={previewOpen}
-            aria-controls="landing-sample-analysis"
-            onClick={() => setPreviewOpen((open) => !open)}
-            className="group inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#f1f0eb]/70 transition-colors hover:text-primary"
-            data-testid="button-view-sample-analysis"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-            {previewOpen ? t.landing.hide_sample : t.landing.view_sample}
-            <ChevronDown className={`h-4 w-4 transition-transform group-hover:translate-y-0.5 ${previewOpen ? "rotate-180" : ""}`} aria-hidden="true" />
-          </button>
-          <p className="mt-0.5 text-xs text-[#f1f0eb]/40">{t.landing.sample_hint}</p>
-        </div>
-
-        {previewOpen && (
-          <div id="landing-sample-analysis" className="mx-auto w-full max-w-2xl pt-4">
-            <LandingProductPreview />
+        <section
+          ref={previewSectionRef}
+          className="border-t border-[#f1f0eb]/10 py-10 sm:py-14"
+          aria-label={t.landing.view_sample}
+          data-testid="section-sample-analysis"
+        >
+          <div className="mx-auto max-w-2xl">
+            <h2 className="text-xl font-bold tracking-tight text-[#f1f0eb] sm:text-2xl">{t.landing.view_sample}</h2>
+            <p className="mt-1 text-xs text-[#f1f0eb]/55">{t.landing.sample_hint}</p>
+            <div className="mt-6">
+              {previewInView ? (
+                <LandingProductPreview />
+              ) : (
+                <p className="py-10 text-sm text-[#f1f0eb]/55" role="status">{t.landing.preview_loading}</p>
+              )}
+            </div>
           </div>
-        )}
+        </section>
       </main>
 
       <footer className="relative z-10 border-t border-[#f1f0eb]/10">
