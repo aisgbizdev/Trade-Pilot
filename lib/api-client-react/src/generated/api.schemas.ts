@@ -1258,15 +1258,12 @@ export interface AnalysisQuota {
   credits: AnalysisQuotaCredits;
 }
 
-/**
- * Which payment path this package must use — "manual" packages go through POST /topups (QRIS + proof upload), "doku" packages go through POST /topups/doku/checkout. Never both.
- */
-export type TopupPackageOptionProvider =
-  (typeof TopupPackageOptionProvider)[keyof typeof TopupPackageOptionProvider];
+export type TopupPackageOptionDokuMethodsItem =
+  (typeof TopupPackageOptionDokuMethodsItem)[keyof typeof TopupPackageOptionDokuMethodsItem];
 
-export const TopupPackageOptionProvider = {
-  manual: "manual",
-  doku: "doku",
+export const TopupPackageOptionDokuMethodsItem = {
+  va: "va",
+  qris: "qris",
 } as const;
 
 /**
@@ -1275,34 +1272,19 @@ export const TopupPackageOptionProvider = {
 export interface TopupPackageOption {
   amountRupiah: number;
   credits: number;
-  /** Which payment path this package must use — "manual" packages go through POST /topups (QRIS + proof upload), "doku" packages go through POST /topups/doku/checkout. Never both. */
-  provider: TopupPackageOptionProvider;
-  /** 0 for "manual" packages. For "doku" packages, a flat fee added on top of amountRupiah to cover DOKU's own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package's own `credits`). */
+  /** Which DOKU Checkout methods this package may use with POST /topups/doku/checkout. Every package supports at least "qris"; only the smallest package doesn't also support "va". */
+  dokuMethods: TopupPackageOptionDokuMethodsItem[];
+  /** The flat fee added on top of amountRupiah when paying via the "va" method (covers DOKU's own VA transaction fee) — irrelevant when only "qris" is chosen, which carries no fee. Credits granted are unaffected either way (always the package's own `credits`). */
   adminFeeRupiah: number;
 }
 
 export interface TopupConfig {
-  /** The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly. */
+  /** The fixed set of purchasable packages. POST /topups/doku/checkout only accepts an amountRupiah matching one of these exactly. */
   packages: TopupPackageOption[];
-  qrisImageUrl: string;
 }
 
 export interface CreditBalance {
   balance: number;
-}
-
-export interface CreateTopupRequestBody {
-  /**
-   * Must match the amountRupiah of one of the packages from GET /topups/config exactly.
-   * @minimum 1
-   */
-  amountRupiah: number;
-  paymentReferenceNote?: string;
-  /**
-   * Object path of the uploaded transfer-proof image. Required — admin review has no other way to verify a manual transfer.
-   * @minLength 1
-   */
-  proofObjectPath: string;
 }
 
 export interface ManualTopupBody {
@@ -1357,9 +1339,22 @@ export interface TopupRequest {
   dokuPaymentUrl: string | null;
 }
 
+/**
+ * Which DOKU-hosted channel to restrict the checkout page to. "va" carries the flat admin fee on top of the package price; "qris" does not (DOKU's own QRIS cost isn't passed on to the customer).
+ */
+export type CreateDokuCheckoutBodyMethod =
+  (typeof CreateDokuCheckoutBodyMethod)[keyof typeof CreateDokuCheckoutBodyMethod];
+
+export const CreateDokuCheckoutBodyMethod = {
+  va: "va",
+  qris: "qris",
+} as const;
+
 export interface CreateDokuCheckoutBody {
   /** Must match one of the fixed packages at/above the DOKU-only threshold. */
   amountRupiah: number;
+  /** Which DOKU-hosted channel to restrict the checkout page to. "va" carries the flat admin fee on top of the package price; "qris" does not (DOKU's own QRIS cost isn't passed on to the customer). */
+  method: CreateDokuCheckoutBodyMethod;
 }
 
 export interface DokuCheckoutSession {

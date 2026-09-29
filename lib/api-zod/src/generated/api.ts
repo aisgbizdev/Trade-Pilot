@@ -193,16 +193,16 @@ export const GetTopupConfigResponse = zod.object({
         .object({
           amountRupiah: zod.number().int(),
           credits: zod.number().int(),
-          provider: zod
-            .enum(["manual", "doku"])
+          dokuMethods: zod
+            .array(zod.enum(["va", "qris"]))
             .describe(
-              'Which payment path this package must use — \"manual\" packages go through POST \/topups (QRIS + proof upload), \"doku\" packages go through POST \/topups\/doku\/checkout. Never both.',
+              'Which DOKU Checkout methods this package may use with POST \/topups\/doku\/checkout. Every package supports at least \"qris\"; only the smallest package doesn\'t also support \"va\".',
             ),
           adminFeeRupiah: zod
             .number()
             .int()
             .describe(
-              '0 for \"manual\" packages. For \"doku\" packages, a flat fee added on top of amountRupiah to cover DOKU\'s own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package\'s own `credits`).',
+              'The flat fee added on top of amountRupiah when paying via the \"va\" method (covers DOKU\'s own VA transaction fee) — irrelevant when only \"qris\" is chosen, which carries no fee. Credits granted are unaffected either way (always the package\'s own `credits`).',
             ),
         })
         .describe(
@@ -210,9 +210,8 @@ export const GetTopupConfigResponse = zod.object({
         ),
     )
     .describe(
-      "The fixed set of purchasable packages. POST \/topups only accepts an amountRupiah matching one of these exactly.",
+      "The fixed set of purchasable packages. POST \/topups\/doku\/checkout only accepts an amountRupiah matching one of these exactly.",
     ),
-  qrisImageUrl: zod.string(),
 });
 
 /**
@@ -223,52 +222,8 @@ export const GetCreditBalanceResponse = zod.object({
 });
 
 /**
- * @summary Submit a manual top-up request for admin review
- */
-
-export const CreateTopupRequestBody = zod.object({
-  amountRupiah: zod
-    .number()
-    .int()
-    .min(1)
-    .describe(
-      "Must match the amountRupiah of one of the packages from GET \/topups\/config exactly.",
-    ),
-  paymentReferenceNote: zod.string().optional(),
-  proofObjectPath: zod
-    .string()
-    .min(1)
-    .describe(
-      "Object path of the uploaded transfer-proof image. Required — admin review has no other way to verify a manual transfer.",
-    ),
-});
-
-export const CreateTopupRequestResponse = zod.object({
-  id: zod.number().int(),
-  userId: zod.number().int(),
-  amountRupiah: zod.number().int(),
-  creditsRequested: zod.number().int(),
-  conversionRateSnapshot: zod.number().int(),
-  paymentReferenceNote: zod.string().nullable(),
-  proofObjectPath: zod.string().nullable(),
-  status: zod.enum(["pending", "approved", "rejected"]),
-  reviewedByUserId: zod.number().int().nullable(),
-  reviewedAt: zod.coerce.date().nullable(),
-  reviewNote: zod.string().nullable(),
-  creditsGranted: zod.number().int().nullable(),
-  createdAt: zod.coerce.date(),
-  paymentProvider: zod.enum(["manual", "doku"]),
-  dokuPaymentUrl: zod
-    .string()
-    .nullable()
-    .describe(
-      'The DOKU hosted checkout page URL — present only while a \"doku\" request is still \"pending\" (lets the frontend offer a \"resume payment\" link); null otherwise.',
-    ),
-});
-
-/**
- * Only accepts packages that are NOT eligible for the manual/QRIS path (POST /topups accepts only the one below the threshold). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
- * @summary Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+ * Every fixed package (see TopupPackageOption.dokuMethods) goes through DOKU Checkout — there is no manual/proof-upload path. `method` must be one of the package's own dokuMethods and restricts the hosted checkout page to either DOKU's Virtual Account channel (carries the flat admin fee) or DOKU's own QRIS channel (no fee). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
+ * @summary Create a DOKU Checkout session for a fixed top-up package
  */
 export const CreateDokuCheckoutBody = zod.object({
   amountRupiah: zod
@@ -276,6 +231,11 @@ export const CreateDokuCheckoutBody = zod.object({
     .int()
     .describe(
       "Must match one of the fixed packages at\/above the DOKU-only threshold.",
+    ),
+  method: zod
+    .enum(["va", "qris"])
+    .describe(
+      'Which DOKU-hosted channel to restrict the checkout page to. \"va\" carries the flat admin fee on top of the package price; \"qris\" does not (DOKU\'s own QRIS cost isn\'t passed on to the customer).',
     ),
 });
 

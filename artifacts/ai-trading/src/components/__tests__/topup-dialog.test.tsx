@@ -1,11 +1,13 @@
 /**
  * Covers the top-up popup (src/components/topup-dialog.tsx) opened from
  * the quota-exceeded dialog's CTA (see quota-dialog.test.tsx for that
- * wiring). It renders the same package-select -> pay flow as the /topup
- * page (via the shared <TopupFlow>, see topup.test.tsx) but as a popup
- * that closes itself on a successful submit instead of navigating anywhere.
+ * wiring). It renders the same package-select -> DOKU Checkout redirect
+ * flow as the /topup page (via the shared <TopupFlow>, see
+ * topup-doku.test.tsx) as a popup — since every package now redirects the
+ * whole browser away to DOKU's hosted checkout page, there's no in-app
+ * "submit" step left for the popup to close itself after.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { TopupDialog } from "../topup-dialog";
@@ -14,18 +16,20 @@ import { installFetchMock, jsonResponse, makeWrapper } from "@/pages/__tests__/t
 
 const CONFIG_PAYLOAD = {
   packages: [
-    { amountRupiah: 5000, credits: 15 },
-    { amountRupiah: 20000, credits: 70 },
-    { amountRupiah: 40000, credits: 150 },
-    { amountRupiah: 80000, credits: 320 },
+    { amountRupiah: 5000, credits: 15, dokuMethods: ["qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 20000, credits: 70, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 40000, credits: 150, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 80000, credits: 320, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
   ],
-  qrisImageUrl: "/qris-gopay.jpeg",
 };
+
+const originalLocation = window.location;
 
 afterEach(() => {
   act(() => {
     hideTopupDialog();
   });
+  Object.defineProperty(window, "location", { value: originalLocation, configurable: true, writable: true });
 });
 
 describe("TopupDialog", () => {
@@ -51,37 +55,14 @@ describe("TopupDialog", () => {
     expect(await screen.findByTestId("button-preset-5000")).toBeInTheDocument();
   });
 
-  it("closes itself automatically once a top-up submits successfully", async () => {
+  it("choosing the QRIS-only Rp5.000 package redirects the browser to DOKU's checkout page", async () => {
     installFetchMock(
       [
         (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
         (url, init) => {
-          if (url.includes("/api/storage/uploads/request-url") && (init?.method ?? "GET").toUpperCase() === "POST") {
-            return jsonResponse({ uploadURL: "https://upload.test/put", objectPath: "objects/proof.png" });
-          }
-          if (url === "https://upload.test/put") {
-            return new Response(null, { status: 200 });
-          }
-          return null;
-        },
-        (url, init) => {
-          if (url.includes("/api/topups") && !url.includes("mine") && (init?.method ?? "GET").toUpperCase() === "POST") {
+          if (url.includes("/api/topups/doku/checkout") && (init?.method ?? "GET").toUpperCase() === "POST") {
             return jsonResponse(
-              {
-                id: 1,
-                userId: 1,
-                amountRupiah: 5000,
-                creditsRequested: 15,
-                conversionRateSnapshot: 333,
-                paymentReferenceNote: null,
-                proofObjectPath: "objects/proof.png",
-                status: "approved",
-                reviewedByUserId: null,
-                reviewedAt: new Date().toISOString(),
-                reviewNote: null,
-                creditsGranted: 15,
-                createdAt: new Date().toISOString(),
-              },
+              { id: 1, paymentUrl: "https://sandbox.doku.com/checkout-link-v2/from-dialog", expiresAt: new Date().toISOString() },
               201,
             );
           }
@@ -90,6 +71,23 @@ describe("TopupDialog", () => {
       ],
       { strict: false },
     );
+
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        pathname: window.location.pathname,
+        search: window.location.search,
+        origin: window.location.origin,
+        set href(v: string) {
+          hrefSetter(v);
+        },
+        get href() {
+          return "http://localhost/";
+        },
+      },
+    });
 
     const { Wrapper } = makeWrapper();
     render(
@@ -108,22 +106,9 @@ describe("TopupDialog", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("button-continue-topup"));
     });
-    await act(async () => {
-      fireEvent.click(await screen.findByTestId("button-proof-notice-ack"));
-    });
-
-    const proofFile = new File(["fake-bytes"], "proof.png", { type: "image/png" });
-    await act(async () => {
-      fireEvent.change(screen.getByTestId("input-proof-file"), { target: { files: [proofFile] } });
-    });
-    await screen.findByTestId("img-proof-preview");
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-submit-topup"));
-    });
 
     await waitFor(() => {
-      expect(screen.queryByTestId("dialog-topup")).not.toBeInTheDocument();
+      expect(hrefSetter).toHaveBeenCalledWith("https://sandbox.doku.com/checkout-link-v2/from-dialog");
     });
   });
 });

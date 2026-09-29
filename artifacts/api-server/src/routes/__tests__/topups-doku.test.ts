@@ -1,11 +1,15 @@
 /**
- * DOKU Checkout integration: POST /topups/doku/checkout, GET
- * /topups/doku/:id/status, POST /topups/doku/notify (the webhook), and
- * the restriction that POST /topups (manual) now only accepts the package
- * below DOKU_MIN_AMOUNT_RUPIAH. createDokuCheckout (the outbound HTTP call
- * to DOKU) is mocked; the incoming webhook's signature verification is
- * exercised for real (same convention as auth-mobile-facebook.test.ts
- * mocking only the provider-facing HTTP call, never our own crypto).
+ * DOKU Checkout integration: POST /topups/doku/checkout (both the "va" and
+ * "qris" methods — both real DOKU channels, "va" alone carries the flat
+ * admin fee), GET /topups/doku/:id/status, POST /topups/doku/notify (the
+ * webhook), and the fact that every fixed package goes through DOKU only
+ * (there is no manual/proof-upload path any more — retired once DOKU's own
+ * QRIS became available for every package, including the smallest one,
+ * which supports "qris" only, not "va"). createDokuCheckout (the outbound
+ * HTTP call to DOKU) is mocked; the incoming webhook's signature
+ * verification is exercised for real (same convention as
+ * auth-mobile-facebook.test.ts mocking only the provider-facing HTTP call,
+ * never our own crypto).
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { randomBytes, createHash, createHmac } from "node:crypto";
@@ -143,58 +147,8 @@ beforeEach(() => {
   mockCreateCheckout.mockReset();
 });
 
-describe("POST /topups — manual/QRIS path (TEMPORARY fallback for every package while DOKU QRIS/e-wallet is pending verification)", () => {
-  it("still accepts the smallest package (Rp5.000)", async () => {
-    const user = await createUser();
-    const res = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(user))
-      .send({ amountRupiah: PKG_5K.amountRupiah, proofObjectPath: "objects/proof.jpg" });
-    expect(res.status).toBe(201);
-    expect(res.body.paymentProvider).toBe("manual");
-  });
-
-  it("also accepts a DOKU-tier amount (Rp20.000) via the manual/QRIS fallback, with NO admin fee added", async () => {
-    const user = await createUser();
-    const res = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(user))
-      .send({ amountRupiah: PKG_20K.amountRupiah, proofObjectPath: "objects/proof.jpg" });
-    expect(res.status).toBe(201);
-    expect(res.body.paymentProvider).toBe("manual");
-    // The full package amount, unlike the DOKU/VA path which adds
-    // DOKU_ADMIN_FEE_RUPIAH — a manual bank transfer has no DOKU fee to
-    // cover.
-    expect(res.body.amountRupiah).toBe(PKG_20K.amountRupiah);
-    expect(res.body.creditsGranted).toBe(PKG_20K.credits);
-  });
-});
-
-describe("POST /topups/doku/checkout", () => {
-  it("returns 401 without auth", async () => {
-    const res = await request(app).post("/api/topups/doku/checkout").send({ amountRupiah: PKG_20K.amountRupiah });
-    expect(res.status).toBe(401);
-  });
-
-  it("rejects the below-threshold package (Rp5.000) — must use the manual path instead", async () => {
-    const user = await createUser();
-    const res = await request(app)
-      .post("/api/topups/doku/checkout")
-      .set(...authHeader(user))
-      .send({ amountRupiah: PKG_5K.amountRupiah });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects an amount that isn't any fixed package", async () => {
-    const user = await createUser();
-    const res = await request(app)
-      .post("/api/topups/doku/checkout")
-      .set(...authHeader(user))
-      .send({ amountRupiah: 12345 });
-    expect(res.status).toBe(400);
-  });
-
-  it("creates a pending request and returns DOKU's payment URL", async () => {
+describe("POST /topups/doku/checkout — smallest package (Rp5.000) is QRIS-only", () => {
+  it("accepts method=qris for the smallest package", async () => {
     const user = await createUser();
     const fake = fakeCheckoutResult();
     mockCreateCheckout.mockResolvedValueOnce(fake);
@@ -202,7 +156,63 @@ describe("POST /topups/doku/checkout", () => {
     const res = await request(app)
       .post("/api/topups/doku/checkout")
       .set(...authHeader(user))
+      .send({ amountRupiah: PKG_5K.amountRupiah, method: "qris" });
+    expect(res.status).toBe(201);
+
+    const [row] = await db.select().from(creditTopupRequests).where(eq(creditTopupRequests.id, res.body.id));
+    // No admin fee — the smallest package's QRIS payment is exactly the
+    // package price.
+    expect(row).toMatchObject({ amountRupiah: PKG_5K.amountRupiah, creditsRequested: PKG_5K.credits });
+    expect(mockCreateCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ amountRupiah: PKG_5K.amountRupiah, paymentMethodTypes: ["QRIS"] }),
+    );
+  });
+
+  it("rejects method=va for the smallest package — VA isn't offered for it", async () => {
+    const user = await createUser();
+    const res = await request(app)
+      .post("/api/topups/doku/checkout")
+      .set(...authHeader(user))
+      .send({ amountRupiah: PKG_5K.amountRupiah, method: "va" });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("POST /topups/doku/checkout", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app)
+      .post("/api/topups/doku/checkout")
+      .send({ amountRupiah: PKG_20K.amountRupiah, method: "va" });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects an amount that isn't any fixed package", async () => {
+    const user = await createUser();
+    const res = await request(app)
+      .post("/api/topups/doku/checkout")
+      .set(...authHeader(user))
+      .send({ amountRupiah: 12345, method: "va" });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a missing/invalid method", async () => {
+    const user = await createUser();
+    const res = await request(app)
+      .post("/api/topups/doku/checkout")
+      .set(...authHeader(user))
       .send({ amountRupiah: PKG_20K.amountRupiah });
+    expect(res.status).toBe(400);
+  });
+
+  it("VA: creates a pending request, adds the admin fee, and restricts the checkout page to the VA channel", async () => {
+    const user = await createUser();
+    const fake = fakeCheckoutResult();
+    mockCreateCheckout.mockResolvedValueOnce(fake);
+
+    const res = await request(app)
+      .post("/api/topups/doku/checkout")
+      .set(...authHeader(user))
+      .send({ amountRupiah: PKG_20K.amountRupiah, method: "va" });
     expect(res.status).toBe(201);
     expect(res.body.paymentUrl).toBe(fake.paymentUrl);
     expect(typeof res.body.id).toBe("number");
@@ -221,7 +231,33 @@ describe("POST /topups/doku/checkout", () => {
     });
     expect(row!.dokuInvoiceNumber).toBeTruthy();
     expect(mockCreateCheckout).toHaveBeenCalledWith(
-      expect.objectContaining({ amountRupiah: PKG_20K.amountRupiah + DOKU_ADMIN_FEE_RUPIAH }),
+      expect.objectContaining({
+        amountRupiah: PKG_20K.amountRupiah + DOKU_ADMIN_FEE_RUPIAH,
+        paymentMethodTypes: ["VIRTUAL_ACCOUNT_BCA"],
+      }),
+    );
+  });
+
+  it("QRIS: creates a pending request for the bare package amount (no admin fee) and restricts the checkout page to QRIS", async () => {
+    const user = await createUser();
+    const fake = fakeCheckoutResult();
+    mockCreateCheckout.mockResolvedValueOnce(fake);
+
+    const res = await request(app)
+      .post("/api/topups/doku/checkout")
+      .set(...authHeader(user))
+      .send({ amountRupiah: PKG_20K.amountRupiah, method: "qris" });
+    expect(res.status).toBe(201);
+
+    const [row] = await db.select().from(creditTopupRequests).where(eq(creditTopupRequests.id, res.body.id));
+    expect(row).toMatchObject({
+      status: "pending",
+      paymentProvider: "doku",
+      amountRupiah: PKG_20K.amountRupiah,
+      creditsRequested: PKG_20K.credits,
+    });
+    expect(mockCreateCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ amountRupiah: PKG_20K.amountRupiah, paymentMethodTypes: ["QRIS"] }),
     );
   });
 
@@ -232,7 +268,7 @@ describe("POST /topups/doku/checkout", () => {
     const res = await request(app)
       .post("/api/topups/doku/checkout")
       .set(...authHeader(user))
-      .send({ amountRupiah: PKG_40K.amountRupiah });
+      .send({ amountRupiah: PKG_40K.amountRupiah, method: "va" });
     expect(res.status).toBe(502);
 
     // The row was still created (to reserve the invoice number) but must
@@ -258,7 +294,7 @@ describe("GET /topups/doku/:id/status", () => {
     const created = await request(app)
       .post("/api/topups/doku/checkout")
       .set(...authHeader(owner))
-      .send({ amountRupiah: PKG_20K.amountRupiah });
+      .send({ amountRupiah: PKG_20K.amountRupiah, method: "va" });
 
     const res = await request(app)
       .get(`/api/topups/doku/${created.body.id}/status`)
@@ -272,7 +308,7 @@ describe("GET /topups/doku/:id/status", () => {
     const created = await request(app)
       .post("/api/topups/doku/checkout")
       .set(...authHeader(user))
-      .send({ amountRupiah: PKG_20K.amountRupiah });
+      .send({ amountRupiah: PKG_20K.amountRupiah, method: "va" });
 
     const res = await request(app)
       .get(`/api/topups/doku/${created.body.id}/status`)
@@ -289,7 +325,7 @@ describe("POST /topups/doku/notify (webhook)", () => {
     const created = await request(app)
       .post("/api/topups/doku/checkout")
       .set(...authHeader(user))
-      .send({ amountRupiah });
+      .send({ amountRupiah, method: "va" });
     const [row] = await db.select().from(creditTopupRequests).where(eq(creditTopupRequests.id, created.body.id));
     return row!;
   }

@@ -10,8 +10,8 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **amountRupiah** | **int** |  | 
 **credits** | **int** |  | 
-**provider** | **String** | Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both. | 
-**adminFeeRupiah** | **int** | 0 for \"manual\" packages. For \"doku\" packages, a flat fee added on top of amountRupiah to cover DOKU's own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package's own `credits`). | 
+**dokuMethods** | **BuiltList&lt;String&gt;** | Which DOKU Checkout methods this package may use with POST /topups/doku/checkout. Every package supports at least \"qris\"; only the smallest package doesn't also support \"va\". | 
+**adminFeeRupiah** | **int** | The flat fee added on top of amountRupiah when paying via the \"va\" method (covers DOKU's own VA transaction fee) — irrelevant when only \"qris\" is chosen, which carries no fee. Credits granted are unaffected either way (always the package's own `credits`). | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

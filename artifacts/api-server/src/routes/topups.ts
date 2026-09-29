@@ -8,10 +8,11 @@ import { createNotification } from "../lib/create-notification";
 import {
   applyCreditLedgerEntry,
   CREDIT_BALANCE_LOCK_NAMESPACE,
-  DOKU_ADMIN_FEE_RUPIAH,
-  DOKU_MIN_AMOUNT_RUPIAH,
   findTopupPackage,
   getCreditBalanceForUser,
+  getDokuAdminFeeRupiah,
+  getDokuMethodsForPackage,
+  getDokuPaymentMethodTypes,
   getTopupConfig,
 } from "../lib/credits";
 import { createDokuCheckout, isDokuConfigured, verifyDokuNotificationSignature } from "../lib/doku";
@@ -20,7 +21,6 @@ import { logger } from "../lib/logger";
 import {
   CreateDokuCheckoutBody,
   CreateManualTopupBody,
-  CreateTopupRequestBody,
   GetMyTopupRequestsQueryParams,
   GetPendingTopupRequestsQueryParams,
   ReviewCreditTopupRequestBody,
@@ -72,99 +72,12 @@ router.get("/topups/balance", requireAuth, async (req: AuthRequest, res) => {
   res.json({ balance: await getCreditBalanceForUser(req.userId!) });
 });
 
-router.post("/topups", requireAuth, async (req: AuthRequest, res) => {
-  // Checked ahead of the full schema parse so a missing/blank proof gets
-  // this specific message whether the field is omitted entirely (which
-  // the generated zod schema also rejects, just with an opaque "invalid
-  // body" error) or present-but-blank. Enforced here rather than relying
-  // solely on the generated zod schema (openapi.yaml already marks the
-  // field required — see CreateTopupRequestBody — but lib/api-zod is
-  // regenerated separately and this guard must hold regardless of when
-  // that next happens).
-  const rawProof = (req.body as { proofObjectPath?: unknown } | undefined)?.proofObjectPath;
-  if (typeof rawProof !== "string" || !rawProof.trim()) {
-    res.status(400).json({ error: "Bukti transfer wajib diupload" });
-    return;
-  }
-
-  const parsed = CreateTopupRequestBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Data top-up tidak valid" });
-    return;
-  }
-  const { amountRupiah, paymentReferenceNote, proofObjectPath } = parsed.data;
-  // Fixed bonus-tiered packages (see lib/credits.ts) — the amount must
-  // match one of them exactly. There is no free-text amount and no
-  // per-rupiah rate to fall back to.
-  const pkg = findTopupPackage(amountRupiah);
-  if (!pkg) {
-    res.status(400).json({
-      error: "Nominal tidak valid. Pilih salah satu paket top-up yang tersedia.",
-    });
-    return;
-  }
-  // TEMPORARY (see chat): every DOKU-tier package (>= DOKU_MIN_AMOUNT_RUPIAH)
-  // also offers this manual/QRIS path as a fallback method choice while
-  // DOKU's own QRIS/e-wallet channels are still pending verification (only
-  // Virtual Account is live so far). No admin fee is added here — that fee
-  // only exists to cover DOKU's own VA transaction cost, which doesn't
-  // apply to a manual bank transfer. Revisit once DOKU QRIS is verified:
-  // either retire this fallback or keep it as a permanent alternative.
-  const creditsRequested = pkg.credits;
-  // Recorded for audit/history purposes only (what this specific package's
-  // effective per-credit price was at the time) — no longer a globally
-  // adjustable rate.
-  const conversionRateSnapshot = Math.round(pkg.amountRupiah / pkg.credits);
-
-  const userId = req.userId!;
-  // TEMPORARY (explicit, time-boxed product decision — see chat): every
-  // request that reaches here already has a proof upload, and we credit
-  // immediately instead of waiting for admin review. This trades away
-  // the actual verification proof-upload was added for — an uploaded
-  // image is NOT checked against the real transfer in any way, so this
-  // is a known fraud surface (any image, any amount, instant credits).
-  // Revisit before wider rollout: verify the proof (vision-model amount
-  // match, or a real payment gateway) before auto-crediting, or at least
-  // cap it to small preset amounts with a per-user rate limit.
-  const row = await db.transaction(async (tx) => {
-    const [inserted] = await tx
-      .insert(creditTopupRequests)
-      .values({
-        userId,
-        amountRupiah,
-        creditsRequested,
-        conversionRateSnapshot,
-        paymentReferenceNote: paymentReferenceNote ?? null,
-        proofObjectPath,
-        status: "approved",
-        reviewedAt: new Date(),
-      })
-      .returning();
-    // Same shared credit-balance lock the manual-approval path and
-    // analysis credit consumption use, so this can never race either.
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(${CREDIT_BALANCE_LOCK_NAMESPACE}::int, ${userId}::int)`);
-    await tx
-      .update(creditTopupRequests)
-      .set({ creditsGranted: creditsRequested })
-      .where(eq(creditTopupRequests.id, inserted!.id));
-    await applyCreditLedgerEntry(tx, {
-      userId,
-      amount: creditsRequested,
-      source: "topup_approval",
-      sourceEventId: `topup:${inserted!.id}`,
-      topupRequestId: inserted!.id,
-    });
-    return { ...inserted!, creditsGranted: creditsRequested };
-  });
-
-  await notifyTopupApproved(userId, amountRupiah, creditsRequested);
-  res.status(201).json(serializeTopupRequest(row));
-});
-
-// DOKU Checkout (Jokul) — real, verified payment for every package at/above
-// DOKU_MIN_AMOUNT_RUPIAH. Creates a "pending" request row, asks DOKU for a
-// hosted checkout-page URL, and returns it for the frontend to redirect the
-// browser to. Credits are granted only once POST /topups/doku/notify
+// DOKU Checkout (Jokul) — real, verified payment for every fixed package.
+// There is no manual/proof-upload path any more (retired — see chat: DOKU's
+// own QRIS carries no fee, so it strictly beats the old manual flow even
+// for the smallest package). Creates a "pending" request row, asks DOKU for
+// a hosted checkout-page URL, and returns it for the frontend to redirect
+// the browser to. Credits are granted only once POST /topups/doku/notify
 // confirms the payment — never here.
 router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (req: AuthRequest, res) => {
   if (!isDokuConfigured()) {
@@ -177,11 +90,11 @@ router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (re
     res.status(400).json({ error: "Data top-up tidak valid" });
     return;
   }
-  const { amountRupiah } = parsed.data;
+  const { amountRupiah, method } = parsed.data;
   const pkg = findTopupPackage(amountRupiah);
-  if (!pkg || pkg.amountRupiah < DOKU_MIN_AMOUNT_RUPIAH) {
+  if (!pkg || !getDokuMethodsForPackage(pkg.amountRupiah).includes(method)) {
     res.status(400).json({
-      error: "Nominal tidak valid untuk pembayaran DOKU. Pilih salah satu paket top-up yang tersedia.",
+      error: "Nominal atau metode pembayaran tidak valid untuk paket ini.",
     });
     return;
   }
@@ -198,12 +111,14 @@ router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (re
   const conversionRateSnapshot = Math.round(pkg.amountRupiah / pkg.credits);
   const paymentDueDateMinutes = 60;
   // DOKU's VA fee (~Rp4.440 = Rp4.000 + 11% PPN) is deducted from what DOKU
-  // settles to us, not added to the customer's charge automatically — so
-  // we add it ourselves here rather than absorb it out of margin. Credits
-  // granted stay exactly `pkg.credits` either way. `amountRupiah` on the
-  // row is the TOTAL actually charged (package + fee), matching what
-  // really lands via DOKU — this is what admin revenue reports should sum.
-  const totalChargeRupiah = pkg.amountRupiah + DOKU_ADMIN_FEE_RUPIAH;
+  // settles to us, not added to the customer's charge automatically — so we
+  // add a flat admin fee ourselves for that method rather than absorb it
+  // out of margin (QRIS carries no such fee — see getDokuAdminFeeRupiah).
+  // Credits granted stay exactly `pkg.credits` either way. `amountRupiah`
+  // on the row is the TOTAL actually charged (package + fee, if any),
+  // matching what really lands via DOKU — this is what admin revenue
+  // reports should sum.
+  const totalChargeRupiah = pkg.amountRupiah + getDokuAdminFeeRupiah(method);
 
   const [inserted] = await db
     .insert(creditTopupRequests)
@@ -225,6 +140,7 @@ router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (re
       callbackUrl: `${publicBaseUrl}/topup?doku=success&id=${inserted!.id}`,
       callbackUrlCancel: `${publicBaseUrl}/topup?doku=cancel&id=${inserted!.id}`,
       paymentDueDateMinutes,
+      paymentMethodTypes: getDokuPaymentMethodTypes(method),
     });
 
     const expiresAt = new Date(Date.now() + paymentDueDateMinutes * 60 * 1000);

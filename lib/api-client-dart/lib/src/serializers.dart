@@ -64,7 +64,6 @@ import 'package:trade_pilot_api_client/src/model/create_doku_checkout_body.dart'
 import 'package:trade_pilot_api_client/src/model/create_filter_preset_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_journal_entry_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_journal_entry_body_entry_price.dart';
-import 'package:trade_pilot_api_client/src/model/create_topup_request_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_user_body.dart';
 import 'package:trade_pilot_api_client/src/model/create_user_price_alert_body.dart';
 import 'package:trade_pilot_api_client/src/model/credit_balance.dart';
@@ -260,7 +259,6 @@ part 'serializers.g.dart';
   CreateFilterPresetBody,
   CreateJournalEntryBody,
   CreateJournalEntryBodyEntryPrice,
-  CreateTopupRequestBody,
   CreateUserBody,
   CreateUserPriceAlertBody,
   CreditBalance,

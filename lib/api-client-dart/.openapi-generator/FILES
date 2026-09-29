@@ -54,7 +54,6 @@ doc/CreateDokuCheckoutBody.md
 doc/CreateFilterPresetBody.md
 doc/CreateJournalEntryBody.md
 doc/CreateJournalEntryBodyEntryPrice.md
-doc/CreateTopupRequestBody.md
 doc/CreateUserBody.md
 doc/CreateUserPriceAlertBody.md
 doc/CreditBalance.md
@@ -291,7 +290,6 @@ lib/src/model/create_doku_checkout_body.dart
 lib/src/model/create_filter_preset_body.dart
 lib/src/model/create_journal_entry_body.dart
 lib/src/model/create_journal_entry_body_entry_price.dart
-lib/src/model/create_topup_request_body.dart
 lib/src/model/create_user_body.dart
 lib/src/model/create_user_price_alert_body.dart
 lib/src/model/credit_balance.dart

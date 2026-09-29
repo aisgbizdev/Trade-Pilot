@@ -159,8 +159,7 @@ Class | Method | HTTP request | Description
 [*SuperadminApi*](doc/SuperadminApi.md) | [**updateUserCredits**](doc/SuperadminApi.md#updateusercredits) | **PATCH** /superadmin/users/{id}/credits | Set a user&#39;s purchased-credit balance to an exact value
 [*SuperadminApi*](doc/SuperadminApi.md) | [**updateUserQuota**](doc/SuperadminApi.md#updateuserquota) | **PATCH** /superadmin/users/{id}/quota | Set or clear a per-user analysis-quota override
 [*SuperadminApi*](doc/SuperadminApi.md) | [**updateUserRole**](doc/SuperadminApi.md#updateuserrole) | **PATCH** /superadmin/users/{id}/role | Update user role (superadmin only)
-[*TopupsApi*](doc/TopupsApi.md) | [**createDokuCheckout**](doc/TopupsApi.md#createdokucheckout) | **POST** /topups/doku/checkout | Create a DOKU Checkout session for a package at/above the DOKU-only threshold
-[*TopupsApi*](doc/TopupsApi.md) | [**createTopupRequest**](doc/TopupsApi.md#createtopuprequest) | **POST** /topups | Submit a manual top-up request for admin review
+[*TopupsApi*](doc/TopupsApi.md) | [**createDokuCheckout**](doc/TopupsApi.md#createdokucheckout) | **POST** /topups/doku/checkout | Create a DOKU Checkout session for a fixed top-up package
 [*TopupsApi*](doc/TopupsApi.md) | [**getCreditBalance**](doc/TopupsApi.md#getcreditbalance) | **GET** /topups/balance | Get the authenticated user&#39;s analysis credit balance
 [*TopupsApi*](doc/TopupsApi.md) | [**getDokuTopupStatus**](doc/TopupsApi.md#getdokutopupstatus) | **GET** /topups/doku/{id}/status | Poll a DOKU checkout request&#39;s status (owner-only)
 [*TopupsApi*](doc/TopupsApi.md) | [**getMyTopupRequests**](doc/TopupsApi.md#getmytopuprequests) | **GET** /topups/mine | List the authenticated user&#39;s own top-up request history
@@ -234,7 +233,6 @@ Class | Method | HTTP request | Description
  - [CreateFilterPresetBody](doc/CreateFilterPresetBody.md)
  - [CreateJournalEntryBody](doc/CreateJournalEntryBody.md)
  - [CreateJournalEntryBodyEntryPrice](doc/CreateJournalEntryBodyEntryPrice.md)
- - [CreateTopupRequestBody](doc/CreateTopupRequestBody.md)
  - [CreateUserBody](doc/CreateUserBody.md)
  - [CreateUserPriceAlertBody](doc/CreateUserPriceAlertBody.md)
  - [CreditBalance](doc/CreditBalance.md)

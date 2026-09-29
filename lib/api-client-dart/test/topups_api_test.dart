@@ -7,13 +7,6 @@ void main() {
   final instance = TradePilotApiClient().getTopupsApi();
 
   group(TopupsApi, () {
-    // Submit a manual top-up request for admin review
-    //
-    //Future<TopupRequest> createTopupRequest(CreateTopupRequestBody createTopupRequestBody) async
-    test('test createTopupRequest', () async {
-      // TODO
-    });
-
     // Get the authenticated user's analysis credit balance
     //
     //Future<CreditBalance> getCreditBalance() async

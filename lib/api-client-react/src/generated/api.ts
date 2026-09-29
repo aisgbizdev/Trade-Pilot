@@ -46,7 +46,6 @@ import type {
   CreateDokuCheckoutBody,
   CreateFilterPresetBody,
   CreateJournalEntryBody,
-  CreateTopupRequestBody,
   CreateUserBody,
   CreateUserPriceAlertBody,
   CreditBalance,
@@ -986,116 +985,13 @@ export function useGetCreditBalance<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-export const getCreateTopupRequestUrl = () => {
-  return `/api/topups`;
-};
-
-/**
- * @summary Submit a manual top-up request for admin review
- */
-export const createTopupRequest = async (
-  createTopupRequestBody: CreateTopupRequestBody,
-  options?: Parameters<typeof customFetch>[1],
-): Promise<TopupRequest> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
-  };
-  return customFetch<TopupRequest>(getCreateTopupRequestUrl(), {
-    ...options,
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
-    body: JSON.stringify(createTopupRequestBody),
-  });
-};
-
-export const getCreateTopupRequestMutationKey = () =>
-  ["createTopupRequest"] as const;
-
-export const getCreateTopupRequestMutationOptions = <
-  TError = ErrorType<ErrorResponse | void>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createTopupRequest>>,
-    TError,
-    CreateTopupRequestMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof createTopupRequest>>,
-  TError,
-  CreateTopupRequestMutationVariables,
-  TContext
-> => {
-  const mutationKey = getCreateTopupRequestMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createTopupRequest>>,
-    CreateTopupRequestMutationVariables
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return createTopupRequest(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type CreateTopupRequestMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createTopupRequest>>
->;
-export type CreateTopupRequestMutationBody = BodyType<CreateTopupRequestBody>;
-export type CreateTopupRequestMutationError = ErrorType<ErrorResponse | void>;
-export type CreateTopupRequestMutationVariables = {
-  data: BodyType<CreateTopupRequestBody>;
-};
-
-/**
- * @summary Submit a manual top-up request for admin review
- */
-export const useCreateTopupRequest = <
-  TError = ErrorType<ErrorResponse | void>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createTopupRequest>>,
-    TError,
-    CreateTopupRequestMutationVariables,
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof createTopupRequest>>,
-  TError,
-  CreateTopupRequestMutationVariables,
-  TContext
-> => {
-  return useMutation(getCreateTopupRequestMutationOptions(options));
-};
-
 export const getCreateDokuCheckoutUrl = () => {
   return `/api/topups/doku/checkout`;
 };
 
 /**
- * Only accepts packages that are NOT eligible for the manual/QRIS path (POST /topups accepts only the one below the threshold). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
- * @summary Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+ * Every fixed package (see TopupPackageOption.dokuMethods) goes through DOKU Checkout — there is no manual/proof-upload path. `method` must be one of the package's own dokuMethods and restricts the hosted checkout page to either DOKU's Virtual Account channel (carries the flat admin fee) or DOKU's own QRIS channel (no fee). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
+ * @summary Create a DOKU Checkout session for a fixed top-up package
  */
 export const createDokuCheckout = async (
   createDokuCheckoutBody: CreateDokuCheckoutBody,
@@ -1171,7 +1067,7 @@ export type CreateDokuCheckoutMutationVariables = {
 };
 
 /**
- * @summary Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+ * @summary Create a DOKU Checkout session for a fixed top-up package
  */
 export const useCreateDokuCheckout = <
   TError = ErrorType<ErrorResponse | void>,

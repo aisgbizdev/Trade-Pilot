@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,11 +13,17 @@ part 'create_doku_checkout_body.g.dart';
 ///
 /// Properties:
 /// * [amountRupiah] - Must match one of the fixed packages at/above the DOKU-only threshold.
+/// * [method] - Which DOKU-hosted channel to restrict the checkout page to. \"va\" carries the flat admin fee on top of the package price; \"qris\" does not (DOKU's own QRIS cost isn't passed on to the customer).
 @BuiltValue()
 abstract class CreateDokuCheckoutBody implements Built<CreateDokuCheckoutBody, CreateDokuCheckoutBodyBuilder> {
   /// Must match one of the fixed packages at/above the DOKU-only threshold.
   @BuiltValueField(wireName: r'amountRupiah')
   int get amountRupiah;
+
+  /// Which DOKU-hosted channel to restrict the checkout page to. \"va\" carries the flat admin fee on top of the package price; \"qris\" does not (DOKU's own QRIS cost isn't passed on to the customer).
+  @BuiltValueField(wireName: r'method')
+  CreateDokuCheckoutBodyMethodEnum get method;
+  // enum methodEnum {  va,  qris,  };
 
   CreateDokuCheckoutBody._();
 
@@ -45,6 +52,11 @@ class _$CreateDokuCheckoutBodySerializer implements PrimitiveSerializer<CreateDo
     yield serializers.serialize(
       object.amountRupiah,
       specifiedType: const FullType(int),
+    );
+    yield r'method';
+    yield serializers.serialize(
+      object.method,
+      specifiedType: const FullType(CreateDokuCheckoutBodyMethodEnum),
     );
   }
 
@@ -76,6 +88,13 @@ class _$CreateDokuCheckoutBodySerializer implements PrimitiveSerializer<CreateDo
           ) as int;
           result.amountRupiah = valueDes;
           break;
+        case r'method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(CreateDokuCheckoutBodyMethodEnum),
+          ) as CreateDokuCheckoutBodyMethodEnum;
+          result.method = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -103,5 +122,22 @@ class _$CreateDokuCheckoutBodySerializer implements PrimitiveSerializer<CreateDo
     );
     return result.build();
   }
+}
+
+class CreateDokuCheckoutBodyMethodEnum extends EnumClass {
+
+  /// Which DOKU-hosted channel to restrict the checkout page to. \"va\" carries the flat admin fee on top of the package price; \"qris\" does not (DOKU's own QRIS cost isn't passed on to the customer).
+  @BuiltValueEnumConst(wireName: r'va')
+  static const CreateDokuCheckoutBodyMethodEnum va = _$createDokuCheckoutBodyMethodEnum_va;
+  /// Which DOKU-hosted channel to restrict the checkout page to. \"va\" carries the flat admin fee on top of the package price; \"qris\" does not (DOKU's own QRIS cost isn't passed on to the customer).
+  @BuiltValueEnumConst(wireName: r'qris')
+  static const CreateDokuCheckoutBodyMethodEnum qris = _$createDokuCheckoutBodyMethodEnum_qris;
+
+  static Serializer<CreateDokuCheckoutBodyMethodEnum> get serializer => _$createDokuCheckoutBodyMethodEnumSerializer;
+
+  const CreateDokuCheckoutBodyMethodEnum._(String name): super(name);
+
+  static BuiltSet<CreateDokuCheckoutBodyMethodEnum> get values => _$createDokuCheckoutBodyMethodEnumValues;
+  static CreateDokuCheckoutBodyMethodEnum valueOf(String name) => _$createDokuCheckoutBodyMethodEnumValueOf(name);
 }
 

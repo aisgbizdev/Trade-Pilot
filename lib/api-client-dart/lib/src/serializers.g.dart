@@ -71,12 +71,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(CreateAnalysisBodyTimeframeEnum.serializer)
       ..add(CreateAnalysisResult.serializer)
       ..add(CreateDokuCheckoutBody.serializer)
+      ..add(CreateDokuCheckoutBodyMethodEnum.serializer)
       ..add(CreateFilterPresetBody.serializer)
       ..add(CreateJournalEntryBody.serializer)
       ..add(CreateJournalEntryBodyEntryPrice.serializer)
       ..add(CreateJournalEntryBodyOutcomeEnum.serializer)
       ..add(CreateJournalEntryBodySideEnum.serializer)
-      ..add(CreateTopupRequestBody.serializer)
       ..add(CreateUserBody.serializer)
       ..add(CreateUserBodyRoleEnum.serializer)
       ..add(CreateUserPriceAlertBody.serializer)
@@ -228,7 +228,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(TopupConfig.serializer)
       ..add(TopupMonthSummary.serializer)
       ..add(TopupPackageOption.serializer)
-      ..add(TopupPackageOptionProviderEnum.serializer)
+      ..add(TopupPackageOptionDokuMethodsEnum.serializer)
       ..add(TopupRequestList.serializer)
       ..add(TopupRequestPaymentProviderEnum.serializer)
       ..add(TopupRequestStatus.serializer)
@@ -471,6 +471,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(TopupPackageOption)]),
           () => ListBuilder<TopupPackageOption>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(TopupPackageOptionDokuMethodsEnum)]),
+          () => ListBuilder<TopupPackageOptionDokuMethodsEnum>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(TopupRequest)]),
           () => ListBuilder<TopupRequest>())

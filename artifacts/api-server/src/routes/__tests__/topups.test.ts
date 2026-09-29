@@ -32,9 +32,12 @@ interface SeedUser {
 
 const RUN_ID = randomBytes(4).toString("hex");
 const EMAIL_PREFIX = `topups-test-${RUN_ID}`;
-// proofObjectPath is mandatory on every real POST /topups now — a fixed
-// stand-in object path is all these tests need (nothing here exercises
-// the actual file upload/storage path).
+// The old manual/proof-upload self-service endpoint (POST /topups) has
+// been retired — every package now goes exclusively through DOKU Checkout
+// (see topups-doku.test.ts). This fixed stand-in object path is only used
+// when seeding a "pending" row directly (insertPendingTopup below) to
+// drive the admin review endpoints, which still matter for historical
+// rows.
 const PROOF_PATH = `objects/topups-test-${RUN_ID}-proof.jpg`;
 
 const seededUserIds: number[] = [];
@@ -128,16 +131,15 @@ afterAll(async () => {
 });
 
 describe("GET /topups/config", () => {
-  it("returns the fixed packages (with provider) and QRIS image url", async () => {
+  it("returns the fixed packages with their allowed DOKU methods", async () => {
     const res = await request(app).get("/api/topups/config").set(...authHeader(alice));
     expect(res.status).toBe(200);
     expect(res.body.packages).toEqual(
       getTopupPackages().map((p) => {
-        const provider = p.amountRupiah >= 20_000 ? "doku" : "manual";
-        return { ...p, provider, adminFeeRupiah: provider === "doku" ? 5_000 : 0 };
+        const dokuMethods = p.amountRupiah >= 20_000 ? ["va", "qris"] : ["qris"];
+        return { ...p, dokuMethods, adminFeeRupiah: 5_000 };
       }),
     );
-    expect(typeof res.body.qrisImageUrl).toBe("string");
   });
 });
 
@@ -149,77 +151,10 @@ describe("GET /topups/balance", () => {
   });
 });
 
-describe("POST /topups", () => {
-  it("returns 401 without auth", async () => {
-    const res = await request(app).post("/api/topups").send({ amountRupiah: 5000 });
-    expect(res.status).toBe(401);
-  });
-
-  it("rejects an amount that doesn't match a fixed package", async () => {
-    const res = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({ amountRupiah: 1, proofObjectPath: PROOF_PATH });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/nominal tidak valid/i);
-  });
-
-  it("rejects a request with no payment proof", async () => {
-    const res = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({ amountRupiah: PKG_5K.amountRupiah });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/bukti transfer/i);
-  });
-
-  it("rejects a request with a blank payment proof", async () => {
-    const res = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({ amountRupiah: PKG_5K.amountRupiah, proofObjectPath: "   " });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/bukti transfer/i);
-  });
-
-  it("auto-approves on submit, credits the balance immediately, and notifies the user", async () => {
-    const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
-
-    const res = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({
-        amountRupiah: PKG_5K.amountRupiah,
-        paymentReferenceNote: `note-${RUN_ID}`,
-        proofObjectPath: PROOF_PATH,
-      });
-    expect(res.status).toBe(201);
-    expect(res.body.status).toBe("approved");
-    expect(res.body.creditsRequested).toBe(PKG_5K.credits);
-    expect(res.body.creditsGranted).toBe(PKG_5K.credits);
-    expect(res.body.conversionRateSnapshot).toBe(Math.round(PKG_5K.amountRupiah / PKG_5K.credits));
-    expect(res.body.proofObjectPath).toBe(PROOF_PATH);
-    seededRequestIds.push(res.body.id);
-
-    const after = await request(app).get("/api/topups/balance").set(...authHeader(alice));
-    expect(after.body.balance).toBe(before.body.balance + PKG_5K.credits);
-
-    const ledgerRows = await db
-      .select()
-      .from(creditLedger)
-      .where(eq(creditLedger.topupRequestId, res.body.id));
-    expect(ledgerRows).toHaveLength(1);
-    expect(ledgerRows[0]!.amount).toBe(PKG_5K.credits);
-
-    // Fresh test users default to users.lang = "en", so the notification is
-    // sent in English, not Indonesian.
-    const notif = await db.select().from(notifications).where(eq(notifications.userId, alice.id));
-    expect(notif.some((n) => n.title === "Top-up approved")).toBe(true);
-  });
-});
-
 describe("GET /topups/mine", () => {
   it("only returns the caller's own requests", async () => {
+    await insertPendingTopup(alice, PKG_5K.amountRupiah, PKG_5K.credits);
+
     const res = await request(app)
       .get("/api/topups/mine")
       .set(...authHeader(alice));
@@ -250,11 +185,11 @@ describe("GET /admin/topups", () => {
   });
 });
 
-// POST /topups no longer produces a "pending" row to review (it
-// auto-approves — see above), but the admin review endpoints themselves
-// are unchanged and still need to work correctly against whatever pending
-// rows exist (e.g. from before this rollout, or a future rollback) —
-// seed those directly rather than through the API.
+// There is no public endpoint that produces a "pending" row any more (the
+// old manual self-service path is retired, and DOKU Checkout rows only go
+// pending through a real DOKU call — see topups-doku.test.ts), but the
+// admin review endpoints themselves are unchanged and still need to work
+// correctly against whatever pending rows exist — seed those directly.
 describe("PATCH /admin/topups/:id/status", () => {
   it("returns 403 for a plain admin (approval requires super_admin)", async () => {
     const id = await insertPendingTopup(alice, 25_000, 5);
@@ -420,13 +355,12 @@ describe("GET /admin/topups/summary", () => {
   it("sums only approved rows, grouped by user, excluding pending/rejected", async () => {
     const bob = await createUser("user");
 
-    // POST /topups (manual, auto-approve) is now restricted to only the
-    // package below the DOKU threshold (see the "manual path restricted"
-    // describe block above) — everything else has to go through DOKU
-    // Checkout, which this file doesn't mock. Drive every amount here
-    // through the admin-approve path instead (insertPendingTopup bypasses
-    // fixed-package validation entirely), which reaches the exact same
-    // "approved" end state this test actually cares about.
+    // Every self-service package now goes through DOKU Checkout, which
+    // this file doesn't mock (see topups-doku.test.ts for that). Drive
+    // every amount here through the admin-approve path instead
+    // (insertPendingTopup bypasses fixed-package validation entirely),
+    // which reaches the exact same "approved" end state this test cares
+    // about.
     async function submitAndApprove(user: SeedUser, amountRupiah: number, creditsGranted: number) {
       const id = await insertPendingTopup(user, amountRupiah, creditsGranted);
       const res = await request(app)
@@ -556,13 +490,12 @@ describe("DELETE /admin/topups/:id", () => {
   });
 
   it("deleting an approved request claws back the granted credits via a reversal ledger entry", async () => {
-    const created = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(alice))
-      .send({ amountRupiah: PKG_5K.amountRupiah, proofObjectPath: PROOF_PATH });
-    expect(created.status).toBe(201);
-    const id = created.body.id as number;
-    seededRequestIds.push(id);
+    const id = await insertPendingTopup(alice, PKG_5K.amountRupiah, PKG_5K.credits);
+    const approved = await request(app)
+      .patch(`/api/admin/topups/${id}/status`)
+      .set(...authHeader(superAdmin))
+      .send({ status: "approved" });
+    expect(approved.status).toBe(200);
 
     const before = await request(app).get("/api/topups/balance").set(...authHeader(alice));
 
@@ -584,12 +517,11 @@ describe("DELETE /admin/topups/:id", () => {
 
   it("a deleted request no longer appears in GET /admin/topups or GET /admin/topups/summary", async () => {
     const dave = await createUser("user");
-    const created = await request(app)
-      .post("/api/topups")
-      .set(...authHeader(dave))
-      .send({ amountRupiah: PKG_5K.amountRupiah, proofObjectPath: PROOF_PATH });
-    const id = created.body.id as number;
-    seededRequestIds.push(id);
+    const id = await insertPendingTopup(dave, PKG_5K.amountRupiah, PKG_5K.credits);
+    await request(app)
+      .patch(`/api/admin/topups/${id}/status`)
+      .set(...authHeader(superAdmin))
+      .send({ status: "approved" });
 
     await request(app).delete(`/api/admin/topups/${id}`).set(...authHeader(superAdmin));
 

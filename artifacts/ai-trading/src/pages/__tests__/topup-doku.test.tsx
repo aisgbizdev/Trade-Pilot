@@ -1,11 +1,10 @@
 /**
  * Payment-method choice + DOKU Checkout redirect flow on the top-up page:
- * selecting a DOKU-tier package (>= Rp20.000) opens a VA-vs-QRIS method
- * dialog (TEMPORARY — see chat — while DOKU's own QRIS/e-wallet channels
- * are pending verification). Choosing VA redirects to DOKU's hosted
- * checkout page (with the admin fee); choosing QRIS falls back to the same
- * manual/QRIS flow the Rp5.000 package always used, for the full package
- * amount with no fee. Also covers the page correctly reading the
+ * every package goes exclusively through DOKU Checkout. A package that
+ * offers both "va" and "qris" (>= Rp20.000) opens a method dialog — VA
+ * carries the flat admin fee, QRIS does not. The smallest package
+ * (Rp5.000) only offers "qris" and skips the dialog, checking out with
+ * that method immediately. Also covers the page correctly reading the
  * ?doku=success|cancel&id=N return.
  */
 import { describe, expect, it, vi, afterEach } from "vitest";
@@ -16,12 +15,11 @@ import { installFetchMock, jsonResponse, makeWrapper } from "./test-helpers";
 
 const CONFIG_PAYLOAD = {
   packages: [
-    { amountRupiah: 5000, credits: 15, provider: "manual", adminFeeRupiah: 0 },
-    { amountRupiah: 20000, credits: 70, provider: "doku", adminFeeRupiah: 5000 },
-    { amountRupiah: 40000, credits: 150, provider: "doku", adminFeeRupiah: 5000 },
-    { amountRupiah: 80000, credits: 320, provider: "doku", adminFeeRupiah: 5000 },
+    { amountRupiah: 5000, credits: 15, dokuMethods: ["qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 20000, credits: 70, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 40000, credits: 150, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 80000, credits: 320, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
   ],
-  qrisImageUrl: "/qris-gopay.jpeg",
 };
 
 const originalLocation = window.location;
@@ -68,8 +66,6 @@ describe("TopupPage — payment-method choice for a DOKU-tier package", () => {
     expect(await screen.findByTestId("dialog-payment-method")).toBeInTheDocument();
     expect(screen.getByTestId("text-method-va-fee")).toHaveTextContent("5.000");
     expect(screen.getByTestId("text-method-va-fee")).toHaveTextContent("25.000");
-    // Never redirects or reveals QRIS just from opening the dialog.
-    expect(screen.queryByTestId("card-qris")).not.toBeInTheDocument();
   });
 
   it("choosing VA calls the DOKU checkout endpoint (package amount only) and redirects", async () => {
@@ -138,20 +134,47 @@ describe("TopupPage — payment-method choice for a DOKU-tier package", () => {
     });
     // The backend (not the frontend) is responsible for adding the admin
     // fee on top — the request to our own checkout endpoint still just
-    // names the package.
-    expect(checkoutRequestBody).toEqual({ amountRupiah: 20000 });
-    expect(screen.queryByTestId("card-qris")).not.toBeInTheDocument();
+    // names the package and method.
+    expect(checkoutRequestBody).toEqual({ amountRupiah: 20000, method: "va" });
   });
 
-  it("choosing QRIS falls back to the manual/QRIS flow for the full package amount, no fee", async () => {
+  it("choosing QRIS calls the DOKU checkout endpoint with method=qris (package amount only, no fee) and redirects", async () => {
+    let checkoutRequestBody: unknown = null;
     installFetchMock(
       [
         (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
         (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
         (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+        (url, init) => {
+          if (url.includes("/api/topups/doku/checkout") && (init?.method ?? "GET").toUpperCase() === "POST") {
+            checkoutRequestBody = JSON.parse(init!.body as string);
+            return jsonResponse(
+              { id: 43, paymentUrl: "https://sandbox.doku.com/checkout-link-v2/qris456", expiresAt: new Date().toISOString() },
+              201,
+            );
+          }
+          return null;
+        },
       ],
       { strict: false },
     );
+
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        pathname: window.location.pathname,
+        search: window.location.search,
+        origin: window.location.origin,
+        set href(v: string) {
+          hrefSetter(v);
+        },
+        get href() {
+          return "http://localhost/topup";
+        },
+      },
+    });
 
     const { Wrapper } = makeWrapper();
     render(
@@ -170,21 +193,50 @@ describe("TopupPage — payment-method choice for a DOKU-tier package", () => {
       fireEvent.click(await screen.findByTestId("button-method-qris"));
     });
 
-    expect(await screen.findByTestId("card-qris")).toBeInTheDocument();
-    // The full package amount (Rp20.000), not package + fee.
-    expect(screen.getByTestId("text-pay-summary")).toHaveTextContent("20.000");
+    await waitFor(() => {
+      expect(hrefSetter).toHaveBeenCalledWith("https://sandbox.doku.com/checkout-link-v2/qris456");
+    });
+    expect(checkoutRequestBody).toEqual({ amountRupiah: 20000, method: "qris" });
     expect(screen.queryByTestId("dialog-payment-method")).not.toBeInTheDocument();
   });
 
-  it("still skips straight to the QRIS/proof step for the manual-only (Rp5.000) package — no method dialog", async () => {
+  it("the QRIS-only Rp5.000 package skips the method dialog and checks out with method=qris directly", async () => {
+    let checkoutRequestBody: unknown = null;
     installFetchMock(
       [
         (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
         (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
         (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+        (url, init) => {
+          if (url.includes("/api/topups/doku/checkout") && (init?.method ?? "GET").toUpperCase() === "POST") {
+            checkoutRequestBody = JSON.parse(init!.body as string);
+            return jsonResponse(
+              { id: 44, paymentUrl: "https://sandbox.doku.com/checkout-link-v2/small-qris", expiresAt: new Date().toISOString() },
+              201,
+            );
+          }
+          return null;
+        },
       ],
       { strict: false },
     );
+
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        pathname: window.location.pathname,
+        search: window.location.search,
+        origin: window.location.origin,
+        set href(v: string) {
+          hrefSetter(v);
+        },
+        get href() {
+          return "http://localhost/topup";
+        },
+      },
+    });
 
     const { Wrapper } = makeWrapper();
     render(
@@ -200,7 +252,10 @@ describe("TopupPage — payment-method choice for a DOKU-tier package", () => {
       fireEvent.click(screen.getByTestId("button-continue-topup"));
     });
 
-    expect(await screen.findByTestId("card-qris")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(hrefSetter).toHaveBeenCalledWith("https://sandbox.doku.com/checkout-link-v2/small-qris");
+    });
+    expect(checkoutRequestBody).toEqual({ amountRupiah: 5000, method: "qris" });
     expect(screen.queryByTestId("dialog-payment-method")).not.toBeInTheDocument();
   });
 });

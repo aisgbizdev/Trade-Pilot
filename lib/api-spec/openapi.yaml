@@ -146,30 +146,17 @@ paths:
           description: Credit balance
           content: { application/json: { schema: { $ref: "#/components/schemas/CreditBalance" } } }
         "401": { description: Not authenticated }
-  /topups:
-    post:
-      operationId: createTopupRequest
-      tags: [topups]
-      summary: Submit a manual top-up request for admin review
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/CreateTopupRequestBody" } } }
-      responses:
-        "201":
-          description: Top-up request submitted
-          content: { application/json: { schema: { $ref: "#/components/schemas/TopupRequest" } } }
-        "400":
-          description: Invalid amount
-          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
-        "401": { description: Not authenticated }
   /topups/doku/checkout:
     post:
       operationId: createDokuCheckout
       tags: [topups]
-      summary: Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+      summary: Create a DOKU Checkout session for a fixed top-up package
       description: >-
-        Only accepts packages that are NOT eligible for the manual/QRIS
-        path (POST /topups accepts only the one below the threshold).
+        Every fixed package (see TopupPackageOption.dokuMethods) goes
+        through DOKU Checkout — there is no manual/proof-upload path.
+        `method` must be one of the package's own dokuMethods and restricts
+        the hosted checkout page to either DOKU's Virtual Account channel
+        (carries the flat admin fee) or DOKU's own QRIS channel (no fee).
         Returns a hosted DOKU payment page URL to redirect the browser to;
         credits are granted only once POST /topups/doku/notify confirms
         the payment.
@@ -5167,34 +5154,34 @@ components:
           type: integer
         credits:
           type: integer
-        provider:
-          type: string
-          enum: [manual, doku]
+        dokuMethods:
+          type: array
           description: >-
-            Which payment path this package must use — "manual" packages go
-            through POST /topups (QRIS + proof upload), "doku" packages go
-            through POST /topups/doku/checkout. Never both.
+            Which DOKU Checkout methods this package may use with
+            POST /topups/doku/checkout. Every package supports at least
+            "qris"; only the smallest package doesn't also support "va".
+          items:
+            type: string
+            enum: [va, qris]
         adminFeeRupiah:
           type: integer
           description: >-
-            0 for "manual" packages. For "doku" packages, a flat fee added
-            on top of amountRupiah to cover DOKU's own transaction fee —
-            the customer is charged amountRupiah + adminFeeRupiah, but
-            credits granted are unaffected (always the package's own
+            The flat fee added on top of amountRupiah when paying via the
+            "va" method (covers DOKU's own VA transaction fee) — irrelevant
+            when only "qris" is chosen, which carries no fee. Credits
+            granted are unaffected either way (always the package's own
             `credits`).
-      required: [amountRupiah, credits, provider, adminFeeRupiah]
+      required: [amountRupiah, credits, dokuMethods, adminFeeRupiah]
 
     TopupConfig:
       type: object
       properties:
         packages:
           type: array
-          description: The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly.
+          description: The fixed set of purchasable packages. POST /topups/doku/checkout only accepts an amountRupiah matching one of these exactly.
           items:
             $ref: "#/components/schemas/TopupPackageOption"
-        qrisImageUrl:
-          type: string
-      required: [packages, qrisImageUrl]
+      required: [packages]
 
     CreditBalance:
       type: object
@@ -5202,23 +5189,6 @@ components:
         balance:
           type: integer
       required: [balance]
-
-    CreateTopupRequestBody:
-      type: object
-      properties:
-        amountRupiah:
-          type: integer
-          minimum: 1
-          description: Must match the amountRupiah of one of the packages from GET /topups/config exactly.
-        paymentReferenceNote:
-          type: string
-        proofObjectPath:
-          type: string
-          minLength: 1
-          description: >-
-            Object path of the uploaded transfer-proof image. Required —
-            admin review has no other way to verify a manual transfer.
-      required: [amountRupiah, proofObjectPath]
 
     ManualTopupBody:
       type: object
@@ -5317,8 +5287,16 @@ components:
         amountRupiah:
           type: integer
           description: Must match one of the fixed packages at/above the DOKU-only threshold.
+        method:
+          type: string
+          enum: [va, qris]
+          description: >-
+            Which DOKU-hosted channel to restrict the checkout page to. "va"
+            carries the flat admin fee on top of the package price; "qris"
+            does not (DOKU's own QRIS cost isn't passed on to the customer).
       required:
         - amountRupiah
+        - method
 
     DokuCheckoutSession:
       type: object

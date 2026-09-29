@@ -10,13 +10,11 @@ import 'package:dio/dio.dart';
 
 import 'package:trade_pilot_api_client/src/api_util.dart';
 import 'package:trade_pilot_api_client/src/model/create_doku_checkout_body.dart';
-import 'package:trade_pilot_api_client/src/model/create_topup_request_body.dart';
 import 'package:trade_pilot_api_client/src/model/credit_balance.dart';
 import 'package:trade_pilot_api_client/src/model/doku_checkout_session.dart';
 import 'package:trade_pilot_api_client/src/model/doku_topup_status.dart';
 import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/topup_config.dart';
-import 'package:trade_pilot_api_client/src/model/topup_request.dart';
 import 'package:trade_pilot_api_client/src/model/topup_request_list.dart';
 
 class TopupsApi {
@@ -27,8 +25,8 @@ class TopupsApi {
 
   const TopupsApi(this._dio, this._serializers);
 
-  /// Create a DOKU Checkout session for a package at/above the DOKU-only threshold
-  /// Only accepts packages that are NOT eligible for the manual/QRIS path (POST /topups accepts only the one below the threshold). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
+  /// Create a DOKU Checkout session for a fixed top-up package
+  /// Every fixed package (see TopupPackageOption.dokuMethods) goes through DOKU Checkout — there is no manual/proof-upload path. &#x60;method&#x60; must be one of the package&#39;s own dokuMethods and restricts the hosted checkout page to either DOKU&#39;s Virtual Account channel (carries the flat admin fee) or DOKU&#39;s own QRIS channel (no fee). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
   ///
   /// Parameters:
   /// * [createDokuCheckoutBody] 
@@ -111,101 +109,6 @@ class TopupsApi {
     }
 
     return Response<DokuCheckoutSession>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// Submit a manual top-up request for admin review
-  /// 
-  ///
-  /// Parameters:
-  /// * [createTopupRequestBody] 
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [TopupRequest] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<TopupRequest>> createTopupRequest({ 
-    required CreateTopupRequestBody createTopupRequestBody,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/topups';
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(CreateTopupRequestBody);
-      _bodyData = _serializers.serialize(createTopupRequestBody, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    TopupRequest? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(TopupRequest),
-      ) as TopupRequest;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<TopupRequest>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

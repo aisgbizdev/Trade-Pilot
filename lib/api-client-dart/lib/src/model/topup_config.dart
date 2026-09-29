@@ -13,16 +13,12 @@ part 'topup_config.g.dart';
 /// TopupConfig
 ///
 /// Properties:
-/// * [packages] - The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly.
-/// * [qrisImageUrl] 
+/// * [packages] - The fixed set of purchasable packages. POST /topups/doku/checkout only accepts an amountRupiah matching one of these exactly.
 @BuiltValue()
 abstract class TopupConfig implements Built<TopupConfig, TopupConfigBuilder> {
-  /// The fixed set of purchasable packages. POST /topups only accepts an amountRupiah matching one of these exactly.
+  /// The fixed set of purchasable packages. POST /topups/doku/checkout only accepts an amountRupiah matching one of these exactly.
   @BuiltValueField(wireName: r'packages')
   BuiltList<TopupPackageOption> get packages;
-
-  @BuiltValueField(wireName: r'qrisImageUrl')
-  String get qrisImageUrl;
 
   TopupConfig._();
 
@@ -51,11 +47,6 @@ class _$TopupConfigSerializer implements PrimitiveSerializer<TopupConfig> {
     yield serializers.serialize(
       object.packages,
       specifiedType: const FullType(BuiltList, [FullType(TopupPackageOption)]),
-    );
-    yield r'qrisImageUrl';
-    yield serializers.serialize(
-      object.qrisImageUrl,
-      specifiedType: const FullType(String),
     );
   }
 
@@ -86,13 +77,6 @@ class _$TopupConfigSerializer implements PrimitiveSerializer<TopupConfig> {
             specifiedType: const FullType(BuiltList, [FullType(TopupPackageOption)]),
           ) as BuiltList<TopupPackageOption>;
           result.packages.replace(valueDes);
-          break;
-        case r'qrisImageUrl':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.qrisImageUrl = valueDes;
           break;
         default:
           unhandled.add(key);

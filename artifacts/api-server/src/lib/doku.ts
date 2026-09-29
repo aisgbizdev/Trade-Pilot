@@ -68,6 +68,10 @@ export interface CreateDokuCheckoutParams {
   callbackUrl: string;
   callbackUrlCancel: string;
   paymentDueDateMinutes?: number;
+  /** Restricts which channels DOKU's hosted page shows (e.g. ["QRIS"] or
+   *  ["VIRTUAL_ACCOUNT_BCA"]) — per DOKU's docs, omitting this shows every
+   *  channel active on the dashboard instead. */
+  paymentMethodTypes?: readonly string[];
 }
 
 export interface DokuCheckoutResult {
@@ -103,6 +107,9 @@ export async function createDokuCheckout(params: CreateDokuCheckoutParams): Prom
     payment: {
       payment_due_date: params.paymentDueDateMinutes ?? 60,
       type: "SALE",
+      ...(params.paymentMethodTypes && params.paymentMethodTypes.length > 0
+        ? { payment_method_types: params.paymentMethodTypes }
+        : {}),
     },
     // NOT setting additional_info.override_notification_url here — per
     // DOKU's docs, that field can only swap the DOMAIN of an ALREADY

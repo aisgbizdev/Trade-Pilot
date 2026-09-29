@@ -81,7 +81,6 @@ export 'package:trade_pilot_api_client/src/model/create_doku_checkout_body.dart'
 export 'package:trade_pilot_api_client/src/model/create_filter_preset_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_journal_entry_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_journal_entry_body_entry_price.dart';
-export 'package:trade_pilot_api_client/src/model/create_topup_request_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_user_body.dart';
 export 'package:trade_pilot_api_client/src/model/create_user_price_alert_body.dart';
 export 'package:trade_pilot_api_client/src/model/credit_balance.dart';

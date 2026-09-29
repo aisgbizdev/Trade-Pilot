@@ -14,8 +14,8 @@ part 'topup_package_option.g.dart';
 /// Properties:
 /// * [amountRupiah] 
 /// * [credits] 
-/// * [provider] - Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
-/// * [adminFeeRupiah] - 0 for \"manual\" packages. For \"doku\" packages, a flat fee added on top of amountRupiah to cover DOKU's own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package's own `credits`).
+/// * [dokuMethods] - Which DOKU Checkout methods this package may use with POST /topups/doku/checkout. Every package supports at least \"qris\"; only the smallest package doesn't also support \"va\".
+/// * [adminFeeRupiah] - The flat fee added on top of amountRupiah when paying via the \"va\" method (covers DOKU's own VA transaction fee) — irrelevant when only \"qris\" is chosen, which carries no fee. Credits granted are unaffected either way (always the package's own `credits`).
 @BuiltValue()
 abstract class TopupPackageOption implements Built<TopupPackageOption, TopupPackageOptionBuilder> {
   @BuiltValueField(wireName: r'amountRupiah')
@@ -24,12 +24,12 @@ abstract class TopupPackageOption implements Built<TopupPackageOption, TopupPack
   @BuiltValueField(wireName: r'credits')
   int get credits;
 
-  /// Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
-  @BuiltValueField(wireName: r'provider')
-  TopupPackageOptionProviderEnum get provider;
-  // enum providerEnum {  manual,  doku,  };
+  /// Which DOKU Checkout methods this package may use with POST /topups/doku/checkout. Every package supports at least \"qris\"; only the smallest package doesn't also support \"va\".
+  @BuiltValueField(wireName: r'dokuMethods')
+  BuiltList<TopupPackageOptionDokuMethodsEnum> get dokuMethods;
+  // enum dokuMethodsEnum {  va,  qris,  };
 
-  /// 0 for \"manual\" packages. For \"doku\" packages, a flat fee added on top of amountRupiah to cover DOKU's own transaction fee — the customer is charged amountRupiah + adminFeeRupiah, but credits granted are unaffected (always the package's own `credits`).
+  /// The flat fee added on top of amountRupiah when paying via the \"va\" method (covers DOKU's own VA transaction fee) — irrelevant when only \"qris\" is chosen, which carries no fee. Credits granted are unaffected either way (always the package's own `credits`).
   @BuiltValueField(wireName: r'adminFeeRupiah')
   int get adminFeeRupiah;
 
@@ -66,10 +66,10 @@ class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackage
       object.credits,
       specifiedType: const FullType(int),
     );
-    yield r'provider';
+    yield r'dokuMethods';
     yield serializers.serialize(
-      object.provider,
-      specifiedType: const FullType(TopupPackageOptionProviderEnum),
+      object.dokuMethods,
+      specifiedType: const FullType(BuiltList, [FullType(TopupPackageOptionDokuMethodsEnum)]),
     );
     yield r'adminFeeRupiah';
     yield serializers.serialize(
@@ -113,12 +113,12 @@ class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackage
           ) as int;
           result.credits = valueDes;
           break;
-        case r'provider':
+        case r'dokuMethods':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(TopupPackageOptionProviderEnum),
-          ) as TopupPackageOptionProviderEnum;
-          result.provider = valueDes;
+            specifiedType: const FullType(BuiltList, [FullType(TopupPackageOptionDokuMethodsEnum)]),
+          ) as BuiltList<TopupPackageOptionDokuMethodsEnum>;
+          result.dokuMethods.replace(valueDes);
           break;
         case r'adminFeeRupiah':
           final valueDes = serializers.deserialize(
@@ -156,20 +156,18 @@ class _$TopupPackageOptionSerializer implements PrimitiveSerializer<TopupPackage
   }
 }
 
-class TopupPackageOptionProviderEnum extends EnumClass {
+class TopupPackageOptionDokuMethodsEnum extends EnumClass {
 
-  /// Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
-  @BuiltValueEnumConst(wireName: r'manual')
-  static const TopupPackageOptionProviderEnum manual = _$topupPackageOptionProviderEnum_manual;
-  /// Which payment path this package must use — \"manual\" packages go through POST /topups (QRIS + proof upload), \"doku\" packages go through POST /topups/doku/checkout. Never both.
-  @BuiltValueEnumConst(wireName: r'doku')
-  static const TopupPackageOptionProviderEnum doku = _$topupPackageOptionProviderEnum_doku;
+  @BuiltValueEnumConst(wireName: r'va')
+  static const TopupPackageOptionDokuMethodsEnum va = _$topupPackageOptionDokuMethodsEnum_va;
+  @BuiltValueEnumConst(wireName: r'qris')
+  static const TopupPackageOptionDokuMethodsEnum qris = _$topupPackageOptionDokuMethodsEnum_qris;
 
-  static Serializer<TopupPackageOptionProviderEnum> get serializer => _$topupPackageOptionProviderEnumSerializer;
+  static Serializer<TopupPackageOptionDokuMethodsEnum> get serializer => _$topupPackageOptionDokuMethodsEnumSerializer;
 
-  const TopupPackageOptionProviderEnum._(String name): super(name);
+  const TopupPackageOptionDokuMethodsEnum._(String name): super(name);
 
-  static BuiltSet<TopupPackageOptionProviderEnum> get values => _$topupPackageOptionProviderEnumValues;
-  static TopupPackageOptionProviderEnum valueOf(String name) => _$topupPackageOptionProviderEnumValueOf(name);
+  static BuiltSet<TopupPackageOptionDokuMethodsEnum> get values => _$topupPackageOptionDokuMethodsEnumValues;
+  static TopupPackageOptionDokuMethodsEnum valueOf(String name) => _$topupPackageOptionDokuMethodsEnumValueOf(name);
 }
 

@@ -1,11 +1,12 @@
 /**
  * Component test for the credit top-up page (src/pages/topup.tsx).
  *
- * Covers the 2-step wizard: step 1 picks one of the four fixed packages
- * from GET /api/topups/config (QRIS hidden) — there is no free-text
- * amount — and step 2 reveals the QRIS image, the balance card, the
- * selected package's credit count, submitting a top-up request, and the
- * history list rendering past requests with a status badge.
+ * Covers the page-level chrome around <TopupFlow> — the balance card, the
+ * floating WhatsApp support shortcut, the fixed package list (with no
+ * free-text amount field), and the top-up history list rendering past
+ * requests with a status badge. The actual purchase flow (method dialog,
+ * DOKU Checkout redirect, DOKU return handling) is covered in
+ * topup-doku.test.tsx.
  */
 import { describe, expect, it } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -15,16 +16,15 @@ import { installFetchMock, jsonResponse, makeWrapper } from "./test-helpers";
 
 const CONFIG_PAYLOAD = {
   packages: [
-    { amountRupiah: 5000, credits: 15 },
-    { amountRupiah: 20000, credits: 70 },
-    { amountRupiah: 40000, credits: 150 },
-    { amountRupiah: 80000, credits: 320 },
+    { amountRupiah: 5000, credits: 15, dokuMethods: ["qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 20000, credits: 70, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 40000, credits: 150, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 80000, credits: 320, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
   ],
-  qrisImageUrl: "/qris-gopay.jpeg",
 };
 
 describe("TopupPage", () => {
-  it("hides the QRIS until an amount is submitted, then reveals it on step 2", async () => {
+  it("shows the credit balance and a floating WhatsApp support shortcut", async () => {
     installFetchMock(
       [
         (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
@@ -45,183 +45,8 @@ describe("TopupPage", () => {
       expect(screen.getByTestId("text-credit-balance")).toHaveTextContent("12");
     });
 
-    // Step 1: QRIS must not be visible yet.
-    expect(screen.queryByTestId("img-qris")).not.toBeInTheDocument();
-
-    await act(async () => {
-      fireEvent.click(await screen.findByTestId("button-preset-5000"));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-continue-topup"));
-    });
-
-    // Step 2: QRIS now revealed.
-    expect(await screen.findByTestId("img-qris")).toHaveAttribute("src", "/qris-gopay.jpeg");
-  });
-
-  it("shows a floating WhatsApp shortcut and a proof-required notice on reaching step 2", async () => {
-    installFetchMock(
-      [
-        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
-        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
-        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
-      ],
-      { strict: false },
-    );
-
-    const { Wrapper } = makeWrapper();
-    render(
-      <Wrapper>
-        <TopupPage />
-      </Wrapper>,
-    );
-
-    // Visible regardless of step.
     const fab = await screen.findByTestId("button-whatsapp-fab");
     expect(fab).toHaveAttribute("href", expect.stringContaining("https://wa.me/6282310384866?text="));
-
-    // No notice yet on step 1.
-    expect(screen.queryByTestId("dialog-proof-required-notice")).not.toBeInTheDocument();
-
-    await act(async () => {
-      fireEvent.click(await screen.findByTestId("button-preset-5000"));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-continue-topup"));
-    });
-
-    // Reaching step 2 pops the mandatory-proof notice, with its own
-    // WhatsApp link, until acknowledged.
-    expect(await screen.findByTestId("dialog-proof-required-notice")).toBeInTheDocument();
-    expect(screen.getByTestId("link-whatsapp-support-dialog")).toHaveAttribute(
-      "href",
-      expect.stringContaining("https://wa.me/6282310384866?text="),
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-proof-notice-ack"));
-    });
-    await waitFor(() => {
-      expect(screen.queryByTestId("dialog-proof-required-notice")).not.toBeInTheDocument();
-    });
-  });
-
-  it("shows a live credits preview for a preset amount and submits a top-up request", async () => {
-    let created: unknown = null;
-    installFetchMock(
-      [
-        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
-        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
-        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
-        (url, init) => {
-          if (url.includes("/api/storage/uploads/request-url") && (init?.method ?? "GET").toUpperCase() === "POST") {
-            return jsonResponse({ uploadURL: "https://upload.test/put", objectPath: "objects/proof.png" });
-          }
-          if (url === "https://upload.test/put") {
-            return new Response(null, { status: 200 });
-          }
-          return null;
-        },
-        (url, init) => {
-          if (url.includes("/api/topups") && !url.includes("mine") && (init?.method ?? "GET").toUpperCase() === "POST") {
-            created = JSON.parse(init!.body as string);
-            return jsonResponse(
-              {
-                id: 1,
-                userId: 1,
-                amountRupiah: 5000,
-                creditsRequested: 15,
-                conversionRateSnapshot: 333,
-                paymentReferenceNote: null,
-                proofObjectPath: "objects/proof.png",
-                status: "approved",
-                reviewedByUserId: null,
-                reviewedAt: new Date().toISOString(),
-                reviewNote: null,
-                creditsGranted: 15,
-                createdAt: new Date().toISOString(),
-              },
-              201,
-            );
-          }
-          return null;
-        },
-      ],
-      { strict: false },
-    );
-
-    const { Wrapper } = makeWrapper();
-    render(
-      <Wrapper>
-        <TopupPage />
-      </Wrapper>,
-    );
-
-    await act(async () => {
-      fireEvent.click(await screen.findByTestId("button-preset-5000"));
-    });
-    expect(await screen.findByTestId("text-credits-preview")).toHaveTextContent("15");
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-continue-topup"));
-    });
-
-    // The submit button stays disabled until a proof file is uploaded.
-    expect(await screen.findByTestId("button-submit-topup")).toBeDisabled();
-
-    const proofFile = new File(["fake-bytes"], "proof.png", { type: "image/png" });
-    await act(async () => {
-      fireEvent.change(screen.getByTestId("input-proof-file"), { target: { files: [proofFile] } });
-    });
-    await screen.findByTestId("img-proof-preview");
-    expect(screen.getByTestId("button-submit-topup")).not.toBeDisabled();
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-submit-topup"));
-    });
-
-    await waitFor(() => {
-      expect(created).toMatchObject({ amountRupiah: 5000, proofObjectPath: "objects/proof.png" });
-    });
-  });
-
-  it("keeps the submit button disabled — and never posts — without a proof upload", async () => {
-    let posted = false;
-    installFetchMock(
-      [
-        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
-        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
-        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
-        (url, init) => {
-          if (url.includes("/api/topups") && !url.includes("mine") && (init?.method ?? "GET").toUpperCase() === "POST") {
-            posted = true;
-            return jsonResponse({}, 201);
-          }
-          return null;
-        },
-      ],
-      { strict: false },
-    );
-
-    const { Wrapper } = makeWrapper();
-    render(
-      <Wrapper>
-        <TopupPage />
-      </Wrapper>,
-    );
-
-    await act(async () => {
-      fireEvent.click(await screen.findByTestId("button-preset-5000"));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("button-continue-topup"));
-    });
-
-    const submitButton = await screen.findByTestId("button-submit-topup");
-    expect(submitButton).toBeDisabled();
-
-    fireEvent.click(submitButton);
-    expect(posted).toBe(false);
   });
 
   it("offers exactly the four fixed packages, each showing its own credit count, and no free-text amount field", async () => {
@@ -252,6 +77,29 @@ describe("TopupPage", () => {
     expect(screen.queryByTestId("input-topup-amount")).not.toBeInTheDocument();
   });
 
+  it("shows a live credits preview once a package is picked", async () => {
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+      ],
+      { strict: false },
+    );
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-preset-5000"));
+    });
+    expect(await screen.findByTestId("text-credits-preview")).toHaveTextContent("15");
+  });
+
   it("renders past requests with a status badge in the history list", async () => {
     installFetchMock(
       [
@@ -275,6 +123,8 @@ describe("TopupPage", () => {
                     reviewNote: null,
                     creditsGranted: 10,
                     createdAt: new Date().toISOString(),
+                    paymentProvider: "doku",
+                    dokuPaymentUrl: null,
                   },
                 ],
                 total: 1,

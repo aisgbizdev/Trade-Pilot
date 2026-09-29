@@ -9,8 +9,7 @@ All URIs are relative to */api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**createDokuCheckout**](TopupsApi.md#createdokucheckout) | **POST** /topups/doku/checkout | Create a DOKU Checkout session for a package at/above the DOKU-only threshold
-[**createTopupRequest**](TopupsApi.md#createtopuprequest) | **POST** /topups | Submit a manual top-up request for admin review
+[**createDokuCheckout**](TopupsApi.md#createdokucheckout) | **POST** /topups/doku/checkout | Create a DOKU Checkout session for a fixed top-up package
 [**getCreditBalance**](TopupsApi.md#getcreditbalance) | **GET** /topups/balance | Get the authenticated user&#39;s analysis credit balance
 [**getDokuTopupStatus**](TopupsApi.md#getdokutopupstatus) | **GET** /topups/doku/{id}/status | Poll a DOKU checkout request&#39;s status (owner-only)
 [**getMyTopupRequests**](TopupsApi.md#getmytopuprequests) | **GET** /topups/mine | List the authenticated user&#39;s own top-up request history
@@ -20,9 +19,9 @@ Method | HTTP request | Description
 # **createDokuCheckout**
 > DokuCheckoutSession createDokuCheckout(createDokuCheckoutBody)
 
-Create a DOKU Checkout session for a package at/above the DOKU-only threshold
+Create a DOKU Checkout session for a fixed top-up package
 
-Only accepts packages that are NOT eligible for the manual/QRIS path (POST /topups accepts only the one below the threshold). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
+Every fixed package (see TopupPackageOption.dokuMethods) goes through DOKU Checkout — there is no manual/proof-upload path. `method` must be one of the package's own dokuMethods and restricts the hosted checkout page to either DOKU's Virtual Account channel (carries the flat admin fee) or DOKU's own QRIS channel (no fee). Returns a hosted DOKU payment page URL to redirect the browser to; credits are granted only once POST /topups/doku/notify confirms the payment.
 
 ### Example
 ```dart
@@ -48,47 +47,6 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**DokuCheckoutSession**](DokuCheckoutSession.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **createTopupRequest**
-> TopupRequest createTopupRequest(createTopupRequestBody)
-
-Submit a manual top-up request for admin review
-
-### Example
-```dart
-import 'package:trade_pilot_api_client/api.dart';
-
-final api = TradePilotApiClient().getTopupsApi();
-final CreateTopupRequestBody createTopupRequestBody = ; // CreateTopupRequestBody | 
-
-try {
-    final response = api.createTopupRequest(createTopupRequestBody);
-    print(response);
-} on DioException catch (e) {
-    print('Exception when calling TopupsApi->createTopupRequest: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **createTopupRequestBody** | [**CreateTopupRequestBody**](CreateTopupRequestBody.md)|  | 
-
-### Return type
-
-[**TopupRequest**](TopupRequest.md)
 
 ### Authorization
 

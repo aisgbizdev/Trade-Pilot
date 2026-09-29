@@ -26,26 +26,54 @@ const TOPUP_PACKAGES: readonly TopupPackage[] = [
   { amountRupiah: 80_000, credits: 320 },
 ];
 
-// Real GoPay QRIS image, served statically from artifacts/ai-trading/public/.
-const QRIS_IMAGE_URL = "/qris-gopay.jpeg";
-
-// Product decision (see chat): only the smallest package stays on the
-// manual proof-upload path (POST /topups, currently auto-approved without
-// actually verifying the uploaded image — a known, accepted fraud surface
-// at this one low value). Every package at or above this threshold must go
-// through DOKU Checkout (POST /topups/doku/checkout) instead, which is a
-// real, verified payment. Keep in sync with the fact that only the
-// Rp5.000 package sits below it.
-export const DOKU_MIN_AMOUNT_RUPIAH = 20_000;
-
 // DOKU's Virtual Account fee is Rp4.000 + 11% PPN on that fee (~Rp4.440
 // total), deducted from what DOKU settles to us — never added to what the
 // customer is charged automatically. Product decision (see chat): pass a
-// flat Rp5.000 admin fee on to the customer for every DOKU package instead
-// of absorbing it, so the full advertised package price still lands net.
-// The customer pays package + fee; the credits granted are only ever the
-// package's own amount, completely unaffected by this.
+// flat Rp5.000 admin fee on to the customer for every DOKU VA payment
+// instead of absorbing it, so the full advertised package price still
+// lands net. The customer pays package + fee; the credits granted are only
+// ever the package's own amount, completely unaffected by this.
+// DOKU's QRIS channel is NOT charged this fee (product decision, see chat)
+// — the customer pays exactly the package price for that method.
 export const DOKU_ADMIN_FEE_RUPIAH = 5_000;
+
+export type DokuCheckoutMethod = "va" | "qris";
+
+// Every package now goes exclusively through DOKU Checkout — there is no
+// more manual/proof-upload path (product decision, see chat: DOKU's own
+// QRIS carries no fee, so it strictly beats the old manual flow even for
+// the smallest package). The smallest package only offers QRIS: DOKU's VA
+// admin fee doesn't make sense relative to such a small top-up, and QRIS
+// is free either way.
+const DOKU_METHODS_BY_AMOUNT: Record<number, readonly DokuCheckoutMethod[]> = {
+  5_000: ["qris"],
+  20_000: ["va", "qris"],
+  40_000: ["va", "qris"],
+  80_000: ["va", "qris"],
+};
+
+/** Which DOKU checkout methods a package may use — empty if the amount
+ *  isn't one of the fixed packages. */
+export function getDokuMethodsForPackage(amountRupiah: number): readonly DokuCheckoutMethod[] {
+  return DOKU_METHODS_BY_AMOUNT[amountRupiah] ?? [];
+}
+
+// DOKU's own payment_method_types values (see
+// developers.doku.com/.../backend-integration) that restrict the hosted
+// checkout page to exactly one channel instead of showing every channel
+// active on the dashboard.
+const DOKU_PAYMENT_METHOD_TYPES: Record<DokuCheckoutMethod, readonly string[]> = {
+  va: ["VIRTUAL_ACCOUNT_BCA"],
+  qris: ["QRIS"],
+};
+
+export function getDokuPaymentMethodTypes(method: DokuCheckoutMethod): readonly string[] {
+  return DOKU_PAYMENT_METHOD_TYPES[method];
+}
+
+export function getDokuAdminFeeRupiah(method: DokuCheckoutMethod): number {
+  return method === "va" ? DOKU_ADMIN_FEE_RUPIAH : 0;
+}
 
 export function getTopupPackages(): readonly TopupPackage[] {
   return TOPUP_PACKAGES;
@@ -58,17 +86,18 @@ export function findTopupPackage(amountRupiah: number): TopupPackage | null {
 }
 
 export interface TopupPackageOption extends TopupPackage {
-  provider: "manual" | "doku";
-  /** 0 for "manual" packages — only DOKU packages carry this fee. */
+  dokuMethods: readonly DokuCheckoutMethod[];
+  /** The flat VA admin fee — relevant only when "va" is in dokuMethods. */
   adminFeeRupiah: number;
 }
 
-export function getTopupConfig(): { packages: readonly TopupPackageOption[]; qrisImageUrl: string } {
-  const packages = TOPUP_PACKAGES.map((p) => {
-    const provider = p.amountRupiah >= DOKU_MIN_AMOUNT_RUPIAH ? ("doku" as const) : ("manual" as const);
-    return { ...p, provider, adminFeeRupiah: provider === "doku" ? DOKU_ADMIN_FEE_RUPIAH : 0 };
-  });
-  return { packages, qrisImageUrl: QRIS_IMAGE_URL };
+export function getTopupConfig(): { packages: readonly TopupPackageOption[] } {
+  const packages = TOPUP_PACKAGES.map((p) => ({
+    ...p,
+    dokuMethods: getDokuMethodsForPackage(p.amountRupiah),
+    adminFeeRupiah: DOKU_ADMIN_FEE_RUPIAH,
+  }));
+  return { packages };
 }
 
 export async function getCreditBalanceForUser(userId: number): Promise<number> {
