@@ -27,7 +27,7 @@ const { db } = await import("../../lib/db");
 const { users, sessions, creditTopupRequests, creditLedger, creditBalances, notifications } = await import(
   "@workspace/db/schema"
 );
-const { getTopupPackages, DOKU_ADMIN_FEE_RUPIAH } = await import("../../lib/credits");
+const { getTopupPackages, DOKU_ADMIN_FEE_RUPIAH, getDokuPaymentMethodTypes } = await import("../../lib/credits");
 const { createDokuCheckout } = await import("../../lib/doku");
 
 const mockCreateCheckout = vi.mocked(createDokuCheckout);
@@ -233,7 +233,7 @@ describe("POST /topups/doku/checkout", () => {
     expect(mockCreateCheckout).toHaveBeenCalledWith(
       expect.objectContaining({
         amountRupiah: PKG_20K.amountRupiah + DOKU_ADMIN_FEE_RUPIAH,
-        paymentMethodTypes: ["VIRTUAL_ACCOUNT_BCA"],
+        paymentMethodTypes: getDokuPaymentMethodTypes("va"),
       }),
     );
   });

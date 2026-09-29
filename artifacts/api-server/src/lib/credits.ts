@@ -60,10 +60,23 @@ export function getDokuMethodsForPackage(amountRupiah: number): readonly DokuChe
 
 // DOKU's own payment_method_types values (see
 // developers.doku.com/.../backend-integration) that restrict the hosted
-// checkout page to exactly one channel instead of showing every channel
-// active on the dashboard.
+// checkout page to just these channels instead of showing every channel
+// active on the dashboard. "va" lists every VA bank confirmed Active +
+// Non-SNAP in DOKU Back Office (Settings > Payment Virtual Account) — see
+// chat: VIRTUAL_ACCOUNT_BCA alone 400'd with "PAYMENT CHANNEL IS INACTIVE"
+// because BCA isn't actually enabled on this merchant account. Keep this
+// in sync with whichever banks are actually Active there; each one also
+// needs its own Notify URL configured (Configure > Notify URL) exactly
+// like QRIS, or its payments will silently never auto-credit.
 const DOKU_PAYMENT_METHOD_TYPES: Record<DokuCheckoutMethod, readonly string[]> = {
-  va: ["VIRTUAL_ACCOUNT_BCA"],
+  va: [
+    "VIRTUAL_ACCOUNT_BNI",
+    "VIRTUAL_ACCOUNT_BRI",
+    "VIRTUAL_ACCOUNT_BANK_CIMB",
+    "VIRTUAL_ACCOUNT_BANK_PERMATA",
+    "VIRTUAL_ACCOUNT_BANK_SYARIAH_MANDIRI",
+    "VIRTUAL_ACCOUNT_DOKU",
+  ],
   qris: ["QRIS"],
 };
 
