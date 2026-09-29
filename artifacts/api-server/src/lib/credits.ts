@@ -61,21 +61,31 @@ export function getDokuMethodsForPackage(amountRupiah: number): readonly DokuChe
 // DOKU's own payment_method_types values (see
 // developers.doku.com/.../backend-integration) that restrict the hosted
 // checkout page to just these channels instead of showing every channel
-// active on the dashboard. "va" lists every VA bank confirmed Active +
-// Non-SNAP in DOKU Back Office (Settings > Payment Virtual Account) — see
-// chat: VIRTUAL_ACCOUNT_BCA alone 400'd with "PAYMENT CHANNEL IS INACTIVE"
-// because BCA isn't actually enabled on this merchant account. Keep this
-// in sync with whichever banks are actually Active there; each one also
-// needs its own Notify URL configured (Configure > Notify URL) exactly
-// like QRIS, or its payments will silently never auto-credit.
+// active on the dashboard. "va" lists every VA bank confirmed Active in
+// DOKU Back Office (Settings > Payment Virtual Account) — see chat:
+// VIRTUAL_ACCOUNT_BCA alone 400'd with "PAYMENT CHANNEL IS INACTIVE"
+// because BCA isn't actually enabled on this merchant account. Maybank
+// (checked in the dashboard's channel-order list) is deliberately left
+// out — DOKU's own supported-payment-methods docs don't list a Maybank VA
+// enum value at all, and guessing wrong here risks 400ing the whole "va"
+// method again, not just skipping that one bank. Keep this list in sync
+// with whichever banks are actually Active there; each one also needs its
+// own Notify URL configured (Configure > Notify URL) exactly like QRIS,
+// or its payments will silently never auto-credit.
 const DOKU_PAYMENT_METHOD_TYPES: Record<DokuCheckoutMethod, readonly string[]> = {
   va: [
-    "VIRTUAL_ACCOUNT_BNI",
+    "VIRTUAL_ACCOUNT_BANK_MANDIRI",
     "VIRTUAL_ACCOUNT_BRI",
-    "VIRTUAL_ACCOUNT_BANK_CIMB",
+    "VIRTUAL_ACCOUNT_BNI",
     "VIRTUAL_ACCOUNT_BANK_PERMATA",
-    "VIRTUAL_ACCOUNT_BANK_SYARIAH_MANDIRI",
     "VIRTUAL_ACCOUNT_DOKU",
+    "VIRTUAL_ACCOUNT_BANK_CIMB",
+    "VIRTUAL_ACCOUNT_BANK_DANAMON",
+    "VIRTUAL_ACCOUNT_BANK_SYARIAH_MANDIRI",
+    "VIRTUAL_ACCOUNT_BTN",
+    "VIRTUAL_ACCOUNT_BNC",
+    "VIRTUAL_ACCOUNT_BJB",
+    "VIRTUAL_ACCOUNT_Sinarmas",
   ],
   qris: ["QRIS"],
 };
