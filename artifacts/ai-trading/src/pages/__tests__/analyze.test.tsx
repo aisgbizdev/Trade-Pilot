@@ -231,9 +231,10 @@ describe("AnalyzePage: happy-path render", () => {
         expect(screen.queryByTestId(`button-timeframe-${tf}`)).not.toBeInTheDocument();
       }
 
-      // Quota chip resolves once the query settles.
+      // Quota chip resolves once the query settles — shows just the
+      // remaining count (not remaining/limit) per the simplified chip.
       const chip = await screen.findByTestId("chip-quota");
-      expect(chip.textContent).toMatch(/9\/10/);
+      expect(chip.textContent).toMatch(/^9\/month$/);
 
       const progression = await screen.findByTestId("button-dashboard-progression");
       expect(progression).toHaveTextContent(/Level 1/i);

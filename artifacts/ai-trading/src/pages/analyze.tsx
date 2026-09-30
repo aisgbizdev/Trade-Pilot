@@ -1167,7 +1167,7 @@ export default function AnalyzePage() {
                 data-testid="chip-quota"
                 title={`${t.analyze.quota_day}: ${dailyQuota.remaining}/${dailyQuota.limit}`}
               >
-                {dailyQuota.remaining}/{dailyQuota.limit} {t.analyze.quota_day_short}
+                {dailyQuota.remaining}{t.analyze.quota_day_short}
               </span>
             )}
           </div>
