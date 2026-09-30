@@ -2,31 +2,42 @@
  * Component test for the Register page (`src/pages/register.tsx`).
  *
  * The manual email/password + security-question form was removed as a
- * deliberate product decision — sign-up is Google-only now (Google
- * already guarantees a verified email). This covers the resulting simple
- * page: the Google button, the consent text linking to /terms and
- * /privacy, the cross-link to /login, and — as a regression guard — that
- * none of the old manual-form controls come back.
+ * deliberate product decision — sign-up is social-only now (Google,
+ * Facebook, or TikTok via the same <SocialSignInMenu> dropdown login.tsx
+ * uses; a verified social account already solves what the manual form's
+ * security question never did). This covers the resulting simple page:
+ * the dropdown, the consent text linking to /terms and /privacy, the
+ * cross-link to /login, and — as a regression guard — that none of the
+ * old manual-form controls come back.
  */
 import { describe, expect, it } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import RegisterPage from "../register";
 import { installFetchMock, makeWrapper } from "./test-helpers";
 
 describe("RegisterPage", () => {
-  it("renders only the Google sign-in path: button, consent links, and the /login cross-link", async () => {
+  it("renders the social sign-in dropdown (Google/Facebook/TikTok), consent links, and the /login cross-link", async () => {
     installFetchMock([]);
     const { Wrapper } = makeWrapper();
 
+    const user = userEvent.setup();
     render(
       <Wrapper>
         <RegisterPage />
       </Wrapper>,
     );
 
-    const googleButton = screen.getByTestId("button-google-signin");
-    expect(googleButton).toBeInTheDocument();
+    const menuTrigger = screen.getByTestId("button-social-signin-menu");
+    expect(menuTrigger).toBeInTheDocument();
+    // Radix's DropdownMenuTrigger opens on a real pointer-down sequence,
+    // not a bare synthetic `click` — userEvent dispatches that full
+    // sequence the way a real browser would.
+    await user.click(menuTrigger);
+    expect(await screen.findByTestId("button-google-signin")).toBeInTheDocument();
+    expect(screen.getByTestId("button-facebook-signin")).toBeInTheDocument();
+    expect(screen.getByTestId("button-tiktok-signin")).toBeInTheDocument();
 
     expect(screen.getByTestId("text-consent")).toBeInTheDocument();
     expect(screen.getByTestId("link-consent-terms")).toHaveAttribute("href", "/terms");
@@ -41,7 +52,7 @@ describe("RegisterPage", () => {
 
     // Settle the AuthProvider query before the test ends.
     await waitFor(() => {
-      expect(screen.getByTestId("button-google-signin")).toBeInTheDocument();
+      expect(screen.getByTestId("button-social-signin-menu")).toBeInTheDocument();
     });
   });
 
@@ -56,7 +67,7 @@ describe("RegisterPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("button-google-signin")).toBeInTheDocument();
+      expect(screen.getByTestId("button-social-signin-menu")).toBeInTheDocument();
     });
 
     for (const testId of [

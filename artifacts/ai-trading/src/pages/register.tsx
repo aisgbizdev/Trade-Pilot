@@ -3,26 +3,23 @@ import { Brain, Zap, Target } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
-import { GoogleSignInButton } from "@/components/google-sign-in-button";
-import { FacebookSignInButton } from "@/components/facebook-sign-in-button";
-import { TiktokSignInButton } from "@/components/tiktok-sign-in-button";
+import { SocialSignInMenu } from "@/components/social-sign-in-menu";
 
 // Same three value props the landing page's hero leads with — reused here
 // (smaller, theme-aware) so the space below the sign-up card carries the
 // "why" instead of sitting empty.
 const VALUE_PROP_ICONS = [Brain, Zap, Target];
 
-// Google-only sign-up (web). The manual email/password + security-question
-// form used to live here, below the Google button — removed as a
-// deliberate product decision (see chat): Google already guarantees a
-// verified email, which was the actual problem the manual form's security
-// question never solved. The backend POST /auth/register endpoint is
-// intentionally left in place (unused by this page) rather than deleted,
-// so existing password accounts keep working via /login and this is easy
-// to roll back if needed.
+// Social-only sign-up (web) — Google, Facebook, or TikTok via
+// <SocialSignInMenu>. The manual email/password + security-question form
+// used to live here, below the Google button — removed as a deliberate
+// product decision (see chat): a verified social account already solves
+// what the manual form's security question never did. The backend
+// POST /auth/register endpoint is intentionally left in place (unused by
+// this page) rather than deleted, so existing password accounts keep
+// working via /login and this is easy to roll back if needed.
 //
-// Visual structure mirrors login.tsx's hero-band + card treatment — with
-// only the Google button left, the page reads as sparse without it.
+// Visual structure mirrors login.tsx's hero-band + card treatment.
 export default function RegisterPage() {
   const { t } = useTranslation();
 
@@ -49,9 +46,7 @@ export default function RegisterPage() {
       <div className="flex-1 flex flex-col px-6 py-8 -mt-4">
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
           <div className="space-y-2.5">
-            <GoogleSignInButton />
-            <FacebookSignInButton />
-            <TiktokSignInButton />
+            <SocialSignInMenu />
           </div>
 
           <p

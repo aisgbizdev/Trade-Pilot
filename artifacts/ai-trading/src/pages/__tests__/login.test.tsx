@@ -16,6 +16,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import LoginPage, { loginErrorDescription } from "../login";
 import {
@@ -42,6 +43,8 @@ function loginHandler(opts: {
   };
 }
 
+const originalLocation = window.location;
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
@@ -50,6 +53,11 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  // jsdom's Location.href is non-configurable, so a test that needs to
+  // observe a redirect replaces `window.location` itself instead of
+  // stubbing `.href` in place — restore the real one here so later tests
+  // get real pathname/search back.
+  Object.defineProperty(window, "location", { value: originalLocation, configurable: true, writable: true });
 });
 
 describe("LoginPage: happy-path render", () => {
@@ -70,7 +78,7 @@ describe("LoginPage: happy-path render", () => {
     expect(screen.getByTestId("input-password")).toBeInTheDocument();
     expect(screen.getByTestId("checkbox-remember-me")).toBeInTheDocument();
     expect(screen.getByTestId("button-submit-login")).toBeInTheDocument();
-    expect(screen.getByTestId("button-google-signin")).toBeInTheDocument();
+    expect(screen.getByTestId("button-social-signin-menu")).toBeInTheDocument();
     expect(screen.getByTestId("link-forgot-password")).toBeInTheDocument();
     expect(screen.getByTestId("link-register")).toBeInTheDocument();
 
@@ -85,6 +93,58 @@ describe("LoginPage: happy-path render", () => {
     await waitFor(() => {
       expect(screen.getByTestId("form-login")).toBeInTheDocument();
     });
+  });
+});
+
+describe("LoginPage: social sign-in dropdown", () => {
+  it("opens on click and lists all three providers; picking one navigates to its OAuth start route", async () => {
+    installFetchMock([loginHandler({})]);
+    const { Wrapper } = makeWrapper();
+
+    // jsdom's Location.href is non-configurable, so it can't be stubbed in
+    // place — replace `window.location` itself instead, with an object
+    // that carries real string snapshots of pathname/search/origin (never
+    // `{ ...window.location }`, which silently yields an empty object
+    // since Location's real properties are prototype accessors). Restored
+    // in the file's shared afterEach.
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        pathname: window.location.pathname,
+        search: window.location.search,
+        origin: window.location.origin,
+        set href(v: string) {
+          hrefSetter(v);
+        },
+        get href() {
+          return "http://localhost/login";
+        },
+      },
+    });
+
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <LoginPage />
+      </Wrapper>,
+    );
+
+    // Collapsed by default — no provider items on the page yet.
+    expect(screen.queryByTestId("button-google-signin")).not.toBeInTheDocument();
+
+    // Radix's DropdownMenuTrigger opens on a real pointer-down sequence,
+    // not a bare synthetic `click` — userEvent dispatches that full
+    // sequence the way a real browser would.
+    await user.click(await screen.findByTestId("button-social-signin-menu"));
+
+    expect(await screen.findByTestId("button-google-signin")).toBeInTheDocument();
+    expect(screen.getByTestId("button-facebook-signin")).toBeInTheDocument();
+    expect(screen.getByTestId("button-tiktok-signin")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("button-facebook-signin"));
+    expect(hrefSetter).toHaveBeenCalledWith("/api/auth/facebook");
   });
 });
 

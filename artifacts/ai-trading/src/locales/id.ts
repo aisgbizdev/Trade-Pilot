@@ -194,6 +194,7 @@ export const id: Translations = {
     login_connection_error: "Tidak dapat terhubung ke server. Periksa koneksi atau coba lagi beberapa saat.",
     login_service_error: "Layanan login sedang tidak tersedia. Coba lagi beberapa saat.",
     or_divider: "atau",
+    social_signin_cta: "Lanjut dengan...",
     continue_with_google: "Lanjut dengan Google",
     google_login_failed: "Login Google gagal. Silakan coba lagi.",
     google_email_unverified: "Email Google kamu belum terverifikasi. Verifikasi dulu di akun Google.",

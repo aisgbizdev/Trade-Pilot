@@ -192,6 +192,7 @@ export const en = {
     login_connection_error: "Could not connect to the server. Check your connection or try again shortly.",
     login_service_error: "The login service is temporarily unavailable. Please try again shortly.",
     or_divider: "or",
+    social_signin_cta: "Continue with...",
     continue_with_google: "Continue with Google",
     google_login_failed: "Google sign-in failed. Please try again.",
     google_email_unverified: "Your Google email isn't verified yet. Verify it in your Google account first.",

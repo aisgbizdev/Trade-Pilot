@@ -15,9 +15,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BrandLogo } from "@/components/brand-logo";
-import { GoogleSignInButton, AuthDivider } from "@/components/google-sign-in-button";
-import { FacebookSignInButton } from "@/components/facebook-sign-in-button";
-import { TiktokSignInButton } from "@/components/tiktok-sign-in-button";
+import { AuthDivider } from "@/components/auth-divider";
+import { SocialSignInMenu } from "@/components/social-sign-in-menu";
 import { useTrackEvent } from "@/hooks/use-track-event";
 
 type LoginRequestError = {
@@ -174,9 +173,7 @@ export default function LoginPage() {
         )}
         <div className="bg-card border border-border rounded-3xl p-6 shadow-xl">
           <div className="space-y-2.5">
-            <GoogleSignInButton disabled={login.isPending} />
-            <FacebookSignInButton disabled={login.isPending} />
-            <TiktokSignInButton disabled={login.isPending} />
+            <SocialSignInMenu disabled={login.isPending} />
           </div>
           <AuthDivider />
           <Form {...form}>
