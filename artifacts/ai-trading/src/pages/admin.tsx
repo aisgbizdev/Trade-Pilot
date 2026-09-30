@@ -37,6 +37,7 @@ import {
   useGetOutboundClickStats,
   useGetAdminAnalyticsUsage,
   useGetAdminAnalyticsTokens,
+  getGetAdminAnalyticsTokensQueryKey,
   useGetAllAnalyses,
   getGetAllAnalysesQueryKey,
   useBroadcastNotification,
@@ -636,6 +637,174 @@ function TokenUsagePanel() {
   );
 }
 
+type CostGranularity = "day" | "week" | "month";
+
+interface CostBucket {
+  sortKey: string;
+  label: string;
+  costUsd: number;
+}
+
+// Buckets a "YYYY-MM-DD" day row into the key/label for the chosen
+// granularity. Dates are parsed as UTC midnight so bucketing never shifts
+// a day across a local-timezone boundary.
+function costBucketFor(dateStr: string, granularity: CostGranularity): { key: string; label: string } {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  if (granularity === "month") {
+    const key = dateStr.slice(0, 7);
+    return { key, label: `${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}` };
+  }
+  if (granularity === "week") {
+    // Monday-start week, matching how most of this app's other weekly
+    // groupings work.
+    const dayOfWeek = d.getUTCDay();
+    const diffToMonday = (dayOfWeek + 6) % 7;
+    const monday = new Date(d);
+    monday.setUTCDate(d.getUTCDate() - diffToMonday);
+    const key = monday.toISOString().slice(0, 10);
+    return { key, label: `${String(monday.getUTCDate()).padStart(2, "0")}/${String(monday.getUTCMonth() + 1).padStart(2, "0")}` };
+  }
+  return { key: dateStr, label: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}` };
+}
+
+function aggregateCostBuckets(
+  dailyTokens: readonly { date: string; estimatedCostUsd: number }[],
+  granularity: CostGranularity,
+): CostBucket[] {
+  const map = new Map<string, CostBucket>();
+  for (const row of dailyTokens) {
+    const { key, label } = costBucketFor(row.date, granularity);
+    const existing = map.get(key);
+    if (existing) existing.costUsd += row.estimatedCostUsd;
+    else map.set(key, { sortKey: key, label, costUsd: row.estimatedCostUsd });
+  }
+  return Array.from(map.values()).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+}
+
+const COST_BUCKET_LIMIT: Record<CostGranularity, number> = { day: 30, week: 12, month: 12 };
+
+// AI spend rolled up by day/week/month — reuses the same ai_token_usage
+// data GET /admin/analytics/tokens already returns per-day (see
+// TokenUsagePanel above); the week/month buckets are computed client-side
+// from that same daily series rather than adding new backend aggregates.
+function AiCostBreakdownPanel() {
+  const { t } = useTranslation();
+  const [granularity, setGranularity] = useState<CostGranularity>("day");
+  // A full year of daily rows is enough to fill 12 monthly buckets; the
+  // day/week views just slice the tail of the same series.
+  const { data, isLoading } = useGetAdminAnalyticsTokens(
+    { days: 365 },
+    { query: { queryKey: getGetAdminAnalyticsTokensQueryKey({ days: 365 }) } },
+  );
+
+  const fmtCost = (usd: number) => `$${usd.toFixed(usd < 1 ? 4 : 2)}`;
+
+  const buckets = useMemo(() => {
+    const all = aggregateCostBuckets(data?.dailyTokens ?? [], granularity);
+    return all.slice(-COST_BUCKET_LIMIT[granularity]);
+  }, [data, granularity]);
+
+  const totalCost = buckets.reduce((sum, b) => sum + b.costUsd, 0);
+
+  return (
+    <Card className="p-4 space-y-4" data-testid="card-ai-cost-breakdown">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Coins className="w-4 h-4" /> {t.admin.ai_cost_breakdown_title}
+          </h3>
+          <p className="text-[11px] text-muted-foreground">{t.admin.ai_cost_breakdown_subtitle}</p>
+        </div>
+        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
+          {(["day", "week", "month"] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGranularity(g)}
+              data-testid={`ai-cost-granularity-${g}`}
+              className={cn(
+                "px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
+                granularity === g
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {g === "day"
+                ? t.admin.ai_cost_granularity_day
+                : g === "week"
+                  ? t.admin.ai_cost_granularity_week
+                  : t.admin.ai_cost_granularity_month}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : buckets.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4">{t.admin.token_usage_empty}</p>
+      ) : (
+        <>
+          <div className="text-center">
+            <div className="text-lg font-bold text-primary" data-testid="stat-ai-cost-total">
+              {fmtCost(totalCost)}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">{t.admin.ai_cost_breakdown_total_label}</div>
+          </div>
+
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={buckets} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                }}
+                formatter={(value: number) => [fmtCost(value), t.admin.ai_cost_breakdown_cost_label]}
+              />
+              <Bar dataKey="costUsd" radius={[3, 3, 0, 0]}>
+                {buckets.map((_, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={index === buckets.length - 1 ? "hsl(var(--primary))" : "hsl(var(--muted))"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+
+          <div className="divide-y divide-border">
+            {[...buckets].reverse().map((b) => (
+              <div
+                key={b.sortKey}
+                className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0"
+                data-testid={`row-ai-cost-bucket-${b.sortKey}`}
+              >
+                <span className="text-sm text-foreground">{b.label}</span>
+                <span className="text-xs text-muted-foreground">{fmtCost(b.costUsd)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
 function RecentSignupsPanel() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
@@ -1175,6 +1344,7 @@ function AdminContent() {
 
             <UsageAnalyticsPanel />
             <TokenUsagePanel />
+            <AiCostBreakdownPanel />
 
             {SHOW_SPONSOR && <SponsorClicksPanel />}
           </>
