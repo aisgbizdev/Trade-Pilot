@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown, Lightbulb } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LandingProductPreview } from "@/components/landing-product-preview";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useAuth } from "@/components/auth-provider";
 import { useTranslation } from "@/lib/i18n";
 import { useEmbedMode } from "@/lib/embed-mode";
@@ -141,6 +147,61 @@ export default function LandingPage() {
             <div className="mt-6">
               {previewOpen && <LandingProductPreview />}
             </div>
+          </div>
+        </section>
+
+        <section className="border-t border-[#f1f0eb]/10 py-10 sm:py-14" aria-label={t.landing.philosophy_title}>
+          <div className="mx-auto max-w-2xl">
+            <div className="flex items-start gap-4 rounded-2xl border border-[#f1f0eb]/10 bg-[#f1f0eb]/[0.03] p-6 sm:p-7" data-testid="card-landing-philosophy">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 border border-primary/25">
+                <Lightbulb className="h-5 w-5 text-primary" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold tracking-tight text-[#f1f0eb]" data-testid="text-philosophy-title">
+                  {t.landing.philosophy_title}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-[#f1f0eb]/65" data-testid="text-philosophy-body">
+                  {t.landing.philosophy_body}
+                </p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-[0.06em] text-primary" data-testid="text-philosophy-subtext">
+                  {t.landing.philosophy_subtext}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-[#f1f0eb]/10 py-10 sm:py-14" aria-labelledby="landing-faq-title" data-testid="section-faq">
+          <div className="mx-auto max-w-2xl">
+            <h2 id="landing-faq-title" className="text-xl font-bold tracking-tight text-[#f1f0eb] sm:text-2xl">
+              {t.landing.faq_title}
+            </h2>
+            <Accordion type="single" collapsible className="mt-6 space-y-2.5">
+              {[
+                [t.landing.faq_q1, t.landing.faq_a1],
+                [t.landing.faq_q2, t.landing.faq_a2],
+                [t.landing.faq_q3, t.landing.faq_a3],
+                [t.landing.faq_q4, t.landing.faq_a4],
+                [t.landing.faq_q5, t.landing.faq_a5],
+              ].map(([question, answer], i) => (
+                <AccordionItem
+                  key={question}
+                  value={`faq-${i}`}
+                  className="overflow-hidden rounded-xl border border-[#f1f0eb]/12 bg-[#f1f0eb]/[0.03]"
+                  data-testid={`accordion-faq-${i}`}
+                >
+                  <AccordionTrigger
+                    className="px-4 py-3.5 text-sm font-semibold text-[#f1f0eb] hover:no-underline [&>svg]:text-primary"
+                    data-testid={`button-faq-${i}`}
+                  >
+                    {question}
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 text-sm leading-relaxed text-[#f1f0eb]/60">
+                    {answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
         </section>
       </main>
