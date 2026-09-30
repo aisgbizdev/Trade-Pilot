@@ -1,7 +1,7 @@
 export const en = {
   risk_map: {
     title: "Timeframe Risk Map",
-    desc: "Compare technical risk across timeframes to find the best setup window.",
+    desc: "This comparison scores technical risk only. The risk in an analysis result can differ due to other factors.",
     btn_open: "Check Timeframe Risk",
     btn_compare: "Compare Risk",
     btn_close: "Close Map",
@@ -971,6 +971,7 @@ export const en = {
     refresh_btn: "Refresh Analysis",
     refresh_failed: "Failed to refresh analysis",
     bias_title: "Directional Bias",
+    bias_risk_disclaimer: "The bias shows a directional tendency from the available data, not a risk level.",
     bias_subtitle: "Tendency from the analysis — not a buy/sell instruction",
     bias_for_timeframe: "For the {timeframe} timeframe",
     bias_bearish_strong: "Strong bearish bias",
@@ -985,7 +986,8 @@ export const en = {
     bias_beginner_bullish_strong: "Tends up (strong)",
     bias_unknown: "Not available",
     opportunity_title: "Opportunity",
-    risk_title: "Risk",
+    risk_title: "Overall Risk",
+    risk_overall_note: "Covers technicals and news/calendar where available; can differ from Compare Risk.",
     invalidation_title: "This analysis becomes invalid if:",
     invalidation_short: "Invalid if",
     invalidation_subtitle: "Watch these conditions before making any decision",

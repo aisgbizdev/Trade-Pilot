@@ -23,6 +23,7 @@ import {
   Activity,
   Plus,
   Printer,
+  Info,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ExpandableExplanation } from "@/components/expandable-explanation";
@@ -134,7 +135,12 @@ function TimeframeRiskDialog({
             <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
             {t.risk_map.title}
           </DialogTitle>
-          <DialogDescription className="text-xs leading-relaxed text-muted-foreground">{t.risk_map.desc}</DialogDescription>
+          <DialogDescription
+            className="flex items-start gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 p-2 text-xs leading-relaxed text-blue-700 dark:text-blue-400"
+          >
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{t.risk_map.desc}</span>
+          </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -383,6 +389,13 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
             >
               {timeframe}
             </span>
+          </div>
+          <div
+            className="mt-1.5 flex items-start gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 p-1.5 text-[11px] leading-relaxed text-blue-700 dark:text-blue-400"
+            data-testid="text-bias-risk-disclaimer"
+          >
+            <Info className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+            <span>{t.analysis_detail.bias_risk_disclaimer}</span>
           </div>
           <p className="text-[11px] text-muted-foreground mt-1">
             {t.analysis_detail.bias_for_timeframe.replace("{timeframe}", timeframe)}
@@ -2522,6 +2535,13 @@ export default function AnalysisDetailPage({
               <p className={cn("text-sm font-bold", rl?.color)} data-testid="text-risk-level">
                 {rl?.label}
               </p>
+              <div
+                className="mt-1 flex items-start gap-1 rounded-md border border-blue-500/20 bg-blue-500/10 p-1.5 text-[9px] leading-snug text-blue-700 dark:text-blue-400 max-w-[10rem]"
+                data-testid="text-risk-overall-note"
+              >
+                <Info className="mt-0.5 h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                <span>{t.analysis_detail.risk_overall_note}</span>
+              </div>
             </div>
           </div>
           <AnalysisGuideLink article="bias-confidence-validity" compact className="-ml-1.5" />

@@ -3,7 +3,7 @@ import type { Translations } from "./en";
 export const id: Translations = {
   risk_map: {
     title: "Peta Risiko Timeframe",
-    desc: "Bandingkan risiko teknikal di berbagai timeframe untuk mencari peluang terbaik.",
+    desc: "Perbandingan ini menilai risiko teknikal saja. Risiko hasil analisis dapat berbeda karena faktor lain.",
     btn_open: "Cek Risiko Timeframe",
     btn_compare: "Compare Risk",
     btn_close: "Tutup Peta",
@@ -973,6 +973,7 @@ export const id: Translations = {
     refresh_btn: "Perbarui Analisis",
     refresh_failed: "Gagal memperbarui analisis",
     bias_title: "Bias Arah",
+    bias_risk_disclaimer: "Bias menunjukkan kecenderungan arah dari data yang tersedia, bukan tingkat risiko.",
     bias_subtitle: "Kecenderungan dari analisis — bukan instruksi beli/jual",
     bias_for_timeframe: "Untuk timeframe {timeframe}",
     bias_bearish_strong: "Bearish bias kuat",
@@ -987,7 +988,8 @@ export const id: Translations = {
     bias_beginner_bullish_strong: "Cenderung naik (kuat)",
     bias_unknown: "Belum tersedia",
     opportunity_title: "Peluang",
-    risk_title: "Risiko",
+    risk_title: "Risiko Keseluruhan",
+    risk_overall_note: "Mencakup teknikal dan berita/kalender jika tersedia; bisa berbeda dari Compare Risk.",
     invalidation_title: "Analisis ini batal jika:",
     invalidation_short: "Batal jika",
     invalidation_subtitle: "Pantau kondisi-kondisi berikut sebelum mengambil keputusan",
