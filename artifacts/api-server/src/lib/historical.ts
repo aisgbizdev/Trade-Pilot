@@ -442,13 +442,23 @@ async function getDailyCandles(
   const symbolData = allData.find((s: any) => s.symbol === apiSymbol);
   if (!symbolData || !symbolData.data?.length) return null;
 
-  const dailyCandles: Candle[] = symbolData.data.map((d: any) => ({
-    date: d.date,
-    open: d.open,
-    high: d.high,
-    low: d.low,
-    close: d.close,
-  }));
+  // The shared daily feed's rows arrive newest-first (see the VERIFIED_OTHER_
+  // INSTRUMENTS branch above) — every consumer of this array (chart
+  // rendering, the live-price anchor, the D1/1W market-snapshot capture in
+  // routes/analyses.ts) assumes the LAST element is the most recent candle,
+  // same convention as the Yahoo-sourced paths. Sort ascending here once so
+  // that assumption actually holds, instead of only being true by accident
+  // for instruments that happen to go through resampleDailyToWeekly (which
+  // already sorts internally) or the Yahoo branch above.
+  const dailyCandles: Candle[] = symbolData.data
+    .map((d: any) => ({
+      date: d.date,
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close,
+    }))
+    .sort((a: Candle, b: Candle) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const candles =
     timeframe === "1W" ? resampleDailyToWeekly(dailyCandles) : dailyCandles;
