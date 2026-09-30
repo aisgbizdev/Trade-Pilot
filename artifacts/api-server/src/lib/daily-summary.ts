@@ -159,6 +159,11 @@ async function resolveAnalysisForInstrument(
       instrument,
       DIGEST_TIMEFRAME,
       DIGEST_MODE,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "free", // digest generations never consume a credit — pure giveaway cost.
     );
     const validUntil = getValidUntil(DIGEST_TIMEFRAME);
     const [inserted] = await db

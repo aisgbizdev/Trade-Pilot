@@ -707,6 +707,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         indicatorContext,
         fundamentalSnapshot,
         livePrice,
+        "dev",
       ));
     } catch (aiErr) {
       logger.error(
@@ -783,6 +784,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           indicatorContext,
           fundamentalSnapshot,
           livePrice,
+          willConsumeCredit ? "paid" : "free",
         ));
       } catch (aiErr) {
         logger.error(

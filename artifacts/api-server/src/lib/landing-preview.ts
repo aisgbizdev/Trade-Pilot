@@ -98,6 +98,7 @@ async function createSnapshot(): Promise<LandingPreviewSnapshot> {
     contextParts.length > 0 ? contextParts.join("\n") : undefined,
     fundamentalSnapshot,
     livePrice,
+    "free", // public marketing preview — no signed-in user, no revenue.
   );
   const price =
     typeof livePrice === "number" && Number.isFinite(livePrice)

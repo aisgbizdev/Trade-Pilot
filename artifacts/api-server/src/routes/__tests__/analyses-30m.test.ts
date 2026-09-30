@@ -217,6 +217,9 @@ describe("POST /api/analyses with timeframe 30m", () => {
       // here so getLivePriceFor resolves to null (instrument not in the
       // cached payload), which is the expected "no live anchor" value.
       null,
+      // Eighth arg is the AI cost-attribution tier — this test's user is
+      // privileged (admin/super_admin), which always maps to "dev".
+      "dev",
     );
 
     // The persisted snapshot is also returned in the response so the

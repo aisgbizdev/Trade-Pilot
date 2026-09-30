@@ -5,9 +5,32 @@ import type { NewsItem } from "./news";
 import { isCryptoInstrument } from "./crypto-instruments";
 import { logger } from "./logger";
 
-export const openai = new OpenAI({
-  apiKey: process.env["OPENAI_API_KEY"],
-});
+// Cost-attribution tier (see chat 2026-09-30) — which of 3 separate OpenAI
+// API keys a call is billed against, so usage/cost can be cross-checked
+// per-tier on OpenAI's own Usage dashboard against our in-app estimate
+// (the "Per Segmentasi User" admin panel), not just trusted blind:
+//   "free" — covered by a user's free lifetime quota, no matching revenue.
+//   "paid" — this specific analysis consumed a purchased credit.
+//   "dev"  — admin/super_admin, unlimited + free, pure internal overhead.
+// Each tier's key env var falls back to OPENAI_API_KEY when unset, so
+// this is a no-op (everything shares one key, exactly as before) until
+// the tier-specific keys are actually created in the OpenAI dashboard and
+// configured as secrets.
+export type AICostTier = "free" | "paid" | "dev";
+
+function buildTierClient(envVar: string): OpenAI {
+  return new OpenAI({ apiKey: process.env[envVar] ?? process.env["OPENAI_API_KEY"] });
+}
+
+const TIER_CLIENTS: Record<AICostTier, OpenAI> = {
+  free: buildTierClient("OPENAI_API_KEY_FREE"),
+  paid: buildTierClient("OPENAI_API_KEY_PAID"),
+  dev: buildTierClient("OPENAI_API_KEY_DEV"),
+};
+
+// Kept as the default/free-tier client — used by anything that doesn't
+// care about tier attribution (tests, one-off scripts).
+export const openai = TIER_CLIENTS.free;
 
 const TIMEFRAME_VALIDITY: Record<string, number> = {
   "1m": 15 * 60 * 1000,
@@ -400,8 +423,9 @@ async function callOpenAI(
   model: string,
   maxTokens?: number,
   timeoutMs?: number,
+  tier: AICostTier = "free",
 ): Promise<{ data: unknown; usage: CallTokenUsage | null }> {
-  const request = openai.chat.completions.create({
+  const request = TIER_CLIENTS[tier].chat.completions.create({
     model,
     messages: [
       { role: "system", content: systemPrompt },
@@ -661,6 +685,7 @@ export async function generateAnalysis(
   indicatorContext?: string,
   fundamentalSnapshot?: FundamentalSnapshot | null,
   livePrice?: number | null,
+  tier: AICostTier = "free",
 ): Promise<GenerateAnalysisResult> {
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
   const selectedModel =
@@ -795,7 +820,7 @@ export async function generateAnalysis(
     maxTok?: number,
     timeout?: number,
   ): Promise<unknown> => {
-    const { data, usage: callUsage } = await callOpenAI(prompt, message, model, maxTok, timeout);
+    const { data, usage: callUsage } = await callOpenAI(prompt, message, model, maxTok, timeout, tier);
     usage.callCount += 1;
     if (callUsage) {
       usage.promptTokens += callUsage.promptTokens;
