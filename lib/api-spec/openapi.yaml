@@ -5130,6 +5130,11 @@ components:
           description: True for admin/super_admin, who bypass quota
         daily:
           type: object
+          description: >-
+            Named "daily" for historical/API-stability reasons, but the
+            window it counts is actually the current calendar month (WIB,
+            resets on the 1st) — see chat 2026-09-30 for why this wasn't
+            renamed alongside the behavior change.
           properties:
             limit:
               type: integer
@@ -6262,7 +6267,10 @@ components:
         customQuotaPerDay:
           type: integer
           nullable: true
-          description: Per-user analysis-quota override. Null = uses the global default.
+          description: >-
+            Per-user analysis-quota override. Null = uses the global
+            default. Named "PerDay" for historical reasons — the window it
+            gates is the current calendar month (WIB), not 24 hours.
         segment:
           type: string
           enum: [free, paid, dev]

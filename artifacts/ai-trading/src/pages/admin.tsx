@@ -1150,8 +1150,8 @@ function QuotaSettingsPanel() {
   }, [toast]);
 
   const save = async () => {
-    const perDay = Number(daily);
-    if (!Number.isFinite(perDay) || perDay <= 0) {
+    const perMonth = Number(daily);
+    if (!Number.isFinite(perMonth) || perMonth <= 0) {
       toast({ title: "Quota harus angka > 0", variant: "destructive" });
       return;
     }
@@ -1162,12 +1162,12 @@ function QuotaSettingsPanel() {
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          analysisQuotaPerDay: Math.floor(perDay),
+          analysisQuotaPerDay: Math.floor(perMonth),
         }),
       });
       const data = (await r.json()) as { error?: string; analysisQuotaPerDay?: number };
       if (!r.ok) throw new Error(data.error ?? "update failed");
-      setDaily(String(data.analysisQuotaPerDay ?? Math.floor(perDay)));
+      setDaily(String(data.analysisQuotaPerDay ?? Math.floor(perMonth)));
       toast({ title: "Quota berhasil diupdate" });
     } catch (e) {
       toast({ title: (e as Error).message || "Gagal update quota", variant: "destructive" });
@@ -1178,7 +1178,7 @@ function QuotaSettingsPanel() {
 
   return (
     <Card className="p-4 space-y-3" data-testid="card-quota-settings">
-      <h3 className="text-sm font-semibold text-foreground">Analysis Quota Settings</h3>
+      <h3 className="text-sm font-semibold text-foreground">Analysis Quota Settings (per month)</h3>
       {loading ? (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading...
@@ -1190,7 +1190,7 @@ function QuotaSettingsPanel() {
             min={1}
             value={daily}
             onChange={(e) => setDaily(e.target.value)}
-            placeholder="Per day"
+            placeholder="Per month"
             data-testid="input-quota-day"
           />
           <Button onClick={save} disabled={saving} data-testid="button-save-quota">

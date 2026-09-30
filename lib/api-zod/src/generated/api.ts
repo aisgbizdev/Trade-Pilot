@@ -3153,11 +3153,15 @@ export const GetAnalysisQuotaResponse = zod.object({
   unlimited: zod
     .boolean()
     .describe("True for admin\/super_admin, who bypass quota"),
-  daily: zod.object({
-    limit: zod.number().int(),
-    used: zod.number().int(),
-    remaining: zod.number().int(),
-  }),
+  daily: zod
+    .object({
+      limit: zod.number().int(),
+      used: zod.number().int(),
+      remaining: zod.number().int(),
+    })
+    .describe(
+      'Named \"daily\" for historical\/API-stability reasons, but the window it counts is actually the current calendar month (WIB, resets on the 1st) — see chat 2026-09-30 for why this wasn\'t renamed alongside the behavior change.',
+    ),
   credits: zod.object({
     balance: zod.number().int(),
   }),
@@ -4938,7 +4942,7 @@ export const GetAllUsersResponse = zod.object({
         .int()
         .nullable()
         .describe(
-          "Per-user analysis-quota override. Null = uses the global default.",
+          'Per-user analysis-quota override. Null = uses the global default. Named \"PerDay\" for historical reasons — the window it gates is the current calendar month (WIB), not 24 hours.',
         ),
       segment: zod
         .enum(["free", "paid", "dev"])

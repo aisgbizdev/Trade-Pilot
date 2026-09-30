@@ -34,10 +34,18 @@ const DIGEST_MODE: "beginner" | "pro" = "pro";
 // the levels still resemble live price action.
 const REUSE_WINDOW_MS = 6 * 60 * 60 * 1000;
 
-// Hard cap matching the AI quota wired into POST /analyses. Defined
-// locally rather than imported so a future change to the analyses
-// route's per-call limits doesn't silently change digest semantics.
-const ANALYSIS_QUOTA_PER_DAY = Number(process.env["ANALYSIS_QUOTA_PER_DAY"] ?? 20);
+// Hard cap matching the AI quota wired into POST /analyses (see the naming
+// drift note there — this is now a calendar-month window, not 24h,
+// despite the name). Defined locally rather than imported so a future
+// change to the analyses route's per-call limits doesn't silently change
+// digest semantics — but see chat (2026-09-30): this had drifted from the
+// real quota anyway (still a rolling 24h check against a hardcoded 20,
+// while the real quota had its own admin-configurable value), which meant
+// this digest was generating real, uncapped, uncounted AI analyses for
+// every instrument in every user's daily summary regardless of their
+// actual quota state — a real hidden cost source. Kept in sync with the
+// same default (5) so it can no longer drift silently like that again.
+const ANALYSIS_QUOTA_PER_DAY = Number(process.env["ANALYSIS_QUOTA_PER_DAY"] ?? 5);
 
 export type DigestKind = "full" | "quota_only";
 
@@ -94,16 +102,21 @@ function shouldDispatchNow(
 
 // Quota check matching POST /analyses' rules. We do this OUTSIDE the
 // per-user transaction so we can decide between `full` and `quota_only`
-// digests without holding any locks.
+// digests without holding any locks. Window matches
+// analyses.ts's QUOTA_WINDOW_START_SQL: start of the current calendar
+// month in WIB, not a rolling 24h — `createdAt` is a plain `timestamp`
+// (no tz) written via Postgres `defaultNow()` in a GMT server session, so
+// its values are already UTC wall-clock; shifting +7h before truncating
+// to the month and back -7h gives the UTC instant for WIB midnight on the
+// 1st.
 async function hasQuotaLeft(userId: number): Promise<boolean> {
-  const now = new Date();
-  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const windowStart = sql`date_trunc('month', now() + interval '7 hours') - interval '7 hours'`;
   const [usage] = await db
     .select({
-      daily: sql<number>`sum(case when ${analyses.createdAt} >= ${dayAgo} then 1 else 0 end)`,
+      daily: sql<number>`sum(case when ${analyses.createdAt} >= ${windowStart} then 1 else 0 end)`,
     })
     .from(analyses)
-    .where(and(eq(analyses.userId, userId), gte(analyses.createdAt, dayAgo)));
+    .where(and(eq(analyses.userId, userId), sql`${analyses.createdAt} >= ${windowStart}`));
   const daily = Number(usage?.daily ?? 0);
   return daily < ANALYSIS_QUOTA_PER_DAY;
 }

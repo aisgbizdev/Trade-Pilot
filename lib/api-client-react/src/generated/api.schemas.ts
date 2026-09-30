@@ -1241,6 +1241,9 @@ export interface TimeframeRiskMap {
   overall: TimeframeRiskMapOverall;
 }
 
+/**
+ * Named "daily" for historical/API-stability reasons, but the window it counts is actually the current calendar month (WIB, resets on the 1st) — see chat 2026-09-30 for why this wasn't renamed alongside the behavior change.
+ */
 export type AnalysisQuotaDaily = {
   limit: number;
   used: number;
@@ -1254,6 +1257,7 @@ export type AnalysisQuotaCredits = {
 export interface AnalysisQuota {
   /** True for admin/super_admin, who bypass quota */
   unlimited: boolean;
+  /** Named "daily" for historical/API-stability reasons, but the window it counts is actually the current calendar month (WIB, resets on the 1st) — see chat 2026-09-30 for why this wasn't renamed alongside the behavior change. */
   daily: AnalysisQuotaDaily;
   credits: AnalysisQuotaCredits;
 }
@@ -1999,7 +2003,7 @@ export interface UserWithStats {
   /** Current purchased-credit balance (sum of credit_ledger for this user). */
   creditBalance: number;
   tags: string[];
-  /** Per-user analysis-quota override. Null = uses the global default. */
+  /** Per-user analysis-quota override. Null = uses the global default. Named "PerDay" for historical reasons — the window it gates is the current calendar month (WIB), not 24 hours. */
   customQuotaPerDay: number | null;
   /** Cost/revenue/profit accounting segment (see GET /admin/stats' totalFreeUsers/totalPaidUsers/totalDevUsers). Mutually exclusive: "dev" (customQuotaPerDay set) wins over "paid" (a lifetime topup_approval credit_ledger entry) wins over "free". */
   segment: UserWithStatsSegment;

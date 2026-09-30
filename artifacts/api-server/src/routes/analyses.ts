@@ -377,20 +377,21 @@ router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
 
-  // Compute the "last 24h" cutoff in Postgres itself (now() - interval)
-  // rather than as a JS `Date` param compared against `createdAt`, a
-  // `timestamp` column with no timezone. node-postgres serializes an
-  // outgoing `Date` parameter for a no-tz column using the API server
-  // process's OS timezone, while `createdAt` itself is written via
-  // Postgres-side `defaultNow()` (server session tz, GMT here) — on a
-  // non-UTC host those two clocks disagree. Keeping the whole comparison
-  // server-side sidesteps the mismatch entirely.
+  // Compute the quota-window cutoff (start of the current WIB calendar
+  // month — see QUOTA_WINDOW_START_SQL) in Postgres itself rather than as
+  // a JS `Date` param compared against `createdAt`, a `timestamp` column
+  // with no timezone. node-postgres serializes an outgoing `Date`
+  // parameter for a no-tz column using the API server process's OS
+  // timezone, while `createdAt` itself is written via Postgres-side
+  // `defaultNow()` (server session tz, GMT here) — on a non-UTC host
+  // those two clocks disagree. Keeping the whole comparison server-side
+  // sidesteps the mismatch entirely.
   const [usage] = await db
     .select({
-      daily: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '24 hours' then 1 else 0 end)`,
+      daily: sql<number>`sum(case when ${analyses.createdAt} >= ${QUOTA_WINDOW_START_SQL} then 1 else 0 end)`,
     })
     .from(analyses)
-    .where(and(eq(analyses.userId, req.userId!), sql`${analyses.createdAt} >= now() - interval '24 hours'`));
+    .where(and(eq(analyses.userId, req.userId!), sql`${analyses.createdAt} >= ${QUOTA_WINDOW_START_SQL}`));
 
   const dailyUsed = Number(usage?.daily ?? 0);
 
@@ -514,7 +515,16 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-let ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_DAY"], 20);
+// TEMPORARY-turned-permanent naming drift (see chat, 2026-09-30): the free
+// quota window changed from a rolling 24h "per day" to a calendar-month
+// window that resets on the 1st (WIB) — but the env var, this variable,
+// the DB column (users.customQuotaPerDay), and the API field names below
+// all still say "Day"/"daily" to avoid a schema migration and a breaking
+// API-shape rename (mobile client + generated types all read `daily`).
+// Read every "Day"/"daily" identifier from here down as "the current
+// quota window" now, not literally 24 hours. Default cut from 20 to 5 —
+// AI spend was ~$36/2 days, almost entirely free-tier usage.
+let ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_DAY"], 5);
 const ANALYSIS_LOCK_NAMESPACE = 4242;
 
 export function getAnalysisQuotaConfig(): { perDay: number } {
@@ -523,6 +533,26 @@ export function getAnalysisQuotaConfig(): { perDay: number } {
 
 export function setAnalysisQuotaConfig(perDay: number): void {
   ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(String(perDay), ANALYSIS_QUOTA_PER_DAY);
+}
+
+// Start of the current calendar month in WIB (Asia/Jakarta, UTC+7) —
+// matches the month-boundary convention topups.ts's revenue report
+// already uses. `createdAt` columns are plain `timestamp` (no tz) written
+// via Postgres `defaultNow()` in a GMT server session, i.e. their values
+// are already UTC wall-clock — shifting by +7h before truncating to the
+// month and then shifting back by -7h gives the UTC instant that
+// corresponds to WIB midnight on the 1st, without needing a real tz
+// conversion.
+const QUOTA_WINDOW_START_SQL = sql`date_trunc('month', now() + interval '7 hours') - interval '7 hours'`;
+
+// JS-side mirror of QUOTA_WINDOW_START_SQL's month math, used only for the
+// `Retry-After` header on a 429 (an approximation for the client's retry
+// backoff — the real reset boundary is whatever the SQL above computes).
+function secondsUntilNextQuotaWindow(): number {
+  const nowWib = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  const nextMonthStartWib = Date.UTC(nowWib.getUTCFullYear(), nowWib.getUTCMonth() + 1, 1);
+  const nextMonthStartUtc = nextMonthStartWib - 7 * 60 * 60 * 1000;
+  return Math.max(1, Math.floor((nextMonthStartUtc - Date.now()) / 1000));
 }
 
 // Per-user quota, falling back to the global admin-configured default when
@@ -744,15 +774,15 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       if (!acquired) return { kind: "busy" };
 
       // See the identical comment on GET /analyses/quota above — the
-      // cutoff is computed in Postgres (now() - interval) rather than as
-      // a JS `Date` param, to avoid the client-OS-timezone-vs-server-
-      // session-tz mismatch.
+      // cutoff (start of the current WIB calendar month) is computed in
+      // Postgres rather than as a JS `Date` param, to avoid the
+      // client-OS-timezone-vs-server-session-tz mismatch.
       const [usage] = await tx
         .select({
-          daily: sql<number>`sum(case when ${analyses.createdAt} >= now() - interval '24 hours' then 1 else 0 end)`,
+          daily: sql<number>`sum(case when ${analyses.createdAt} >= ${QUOTA_WINDOW_START_SQL} then 1 else 0 end)`,
         })
         .from(analyses)
-        .where(and(eq(analyses.userId, userId), sql`${analyses.createdAt} >= now() - interval '24 hours'`));
+        .where(and(eq(analyses.userId, userId), sql`${analyses.createdAt} >= ${QUOTA_WINDOW_START_SQL}`));
 
       const dailyCount = Number(usage?.daily ?? 0);
 
@@ -836,8 +866,8 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
   if (outcome.kind === "day") {
-    res.status(429).set("Retry-After", "86400").json({
-      error: `Batas analisis harian tercapai (${outcome.limit} analisis/hari). Silakan coba lagi besok.`,
+    res.status(429).set("Retry-After", String(secondsUntilNextQuotaWindow())).json({
+      error: `Batas analisis bulanan tercapai (${outcome.limit} analisis/bulan). Top up kredit untuk lanjut sekarang, atau coba lagi bulan depan.`,
       quota: { scope: "day", limit: outcome.limit, used: outcome.used },
     });
     return;

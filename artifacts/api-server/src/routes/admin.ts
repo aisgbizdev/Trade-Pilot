@@ -47,7 +47,7 @@ router.patch("/superadmin/quota-settings", requireSuperAdmin, async (req: AuthRe
   const perDayRaw = Number(req.body?.analysisQuotaPerDay);
   const perDay = Number.isFinite(perDayRaw) && perDayRaw > 0 ? Math.floor(perDayRaw) : NaN;
   if (!Number.isFinite(perDay)) {
-    res.status(400).json({ error: "Quota harian harus angka > 0" });
+    res.status(400).json({ error: "Quota bulanan harus angka > 0" });
     return;
   }
   setAnalysisQuotaConfig(perDay);
