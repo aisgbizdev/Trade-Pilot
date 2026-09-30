@@ -1,4 +1,4 @@
-import { CalendarClock, Hourglass, Zap } from "lucide-react";
+import { CalendarClock, Hourglass } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { hideQuotaDialog, useQuotaDialogState, type QuotaScope } from "@/hooks/use-quota-dialog";
-import { showTopupDialog } from "@/hooks/use-topup-dialog";
+import { TopupFlow } from "@/components/topup-flow";
 
 const SCOPE_ICON: Record<QuotaScope, typeof CalendarClock> = {
   day: CalendarClock,
@@ -38,8 +38,8 @@ export function QuotaDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && hideQuotaDialog()}>
-      <DialogContent className="sm:max-w-sm text-center" data-testid="dialog-quota">
-        <DialogHeader className="items-center">
+      <DialogContent className="sm:max-w-sm" data-testid="dialog-quota">
+        <DialogHeader className="items-center text-center">
           <div className="w-14 h-14 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-1">
             <Icon className="w-7 h-7 text-amber-500 dark:text-amber-400" />
           </div>
@@ -48,7 +48,7 @@ export function QuotaDialog() {
         </DialogHeader>
 
         {hasCount && (
-          <div className="space-y-1.5 px-1" data-testid="quota-dialog-bar">
+          <div className="space-y-1.5 px-1 text-center" data-testid="quota-dialog-bar">
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className={cn(
@@ -67,29 +67,16 @@ export function QuotaDialog() {
         )}
 
         {/* A purchased credit bypasses the daily cap (see the analyses
-            route), so the top-up is the primary way forward — offered
-            as the dominant action with
-            the dismiss kept as a quiet text link, not a co-equal button.
+            route), so the package picker is shown directly in this same
+            dialog instead of behind an extra "top up" button/second
+            popup — one less step between "quota's out" and paying.
             `concurrent` is a per-user processing lock a credit can't
-            skip, so that branch keeps a plain acknowledge button. Opens
-            the top-up popup in place (see TopupDialog) instead of
-            navigating to /topup, so the user never leaves this page. */}
+            skip, so that branch keeps the plain acknowledge button. */}
         {info.scope !== "concurrent" ? (
           <div className="mt-1 space-y-2.5">
-            <Button
-              size="lg"
-              className="w-full gap-2 font-semibold"
-              onClick={() => {
-                hideQuotaDialog();
-                showTopupDialog();
-              }}
-              data-testid="button-quota-dialog-topup"
-            >
-              <Zap className="w-4 h-4" aria-hidden="true" />
-              {t.quota_dialog.topup_cta}
-            </Button>
+            <TopupFlow />
             <p
-              className="text-[11px] leading-relaxed text-muted-foreground"
+              className="text-center text-[11px] leading-relaxed text-muted-foreground"
               data-testid="text-quota-dialog-topup-hint"
             >
               {t.quota_dialog.topup_hint}
@@ -97,7 +84,7 @@ export function QuotaDialog() {
             <button
               type="button"
               onClick={hideQuotaDialog}
-              className="text-xs text-muted-foreground/70 underline-offset-2 hover:text-muted-foreground hover:underline"
+              className="block w-full text-center text-xs text-muted-foreground/70 underline-offset-2 hover:text-muted-foreground hover:underline"
               data-testid="button-quota-dialog-ok"
             >
               {t.quota_dialog.dismiss_btn}

@@ -284,7 +284,6 @@ export const id: Translations = {
     desc_concurrent: "Analisis terakhir kamu masih diproses. Tunggu beberapa detik lalu coba lagi.",
     used_of_limit: "{used} dari {limit} analisis terpakai",
     ok_btn: "Mengerti",
-    topup_cta: "Lanjut Analisis Sekarang",
     dismiss_btn: "Nanti saja",
     topup_hint: "Kredit nggak ada masa berlaku dan bebas dipakai kapan aja, ga terbatas kayak quota gratis.",
   },

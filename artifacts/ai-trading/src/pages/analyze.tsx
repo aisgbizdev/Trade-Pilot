@@ -1134,19 +1134,6 @@ export default function AnalyzePage() {
         <div className="flex flex-wrap items-center gap-2.5 mb-5">
           <h1 className="mr-auto text-lg font-bold text-foreground">{t.analyze.title}</h1>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {resultAnalysisId != null && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-9 shrink-0 gap-1.5 px-3 text-xs font-semibold"
-                onClick={() => applyResultAnalysisId(null)}
-                data-testid="button-new-analysis"
-              >
-                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                {t.analyze.new_analysis_btn}
-              </Button>
-            )}
             {progressionSummary && (
               <button
                 type="button"
@@ -1267,6 +1254,21 @@ export default function AnalyzePage() {
                 >
                   <Bell className="w-3.5 h-3.5" />
                   {t.analyze.set_alert_btn}
+                </Button>
+              </div>
+            )}
+            {resultAnalysisId != null && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full gap-1.5 text-xs font-semibold"
+                  onClick={() => applyResultAnalysisId(null)}
+                  data-testid="button-new-analysis"
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t.analyze.new_analysis_btn}
                 </Button>
               </div>
             )}

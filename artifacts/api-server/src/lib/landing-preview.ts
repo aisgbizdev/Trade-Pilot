@@ -98,6 +98,7 @@ async function createSnapshot(): Promise<LandingPreviewSnapshot> {
     contextParts.length > 0 ? contextParts.join("\n") : undefined,
     fundamentalSnapshot,
     livePrice,
+    undefined, // selectedTimeframePrice — no candle-snapshot capture on this path
     "free", // public marketing preview — no signed-in user, no revenue.
   );
   const price =

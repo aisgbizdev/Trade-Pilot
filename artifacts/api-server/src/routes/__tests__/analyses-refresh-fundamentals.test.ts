@@ -98,7 +98,7 @@ vi.mock("../../lib/calendar", async () => {
 const request = (await import("supertest")).default;
 const app = (await import("../../app")).default;
 const { db } = await import("../../lib/db");
-const { users, sessions, analyses } = await import("@workspace/db/schema");
+const { users, sessions, analyses, creditLedger } = await import("@workspace/db/schema");
 const { generateAnalysis } = await import("../../lib/openai");
 const { getRelevantNews } = await import("../../lib/news");
 const { getRelevantCalendar } = await import("../../lib/calendar");
@@ -188,6 +188,15 @@ afterAll(async () => {
     await db.delete(sessions).where(inArray(sessions.userId, seededUserIds));
     await db.delete(users).where(inArray(users.id, seededUserIds));
   }
+  // The broad instrument-prefix sweep below can catch rows left by another
+  // test file that also uses the bare "XAU/USD" instrument (e.g.
+  // analyses-30m.test.ts) — clear any credit_ledger rows referencing them
+  // first, or the FK constraint rejects the delete.
+  const staleAnalysisIds = db
+    .select({ id: analyses.id })
+    .from(analyses)
+    .where(like(analyses.instrument, `${INSTRUMENT}%`));
+  await db.delete(creditLedger).where(inArray(creditLedger.analysisId, staleAnalysisIds));
   await db.delete(analyses).where(like(analyses.instrument, `${INSTRUMENT}%`));
 });
 

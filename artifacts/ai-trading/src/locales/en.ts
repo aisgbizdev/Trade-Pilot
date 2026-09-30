@@ -282,7 +282,6 @@ export const en = {
     desc_concurrent: "Your last analysis is still being processed. Wait a few seconds and try again.",
     used_of_limit: "{used} of {limit} analyses used",
     ok_btn: "Got it",
-    topup_cta: "Keep Analysing Now",
     dismiss_btn: "Maybe later",
     topup_hint: "Credits never expire and work anytime, unlike the limited free quota.",
   },

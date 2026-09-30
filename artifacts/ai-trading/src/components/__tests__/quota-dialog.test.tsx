@@ -1,70 +1,71 @@
 /**
- * Covers the "Top Up Credits" CTA on the quota-exceeded dialog
- * (src/components/quota-dialog.tsx). A purchased credit bypasses the
- * daily cap, so the CTA + hint show for that wall — but not for
+ * Covers the quota-exceeded dialog (src/components/quota-dialog.tsx). A
+ * purchased credit bypasses the free lifetime cap, so for a `day`-scope
+ * block the dialog shows the top-up package picker (<TopupFlow>) directly
+ * inline — no second "top up" button/popup in between — but not for
  * `concurrent`, which is a per-user processing lock a credit can't skip.
- * The CTA opens the top-up popup (TopupDialog) in place instead of
- * navigating to /topup — see topup-dialog.test.tsx for that dialog's own
- * behavior.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { act, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
 
 import { QuotaDialog } from "../quota-dialog";
 import { showQuotaDialog, hideQuotaDialog } from "@/hooks/use-quota-dialog";
-import { useTopupDialogState, hideTopupDialog } from "@/hooks/use-topup-dialog";
-import { LanguageProvider } from "@/lib/i18n";
+import { installFetchMock, jsonResponse, makeWrapper } from "@/pages/__tests__/test-helpers";
 
-function Wrapper({ children }: { children: ReactNode }) {
-  return <LanguageProvider>{children}</LanguageProvider>;
-}
+const CONFIG_PAYLOAD = {
+  packages: [
+    { amountRupiah: 5000, credits: 15, dokuMethods: ["qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 20000, credits: 70, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 40000, credits: 150, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+    { amountRupiah: 80000, credits: 320, dokuMethods: ["va", "qris"], adminFeeRupiah: 5000 },
+  ],
+};
 
 afterEach(() => {
   act(() => {
     hideQuotaDialog();
-    hideTopupDialog();
   });
   window.history.replaceState({}, "", "/analyze");
 });
 
-describe("QuotaDialog top-up CTA", () => {
-  it("renders the top-up CTA + hint for a daily-scope block and opens the top-up popup on click, without navigating", async () => {
-    function Probe() {
-      const { open } = useTopupDialogState();
-      return <span data-testid="probe-topup-dialog-open">{String(open)}</span>;
-    }
+describe("QuotaDialog top-up upsell", () => {
+  it("shows the top-up package picker directly for a daily-scope block, without navigating", async () => {
+    installFetchMock(
+      [(url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null)],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
 
     render(
       <Wrapper>
         <QuotaDialog />
-        <Probe />
       </Wrapper>,
     );
 
     act(() => {
-      showQuotaDialog({ scope: "day", limit: 20, used: 20 });
+      showQuotaDialog({ scope: "day", limit: 5, used: 5 });
     });
 
     expect(
       await screen.findByTestId("text-quota-dialog-topup-hint"),
     ).toBeInTheDocument();
+    // The package picker itself, not a button that opens a second popup.
+    expect(await screen.findByTestId("card-topup-form")).toBeInTheDocument();
+    expect(await screen.findByTestId("button-preset-5000")).toBeInTheDocument();
     // Dismiss stays available, but as a quiet text link — not a co-equal button.
     expect(screen.getByTestId("button-quota-dialog-ok")).toBeInTheDocument();
-    expect(screen.getByTestId("probe-topup-dialog-open")).toHaveTextContent("false");
 
-    const pathnameBeforeClick = window.location.pathname;
-    const cta = await screen.findByTestId("button-quota-dialog-topup");
-    act(() => {
-      cta.click();
-    });
-
-    expect(window.location.pathname).toBe(pathnameBeforeClick);
-    expect(screen.queryByTestId("dialog-quota")).not.toBeInTheDocument();
-    expect(screen.getByTestId("probe-topup-dialog-open")).toHaveTextContent("true");
+    const pathnameBeforeShow = window.location.pathname;
+    expect(window.location.pathname).toBe(pathnameBeforeShow);
   });
 
   it("still lets the user dismiss the upsell without topping up", async () => {
+    installFetchMock(
+      [(url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null)],
+      { strict: false },
+    );
+    const { Wrapper } = makeWrapper();
+
     render(
       <Wrapper>
         <QuotaDialog />
@@ -72,7 +73,7 @@ describe("QuotaDialog top-up CTA", () => {
     );
 
     act(() => {
-      showQuotaDialog({ scope: "day", limit: 20, used: 20 });
+      showQuotaDialog({ scope: "day", limit: 5, used: 5 });
     });
 
     const dismiss = await screen.findByTestId("button-quota-dialog-ok");
@@ -84,7 +85,8 @@ describe("QuotaDialog top-up CTA", () => {
     expect(screen.queryByTestId("dialog-quota")).not.toBeInTheDocument();
   });
 
-  it("does not render the top-up CTA for a concurrent-scope block", async () => {
+  it("does not render the top-up package picker for a concurrent-scope block", async () => {
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <QuotaDialog />
@@ -96,7 +98,7 @@ describe("QuotaDialog top-up CTA", () => {
     });
 
     await screen.findByTestId("dialog-quota");
-    expect(screen.queryByTestId("button-quota-dialog-topup")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("card-topup-form")).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("text-quota-dialog-topup-hint"),
     ).not.toBeInTheDocument();
