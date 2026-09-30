@@ -9,21 +9,26 @@ export interface TopupPackage {
   credits: number;
 }
 
-// Fixed bonus-tiered top-up packages (product decision — replaces the old
-// flat Rp-per-credit rate, which gave every nominal the same per-credit
-// price). A bigger top-up buys credits at a better effective rate:
-//   Rp5.000 -> 15 credits   (Rp333/credit)
-//   Rp20.000 -> 70 credits  (Rp286/credit)
-//   Rp40.000 -> 150 credits (Rp267/credit)
-//   Rp80.000 -> 320 credits (Rp250/credit)
+// Fixed top-up packages (product decision, see chat 2026-09-30 — repriced
+// from the original bonus-tiered rates after margin analysis against real
+// OpenAI cost per analysis, ~$0.01-0.02 depending on model tier, vs. the
+// old per-credit price of Rp250-333 which was break-even-to-negative once
+// USD/IDR crossed ~Rp17.9k). The smallest package carries a premium
+// (Rp1.000/credit); Rp20k/40k/80k share the same flat Rp800/credit rate —
+// deliberately no volume discount above the entry tier, unlike the old
+// tiering, since a bigger discount at scale is what eroded margin before:
+//   Rp5.000  -> 5 credits   (Rp1.000/credit)
+//   Rp20.000 -> 25 credits  (Rp800/credit)
+//   Rp40.000 -> 50 credits  (Rp800/credit)
+//   Rp80.000 -> 100 credits (Rp800/credit)
 // POST /topups only accepts an amount that matches one of these exactly —
 // there is no free-text/custom amount and no longer a runtime-adjustable
 // rate (see the removed PATCH /admin/topups/config and TopupRateEditor).
 const TOPUP_PACKAGES: readonly TopupPackage[] = [
-  { amountRupiah: 5_000, credits: 15 },
-  { amountRupiah: 20_000, credits: 70 },
-  { amountRupiah: 40_000, credits: 150 },
-  { amountRupiah: 80_000, credits: 320 },
+  { amountRupiah: 5_000, credits: 5 },
+  { amountRupiah: 20_000, credits: 25 },
+  { amountRupiah: 40_000, credits: 50 },
+  { amountRupiah: 80_000, credits: 100 },
 ];
 
 // DOKU's Virtual Account fee is Rp4.000 + 11% PPN on that fee (~Rp4.440
