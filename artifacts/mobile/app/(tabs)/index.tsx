@@ -1,4 +1,5 @@
 import { ProgressionEmblem } from "@/components/ProgressionEmblem";
+import { PreAnalysisChecklist } from "@/components/PreAnalysisChecklist";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LangContext";
 import { useColors } from "@/hooks/useColors";
@@ -13,25 +14,27 @@ import {
   useCreateAnalysis,
   useGetAnalysisQuota,
   useGetProgressionSummary,
+  useSubmitInstrumentRequest,
 } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getTabContentBottomPadding } from "@/constants/layout";
 
 const INSTRUMENTS = {
-  futures: ["XAU/USD", "XAG/USD", "US30", "NAS100", "US500", "OIL/USD", "GC=F"],
-  forex: ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CHF", "USD/CAD", "NZD/USD"],
-  crypto: ["BTC/USD", "ETH/USD", "BNB/USD", "SOL/USD", "XRP/USD", "DOGE/USD"],
+  main: ["XAU/USD", "BRENT", "HSI", "NIKKEI"],
+  forex: ["EUR/USD", "GBP/USD", "AUD/USD", "USD/JPY"],
 } as const;
 
 type Category = keyof typeof INSTRUMENTS;
@@ -40,13 +43,17 @@ const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D"] as const;
 
 export default function AnalyzeScreen() {
   const colors = useColors();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [category, setCategory] = useState<Category>("futures");
+  const [category, setCategory] = useState<Category>("main");
   const [instrument, setInstrument] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [requestCode, setRequestCode] = useState<string | null>(null);
+  const [requestMessage, setRequestMessage] = useState<string | null>(null);
+  const requestInstrument = useSubmitInstrumentRequest();
   const [timeframe, setTimeframe] = useState<CreateAnalysisBodyTimeframe | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +91,19 @@ export default function AnalyzeScreen() {
   };
 
   const canSubmit = !!instrument && !!timeframe && !isPending;
+  const aliases: Record<string, string> = {
+    "XAU/USD": "gold xauusd", BRENT: "bco uk oil brent crude",
+    HSI: "hang seng", NIKKEI: "nikkei 225 japan",
+    "EUR/USD": "eurusd euro", "GBP/USD": "gbpusd pound",
+    "AUD/USD": "audusd aussie", "USD/JPY": "usdjpy yen",
+  };
+  const requested = search.trim().toUpperCase();
+  const matches = (code: string) => `${code} ${aliases[code]}`.toUpperCase().includes(requested);
+  const matching = (requested ? Object.values(INSTRUMENTS).flat() : [...INSTRUMENTS[category]]).filter(matches);
+  const noMatch = !!requested && !Object.values(INSTRUMENTS).flat().some(matches);
+  const requestable = !!requested &&
+    !Object.values(INSTRUMENTS).flat().some((code) => code === requested) &&
+    /^[A-Z0-9]{2,12}(?:[/.:-][A-Z0-9]{1,12})?$/.test(requested);
 
   const s = StyleSheet.create({
     root: {
@@ -323,6 +343,14 @@ export default function AnalyzeScreen() {
 
         <View style={s.section}>
           <Text style={s.label}>Instrument</Text>
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder={lang === "id" ? "Cari nama atau kode instrumen" : "Search instrument name or code"}
+            placeholderTextColor={colors.mutedForeground}
+            accessibilityLabel={lang === "id" ? "Cari instrumen" : "Search instruments"}
+            style={[s.instrBtn, { color: colors.foreground, marginBottom: 12 }]}
+          />
           <View style={s.catRow}>
             {(Object.keys(INSTRUMENTS) as Category[]).map((cat) => (
               <Pressable
@@ -330,28 +358,38 @@ export default function AnalyzeScreen() {
                 style={[s.catBtn, category === cat && s.catBtnActive]}
                 onPress={() => {
                   setCategory(cat);
-                  setInstrument(null);
                 }}
               >
                 <Text style={[s.catText, category === cat && s.catTextActive]}>
-                  {t.analyze[cat as keyof typeof t.analyze] ?? cat}
+                  {cat === "main" ? (lang === "id" ? "Utama" : "Main") : t.analyze.forex}
                 </Text>
               </Pressable>
             ))}
           </View>
           <View style={s.instrumentGrid}>
-            {INSTRUMENTS[category].map((instr) => (
+            {matching.map((instr) => (
               <Pressable
                 key={instr}
                 style={[s.instrBtn, instrument === instr && s.instrBtnActive]}
                 onPress={() => setInstrument(instr)}
               >
                 <Text style={[s.instrText, instrument === instr && s.instrTextActive]}>
-                  {instr}
+                  {instr}{INSTRUMENTS.forex.some((code) => code === instr) ? (lang === "id" ? " · Analisis saja" : " · Analysis only") : ""}
                 </Text>
               </Pressable>
             ))}
           </View>
+          {noMatch || requestable ? (
+            <View style={{ marginTop: 12, gap: 8 }}>
+              {noMatch ? <Text style={s.quotaText}>{lang === "id" ? "Kode belum terverifikasi di aplikasi ini." : "Code not yet verified in this app."}</Text> : null}
+              {requestable ? (
+                <Pressable accessibilityRole="button" style={s.instrBtn} onPress={() => setRequestCode(requested)}>
+                  <Text style={s.instrText}>{lang === "id" ? `Ajukan ${requested}` : `Request ${requested}`}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+          {requestMessage ? <Text accessibilityRole="alert" style={[s.quotaText, { marginTop: 8 }]}>{requestMessage}</Text> : null}
         </View>
 
         <View style={s.section}>
@@ -367,6 +405,7 @@ export default function AnalyzeScreen() {
               </Pressable>
             ))}
           </View>
+          <PreAnalysisChecklist instrument={instrument} timeframe={timeframe} />
         </View>
 
         {error ? (
@@ -382,9 +421,9 @@ export default function AnalyzeScreen() {
             </Text>
           ) : null}
           <Pressable
-            style={[s.submitBtn, !canSubmit && s.submitBtnDisabled]}
+            style={[s.submitBtn, (!canSubmit || !!requested) && s.submitBtnDisabled]}
             onPress={handleSubmit}
-            disabled={!canSubmit}
+            disabled={!canSubmit || !!requested}
           >
             {isPending ? (
               <>
@@ -398,6 +437,43 @@ export default function AnalyzeScreen() {
         </View>
         </View>
       </ScrollView>
+      <Modal visible={requestCode !== null} transparent animationType="fade" onRequestClose={() => setRequestCode(null)}>
+        <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#0009" }}>
+          <View style={{ padding: 20, gap: 14, borderRadius: colors.radius, backgroundColor: colors.card }}>
+            <Text style={[s.title, { fontSize: 19 }]}>
+              {lang === "id" ? `Ajukan ${requestCode}?` : `Request ${requestCode}?`}
+            </Text>
+            <Text style={[s.instrText, { lineHeight: 21 }]}>
+              {lang === "id"
+                ? "Kode ini belum didukung atau harganya belum terverifikasi di aplikasi ini. Permintaan ditinjau dahulu; analisis tidak dijalankan dan kredit tidak dipakai."
+                : "This code is not supported or its price is not verified in this app. The request is for review only; no analysis runs and no credit is used."}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable accessibilityRole="button" disabled={requestInstrument.isPending}
+                style={[s.instrBtn, { flex: 1 }]} onPress={() => setRequestCode(null)}>
+                <Text style={s.instrText}>{lang === "id" ? "Batal" : "Cancel"}</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={requestInstrument.isPending}
+                style={[s.instrBtn, { flex: 1, borderColor: colors.primary }]}
+                onPress={async () => {
+                  if (!requestCode) return;
+                  try {
+                    await requestInstrument.mutateAsync({ data: { code: requestCode } });
+                    setRequestMessage(lang === "id" ? `Permintaan ${requestCode} terkirim.` : `${requestCode} request submitted.`);
+                    setRequestCode(null);
+                  } catch {
+                    setRequestMessage(lang === "id" ? "Permintaan gagal dikirim." : "Could not submit request.");
+                    setRequestCode(null);
+                  }
+                }}>
+                <Text style={[s.instrText, { color: colors.primary }]}>
+                  {requestInstrument.isPending ? "…" : lang === "id" ? "Kirim permintaan" : "Send request"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

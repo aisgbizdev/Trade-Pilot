@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  getCandles,
+  getCandleSnapshot,
   getIndicators,
   isSupportedIndicatorTimeframe,
   SUPPORTED_INDICATOR_TIMEFRAMES,
@@ -61,21 +61,24 @@ router.get("/historical/candles", async (req, res) => {
   }
 
   try {
-    const candles = await getCandles(instrument, tfRaw);
-    if (!candles) {
+    const snapshot = await getCandleSnapshot(instrument, tfRaw);
+    if (!snapshot) {
       return res.status(404).json({ error: "Data historis tidak tersedia untuk instrumen ini" });
     }
     // Cap response size — even the deepest timeframe only needs the last
     // ~300 bars for a chart preview. Avoids shipping 10k bars over the wire
     // when the user only sees the last screenful anyway.
-    const trimmed = candles.length > 300 ? candles.slice(-300) : candles;
-    res.setHeader(
-      "Cache-Control",
-      `private, max-age=${indicatorsCacheTtlSeconds(tfRaw)}`,
-    );
-    return res.json({ status: "success", timeframe: tfRaw, candles: trimmed });
+    const trimmed = snapshot.candles.length > 300 ? snapshot.candles.slice(-300) : snapshot.candles;
+    // Force an API recheck so a browser never masks an upstream failure behind
+    // an HTTP cache hit. The server's source timestamp remains auditable.
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.json({ status: "success", timeframe: tfRaw, ...snapshot, candles: trimmed });
   } catch (err: any) {
-    return res.status(502).json({ error: "Gagal mengambil data historis", detail: err.message });
+    res.setHeader("Cache-Control", "private, no-store");
+    return res.status(502).json({
+      error: "Gagal mengambil data historis", detail: err.message,
+      sourceFetchedAt: null, isStale: true, staleReason: "feed_unavailable",
+    });
   }
 });
 

@@ -125,6 +125,61 @@ describe("GuidePage Progression", () => {
     },
   );
 
+  it("explains the preparation and reading wait before completion is available", async () => {
+    window.history.replaceState(null, "", "/guide?article=how-ai-works");
+    let resolveEvidence!: (response: Response) => void;
+    const pendingEvidence = new Promise<Response>((resolve) => { resolveEvidence = resolve; });
+    installFetchMock([
+      (url, init) => url.includes("/api/progression/evidence") && init?.method === "POST"
+        ? pendingEvidence
+        : null,
+    ]);
+
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><GuidePage /></Wrapper>);
+    expect(screen.getByTestId("button-mark-guide-complete")).toBeDisabled();
+    expect(screen.getByTestId("guide-completion-status")).toHaveTextContent("Preparing reading progress");
+
+    await act(async () => {
+      resolveEvidence(jsonResponse({
+        token: "mock_evidence_token",
+        source: "guide_completion",
+        subject: "how-ai-works",
+        minimumCompleteAt: new Date(Date.now() + 20_000).toISOString(),
+      }));
+    });
+    await waitFor(() => expect(screen.getByTestId("guide-completion-status")).toHaveTextContent(/Keep reading.*button unlocks in \d+ seconds/));
+    expect(screen.getByTestId("button-mark-guide-complete")).toBeDisabled();
+  });
+
+  it("shows an evidence error and lets the reader retry", async () => {
+    window.history.replaceState(null, "", "/guide?article=how-ai-works");
+    let attempts = 0;
+    installFetchMock([
+      (url, init) => {
+        if (!url.includes("/api/progression/evidence") || init?.method !== "POST") return null;
+        attempts += 1;
+        return attempts === 1
+          ? jsonResponse({ error: "Unavailable" }, 503)
+          : jsonResponse({
+              token: "retried_evidence_token",
+              source: "guide_completion",
+              subject: "how-ai-works",
+              minimumCompleteAt: new Date(Date.now() - 1000).toISOString(),
+            });
+      },
+    ]);
+
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><GuidePage /></Wrapper>);
+    await waitFor(() => expect(screen.getByTestId("guide-completion-status")).toHaveTextContent("Couldn't prepare reading progress"));
+    expect(screen.getByTestId("button-mark-guide-complete")).toBeDisabled();
+    fireEvent.click(screen.getByTestId("button-retry-guide-completion"));
+    await waitFor(() => expect(screen.getByTestId("button-mark-guide-complete")).toBeEnabled());
+    expect(attempts).toBe(2);
+    expect(screen.queryByTestId("guide-completion-status")).not.toBeInTheDocument();
+  });
+
   it("keeps article state in sync with browser back and forward navigation", async () => {
     installFetchMock([
       (url, init) => {

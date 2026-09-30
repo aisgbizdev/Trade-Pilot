@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Layout } from "@/components/layout";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -96,7 +97,7 @@ export default function ProgressionPage() {
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-foreground truncate">{t.progression.title}</h1>
-            <p className="text-xs text-muted-foreground truncate">{t.progression.subtitle}</p>
+             <ExpandableExplanation inline>{t.progression.subtitle}</ExpandableExplanation>
           </div>
         </div>
 
@@ -125,9 +126,59 @@ export default function ProgressionPage() {
               </div>
               <Progress value={progressPercent} className="h-2 progression-bar-bg" indicatorClassName="progression-bar-fill" />
               {summary.nextLevelXp && (
-                <p className="text-[10px] text-white/60 text-right">
+                 <p className="text-xs text-white/80 text-right">
                   {t.progression.next_level.replace("{xp}", String(summary.nextLevelXp - summary.totalXp))}
                 </p>
+              )}
+              {summary.nextLevelXp && (
+                <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-left">
+                  <p className="text-xs text-white/80">
+                    {t.progression.level_up_hint.replace("{xp}", (summary.nextLevelXp - summary.totalXp).toLocaleString())}
+                  </p>
+                  <ExpandableExplanation
+                    label={t.progression.level_up_ways_label}
+                    className="mt-0.5"
+                    contentClassName="text-white/80"
+                    testId="progression-level-up-help"
+                  >
+                    <ul className="space-y-1.5 pt-1">
+                      <li>
+                        <Link href="/journal" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_journal}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "20").replace("{cap}", "2")}</span>
+                      </li>
+                      <li>
+                        <Link href="/history" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_evaluation}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "12").replace("{cap}", "3")}</span>
+                      </li>
+                      <li>
+                        <Link href="/analyze" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_checklist}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "8").replace("{cap}", "3")}</span>
+                      </li>
+                      <li>
+                        <Link href="/guide" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_guide}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "15").replace("{cap}", "2")}</span>
+                      </li>
+                      <li>
+                        <Link href="/analyze" className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">
+                          {t.progression.level_up_wait}
+                        </Link>
+                        <span> — {t.progression.level_up_daily_cap.replace("{xp}", "15").replace("{cap}", "2")}</span>
+                      </li>
+                      <li>
+                        <span className="font-medium text-white">{t.progression.level_up_streak}</span>
+                        <span> — {t.progression.level_up_per_day.replace("{xp}", "10")}</span>
+                      </li>
+                    </ul>
+                  </ExpandableExplanation>
+                </div>
               )}
             </div>
             
@@ -135,14 +186,14 @@ export default function ProgressionPage() {
               <div className="flex items-center gap-1.5 bg-black/40 rounded-lg px-3 py-1.5 border border-white/10">
                 <Zap className="w-4 h-4 text-amber-400" />
                 <div>
-                  <p className="text-[10px] text-white/60 uppercase">{t.progression.daily_streak}</p>
+                   <p className="text-xs text-white/80 uppercase">{t.progression.daily_streak}</p>
                   <p className="text-sm font-bold text-white leading-none">{summary.currentStreak}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 bg-black/40 rounded-lg px-3 py-1.5 border border-white/10">
                 <Calendar className="w-4 h-4 text-blue-400" />
                 <div>
-                  <p className="text-[10px] text-white/60 uppercase">{t.progression.longest_streak.replace("{n}", "")}</p>
+                   <p className="text-xs text-white/80 uppercase">{t.progression.longest_streak.replace("{n}", "")}</p>
                   <p className="text-sm font-bold text-white leading-none">{summary.longestStreak}</p>
                 </div>
               </div>
@@ -225,13 +276,13 @@ export default function ProgressionPage() {
                   {history?.entries.slice(0, 5).map(entry => (
                     <div key={entry.id} className="flex gap-3 items-center p-2 rounded-lg bg-muted/10 border border-transparent hover:border-border/50">
                       <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">+{entry.xp}</span>
+                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+{entry.xp}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground truncate">
                           {t.progression.activity_awarded.replace("{xp}", String(entry.xp)).replace("{reason}", getSourceName(entry.source, t))}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                         <p className="text-xs text-muted-foreground">
                           {format(new Date(entry.createdAt), "dd MMM yyyy • HH:mm", { locale })}
                         </p>
                       </div>
@@ -262,14 +313,14 @@ export default function ProgressionPage() {
                     <AchievementBadge achievementKey={key} unlocked={Boolean(unlocked)} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-foreground">{title}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{desc}</p>
+                       <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
                       {unlocked ? (
-                        <p className="text-[10px] font-medium text-primary mt-2 flex items-center gap-1">
+                         <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
                           <Unlock className="w-3 h-3" />
                           {t.progression.unlocked_at.replace("{date}", format(new Date(achievement!.unlockedAt!), "dd MMM yyyy", { locale }))}
                         </p>
                       ) : (
-                        <p className="text-[10px] font-medium text-muted-foreground mt-2 flex items-center gap-1">
+                         <p className="text-xs font-medium text-muted-foreground mt-2 flex items-center gap-1">
                           <Lock className="w-3 h-3" />
                           {t.progression.locked}
                         </p>

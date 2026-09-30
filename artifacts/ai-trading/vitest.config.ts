@@ -18,5 +18,8 @@ export default defineConfig({
     testTimeout: 15000,
     hookTimeout: 15000,
     pool: "forks",
+    // Completion validation runs web, API, and browser suites together.
+    // Avoid spawning many jsdom workers that starve API requests and Chromium.
+    fileParallelism: false,
   },
 });

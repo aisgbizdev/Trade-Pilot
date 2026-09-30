@@ -71,6 +71,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**getAdminAnalyticsTokens**](doc/AdminApi.md#getadminanalyticstokens) | **GET** /admin/analytics/tokens | AI (OpenAI) token usage and estimated cost breakdown
 [*AdminApi*](doc/AdminApi.md) | [**getAdminAnalyticsUsage**](doc/AdminApi.md#getadminanalyticsusage) | **GET** /admin/analytics/usage | Feature-usage, device, browser, and country breakdown from analytics events
 [*AdminApi*](doc/AdminApi.md) | [**getAdminFeedback**](doc/AdminApi.md#getadminfeedback) | **GET** /admin/feedback | List user feedback rows (admin only)
+[*AdminApi*](doc/AdminApi.md) | [**getAdminInstrumentRequests**](doc/AdminApi.md#getadmininstrumentrequests) | **GET** /admin/instrument-requests | Full popularity-ranked list of requested codes
 [*AdminApi*](doc/AdminApi.md) | [**getAdminStats**](doc/AdminApi.md#getadminstats) | **GET** /admin/stats | Get admin statistics
 [*AdminApi*](doc/AdminApi.md) | [**getAllAnalyses**](doc/AdminApi.md#getallanalyses) | **GET** /admin/analyses | Get all analyses (admin only)
 [*AdminApi*](doc/AdminApi.md) | [**getBroadcasts**](doc/AdminApi.md#getbroadcasts) | **GET** /admin/broadcasts | Broadcast history
@@ -97,6 +98,7 @@ Class | Method | HTTP request | Description
 [*AnalysesApi*](doc/AnalysesApi.md) | [**refreshFundamentals**](doc/AnalysesApi.md#refreshfundamentals) | **POST** /analyses/{id}/refresh-fundamentals | Re-fetch news + economic calendar for an existing analysis (no AI re-run)
 [*AnalysesApi*](doc/AnalysesApi.md) | [**setAnalysisNote**](doc/AnalysesApi.md#setanalysisnote) | **PUT** /analyses/{id}/note | Save the user&#39;s private trading-journal note for an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**submitFeedback**](doc/AnalysesApi.md#submitfeedback) | **POST** /analyses/{id}/feedback | Submit feedback for analysis
+[*AnalysesApi*](doc/AnalysesApi.md) | [**submitInstrumentRequest**](doc/AnalysesApi.md#submitinstrumentrequest) | **POST** /instrument-requests | Register interest in an unsupported instrument code without starting an analysis
 [*AnalysesApi*](doc/AnalysesApi.md) | [**waitGuardrail**](doc/AnalysesApi.md#waitguardrail) | **POST** /analyses/guardrails/{id}/wait | Record an explicit decision to wait
 [*AuthApi*](doc/AuthApi.md) | [**changePassword**](doc/AuthApi.md#changepassword) | **PATCH** /auth/password | Change own password
 [*AuthApi*](doc/AuthApi.md) | [**changeSecurityQuestion**](doc/AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
@@ -265,6 +267,10 @@ Class | Method | HTTP request | Description
  - [GoogleReauthBody](doc/GoogleReauthBody.md)
  - [GoogleReauthResponse](doc/GoogleReauthResponse.md)
  - [HealthStatus](doc/HealthStatus.md)
+ - [InstrumentRequestInput](doc/InstrumentRequestInput.md)
+ - [InstrumentRequestRank](doc/InstrumentRequestRank.md)
+ - [InstrumentRequestRanking](doc/InstrumentRequestRanking.md)
+ - [InstrumentRequestReceipt](doc/InstrumentRequestReceipt.md)
  - [JournalEntry](doc/JournalEntry.md)
  - [JournalEntryList](doc/JournalEntryList.md)
  - [JournalGroupStat](doc/JournalGroupStat.md)
@@ -273,6 +279,8 @@ Class | Method | HTTP request | Description
  - [JournalStatsTotals](doc/JournalStatsTotals.md)
  - [LoginBody](doc/LoginBody.md)
  - [ManualTopupBody](doc/ManualTopupBody.md)
+ - [MarketSnapshot](doc/MarketSnapshot.md)
+ - [MarketSnapshotCandle](doc/MarketSnapshotCandle.md)
  - [MessageResponse](doc/MessageResponse.md)
  - [MirrorGatedInsight](doc/MirrorGatedInsight.md)
  - [MirrorGroupStat](doc/MirrorGroupStat.md)

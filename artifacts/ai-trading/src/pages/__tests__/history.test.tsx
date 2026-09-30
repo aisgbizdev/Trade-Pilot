@@ -140,6 +140,11 @@ describe("HistoryPage: instrument performance", () => {
     expect(screen.getByText("Performance by timeframe · XAU/USD")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /BRENT.*5 sample/i }));
     expect(await screen.findByText("Performance by timeframe · BRENT")).toBeInTheDocument();
+    const backToXau = screen.getByTestId("button-show-all-instruments");
+    expect(backToXau).toHaveTextContent("Back to XAU/USD");
+    fireEvent.click(backToXau);
+    expect(await screen.findByText("Performance by timeframe · XAU/USD")).toBeInTheDocument();
+    expect(screen.queryByTestId("button-show-all-instruments")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Other Instruments.*5 sample/i }));
     expect(await screen.findByText("Performance by timeframe · Other Instruments")).toBeInTheDocument();
@@ -147,7 +152,7 @@ describe("HistoryPage: instrument performance", () => {
     expect(screen.queryByRole("button", { name: /NASDAQ.*2 sample/i })).not.toBeInTheDocument();
   });
 
-  it("shows Show all for an instrument filter and clears that filter", async () => {
+  it("offers to clear an instrument filter and clears that filter", async () => {
     window.history.replaceState({}, "", "/history?instruments=HSI");
     installFetchMock([summaryHandler()]);
     const { Wrapper } = makeWrapper();
@@ -159,12 +164,22 @@ describe("HistoryPage: instrument performance", () => {
     );
 
     const showAll = await screen.findByTestId("button-show-all-instruments");
+    expect(showAll).toHaveTextContent("Clear instrument filter");
     fireEvent.click(showAll);
 
     await waitFor(() => {
       expect(new URLSearchParams(window.location.search).has("instruments")).toBe(false);
     });
     expect(new URLSearchParams(window.location.search).has("focusInstrument")).toBe(false);
+  });
+
+  it("does not offer a reset when an explicit XAU/USD focus is already the default", async () => {
+    window.history.replaceState({}, "", "/history?focusInstrument=XAU%2FUSD");
+    installFetchMock([summaryHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><HistoryPage /></Wrapper>);
+    expect(await screen.findByText("Performance by timeframe · XAU/USD")).toBeInTheDocument();
+    expect(screen.queryByTestId("button-show-all-instruments")).not.toBeInTheDocument();
   });
 });
 

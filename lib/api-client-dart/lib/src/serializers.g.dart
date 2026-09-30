@@ -121,6 +121,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(GoogleReauthBody.serializer)
       ..add(GoogleReauthResponse.serializer)
       ..add(HealthStatus.serializer)
+      ..add(InstrumentRequestInput.serializer)
+      ..add(InstrumentRequestRank.serializer)
+      ..add(InstrumentRequestRanking.serializer)
+      ..add(InstrumentRequestReceipt.serializer)
       ..add(JournalEntry.serializer)
       ..add(JournalEntryList.serializer)
       ..add(JournalEntryOutcomeEnum.serializer)
@@ -131,6 +135,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(JournalStatsTotals.serializer)
       ..add(LoginBody.serializer)
       ..add(ManualTopupBody.serializer)
+      ..add(MarketSnapshot.serializer)
+      ..add(MarketSnapshotCandle.serializer)
+      ..add(MarketSnapshotSourceStatusEnum.serializer)
       ..add(MessageResponse.serializer)
       ..add(MirrorGatedInsight.serializer)
       ..add(MirrorGatedInsightReasonEnum.serializer)
@@ -374,8 +381,16 @@ Serializers _$serializers = (Serializers().toBuilder()
               BuiltList, const [const FullType(FundamentalCalendarEvent)]),
           () => ListBuilder<FundamentalCalendarEvent>())
       ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(InstrumentRequestRank)]),
+          () => ListBuilder<InstrumentRequestRank>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(JournalEntry)]),
           () => ListBuilder<JournalEntry>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(MarketSnapshotCandle)]),
+          () => ListBuilder<MarketSnapshotCandle>())
       ..addBuilderFactory(
           const FullType(BuiltList,
               const [const FullType(NativePushTestResultFailuresEnum)]),

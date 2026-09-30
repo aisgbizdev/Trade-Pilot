@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 import { HistoryPerformanceSummary } from "@/components/history-performance-summary";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import {
   ALL_HISTORY_INSTRUMENTS,
   OTHER_INSTRUMENTS,
@@ -533,7 +534,7 @@ export default function HistoryPage() {
               <Filter className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden xxs:inline">{t.history.filters}</span>
               {activeFilterCount > 0 && (
-                <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] inline-flex items-center justify-center tabular-nums">
+                <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-xs inline-flex items-center justify-center tabular-nums">
                   {activeFilterCount}
                 </span>
               )}
@@ -546,7 +547,7 @@ export default function HistoryPage() {
               data-testid="preset-row"
             >
               <Bookmark className="w-3 h-3 text-muted-foreground" />
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mr-1">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">
                 {t.history.presets ?? "Presets"}
               </span>
               {presets.map((preset) => {
@@ -555,7 +556,7 @@ export default function HistoryPage() {
                   <div
                     key={preset.id}
                     className={cn(
-                      "inline-flex items-center rounded-full text-[11px] font-medium transition-colors",
+                      "inline-flex items-center rounded-full text-xs font-medium transition-colors",
                       active
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-foreground hover:bg-muted/80",
@@ -608,7 +609,7 @@ export default function HistoryPage() {
                   onClick={handleSavePreset}
                   disabled={createPreset.isPending}
                   data-testid="button-save-preset"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full border border-dashed border-primary/50 text-primary hover:bg-primary/10 transition-colors disabled:opacity-60"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border border-dashed border-primary/50 text-primary hover:bg-primary/10 transition-colors disabled:opacity-60"
                 >
                   <Bookmark className="w-2.5 h-2.5" />
                   {t.history.save_preset ?? "Save preset"}
@@ -622,7 +623,7 @@ export default function HistoryPage() {
               className="mt-2 flex flex-wrap gap-1.5 items-center"
               data-testid="active-filters-row"
             >
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mr-1">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">
                 {t.history.active_filters ?? "Active filters"}
               </span>
               {activeChips.map((chip) => (
@@ -630,7 +631,7 @@ export default function HistoryPage() {
                   key={chip.key}
                   onClick={chip.remove}
                   data-testid={`chip-${chip.key}`}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
                   <span>{chip.label}</span>
                   <X className="w-2.5 h-2.5" />
@@ -639,7 +640,7 @@ export default function HistoryPage() {
               <button
                 onClick={handleClearFilters}
                 data-testid="button-clear-filters-chips"
-                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
               >
                 {t.history.clear_all ?? "Clear all"}
               </button>
@@ -649,7 +650,7 @@ export default function HistoryPage() {
           {showFilters && (
             <div className="mt-3 p-3 rounded-xl border border-border bg-muted/30 space-y-3" data-testid="filter-panel">
               <div>
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Outcome</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Outcome</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(["pending", "tp1_hit", "tp2_hit", "sl_hit", "expired", "invalidated"] as OutcomeStatus[]).map((outcome) => {
                     const active = filters.outcomes.includes(outcome);
@@ -669,7 +670,7 @@ export default function HistoryPage() {
               </div>
               <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
                 <p className="text-xs font-semibold text-foreground">{t.history.choose_instruments}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 mb-2.5">{t.history.choose_instruments_hint}</p>
+                 <ExpandableExplanation inline className="mb-2.5"><p>{t.history.choose_instruments_hint}</p></ExpandableExplanation>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-5 gap-2">
                   {PRIMARY_INSTRUMENTS.map((inst) => {
                     const active = filters.instruments.includes(inst);
@@ -709,7 +710,7 @@ export default function HistoryPage() {
                 </div>
               </div>
               <div>
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                   {t.history.timeframe ?? "Timeframe"}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -735,12 +736,12 @@ export default function HistoryPage() {
                 </div>
               </div>
               <div>
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                   {t.history.date_range ?? "Date Range"}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-muted-foreground block mb-1">
+                    <label className="text-xs text-muted-foreground block mb-1">
                       {t.history.from_date ?? "From"}
                     </label>
                     <input
@@ -752,7 +753,7 @@ export default function HistoryPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground block mb-1">
+                    <label className="text-xs text-muted-foreground block mb-1">
                       {t.history.to_date ?? "To"}
                     </label>
                     <input
@@ -827,13 +828,13 @@ export default function HistoryPage() {
                     <Link href={`/analyses/${a.id}`} className="flex-1 min-w-0 cursor-pointer">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-foreground">{a.instrument}</span>
-                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
                           {a.timeframe}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {mc && (
-                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md font-medium", mc.color)}>
+                          <span className={cn("text-xs px-1.5 py-0.5 rounded-md font-medium", mc.color)}>
                             {mc.label}
                           </span>
                         )}
@@ -843,7 +844,7 @@ export default function HistoryPage() {
                             sell={a.techSellCount}
                           />
                         )}
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
                           <Clock className="w-2.5 h-2.5" />
                           {format(new Date(a.createdAt), "dd MMM yyyy HH:mm", { locale: dateLocale })}
                         </span>
@@ -863,7 +864,7 @@ export default function HistoryPage() {
                       )}
                       <Badge
                         variant={valid ? "default" : "secondary"}
-                        className="text-[10px] px-1.5 py-0"
+                        className="text-xs px-1.5 py-0"
                       >
                         {valid ? t.history.valid : t.history.expired}
                       </Badge>
@@ -885,7 +886,7 @@ export default function HistoryPage() {
                         title={t.history.analyze_again}
                         data-testid={`button-reanalyze-row-${a.id}`}
                         className={cn(
-                          "inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-colors",
+                          "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-colors",
                           refreshing && "opacity-60 cursor-not-allowed"
                         )}
                       >
@@ -915,7 +916,7 @@ export default function HistoryPage() {
               >
                 <p className="text-xs font-medium text-foreground">{pageStatus}</p>
                 <p
-                  className="text-[10px] text-muted-foreground"
+                  className="text-xs text-muted-foreground"
                   data-testid="history-pagination-range"
                 >
                   {rangeStatus}

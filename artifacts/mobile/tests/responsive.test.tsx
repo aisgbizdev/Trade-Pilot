@@ -35,6 +35,7 @@ vi.mock("react-native", async () => {
     ScrollView: host("ScrollView"),
     StyleSheet: { create: <T,>(styles: T) => styles, hairlineWidth: 1 },
     Text: host("Text"),
+    TextInput: host("TextInput"),
     View: host("View"),
     RefreshControl: host("RefreshControl"),
   };
@@ -93,12 +94,21 @@ vi.mock("@workspace/api-client-react", () => ({
   useGetAnalysis: () => ({ data: { id: 1, instrument: "test" }, isLoading: false }),
   useGetProgressionCatalog: () => ({ data: undefined, isError: false }),
   useGetProgressionHistory: () => ({ data: undefined, isError: false }),
+  useSubmitFeedback: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  getGetAnalysisQueryKey: () => ["analysis", 1],
 }));
 
 vi.mock("@/components/ProgressionEmblem", async () => {
   const ReactModule = await import("react");
   return { ProgressionEmblem: (props: Record<string, unknown>) => ReactModule.createElement("ProgressionEmblem", props) };
 });
+vi.mock("@/components/PreAnalysisChecklist", async () => {
+  const ReactModule = await import("react");
+  return { PreAnalysisChecklist: () => ReactModule.createElement("PreAnalysisChecklist") };
+});
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
 
 vi.mock("@/components/AchievementBadge", async () => {
   const ReactModule = await import("react");

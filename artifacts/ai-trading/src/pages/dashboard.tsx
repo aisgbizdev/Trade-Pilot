@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { TrendingUp, Plus, Clock, Loader2, Brain, Radio, ArrowUpRight, X } from "lucide-react";
+import { Plus, Loader2, Brain, Radio, ArrowUpRight, X, ChevronDown } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
 import { OnboardingModal, isOnboardingDone } from "@/components/onboarding-modal";
@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 
 function isValid(validUntil: string | Date) {
   return new Date(validUntil) > new Date();
@@ -96,64 +97,9 @@ export default function DashboardPage() {
 
       <div className="px-4 py-5 space-y-5 md:px-6">
 
-        <EnablePushCard />
-
-        {SHOW_SPONSOR && !liveBannerDismissed && (
-          <div className="relative" data-testid="card-live-analisa">
-            <a
-              href="https://www.tiktok.com/@solid.prime"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
-              data-testid="link-live-analisa-tiktok"
-              onClick={() => trackOutbound("dashboard-tiktok", "tiktok")}
-            >
-              <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-orange-500/10 p-3.5 active:scale-[0.99] transition-transform">
-                <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
-                <div className="relative flex items-center gap-3 pr-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30">
-                    <Radio className="w-5 h-5 text-[#1a1208]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-red-500/90 text-white text-[8px] font-bold uppercase tracking-wider">
-                        <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                        {t.brand.live_analisa_badge}
-                      </span>
-                      <span className="text-[10px] text-amber-300 font-semibold tracking-wide">SOLID PRIME</span>
-                    </div>
-                    <p className="text-xs font-bold text-foreground leading-tight">
-                      {t.brand.live_analisa_title}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
-                      {t.brand.live_analisa_subtitle}
-                    </p>
-                  </div>
-                  <span
-                    className="flex items-center gap-1 text-[11px] font-bold text-amber-300 shrink-0"
-                    data-testid="text-live-analisa-cta"
-                  >
-                    {t.brand.live_analisa_cta}
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </div>
-            </a>
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismissLiveBanner(); }}
-              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background/60 transition-colors"
-              aria-label="Close"
-              data-testid="button-dismiss-live-analisa"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-0.5">{t.dashboard.welcome}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">{t.dashboard.welcome}</p>
             <h1 className="text-xl font-extrabold text-foreground" data-testid="text-display-name">
               {user?.displayName}
             </h1>
@@ -179,14 +125,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="md:mb-5 md:break-inside-avoid">
-          <CalendarWidget limit={6} />
-        </div>
-
-        <div className="md:mb-5 md:break-inside-avoid">
-          <NewsWidget limit={5} />
-        </div>
-
-        <div className="md:mb-5 md:break-inside-avoid">
           {[
             { label: t.dashboard.total_analyses, value: summaryLoading ? "—" : (summaryData?.totalAnalyses ?? 0), icon: Brain, gradient: "from-amber-400/20 to-yellow-500/20", iconColor: "text-amber-300" },
           ].map(({ label, value, icon: Icon, gradient, iconColor }) => (
@@ -197,7 +135,7 @@ export default function DashboardPage() {
               <div className="text-2xl font-extrabold gradient-text" data-testid={`stat-${label.toLowerCase().replace(/\s/g, "-")}`}>
                 {value}
               </div>
-              <div className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{label}</div>
+               <div className="text-xs text-muted-foreground mt-0.5 leading-tight">{label}</div>
             </div>
           ))}
         </div>
@@ -210,15 +148,19 @@ export default function DashboardPage() {
               <p className="text-sm font-bold text-foreground">
                 {t.outcomes.summary_title.replace("{days}", String(outcomesData.rangeDays))}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                {t.outcomes.summary_subtitle}
-              </p>
+              <ExpandableExplanation inline><p>{t.outcomes.summary_subtitle}</p></ExpandableExplanation>
             </div>
+            {(outcomesData.invalidated > 0 || outcomesData.pending > 0) && (
+              <div className="flex flex-wrap gap-3 text-xs font-medium text-foreground">
+                {outcomesData.pending > 0 && <span>{t.outcomes.summary_pending.replace("{n}", String(outcomesData.pending))}</span>}
+                {outcomesData.invalidated > 0 && <span><OutcomeBadge status="invalidated" /> <span className="ml-1">{outcomesData.invalidated}</span></span>}
+              </div>
+            )}
             {outcomesData.scored > 0 ? (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-emerald-500/10 px-3 py-2.5">
-                    <p className="text-[10px] uppercase tracking-wide text-emerald-700/80 dark:text-emerald-300/80">
+                     <p className="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-300/80">
                       {t.outcomes.summary_tp_rate}
                     </p>
                     <p
@@ -227,12 +169,12 @@ export default function DashboardPage() {
                     >
                       {Math.round((outcomesData.tpHitRate ?? 0) * 100)}%
                     </p>
-                    <p className="text-[10px] text-emerald-700/70 dark:text-emerald-300/70 mt-0.5">
+                     <p className="text-xs text-emerald-700/70 dark:text-emerald-300/70 mt-0.5">
                       {outcomesData.tp1Hit + outcomesData.tp2Hit} / {outcomesData.scored}
                     </p>
                   </div>
                   <div className="rounded-xl bg-red-500/10 px-3 py-2.5">
-                    <p className="text-[10px] uppercase tracking-wide text-red-700/80 dark:text-red-300/80">
+                     <p className="text-xs uppercase tracking-wide text-red-700/80 dark:text-red-300/80">
                       {t.outcomes.summary_sl_rate}
                     </p>
                     <p
@@ -241,24 +183,24 @@ export default function DashboardPage() {
                     >
                       {Math.round((outcomesData.slHitRate ?? 0) * 100)}%
                     </p>
-                    <p className="text-[10px] text-red-700/70 dark:text-red-300/70 mt-0.5">
+                     <p className="text-xs text-red-700/70 dark:text-red-300/70 mt-0.5">
                       {outcomesData.slHit} / {outcomesData.scored}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>
                     {t.outcomes.summary_resolved
                       .replace("{scored}", String(outcomesData.scored))
                       .replace("{total}", String(outcomesData.total))}
                   </span>
-                  {outcomesData.pending > 0 && (
-                    <span>
-                      {t.outcomes.summary_pending.replace("{n}", String(outcomesData.pending))}
-                    </span>
-                  )}
                 </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                 <details className="group rounded-lg border border-border/70 px-3 py-1" data-testid="details-outcome-breakdown">
+                   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-1.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+                     {lang === "id" ? "Rincian hasil" : "Outcome breakdown"}
+                     <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+                   </summary>
+                 <div className="flex flex-wrap gap-2 py-2">
                   {(["tp2_hit", "tp1_hit", "sl_hit", "expired", "invalidated", "pending"] as const).map((s) => {
                     const counts: Record<OutcomeStatus, number> = {
                       tp1_hit: outcomesData.tp1Hit,
@@ -273,11 +215,12 @@ export default function DashboardPage() {
                     return (
                       <span key={s} className="inline-flex items-center gap-1">
                         <OutcomeBadge status={s} />
-                        <span className="text-[10px] text-muted-foreground">{n}</span>
+                         <span className="text-xs text-muted-foreground">{n}</span>
                       </span>
                     );
                   })}
                 </div>
+                 </details>
               </>
             ) : (
               <p className="text-xs text-muted-foreground">{t.outcomes.summary_no_data}</p>
@@ -312,6 +255,54 @@ export default function DashboardPage() {
         )}
 
         </div>
+
+        <EnablePushCard />
+
+        {SHOW_SPONSOR && !liveBannerDismissed && (
+          <div className="relative" data-testid="card-live-analisa">
+            <a
+              href="https://www.tiktok.com/@solid.prime"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+              data-testid="link-live-analisa-tiktok"
+              onClick={() => trackOutbound("dashboard-tiktok", "tiktok")}
+            >
+              <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-orange-500/10 p-3.5 active:scale-[0.99] transition-transform">
+                <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
+                <div className="relative flex items-center gap-3 pr-6">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30">
+                    <Radio className="w-5 h-5 text-[#1a1208]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-red-500/90 text-white text-xs font-bold uppercase tracking-wider">
+                        <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
+                        {t.brand.live_analisa_badge}
+                      </span>
+                      <span className="text-xs text-amber-300 font-semibold tracking-wide">SOLID PRIME</span>
+                    </div>
+                    <p className="text-xs font-bold text-foreground leading-tight">{t.brand.live_analisa_title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{t.brand.live_analisa_subtitle}</p>
+                  </div>
+                  <span className="flex items-center gap-1 text-xs font-bold text-amber-300 shrink-0" data-testid="text-live-analisa-cta">
+                    {t.brand.live_analisa_cta}
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </div>
+            </a>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismissLiveBanner(); }}
+              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background/60 transition-colors"
+              aria-label={lang === "id" ? "Tutup" : "Close"}
+              data-testid="button-dismiss-live-analisa"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -359,16 +350,16 @@ export default function DashboardPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-foreground">{a.instrument}</span>
-                          <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">{a.timeframe}</span>
+                           <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">{a.timeframe}</span>
                           {mc && (
-                            <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-md", mc.color)}>
+                            <span className={cn("text-xs font-medium px-1.5 py-0.5 rounded-md", mc.color)}>
                               {mc.label}
                             </span>
                           )}
                         </div>
                         <span
                           className={cn(
-                            "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                            "text-xs font-semibold px-2 py-0.5 rounded-full",
                             valid
                               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                               : "bg-muted text-muted-foreground"
@@ -382,7 +373,7 @@ export default function DashboardPage() {
                         <span className="text-xs text-muted-foreground">
                           {a.confidenceMin}–{a.confidenceMax}% {t.common.confidence}
                         </span>
-                        <span className="text-[10px] text-muted-foreground group-hover:text-primary transition-colors">
+                        <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
                           {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: dateLocale })}
                         </span>
                       </div>
@@ -392,6 +383,23 @@ export default function DashboardPage() {
               })}
             </div>
           )}
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <details className="group rounded-2xl border border-border bg-card p-4" data-testid="details-market-calendar">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+              {lang === "id" ? "Kalender ekonomi" : "Economic calendar"}
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <div className="pt-4"><CalendarWidget limit={6} /></div>
+          </details>
+          <details className="group rounded-2xl border border-border bg-card p-4" data-testid="details-market-news">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+              {lang === "id" ? "Berita pasar" : "Market news"}
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <div className="pt-4"><NewsWidget limit={5} /></div>
+          </details>
         </div>
 
       </div>

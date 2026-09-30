@@ -18,8 +18,9 @@ import {
   PRIMARY_INSTRUMENTS,
 } from "@workspace/instrument-taxonomy";
 import { estimateCostUsd } from "../lib/model-pricing";
-import { getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe } from "../lib/historical";
+import { getCandleSnapshot, getIndicators, formatIndicatorsForPrompt, isSupportedIndicatorTimeframe, type IndicatorTimeframe } from "../lib/historical";
 import { getLivePriceFor } from "../lib/live-prices";
+import { VERIFIED_ANALYSIS_INSTRUMENTS, VERIFIED_OTHER_INSTRUMENTS } from "../lib/verified-instruments";
 import {
   getRelevantNews,
   formatNewsForPrompt,
@@ -46,7 +47,12 @@ import { resetDormancyStreak } from "../lib/dormancy";
 import { detectGuardrailSignals, GUARDRAIL_KINDS, type GuardrailKind } from "../lib/anti-pattern";
 import { guardrailEvents } from "@workspace/db/schema";
 import { z } from "zod";
-import { awardProgression, revokeProgressionEvidence, riskWaitSourceEventId } from "../lib/progression";
+// XP policy (see chat 2026-09-30): always award on feedback, no minimum
+// note-length gate, no revoke-on-downgrade — merged in from devv-psr.
+import { awardProgression, riskWaitSourceEventId } from "../lib/progression";
+// The free-timeframe-switch credit bonus stays reverted (explicit prior
+// decision, see chat) — consumeFreeTimeframeSwitch/isEligibleForFreeTimeframeSwitch
+// deliberately not re-imported even though devv-psr still has them.
 import { applyCreditLedgerEntry, CREDIT_BALANCE_LOCK_NAMESPACE, getCreditBalanceForUser } from "../lib/credits";
 
 let aiErrorCount = 0;
@@ -567,6 +573,14 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     res.status(400).json({ error: "Mode tidak valid" });
     return;
   }
+  if (typeof instrument !== "string" || !VERIFIED_ANALYSIS_INSTRUMENTS.has(instrument)) {
+    res.status(400).json({ error: "Kode instrumen belum didukung atau harga belum terverifikasi di aplikasi." });
+    return;
+  }
+  if (!isSupportedIndicatorTimeframe(timeframe)) {
+    res.status(400).json({ error: "Timeframe tidak valid" });
+    return;
+  }
 
   const userId = req.userId!;
   const typedMode = mode as "beginner" | "pro";
@@ -577,6 +591,19 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   // Indicators only support daily/weekly today; skip them for intraday timeframes
   // so the AI is not fed stale daily data labelled as e.g. "1h".
   const indicatorTf = isSupportedIndicatorTimeframe(timeframe) ? timeframe : null;
+  const timeframeOrder: IndicatorTimeframe[] = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"];
+  const selectedIndex = indicatorTf ? timeframeOrder.indexOf(indicatorTf) : -1;
+  const comparisonTimeframes = selectedIndex < 0
+    ? []
+    : [timeframeOrder[selectedIndex - 1], timeframeOrder[selectedIndex + 1]]
+        .filter((tf): tf is IndicatorTimeframe => tf !== undefined);
+  // Comparisons are advisory context, not a substitute for the selected
+  // timeframe's actual execution levels. Keep optional feeds bounded so they
+  // cannot indefinitely delay a paid user's answer.
+  const boundedIndicators = (tf: IndicatorTimeframe) => Promise.race([
+    getIndicators(instrument, tf),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+  ]);
   const contextParts: string[] = [];
   // Snapshot the overall buy/sell/neutral tally that drives the Market Context
   // Summary card on the Analyze tab so the saved analysis page can render the
@@ -595,6 +622,9 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
   // doesn't cover this instrument (futures-only); the model then anchors to
   // the indicator block's last close as before.
   let livePrice: number | null = null;
+  // Close from the user's selected timeframe only. Comparison timeframe
+  // summaries are context, never an execution-price anchor.
+  let selectedTimeframePrice: number | null = null;
   // Bound the live-price lookup: the upstream forex fetch has no timeout of
   // its own, so without this a stalled feed could hang the whole analysis.
   // Best-effort — null just means "no live anchor", same as no coverage.
@@ -602,13 +632,35 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     getLivePriceFor(instrument),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
   ]);
+  const candleSnapshotRequest: Promise<Awaited<ReturnType<typeof getCandleSnapshot>>> =
+    indicatorTf
+      ? new Promise((resolve) => {
+          const timeout = setTimeout(() => resolve(null), 5500);
+          getCandleSnapshot(instrument, indicatorTf).then(
+            (snapshot) => {
+              clearTimeout(timeout);
+              resolve(snapshot);
+            },
+            (err) => {
+              clearTimeout(timeout);
+              logger.warn({ err, instrument, timeframe }, "[analyses] Selected-timeframe candle snapshot unavailable");
+              resolve(null);
+            },
+          );
+        })
+      : Promise.resolve(null);
   await Promise.allSettled([
+    candleSnapshotRequest,
     livePriceAnchor.then((p) => {
       livePrice = p;
     }),
     indicatorTf
-      ? getIndicators(instrument, indicatorTf).then((ind) => {
+      ? boundedIndicators(indicatorTf).then((ind) => {
           if (ind) {
+            selectedTimeframePrice =
+              Number.isFinite(ind.lastClose) && ind.lastClose > 0
+                ? ind.lastClose
+                : null;
             contextParts.push(formatIndicatorsForPrompt(ind, indicatorTf));
             techCounts = {
               buy: ind.overallSummary.buy,
@@ -618,6 +670,17 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           }
         })
       : Promise.resolve(),
+    Promise.all(comparisonTimeframes.map(async (tf) => {
+      const ind = await boundedIndicators(tf).catch(() => null);
+      return ind ? formatIndicatorsForPrompt(ind, tf) : null;
+    })).then((comparisons) => {
+      const available = comparisons.filter((item): item is string => item !== null);
+      if (available.length) {
+        contextParts.push(
+          `TIMEFRAME PEMBANDING (untuk menilai arah dan timing; level entry/SL/TP harus sesuai timeframe utama ${timeframe}):\n${available.join("\n")}`,
+        );
+      }
+    }),
     isFastIntraday
       ? Promise.resolve()
       : getRelevantNews(instrument).then((news) => {
@@ -631,6 +694,67 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           if (events.length) contextParts.push(formatCalendarForPrompt(events, instrument));
         }),
   ]);
+  const candleSnapshot = await candleSnapshotRequest;
+  if (VERIFIED_OTHER_INSTRUMENTS.has(instrument)) {
+    const last = candleSnapshot?.candles.at(-1);
+    const lastCandleTime = last ? Date.parse(last.date) : NaN;
+    const maxCandleAge = timeframe === "1W" ? 11 * 86400000 : timeframe === "1D" ? 5 * 86400000 : 3 * 86400000;
+    if (!candleSnapshot || candleSnapshot.isStale || candleSnapshot.candles.length < 20 ||
+        !last || !Number.isFinite(last.close) || last.close <= 0 ||
+        !Number.isFinite(lastCandleTime) || lastCandleTime > Date.now() + 86400000 ||
+        Date.now() - lastCandleTime > maxCandleAge ||
+        !Number.isFinite(last.low) || !Number.isFinite(last.high) ||
+        last.low <= 0 || last.high < last.low) {
+      res.status(503).json({ error: "Data harga untuk timeframe ini belum terverifikasi saat ini. Analisis tidak dijalankan dan kredit tidak dipakai." });
+      return;
+    }
+    // The two independently sourced spot prices must agree. A feed-scale
+    // mismatch would otherwise create plausible-looking but unsafe levels.
+    if (livePrice !== null &&
+        (!Number.isFinite(livePrice) || livePrice <= 0 ||
+         Math.abs(livePrice - last.close) / last.close > 0.01)) {
+      res.status(503).json({ error: "Sumber harga tidak selaras. Analisis tidak dijalankan dan kredit tidak dipakai." });
+      return;
+    }
+  }
+  // The exact same selected-timeframe price anchor is persisted with the bars.
+  // Prefer the close from the captured snapshot when its upstream retrieval is
+  // fresh; stale cached candles remain explicitly stale and do not override an
+  // independent live quote.
+  if (candleSnapshot && !candleSnapshot.isStale) {
+    const capturedClose = candleSnapshot.candles.at(-1)?.close;
+    if (typeof capturedClose === "number" && Number.isFinite(capturedClose) && capturedClose > 0) {
+      livePrice = capturedClose;
+      selectedTimeframePrice = capturedClose;
+    }
+  }
+  const priceAtAnalysis =
+    typeof livePrice === "number" && Number.isFinite(livePrice) && livePrice > 0
+      ? livePrice
+      : typeof selectedTimeframePrice === "number" &&
+          Number.isFinite(selectedTimeframePrice) &&
+          selectedTimeframePrice > 0
+        ? selectedTimeframePrice
+        : null;
+  const marketSnapshot = indicatorTf
+    ? {
+        instrument,
+        timeframe,
+        capturedAt: new Date().toISOString(),
+        sourceFetchedAt: candleSnapshot?.sourceFetchedAt ?? null,
+        // Retain a bounded recent history for Adaptive without persisting the
+        // full upstream multi-year response.
+        candles: candleSnapshot?.candles.slice(-300) ?? [],
+        priceAtAnalysis,
+        sourceStatus: candleSnapshot
+          ? candleSnapshot.isStale
+            ? candleSnapshot.staleReason === "source_age"
+              ? "stale_source_age"
+              : "stale_feed_unavailable"
+            : "fresh"
+          : "feed_unavailable",
+      }
+    : null;
   const indicatorContext = contextParts.length ? contextParts.join("\n") : undefined;
   // Always persist as `{ newsItems: [], calendarEvents: [] }` (never
   // null) so the saved-analysis page renders an honest empty-state
@@ -680,6 +804,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       techSellCount: techCounts?.sell ?? null,
       techNeutralCount: techCounts?.neutral ?? null,
       tradePlan: aiResult.tradePlan ?? null,
+      marketSnapshot,
       fundamentalContext: fundamentalSnapshot,
       // Provenance trail emitted by the AI: which news titles + event
       // names from `fundamentalSnapshot` it actually cited in the
@@ -707,6 +832,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
         indicatorContext,
         fundamentalSnapshot,
         livePrice,
+        selectedTimeframePrice,
         "dev",
       ));
     } catch (aiErr) {
@@ -784,6 +910,7 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
           indicatorContext,
           fundamentalSnapshot,
           livePrice,
+          selectedTimeframePrice,
           willConsumeCredit ? "paid" : "free",
         ));
       } catch (aiErr) {
@@ -857,24 +984,27 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
 
   const completeTitle = "Analisis Selesai";
   const completeMessage = `Analisis ${instrument} (${timeframe}, ${typedMode === "beginner" ? "Pemula" : "Pro"}) telah selesai diproses.`;
-  await createNotification(
-    req.userId!,
-    {
-      title: completeTitle,
-      message: completeMessage,
-      type: "info",
-      // Tapping the notification (in-app or native push) opens this exact
-      // analysis; the client ownership-checks the id before navigating.
-      actionType: "open_analysis",
-      actionId: String(analysis.id),
-    },
-    {
-      title: "Analisis Selesai ✅",
-      body: `${instrument} (${timeframe}) — buka TradePilot untuk lihat hasilnya.`,
-      url: `/analyses/${analysis.id}`,
-      tag: `analysis-${analysis.id}`,
-    },
-  );
+  try {
+    await createNotification(
+      req.userId!,
+      {
+        title: completeTitle,
+        message: completeMessage,
+        type: "info",
+        // Tapping the notification opens this saved analysis.
+        actionType: "open_analysis",
+        actionId: String(analysis.id),
+      },
+      {
+        title: "Analisis Selesai ✅",
+        body: `${instrument} (${timeframe}) — buka TradePilot untuk lihat hasilnya.`,
+        url: `/analyses/${analysis.id}`,
+        tag: `analysis-${analysis.id}`,
+      },
+    );
+  } catch (err) {
+    logger.warn({ err, analysisId: analysis.id }, "Analysis saved but completion notification failed");
+  }
 
   // Auto-arm price alerts for the AI's trade plan when the user already
   // has push enabled — they shouldn't need a second tap to opt in for
@@ -1299,7 +1429,14 @@ router.post("/analyses/:id/alerts", requireAuth, async (req: AuthRequest, res) =
     res.status(404).json({ error: "Analisis tidak ditemukan" });
     return;
   }
-  const armed = await armAlertsForAnalysis(id);
+  let armed: number;
+  try {
+    armed = await armAlertsForAnalysis(id);
+  } catch (err) {
+    req.log.warn({ err, analysisId: id }, "Price alert live feed unavailable");
+    res.status(503).json({ error: "Layanan harga live sedang tidak tersedia. Coba lagi nanti." });
+    return;
+  }
   if (armed === 0) {
     // Most common cause: instrument isn't covered by the live-quotes
     // upstream (e.g. NIKKEI variants we don't map). Surface a 422 so
@@ -1371,8 +1508,7 @@ router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res)
       .set({ feedbackType, outcome: outcome ?? null, note: note ?? null })
       .where(eq(feedback.id, existing[0].id))
       .returning();
-    if (typeof note === "string" && note.trim().length >= 40) void awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(updated.id), qualityScore: 100, metadata: { analysisId, feedbackId: updated.id } });
-    else void revokeProgressionEvidence(req.userId!, "analysis_evaluation", String(updated.id), "Evaluation no longer meets minimum quality");
+    await awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(updated.id), qualityScore: 100, metadata: { analysisId, feedbackId: updated.id } });
     res.json(updated);
     return;
   }
@@ -1387,7 +1523,7 @@ router.post("/analyses/:id/feedback", requireAuth, async (req: AuthRequest, res)
       note: note ?? null,
     })
     .returning();
-  if (typeof note === "string" && note.trim().length >= 40) void awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(newFeedback.id), qualityScore: 100, metadata: { analysisId, feedbackId: newFeedback.id } });
+  await awardProgression({ userId: req.userId!, source: "analysis_evaluation", sourceEventId: String(newFeedback.id), qualityScore: 100, metadata: { analysisId, feedbackId: newFeedback.id } });
   res.status(201).json(newFeedback);
 });
 

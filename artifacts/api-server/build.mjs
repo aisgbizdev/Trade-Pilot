@@ -9,9 +9,11 @@ import { rm } from "node:fs/promises";
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+// E2E builds must never remove the development server's dist while it starts.
+const outputDirName = process.argv.includes("--e2e") ? "dist-e2e" : "dist";
 
 async function buildAll() {
-  const distDir = path.resolve(artifactDir, "dist");
+  const distDir = path.resolve(artifactDir, outputDirName);
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({

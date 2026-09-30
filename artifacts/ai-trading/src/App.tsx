@@ -12,6 +12,7 @@ import { EmbedProvider } from "@/lib/embed-mode";
 import { ProtectedRoute } from "@/components/protected-route";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
+import PrivacySecurityPage from "@/pages/privacy-security";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
@@ -37,6 +38,7 @@ import AdminTopupsPage from "@/pages/admin-topups";
 import AdminDashboardPage from "@/pages/admin-dashboard";
 import TopupPage from "@/pages/topup";
 import { SplashScreen } from "@/components/splash-screen";
+import { ProgressionLevelUpWatcher } from "@/components/progression/level-up-watcher";
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
 
@@ -127,6 +129,11 @@ function Router() {
         </Route>
         <Route path="/analytics">
           <Redirect to="/history?view=summary" />
+        </Route>
+        <Route path="/profile/privacy-security">
+          <ProtectedRoute>
+            <PrivacySecurityPage />
+          </ProtectedRoute>
         </Route>
         <Route path="/profile">
           <ProtectedRoute>
@@ -223,6 +230,7 @@ function App() {
                 <EmbedProvider>
                   <AuthProvider>
                     <ThemeSync />
+                    <ProgressionLevelUpWatcher />
                     <Router />
                   </AuthProvider>
                 </EmbedProvider>

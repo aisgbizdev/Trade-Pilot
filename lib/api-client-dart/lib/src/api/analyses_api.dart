@@ -25,6 +25,8 @@ import 'package:trade_pilot_api_client/src/model/error_response.dart';
 import 'package:trade_pilot_api_client/src/model/feedback.dart';
 import 'package:trade_pilot_api_client/src/model/feedback_body.dart';
 import 'package:trade_pilot_api_client/src/model/get_guardrails200_response.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_input.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_receipt.dart';
 import 'package:trade_pilot_api_client/src/model/personal_analytics.dart';
 import 'package:trade_pilot_api_client/src/model/progression_award.dart';
 import 'package:trade_pilot_api_client/src/model/recent_instruments.dart';
@@ -976,7 +978,7 @@ class AnalysesApi {
   }
 
   /// Compare deterministic technical risk across supported timeframes
-  /// Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI, and NIKKEI only. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result. 
+  /// Authenticated, read-only technical comparison for all eight verified analysis instruments. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result.
   ///
   /// Parameters:
   /// * [instrument] 
@@ -1526,6 +1528,101 @@ class AnalysesApi {
     }
 
     return Response<Feedback>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Register interest in an unsupported instrument code without starting an analysis
+  /// 
+  ///
+  /// Parameters:
+  /// * [instrumentRequestInput] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [InstrumentRequestReceipt] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<InstrumentRequestReceipt>> submitInstrumentRequest({ 
+    required InstrumentRequestInput instrumentRequestInput,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/instrument-requests';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(InstrumentRequestInput);
+      _bodyData = _serializers.serialize(instrumentRequestInput, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    InstrumentRequestReceipt? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(InstrumentRequestReceipt),
+      ) as InstrumentRequestReceipt;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<InstrumentRequestReceipt>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

@@ -1,3 +1,5 @@
+import { BROKER_CONTRACT_TIERS } from "@workspace/instrument-taxonomy";
+
 export type StandardTradingRuleInstrument = {
   code: "XUL10" | "BCO10_BBJ" | "HKK50_BBJ" | "JPK50_BBJ";
   product: string;
@@ -72,8 +74,8 @@ export const STANDARD_TRADING_RULES: StandardTradingRules = {
     {
       code: "XUL10",
       product: "Gold (Loco London)",
-      contractSize: 10,
-      contractUnit: "troy ounce",
+      contractSize: BROKER_CONTRACT_TIERS.XUL10.mini.size,
+      contractUnit: BROKER_CONTRACT_TIERS.XUL10.unit,
       tradingDays: "Monday–Friday",
       tradingHours: { summer: "06:00–03:30 WIB", winter: "06:00–04:30 WIB" },
       initialMarginUsdPerLot: 100,
@@ -92,8 +94,8 @@ export const STANDARD_TRADING_RULES: StandardTradingRules = {
     {
       code: "BCO10_BBJ",
       product: "Brent Crude Oil",
-      contractSize: 100,
-      contractUnit: "barrel",
+      contractSize: BROKER_CONTRACT_TIERS.BCO10_BBJ.mini.size,
+      contractUnit: BROKER_CONTRACT_TIERS.BCO10_BBJ.unit,
       tradingDays: "Monday–Friday",
       tradingHours: { summer: "07:00–03:45 WIB", winter: "08:00–03:45 WIB" },
       initialMarginUsdPerLot: 100,
@@ -112,8 +114,8 @@ export const STANDARD_TRADING_RULES: StandardTradingRules = {
     {
       code: "HKK50_BBJ",
       product: "Hang Seng Index",
-      contractSize: 5,
-      contractUnit: "USD/point",
+      contractSize: BROKER_CONTRACT_TIERS.HKK50_BBJ.mini.size,
+      contractUnit: BROKER_CONTRACT_TIERS.HKK50_BBJ.unit,
       tradingDays: "Monday–Friday",
       tradingHours: {
         summer: "08:15–11:00, 12:00–15:30, 16:00–02:00 WIB",
@@ -135,8 +137,8 @@ export const STANDARD_TRADING_RULES: StandardTradingRules = {
     {
       code: "JPK50_BBJ",
       product: "Nikkei Index",
-      contractSize: 5,
-      contractUnit: "USD/point",
+      contractSize: BROKER_CONTRACT_TIERS.JPK50_BBJ.mini.size,
+      contractUnit: BROKER_CONTRACT_TIERS.JPK50_BBJ.unit,
       tradingDays: "Monday–Friday",
       tradingHours: {
         summer: "06:30–13:55, 14:10–03:45 WIB",

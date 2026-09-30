@@ -199,6 +199,32 @@ describe("NotificationsPage: happy-path render", () => {
     );
     expect(screen.queryByTestId("card-notification-11")).not.toBeInTheDocument();
   });
+
+  it("opens push settings from an alert and links back only to a valid analysis", async () => {
+    window.history.replaceState({}, "", "/notifications?returnTo=%2Fanalyses%2F555#settings");
+    installFetchMock([
+      notificationsHandler(NOTIFICATIONS_PAYLOAD),
+      pushPrefsHandler(PUSH_PREFS_PAYLOAD),
+      markReadHandler(),
+    ]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><NotificationsPage /></Wrapper>);
+    expect(await screen.findByTestId("card-notification-settings")).toBeInTheDocument();
+    expect(screen.getByTestId("link-return-to-analysis")).toHaveAttribute("href", "/analyses/555");
+    expect(screen.getByTestId("link-return-to-analysis")).toHaveTextContent(en.notifications.return_to_analysis);
+    expect(screen.getByText(en.notifications.push_unsupported)).toBeInTheDocument();
+  });
+
+  it("explains blocked browser permission without offering an impossible enable toggle", async () => {
+    pushHookState.current = "denied";
+    window.history.replaceState({}, "", "/notifications?returnTo=%2Fanalyses%2F555#settings");
+    installFetchMock([notificationsHandler(NOTIFICATIONS_PAYLOAD), pushPrefsHandler(PUSH_PREFS_PAYLOAD), markReadHandler()]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><NotificationsPage /></Wrapper>);
+    expect(await screen.findByTestId("card-notification-settings")).toHaveTextContent(en.notifications.push_denied);
+    expect(screen.queryByTestId("switch-push-notifications")).not.toBeInTheDocument();
+    pushHookState.current = "unsupported";
+  });
 });
 
 describe("NotificationsPage: empty branch", () => {

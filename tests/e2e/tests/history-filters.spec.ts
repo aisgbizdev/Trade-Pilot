@@ -137,12 +137,12 @@ test.describe("History filters & URL sync (real Chromium)", () => {
     const user = await registerUser(baseURL!);
     await signIn(page, user);
 
-    await page.goto("/history");
+    await page.goto("/history?view=history");
     await page.getByTestId("button-toggle-filters").click();
     await expect(page.getByTestId("filter-panel")).toBeVisible();
 
     await page.getByTestId("filter-instrument-XAU/USD").click();
-    await page.getByTestId("filter-instrument-EUR/USD").click();
+    await page.getByTestId("filter-instrument-BRENT").click();
     await page.getByTestId("filter-timeframe-1h").click();
     await page.getByTestId("filter-timeframe-4h").click();
 
@@ -151,7 +151,7 @@ test.describe("History filters & URL sync (real Chromium)", () => {
       .poll(() => parseHistoryQuery(page.url()).getAll("instruments"), {
         timeout: 5_000,
       })
-      .toEqual(["XAU/USD", "EUR/USD"]);
+      .toEqual(["XAU/USD", "BRENT"]);
     expect(parseHistoryQuery(page.url()).getAll("timeframes")).toEqual([
       "1h",
       "4h",
@@ -161,7 +161,7 @@ test.describe("History filters & URL sync (real Chromium)", () => {
     const chipsRow = page.getByTestId("active-filters-row");
     await expect(chipsRow).toBeVisible();
     await expect(page.getByTestId("chip-inst-XAU/USD")).toBeVisible();
-    await expect(page.getByTestId("chip-inst-EUR/USD")).toBeVisible();
+    await expect(page.getByTestId("chip-inst-BRENT")).toBeVisible();
     await expect(page.getByTestId("chip-tf-1h")).toBeVisible();
     await expect(page.getByTestId("chip-tf-4h")).toBeVisible();
 
@@ -177,7 +177,7 @@ test.describe("History filters & URL sync (real Chromium)", () => {
         },
         { timeout: 5_000 },
       )
-      .toEqual(["XAU/USD", "EUR/USD"]);
+      .toEqual(["XAU/USD", "BRENT"]);
     expect(
       parseHistoryQuery(getLastAnalysesUrl()!).getAll("timeframes"),
     ).toEqual(["1h", "4h"]);
@@ -194,14 +194,13 @@ test.describe("History filters & URL sync (real Chromium)", () => {
     // Land directly on a URL that already contains filters — the
     // component must derive its state from `useSearch()` on mount.
     await page.goto(
-      "/history?instruments=XAU%2FUSD&instruments=GBP%2FUSD&timeframes=1h&mode=beginner",
+      "/history?view=history&instruments=XAU%2FUSD&instruments=BRENT&timeframes=1h",
     );
 
     // Active-filter chips reflect the URL on first render.
     await expect(page.getByTestId("chip-inst-XAU/USD")).toBeVisible();
-    await expect(page.getByTestId("chip-inst-GBP/USD")).toBeVisible();
+    await expect(page.getByTestId("chip-inst-BRENT")).toBeVisible();
     await expect(page.getByTestId("chip-tf-1h")).toBeVisible();
-    await expect(page.getByTestId("chip-mode-beginner")).toBeVisible();
 
     // The filter panel's pressed-state also hydrates — proves the
     // URL → state path covers the in-panel buttons, not just chips.
@@ -210,7 +209,7 @@ test.describe("History filters & URL sync (real Chromium)", () => {
       page.getByTestId("filter-instrument-XAU/USD"),
     ).toHaveAttribute("aria-pressed", "true");
     await expect(
-      page.getByTestId("filter-instrument-GBP/USD"),
+      page.getByTestId("filter-instrument-BRENT"),
     ).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByTestId("filter-timeframe-1h")).toHaveAttribute(
       "aria-pressed",
@@ -227,9 +226,8 @@ test.describe("History filters & URL sync (real Chromium)", () => {
     // the URL, not in React state.
     await page.reload();
     await expect(page.getByTestId("chip-inst-XAU/USD")).toBeVisible();
-    await expect(page.getByTestId("chip-inst-GBP/USD")).toBeVisible();
+    await expect(page.getByTestId("chip-inst-BRENT")).toBeVisible();
     await expect(page.getByTestId("chip-tf-1h")).toBeVisible();
-    await expect(page.getByTestId("chip-mode-beginner")).toBeVisible();
   });
 
   test("removing a single active-filter chip clears only that filter", async ({
@@ -241,17 +239,17 @@ test.describe("History filters & URL sync (real Chromium)", () => {
     await signIn(page, user);
 
     await page.goto(
-      "/history?instruments=XAU%2FUSD&instruments=EUR%2FUSD&timeframes=1h",
+      "/history?view=history&instruments=XAU%2FUSD&instruments=BRENT&timeframes=1h",
     );
 
     await expect(page.getByTestId("chip-inst-XAU/USD")).toBeVisible();
-    await expect(page.getByTestId("chip-inst-EUR/USD")).toBeVisible();
+    await expect(page.getByTestId("chip-inst-BRENT")).toBeVisible();
     await expect(page.getByTestId("chip-tf-1h")).toBeVisible();
 
-    // Tap the EUR/USD chip × — the others must stay.
-    await page.getByTestId("chip-inst-EUR/USD").click();
+    // Tap the BRENT chip × — the others must stay.
+    await page.getByTestId("chip-inst-BRENT").click();
 
-    await expect(page.getByTestId("chip-inst-EUR/USD")).toHaveCount(0);
+    await expect(page.getByTestId("chip-inst-BRENT")).toHaveCount(0);
     await expect(page.getByTestId("chip-inst-XAU/USD")).toBeVisible();
     await expect(page.getByTestId("chip-tf-1h")).toBeVisible();
 
@@ -271,7 +269,7 @@ test.describe("History filters & URL sync (real Chromium)", () => {
     await signIn(page, user);
 
     await page.goto(
-      "/history?instruments=XAU%2FUSD&timeframes=1h&timeframes=4h&mode=pro",
+      "/history?view=history&instruments=XAU%2FUSD&timeframes=1h&timeframes=4h",
     );
     await expect(page.getByTestId("active-filters-row")).toBeVisible();
 
@@ -297,7 +295,7 @@ test.describe("History filters & URL sync (real Chromium)", () => {
     const user = await registerUser(baseURL!);
     await signIn(page, user);
 
-    await page.goto("/history?instruments=XAU%2FUSD&timeframes=1h");
+    await page.goto("/history?view=history&instruments=XAU%2FUSD&timeframes=1h");
 
     const empty = page.getByTestId("history-empty-state");
     await expect(empty).toBeVisible();

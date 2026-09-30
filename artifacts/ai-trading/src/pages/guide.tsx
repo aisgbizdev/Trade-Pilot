@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Brain, CheckCircle2, ChevronLeft, Search, BookOpen, ChevronRight, X, Sparkles } from "lucide-react";
 import { Layout } from "@/components/layout";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { useGetProgressionCatalog } from "@workspace/api-client-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -106,18 +107,29 @@ export default function GuidePage() {
   }, [progressionCatalog?.completedGuideIds]);
 
   const [evidenceSession, setEvidenceSession] = useState<ProgressionEvidenceSession | null>(null);
+  const [evidenceStartError, setEvidenceStartError] = useState(false);
+  const [evidenceRetry, setEvidenceRetry] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    setEvidenceSession(null);
+    setEvidenceStartError(false);
     if (activeArticleId && isProgressionGuideId(activeArticleId)) {
-      setEvidenceSession(null);
       startEvidence.mutateAsync({
         data: {
           source: "guide_completion",
           guideId: activeArticleId
         }
-      }).then(setEvidenceSession).catch(() => {});
+      }).then((session) => {
+        if (cancelled) return;
+        setNow(Date.now());
+        setEvidenceSession(session);
+      }).catch(() => {
+        if (!cancelled) setEvidenceStartError(true);
+      });
     }
-  }, [activeArticleId]);
+    return () => { cancelled = true; };
+  }, [activeArticleId, evidenceRetry]);
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -126,14 +138,29 @@ export default function GuidePage() {
     return () => window.clearInterval(interval);
   }, [evidenceSession]);
 
-  const isCompleteButtonDisabled = isAlreadyCompleted || !evidenceSession || recordActivity.isPending || (new Date(evidenceSession.minimumCompleteAt).getTime() > now);
+  const currentEvidenceSession = evidenceSession?.subject === activeArticleId ? evidenceSession : null;
+  const remainingSeconds = currentEvidenceSession
+    ? Math.max(0, Math.ceil((new Date(currentEvidenceSession.minimumCompleteAt).getTime() - now) / 1000))
+    : 0;
+  const isCompleteButtonDisabled = isAlreadyCompleted || !currentEvidenceSession || recordActivity.isPending || remainingSeconds > 0;
+  const completionStatus = isAlreadyCompleted
+    ? null
+    : evidenceStartError
+      ? t.guide.completion_start_failed
+      : !currentEvidenceSession
+        ? t.guide.completion_preparing
+        : recordActivity.isPending
+          ? t.guide.completion_saving
+          : remainingSeconds > 0
+            ? t.guide.completion_wait.replace("{seconds}", String(remainingSeconds))
+            : null;
 
   const handleRecordActivity = async () => {
-    if (!evidenceSession) return;
+    if (!currentEvidenceSession) return;
     try {
       const res = await recordActivity.mutateAsync({
         data: {
-          token: evidenceSession.token
+          token: currentEvidenceSession.token
         }
       });
       if (res.awarded) {
@@ -292,7 +319,7 @@ export default function GuidePage() {
                   <BookOpen className="w-4 h-4 text-primary" />
                   {t.guide.title}
                 </h1>
-                <p className="text-xs text-muted-foreground">{t.guide.subtitle}</p>
+                 <ExpandableExplanation inline>{t.guide.subtitle}</ExpandableExplanation>
               </div>
             </div>
 
@@ -325,7 +352,7 @@ export default function GuidePage() {
                       <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
                       {t.guide.quick_start}
                     </h2>
-                    <p className="text-[11px] text-muted-foreground">{t.guide.quick_start_hint}</p>
+                     <ExpandableExplanation inline>{t.guide.quick_start_hint}</ExpandableExplanation>
                   </div>
                 </div>
                 <div className="grid gap-2 md:grid-cols-3">
@@ -341,7 +368,7 @@ export default function GuidePage() {
                         {index + 1}
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                         <span className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {lang === "id" ? category.title_id : category.title_en}
                         </span>
                         <span className="mt-0.5 block text-sm font-semibold leading-snug text-foreground">
@@ -350,7 +377,7 @@ export default function GuidePage() {
                       </span>
                       {completedGuides.has(article.id) && (
                         <span
-                          className="ml-auto inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                           className="ml-auto inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400"
                           data-testid={`guide-quick-start-completed-${article.id}`}
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -399,12 +426,11 @@ export default function GuidePage() {
               >
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="px-4 pt-1 text-[10px] text-muted-foreground md:hidden">
-                {t.guide.browse_categories}
-              </p>
+               <ExpandableExplanation inline className="px-4 md:hidden">{t.guide.browse_categories}</ExpandableExplanation>
             </div>
 
             {!searchQuery.trim() && selectedCategory === null && (
+              <div>
               <button
                 type="button"
                 onClick={() => selectCategory("psychology")}
@@ -416,11 +442,12 @@ export default function GuidePage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold text-foreground">{t.guide.psychology_title}</span>
-                  <span className="block text-[11px] leading-relaxed text-muted-foreground">{t.guide.psychology_hint}</span>
                 </span>
                 <span className="hidden text-xs font-semibold text-primary sm:block">{t.guide.psychology_action}</span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               </button>
+              <ExpandableExplanation inline className="px-3">{t.guide.psychology_hint}</ExpandableExplanation>
+              </div>
             )}
 
             {filteredCategories.length === 0 ? (
@@ -453,7 +480,7 @@ export default function GuidePage() {
                             <span className="flex shrink-0 items-center gap-2">
                               {completedGuides.has(art.id) && (
                                 <span
-                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                                   className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400"
                                   data-testid={`guide-article-completed-${art.id}`}
                                 >
                                   <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -483,7 +510,7 @@ export default function GuidePage() {
                {returnTo ? t.guide.back_to_analysis : t.guide.back_to_guide}
             </button>
             <header className="space-y-2 mb-6">
-              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-[10px] font-semibold text-primary uppercase tracking-wider">
+               <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-xs font-semibold text-primary uppercase tracking-wider">
                 <activeArticle.category.icon className="w-3 h-3" />
                 {lang === "id" ? activeArticle.category.title_id : activeArticle.category.title_en}
               </div>
@@ -504,16 +531,37 @@ export default function GuidePage() {
                 </button>
               )}
 
-              <div className="pt-8 flex justify-center border-t border-border mt-8">
+               <div className="pt-8 flex flex-col items-center gap-2 border-t border-border mt-8">
                 <button
                   type="button"
                   onClick={() => handleRecordActivity()}
                   disabled={isCompleteButtonDisabled}
+                   aria-describedby={completionStatus ? "guide-completion-status" : undefined}
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/50 bg-primary/10 px-6 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/20 hover:border-primary disabled:opacity-50"
                   data-testid="button-mark-guide-complete"
                 >
                   {isAlreadyCompleted ? t.progression.guide_already_completed : t.progression.mark_complete}
                 </button>
+                 {completionStatus && (
+                   <p
+                     id="guide-completion-status"
+                     role={evidenceStartError ? "alert" : "status"}
+                     className="text-center text-xs text-muted-foreground"
+                     data-testid="guide-completion-status"
+                   >
+                     {completionStatus}
+                   </p>
+                 )}
+                 {evidenceStartError && !isAlreadyCompleted && (
+                   <button
+                     type="button"
+                     onClick={() => setEvidenceRetry((count) => count + 1)}
+                     className="text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                     data-testid="button-retry-guide-completion"
+                   >
+                     {t.guide.completion_retry}
+                   </button>
+                 )}
               </div>
             </div>
           </div>

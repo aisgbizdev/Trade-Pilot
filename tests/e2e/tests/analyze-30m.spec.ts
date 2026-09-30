@@ -223,20 +223,17 @@ test.describe("Analyze flow — 30m timeframe (real Chromium)", () => {
     const user = await registerUser(baseURL!);
     await signIn(page, user);
 
-    await page.goto("/analyze");
-
-    // The Analyze page defaults to the "futures" tab, where XAU/USD lives.
-    await page.getByTestId("button-instrument-XAU/USD").click();
-
-    // Pick "30m" — the new timeframe added by task #83.
-    const timeframe30m = page.getByTestId("button-timeframe-30m");
-    await expect(timeframe30m).toBeVisible();
-    await timeframe30m.click();
+    // The simplified form hides the timeframe picker, but deep links still
+    // accept a timeframe. Confirm the 30m link reaches the create request.
+    await page.goto("/analyze?instrument=XAU%2FUSD&timeframe=30m");
+    await expect(page.getByTestId("button-submit-analysis")).toBeEnabled();
+    await expect(page.getByText("30m", { exact: true })).toBeVisible();
 
     await page.getByTestId("button-submit-analysis").click();
 
-    // A successful create navigates directly to the full analysis detail page.
-    await page.waitForURL(new RegExp(`/analyses/${STUB_ANALYSIS_ID}$`), {
+    // A successful create displays the result inline and persists its ID
+    // in the Analyze URL, so returning from another page restores it.
+    await page.waitForURL(new RegExp(`/analyze\\?.*result=${STUB_ANALYSIS_ID}(?:&|$)`), {
       timeout: 30_000,
     });
 
@@ -256,10 +253,9 @@ test.describe("Analyze flow — 30m timeframe (real Chromium)", () => {
     // stale render or a re-typed default.
     await expect(page.getByTestId("text-bias-timeframe")).toHaveText("30m");
 
-    // Finally, prove the Analyze form actually submitted the timeframe
-    // we picked. Without this assertion the test would silently pass
-    // even if the `button-timeframe-30m` pill became disconnected from
-    // form state, because the route stub hard-codes `timeframe: "30m"`
+    // Finally, prove the form submitted the linked timeframe. Without this
+    // assertion the test would silently pass even if URL hydration stopped
+    // updating form state, because the route stub hard-codes `timeframe: "30m"`
     // in its response.
     expect(createPayload).not.toBeNull();
     expect(createPayload!.timeframe).toBe("30m");
@@ -271,9 +267,11 @@ test.describe("Analyze flow — 30m timeframe (real Chromium)", () => {
     // the persisted snapshot, not just the legacy AI narrative.
     const fundamentalCard = page.getByTestId("card-fundamental-context");
     await expect(fundamentalCard).toBeVisible();
+    await fundamentalCard.getByTestId("fundamental-news-toggle").click();
     await expect(fundamentalCard).toContainText(
       "Gold edges higher as dollar slips on Fed rate cut bets",
     );
+    await fundamentalCard.getByTestId("fundamental-calendar-toggle").click();
     await expect(fundamentalCard).toContainText("FOMC Rate Decision");
   });
 });

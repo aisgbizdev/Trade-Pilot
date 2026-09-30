@@ -96,6 +96,10 @@ import 'package:trade_pilot_api_client/src/model/google_native_login_body.dart';
 import 'package:trade_pilot_api_client/src/model/google_reauth_body.dart';
 import 'package:trade_pilot_api_client/src/model/google_reauth_response.dart';
 import 'package:trade_pilot_api_client/src/model/health_status.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_input.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_rank.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_ranking.dart';
+import 'package:trade_pilot_api_client/src/model/instrument_request_receipt.dart';
 import 'package:trade_pilot_api_client/src/model/journal_entry.dart';
 import 'package:trade_pilot_api_client/src/model/journal_entry_list.dart';
 import 'package:trade_pilot_api_client/src/model/journal_group_stat.dart';
@@ -104,6 +108,8 @@ import 'package:trade_pilot_api_client/src/model/journal_stats.dart';
 import 'package:trade_pilot_api_client/src/model/journal_stats_totals.dart';
 import 'package:trade_pilot_api_client/src/model/login_body.dart';
 import 'package:trade_pilot_api_client/src/model/manual_topup_body.dart';
+import 'package:trade_pilot_api_client/src/model/market_snapshot.dart';
+import 'package:trade_pilot_api_client/src/model/market_snapshot_candle.dart';
 import 'package:trade_pilot_api_client/src/model/message_response.dart';
 import 'package:trade_pilot_api_client/src/model/mirror_gated_insight.dart';
 import 'package:trade_pilot_api_client/src/model/mirror_group_stat.dart';
@@ -291,6 +297,10 @@ part 'serializers.g.dart';
   GoogleReauthBody,
   GoogleReauthResponse,
   HealthStatus,
+  InstrumentRequestInput,
+  InstrumentRequestRank,
+  InstrumentRequestRanking,
+  InstrumentRequestReceipt,
   JournalEntry,
   JournalEntryList,
   JournalGroupStat,
@@ -299,6 +309,8 @@ part 'serializers.g.dart';
   JournalStatsTotals,
   LoginBody,
   ManualTopupBody,
+  MarketSnapshot,
+  MarketSnapshotCandle,
   MessageResponse,
   MirrorGatedInsight,
   MirrorGroupStat,
@@ -511,6 +523,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AlertLevelRow>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(MarketSnapshotCandle)]),
+        () => ListBuilder<MarketSnapshotCandle>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(TopupRequest)]),
         () => ListBuilder<TopupRequest>(),
       )
@@ -545,6 +561,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(JournalEntry)]),
         () => ListBuilder<JournalEntry>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InstrumentRequestRank)]),
+        () => ListBuilder<InstrumentRequestRank>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FeedbackWithDetails)]),

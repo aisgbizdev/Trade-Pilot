@@ -1,13 +1,10 @@
 /**
- * E2E tests for the Re-Analyze button and Copy Levels button introduced in
- * the analysis detail page.
+ * E2E tests for the current Analyze flow, Copy Levels, Standard Plan, and
+ * Adaptive Plan safeguards.
  *
- * Re-Analyze (data-testid="button-re-analyze"):
- *   1. The button is visible on the detail page.
- *   2. Its href encodes the analysis instrument and timeframe as URL params.
- *   3. Clicking it navigates to /analyze with ?instrument= and ?timeframe=
- *      pre-filled, and the correct instrument tab (futures for XAU/USD) is
- *      auto-selected.
+ * Analyze now uses a quick instrument chooser with a 1h default timeframe.
+ * A completed result is embedded inline; choosing another instrument
+ * re-analyzes in place rather than navigating to /analyses/:id.
  *
  * Copy Levels (data-testid="button-copy-levels-buy"):
  *   1. The button is visible when a trade plan is present.
@@ -18,7 +15,7 @@
  * Network strategy: same as analyze-30m.spec.ts and log-trade-button-flip.spec.ts.
  *   - POST /api/analyses → stubbed (no OpenAI call required).
  *   - GET  /api/analyses/:id → stubbed with a known tradePlan so the
- *     TradePlanCard (and its copy button) renders on the detail page.
+ *     TradePlanCard (and its copy button) renders in the embedded result.
  *   - All other endpoints fall back to the real server.
  */
 import { test, expect, request as pwRequest, type Page, type Route } from "@playwright/test";
@@ -75,16 +72,17 @@ const STUB_ID_STANDARD_REGRESSION = 9_999_950;
 const STUB_ID_ADAPTIVE_REFRESH = 9_999_940;
 const STUB_ID_HSI_ADAPTIVE = 9_999_930;
 const STUB_ID_UNSUPPORTED_ADAPTIVE = 9_999_920;
+const STUB_ID_RESPONSIVE_ADAPTIVE = 9_999_910;
 
-const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
-const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
+const QUICK_INSTRUMENTS = ["XAU/USD", "BRENT", "HSI", "NIKKEI"];
 
 function isIgnorableTradingViewConsoleError(message: string): boolean {
   // TradingView's embed loader reports an unavailable optional widget-sheriff
   // rules feed through console.error. This external diagnostic must not make
   // unrelated application-flow tests fail, while errors from every other
   // source remain actionable.
-  return message.includes("https://widget-sheriff.tradingview-widget.com/");
+  return message.includes("https://widget-sheriff.tradingview-widget.com/")
+    || message === "Cannot listen to the event from the provided iframe, contentWindow is not available";
 }
 
 function buildStubAnalysis(id: number) {
@@ -158,8 +156,8 @@ type AdaptiveRefreshAnalysis = Omit<
   };
 };
 
-/** Navigate to the analysis detail page via the Analyze form submit flow. */
-async function reachDetailPage(
+/** Create an analysis through Analyze and wait for its inline result. */
+async function reachInlineAnalysis(
   page: Page,
   stubAnalysisId: number,
   stubAnalysis: ReturnType<typeof buildStubAnalysis>,
@@ -190,74 +188,81 @@ async function reachDetailPage(
 
   await page.goto("/analyze");
 
-  // XAU/USD lives in the Futures tab (default).
-  await page.getByTestId("button-instrument-XAU/USD").click();
-  // Match the stubbed analysis and exercise the same explicit selection a
-  // user makes before submitting, rather than relying on the page's 1D default.
-  await page.getByTestId("button-timeframe-1h").click();
-  // This helper sets up detail-page tests. Invoke the DOM click directly so
-  // TradingView iframe layout shifts cannot swallow the coordinate-based click.
+  // XAU/USD and 1h are selected by default in the current quick chooser.
+  await expect(page.getByTestId("button-instrument-XAU/USD")).toHaveClass(/bg-primary\/10/);
+  await expect(page.getByTestId("instrument-chart-layout")).toContainText(/Timeframe:\s*1h/);
+  // Invoke the DOM click directly so TradingView iframe layout shifts cannot
+  // swallow the coordinate-based click.
   await page.getByTestId("button-submit-analysis").evaluate((button) => {
     (button as HTMLButtonElement).click();
   });
 
-  // A successful create navigates directly to the full analysis detail page.
-  await page.waitForURL(new RegExp(`/analyses/${stubAnalysisId}$`), {
-    timeout: 30_000,
-  });
+  // The result is embedded below the Analyze form; the URL remains /analyze.
+  await expect(page.getByTestId("embedded-analysis-result")).toBeVisible({ timeout: 30_000 });
 
-  // Wait for the page to be fully rendered before any assertions.
+  // Wait for the embedded detail to finish rendering.
   await expect(page.getByTestId("bias-gauge")).toBeAttached({ timeout: 15_000 });
 }
 
 // ---------------------------------------------------------------------------
 
-test.describe("Re-Analyze button (real Chromium + stubbed analysis)", () => {
-  test("button is visible, href encodes instrument+timeframe, and clicking pre-fills the Analyze page", async ({
+test.describe("Re-Analyze through the quick instrument chooser (real Chromium + stubbed analysis)", () => {
+  test("choosing another instrument re-analyzes inline using the default 1h timeframe", async ({
     page,
     baseURL,
   }) => {
-    const stubAnalysis = buildStubAnalysis(STUB_ID_RE_ANALYZE);
+    const initialAnalysis = buildStubAnalysis(STUB_ID_RE_ANALYZE);
+    const secondAnalysis = {
+      ...buildStubAnalysis(STUB_ID_RE_ANALYZE - 1),
+      instrument: "BRENT",
+    };
 
     const user = await registerUser(baseURL!, "re-analyze");
     await signIn(page, user);
-    await reachDetailPage(page, STUB_ID_RE_ANALYZE, stubAnalysis);
+    await reachInlineAnalysis(page, STUB_ID_RE_ANALYZE, initialAnalysis);
 
-    // 1. The Re-Analyze button must be present on the detail page.
-    const reAnalyzeBtn = page.getByTestId("button-re-analyze");
-    await expect(reAnalyzeBtn).toBeVisible({ timeout: 10_000 });
+    const secondRequests: Array<{ instrument?: string; timeframe?: string }> = [];
+    await page.route("**/api/analyses", async (route: Route) => {
+      if (route.request().method() === "POST") {
+        secondRequests.push(route.request().postDataJSON());
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify(secondAnalysis),
+        });
+        return;
+      }
+      await route.fallback();
+    });
+    await page.route(`**/api/analyses/${secondAnalysis.id}`, async (route: Route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(secondAnalysis),
+        });
+        return;
+      }
+      await route.fallback();
+    });
 
-    // 2. Its href must encode the analysis instrument and timeframe.
-    const href = await reAnalyzeBtn.getAttribute("href");
-    expect(href).not.toBeNull();
-    // The Link href is a client-side path; URL-encoded XAU/USD → XAU%2FUSD.
-    expect(decodeURIComponent(href!)).toContain("instrument=XAU/USD");
-    expect(href!).toContain("timeframe=1h");
-
-    // 3. Clicking navigates to /analyze with the correct query params.
-    await reAnalyzeBtn.click();
-    await page.waitForURL(/\/analyze\?/, { timeout: 10_000 });
-
-    const url = new URL(page.url());
-    expect(decodeURIComponent(url.searchParams.get("instrument") ?? "")).toBe("XAU/USD");
-    expect(url.searchParams.get("timeframe")).toBe("1h");
-
-    // 4. The "futures" tab must be auto-selected for XAU/USD (a futures
-    //    instrument). The active tab renders with bg-primary CSS class.
-    const futuresTab = page.getByTestId("tab-futures");
-    await expect(futuresTab).toBeVisible({ timeout: 5_000 });
-    await expect(futuresTab).toHaveClass(/bg-primary/);
-
-    // 5. The instrument button is visible in the grid (confirming the correct
-    //    tab is shown and the instrument list is rendered).
-    await expect(page.getByTestId("button-instrument-XAU/USD")).toBeVisible();
+    // Choosing another instrument does not start a paid analysis on its own.
+    await page.getByTestId("button-instrument-BRENT").click();
+    expect(secondRequests).toHaveLength(0);
+    await page.getByTestId("button-submit-analysis").click();
+    await expect(page.getByTestId("text-instrument")).toHaveText("BRENT", { timeout: 30_000 });
+    expect(new URL(page.url()).pathname).toBe("/analyze");
+    expect(new URL(page.url()).searchParams.get("result")).toBe(String(secondAnalysis.id));
+    expect(secondRequests[0]?.instrument).toBe("BRENT");
+    expect(secondRequests[0]?.timeframe).toBe("1h");
+    await expect(page.getByTestId("embedded-analysis-result")).toBeVisible();
   });
 });
 
 // ---------------------------------------------------------------------------
 
-test.describe("Analyze instrument accordion (authenticated Chromium)", () => {
-  test("keeps the category selector correct at desktop and mobile widths", async ({
+test.describe("Analyze quick instrument chooser (authenticated Chromium)", () => {
+  test("keeps the available instruments and current selection clear at desktop and mobile widths", async ({
     page,
     baseURL,
   }) => {
@@ -285,7 +290,7 @@ test.describe("Analyze instrument accordion (authenticated Chromium)", () => {
       browserErrors.push(`pageerror: ${error.message}`);
     });
 
-    const user = await registerUser(baseURL!, "accordion");
+    const user = await registerUser(baseURL!, "quick-instrument");
     await signIn(page, user);
     // Login intentionally makes an unauthenticated /api/auth/me request
     // before the session exists. Only collect errors from /analyze below.
@@ -307,44 +312,23 @@ test.describe("Analyze instrument accordion (authenticated Chromium)", () => {
       await page.setViewportSize(viewport);
       await page.goto("/analyze");
 
-      const futuresTab = page.getByTestId("tab-futures");
-      const forexTab = page.getByTestId("tab-forex");
       const instrumentOptions = page.getByTestId("instrument-options");
 
-      // Futures is the initial category and its complete product list is
-      // rendered before the user makes a selection.
-      await expect(futuresTab).toHaveAttribute("aria-expanded", "true");
+      // The current allowlist presents its available preset instruments
+      // directly; there are no empty category tabs to expand.
       await expect(instrumentOptions).toBeVisible();
       await expect(
         instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
-      ).toHaveText(FUTURES_INSTRUMENTS);
+      ).toHaveText(QUICK_INSTRUMENTS);
 
-      // Opening Forex replaces the options rather than appending another
-      // category's products to the existing list.
-      await forexTab.click();
-      await expect(futuresTab).toHaveAttribute("aria-expanded", "false");
-      await expect(forexTab).toHaveAttribute("aria-expanded", "true");
-      await expect(instrumentOptions).toBeVisible();
-      await expect(
-        instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
-      ).toHaveText(FOREX_INSTRUMENTS);
-      await expect(page.getByTestId("button-instrument-XAU/USD")).toHaveCount(0);
-
-      // A selected Forex instrument survives closing and reopening its
-      // accordion panel.
-      const selectedForex = page.getByTestId("button-instrument-EUR/USD");
-      await selectedForex.click();
-      await forexTab.click();
-      await expect(forexTab).toHaveAttribute("aria-expanded", "false");
-      await expect(instrumentOptions).toHaveCount(0);
-
-      await forexTab.click();
-      await expect(forexTab).toHaveAttribute("aria-expanded", "true");
-      await expect(selectedForex).toBeVisible();
-      await expect(selectedForex).toHaveClass(/bg-primary\/10/);
-      await expect(
-        instrumentOptions.locator('button[data-testid^="button-instrument-"]'),
-      ).toHaveText(FOREX_INSTRUMENTS);
+      const initialSelection = page.getByTestId("button-instrument-XAU/USD");
+      await expect(initialSelection).toHaveClass(/bg-primary\/10/);
+      const otherSelection = page.getByTestId("button-instrument-BRENT");
+      await otherSelection.click();
+      await expect(otherSelection).toHaveClass(/bg-primary\/10/);
+      await expect(initialSelection).not.toHaveClass(/bg-primary\/10/);
+      await initialSelection.click();
+      await expect(initialSelection).toHaveClass(/bg-primary\/10/);
     }
 
     expect(browserErrors, browserErrors.join("\n")).toEqual([]);
@@ -367,7 +351,7 @@ test.describe("Copy Levels button (real Chromium + stubbed analysis)", () => {
 
     const user = await registerUser(baseURL!, "copy-levels");
     await signIn(page, user);
-    await reachDetailPage(page, STUB_ID_COPY_LEVELS, stubAnalysis);
+    await reachInlineAnalysis(page, STUB_ID_COPY_LEVELS, stubAnalysis);
 
     // 1. The copy buttons must be visible (requires a tradePlan to be present).
     const copyBuyBtn = page.getByTestId("button-copy-levels-buy");
@@ -409,7 +393,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     const stubAnalysis = buildStubAnalysis(STUB_ID_STANDARD_REGRESSION);
     const user = await registerUser(baseURL!, "adaptive-refresh");
     await signIn(page, user);
-    await reachDetailPage(page, STUB_ID_STANDARD_REGRESSION, stubAnalysis);
+    await reachInlineAnalysis(page, STUB_ID_STANDARD_REGRESSION, stubAnalysis);
 
     await expect(page.getByTestId("card-trade-plan")).toBeVisible();
     await expect(page.getByTestId("trade-plan-buy")).toBeVisible();
@@ -433,7 +417,7 @@ test.describe("Standard Plan regression (real Chromium + stubbed analysis)", () 
     await expect(page.getByTestId("card-log-trade")).toHaveCount(0);
     await expect(page.getByTestId("card-user-journal-note")).toHaveCount(0);
     const adaptiveStorage = await page.evaluate(
-      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v17:${analysisId}`),
+      (analysisId) => window.localStorage.getItem(`trade-pilot:adaptive-plan:v24:${analysisId}`),
       STUB_ID_STANDARD_REGRESSION,
     );
     expect(adaptiveStorage).toBeNull();
@@ -492,6 +476,290 @@ test.describe("Adaptive product boundary (real Chromium + stubbed analyses)", ()
 
 // ---------------------------------------------------------------------------
 
+test.describe("Adaptive settings at narrow and desktop widths", () => {
+  test("keeps account and risk choices readable, with inline desktop labels and no extra disclosure", async ({
+    page,
+    baseURL,
+  }, testInfo) => {
+    const user = await registerUser(baseURL!, "adaptive-responsive");
+    await signIn(page, user);
+    await page.route(`**/api/analyses/${STUB_ID_RESPONSIVE_ADAPTIVE}`, async (route: Route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildStubAnalysis(STUB_ID_RESPONSIVE_ADAPTIVE)),
+      });
+    });
+    await page.goto(`/analyses/${STUB_ID_RESPONSIVE_ADAPTIVE}`);
+
+    const card = page.getByTestId("card-adaptive-position-plan");
+    await expect(card).toBeVisible();
+    const account = page.getByTestId("adaptive-account-selector");
+    const risk = page.getByTestId("adaptive-risk-style-selector");
+    await expect(page.getByTestId("adaptive-account-explanation")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-funds-explanation")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-risk-explanation")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-risk-style-details")).toHaveCount(0);
+
+    for (const width of [320, 390, 768, 975, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      const rowWidths: number[] = [];
+      for (const [row, group, names] of [
+        [page.getByTestId("adaptive-account-row"), account, ["Micro", "Mini", "Regular"]],
+        [risk, risk.getByRole("group"), ["Conservative", "Moderate", "Aggressive"]],
+      ] as const) {
+        const buttons = group.getByRole("button");
+        await expect(buttons).toHaveCount(3);
+        const label = row.locator("h4, p").first();
+        const labelBox = await label.boundingBox();
+        const firstButtonBox = await buttons.first().boundingBox();
+        expect(labelBox).not.toBeNull();
+        expect(firstButtonBox).not.toBeNull();
+        if (width >= 640) {
+          expect(labelBox!.x + labelBox!.width).toBeLessThan(firstButtonBox!.x);
+          expect(Math.abs(labelBox!.y + labelBox!.height / 2 - firstButtonBox!.y - firstButtonBox!.height / 2)).toBeLessThanOrEqual(3);
+        } else {
+          expect(firstButtonBox!.y).toBeGreaterThanOrEqual(labelBox!.y + labelBox!.height);
+        }
+        if (row === risk) {
+          await expect(label).toHaveCSS("text-transform", "uppercase");
+        }
+        const layout = await buttons.evaluateAll((nodes) => nodes.map((node) => {
+          const button = node as HTMLButtonElement;
+          const box = button.getBoundingClientRect();
+          const text = document.createRange();
+          text.selectNodeContents(button);
+          const textBox = text.getBoundingClientRect();
+          return {
+            label: button.textContent?.trim(),
+            left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+            textLeft: textBox.left, textRight: textBox.right,
+          };
+        }));
+        expect(layout.map(({ label }) => label)).toEqual(names);
+        rowWidths.push(layout[0].right - layout[0].left);
+        for (const [index, box] of layout.entries()) {
+          expect(box.right - box.left, `${width}px: ${box.label} touch width`).toBeGreaterThanOrEqual(70);
+          expect(box.bottom - box.top, `${width}px: ${box.label} touch height`).toBeGreaterThanOrEqual(40);
+          expect(box.textLeft, `${width}px: ${box.label} text starts within button`).toBeGreaterThanOrEqual(box.left - 1);
+          expect(box.textRight, `${width}px: ${box.label} text ends within button`).toBeLessThanOrEqual(box.right + 1);
+          expect(box.left, `${width}px: ${box.label} starts on screen`).toBeGreaterThanOrEqual(-1);
+          expect(box.right, `${width}px: ${box.label} ends on screen`).toBeLessThanOrEqual(width + 1);
+          if (index > 0) {
+            expect(box.top, `${width}px: ${box.label} stays in one row`).toBeCloseTo(layout[0].top, 0);
+            expect(box.left, `${width}px: ${box.label} does not overlap`).toBeGreaterThanOrEqual(layout[index - 1].right);
+            expect(Math.abs((box.right - box.left) - (layout[0].right - layout[0].left)), `${width}px: buttons share one width`).toBeLessThanOrEqual(1);
+          }
+        }
+      }
+      expect(Math.abs(rowWidths[0] - rowWidths[1]), `${width}px: account and risk buttons align`).toBeLessThanOrEqual(1);
+      await expect(card).toBeVisible();
+      await testInfo.attach(`adaptive-settings-${width}px`, {
+        body: await card.screenshot(),
+        contentType: "image/png",
+      });
+    }
+    await page.getByTestId("button-adaptive-explanation").click();
+    await expect(page.getByTestId("adaptive-risk-style-details")).toBeVisible();
+    await expect(page.getByTestId("adaptive-risk-style-details")).toContainText("Conservative");
+    await page.keyboard.press("Escape");
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+test.describe("Adaptive result layout (authenticated Chromium)", () => {
+  test("keeps prices, lots, totals and next broker funds legible at 320px, 390px and desktop", async ({
+    page,
+    baseURL,
+  }, testInfo) => {
+    const user = await registerUser(baseURL!, "adaptive-result-layout");
+    await signIn(page, user);
+    const analysis = {
+      ...buildStubAnalysis(STUB_ID_RESPONSIVE_ADAPTIVE),
+      validUntil: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+      fundamentalContext: { newsItems: [], calendarEvents: [] },
+      tradePlan: {
+        preferredSide: "buy" as const,
+        buy: {
+          entryZone: "2,300.00–2,302.00",
+          stopLoss: "2,290.00",
+          takeProfit1: "2,315.00",
+          takeProfit2: "2,325.00",
+          riskRewardRatio: "1:1.5",
+          rationale: "Bullish structure.",
+        },
+        sell: {
+          entryZone: "2,300.00–2,302.00",
+          stopLoss: "2,312.00",
+          takeProfit1: "2,290.00",
+          takeProfit2: "2,280.00",
+          riskRewardRatio: "1:1.2",
+          rationale: "Bearish alternative.",
+        },
+      },
+    };
+    await page.route(`**/api/analyses/${STUB_ID_RESPONSIVE_ADAPTIVE}`, async (route: Route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(analysis) });
+    });
+    await page.route("**/api/historical/candles?*purpose=adaptive-layering*", async (route: Route) => {
+      const now = Date.now();
+      const candles = [
+        { open: 2304, high: 2305, low: 2300, close: 2302 },
+        { open: 2302, high: 2304, low: 2298, close: 2300 },
+        { open: 2300, high: 2302, low: 2295, close: 2297 },
+        { open: 2297, high: 2301, low: 2297, close: 2300 },
+        { open: 2300, high: 2307, low: 2299, close: 2305 },
+        { open: 2305, high: 2309, low: 2301, close: 2303 },
+        { open: 2303, high: 2306, low: 2299, close: 2301 },
+      ].map((candle, index) => ({
+        ...candle, date: new Date(now - (7 - index) * 3_600_000).toISOString(),
+      }));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          candles,
+          sourceFetchedAt: new Date(now).toISOString(),
+          sourceMaxAgeMs: 5 * 60_000,
+          isStale: false,
+          staleReason: null,
+        }),
+      });
+    });
+    await page.goto(`/analyses/${STUB_ID_RESPONSIVE_ADAPTIVE}`);
+    const card = page.getByTestId("card-adaptive-position-plan");
+    await expect(card).toBeVisible();
+    const margin = page.getByTestId("input-adaptive-available-margin");
+    const loss = page.getByTestId("input-adaptive-maximum-loss");
+    await expect(page.getByTestId("button-calculate-adaptive-plan")).toBeEnabled();
+
+    // Check actual glyph rectangles, not just DOM presence or document scrollWidth:
+    // the card itself has overflow-hidden and can mask an overflowing child.
+    async function expectTextFits(testId: string, width: number) {
+      const measurements = await page.getByTestId(testId).evaluate((element) => {
+        const card = element.closest('[data-testid="card-adaptive-position-plan"]')!;
+        const cardBox = card.getBoundingClientRect();
+        const box = element.getBoundingClientRect();
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const lines: { left: number; right: number }[] = [];
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (!node.textContent?.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const rect of Array.from(range.getClientRects())) lines.push({ left: rect.left, right: rect.right });
+        }
+        return {
+          cardLeft: cardBox.left, cardRight: cardBox.right,
+          left: box.left, right: box.right, lines,
+          viewportWidth: document.documentElement.clientWidth,
+          pageWidth: document.documentElement.scrollWidth,
+        };
+      });
+      expect(measurements.lines.length, `${width}px: ${testId} contains visible text`).toBeGreaterThan(0);
+      expect(measurements.pageWidth, `${width}px: page does not scroll sideways`).toBeLessThanOrEqual(width + 1);
+      for (const line of measurements.lines) {
+        expect(line.left, `${width}px: ${testId} text inside card`).toBeGreaterThanOrEqual(Math.max(0, measurements.cardLeft) - 1);
+        expect(line.right, `${width}px: ${testId} text inside card`).toBeLessThanOrEqual(Math.min(measurements.viewportWidth, measurements.cardRight) + 1);
+        expect(line.left, `${width}px: ${testId} text inside element`).toBeGreaterThanOrEqual(measurements.left - 1);
+        expect(line.right, `${width}px: ${testId} text inside element`).toBeLessThanOrEqual(measurements.right + 1);
+      }
+    }
+
+    for (const width of [320, 390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      const liveLabel = page.getByTestId("card-indicators-section").getByRole("heading", {
+        name: "Live indicators · Saved analysis and plan do not update automatically",
+      });
+      await expect(liveLabel).toBeVisible();
+      const liveLabelBounds = await liveLabel.evaluate((element) => {
+        const panel = element.closest('[data-testid="card-indicators-section"]')!;
+        const text = document.createRange();
+        text.selectNodeContents(element);
+        return {
+          textRight: Math.max(...Array.from(text.getClientRects(), (rect) => rect.right)),
+          panelRight: panel.getBoundingClientRect().right,
+          viewportRight: document.documentElement.clientWidth,
+        };
+      });
+      expect(liveLabelBounds.textRight, `${width}px: live indicator label fits in panel`)
+        .toBeLessThanOrEqual(Math.min(liveLabelBounds.panelRight, liveLabelBounds.viewportRight) + 1);
+      await margin.fill("1234567890");
+      await loss.fill("1234567890");
+      const fundsFields = await page.getByTestId("adaptive-funds-fields").locator("label").evaluateAll((labels) =>
+        labels.map((label) => {
+          const caption = label.querySelector(":scope > span:first-child")!;
+          const input = label.querySelector("input")!;
+          const captionBox = caption.getBoundingClientRect();
+          const inputBox = input.getBoundingClientRect();
+          const style = getComputedStyle(input);
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d")!;
+          context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+          return {
+            captionRight: captionBox.right,
+            inputLeft: inputBox.left,
+            inputRight: inputBox.right,
+            textWidth: context.measureText(input.value).width,
+            availableWidth: inputBox.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 20,
+          };
+        }),
+      );
+      expect(fundsFields).toHaveLength(2);
+      for (const field of fundsFields) {
+        expect(field.captionRight, `${width}px: label stays beside its input`).toBeLessThanOrEqual(field.inputLeft);
+        expect(field.inputRight, `${width}px: input stays on screen`).toBeLessThanOrEqual(width + 1);
+        expect(field.textWidth, `${width}px: ten digits fit before the number controls`).toBeLessThanOrEqual(field.availableWidth);
+      }
+      await margin.fill("20000");
+      await loss.fill("2000");
+      await page.getByTestId("button-calculate-adaptive-plan").click();
+      const result = page.getByTestId("adaptive-plan-valid");
+      await expect(result).toBeVisible();
+      const positions = page.locator('[data-testid^="adaptive-snapshot-position-buy-"]');
+      expect(await positions.count(), `${width}px: multiple calculated positions`).toBeGreaterThan(1);
+      for (let index = 0; index < await positions.count(); index++) {
+        const position = page.getByTestId(`adaptive-snapshot-position-buy-${index}`);
+        await expect(position).toContainText(/lot/i);
+        await expectTextFits(`adaptive-snapshot-position-buy-${index}`, width);
+      }
+      const total = page.getByTestId("adaptive-snapshot-all-filled-buy");
+      await expect(total).toContainText(/lot/i);
+      await expectTextFits("adaptive-snapshot-all-filled-buy", width);
+
+      const ladder = page.getByTestId("adaptive-ladder-buy");
+      const fillScenarios = page.getByTestId("adaptive-fill-scenarios-buy");
+      await expect(ladder).not.toHaveAttribute("open", "");
+      await expect(fillScenarios).toBeHidden();
+      await ladder.locator("summary").first().click();
+      await expect(ladder).toHaveAttribute("open", "");
+      await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toBeVisible();
+      await expect(fillScenarios.locator("dd").first()).toBeVisible();
+      await expectTextFits("adaptive-fill-scenarios-buy", width);
+      await ladder.locator("summary").first().click();
+      await expect(fillScenarios).toBeHidden();
+
+      // A funds-only next position has a long, visible broker message.
+      await page.getByTestId("button-adaptive-risk-style-balanced").click();
+      await margin.fill("330");
+      await loss.fill("300");
+      await page.getByTestId("button-calculate-adaptive-plan").click();
+      await expect(result).toBeVisible();
+      await expect(page.getByTestId("adaptive-next-layer-funds-buy")).toContainText(/lot.*broker funds|lot.*dana bebas broker/i);
+      await expectTextFits("adaptive-snapshot-position-buy-0", width);
+      await expectTextFits("adaptive-snapshot-all-filled-buy", width);
+      await expectTextFits("adaptive-next-layer-funds-buy", width);
+      await testInfo.attach(`adaptive-result-${width}px`, {
+        body: await card.screenshot(),
+        contentType: "image/png",
+      });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+
 test.describe("Adaptive plan manual safeguards (real Chromium + refreshed context)", () => {
   test("uses standard rules and re-evaluates the saved plan after a fundamental refresh", async ({
     page,
@@ -527,8 +795,8 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
           fundamentalContext: {
             newsItems: [],
             calendarEvents: [{
-              date: "2026-08-27",
-              time: "14:30",
+               date: new Date().toISOString().slice(0, 10),
+               time: new Date().toISOString().slice(11, 16),
               currency: "USD",
               event: "Central-bank rate decision",
               impact: "★★★",
@@ -587,31 +855,43 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
             { high: 2300, low: 2297 },
             { high: 2300, low: 2296 },
             { high: 2301, low: 2297 },
-          ],
+          ].map(({ high, low }, index) => ({
+            date: new Date(Date.now() - (9 - index) * 3_600_000).toISOString(),
+            open: low,
+            high,
+            low,
+            close: high,
+          })),
+          sourceFetchedAt: new Date().toISOString(),
+          sourceMaxAgeMs: 5 * 60_000,
+          isStale: false,
+          staleReason: null,
         }),
       });
     });
 
     await page.goto("/analyze");
     await page.getByTestId("button-instrument-XAU/USD").click();
-    await page.getByTestId("button-timeframe-1h").click();
+    await expect(page.getByTestId("instrument-chart-layout")).toContainText(/Timeframe:\s*1h/);
     await page.getByTestId("button-submit-analysis").evaluate((button) => {
       (button as HTMLButtonElement).click();
     });
-    await page.waitForURL(new RegExp(`/analyses/${STUB_ID_ADAPTIVE_REFRESH}$`), {
-      timeout: 30_000,
-    });
+    await expect(page.getByTestId("embedded-analysis-result")).toBeVisible({ timeout: 30_000 });
 
     const marginInput = page.getByTestId("input-adaptive-available-margin");
     const maximumLossInput = page.getByTestId("input-adaptive-maximum-loss");
     await expect(marginInput).toBeVisible();
+    await page.getByTestId("button-adaptive-explanation").click();
     const accountRule = page.getByTestId("adaptive-account-rule");
-    await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/day trade only/i);
+    await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/intraday \(day trade\)/i);
+    await expect(page.getByTestId("adaptive-daytrade-only")).toContainText(/overnight positions are not covered|posisi overnight tidak tercakup/i);
     await expect(accountRule).toContainText("Mini");
     await expect(accountRule).toContainText(/0[.,]1(?:0)? lot/);
     await expect(accountRule).toContainText(/100/);
     await expect(accountRule).toContainText(/0[.,]9(?:0)? lot/);
     await expect(accountRule).toContainText(/each position|setiap posisi/i);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("adaptive-education-panel")).toBeHidden();
 
     await marginInput.fill("5000");
     await maximumLossInput.fill("125");
@@ -627,16 +907,18 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     await expect(page.getByTestId("adaptive-unused-risk-buffer")).toContainText(/0/);
     await maximumLossInput.fill("15");
     await page.getByTestId("button-calculate-adaptive-plan").click();
-    await page.getByTestId("adaptive-rejected-buy").locator("summary").click();
-    await expect(page.getByTestId("adaptive-conditional-buy-1")).toContainText(/Conditional financial plan|Rencana finansial bersyarat/i);
-    await expect(page.getByTestId("adaptive-conditional-buy-1")).toContainText(/Additional loss budget needed|Tambahan batas rugi yang dibutuhkan/i);
+    await expect(page.getByTestId("adaptive-plan-invalid")).toBeVisible();
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/minimum-lot loss|rugi lot minimum/i);
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$110/);
+    await expect(page.getByTestId("adaptive-blocked-dialog")).toBeVisible();
+    await expect(page.getByTestId("adaptive-blocked-figures")).toContainText(/\$110/);
+    await page.getByTestId("adaptive-blocked-edit-loss").click();
+    await expect(page.getByTestId("adaptive-blocked-dialog")).toBeHidden();
     await maximumLossInput.fill("125");
+    await expect(maximumLossInput).toHaveValue("125");
     await page.getByTestId("button-calculate-adaptive-plan").click();
-    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/3 positions|3 posisi/i);
-    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/1[.,]1 lot/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]6 lot/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]3 lot/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/0[.,]2 lot/i);
+    await expect(page.getByTestId("adaptive-plan-snapshot")).toContainText(/position|posisi/i);
+    await expect(page.getByTestId("adaptive-plan-buy")).toContainText(/Final Stop Loss|Stop Loss final/i);
     await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toContainText(/Margin this position|Margin posisi ini/i);
     await expect(page.getByTestId("adaptive-layer-financial-buy-0")).toContainText(/Funds remaining|Sisa dana/i);
     await expect(page.getByTestId("adaptive-plan-comparison")).toHaveCount(0);
@@ -644,12 +926,13 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedBeforeRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v17:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v24:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedBeforeRefresh).not.toBeNull();
 
     await page.getByTestId("button-refresh-fundamentals").click();
+    await page.getByTestId("fundamental-calendar-toggle").click();
     await expect(page.getByTestId("fundamental-calendar-list")).toContainText("Central-bank rate decision");
     await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
     await expect(marginInput).toHaveValue("5000");
@@ -658,17 +941,27 @@ test.describe("Adaptive plan manual safeguards (real Chromium + refreshed contex
     const storedAfterRefresh = await page.evaluate(
       (analysisId) => (
         globalThis as unknown as { localStorage: { getItem: (key: string) => string | null } }
-      ).localStorage.getItem(`trade-pilot:adaptive-plan:v17:${analysisId}`),
+      ).localStorage.getItem(`trade-pilot:adaptive-plan:v24:${analysisId}`),
       STUB_ID_ADAPTIVE_REFRESH,
     );
     expect(storedAfterRefresh).toBeNull();
 
     await page.getByTestId("button-calculate-adaptive-plan").click();
+    await expect(page.getByTestId("adaptive-plan-invalid")).toBeVisible();
+    await expect(page.getByTestId("adaptive-plan-valid")).toHaveCount(0);
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$110/);
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$62[.,]5/);
+    await expect(page.getByTestId("adaptive-direction-buy")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("adaptive-review-side-sell")).toHaveCount(0);
+    await page.getByTestId("adaptive-direction-sell").click();
+    await expect(page.getByTestId("adaptive-review-side-sell")).toContainText(/Conditional|Kondisional/i);
+    await expect(page.getByTestId("adaptive-review-side-buy")).toHaveCount(0);
+    await page.getByTestId("adaptive-direction-buy").click();
+    await expect(page.getByTestId("adaptive-review-side-buy")).toContainText(/\$110/);
+    await expect(page.getByTestId("adaptive-plan-reasoning")).toHaveCount(0);
+    await page.getByTestId("button-adaptive-explanation").click();
+    await expect(page.getByTestId("adaptive-education-panel")).toBeVisible();
     await expect(page.getByTestId("adaptive-plan-reasoning")).toContainText(/high-impact|dampak tinggi/i);
-    await expect(page.getByTestId("adaptive-plan-buy")).toBeVisible();
-    await page.getByTestId("adaptive-rejected-buy").locator("summary").click();
-    await expect(page.getByTestId("adaptive-rejected-layer-financial-buy-1")).toContainText(/Risk at final SL so far|Risiko di SL final sampai sini/i);
-    await expect(page.getByTestId("adaptive-rejected-layer-financial-buy-1")).toContainText(/Funds remaining|Sisa dana/i);
 
     // Standard Plan levels remain the source plan throughout; only the
     // optional adaptive recommendation has been discarded and re-evaluated.

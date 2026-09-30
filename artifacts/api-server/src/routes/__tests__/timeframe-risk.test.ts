@@ -58,10 +58,21 @@ describe("GET /api/risk-map/timeframes", () => {
     expect(getIndicators).toHaveBeenCalledTimes(5);
   });
 
+  it.each(["EUR/USD", "GBP/USD", "AUD/USD", "USD/JPY"])("provides the same comparison for %s", async (instrument) => {
+    getIndicators.mockClear();
+    getIndicators.mockImplementation(async (symbol: string, timeframe: string) =>
+      indicator(symbol, timeframe));
+    const response = await request(app).get(`/api/risk-map/timeframes?instrument=${encodeURIComponent(instrument)}`);
+    expect(response.status).toBe(200);
+    expect(response.body.instrument).toBe(instrument);
+    expect(response.body.timeframes).toHaveLength(5);
+    expect(getIndicators).toHaveBeenCalledTimes(5);
+  });
+
   it("rejects an authenticated unsupported instrument before indicator work", async () => {
     getIndicators.mockClear();
 
-    const response = await request(app).get("/api/risk-map/timeframes?instrument=EUR%2FUSD");
+    const response = await request(app).get("/api/risk-map/timeframes?instrument=UNKNOWN");
 
     expect(response.status).toBe(400);
     expect(response.body.error).toContain("XAU/USD, BRENT, HSI, NIKKEI");

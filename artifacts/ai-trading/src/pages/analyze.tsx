@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronDown, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle, Shield, Activity, Plus } from "lucide-react";
+import { ChevronDown, Loader2, TrendingUp, TrendingDown, Minus, CalendarClock, Bell, Newspaper, AlertTriangle, Shield, Activity, Plus, Info } from "lucide-react";
 import { TradingViewEconomicCalendar } from "@/components/tradingview-economic-calendar";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { SetAlertModal } from "@/components/set-alert-modal";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -61,12 +62,6 @@ function formatPrice(price: number, instrument: string): string {
 const FUTURES_INSTRUMENTS = ["XAU/USD", "BRENT", "XAG/USD", "HSI", "NIKKEI", "DJIA", "NASDAQ", "DXY"];
 const FOREX_INSTRUMENTS = ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CHF", "USD/JPY", "USD/IDR"];
 const CRYPTO_INSTRUMENTS_PICKER = ["BTC/USD", "ETH/USD", "SOL/USD", "BNB/USD", "XRP/USD"];
-type InstrumentCategory = "futures" | "forex" | "crypto";
-
-// Temporarily narrows the instrument picker to this allowlist without
-// deleting the underlying instrument data above, so the rest can be
-// re-enabled later just by clearing this list.
-const VISIBLE_INSTRUMENTS = new Set(["XAU/USD", "BRENT", "NIKKEI", "HSI"]);
 
 const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
   new Set(
@@ -75,26 +70,20 @@ const AVAILABLE_CALENDAR_CURRENCIES = Array.from(
   ),
 );
 
-function instrumentsForTab(tab: InstrumentCategory): string[] {
-  switch (tab) {
-    case "futures":
-      return FUTURES_INSTRUMENTS.filter((inst) => VISIBLE_INSTRUMENTS.has(inst));
-    case "forex":
-      return FOREX_INSTRUMENTS.filter((inst) => VISIBLE_INSTRUMENTS.has(inst));
-    case "crypto":
-      return CRYPTO_INSTRUMENTS_PICKER.filter((inst) => VISIBLE_INSTRUMENTS.has(inst));
-  }
-}
-
-const VISIBLE_INSTRUMENT_CATEGORIES = (["futures", "forex", "crypto"] as const).filter(
-  (tab) => instrumentsForTab(tab).length > 0,
+const CORE_ANALYSIS_INSTRUMENTS = ["XAU/USD", "BRENT", "HSI", "NIKKEI"] as const;
+const ANALYSIS_INSTRUMENT_OPTIONS = [
+  { code: "XAU/USD", name: "Gold", aliases: ["GOLD", "XAUUSD"] },
+  { code: "BRENT", name: "Brent crude oil", aliases: ["CRUDE", "BRENT OIL", "BCO", "UK OIL", "UKOIL", "UK-OIL"] },
+  { code: "HSI", name: "Hang Seng Index", aliases: ["HANG SENG", "HANGSENG"] },
+  { code: "NIKKEI", name: "Nikkei 225", aliases: ["JAPAN 225", "NIKKEI 225"] },
+  { code: "EUR/USD", name: "Euro / US dollar", aliases: ["EURUSD", "EURO DOLLAR"] },
+  { code: "GBP/USD", name: "British pound / US dollar", aliases: ["GBPUSD", "CABLE", "POUND DOLLAR"] },
+  { code: "AUD/USD", name: "Australian dollar / US dollar", aliases: ["AUDUSD", "AUSSIE"] },
+  { code: "USD/JPY", name: "US dollar / Japanese yen", aliases: ["USDJPY", "DOLLAR YEN"] },
+] as const;
+const VERIFIED_ANALYSIS_INSTRUMENTS = new Set<string>(
+  ANALYSIS_INSTRUMENT_OPTIONS.map(({ code }) => code),
 );
-
-function categoryForInstrument(instrument: string): InstrumentCategory {
-  if (CRYPTO_INSTRUMENTS_PICKER.includes(instrument)) return "crypto";
-  if (FOREX_INSTRUMENTS.includes(instrument)) return "forex";
-  return "futures";
-}
 
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
 const ADVANCED_ANALYSIS_INSTRUMENTS = new Set<GetTimeframeRiskMapInstrument>([
@@ -102,6 +91,10 @@ const ADVANCED_ANALYSIS_INSTRUMENTS = new Set<GetTimeframeRiskMapInstrument>([
   "BRENT",
   "HSI",
   "NIKKEI",
+  "EUR/USD",
+  "GBP/USD",
+  "AUD/USD",
+  "USD/JPY",
 ]);
 
 // These instruments use broker-specific TradingView CFDs whose prices can
@@ -123,37 +116,15 @@ const IMPACT_STYLES: Record<string, string> = {
   "★":   "text-muted-foreground bg-muted",
 };
 
-const CURRENCY_FLAGS: Record<string, string> = {
-  USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵", AUD: "🇦🇺",
-  CAD: "🇨🇦", CHF: "🇨🇭", CNY: "🇨🇳", CHN: "🇨🇳", NZD: "🇳🇿",
-  IDR: "🇮🇩", HKD: "🇭🇰", GOLD: "🥇", OIL: "🛢️", OPEC: "🛢️",
-};
-
-let calendarExplainerSeq = 0;
-
 function CalendarEventExplainer({ event }: { event: CalendarEvent }) {
   const { t, lang } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const [panelId] = useState(() => `cal-explainer-${++calendarExplainerSeq}`);
-  // Prefer the upstream-provided text when present; otherwise look up
-  // the local dictionary. If neither yields anything, render nothing.
   const dict = explainerFor(event.event, lang);
   const upstream = event.whyTraderCare?.trim();
   if (!dict && !upstream) return null;
   return (
     <div className="mt-1.5">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-[10px] font-medium text-primary hover:underline"
-        data-testid="button-event-explainer-toggle"
-        aria-expanded={open}
-        aria-controls={panelId}
-      >
-        {open ? t.analyze.pre_trade_warning_explainer_hide : t.analyze.calendar_event_explainer_btn}
-      </button>
-      {open && (
-        <div id={panelId} className="mt-1 rounded-lg bg-muted/60 p-2 space-y-1.5 text-[11px] leading-snug">
+      <ExpandableExplanation label={t.analyze.calendar_event_explainer_btn}>
+        <div className="rounded-lg bg-muted/60 p-2 space-y-1.5 text-xs leading-snug">
           {dict ? (
             <>
               <p className="font-semibold text-foreground">{dict.headline}</p>
@@ -171,7 +142,7 @@ function CalendarEventExplainer({ event }: { event: CalendarEvent }) {
             <p className="text-foreground/85">{upstream}</p>
           )}
         </div>
-      )}
+      </ExpandableExplanation>
     </div>
   );
 }
@@ -216,8 +187,8 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
                 <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded shrink-0 mt-0.5", impactStyle)}>
                   {evt.impact}
                 </span>
-                <span className="text-sm leading-none mt-0.5" aria-hidden="true">
-                  {CURRENCY_FLAGS[evt.currency] ?? "🌐"}
+                <span className="text-xs font-bold mt-0.5 px-1 bg-muted rounded text-muted-foreground shrink-0" aria-hidden="true">
+                  {evt.currency}
                 </span>
                 <span className="flex-1 min-w-0 break-words">
                   <span className="text-foreground font-medium">{evt.event}</span>
@@ -226,7 +197,7 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
                   )}
                   <CalendarEventExplainer event={evt} />
                 </span>
-                <span className="text-[10px] text-muted-foreground font-mono shrink-0 mt-0.5 whitespace-nowrap">
+                <span className="text-xs text-muted-foreground font-mono shrink-0 mt-0.5 whitespace-nowrap">
                   {dateLabel} {timeLabel}
                 </span>
               </li>
@@ -234,10 +205,14 @@ function RelevantCalendarPreview({ instrument }: { instrument: string }) {
           })}
         </ul>
       )}
-      <p className="text-[10px] text-muted-foreground italic flex items-start gap-1 leading-relaxed pt-1 border-t border-border/40">
-        <span aria-hidden="true">ℹ</span>
-        {t.analyze.calendar_preview_note}
-      </p>
+      <div className="pt-1 mt-1 border-t border-border/40">
+        <ExpandableExplanation inline>
+          <p className="flex items-start gap-1 text-xs text-muted-foreground italic leading-relaxed">
+            <Info className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
+            <span>{t.analyze.calendar_preview_note}</span>
+          </p>
+        </ExpandableExplanation>
+      </div>
     </Card>
   );
 }
@@ -281,8 +256,6 @@ function eventEpoch(evt: CalendarEvent): number | null {
 
 function PreTradeWarning({ instrument }: { instrument: string }) {
   const { t, lang } = useTranslation();
-  const [explainerOpen, setExplainerOpen] = useState(false);
-  const explainerPanelId = "pre-trade-warning-explainer-panel";
   // Ask for a wider window than the default preview cap so an unusually
   // packed week (multiple ★★★ events for the same currency on FOMC /
   // NFP days) can't silently truncate the imminent event off the list.
@@ -313,8 +286,7 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
 
   if (!soonest) return null;
 
-  const flag = CURRENCY_FLAGS[soonest.event.currency] ?? "🌐";
-  const eventLabel = `${flag} ${soonest.event.event}`;
+  const eventLabel = `${soonest.event.currency} ${soonest.event.event}`;
   const minutes = Math.floor(soonest.minutes);
   const message =
     minutes < 1
@@ -337,9 +309,9 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
       />
       <div className="min-w-0 flex-1">
         <p className="text-xs font-bold text-amber-700 dark:text-amber-300 leading-tight">
-          ⚠ {t.analyze.pre_trade_warning_title}
+          {t.analyze.pre_trade_warning_title}
         </p>
-        <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-snug mt-0.5">
+        <p className="text-xs text-amber-800 dark:text-amber-200 leading-snug mt-0.5">
           {message}
         </p>
         {(() => {
@@ -348,20 +320,8 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
           if (!dict && !upstream) return null;
           return (
             <div className="mt-1.5">
-              <button
-                type="button"
-                onClick={() => setExplainerOpen((v) => !v)}
-                className="text-[11px] font-medium text-amber-700 dark:text-amber-300 underline-offset-2 hover:underline"
-                data-testid="button-pre-trade-explainer-toggle"
-                aria-expanded={explainerOpen}
-                aria-controls={explainerPanelId}
-              >
-                {explainerOpen
-                  ? t.analyze.pre_trade_warning_explainer_hide
-                  : t.analyze.pre_trade_warning_explainer_btn}
-              </button>
-              {explainerOpen && (
-                <div id={explainerPanelId} className="mt-1.5 rounded-md bg-amber-500/[0.06] border border-amber-500/30 p-2 space-y-1 text-[11px] leading-snug text-amber-900 dark:text-amber-100 break-words">
+              <ExpandableExplanation label={t.analyze.pre_trade_warning_explainer_btn}>
+                <div className="mt-1.5 rounded-md bg-amber-500/[0.06] border border-amber-500/30 p-2 space-y-1 text-xs leading-snug text-amber-900 dark:text-amber-100 break-words">
                   {dict ? (
                     <>
                       <p className="font-semibold">{dict.headline}</p>
@@ -379,7 +339,7 @@ function PreTradeWarning({ instrument }: { instrument: string }) {
                     <p>{upstream}</p>
                   )}
                 </div>
-              )}
+              </ExpandableExplanation>
             </div>
           );
         })()}
@@ -463,9 +423,9 @@ function EconomicCalendarSection() {
         </div>
       </div>
       <div className="pt-1 space-y-2">
-        <p className="text-[10px] text-muted-foreground leading-snug">
+        <ExpandableExplanation inline>
           {t.analyze.economic_calendar_section_hint}
-        </p>
+        </ExpandableExplanation>
         <div
           className="flex flex-wrap items-center gap-1.5"
           role="group"
@@ -522,7 +482,6 @@ function EconomicCalendarSection() {
           </button>
           {availableCurrencies.map((currency) => {
             const active = effectiveCurrencies.includes(currency);
-            const flag = CURRENCY_FLAGS[currency] ?? "";
             return (
               <button
                 key={currency}
@@ -537,7 +496,6 @@ function EconomicCalendarSection() {
                     : "bg-muted/40 text-foreground border-border hover:bg-muted",
                 )}
               >
-                {flag ? <span className="mr-1" aria-hidden="true">{flag}</span> : null}
                 {currency}
               </button>
             );
@@ -669,9 +627,9 @@ function TimeframeRiskMapSection({
             <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
             {t.risk_map.title}
           </h2>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          <ExpandableExplanation inline className="mt-1">
             {t.risk_map.desc}
-          </p>
+          </ExpandableExplanation>
         </div>
 
         <div className="space-y-3">
@@ -802,16 +760,20 @@ export default function AnalyzePage() {
 
   const { enabled: mentalChecklistEnabled } = useMentalChecklistPref();
 
-  const [openInstrumentCategory, setOpenInstrumentCategory] = useState<InstrumentCategory | null>("futures");
   const [selectedInstrument, setSelectedInstrument] = useState("XAU/USD");
-  const [customInstrument, setCustomInstrument] = useState("");
+  const [instrumentSearch, setInstrumentSearch] = useState("");
+  const [otherInstrumentsOpen, setOtherInstrumentsOpen] = useState(false);
+  const [instrumentRequestOpen, setInstrumentRequestOpen] = useState(false);
+  const [instrumentRequestCode, setInstrumentRequestCode] = useState("");
+  const [instrumentRequestLoading, setInstrumentRequestLoading] = useState(false);
+  const [instrumentRequestStatus, setInstrumentRequestStatus] = useState<"success" | "error" | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1h");
   const instrumentChoiceVersionRef = useRef(0);
   const timeframeChoiceVersionRef = useRef(0);
 
   const [evidenceSession, setEvidenceSession] = useState<ProgressionEvidenceSession | null>(null);
 
-  const finalInstrument = customInstrument.trim() || selectedInstrument;
+  const finalInstrument = selectedInstrument;
 
   useEffect(() => {
     if (mentalChecklistEnabled && finalInstrument && selectedTimeframe) {
@@ -967,8 +929,6 @@ export default function AnalyzePage() {
       instrumentChoiceVersionRef.current === restoreContext.instrumentVersion
     ) {
       setSelectedInstrument(restoredAnalysis.instrument);
-      setCustomInstrument("");
-      setOpenInstrumentCategory(categoryForInstrument(restoredAnalysis.instrument));
     }
     if (
       !restoreContext.hasUrlTimeframe &&
@@ -986,8 +946,7 @@ export default function AnalyzePage() {
     if (inst) {
       instrumentChoiceVersionRef.current += 1;
       setSelectedInstrument(inst);
-      setCustomInstrument("");
-      setOpenInstrumentCategory(categoryForInstrument(inst));
+      setInstrumentSearch("");
     }
     if (tf && (TIMEFRAMES as readonly string[]).includes(tf)) {
       timeframeChoiceVersionRef.current += 1;
@@ -1025,6 +984,14 @@ export default function AnalyzePage() {
 
   const runAnalysis = async (instrumentOverride?: string) => {
     const instrumentToUse = instrumentOverride ?? finalInstrument;
+    if (!VERIFIED_ANALYSIS_INSTRUMENTS.has(instrumentToUse)) {
+      toast({
+        title: t.analyze.instrument_not_verified_title,
+        description: t.analyze.instrument_not_verified_desc,
+        variant: "destructive",
+      });
+      return;
+    }
     guardrailProceedRef.current?.();
     setIsLoading(true);
     try {
@@ -1075,6 +1042,14 @@ export default function AnalyzePage() {
       toast({ title: t.analyze.error_no_instrument, description: t.analyze.error_no_instrument_desc, variant: "destructive" });
       return;
     }
+    if (!VERIFIED_ANALYSIS_INSTRUMENTS.has(instrumentToUse)) {
+      toast({
+        title: t.analyze.instrument_not_verified_title,
+        description: t.analyze.instrument_not_verified_desc,
+        variant: "destructive",
+      });
+      return;
+    }
     if (!selectedTimeframe) {
       toast({ title: t.analyze.error_no_timeframe, description: t.analyze.error_no_timeframe_desc, variant: "destructive" });
       return;
@@ -1091,18 +1066,65 @@ export default function AnalyzePage() {
     await runAnalysis(instrumentToUse);
   };
 
-  // Once a result already exists on the page, picking a different preset
-  // instrument re-analyzes immediately instead of requiring another tap on
-  // the Analisis button — matches the "Ganti Timeframe" quick-switch below
-  // the result. The very first analysis still requires the explicit button.
+  // Selecting an instrument only changes the choice. Analysis always
+  // requires an explicit submit action.
   const handleInstrumentClick = (inst: string) => {
     instrumentChoiceVersionRef.current += 1;
     setSelectedInstrument(inst);
-    setCustomInstrument("");
-    const isRestoredResultReady =
-      resultAnalysisId != null && restoredAnalysis?.id === resultAnalysisId;
-    if (isRestoredResultReady && inst !== finalInstrument && !isLoading) {
-      void handleSubmit(inst);
+    setInstrumentSearch("");
+    setOtherInstrumentsOpen(false);
+  };
+
+  const normalizedSearch = instrumentSearch.trim().toLocaleUpperCase();
+  const matchingInstrumentOptions = ANALYSIS_INSTRUMENT_OPTIONS.filter((option) =>
+    (normalizedSearch.length > 0 || !(CORE_ANALYSIS_INSTRUMENTS as readonly string[]).includes(option.code)) &&
+    [option.code, option.name, ...option.aliases].some((term) =>
+      term.toLocaleUpperCase().includes(normalizedSearch),
+    ),
+  );
+  const unmatchedRequestCode =
+    normalizedSearch &&
+    !VERIFIED_ANALYSIS_INSTRUMENTS.has(normalizedSearch) &&
+    !["BCO", "UKOIL", "UK-OIL"].includes(normalizedSearch) &&
+    /^[A-Z0-9]{2,12}(?:[/.:-][A-Z0-9]{1,12})?$/.test(normalizedSearch) &&
+    normalizedSearch.length <= 25
+      ? normalizedSearch
+      : "";
+
+  const submitInstrumentRequest = async (code: string) => {
+    if (!code || instrumentRequestLoading) return;
+    setInstrumentRequestCode(code);
+    setOtherInstrumentsOpen(false);
+    setInstrumentRequestOpen(true);
+    setInstrumentRequestLoading(true);
+    setInstrumentRequestStatus(null);
+    try {
+      const response = await fetch("/api/instrument-requests", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      if (!response.ok) {
+        setInstrumentRequestStatus("error");
+        return;
+      }
+      setInstrumentRequestStatus("success");
+    } catch {
+      setInstrumentRequestStatus("error");
+    } finally {
+      setInstrumentRequestLoading(false);
+    }
+  };
+
+  const handleOtherCodeSubmit = () => {
+    const existing = ANALYSIS_INSTRUMENT_OPTIONS.find((option) =>
+      option.code === normalizedSearch || option.aliases.some((alias) => alias === normalizedSearch),
+    );
+    if (existing) {
+      handleInstrumentClick(existing.code);
+    } else if (unmatchedRequestCode) {
+      void submitInstrumentRequest(unmatchedRequestCode);
     }
   };
 
@@ -1184,96 +1206,55 @@ export default function AnalyzePage() {
           >
           <div className="min-w-0">
              <h2 className="mb-3 text-sm font-semibold text-foreground">{t.analyze.select_instrument}</h2>
-            {VISIBLE_INSTRUMENT_CATEGORIES.length > 1 ? (
-              <>
-                <div className="flex sm:grid sm:grid-cols-3 overflow-x-auto no-scrollbar gap-2 mb-3 pb-1 -mx-1 px-1">
-                  {VISIBLE_INSTRUMENT_CATEGORIES.map((tab) => {
-                    const isOpen = openInstrumentCategory === tab;
-                    return (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setOpenInstrumentCategory((current) => current === tab ? null : tab)}
-                      data-testid={`tab-${tab}`}
-                      aria-expanded={isOpen}
-                      aria-controls={isOpen ? "instrument-options" : undefined}
-                      className={cn(
-                        "flex shrink-0 items-center justify-center gap-1 px-3 sm:px-0 py-2 text-sm font-medium rounded-lg border transition-all",
-                        isOpen
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-muted-foreground border-border hover:border-primary/50"
-                      )}
-                    >
-                      {tab === "futures"
-                        ? t.analyze.tab_futures
-                        : tab === "forex"
-                          ? t.analyze.tab_forex
-                          : t.analyze.tab_crypto}
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
-                    </button>
-                    );
-                  })}
-                </div>
-                {openInstrumentCategory && (
-                  <div id="instrument-options" className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] sm:grid-cols-1 gap-2" data-testid="instrument-options">
-                    {instrumentsForTab(openInstrumentCategory).map((inst) => (
-                      <button
-                        key={inst}
-                        type="button"
-                        onClick={() => handleInstrumentClick(inst)}
-                        data-testid={`button-instrument-${inst}`}
-                        className={cn(
-                          "w-full py-2.5 px-3 rounded-lg border text-sm font-medium text-left transition-all",
-                          selectedInstrument === inst && !customInstrument
-                            ? "bg-primary/10 border-primary text-primary"
-                            : "bg-background border-border text-foreground hover:border-primary/50"
-                        )}
-                      >
-                        {inst}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              // Only one category has any visible instruments right now
-              // (VISIBLE_INSTRUMENTS in this file), so the tab toggle would
-              // just be a single button that always opens the same list —
-              // skip it and show the instruments directly. Restores itself
-              // automatically once a second category has visible items.
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2 mb-3 sm:grid-cols-1" data-testid="instrument-options">
-                {instrumentsForTab(VISIBLE_INSTRUMENT_CATEGORIES[0]).map((inst) => (
-                  <button
-                    key={inst}
-                    type="button"
-                    onClick={() => handleInstrumentClick(inst)}
-                    data-testid={`button-instrument-${inst}`}
-                    className={cn(
-                      "w-full py-2 px-3 rounded-lg border text-sm font-medium text-left transition-all",
-                      selectedInstrument === inst && !customInstrument
-                        ? "bg-primary/10 border-primary text-primary"
-                        : "bg-background border-border text-foreground hover:border-primary/50"
-                    )}
-                  >
-                    {inst}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="mt-3">
-              <input
-                type="text"
-                placeholder={t.analyze.or_type}
-                value={customInstrument}
-                onChange={(e) => {
-                  instrumentChoiceVersionRef.current += 1;
-                  setCustomInstrument(e.target.value);
-                  if (e.target.value) setSelectedInstrument("");
-                }}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                data-testid="input-custom-instrument"
-              />
+            <div id="instrument-options" className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2 mb-3 sm:grid-cols-1" data-testid="instrument-options">
+              {CORE_ANALYSIS_INSTRUMENTS.map((inst) => (
+                <button
+                  key={inst}
+                  type="button"
+                  onClick={() => handleInstrumentClick(inst)}
+                  aria-pressed={selectedInstrument === inst}
+                  data-testid={`button-instrument-${inst}`}
+                  className={cn(
+                    "w-full py-2 px-3 rounded-lg border text-sm font-medium text-left transition-all",
+                    selectedInstrument === inst
+                      ? "bg-primary/10 border-primary text-primary"
+                      : "bg-background border-border text-foreground hover:border-primary/50"
+                  )}
+                >
+                  {inst}
+                </button>
+              ))}
             </div>
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setInstrumentSearch("");
+                  setOtherInstrumentsOpen(true);
+                }}
+                aria-expanded={otherInstrumentsOpen}
+                aria-haspopup="dialog"
+                data-testid="button-other-instruments"
+                className={cn(
+                  "flex w-full items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-left text-sm transition-all hover:border-primary/50",
+                  !(CORE_ANALYSIS_INSTRUMENTS as readonly string[]).includes(selectedInstrument)
+                    ? "border-primary text-primary font-semibold"
+                    : "border-border text-muted-foreground",
+                )}
+              >
+                <span className="min-w-0 truncate">
+                  {(CORE_ANALYSIS_INSTRUMENTS as readonly string[]).includes(selectedInstrument)
+                    ? t.analyze.or_type
+                    : selectedInstrument}
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </button>
+            </div>
+            {selectedInstrument && !VERIFIED_ANALYSIS_INSTRUMENTS.has(selectedInstrument) && (
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" data-testid="unsupported-restored-instrument">
+                {t.analyze.instrument_legacy_unsupported}
+              </p>
+            )}
             {finalInstrument && (
               <div className="mt-3">
                 <Button
@@ -1289,21 +1270,34 @@ export default function AnalyzePage() {
                 </Button>
               </div>
             )}
-            {resultAnalysisId == null && (
+            {(resultAnalysisId == null ||
+              (restoredAnalysis?.id === resultAnalysisId &&
+                (finalInstrument !== restoredAnalysis.instrument || selectedTimeframe !== restoredAnalysis.timeframe))) && (
               <div className="mt-3">
                 <Button
-                  className="h-12 w-full px-8 text-base font-bold"
+                  className="min-h-12 w-full min-w-0 px-3 text-base font-bold"
                   onClick={() => handleSubmit()}
-                  disabled={isLoading || !finalInstrument || !selectedTimeframe}
+                  disabled={isLoading || !finalInstrument || !selectedTimeframe || !VERIFIED_ANALYSIS_INSTRUMENTS.has(finalInstrument)}
                   data-testid="button-submit-analysis"
                 >
                   {isLoading ? (
-                    <div className="flex items-center gap-3">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span className="text-sm">{t.analyze.loading[loadingMsgIndex]}</span>
-                    </div>
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                      <span className="min-w-0 text-sm whitespace-normal text-center leading-tight">{t.analyze.loading_btn}</span>
+                    </>
                   ) : t.analyze.submit_btn}
                 </Button>
+                {isLoading && (
+                  <p
+                    className="mt-2 max-w-full text-center text-xs leading-relaxed text-muted-foreground break-words"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    data-testid="analysis-loading-status"
+                  >
+                    {t.analyze.loading[loadingMsgIndex]}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -1365,10 +1359,10 @@ export default function AnalyzePage() {
                 />
                 <p
                   id="analysis-notes-broker-warning"
-                  className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed"
+                  className="text-xs text-muted-foreground mt-1.5 flex items-start gap-1 leading-relaxed"
                   data-testid="notes-broker-hint"
                 >
-                  <span className="text-primary mt-0.5" aria-hidden="true">ℹ</span>
+                  <Info className="h-3 w-3 text-primary mt-0.5 shrink-0" aria-hidden="true" />
                   {t.analyze.broker_warning}
                 </p>
               </>
@@ -1449,7 +1443,7 @@ export default function AnalyzePage() {
           {mentalChecklistEnabled && finalInstrument && selectedTimeframe && <MentalChecklist onComplete={handleChecklistComplete} />}
 
           {/* Once a result already exists, picking a different instrument
-              re-analyzes without the submit button (it's hidden above) —
+              can re-analyze through the submit button above —
               show the AI-processing wait state as a popup instead. */}
           <Dialog open={isLoading && resultAnalysisId != null}>
             <DialogContent
@@ -1487,6 +1481,96 @@ export default function AnalyzePage() {
         onOpenChange={setAlertModalOpen}
         instrument={finalInstrument}
       />
+      <Dialog open={otherInstrumentsOpen} onOpenChange={(open) => {
+        setOtherInstrumentsOpen(open);
+        if (!open) setInstrumentSearch("");
+      }}>
+        <DialogContent closeLabel={t.analyze.instrument_request_close} className="w-[calc(100%-2rem)] max-h-[80dvh] overflow-y-auto sm:max-w-xs" data-testid="dialog-other-instruments">
+          <DialogHeader>
+            <DialogTitle>{t.analyze.or_type}</DialogTitle>
+            <DialogDescription className="sr-only">{t.analyze.instrument_picker_hint}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            handleOtherCodeSubmit();
+          }} className="space-y-3">
+            <input
+              type="search"
+              autoFocus
+              maxLength={25}
+              placeholder={t.analyze.instrument_search_placeholder}
+              value={instrumentSearch}
+              onChange={(event) => setInstrumentSearch(event.target.value)}
+              aria-label={t.analyze.instrument_search_placeholder}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              data-testid="input-instrument-search"
+            />
+            <div className="grid grid-cols-2 gap-2" data-testid="other-instrument-options">
+              {matchingInstrumentOptions.map((option) => (
+                <button
+                  key={option.code}
+                  type="button"
+                  onClick={() => handleInstrumentClick(option.code)}
+                  aria-pressed={selectedInstrument === option.code}
+                  data-testid={`button-instrument-${option.code}`}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-left text-sm font-medium transition-all hover:border-primary/50",
+                    selectedInstrument === option.code
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background text-foreground",
+                  )}
+                >
+                  {option.code}
+                </button>
+              ))}
+            </div>
+            {unmatchedRequestCode && (
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full"
+                data-testid="button-request-instrument"
+              >
+                {t.analyze.instrument_request_action.replace("{code}", unmatchedRequestCode)}
+              </Button>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={instrumentRequestOpen} onOpenChange={(open) => {
+        if (!instrumentRequestLoading) setInstrumentRequestOpen(open);
+      }}>
+        <DialogContent closeLabel={t.analyze.instrument_request_close} className="w-[calc(100%-2rem)] sm:max-w-xs" data-testid="dialog-request-instrument">
+          <DialogHeader>
+            <DialogTitle>
+              {instrumentRequestLoading
+                ? t.analyze.instrument_request_sending
+                : instrumentRequestStatus === "error"
+                  ? t.analyze.instrument_request_error
+                  : t.analyze.instrument_request_unavailable.replace("{code}", instrumentRequestCode)}
+            </DialogTitle>
+            <DialogDescription className={instrumentRequestStatus === "success" ? "text-left leading-relaxed" : "sr-only"}>
+              {instrumentRequestStatus === "success"
+                ? t.analyze.instrument_request_short_description
+                : instrumentRequestLoading
+                  ? t.analyze.instrument_request_sending
+                  : t.analyze.instrument_request_error}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            {instrumentRequestStatus === "error" && (
+              <Button type="button" variant="outline" onClick={() => void submitInstrumentRequest(instrumentRequestCode)}
+                data-testid="button-retry-instrument-request">
+                {t.analyze.instrument_request_retry}
+              </Button>
+            )}
+            <Button type="button" onClick={() => setInstrumentRequestOpen(false)} disabled={instrumentRequestLoading}
+              data-testid="button-close-instrument-notice">
+              {t.analyze.instrument_request_close}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

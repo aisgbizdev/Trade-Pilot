@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { Layout } from "@/components/layout";
 import {
   useGetPerformanceSummary,
@@ -232,7 +233,7 @@ export default function PerformancePage() {
             <Activity className="w-5 h-5 text-primary" />
             <h1 className="text-xl font-bold text-foreground leading-tight">{tp.title}</h1>
           </div>
-          <p className="text-[12px] text-muted-foreground leading-snug">{tp.subtitle}</p>
+          <ExpandableExplanation inline testId="performance-intro">{tp.subtitle}</ExpandableExplanation>
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div
               role="tablist"
@@ -339,20 +340,20 @@ export default function PerformancePage() {
                   <p className="text-2xl font-bold text-emerald-400 tabular-nums" data-testid="overall-win-rate">
                     {fmtPct(summary.overall.winRate)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground leading-snug">
-                    {tp.overall_win_rate_explain}
-                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[11px] text-muted-foreground">{tp.overall_hit_rate}</p>
                   <p className="text-2xl font-bold text-foreground tabular-nums" data-testid="overall-hit-rate">
                     {fmtPct(summary.overall.hitRate)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground leading-snug">
-                    {tp.overall_hit_rate_explain}
-                  </p>
                 </div>
               </div>
+              <ExpandableExplanation label={tp.overall_explain_label} testId="performance-metrics-explanation">
+                <dl className="grid gap-2 sm:grid-cols-2">
+                  <div><dt className="font-semibold text-foreground">{tp.overall_win_rate}</dt><dd>{tp.overall_win_rate_explain}</dd></div>
+                  <div><dt className="font-semibold text-foreground">{tp.overall_hit_rate}</dt><dd>{tp.overall_hit_rate_explain}</dd></div>
+                </dl>
+              </ExpandableExplanation>
               <HitBar
                 wins={summary.overall.wins}
                 losses={summary.overall.losses}

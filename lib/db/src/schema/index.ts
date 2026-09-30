@@ -69,6 +69,25 @@ export type FundamentalCitationsShape = {
   calendarEvents: string[];
 };
 
+// Selected-timeframe market data captured when an analysis was generated.
+// sourceFetchedAt is null only when the candle feed could not provide bars;
+// sourceStatus distinguishes unavailable and stale data from a fresh fetch.
+export type MarketSnapshotShape = {
+  instrument: string;
+  timeframe: string;
+  capturedAt: string;
+  sourceFetchedAt: string | null;
+  candles: Array<{
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  }>;
+  priceAtAnalysis: number | null;
+  sourceStatus: string;
+};
+
 export const roleEnum = pgEnum("role", ["user", "admin", "super_admin"]);
 export const modeEnum = pgEnum("mode", ["beginner", "pro"]);
 export const marketConditionEnum = pgEnum("market_condition", [
@@ -337,12 +356,12 @@ export const sessions = pgTable("sessions", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),
-  expiresAt: timestamp("expires_at").notNull(),
-  platform: sessionPlatformEnum("platform").notNull().default("web"),
   // Updated (throttled, not on every single request) each time a "web"
   // session makes an authenticated request — see requireAuth. Ignored for
   // "native" sessions, which never idle-time-out.
-  lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
+  platform: sessionPlatformEnum("platform").notNull().default("web"),
+  lastActivityAt: timestamp("last_activity_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -541,6 +560,9 @@ export const analyses = pgTable("analyses", {
   // without re-prompting the model. Nullable for legacy rows + cases where
   // no anchor price was available at analysis time.
   tradePlan: jsonb("trade_plan").$type<TradePlanShape>(),
+  // Selected-timeframe candle data and its source freshness at creation time.
+  // Nullable for legacy rows and timeframes with no candle feed.
+  marketSnapshot: jsonb("market_snapshot").$type<MarketSnapshotShape>(),
   // Snapshot of the news headlines + economic-calendar events the AI
   // saw when generating this analysis (task #88). Lets the saved
   // analysis page render the *same* fundamental context the model used,
@@ -573,6 +595,17 @@ export const analyses = pgTable("analyses", {
   userNoteUpdatedAt: timestamp("user_note_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const instrumentRequests = pgTable("instrument_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: text("code").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastRequestedAt: timestamp("last_requested_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  userCode: uniqueIndex("instrument_requests_user_code_unique").on(t.userId, t.code),
+  codeIndex: index("instrument_requests_code_idx").on(t.code),
+}));
 
 export const feedback = pgTable("feedback", {
   id: serial("id").primaryKey(),

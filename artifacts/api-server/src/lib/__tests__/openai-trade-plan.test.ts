@@ -2,7 +2,7 @@
 // - parseLevelPrice: extract a representative price from free-text levels
 // - computeRiskReward: derive "1:X.X" from entry/SL/TP1
 // - reconcileTradePlanRiskReward: rewrite each side's ratio from its own levels
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   parseLevelPrice,
@@ -10,6 +10,9 @@ import {
   reconcileTradePlanRiskReward,
   sanitizeTradePlanLevels,
   buildFastIntradayFallback,
+  validateTradePlanQuality,
+  generateAnalysis,
+  openai,
   type TradePlan,
 } from "../openai";
 
@@ -120,7 +123,7 @@ describe("reconcileTradePlanRiskReward", () => {
     expect(fixed.buy.rationale).toBe("x");
   });
 
-  it("falls back to n/a for descriptive (no-number) levels", () => {
+  it("uses explicit pending text for descriptive (no-anchor) levels", () => {
     const plan: TradePlan = {
       preferredSide: "wait",
       buy: {
@@ -142,8 +145,8 @@ describe("reconcileTradePlanRiskReward", () => {
     };
 
     const fixed = reconcileTradePlanRiskReward(plan);
-    expect(fixed.buy.riskRewardRatio).toBe("n/a");
-    expect(fixed.sell.riskRewardRatio).toBe("n/a");
+    expect(fixed.buy.riskRewardRatio).toMatch(/menunggu quote/i);
+    expect(fixed.sell.riskRewardRatio).toMatch(/menunggu quote/i);
   });
 });
 
@@ -196,12 +199,12 @@ describe("sanitizeTradePlanLevels", () => {
       },
     };
     const sanitized = sanitizeTradePlanLevels(plan);
-    expect(sanitized.buy.entryZone).toBe("tunggu konfirmasi ulang");
-    expect(sanitized.buy.stopLoss).toBe("n/a");
-    expect(sanitized.buy.takeProfit1).toBe("n/a");
-    expect(sanitized.buy.takeProfit2).toBe("n/a");
-    expect(sanitized.buy.riskRewardRatio).toBe("n/a");
-    expect(sanitized.buy.rationale).toMatch(/tidak konsisten/);
+    expect(sanitized.buy.entryZone).toMatch(/menunggu quote/i);
+    expect(sanitized.buy.stopLoss).toMatch(/menunggu quote/i);
+    expect(sanitized.buy.takeProfit1).toMatch(/menunggu quote/i);
+    expect(sanitized.buy.takeProfit2).toMatch(/menunggu quote/i);
+    expect(sanitized.buy.riskRewardRatio).not.toMatch(/n\/a/i);
+    expect(sanitized.buy.rationale).toMatch(/belum lolos validasi arah/i);
     // The sell side was internally consistent and must be left alone.
     expect(sanitized.sell).toEqual(plan.sell);
   });
@@ -227,8 +230,8 @@ describe("sanitizeTradePlanLevels", () => {
       },
     };
     const sanitized = sanitizeTradePlanLevels(plan);
-    expect(sanitized.sell.entryZone).toBe("tunggu konfirmasi ulang");
-    expect(sanitized.sell.stopLoss).toBe("n/a");
+    expect(sanitized.sell.entryZone).toMatch(/menunggu quote/i);
+    expect(sanitized.sell.stopLoss).toMatch(/menunggu quote/i);
     expect(sanitized.buy).toEqual(plan.buy);
   });
 
@@ -253,10 +256,10 @@ describe("sanitizeTradePlanLevels", () => {
       },
     };
     const sanitized = sanitizeTradePlanLevels(plan);
-    expect(sanitized.buy.entryZone).toBe("tunggu konfirmasi ulang");
+    expect(sanitized.buy.entryZone).toMatch(/menunggu quote/i);
   });
 
-  it("leaves purely descriptive (no-anchor / wait) levels untouched", () => {
+  it("keeps descriptive (no-anchor / wait) levels but replaces bare n/a", () => {
     const plan: TradePlan = {
       preferredSide: "wait",
       buy: {
@@ -277,7 +280,306 @@ describe("sanitizeTradePlanLevels", () => {
       },
     };
     const sanitized = sanitizeTradePlanLevels(plan);
-    expect(sanitized).toEqual(plan);
+    expect(sanitized.buy.entryZone).toBe(plan.buy.entryZone);
+    expect(sanitized.sell.entryZone).toBe(plan.sell.entryZone);
+    for (const side of [sanitized.buy, sanitized.sell]) {
+      expect(Object.values(side).join(" ")).not.toMatch(/n\/a/i);
+      expect(side.stopLoss).toMatch(/menunggu quote/i);
+    }
+  });
+});
+
+describe("validateTradePlanQuality", () => {
+  const validPlan: TradePlan = {
+    preferredSide: "buy",
+    buy: {
+      entryZone: "99-100",
+      stopLoss: "95",
+      takeProfit1: "110",
+      takeProfit2: "120",
+      riskRewardRatio: "1:2",
+      rationale: "Support 99-100 dan swing low 95.",
+    },
+    sell: {
+      entryZone: "100",
+      stopLoss: "105",
+      takeProfit1: "90",
+      takeProfit2: "80",
+      riskRewardRatio: "1:2",
+      rationale: "Rejection resistance 100 dengan swing high 105.",
+    },
+  };
+
+  it("requires concrete, directional levels for both sides when quote is available", () => {
+    expect(validateTradePlanQuality(validPlan, 100, "1D", "XAU/USD")).toEqual({
+      ok: true,
+    });
+    const malformed = {
+      ...validPlan,
+      buy: { ...validPlan.buy, takeProfit2: "resistance berikutnya" },
+    };
+    expect(validateTradePlanQuality(malformed, 100, "1D", "XAU/USD")).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/TP2 numerik/i),
+    });
+  });
+
+  it("rejects invented numeric levels without an anchor but accepts pending scenarios", () => {
+    expect(validateTradePlanQuality(validPlan, null, "1D", "XAU/USD")).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/tanpa quote/i),
+    });
+    const pending: TradePlan = {
+      preferredSide: "wait",
+      buy: {
+        entryZone: "Entry pending sampai quote dan support terkonfirmasi",
+        stopLoss: "Menunggu swing-low terukur",
+        takeProfit1: "Menunggu resistance terdekat",
+        takeProfit2: "Menunggu resistance lanjutan",
+        riskRewardRatio: "Belum dihitung sebelum ada quote",
+        rationale: "Tidak ada anchor harga andal.",
+      },
+      sell: {
+        entryZone: "Entry pending sampai quote dan resistance terkonfirmasi",
+        stopLoss: "Menunggu swing-high terukur",
+        takeProfit1: "Menunggu support terdekat",
+        takeProfit2: "Menunggu support lanjutan",
+        riskRewardRatio: "Belum dihitung sebelum ada quote",
+        rationale: "Tidak ada anchor harga andal.",
+      },
+    };
+    expect(validateTradePlanQuality(pending, null, "1D", "XAU/USD")).toEqual({
+      ok: true,
+    });
+  });
+
+  it("rejects wildly off-quote levels but allows broad, plausible weekly setups", () => {
+    const offQuotePlan: TradePlan = {
+      preferredSide: "buy",
+      buy: {
+        entryZone: "990-1000",
+        stopLoss: "950",
+        takeProfit1: "1100",
+        takeProfit2: "1200",
+        riskRewardRatio: "1:2",
+        rationale: "Structure setup.",
+      },
+      sell: {
+        entryZone: "1000",
+        stopLoss: "1050",
+        takeProfit1: "900",
+        takeProfit2: "800",
+        riskRewardRatio: "1:2",
+        rationale: "Structure setup.",
+      },
+    };
+    expect(validateTradePlanQuality(offQuotePlan, 100, "1W", "XAU/USD"))
+      .toMatchObject({
+        ok: false,
+        reason: expect.stringMatching(/terlalu jauh dari quote/i),
+      });
+
+    const broadWeeklyPlan: TradePlan = {
+      preferredSide: "wait",
+      buy: {
+        entryZone: "80",
+        stopLoss: "60",
+        takeProfit1: "130",
+        takeProfit2: "150",
+        riskRewardRatio: "1:2.5",
+        rationale: "Weekly support zone.",
+      },
+      sell: {
+        entryZone: "120",
+        stopLoss: "150",
+        takeProfit1: "80",
+        takeProfit2: "60",
+        riskRewardRatio: "1:1.3",
+        rationale: "Weekly resistance zone.",
+      },
+    };
+    expect(validateTradePlanQuality(broadWeeklyPlan, 100, "1W", "XAU/USD"))
+      .toEqual({ ok: true });
+  });
+});
+
+describe("generateAnalysis — trade-plan corrective retry", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  function response(takeProfit2: string) {
+    return {
+      id: "stub",
+      object: "chat.completion",
+      created: 0,
+      model: "gpt-4o",
+      choices: [{
+        index: 0,
+        message: {
+          role: "assistant",
+          content: JSON.stringify({
+            marketCondition: "ranging",
+            riskLevel: "medium",
+            confidenceMin: 45,
+            confidenceMax: 60,
+            tradingBias: "neutral",
+            opportunity: "Pada timeframe, dua reaksi level masih mungkin.",
+            risk: "Kedua skenario dapat gagal bila struktur berubah.",
+            mainScenario: "Pada timeframe, harga menunggu reaksi level.",
+            alternativeScenario: "Jika support patah, skenario turun aktif.",
+            whyReason: "Struktur belum memberi konfirmasi satu arah.",
+            failureConditions: "Close di bawah support; Break resistance",
+            tradePlan: {
+              preferredSide: "wait",
+              buy: {
+                entryZone: "999-1000",
+                stopLoss: "950",
+                takeProfit1: "1030",
+                takeProfit2,
+                riskRewardRatio: "1:2",
+                rationale: "Support 999-1000 dan swing low 950.",
+              },
+              sell: {
+                entryZone: "1000",
+                stopLoss: "1050",
+                takeProfit1: "970",
+                takeProfit2: "930",
+                riskRewardRatio: "1:2",
+                rationale: "Resistance 1000 dan swing high 1050.",
+              },
+            },
+            fundamentalCitations: { newsTitles: [], calendarEvents: [] },
+          }),
+        },
+        finish_reason: "stop",
+      }],
+      usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 },
+    };
+  }
+
+  function pendingResponse() {
+    const result = response("120");
+    const output = JSON.parse(result.choices[0]!.message.content!);
+    output.tradePlan = {
+      preferredSide: "wait",
+      buy: {
+        entryZone: "Entry pending sampai quote dan support terkonfirmasi",
+        stopLoss: "Menunggu swing-low terukur",
+        takeProfit1: "Menunggu resistance terdekat",
+        takeProfit2: "Menunggu resistance lanjutan",
+        riskRewardRatio: "Belum dihitung sebelum ada quote",
+        rationale: "Tidak ada quote timeframe utama yang andal.",
+      },
+      sell: {
+        entryZone: "Entry pending sampai quote dan resistance terkonfirmasi",
+        stopLoss: "Menunggu swing-high terukur",
+        takeProfit1: "Menunggu support terdekat",
+        takeProfit2: "Menunggu support lanjutan",
+        riskRewardRatio: "Belum dihitung sebelum ada quote",
+        rationale: "Tidak ada quote timeframe utama yang andal.",
+      },
+    };
+    result.choices[0]!.message.content = JSON.stringify(output);
+    return result;
+  }
+
+  it.each(["1m", "5m", "1h"])(
+    "retries a malformed TP2 on %s and preserves the valid Sell scenario",
+    async (timeframe) => {
+      const createSpy = vi.spyOn(openai.chat.completions, "create")
+        .mockResolvedValueOnce(response("resistance lanjutan") as never)
+        .mockResolvedValueOnce(response("1060") as never);
+
+      const result = await generateAnalysis(
+        "XAU/USD",
+        timeframe,
+        "beginner",
+        undefined,
+        undefined,
+        undefined,
+        1000,
+      );
+      expect(createSpy).toHaveBeenCalledTimes(2);
+      expect(result.output.tradePlan.buy.takeProfit2).toBe("1060");
+      expect(result.output.tradePlan.sell.entryZone).toBe("1000");
+      expect(createSpy.mock.calls[0]?.[0].messages[0]?.content).toMatch(
+        /Bandingkan keselarasan atau konflik timeframe/i,
+      );
+      expect(createSpy.mock.calls[0]?.[0].messages[0]?.content).toMatch(
+        /satu sisi lebih diutamakan|preferredSide lebih didukung/i,
+      );
+      expect(createSpy.mock.calls[1]?.[0].messages[1]?.content).toMatch(
+        /TP2 numerik yang valid/i,
+      );
+    },
+  );
+
+  it("throws instead of returning a generic paid fallback after repeated bad levels", async () => {
+    vi.spyOn(openai.chat.completions, "create")
+      .mockResolvedValue(response("resistance lanjutan") as never);
+    await expect(
+      generateAnalysis("XAU/USD", "1m", "beginner", undefined, undefined, undefined, 1000),
+    ).rejects.toThrow(/trade-plan quality failed after retry/i);
+  });
+
+  it("does not accept a secondary-timeframe quote as the selected timeframe anchor", async () => {
+    const createSpy = vi.spyOn(openai.chat.completions, "create")
+      .mockResolvedValueOnce(response("120") as never)
+      .mockResolvedValueOnce(pendingResponse() as never);
+    const comparisonContext = [
+      "TIMEFRAME PEMBANDING (4h)",
+      "=== DATA TEKNIKAL (XAU/USD, timeframe 4h) ===",
+      "Harga terakhir: 100",
+    ].join("\n");
+
+    const result = await generateAnalysis(
+      "XAU/USD",
+      "1D",
+      "beginner",
+      undefined,
+      comparisonContext,
+      undefined,
+      null,
+      null,
+    );
+
+    expect(createSpy).toHaveBeenCalledTimes(2);
+    expect(createSpy.mock.calls[1]?.[0].messages[1]?.content).toMatch(
+      /tanpa quote \/ anchor harga yang andal/i,
+    );
+    for (const side of [
+      result.output.tradePlan.buy,
+      result.output.tradePlan.sell,
+    ]) {
+      expect(Object.values(side).join(" ")).not.toMatch(/n\/a/i);
+      expect(side.entryZone).toMatch(/pending/i);
+    }
+  });
+
+  it("propagates an AI failure for 1m rather than treating generic analysis as paid success", async () => {
+    vi.spyOn(openai.chat.completions, "create")
+      .mockRejectedValue(new Error("upstream unavailable"));
+    await expect(
+      generateAnalysis("XAU/USD", "1m", "beginner"),
+    ).rejects.toThrow(/upstream unavailable/i);
+  });
+
+  it("aborts and rejects a normal-timeframe request at its deadline without SDK retries", async () => {
+    vi.useFakeTimers();
+    const createSpy = vi.spyOn(openai.chat.completions, "create")
+      .mockImplementation((() => new Promise(() => undefined)) as never);
+    const analysis = generateAnalysis("XAU/USD", "1h", "beginner");
+    const rejection = expect(analysis).rejects.toThrow(
+      /OpenAI timeout after 25000ms/i,
+    );
+    await vi.advanceTimersByTimeAsync(25_000);
+    await rejection;
+
+    const requestOptions = createSpy.mock.calls[0]?.[1];
+    expect(requestOptions?.signal?.aborted).toBe(true);
+    expect(requestOptions?.maxRetries).toBe(0);
   });
 });
 

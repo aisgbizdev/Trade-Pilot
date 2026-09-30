@@ -31,7 +31,7 @@ const API_SERVER_ENTRY = path.join(
   REPO_ROOT,
   "artifacts",
   "api-server",
-  "dist",
+  "dist-e2e",
   "index.mjs",
 );
 
@@ -81,13 +81,8 @@ function waitForHealthz(port, timeoutMs) {
 }
 
 async function waitForBuildArtifact(p, timeoutMs = 15_000) {
-  // The `build-deps` script runs `pnpm --filter @workspace/api-server run build`
-  // immediately before playwright launches the webServer. In edge cases
-  // (pnpm filter / fs sync race, or a concurrent dev workflow that's
-  // also rebuilding into the same `dist`) the entry path can be briefly
-  // missing or zero-byte at the moment we spawn the child, surfacing as
-  // MODULE_NOT_FOUND with no useful context. Poll for the file before
-  // spawning so we either start cleanly or fail with an obvious message.
+  // build-deps writes to dist-e2e, isolated from the development server's
+  // dist. Poll for the entry to handle filesystem sync before spawning.
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {

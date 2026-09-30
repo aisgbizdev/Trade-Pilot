@@ -5,6 +5,7 @@ import { getIndicators } from "../lib/historical";
 import {
   isRiskMapInstrument,
   mapWithConcurrency,
+  RISK_MAP_INSTRUMENTS,
   RISK_MAP_TIMEFRAMES,
   scoreTimeframeRisk,
 } from "../lib/timeframe-risk";
@@ -15,14 +16,14 @@ router.get("/risk-map/timeframes", requireAuth, async (req: AuthRequest, res): P
   const parsed = GetTimeframeRiskMapQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({
-      error: "Instrument tidak didukung. Gunakan salah satu: XAU/USD, BRENT, HSI, NIKKEI.",
+      error: `Instrument tidak didukung. Gunakan salah satu: ${RISK_MAP_INSTRUMENTS.join(", ")}.`,
     });
     return;
   }
   const instrument = parsed.data.instrument.trim();
   if (!isRiskMapInstrument(instrument)) {
     res.status(400).json({
-      error: "Instrument tidak didukung. Gunakan salah satu: XAU/USD, BRENT, HSI, NIKKEI.",
+      error: `Instrument tidak didukung. Gunakan salah satu: ${RISK_MAP_INSTRUMENTS.join(", ")}.`,
     });
     return;
   }

@@ -24,6 +24,7 @@ import {
   useUpdateJournalEntry,
   getListJournalEntriesQueryKey,
   getGetJournalStatsQueryKey,
+  getGetProgressionSummaryQueryKey,
   type JournalEntry,
   type CreateJournalEntryBody,
 } from "@workspace/api-client-react";
@@ -170,6 +171,9 @@ export function LogTradeDialog({
       });
       queryClient.invalidateQueries({
         queryKey: getGetJournalStatsQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: getGetProgressionSummaryQueryKey(),
       });
       if (!editing) {
         trackEvent("trade_logged", { instrument: body.instrument, side: body.side });

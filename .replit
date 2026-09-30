@@ -36,45 +36,45 @@ args = "typecheck"
 name = "api-server-test"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/api-server run test"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm --filter @workspace/api-server run test"
 
 [[workflows.workflow]]
 name = "ai-trading-test"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/ai-trading run test"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm --filter @workspace/ai-trading run test"
 
 [[workflows.workflow]]
 name = "e2e-test"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/e2e run test"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm --filter @workspace/e2e run test"
 
 [[workflows.workflow]]
 name = "typecheck"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm run typecheck"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flock -x /tmp/tradepilot-validation-test-suites.lock pnpm run typecheck"
 
 [agent]
 stack = "PNPM_WORKSPACE"
@@ -176,6 +176,10 @@ localPort = 8083
 externalPort = 4200
 
 [[ports]]
+localPort = 18115
+externalPort = 6000
+
+[[ports]]
 localPort = 20853
 externalPort = 3000
 
@@ -186,3 +190,11 @@ externalPort = 5000
 [[ports]]
 localPort = 29912
 externalPort = 5173
+
+[[ports]]
+localPort = 31692
+externalPort = 8099
+
+[[ports]]
+localPort = 31693
+externalPort = 6800

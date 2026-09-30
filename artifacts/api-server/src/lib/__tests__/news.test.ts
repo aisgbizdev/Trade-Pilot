@@ -103,6 +103,79 @@ describe("getRelevantNews — merge + dedupe", () => {
     const sameUrl = items.filter((i) => i.url === sharedUrl);
     expect(sameUrl.length).toBe(1);
   });
+
+  it("keeps up to five direct market headlines, rejects incidental corporate mentions and Yahoo feed noise", async () => {
+    const date = recentISO();
+    globalThis.fetch = vi.fn(async () => newsmakerResponse([
+      { id: 1, title: "Gold prices rally as bullion demand rises", date },
+      { id: 2, title: "Gold miner company earnings jump after acquisition", summary: "Gold market mentioned in passing", date },
+      { id: 3, title: "Gold futures gain as traders await Fed", date },
+      { id: 4, title: "Emas naik seiring inflasi AS", date },
+      { id: 5, title: "Gold slips after dollar strengthens", date },
+    ])) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([
+      { title: "Gold price rises on safe haven demand", summary: "", url: "https://yahoo.test/gold", publishedAt: date },
+      { title: "Mining company quarterly earnings", summary: "Gold was used in an unrelated corporate project", url: "https://yahoo.test/company", publishedAt: date },
+      { title: "Tech stocks rally on earnings", summary: "", url: "https://yahoo.test/tech", publishedAt: date },
+    ]);
+    const items = await getRelevantNews("XAU/USD");
+    expect(items).toHaveLength(5);
+    expect(items.every((item) => !/company|tech stocks/i.test(item.title))).toBe(true);
+    expect(items.filter((item) => item.source === "Newsmaker.id")).toHaveLength(4);
+  });
+
+  it.each([
+    ["BRENT", "Brent crude prices rise after OPEC supply cuts", "Oil company revenue grows after merger"],
+    ["EUR/USD", "Euro rises against dollar after ECB rate decision", "European company earnings rise"],
+    ["HSI", "Hang Seng index falls as Hong Kong stocks slide", "Hong Kong firm shares issued to employees"],
+    ["BTC/USD", "Bitcoin price rallies after spot ETF inflows", "Crypto company revenue climbs"],
+    ["SOL/USD", "Solana price falls amid crypto market selloff", "Solution provider expands corporate sales"],
+  ])("accepts %s market news but not weak corporate overlap", async (instrument, relevant, irrelevant) => {
+    globalThis.fetch = vi.fn(async () => newsmakerResponse([
+      { id: 1, title: relevant, date: recentISO() },
+      { id: 2, title: irrelevant, date: recentISO() },
+    ])) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([]);
+    expect((await getRelevantNews(instrument)).map((item) => item.title)).toEqual([relevant]);
+  });
+
+  it.each([
+    ["XAU/USD", "Gold prices rise as bullion demand grows"],
+    ["XAG/USD", "Silver futures gain as industrial demand climbs"],
+    ["BRENT", "Brent crude prices rise on supply concerns"],
+    ["EUR/USD", "Euro rises against dollar after ECB rate decision"],
+    ["GBP/USD", "Pound rises after BoE rate decision"],
+    ["USD/JPY", "Yen weakens after BoJ rate decision"],
+    ["USD/IDR", "Rupiah weakens as exchange rate slides"],
+    ["DXY", "Dollar index rises after Fed decision"],
+    ["AUD/USD", "Australian dollar gains after RBA rate decision"],
+    ["USD/CHF", "Swiss franc weakens after SNB rate decision"],
+    ["HSI", "Hang Seng index falls as Hong Kong stocks slide"],
+    ["NIKKEI", "Nikkei 225 index rises as Japanese stocks gain"],
+    ["NIKKEI", "Indeks Nikkei menguat seiring saham Jepang naik"],
+    ["DJIA", "Dow Jones index falls after Fed rate decision"],
+    ["NASDAQ", "Nasdaq 100 index gains as tech stocks rally"],
+    ["BTC/USD", "Bitcoin price rises as ETF inflows climb"],
+    ["ETH/USD", "Ethereum price falls amid market selloff"],
+    ["SOL/USD", "Solana price rises on trading demand"],
+    ["BNB/USD", "BNB price slips on crypto market weakness"],
+    ["XRP/USD", "XRP price surges after ETF inflows"],
+  ])("keeps direct market coverage for supported %s", async (instrument, title) => {
+    globalThis.fetch = vi.fn(async () => newsmakerResponse([{ id: 1, title, date: recentISO() }])) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([]);
+    expect((await getRelevantNews(instrument)).map((item) => item.title)).toEqual([title]);
+  });
+
+  it.each(["BTC/USD", "ETH/USD", "SOL/USD", "BNB/USD", "XRP/USD"])(
+    "does not attribute an asset-free ETF approval to %s",
+    async (instrument) => {
+      globalThis.fetch = vi.fn(async () => newsmakerResponse([{
+        id: 1, title: "Spot ETF approval lifts risk assets", date: recentISO(),
+      }])) as unknown as typeof fetch;
+      mockedYahoo.mockResolvedValue([]);
+      expect(await getRelevantNews(instrument)).toEqual([]);
+    },
+  );
 });
 
 describe("getTickerNews — global multi-source feed", () => {

@@ -3,12 +3,11 @@ import { checklistCycleSubject, levelForXp, localDay, rankForLevel, riskWaitSour
 
 describe("progression curve and timezone primitives", () => {
   it("starts at level one and exposes absolute level targets", () => {
-    expect(levelForXp(0)).toMatchObject({ level: 1, currentLevelXp: 0, nextXp: 100 });
-    expect(levelForXp(50)).toMatchObject({ level: 1, currentLevelXp: 0, nextXp: 100 });
-    expect(levelForXp(99)).toMatchObject({ level: 1, currentLevelXp: 0, nextXp: 100 });
-    expect(levelForXp(100)).toMatchObject({ level: 2, currentLevelXp: 100, nextXp: 225 });
-    expect(levelForXp(224)).toMatchObject({ level: 2, currentLevelXp: 100, nextXp: 225 });
-    expect(levelForXp(225)).toMatchObject({ level: 3, currentLevelXp: 225, nextXp: 375 });
+    expect(levelForXp(0)).toMatchObject({ level: 1, currentLevelXp: 0, nextXp: 50 });
+    expect(levelForXp(49)).toMatchObject({ level: 1, currentLevelXp: 0, nextXp: 50 });
+    expect(levelForXp(50)).toMatchObject({ level: 2, currentLevelXp: 50, nextXp: 120 });
+    expect(levelForXp(119)).toMatchObject({ level: 2, currentLevelXp: 50, nextXp: 120 });
+    expect(levelForXp(120)).toMatchObject({ level: 3, currentLevelXp: 120, nextXp: 210 });
   });
   it("has all ten original rank thresholds and unbounded mastery", () => {
     expect(rankForLevel(1)).toBe("seedling");

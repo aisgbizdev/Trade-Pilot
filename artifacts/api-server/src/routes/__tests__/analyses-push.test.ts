@@ -103,7 +103,7 @@ beforeEach(() => {
 
 describe("POST /api/analyses dispatches push on completion", () => {
   it("invokes sendPushToUser with the analysis-complete payload", async () => {
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${alice.token}`)
@@ -140,7 +140,7 @@ describe("POST /api/analyses dispatches push on completion", () => {
   it("does not fail the request when push delivery throws", async () => {
     vi.mocked(sendPushToUser).mockRejectedValueOnce(new Error("transport boom"));
 
-    const instrument = `INST-${RUN_ID}-${randomBytes(3).toString("hex")}`;
+    const instrument = "XAU/USD";
     const res = await request(app)
       .post("/api/analyses")
       .set("Authorization", `Bearer ${alice.token}`)

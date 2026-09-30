@@ -1,21 +1,10 @@
 import { useRef, useState } from "react";
-import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, Trash2, KeyRound, Wallet } from "lucide-react";
+import { Camera, Eye, EyeOff, Sun, Moon, LogOut, Shield, Loader2, ChevronRight, ArrowUpRight, Bell, BellRing, Trash2, KeyRound, Wallet } from "lucide-react";
 import { avatarSrc, uploadAvatar, validateAvatarFile } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
 import { useTheme } from "@/components/theme-provider";
@@ -26,7 +15,6 @@ import {
   useChangePassword,
   useChangeSecurityQuestion,
   useLogout,
-  useDeleteAccount,
   getGetMeQueryKey,
   useGetProgressionSummary,
   useGetCreditBalance,
@@ -38,6 +26,7 @@ import { useTranslation, getSecurityQuestionOptions } from "@/lib/i18n";
 import { useTrackOutbound } from "@/hooks/use-track-outbound";
 import { SHOW_SPONSOR } from "@/lib/sponsor-flag";
 import { ProgressionEmblem } from "@/components/progression/progression-emblem";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -52,14 +41,10 @@ export default function ProfilePage() {
   const changePassword = useChangePassword();
   const changeSecurityQuestion = useChangeSecurityQuestion();
   const logout = useLogout();
-  const deleteAccount = useDeleteAccount();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.displayName ?? "");
+  const [themeSaving, setThemeSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarUrl = avatarSrc(user?.avatarUrl);
@@ -121,19 +106,35 @@ export default function ProfilePage() {
   const [showSecAnswer, setShowSecAnswer] = useState(false);
 
   const handleThemeToggle = async (th: "light" | "dark") => {
+    if (th === theme || themeSaving || updateProfile.isPending) return;
+    const previousTheme = theme;
     setTheme(th);
-    await updateProfile.mutateAsync({ data: { themePreference: th } });
+    setThemeSaving(true);
+    try {
+      await updateProfile.mutateAsync({ data: { themePreference: th } });
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      toast({ title: t.profile.theme_updated });
+    } catch {
+      setTheme(previousTheme);
+      toast({ title: t.profile.theme_update_failed, variant: "destructive" });
+    } finally {
+      setThemeSaving(false);
+    }
   };
 
   const { data: progressionSummary } = useGetProgressionSummary();
-  const { data: creditBalanceData } = useGetCreditBalance({ query: { queryKey: getGetCreditBalanceQueryKey() } });
+  const creditBalance = useGetCreditBalance({ query: { queryKey: getGetCreditBalanceQueryKey() } });
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
-    await updateProfile.mutateAsync({ data: { displayName: newName.trim() } });
-    queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-    setEditingName(false);
-    toast({ title: t.profile.name_updated });
+    try {
+      await updateProfile.mutateAsync({ data: { displayName: newName.trim() } });
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      setEditingName(false);
+      toast({ title: t.profile.name_updated });
+    } catch {
+      toast({ title: t.profile.name_update_failed, variant: "destructive" });
+    }
   };
 
   const handleChangePassword = async () => {
@@ -188,22 +189,6 @@ export default function ProfilePage() {
     // dev-mode 401 overlay caused by zombie refetches after the
     // session cookie is cleared.
     window.location.assign("/");
-  };
-
-  const handleDeleteAccount = async () => {
-    setDeleteError(null);
-    try {
-      await deleteAccount.mutateAsync({ data: { currentPassword: deletePassword } });
-      // Same full-teardown pattern as logout: the account (and its
-      // session) is already gone server-side, so there's nothing left to
-      // cancel/clear beyond forcing every mounted component to unmount.
-      queryClient.cancelQueries();
-      queryClient.clear();
-      window.location.assign("/");
-    } catch (err) {
-      const apiErr = err as { data?: { error?: string } };
-      setDeleteError(apiErr?.data?.error ?? t.profile.delete_account_error_generic);
-    }
   };
 
   return (
@@ -270,9 +255,10 @@ export default function ProfilePage() {
                       size="sm"
                       className="h-9 px-4 shrink-0"
                       onClick={handleSaveName}
-                      disabled={updateProfile.isPending}
+                      disabled={updateProfile.isPending || !newName.trim()}
                       data-testid="button-save-name"
                     >
+                      {updateProfile.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" aria-hidden="true" />}
                       {t.common.save}
                     </Button>
                   </div>
@@ -328,7 +314,7 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-3.5">
                   <ProgressionEmblem level={progressionSummary.level} masteryLevel={progressionSummary.masteryLevel} className="w-12 h-12 drop-shadow-sm" />
                   <div className="min-w-0 text-left">
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-widest leading-none mb-1">
+                     <p className="text-xs font-bold text-primary uppercase tracking-widest leading-none mb-1">
                       {progressionSummary.masteryLevel > 0
                         ? t.progression.mastery_level.replace("{n}", String(progressionSummary.masteryLevel))
                         : t.progression.level.replace("{n}", String(progressionSummary.level))}
@@ -348,13 +334,14 @@ export default function ProfilePage() {
           <div className="contents">
             <Card className="p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h3 className="text-sm font-semibold text-foreground">{t.profile.theme_label}</h3>
-              <div className="inline-flex self-start rounded-xl border border-border/60 bg-muted/25 p-1" data-testid="theme-segmented-control">
+              <div className="inline-flex self-start items-center rounded-xl border border-border/60 bg-muted/25 p-1" data-testid="theme-segmented-control" aria-busy={themeSaving}>
                 <button
                   type="button"
                   onClick={() => handleThemeToggle("light")}
+                  disabled={themeSaving || updateProfile.isPending}
                   data-testid="button-theme-light"
                   className={cn(
-                    "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
                     theme === "light"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -366,9 +353,10 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => handleThemeToggle("dark")}
+                  disabled={themeSaving || updateProfile.isPending}
                   data-testid="button-theme-dark"
                   className={cn(
-                    "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
                     theme === "dark"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -540,14 +528,31 @@ export default function ProfilePage() {
               <button
                 type="button"
                 className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                onClick={() => setLocation("/my-alerts")}
-                data-testid="button-go-my-alerts"
+                onClick={() => setLocation("/profile/privacy-security")}
+                data-testid="button-go-privacy-security"
               >
-                <Bell className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="flex-1 text-sm font-medium text-foreground">{t.alerts.page_title}</span>
+                <Shield className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{t.profile.privacy_security_title}</span>
+                  <span className="block text-xs leading-relaxed text-muted-foreground">{t.profile.privacy_security_subtitle}</span>
+                </span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
               <button
+                type="button"
+                className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => setLocation("/my-alerts")}
+                data-testid="button-go-my-alerts"
+              >
+                 <BellRing className="w-4 h-4 text-muted-foreground shrink-0" />
+                 <span className="flex-1 min-w-0">
+                   <span className="block text-sm font-medium text-foreground">{t.alerts.page_title}</span>
+                   <span className="block text-xs leading-relaxed text-muted-foreground">{t.profile_extra.alerts_link_subtitle}</span>
+                 </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+               <div>
+               <button
                 type="button"
                 className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => setLocation("/notifications#settings")}
@@ -556,12 +561,11 @@ export default function ProfilePage() {
                 <Bell className="w-4 h-4 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{t.profile_extra.notifications_link_title}</p>
-                  <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-                    {t.profile_extra.notifications_link_subtitle}
-                  </p>
+                   <p className="text-xs leading-relaxed text-muted-foreground">{t.profile_extra.notifications_link_subtitle}</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
+               </div>
               <button
                 type="button"
                 className="w-full flex items-center gap-3.5 p-3.5 rounded-lg hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -569,10 +573,19 @@ export default function ProfilePage() {
                 data-testid="button-go-topup"
               >
                 <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="flex-1 text-sm font-medium text-foreground">{t.profile.credit_topup_nav_label}</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mr-1" data-testid="badge-credit-balance">
-                  {creditBalanceData?.balance ?? 0}
-                </Badge>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{t.profile.credit_topup_nav_label}</span>
+                  {!creditBalance.isSuccess && (
+                    <span className="block text-xs leading-relaxed text-muted-foreground" role="status" data-testid="credit-balance-status">
+                      {creditBalance.isError ? t.profile.credit_balance_unavailable : t.profile.credit_balance_loading}
+                    </span>
+                  )}
+                </span>
+                {creditBalance.isSuccess && (
+                  <Badge variant="secondary" className="text-xs px-1.5 py-0 mr-1" data-testid="badge-credit-balance">
+                    {creditBalance.data.balance}
+                  </Badge>
+                )}
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
             </Card>
@@ -624,19 +637,17 @@ export default function ProfilePage() {
                 data-testid="card-solid-prime-cta"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                   <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                     {t.brand.sponsored_by}
                   </span>
                   <span className="text-sm font-extrabold tracking-wide text-amber-500 dark:text-amber-300">
                     SOLID PRIME
                   </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground/80 mb-3 leading-snug">
+                 <p className="text-xs text-muted-foreground mb-3 leading-snug">
                   {t.brand.solid_prime_subline} · {t.brand.solid_prime_regulated}
                 </p>
-                <p className="text-sm text-foreground/85 leading-relaxed mb-4">
-                  {t.brand.open_account_subtitle}
-                </p>
+                 <ExpandableExplanation inline className="mb-4">{t.brand.open_account_subtitle}</ExpandableExplanation>
                 <Button asChild className="w-full btn-premium font-semibold h-11">
                   <a
                     href="https://www.sg-berjangka.com"
@@ -653,98 +664,6 @@ export default function ProfilePage() {
               </Card>
             )}
 
-            <div className="border-t border-destructive/20 pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-testid="card-delete-account">
-              <div className="max-w-xl">
-                <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
-                  <Trash2 className="w-4 h-4" />
-                  {t.profile.delete_account_title}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                  {t.profile.delete_account_description}
-                </p>
-              </div>
-              <AlertDialog
-                open={deleteDialogOpen}
-                onOpenChange={(open) => {
-                  setDeleteDialogOpen(open);
-                  if (!open) {
-                    setDeletePassword("");
-                    setDeleteConfirmed(false);
-                    setDeleteError(null);
-                  }
-                }}
-              >
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto h-10 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    data-testid="button-open-delete-account"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {t.profile.delete_account_button}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent data-testid="dialog-delete-account">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t.profile.delete_account_confirm_title}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t.profile.delete_account_confirm_description}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="space-y-3 my-2">
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="delete-account-password"
-                        className="text-xs font-medium text-foreground"
-                      >
-                        {t.profile.delete_account_password_label}
-                      </label>
-                      <Input
-                        id="delete-account-password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
-                        data-testid="input-delete-account-password"
-                        className="h-10"
-                      />
-                    </div>
-                    <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer pt-1">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={deleteConfirmed}
-                        onChange={(e) => setDeleteConfirmed(e.target.checked)}
-                        data-testid="checkbox-delete-account-confirm"
-                      />
-                      <span className="leading-snug">{t.profile.delete_account_checkbox_label}</span>
-                    </label>
-                    {deleteError && (
-                      <p className="text-xs text-destructive font-medium" data-testid="text-delete-account-error">
-                        {deleteError}
-                      </p>
-                    )}
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel data-testid="button-cancel-delete-account">
-                      {t.common.cancel}
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      data-testid="button-confirm-delete-account"
-                      disabled={!deletePassword || !deleteConfirmed || deleteAccount.isPending}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        void handleDeleteAccount();
-                      }}
-                    >
-                      {deleteAccount.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                      {t.profile.delete_account_confirm_button}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
           </div>
         </div>
 

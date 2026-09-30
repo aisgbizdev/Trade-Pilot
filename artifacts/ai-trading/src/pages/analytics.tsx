@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { BarChart3, Loader2, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -76,7 +77,7 @@ export default function AnalyticsPage() {
       <Layout>
         <div className="px-4 py-5">
           <h1 className="text-xl font-bold text-foreground mb-1">{t.analytics.title}</h1>
-          <p className="text-xs text-muted-foreground mb-8">{t.analytics.subtitle}</p>
+          <ExpandableExplanation inline className="mb-8">{t.analytics.subtitle}</ExpandableExplanation>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <BarChart3 className="w-12 h-12 text-muted-foreground opacity-40 mb-3" />
             <p className="text-sm font-medium text-foreground">{t.analytics.no_data_title}</p>
@@ -101,7 +102,7 @@ export default function AnalyticsPage() {
       <div className="px-4 py-5 space-y-5 md:px-6">
         <div>
           <h1 className="text-xl font-bold text-foreground">{t.analytics.title}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{t.analytics.subtitle}</p>
+          <ExpandableExplanation inline>{t.analytics.subtitle}</ExpandableExplanation>
         </div>
 
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -114,7 +115,7 @@ export default function AnalyticsPage() {
               <div className="text-xl sm:text-2xl font-bold text-primary truncate" data-testid={`stat-${label}`}>
                 {value}
               </div>
-              <div className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 break-words leading-tight">{label}</div>
+              <div className="text-xs text-muted-foreground mt-0.5 break-words leading-tight">{label}</div>
             </Card>
           ))}
         </div>
@@ -148,7 +149,7 @@ export default function AnalyticsPage() {
             {analytics.accuracyRate !== null && analytics.accuracyRate !== undefined ? (
               <>
                 <AccuracyGauge value={analytics.accuracyRate} />
-                <p className="text-[10px] text-muted-foreground mt-1 text-center">
+                 <p className="text-xs text-muted-foreground mt-1 text-center">
                   {t.analytics.based_on_feedback?.replace("{n}", String(analytics.feedbackCount ?? 0)) ?? `Based on ${analytics.feedbackCount ?? 0} feedback`}
                 </p>
               </>
@@ -209,15 +210,15 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={analytics.weeklyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+               <BarChart data={analytics.weeklyData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                 <XAxis
                   dataKey="week"
-                  tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                   tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                   tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
                   allowDecimals={false}

@@ -27,6 +27,7 @@ Method | HTTP request | Description
 [**refreshFundamentals**](AnalysesApi.md#refreshfundamentals) | **POST** /analyses/{id}/refresh-fundamentals | Re-fetch news + economic calendar for an existing analysis (no AI re-run)
 [**setAnalysisNote**](AnalysesApi.md#setanalysisnote) | **PUT** /analyses/{id}/note | Save the user&#39;s private trading-journal note for an analysis
 [**submitFeedback**](AnalysesApi.md#submitfeedback) | **POST** /analyses/{id}/feedback | Submit feedback for analysis
+[**submitInstrumentRequest**](AnalysesApi.md#submitinstrumentrequest) | **POST** /instrument-requests | Register interest in an unsupported instrument code without starting an analysis
 [**waitGuardrail**](AnalysesApi.md#waitguardrail) | **POST** /analyses/guardrails/{id}/wait | Record an explicit decision to wait
 
 
@@ -521,7 +522,7 @@ No authorization required
 
 Compare deterministic technical risk across supported timeframes
 
-Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI, and NIKKEI only. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result. 
+Authenticated, read-only technical comparison for all eight verified analysis instruments. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result.
 
 ### Example
 ```dart
@@ -782,6 +783,47 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**Feedback**](Feedback.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **submitInstrumentRequest**
+> InstrumentRequestReceipt submitInstrumentRequest(instrumentRequestInput)
+
+Register interest in an unsupported instrument code without starting an analysis
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+
+final api = TradePilotApiClient().getAnalysesApi();
+final InstrumentRequestInput instrumentRequestInput = ; // InstrumentRequestInput | 
+
+try {
+    final response = api.submitInstrumentRequest(instrumentRequestInput);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AnalysesApi->submitInstrumentRequest: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **instrumentRequestInput** | [**InstrumentRequestInput**](InstrumentRequestInput.md)|  | 
+
+### Return type
+
+[**InstrumentRequestReceipt**](InstrumentRequestReceipt.md)
 
 ### Authorization
 

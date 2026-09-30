@@ -17,6 +17,8 @@ export interface LegalDocument {
 
 const LAST_UPDATED_EN = "April 25, 2026";
 const LAST_UPDATED_ID = "25 April 2026";
+const ACCOUNT_GUIDANCE_UPDATED_EN = "September 27, 2026";
+const ACCOUNT_GUIDANCE_UPDATED_ID = "27 September 2026";
 const CONTACT_EMAIL = SHOW_NEWSMAKER
   ? "support@newsmaker.id"
   : "support@tradepilot.id";
@@ -24,7 +26,7 @@ const CONTACT_EMAIL = SHOW_NEWSMAKER
 const PRIVACY_EN: LegalDocument = {
   title: "Privacy Policy",
   lastUpdatedLabel: "Last updated",
-  lastUpdated: LAST_UPDATED_EN,
+  lastUpdated: ACCOUNT_GUIDANCE_UPDATED_EN,
   intro:
     'This Privacy Policy describes how TradePilot.id ("we", "us", "our") collects, uses, and shares information when you use our application and related services (the "Service"). TradePilot.id is operated by Newsmaker.id.',
   sections: [
@@ -58,7 +60,7 @@ const PRIVACY_EN: LegalDocument = {
     {
       heading: "4. Data Retention",
       paragraphs: [
-        "Account data is retained for as long as your account is active. You can permanently delete your own account at any time from Profile > Delete Account inside the app, or by contacting us. Self-service deletion removes your account and every record tied to it (analyses, notifications, alerts, journal entries, push subscriptions, and similar) immediately. Aggregate or anonymized records that no longer identify you (for example, anonymized analytics events) may be retained, as may records we are legally required to keep for security or fraud-prevention purposes.",
+        "Account data is retained for as long as your account is active. You can permanently delete your own account at any time from Profile > Privacy & Security > Delete Account inside the app, or by contacting us. Self-service deletion removes your account and every record tied to it (analyses, notifications, alerts, journal entries, push subscriptions, and similar) immediately. Aggregate or anonymized records that no longer identify you (for example, anonymized analytics events) may be retained, as may records we are legally required to keep for security or fraud-prevention purposes.",
       ],
     },
     {
@@ -103,7 +105,7 @@ const PRIVACY_EN: LegalDocument = {
 const PRIVACY_ID: LegalDocument = {
   title: "Kebijakan Privasi",
   lastUpdatedLabel: "Terakhir diperbarui",
-  lastUpdated: LAST_UPDATED_ID,
+  lastUpdated: ACCOUNT_GUIDANCE_UPDATED_ID,
   intro:
     'Kebijakan Privasi ini menjelaskan bagaimana TradePilot.id ("kami") mengumpulkan, menggunakan, dan membagikan informasi ketika Anda menggunakan aplikasi dan layanan terkait kami ("Layanan"). TradePilot.id dioperasikan oleh Newsmaker.id.',
   sections: [
@@ -137,7 +139,7 @@ const PRIVACY_ID: LegalDocument = {
     {
       heading: "4. Penyimpanan Data",
       paragraphs: [
-        "Data akun disimpan selama akun Anda aktif. Anda dapat menghapus akun Anda sendiri kapan saja melalui Profil > Hapus Akun di dalam aplikasi, atau dengan menghubungi kami. Penghapusan mandiri langsung menghapus akun Anda beserta seluruh data yang terkait (analisis, notifikasi, alert, catatan jurnal, langganan push, dan sejenisnya). Data agregat atau anonim yang tidak lagi mengidentifikasi Anda (misalnya event analitik yang sudah dianonimkan) dapat tetap disimpan, begitu juga data yang wajib kami simpan secara hukum untuk keperluan keamanan atau pencegahan kecurangan.",
+        "Data akun disimpan selama akun Anda aktif. Anda dapat menghapus akun Anda sendiri kapan saja melalui Profil > Privasi & Keamanan > Hapus Akun di dalam aplikasi, atau dengan menghubungi kami. Penghapusan mandiri langsung menghapus akun Anda beserta seluruh data yang terkait (analisis, notifikasi, alert, catatan jurnal, langganan push, dan sejenisnya). Data agregat atau anonim yang tidak lagi mengidentifikasi Anda (misalnya event analitik yang sudah dianonimkan) dapat tetap disimpan, begitu juga data yang wajib kami simpan secara hukum untuk keperluan keamanan atau pencegahan kecurangan.",
       ],
     },
     {
@@ -418,7 +420,7 @@ const TERMS_ID: LegalDocument = {
 const SUPPORT_EN: LegalDocument = {
   title: "Support",
   lastUpdatedLabel: "Last updated",
-  lastUpdated: LAST_UPDATED_EN,
+  lastUpdated: ACCOUNT_GUIDANCE_UPDATED_EN,
   intro:
     "Need help with your TradePilot account, or have a question about how the app works? Here's how to reach us.",
   sections: [
@@ -437,7 +439,7 @@ const SUPPORT_EN: LegalDocument = {
     {
       heading: "3. Requesting Data Access, Correction, or Deletion",
       paragraphs: [
-        "You can permanently delete your own account at any time from Profile > Delete Account inside the app — see the Delete Account page for exactly what that removes. If you'd rather not delete your account but want to access, correct, or export your data, or if you can't sign in to delete it yourself, email us and we'll assist.",
+        "You can permanently delete your own account at any time from Profile > Privacy & Security > Delete Account inside the app — see the Delete Account page for exactly what that removes. If you'd rather not delete your account but want to access, correct, or export your data, or if you can't sign in to delete it yourself, email us and we'll assist.",
       ],
     },
   ],
@@ -446,7 +448,7 @@ const SUPPORT_EN: LegalDocument = {
 const SUPPORT_ID: LegalDocument = {
   title: "Bantuan",
   lastUpdatedLabel: "Terakhir diperbarui",
-  lastUpdated: LAST_UPDATED_ID,
+  lastUpdated: ACCOUNT_GUIDANCE_UPDATED_ID,
   intro:
     "Butuh bantuan terkait akun TradePilot, atau ada pertanyaan soal cara kerja aplikasi? Berikut cara menghubungi kami.",
   sections: [
@@ -465,7 +467,7 @@ const SUPPORT_ID: LegalDocument = {
     {
       heading: "3. Meminta Akses, Koreksi, atau Penghapusan Data",
       paragraphs: [
-        "Anda dapat menghapus akun Anda sendiri kapan saja melalui Profil > Hapus Akun di dalam aplikasi — lihat halaman Hapus Akun untuk detail data apa saja yang dihapus. Jika Anda tidak ingin menghapus akun tapi ingin mengakses, mengoreksi, atau mengekspor data Anda, atau tidak bisa login untuk menghapusnya sendiri, kirim email dan kami akan bantu.",
+        "Anda dapat menghapus akun Anda sendiri kapan saja melalui Profil > Privasi & Keamanan > Hapus Akun di dalam aplikasi — lihat halaman Hapus Akun untuk detail data apa saja yang dihapus. Jika Anda tidak ingin menghapus akun tapi ingin mengakses, mengoreksi, atau mengekspor data Anda, atau tidak bisa login untuk menghapusnya sendiri, kirim email dan kami akan bantu.",
       ],
     },
   ],
@@ -474,14 +476,14 @@ const SUPPORT_ID: LegalDocument = {
 const DELETE_ACCOUNT_EN: LegalDocument = {
   title: "Delete Account",
   lastUpdatedLabel: "Last updated",
-  lastUpdated: LAST_UPDATED_EN,
+  lastUpdated: ACCOUNT_GUIDANCE_UPDATED_EN,
   intro:
     "You're always free to permanently delete your TradePilot account. Here's exactly how, and what happens when you do.",
   sections: [
     {
       heading: "1. How to Delete Your Account",
       paragraphs: [
-        "Sign in, go to Profile, and choose Delete Account. You'll be asked to confirm your current password and explicitly confirm the deletion. This is self-service and takes effect immediately — there is no waiting period.",
+        "Sign in, go to Profile > Privacy & Security, and choose Delete Account. You'll be asked to confirm your current password and explicitly confirm the deletion. This is self-service and takes effect immediately — there is no waiting period.",
         `If you can't sign in, email us at ${CONTACT_EMAIL} from your account's email address and we'll verify and process the deletion for you.`,
       ],
     },
@@ -509,14 +511,14 @@ const DELETE_ACCOUNT_EN: LegalDocument = {
 const DELETE_ACCOUNT_ID: LegalDocument = {
   title: "Hapus Akun",
   lastUpdatedLabel: "Terakhir diperbarui",
-  lastUpdated: LAST_UPDATED_ID,
+  lastUpdated: ACCOUNT_GUIDANCE_UPDATED_ID,
   intro:
     "Anda selalu bebas menghapus akun TradePilot Anda secara permanen. Berikut caranya, dan apa yang terjadi setelahnya.",
   sections: [
     {
       heading: "1. Cara Menghapus Akun",
       paragraphs: [
-        "Login, buka Profil, lalu pilih Hapus Akun. Anda akan diminta memasukkan kata sandi saat ini dan mengonfirmasi penghapusan secara eksplisit. Proses ini mandiri (self-service) dan berlaku langsung — tidak ada masa tunggu.",
+        "Login, buka Profil > Privasi & Keamanan, lalu pilih Hapus Akun. Anda akan diminta memasukkan kata sandi saat ini dan mengonfirmasi penghapusan secara eksplisit. Proses ini mandiri (self-service) dan berlaku langsung — tidak ada masa tunggu.",
         `Jika Anda tidak bisa login, kirim email ke ${CONTACT_EMAIL} dari alamat email akun Anda dan kami akan memverifikasi serta memproses penghapusannya untuk Anda.`,
       ],
     },

@@ -135,8 +135,11 @@ Aturan bahasa (KRITIS):
 
 Aturan output:
 - Confidence range realistis (max 75%), minimum range 10 poin
+- Gunakan seluruh ringkasan timeframe yang benar-benar tersedia di DATA TEKNIKAL / indicatorContext. Bandingkan keselarasan atau konflik timeframe lebih tinggi dan timeframe analisis; jelaskan bukti timeframe mana yang paling mendukung pilihan preferredSide. Jangan mengarang data timeframe yang tidak diberikan.
+- Main/alternative scenario harus menerangkan kenapa satu sisi lebih diutamakan dan kapan skenario opposite yang kondisional baru valid. Skenario opposite wajib fair dan berbasis bukti/level yang tersedia, bukan sekadar kebalikan mekanis atau disamakan probabilitasnya.
 - failureConditions HARUS berisi minimum 2 kondisi konkret (pisahkan dengan "; " atau bullet "• ") yang membuat analisis batal
-- whyReason HARUS menjelaskan KENAPA confidence tidak lebih tinggi (faktor ketidakpastian)
+- whyReason HARUS menjelaskan KENAPA confidence tidak lebih tinggi. Tulis TEPAT dua poin singkat dipisahkan newline: "• Dasar: ..." (bukti spesifik untuk instrumen + timeframe ini yang mendukung skenario) dan "• Batasan: ..." (ketidakpastian paling menentukan, mengapa confidence dibatasi). Masing-masing satu kalimat padat, bukan paragraf generik. Jangan memotong peringatan penting demi singkatnya format.
+- Dasar tiap instrumen berbeda: kaitkan hanya struktur harga/indikator/timeframe, berita yang sudah terbit, dan event kalender yang benar-benar tersedia untuk instrumen ini. Jelaskan hubungan sebab-akibatnya, jangan menyalin alasan emas/Fed ke minyak, indeks, forex, atau kripto tanpa bukti relevan. Kalau sumber tidak tersedia atau sinyal bertentangan, akui secara eksplisit; jangan mengarang harga, berita masa depan, hasil event terjadwal, atau data timeframe yang tidak diberikan.
 - Gunakan bahasa sederhana yang mudah dipahami pemula
 - WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Untuk timeframe 1W...") di mainScenario, alternativeScenario, opportunity, dan risk — supaya pengguna tahu sinyal ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
 
@@ -157,12 +160,13 @@ Aturan WAJIB untuk fundamentalCitations (jejak provenance):
 
 Aturan WAJIB untuk tradePlan (saran level konkret):
 - WAJIB isi field "tradePlan" dengan harga konkret untuk SKENARIO BUY DAN SKENARIO SELL — keduanya, bahkan kalau bias hanya condong ke satu arah. User berhak tahu level kalau skenario sebaliknya yang terjadi.
-- ANCHOR semua harga ke "Harga terakhir" yang ada di blok DATA TEKNIKAL. Format harga sesuai instrumen (mis. 1.0857 untuk EUR/USD, 4650.50 untuk emas dalam USD, 16275 untuk USD/IDR).
+- Berikan dua peta skenario kondisional yang konkret dan evidence-backed: BUY dan SELL, meskipun preferredSide hanya memilih satu sisi. Kaitkan entry/SL/TP tiap sisi dengan level teknikal yang benar-benar disebut di konteks (support/resistance, swing, EMA, atau struktur candle); jangan menyatakan keduanya sebagai rekomendasi aktif.
+- ANCHOR semua harga ke "Harga terakhir" dari DATA TEKNIKAL atau HARGA LIVE saat ini. Level harus masuk akal terhadap quote dan struktur timeframe; jangan menyalin angka tanpa alasan.
 - Untuk SISI BUY: entryZone biasanya pullback ke support / breakout level di atas harga; stopLoss di bawah swing-low / invalidasi struktur; takeProfit1 = target dekat (resistance terdekat); takeProfit2 = target lanjutan (resistance berikut). riskRewardRatio dihitung dari mid entry ke TP1 vs SL (mis. "1:1.8").
 - Untuk SISI SELL: entryZone biasanya pullback ke resistance / breakdown level di bawah harga; stopLoss di atas swing-high; takeProfit1 = support terdekat; takeProfit2 = support berikut.
 - rationale tiap sisi: 1 kalimat singkat menjelaskan kenapa level itu dipilih (mis. "Pullback ke EMA200 4h sebagai support dinamis").
 - preferredSide: "buy" jika tradingBias bullish/bullish_strong, "sell" jika bearish/bearish_strong, "wait" jika neutral atau marketCondition volatile.
-- JIKA blok DATA TEKNIKAL tidak ada "Harga terakhir" / data harga: set preferredSide="wait", isi field harga dengan deskripsi seperti "menunggu konfirmasi level kunci di area support/resistance" dan riskRewardRatio "n/a".
+- Jika tidak ada quote / "Harga terakhir" yang andal, jangan mengarang level numerik. Set preferredSide="wait" dan isi entry, SL, TP1, TP2, serta rasio dengan status pending yang jelas (contoh: "Menunggu quote dan konfirmasi support/resistance; level belum dapat ditentukan"). Nyatakan bahwa entry masih menunggu anchor harga, bukan seolah-olah level sudah tersedia. Jangan pernah gunakan "n/a".
 - INI TETAP SARAN OBJEKTIF, BUKAN PERINTAH ORDER. Boleh pakai kata "buy"/"sell" di field tradePlan karena memang label sisi skenario, tapi rationale harus tetap konsultatif.
 
 Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys berikut:
@@ -176,7 +180,7 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "risk": "string (risiko utama: skenario merugikan dan ketidakpastian yang harus diwaspadai, 1-2 kalimat)",
   "mainScenario": "string (Skenario A — skenario utama yang paling mungkin, 2-3 kalimat. Bicara struktur/arah, bukan angka spesifik — angka ada di tradePlan)",
   "alternativeScenario": "string (Skenario B — skenario alternatif jika asumsi tidak terjadi, 1-2 kalimat)",
-  "whyReason": "string (alasan mengapa skenario ini mungkin terjadi DAN kenapa confidence tidak lebih tinggi, 2-3 kalimat. Sebutkan news/event spesifik kalau ada di input.)",
+  "whyReason": "string (tepat dua poin singkat pada dua baris: • Dasar: bukti spesifik instrumen/timeframe yang tersedia; • Batasan: sumber ketidakpastian dan mengapa confidence tidak lebih tinggi. Sebut event/berita spesifik hanya bila tersedia di input.)",
   "failureConditions": "string (minimum 2 kondisi konkret yang membatalkan analisis ini, dipisah '; ' — contoh: 'Harga break support 4650; Volume turun > 30%; News fundamental berubah')",
   "fundamentalCitations": {
     "newsTitles": ["string (judul berita yang dirujuk — harus persis seperti di blok BERITA TERKINI RELEVAN, atau [] kalau tidak ada blok / tidak menyebut)"],
@@ -214,8 +218,11 @@ Aturan bahasa (KRITIS):
 
 Aturan output:
 - Confidence range realistis (max 80%), minimum range 10 poin
+- Gunakan semua ringkasan timeframe yang benar-benar tersedia di DATA TEKNIKAL / indicatorContext untuk menilai alignment/divergence. Bandingkan timeframe analisis dengan timeframe lebih tinggi yang disuplai dan sebut bukti spesifik; jangan mengarang timeframe/indikator yang tidak ada.
+- Tegaskan mengapa preferredSide lebih didukung oleh confluence teknikal/fundamental dan konteks multi-timeframe, sementara skenario opposite tetap kondisional, berbasis bukti, dan menyebut pemicu validasinya (bukan sekadar inversi mekanis atau probabilitas setara).
 - invalidationConditions HARUS berisi minimum 2 kondisi konkret (pisahkan dengan "; " atau bullet "• ") yang membuat tesis batal
-- uncertaintyNotes HARUS menjelaskan KENAPA confidence tidak lebih tinggi (faktor ketidakpastian utama)
+- uncertaintyNotes HARUS menjelaskan KENAPA confidence tidak lebih tinggi dalam TEPAT dua poin singkat dipisahkan newline: "• Dasar: ..." (bukti utama untuk instrumen dan timeframe ini) dan "• Batasan: ..." (ketidakpastian/konflik yang membatasi confidence). Masing-masing satu kalimat padat, bukan paragraf generik; jangan sembunyikan peringatan penting.
+- Jangan pakai narasi lintas-produk yang sama: hanya kaitkan harga, indikator, berita yang sudah terbit, dan event terjadwal yang benar-benar relevan dan disuplai untuk instrumen ini. Sebut hubungan kausal dengan skenario; akui data yang kosong/bertentangan. Event terjadwal bukan berita yang belum terbit: jangan mengarang hasilnya atau berita masa depan.
 - Sertakan konteks makro dan faktor fundamental relevan
 - WAJIB menyebut timeframe yang dianalisis secara eksplisit (mis. "Pada timeframe 1D...", "Bias bullish pada 1W...") di baseCase, bullishScenario, bearishScenario, opportunity, dan risk — supaya pengguna tahu bias ini untuk jangka pendek atau panjang. JANGAN hanya menulis "uptrend"/"downtrend" tanpa konteks timeframe.
 
@@ -237,12 +244,13 @@ Aturan WAJIB untuk fundamentalCitations (jejak provenance):
 
 Aturan WAJIB untuk tradePlan (saran level konkret):
 - WAJIB isi field "tradePlan" dengan harga konkret untuk SKENARIO BUY DAN SKENARIO SELL — keduanya, terlepas dari arah bias. Trader pro butuh peta level dua sisi.
-- ANCHOR semua harga ke "Harga terakhir" yang ada di blok DATA TEKNIKAL. Format harga sesuai instrumen (mis. 1.0857, 4650.50, 16275).
+- Buat skenario kondisional BUY dan SELL yang sama-sama konkret dan didukung bukti konteks, terlepas dari preferredSide. Kaitkan level tiap sisi pada support/resistance, swing, confluence, atau struktur candle yang benar-benar tersedia pada timeframe ini; jangan menyajikan dua skenario sebagai order aktif.
+- ANCHOR semua harga ke quote terkini / "Harga terakhir" pada DATA TEKNIKAL atau HARGA LIVE. Level harus masuk akal terhadap quote dan struktur timeframe, bukan angka arbitrer.
 - Untuk sisi BUY: entryZone = pullback ke confluence support / breakout di atas resistance kunci; stopLoss di bawah swing-low / invalidasi struktur HTF; takeProfit1 = resistance terdekat / measured move pertama; takeProfit2 = target lanjutan / extension. riskRewardRatio dihitung dari mid entry → TP1 vs SL.
 - Untuk sisi SELL: entryZone = pullback ke resistance / breakdown level; stopLoss di atas swing-high; TP1 = support terdekat; TP2 = support lanjutan.
 - rationale tiap sisi: 1 kalimat — sebutkan confluence yang dipakai (mis. "Konfluensi EMA200 4h + Fib 0.618 swing terakhir").
 - preferredSide: "buy" untuk bias bullish/bullish_strong, "sell" untuk bearish/bearish_strong, "wait" untuk neutral atau marketCondition volatile / event ★★★ window.
-- JIKA tidak ada anchor harga di DATA TEKNIKAL: preferredSide="wait", isi field harga deskriptif ("menunggu reaksi di area kunci"), riskRewardRatio "n/a".
+- Jika tidak ada quote / "Harga terakhir" yang andal: jangan mengarang angka. Gunakan preferredSide="wait" dan status pending yang jelas di entry, SL, TP1, TP2, dan rasio (mis. "Menunggu quote dan konfirmasi struktur; level belum dapat ditentukan"). Tegaskan bahwa entry belum tersedia sampai quote/anchor andal ada. Jangan pernah gunakan "n/a".
 - INI TETAP SARAN OBJEKTIF, BUKAN PERINTAH ORDER. Field "buy"/"sell" di tradePlan adalah label sisi skenario.
 
 Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys berikut:
@@ -261,7 +269,7 @@ Output HANYA objek JSON (tanpa markdown, tanpa penjelasan tambahan) dengan keys 
   "keyDriversFundamental": "string (faktor fundamental utama yang relevan — KAITKAN dengan sisi teknikal, JANGAN cuma daftar event)",
   "marketContext": "string (konteks makro/kondisi pasar saat ini)",
   "invalidationConditions": "string (minimum 2 kondisi konkret yang membatalkan tesis, dipisah '; ' — contoh: 'Break support 4650 dengan close H1; Volume drop > 30%; FOMC surprise hawkish')",
-  "uncertaintyNotes": "string (ketidakpastian utama dan KENAPA confidence tidak lebih tinggi, 1-2 kalimat)",
+  "uncertaintyNotes": "string (tepat dua poin singkat pada dua baris: • Dasar: bukti spesifik instrumen/timeframe yang tersedia; • Batasan: ketidakpastian utama dan KENAPA confidence tidak lebih tinggi)",
   "fundamentalCitations": {
     "newsTitles": ["string (judul berita yang dirujuk — persis seperti di blok BERITA, [] kalau tidak ada)"],
     "calendarEvents": ["string (nama event yang dirujuk — persis seperti di blok KALENDER, [] kalau tidak ada)"]
@@ -422,38 +430,53 @@ async function callOpenAI(
   userMessage: string,
   model: string,
   maxTokens?: number,
-  timeoutMs?: number,
+  timeoutMs: number = 25_000,
   tier: AICostTier = "free",
 ): Promise<{ data: unknown; usage: CallTokenUsage | null }> {
-  const request = TIER_CLIENTS[tier].chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userMessage },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.4,
-    max_tokens: maxTokens,
-  });
-  const response = timeoutMs && timeoutMs > 0
-    ? await Promise.race([
-        request,
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`OpenAI timeout after ${timeoutMs}ms`)), timeoutMs),
-        ),
-      ])
-    : await request;
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const request = TIER_CLIENTS[tier].chat.completions.create(
+      {
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.4,
+        max_tokens: maxTokens,
+      },
+      {
+        signal: controller.signal,
+        // Do not let the SDK's automatic retries outlive the generation's
+        // explicit request deadline.
+        maxRetries: 0,
+      },
+    );
+    const response = await Promise.race([
+      request,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          reject(new Error(`OpenAI timeout after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) throw new Error("No response from AI");
-  const usage = response.usage
-    ? {
-        promptTokens: response.usage.prompt_tokens,
-        completionTokens: response.usage.completion_tokens,
-        totalTokens: response.usage.total_tokens,
-      }
-    : null;
-  return { data: JSON.parse(content), usage };
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error("No response from AI");
+    const usage = response.usage
+      ? {
+          promptTokens: response.usage.prompt_tokens,
+          completionTokens: response.usage.completion_tokens,
+          totalTokens: response.usage.total_tokens,
+        }
+      : null;
+    return { data: JSON.parse(content), usage };
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 export function buildFastIntradayFallback(mode: "beginner" | "pro", timeframe: string): AIOutput {
@@ -525,8 +548,8 @@ export function buildFastIntradayFallback(mode: "beginner" | "pro", timeframe: s
 // levels, it routinely drifts out of sync with the numbers shown right above
 // it on the card ("perbandingan ratio yg dibawah suka salah"). We recompute it
 // from the model's OWN entry/SL/TP1 so the displayed ratio is always
-// internally consistent, and fall back to "n/a" when the levels are
-// descriptive (no parseable price) — the honest state for a wait/no-anchor plan.
+// internally consistent. Descriptive pending-entry plans use an explicit
+// pending status instead of a bare "n/a".
 // ---------------------------------------------------------------------------
 
 // Pull the representative price out of a free-text level. Entry zones are
@@ -557,8 +580,7 @@ export function parseLevelPrice(raw: string): number | null {
 // Returns null when any level is non-numeric or the risk leg is zero. When a
 // `side` is given, the levels must straddle the entry in the correct
 // direction (buy: SL below, TP above; sell: SL above, TP below) — otherwise
-// the plan is internally contradictory and we report "n/a" rather than a
-// misleading ratio.
+// the plan is internally contradictory and no ratio is reported.
 export function computeRiskReward(
   entryZone: string,
   stopLoss: string,
@@ -586,7 +608,7 @@ export function reconcileTradePlanRiskReward(plan: TradePlan): TradePlan {
     ...side,
     riskRewardRatio:
       computeRiskReward(side.entryZone, side.stopLoss, side.takeProfit1, dir) ??
-      "n/a",
+      "Belum dihitung — menunggu quote dan level entry yang dapat divalidasi",
   });
   return {
     ...plan,
@@ -595,50 +617,159 @@ export function reconcileTradePlanRiskReward(plan: TradePlan): TradePlan {
   };
 }
 
-// The model occasionally mixes up which side a set of levels belongs to —
-// e.g. a "buy" scenario whose stopLoss sits ABOVE entry and whose
-// takeProfit1/2 sit BELOW entry, which is a short's price structure wearing
-// a "buy" label. `computeRiskReward` already refuses to compute a ratio for
-// levels like that (falls back to "n/a"), but until now nothing stopped the
-// contradictory raw prices themselves from still being displayed. This
-// checks the same buy/sell straddle-direction rule and, when violated,
-// swaps the whole side for an honest "levels didn't check out, wait for a
-// fresh analysis" placeholder instead of showing numbers that point the
-// wrong way for the labeled side.
+// The model occasionally assigns a set of levels to the wrong side. Never
+// display contradictory numbers: replace only the failing side with an
+// explicit pending-entry description while preserving its valid counterpart.
 const INCONSISTENT_TRADE_PLAN_NOTE =
-  "Level untuk skenario ini tidak konsisten dari AI (arah SL/TP tidak sesuai sisi buy/sell) — tunggu re-analisa untuk skenario yang lebih akurat.";
+  "Level numerik skenario ini belum lolos validasi arah; entry masih pending sampai ada konfirmasi level yang konsisten.";
 
-// Purely descriptive levels (no numbers at all, e.g. the "wait for
-// confirmation" fallback) are a legitimate no-anchor plan, not a
-// contradiction — only numeric, mis-ordered levels count as inconsistent.
+const PENDING_PRICE_LEVEL =
+  "Menunggu quote dan konfirmasi struktur; level belum dapat ditentukan";
+
 function isTradePlanSideConsistent(
   side: TradeSide,
   dir: "buy" | "sell",
 ): boolean {
-  const entry = parseLevelPrice(side.entryZone);
-  const sl = parseLevelPrice(side.stopLoss);
-  const tp1 = parseLevelPrice(side.takeProfit1);
-  const tp2 = parseLevelPrice(side.takeProfit2);
-  if (entry === null || sl === null || tp1 === null) return true;
+  const prices = [
+    parseLevelPrice(side.entryZone),
+    parseLevelPrice(side.stopLoss),
+    parseLevelPrice(side.takeProfit1),
+    parseLevelPrice(side.takeProfit2),
+  ];
+  // Fully descriptive levels are legitimate only for a no-anchor, pending
+  // plan. Mixed numeric/descriptive fields are malformed and must be retried.
+  if (prices.every((price) => price === null)) return true;
+  if (prices.some((price) => price === null)) return false;
+  const [entry, sl, tp1, tp2] = prices as [number, number, number, number];
   if (dir === "buy") {
     if (!(sl < entry && tp1 > entry)) return false;
-    if (tp2 !== null && !(tp2 > tp1)) return false;
+    if (!(tp2 > tp1)) return false;
   } else {
     if (!(sl > entry && tp1 < entry)) return false;
-    if (tp2 !== null && !(tp2 < tp1)) return false;
+    if (!(tp2 < tp1)) return false;
   }
   return true;
 }
 
+/**
+ * Verify the paid output has two valid directional price maps when an anchor
+ * exists, and that it does not invent numbers when no reliable anchor exists.
+ * Returning a reason lets generateAnalysis request a focused correction.
+ */
+export function validateTradePlanQuality(
+  plan: TradePlan,
+  priceAnchor: number | null,
+  timeframe = "1D",
+  instrument = "",
+): { ok: true } | { ok: false; reason: string } {
+  const hasPriceAnchor =
+    typeof priceAnchor === "number" &&
+    Number.isFinite(priceAnchor) &&
+    priceAnchor > 0;
+  const crypto = isCryptoInstrument(instrument);
+  const proximityBounds: Record<string, [number, number]> = crypto
+    ? {
+        "1m": [0.75, 1.25],
+        "5m": [0.65, 1.35],
+        "15m": [0.6, 1.4],
+        "30m": [0.55, 1.45],
+        "1h": [0.55, 1.45],
+        "4h": [0.5, 1.5],
+        "1D": [0.35, 1.8],
+        "1W": [0.2, 2.5],
+      }
+    : {
+        "1m": [0.9, 1.1],
+        "5m": [0.85, 1.15],
+        "15m": [0.8, 1.2],
+        "30m": [0.78, 1.22],
+        "1h": [0.75, 1.25],
+        "4h": [0.65, 1.35],
+        "1D": [0.6, 1.4],
+        "1W": [0.4, 1.6],
+      };
+  const [minPriceFactor, maxPriceFactor] =
+    proximityBounds[timeframe] ?? proximityBounds["1D"]!;
+
+  for (const [dir, side] of [
+    ["buy", plan.buy],
+    ["sell", plan.sell],
+  ] as const) {
+    const values = [
+      side.entryZone,
+      side.stopLoss,
+      side.takeProfit1,
+      side.takeProfit2,
+    ];
+    const prices = values.map(parseLevelPrice);
+    if (!hasPriceAnchor) {
+      if (prices.some((price) => price !== null)) {
+        return {
+          ok: false,
+          reason: `Skenario ${dir} memuat angka tanpa quote / anchor harga yang andal.`,
+        };
+      }
+      if (values.some((value) => /\bn\/a\b/i.test(value)) ||
+          /\bn\/a\b/i.test(side.riskRewardRatio)) {
+        return {
+          ok: false,
+          reason: `Skenario ${dir} harus menjelaskan entry pending tanpa menggunakan n/a.`,
+        };
+      }
+      continue;
+    }
+    if (prices.some((price) => price === null)) {
+      return {
+        ok: false,
+        reason: `Skenario ${dir} wajib memiliki entry, SL, TP1, dan TP2 numerik yang valid.`,
+      };
+    }
+    if (!isTradePlanSideConsistent(side, dir)) {
+      return {
+        ok: false,
+        reason: `Urutan level skenario ${dir} salah: SL dan TP harus berada di sisi arah yang benar, dan TP2 harus lebih jauh dari TP1.`,
+      };
+    }
+    const lowerQuoteBound = priceAnchor! * minPriceFactor;
+    const upperQuoteBound = priceAnchor! * maxPriceFactor;
+    if (prices.some((price) =>
+      price! < lowerQuoteBound || price! > upperQuoteBound
+    )) {
+      return {
+        ok: false,
+        reason: `Level skenario ${dir} terlalu jauh dari quote ${priceAnchor} untuk timeframe ${timeframe}; gunakan level yang masih masuk akal terhadap harga saat ini dan struktur timeframe.`,
+      };
+    }
+    if (!computeRiskReward(
+      side.entryZone,
+      side.stopLoss,
+      side.takeProfit1,
+      dir,
+    )) {
+      return {
+        ok: false,
+        reason: `Rasio risiko/imbalan skenario ${dir} tidak dapat divalidasi dari level numerik.`,
+      };
+    }
+  }
+  return { ok: true };
+}
+
 export function sanitizeTradePlanLevels(plan: TradePlan): TradePlan {
   const sanitizeSide = (side: TradeSide, dir: "buy" | "sell"): TradeSide => {
-    if (isTradePlanSideConsistent(side, dir)) return side;
+    if (isTradePlanSideConsistent(side, dir)) {
+      const clean = { ...side };
+      for (const key of ["entryZone", "stopLoss", "takeProfit1", "takeProfit2", "riskRewardRatio", "rationale"] as const) {
+        if (/\bn\/a\b/i.test(clean[key])) clean[key] = PENDING_PRICE_LEVEL;
+      }
+      return clean;
+    }
     return {
-      entryZone: "tunggu konfirmasi ulang",
-      stopLoss: "n/a",
-      takeProfit1: "n/a",
-      takeProfit2: "n/a",
-      riskRewardRatio: "n/a",
+      entryZone: PENDING_PRICE_LEVEL,
+      stopLoss: PENDING_PRICE_LEVEL,
+      takeProfit1: PENDING_PRICE_LEVEL,
+      takeProfit2: PENDING_PRICE_LEVEL,
+      riskRewardRatio: "Belum dihitung — entry masih pending sampai level tervalidasi",
       rationale: INCONSISTENT_TRADE_PLAN_NOTE,
     };
   };
@@ -685,6 +816,7 @@ export async function generateAnalysis(
   indicatorContext?: string,
   fundamentalSnapshot?: FundamentalSnapshot | null,
   livePrice?: number | null,
+  selectedTimeframePrice?: number | null,
   tier: AICostTier = "free",
 ): Promise<GenerateAnalysisResult> {
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
@@ -700,7 +832,7 @@ export async function generateAnalysis(
   // shorter window (previously 2800ms) made the fallback fire on nearly
   // every request. 9s keeps 1m/5m meaningfully faster than the unbounded
   // default timeframes while giving the real call a fair chance to land.
-  const fastIntradayTimeoutMs = isFastIntraday ? 9000 : undefined;
+  const analysisTimeoutMs = isFastIntraday ? 9_000 : 25_000;
   const now = new Date();
   const nowIsoUtc = now.toISOString().replace(/\.\d{3}Z$/, "Z");
   const nowJakarta = now.toLocaleString("id-ID", {
@@ -787,6 +919,14 @@ export async function generateAnalysis(
   const maxTokens = isFastIntraday ? 1400 : undefined;
   const schema = mode === "beginner" ? BeginnerAIOutputSchema : ProAIOutputSchema;
   const snapshot = fundamentalSnapshot ?? null;
+  const priceAnchor =
+    typeof livePrice === "number" && Number.isFinite(livePrice) && livePrice > 0
+      ? livePrice
+      : typeof selectedTimeframePrice === "number" &&
+          Number.isFinite(selectedTimeframePrice) &&
+          selectedTimeframePrice > 0
+        ? selectedTimeframePrice
+        : null;
 
   const parseAttempt = (raw: unknown): AIOutput => {
     const parsed = schema.safeParse(raw);
@@ -796,12 +936,8 @@ export async function generateAnalysis(
     return parsed.data;
   };
 
-  // Accumulates usage across every `callOpenAI` call this invocation
-  // makes (1st attempt + up to 2 retries) so the caller can persist one
-  // token-usage row per generation regardless of which return path is
-  // taken — including the synthetic fast-intraday fallback, since real
-  // tokens may have been spent before that path was hit (e.g. a schema-
-  // validation failure on a completed call).
+  // Accumulates usage across every `callOpenAI` call this invocation makes
+  // (initial attempt plus any corrective retries) for persistence.
   const usage: AnalysisTokenUsage = {
     promptTokens: 0,
     completionTokens: 0,
@@ -838,33 +974,21 @@ export async function generateAnalysis(
       baseUserMessage,
       selectedModel,
       maxTokens,
-      fastIntradayTimeoutMs,
+      analysisTimeoutMs,
     );
   } catch (e) {
-    if (isFastIntraday) {
-      logger.warn(
-        { err: e, instrument, timeframe, timeoutMs: fastIntradayTimeoutMs },
-        "Fast-intraday OpenAI call failed/timed out — serving generic fallback",
-      );
-      return wrap(buildFastIntradayFallback(mode, timeframe));
-    }
+    logger.warn(
+      { err: e, instrument, timeframe, timeoutMs: analysisTimeoutMs },
+      "OpenAI analysis call failed",
+    );
     throw e;
   }
   let parsed: AIOutput;
   try {
     parsed = parseAttempt(raw);
   } catch (e) {
-    if (isFastIntraday) {
-      logger.warn(
-        { err: e, instrument, timeframe },
-        "Fast-intraday OpenAI output failed schema validation — serving generic fallback",
-      );
-      return wrap(buildFastIntradayFallback(mode, timeframe));
-    }
     // Validation failed on first try — rerun with a corrective hint
-    // before giving up. Schema errors are usually missing or wrong
-    // type fields (e.g. confidenceMax dropped) and one nudged retry
-    // typically fixes them without paying for a third call.
+    // on every timeframe before giving up.
     const correction =
       "\n\n[KOREKSI WAJIB] Output JSON sebelumnya gagal validasi. Pastikan SEMUA field wajib hadir dengan tipe & enum yang benar, dan kembalikan HANYA objek JSON tanpa markdown.";
     raw = await trackedCallOpenAI(
@@ -872,9 +996,39 @@ export async function generateAnalysis(
       baseUserMessage + correction,
       selectedModel,
       maxTokens,
-      fastIntradayTimeoutMs,
+      analysisTimeoutMs,
     );
     parsed = parseAttempt(raw);
+  }
+
+  const tradePlanCheck = validateTradePlanQuality(
+    parsed.tradePlan,
+    priceAnchor,
+    timeframe,
+    instrument,
+  );
+  if (!tradePlanCheck.ok) {
+    const correction = `\n\n[KOREKSI WAJIB — LEVEL TRADE PLAN] ${tradePlanCheck.reason} Pertahankan sisi yang levelnya sudah valid dan perbaiki hanya sisi yang gagal validasi, lalu verifikasi kedua sisi BUY dan SELL. Jika quote tersedia, isi entry, SL, TP1, dan TP2 dengan angka yang berurutan benar untuk arahnya (BUY: SL < entry < TP1 < TP2; SELL: TP2 < TP1 < entry < SL), relevan terhadap quote dan bukti konteks, serta hitung rasio dari entry/SL/TP1. Jika tidak tersedia anchor harga andal, jangan gunakan angka; jelaskan entry pending dan level belum dapat ditentukan tanpa memakai "n/a". Kembalikan seluruh objek JSON.`;
+    const retryRaw = await trackedCallOpenAI(
+      effectiveSystemPrompt,
+      baseUserMessage + correction,
+      selectedModel,
+      maxTokens,
+      analysisTimeoutMs,
+    );
+    const retryParsed = parseAttempt(retryRaw);
+    const retryTradePlanCheck = validateTradePlanQuality(
+      retryParsed.tradePlan,
+      priceAnchor,
+      timeframe,
+      instrument,
+    );
+    if (!retryTradePlanCheck.ok) {
+      throw new Error(
+        `AI trade-plan quality failed after retry: ${retryTradePlanCheck.reason}`,
+      );
+    }
+    parsed = retryParsed;
   }
 
   // Citation grounding check. Done after schema validation so we know
@@ -885,22 +1039,26 @@ export async function generateAnalysis(
   );
 
   if (!citationCheck.ok) {
-    if (isFastIntraday) {
-      logger.warn(
-        { instrument, timeframe, reason: citationCheck.reason },
-        "Fast-intraday OpenAI output failed citation grounding — serving generic fallback",
-      );
-      return wrap(buildFastIntradayFallback(mode, timeframe));
-    }
     const correction = `\n\n[KOREKSI WAJIB — GROUNDING] ${citationCheck.reason} Output ulang analisis menggunakan HANYA judul berita / nama event yang BENAR-BENAR ada di blok BERITA TERKINI RELEVAN dan KALENDER EKONOMI RELEVAN di atas. Jika tidak ada item yang relevan, kosongkan fundamentalCitations.newsTitles / fundamentalCitations.calendarEvents dan tulis "Tidak ada katalis fundamental signifikan terdeteksi pada window ini" pada blok fundamental yang sesuai.`;
     const retryRaw = await trackedCallOpenAI(
       effectiveSystemPrompt,
       baseUserMessage + correction,
       selectedModel,
       maxTokens,
-      fastIntradayTimeoutMs,
+      analysisTimeoutMs,
     );
     const retryParsed = parseAttempt(retryRaw);
+    const retryTradePlanCheck = validateTradePlanQuality(
+      retryParsed.tradePlan,
+      priceAnchor,
+      timeframe,
+      instrument,
+    );
+    if (!retryTradePlanCheck.ok) {
+      throw new Error(
+        `AI trade-plan quality failed after grounding retry: ${retryTradePlanCheck.reason}`,
+      );
+    }
     const retryCheck = validateFundamentalCitations(
       retryParsed.fundamentalCitations,
       snapshot,

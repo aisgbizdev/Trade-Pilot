@@ -2,7 +2,6 @@ import { useLocation, Link } from "wouter";
 import {
   ChevronLeft,
   Clock,
-  AlertTriangle,
   ThumbsUp,
   ThumbsDown,
   Loader2,
@@ -13,19 +12,20 @@ import {
   Minus,
   ChevronDown,
   ChevronRight,
-  ShieldAlert,
   Target,
-  AlertOctagon,
   HelpCircle,
   Newspaper,
   CalendarClock,
   ExternalLink,
   Copy,
   Check,
+  Image as ImageIcon,
   Activity,
   Plus,
+  Printer,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { ExpandableExplanation } from "@/components/expandable-explanation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +41,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Layout } from "@/components/layout";
 import { LogTradeDialog } from "@/components/log-trade-dialog";
@@ -49,12 +50,12 @@ import { MarketContextSummary } from "@/components/market-context-summary";
 import { OutcomeBadge, type OutcomeStatus } from "@/components/outcome-badge";
 import { AnalysisChartSection } from "@/components/analysis-chart-section";
 import { SignalSpeedometer } from "@/components/signal-speedometer";
-import { LivePriceChip } from "@/components/live-price-chip";
 import { TechnicalIndicatorsPanel } from "@/components/technical-indicators-panel";
 import type { IndicatorTimeframe } from "@/hooks/use-technical-indicators";
 import {
   useGetAnalysis,
   getGetAnalysisQueryKey,
+  getGetProgressionSummaryQueryKey,
   useSubmitFeedback,
   useRefreshFundamentals,
   useGetAnalysisAlerts,
@@ -92,9 +93,10 @@ import { useTranslation } from "@/lib/i18n";
 import { useRefreshAnalysis } from "@/hooks/use-refresh-analysis";
 import { useTrackEvent } from "@/hooks/use-track-event";
 import { safeHttpUrl } from "@/lib/safe-url";
+import { buildConfidencePrintHtml, buildConfidenceShareText, renderConfidenceSharePng, type ConfidenceShareData } from "@/lib/confidence-share";
+import { renderChartSharePng } from "@/lib/chart-share";
 import { AdaptivePositionPlan } from "@/components/adaptive-position-plan";
 import { isAdaptivePositionInstrument } from "@/lib/adaptive-position-plan";
-import { prioritizeNewsSources } from "@/lib/news-source-priority";
 import { AnalysisGuideLink } from "@/components/analysis-guide-link";
 import { useLiveQuoteSnapshotByInstrument } from "@/hooks/use-live-quotes";
 
@@ -132,7 +134,7 @@ function TimeframeRiskDialog({
             <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
             {t.risk_map.title}
           </DialogTitle>
-          <DialogDescription>{t.risk_map.desc}</DialogDescription>
+          <DialogDescription className="text-xs leading-relaxed text-muted-foreground">{t.risk_map.desc}</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -189,7 +191,7 @@ function TimeframeRiskDialog({
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground break-words">
+                      <p className="mt-1 text-xs text-muted-foreground break-words">
                         {unavailable
                           ? t.risk_map.category_unavailable
                           : `${tf.riskScore}/100 · ${t.risk_map[`recommendation_${tf.recommendation}` as keyof typeof t.risk_map]}`}
@@ -213,7 +215,7 @@ function TimeframeRiskDialog({
                 </div>
               );
             })}
-            <p className="text-center text-[10px] italic text-muted-foreground">{t.risk_map.note_relative_risk}</p>
+            <p className="text-center text-xs italic text-muted-foreground">{t.risk_map.note_relative_risk}</p>
           </div>
         ) : null}
       </DialogContent>
@@ -403,7 +405,7 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
         <span>{t.analysis_detail.bias_neutral}</span>
         <span>{t.analysis_detail.bias_bullish_strong}</span>
       </div>
-      <p className="text-[11px] text-muted-foreground italic leading-snug">
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
         {t.analysis_detail.bias_subtitle}
       </p>
     </div>
@@ -432,61 +434,6 @@ function ValidityBadge({ validUntil }: { validUntil: string }) {
       <Clock className="w-4 h-4" />
       <span className="text-xs font-medium">{t.analysis_detail.validity_expired}</span>
     </div>
-  );
-}
-
-function narrativePreview(content: string): string {
-  const preview = content.replace(/\s+/g, " ").trim();
-  return preview.length > 120 ? `${preview.slice(0, 120).trimEnd()}…` : preview;
-}
-
-function NarrativeDisclosure({
-  title,
-  content,
-  citations,
-  open,
-  onOpenChange,
-  testId,
-  t,
-}: {
-  title: string;
-  content?: string | null;
-  citations?: React.ReactNode;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  testId: string;
-  t: T;
-}) {
-  if (!content) return null;
-  return (
-    <Collapsible open={open} onOpenChange={onOpenChange} data-testid={testId}>
-      <CollapsibleTrigger
-        className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        data-testid={`${testId}-trigger`}
-        aria-label={`${open ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${title}`}
-      >
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-foreground">{title}</span>
-          {!open && (
-            <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted-foreground">
-              {narrativePreview(content)}
-            </span>
-          )}
-        </span>
-        {open ? (
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        ) : (
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        )}
-      </CollapsibleTrigger>
-      <CollapsibleContent
-        className="px-3 pb-3 pt-1"
-        data-testid={`${testId}-content`}
-      >
-        <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{content}</p>
-        {citations}
-      </CollapsibleContent>
-    </Collapsible>
   );
 }
 
@@ -550,17 +497,14 @@ function findCitedEvent(
 // view + briefly highlight it. Falls back to a no-op when the target
 // isn't on the page (e.g. AI cited a row that didn't survive into the
 // persisted snapshot — rare but possible).
-function scrollToCitation(id: string): void {
+function scrollToCitation(id: string, kind: "news" | "calendar"): void {
   if (typeof document === "undefined") return;
-  const el = document.getElementById(id);
-  if (!el) return;
-  const collapsedContent = el.closest<HTMLElement>('[data-state="closed"]');
-  const trigger = collapsedContent?.previousElementSibling;
-  if (trigger instanceof HTMLElement && trigger.getAttribute("aria-expanded") === "false") {
-    trigger.click();
-  }
+  const trigger = document.querySelector<HTMLButtonElement>(`[data-testid="fundamental-${kind}-toggle"]`);
+  if (trigger?.getAttribute("aria-expanded") === "false") trigger.click();
 
   window.requestAnimationFrame(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     // Add a one-shot highlight ring so the eye lands on the row even if
     // the card was already on screen and didn't need to scroll.
@@ -633,6 +577,7 @@ function CitationChips({
             <a
               key={slug}
               href={safeUrl}
+              onClick={() => scrollToCitation(slug, "news")}
               target="_blank"
               rel="noopener noreferrer"
               className={className}
@@ -649,7 +594,7 @@ function CitationChips({
           <button
             key={slug}
             type="button"
-            onClick={() => scrollToCitation(slug)}
+            onClick={() => scrollToCitation(slug, "news")}
             className={className}
             data-testid="citation-chip-news"
             title={item.title}
@@ -667,7 +612,7 @@ function CitationChips({
           <button
             key={slug}
             type="button"
-            onClick={() => scrollToCitation(slug)}
+            onClick={() => scrollToCitation(slug, "calendar")}
             className={cn(
               "inline-flex items-center gap-1 max-w-[220px] truncate text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors",
               eventImpactClass(ev.impact),
@@ -708,6 +653,10 @@ function scenarioCText(bias: BiasKey, t: T): string {
 }
 
 const QUICK_TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
+const RISK_MAP_INSTRUMENTS = new Set([
+  "XAU/USD", "BRENT", "HSI", "NIKKEI",
+  "EUR/USD", "GBP/USD", "AUD/USD", "USD/JPY",
+]);
 
 const INDICATOR_TIMEFRAMES = new Set<IndicatorTimeframe>(["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"]);
 function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
@@ -719,8 +668,9 @@ function asIndicatorTimeframe(tf: string): IndicatorTimeframe | null {
 function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: string; t: T }) {
   const [copied, setCopied] = useState<"buy" | "sell" | null>(null);
   const isFastIntraday = timeframe === "1m" || timeframe === "5m";
+  const isUnavailable = (raw: string): boolean => /^(?:n\/a|na|—|-)$/i.test(raw.trim());
   const unavailableLevel = (raw: string, replacement: string): string =>
-    isFastIntraday && /^(?:n\/a|na|—|-)$/i.test(raw.trim()) ? replacement : raw;
+    isUnavailable(raw) ? replacement : raw;
   const displaySide = (side: TradeSide): TradeSide => ({
     ...side,
     entryZone: unavailableLevel(side.entryZone, t.analysis_detail.fast_plan_entry_pending),
@@ -759,6 +709,13 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
 
   const renderSide = (side: TradeSide, kind: "buy" | "sell") => {
     const visibleSide = displaySide(side);
+    const priceFields = [side.entryZone, side.stopLoss, side.takeProfit1, side.takeProfit2];
+    const pending = priceFields.some((raw) =>
+      isUnavailable(raw) ||
+      !/\d/.test(raw) ||
+      /\b(menunggu|tunggu|belum|pending|await|wait for|not available)\b/i.test(raw),
+    ) || isUnavailable(side.riskRewardRatio) ||
+      !/\b1:\d+(?:\.\d+)?\b/.test(side.riskRewardRatio);
     const accent =
       kind === "buy"
         ? "border-l-emerald-500 dark:border-l-emerald-400"
@@ -786,6 +743,11 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
             {kind === "buy" ? t.analysis_detail.trade_plan_side_buy : t.analysis_detail.trade_plan_side_sell}
           </h4>
         </div>
+        {pending && (
+          <p className="mt-1.5 text-[11px] leading-snug text-amber-700 dark:text-amber-300" data-testid={`trade-plan-${kind}-pending`}>
+            {t.analysis_detail.fast_plan_wait_title} {t.analysis_detail.fast_plan_entry_pending}
+          </p>
+        )}
         <dl className="mt-1.5 grid grid-cols-2 gap-x-2.5 gap-y-1 text-[11px]">
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_entry}</dt>
           <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-entry`}>{visibleSide.entryZone}</dd>
@@ -798,24 +760,27 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
           <dt className="text-muted-foreground">{t.analysis_detail.trade_plan_rr}</dt>
           <dd className="font-semibold text-foreground tabular-nums text-right" data-testid={`trade-plan-${kind}-rr`}>{visibleSide.riskRewardRatio}</dd>
         </dl>
-        <div className="mt-auto min-h-[2.75rem] border-t border-border/60 pt-1">
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            <span className="font-semibold text-foreground/80">{t.analysis_detail.trade_plan_rationale}:</span>{" "}
+        <div className="relative mt-auto border-t border-border/60 pt-1" data-testid={`trade-plan-actions-${kind}`}>
+          <ExpandableExplanation
+            label={t.analysis_detail.trade_plan_rationale}
+            className={!pending ? "[&>summary]:pr-28" : undefined}
+            testId={`trade-plan-reason-${kind}`}
+          >
             {side.rationale}
-          </p>
+          </ExpandableExplanation>
+          {!pending && <button
+            type="button"
+            onClick={() => copyLevels(side, kind)}
+            className="absolute right-0 top-1 inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            data-testid={`button-copy-levels-${kind}`}
+          >
+            {copied === kind ? (
+              <><Check className="h-3.5 w-3.5 text-green-500" aria-hidden="true" /><span className="text-green-500">{t.analysis_detail.copy_levels_copied}</span></>
+            ) : (
+              <><Copy className="h-3.5 w-3.5" aria-hidden="true" /><span>{t.analysis_detail.copy_levels}</span></>
+            )}
+          </button>}
         </div>
-        <button
-          type="button"
-          onClick={() => copyLevels(side, kind)}
-          className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-          data-testid={`button-copy-levels-${kind}`}
-        >
-          {copied === kind ? (
-            <><Check className="w-3 h-3 text-green-500" /><span className="text-green-500">{t.analysis_detail.copy_levels_copied}</span></>
-          ) : (
-            <><Copy className="w-3 h-3" /><span>{t.analysis_detail.copy_levels}</span></>
-          )}
-        </button>
       </div>
     );
   };
@@ -828,9 +793,9 @@ function TradePlanCard({ plan, timeframe, t }: { plan: TradePlan; timeframe: str
             <Target className="w-3.5 h-3.5 text-primary" />
             {t.analysis_detail.trade_plan_title}
           </h3>
-          <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+          <ExpandableExplanation inline className="mt-0.5">
             {t.analysis_detail.trade_plan_subtitle}
-          </p>
+          </ExpandableExplanation>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <span
@@ -1230,10 +1195,12 @@ function AnalysisAlertsCard({
   t: T;
 }) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const trackEvent = useTrackEvent();
   const queryClient = useQueryClient();
   const statusQuery = useGetAnalysisAlerts(analysisId);
   const pushStatusQuery = useGetPushSubscriptionStatus();
+  const [alertError, setAlertError] = useState<"unavailable" | "retry" | null>(null);
   const armMutation = useArmAnalysisAlerts();
   const cancelMutation = useCancelAnalysisAlerts();
 
@@ -1249,22 +1216,24 @@ function AnalysisAlertsCard({
   const handleToggle = (checked: boolean) => {
     if (busy) return;
     if (checked) {
-      if (!hasPush) {
-        toast({ title: t.analysis_detail.alerts_no_push, variant: "destructive" });
+      if (pushStatusQuery.isPending || pushStatusQuery.isError) {
+        setAlertError("retry");
         return;
       }
+      if (!hasPush) return;
+      setAlertError(null);
       armMutation.mutate(
         { id: analysisId },
         {
           onSuccess: () => {
+            setAlertError(null);
             trackEvent("alert_armed", { analysisId });
             invalidate();
           },
-          onError: () =>
-            toast({
-              title: t.analysis_detail.alerts_arm_error,
-              variant: "destructive",
-            }),
+          onError: (error) => {
+            setAlertError((error as { status?: number }).status === 422 ? "unavailable" : "retry");
+            invalidate();
+          },
         },
       );
     } else {
@@ -1340,11 +1309,30 @@ function AnalysisAlertsCard({
         <Switch
           checked={enabled}
           onCheckedChange={handleToggle}
-          disabled={busy || statusQuery.isLoading}
+          disabled={busy || statusQuery.isLoading || (!enabled && pushStatusQuery.isSuccess && !hasPush)}
           data-testid="switch-price-alerts"
           aria-label={enabled ? t.analysis_detail.alerts_on : t.analysis_detail.alerts_off}
+          aria-describedby={!enabled && pushStatusQuery.isSuccess && !hasPush ? "price-alerts-setup-hint" : undefined}
         />
       </div>
+      {pushStatusQuery.isSuccess && !hasPush && (
+        <div className="space-y-2 text-xs text-muted-foreground" data-testid="price-alerts-setup">
+          <p id="price-alerts-setup-hint">{t.analysis_detail.alerts_no_push}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            data-testid="button-enable-alert-notifications"
+            onClick={() => setLocation(`/notifications?returnTo=${encodeURIComponent(`/analyses/${analysisId}`)}#settings`)}
+          >
+            {t.analysis_detail.alerts_enable_notifications}
+          </Button>
+        </div>
+      )}
+      {alertError && (
+        <div className="text-xs text-destructive space-y-2" role="alert" data-testid="price-alerts-error">
+          <p>{alertError === "unavailable" ? t.analysis_detail.alerts_arm_error : t.analysis_detail.alerts_retry_error}</p>
+        </div>
+      )}
       <div className="flex items-center gap-2 flex-wrap" data-testid="price-alerts-summary">
         <span
           className={cn(
@@ -1408,7 +1396,12 @@ function FundamentalContextCard({
   isRefreshing: boolean;
   refreshState: { refreshedAt: string; drift: FundamentalDrift } | null;
 }) {
-  const news = prioritizeNewsSources(ctx.newsItems ?? [], 3);
+  const [openSection, setOpenSection] = useState<"news" | "calendar" | null>(null);
+  const newsOpen = openSection === "news";
+  const calendarOpen = openSection === "calendar";
+  // The saved snapshot is exactly what the AI saw; do not reorder it in the
+  // audit view or a citation could point to an item no longer displayed.
+  const news = (ctx.newsItems ?? []).slice(0, 5);
   const events = (ctx.calendarEvents ?? []).slice(0, 5);
   const refreshButton = (
     <Button
@@ -1438,29 +1431,10 @@ function FundamentalContextCard({
     <FundamentalDriftBanner state={refreshState} t={t} lang={lang} />
   ) : null;
 
-  if (news.length === 0 && events.length === 0) {
-    return (
-      <Card className="p-4 space-y-2" data-testid="card-fundamental-context">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Newspaper className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-bold text-foreground">
-              {t.analysis_detail.fundamental_context_title}
-            </h3>
-          </div>
-          {refreshButton}
-        </div>
-        {driftBanner}
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          {t.analysis_detail.fundamental_empty.replace("{instrument}", instrument)}
-        </p>
-      </Card>
-    );
-  }
   return (
     <Card className="p-4 space-y-4" data-testid="card-fundamental-context">
       <div>
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <Newspaper className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-bold text-foreground">
@@ -1469,25 +1443,46 @@ function FundamentalContextCard({
           </div>
           {refreshButton}
         </div>
-        <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+        <ExpandableExplanation inline className="mt-0.5">
           {t.analysis_detail.fundamental_context_subtitle}
-        </p>
+        </ExpandableExplanation>
       </div>
 
       {driftBanner}
+      {news.length === 0 && events.length === 0 && (
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t.analysis_detail.fundamental_empty.replace("{instrument}", instrument)}
+        </p>
+      )}
 
-      {news.length > 0 && (
-        <section className="px-2" data-testid="fundamental-news">
-          <div className="flex items-center gap-1.5 py-2">
-            <Newspaper className="w-3.5 h-3.5 shrink-0" />
-            <h4 className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
-              {t.analysis_detail.fundamental_news_title}
-            </h4>
-            <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-              ({news.length})
-            </span>
-          </div>
-          <div className="pb-1 pt-1" data-testid="fundamental-news-list">
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label={t.analysis_detail.fundamental_context_title} data-testid="fundamental-section-buttons">
+        <button type="button" id="fundamental-news-toggle-button" data-testid="fundamental-news-toggle"
+          aria-expanded={newsOpen} aria-controls="fundamental-news-list"
+          onClick={() => setOpenSection(newsOpen ? null : "news")}
+          className={cn("flex min-h-12 min-w-0 items-center gap-1.5 rounded-md border px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            newsOpen ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50")}>
+          <Newspaper className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 text-xs font-semibold leading-tight text-foreground">
+            {t.analysis_detail.fundamental_news_title}
+          </span>
+          {newsOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+        </button>
+        <button type="button" id="fundamental-calendar-toggle-button" data-testid="fundamental-calendar-toggle"
+          aria-expanded={calendarOpen} aria-controls="fundamental-calendar-list"
+          onClick={() => setOpenSection(calendarOpen ? null : "calendar")}
+          className={cn("flex min-h-12 min-w-0 items-center gap-1.5 rounded-md border px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            calendarOpen ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50")}>
+          <CalendarClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 text-xs font-semibold leading-tight text-foreground">
+            {t.analysis_detail.fundamental_calendar_title}
+          </span>
+          {calendarOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+        </button>
+      </div>
+      {newsOpen && (
+        <section id="fundamental-news-list" role="region" aria-labelledby="fundamental-news-toggle-button"
+          className="min-w-0 px-2 pb-1" data-testid="fundamental-news-list">
+            {news.length === 0 ? <p className="text-xs text-muted-foreground">{t.analysis_detail.fundamental_news_empty}</p> :
             <ul className="space-y-2">
               {news.map((n) => (
                 <FundamentalNewsRow
@@ -1499,22 +1494,13 @@ function FundamentalContextCard({
                 />
               ))}
             </ul>
-          </div>
+            }
         </section>
       )}
-
-      {events.length > 0 && (
-        <section className="px-2" data-testid="fundamental-calendar">
-          <div className="flex items-center gap-1.5 py-2">
-            <CalendarClock className="w-3.5 h-3.5 shrink-0" />
-            <h4 className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/80">
-              {t.analysis_detail.fundamental_calendar_title}
-            </h4>
-            <span className="shrink-0 text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-              ({events.length})
-            </span>
-          </div>
-          <div className="pb-1 pt-1" data-testid="fundamental-calendar-list">
+      {calendarOpen && (
+        <section id="fundamental-calendar-list" role="region" aria-labelledby="fundamental-calendar-toggle-button"
+          className="min-w-0 px-2 pb-1" data-testid="fundamental-calendar-list">
+            {events.length === 0 ? <p className="text-xs text-muted-foreground">{t.analysis_detail.fundamental_calendar_empty}</p> :
             <ul className="space-y-2">
               {events.map((e, i) => (
                 <FundamentalCalendarRow
@@ -1525,7 +1511,7 @@ function FundamentalContextCard({
                 />
               ))}
             </ul>
-          </div>
+            }
         </section>
       )}
     </Card>
@@ -1819,9 +1805,7 @@ export default function AnalysisDetailPage({
   // bleed into analysis #42.
   useEffect(() => {
     setFundamentalRefresh(null);
-    setOpenScenario("a");
-    setOpenProFactor(null);
-    setExecutionInsightOpen(false);
+    setNonAdaptiveDetailsOpen(false);
   }, [id]);
 
   const [feedbackType, setFeedbackType] = useState<"useful" | "not_useful" | null>(null);
@@ -1836,16 +1820,13 @@ export default function AnalysisDetailPage({
   const [quickTimeframeStatus, setQuickTimeframeStatus] = useState<
     "idle" | "scheduled" | "loading" | "error"
   >("idle");
-  const [openScenario, setOpenScenario] = useState<"a" | "b" | "c" | null>("a");
-  const [openProFactor, setOpenProFactor] = useState<
-    "technical" | "fundamental" | "market" | null
-  >(null);
-  const [executionInsightOpen, setExecutionInsightOpen] = useState(false);
-  const [invalidationOpen, setInvalidationOpen] = useState(false);
-  const [opportunityOpen, setOpportunityOpen] = useState(false);
-  const [riskOpen, setRiskOpen] = useState(false);
-  const [scenariosOpen, setScenariosOpen] = useState(false);
-  const [proDetailsOpen, setProDetailsOpen] = useState(false);
+  const [nonAdaptiveDetailsOpen, setNonAdaptiveDetailsOpen] = useState(false);
+  const [nonAdaptiveChart, setNonAdaptiveChart] = useState<{
+    key: string;
+    status: "loading" | "ready" | "unavailable";
+    url?: string;
+    description?: string;
+  } | null>(null);
   const quickTimeframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickTimeframeTargetRef = useRef<string | null>(null);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -2011,6 +1992,7 @@ export default function AnalysisDetailPage({
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetAnalysisQueryKey(id) });
+      queryClient.invalidateQueries({ queryKey: getGetProgressionSummaryQueryKey() });
       trackEvent("feedback_submitted", { analysisId: id });
       setFeedbackSubmitted(true);
       toast({ title: t.analysis_detail.feedback_saved });
@@ -2057,6 +2039,75 @@ export default function AnalysisDetailPage({
   const confidenceReason = isBeginnerMode
     ? analysis.whyReason
     : analysis.uncertaintyNotes;
+  const confidenceBasis = isBeginnerMode ? analysis.mainScenario : analysis.keyDriversTechnical;
+  const confidenceFundamentals = isBeginnerMode ? null : analysis.keyDriversFundamental;
+  const confidenceSections: ConfidenceShareData["sections"] = [];
+  if (confidenceBasis) confidenceSections.push({
+    title: isBeginnerMode ? t.analysis_detail.confidence_reason_basis : t.analysis_detail.confidence_reason_technical,
+    body: confidenceBasis,
+  });
+  if (confidenceFundamentals) confidenceSections.push({
+    title: t.analysis_detail.confidence_reason_fundamental,
+    body: confidenceFundamentals,
+  });
+  if (analysis.risk) confidenceSections.push({ title: t.analysis_detail.confidence_reason_risk, body: analysis.risk });
+  if (invalidationItems.length) confidenceSections.push({
+    title: t.analysis_detail.confidence_reason_invalidation,
+    body: invalidationItems.slice(0, 3).map((item) => `• ${item}`).join("\n"),
+  });
+  const citedNews = (analysis.fundamentalCitations?.newsTitles ?? []).flatMap((title) => {
+    const item = findCitedNews(title, analysis.fundamentalContext?.newsItems ?? []);
+    return item ? [{ label: item.title, url: safeHttpUrl(item.url) ?? undefined }] : [];
+  });
+  const citedEvents = (analysis.fundamentalCitations?.calendarEvents ?? []).flatMap((name) => {
+    const hit = findCitedEvent(name, analysis.fundamentalContext?.calendarEvents ?? []);
+    return hit ? [{ label: `${hit.ev.event} · ${hit.ev.date}` }] : [];
+  });
+  const confidenceShareData: ConfidenceShareData = {
+    title: t.analysis_detail.confidence_reason_label,
+    instrument: analysis.instrument,
+    timeframe: analysis.timeframe,
+    analyzedAt: format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
+      locale: lang === "id" ? idLocale : undefined,
+    }),
+    summary: confidenceReason ?? "",
+    sections: confidenceSections,
+    sourcesTitle: t.analysis_detail.citations_label,
+    sources: [...citedNews, ...citedEvents],
+    disclaimer: t.analysis_detail.confidence_share_disclaimer,
+  };
+  const copyConfidenceText = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(buildConfidenceShareText(confidenceShareData));
+      toast({ title: t.analysis_detail.confidence_share_text_copied });
+    } catch {
+      toast({ title: t.analysis_detail.confidence_share_failed, variant: "destructive" });
+    }
+  };
+  const copyConfidenceImage = async () => {
+    try {
+      const { blob, url } = renderConfidenceSharePng(confidenceShareData);
+      if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast({ title: t.analysis_detail.confidence_share_image_copied });
+          return;
+        } catch {
+          // iOS and some browsers reject image clipboard writes; offer a PNG instead.
+        }
+      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tradepilot-${analysis.instrument.replace(/[^a-z0-9-]/gi, "-")}-${analysis.timeframe}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast({ title: t.analysis_detail.confidence_share_image_downloaded });
+    } catch {
+      toast({ title: t.analysis_detail.confidence_share_failed, variant: "destructive" });
+    }
+  };
 
   const scenarioAContent = isBeginnerMode ? analysis.mainScenario : analysis.baseCase;
   const scenarioBContent = isBeginnerMode
@@ -2066,7 +2117,226 @@ export default function AnalysisDetailPage({
         : analysis.bearishScenario);
 
   const tradePlan = analysis.tradePlan ?? null;
+  const hasAdaptive = Boolean(tradePlan && isAdaptivePositionInstrument(analysis.instrument));
+  const chartKey = `${analysis.id}:${lang}`;
+  const renderNonAdaptiveChart = async () => {
+    const result = await renderChartSharePng({
+      instrument: analysis.instrument,
+      timeframe: analysis.timeframe,
+      analyzedAt: analysis.createdAt,
+      bias: bias ? biasLabel(bias, isBeginnerMode ? "beginner" : "pro", t) : t.analysis_detail.bias_unknown,
+      plan: tradePlan,
+      locale: lang === "id" ? "id-ID" : "en-US",
+      copy: {
+        title: t.analysis_detail.chart_share_title,
+        analyzed: t.analysis_detail.chart_share_analyzed,
+        made: t.analysis_detail.chart_share_made,
+        bias: t.analysis_detail.bias_title,
+        suggested: t.analysis_detail.chart_share_suggested,
+        buy: t.analysis_detail.trade_plan_side_buy,
+        sell: t.analysis_detail.trade_plan_side_sell,
+        both: t.analysis_detail.chart_share_wait,
+        entry: t.analysis_detail.trade_plan_entry,
+        stop: t.analysis_detail.trade_plan_sl,
+        tp1: t.analysis_detail.trade_plan_tp1,
+        tp2: t.analysis_detail.trade_plan_tp2,
+        sourceNote: t.analysis_detail.chart_share_source_note,
+        warning: t.analysis_detail.chart_share_warning,
+        accessibleRange: t.analysis_detail.chart_share_accessible_range,
+        accessibleLevels: t.analysis_detail.chart_share_accessible_levels,
+        accessibleNoLevels: t.analysis_detail.chart_share_accessible_no_levels,
+      },
+    });
+    return { url: result.url, description: result.description };
+  };
+  const openNonAdaptiveDetails = () => {
+    setNonAdaptiveDetailsOpen(true);
+    if (nonAdaptiveChart?.key === chartKey) return;
+    setNonAdaptiveChart({ key: chartKey, status: "loading" });
+    void renderNonAdaptiveChart().then(({ url, description }) => {
+      setNonAdaptiveChart({ key: chartKey, status: "ready", url, description });
+    }).catch(() => {
+      setNonAdaptiveChart({ key: chartKey, status: "unavailable" });
+    });
+  };
+  const printNonAdaptiveDetails = async () => {
+    if (hasAdaptive) return;
+    let tab: Window | null = null;
+    try {
+      // Use the saved row, never the current quote, live chart, or a refreshed AI response.
+      const sections: ConfidenceShareData["sections"] = [];
+      const addSection = (title: string, body?: string | null) => {
+        if (body?.trim()) sections.push({ title, body });
+      };
+      addSection(t.analysis_detail.confidence_reason_label, confidenceReason);
+      addSection(t.analysis_detail.scenario_a, scenarioAContent);
+      addSection(t.analysis_detail.scenario_b, scenarioBContent);
+      addSection(t.analysis_detail.scenario_c, scenarioCText(bias ?? "neutral", t));
+      addSection(t.analysis_detail.opportunity_title, analysis.opportunity);
+      addSection(t.analysis_detail.risk_title, analysis.risk);
+      if (invalidationItems.length) sections.push({
+        title: t.analysis_detail.invalidation_title,
+        body: invalidationItems.join("\n"),
+        blocks: invalidationItems.map((text) => ({ kind: "item", text })),
+      });
+      if (!isBeginnerMode) {
+        addSection(t.analysis_detail.pro_factor_technical, analysis.keyDriversTechnical);
+        addSection(t.analysis_detail.pro_factor_fundamental, analysis.keyDriversFundamental);
+        addSection(t.analysis_detail.pro_factor_market_context, analysis.marketContext);
+      }
+      sections.push({
+        title: t.analysis_detail.execution_insight_title,
+        body: "",
+        blocks: [
+          { kind: "paragraph", text: t.analysis_detail.execution_insight_intro },
+          { kind: "subheading", text: t.analysis_detail.execution_scenario_a_label },
+          { kind: "paragraph", text: executionScenarioAText(bias ?? "neutral", t) },
+          { kind: "subheading", text: t.analysis_detail.execution_scenario_b_label },
+          { kind: "paragraph", text: t.analysis_detail.execution_scenario_b_template },
+          { kind: "subheading", text: t.analysis_detail.execution_scenario_c_label },
+          { kind: "paragraph", text: t.analysis_detail.execution_scenario_c_template },
+          { kind: "paragraph", text: t.analysis_detail.execution_insight_disclaimer },
+        ],
+      });
+      if (tradePlan) {
+        const sideBlocks = (side: TradeSide, title: string): NonNullable<ConfidenceShareData["sections"][number]["blocks"]> => [
+          { kind: "subheading", text: title },
+          { kind: "paragraph", text: [
+            `${t.analysis_detail.trade_plan_entry}: ${side.entryZone}`,
+            `${t.analysis_detail.trade_plan_sl}: ${side.stopLoss}`,
+            `${t.analysis_detail.trade_plan_tp1}: ${side.takeProfit1}`,
+            `${t.analysis_detail.trade_plan_tp2}: ${side.takeProfit2}`,
+            `${t.analysis_detail.trade_plan_rr}: ${side.riskRewardRatio}`,
+          ].join("\n") },
+          ...(side.rationale ? [{ kind: "paragraph" as const, text: `${t.analysis_detail.trade_plan_rationale}: ${side.rationale}` }] : []),
+        ];
+        sections.push({
+          title: t.analysis_detail.trade_plan_title,
+          body: "",
+          blocks: [
+            { kind: "paragraph", text: t.analysis_detail.trade_plan_subtitle },
+            ...sideBlocks(tradePlan.buy, t.analysis_detail.trade_plan_side_buy),
+            ...sideBlocks(tradePlan.sell, t.analysis_detail.trade_plan_side_sell),
+            { kind: "paragraph", text: t.analysis_detail.trade_plan_disclaimer },
+          ],
+        });
+      }
+      addSection(t.analysis_detail.your_notes, analysis.userInputContext);
+      const data: ConfidenceShareData = {
+        title: t.analysis_detail.print_analysis_title,
+        instrument: analysis.instrument,
+        timeframe: analysis.timeframe,
+        analyzedAt: confidenceShareData.analyzedAt,
+        summary: scenarioAContent ?? confidenceReason ?? "",
+        sections,
+        sourcesTitle: t.analysis_detail.citations_label,
+        sources: confidenceShareData.sources,
+        disclaimerTitle: t.analysis_detail.print_snapshot_title,
+        disclaimer: `${t.analysis_detail.print_snapshot_note} ${t.analysis_detail.disclaimer_full}`,
+      };
+      tab = window.open("", "_blank");
+      if (!tab) throw new Error("Print preview was blocked");
+      tab.opener = null;
+      let chartImage = nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "ready" &&
+        nonAdaptiveChart.url && nonAdaptiveChart.description
+        ? { url: nonAdaptiveChart.url, description: nonAdaptiveChart.description } : undefined;
+      if (!chartImage) {
+        try {
+          chartImage = await renderNonAdaptiveChart();
+          setNonAdaptiveChart({ key: chartKey, status: "ready", ...chartImage });
+        } catch {
+          setNonAdaptiveChart({ key: chartKey, status: "unavailable" });
+        }
+      }
+      const html = buildConfidencePrintHtml(data, {
+        lang,
+        printLabel: t.analysis_detail.adaptive_print_details,
+        briefLabel: t.analysis_detail.summary,
+        chart: chartImage ? {
+          title: t.analysis_detail.chart_share_title,
+          caption: t.analysis_detail.print_chart_caption,
+          src: chartImage.url,
+          description: chartImage.description,
+        } : {
+          title: t.analysis_detail.chart_share_title,
+          caption: t.analysis_detail.print_chart_caption,
+          unavailable: t.analysis_detail.print_chart_unavailable,
+        },
+      });
+      tab.document.open();
+      tab.document.write(html);
+      tab.document.close();
+    } catch {
+      tab?.close();
+      toast({ title: t.analysis_detail.print_analysis_failed, variant: "destructive" });
+    }
+  };
   const indicatorTimeframe = asIndicatorTimeframe(analysis.timeframe);
+  const savedAnalysisDetails = (
+    <section className="space-y-3 border-b border-border pb-4 text-xs leading-relaxed" data-testid="adaptive-supporting-details">
+      <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h3>
+      {invalidationItems.length > 0 && (
+        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-red-900 dark:border-red-800 dark:bg-red-950/20 dark:text-red-200">
+          <h4 className="font-bold">{t.analysis_detail.invalidation_title}</h4>
+          <ul className="mt-2 list-disc space-y-1 pl-4" data-testid="list-invalidation">
+            {invalidationItems.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {(analysis.opportunity || analysis.risk) && (
+        <div className="grid gap-3 sm:grid-cols-2" data-testid="adaptive-analysis-findings">
+          {analysis.opportunity && <div><h4 className="font-bold text-foreground">{t.analysis_detail.opportunity_title}</h4><p className="mt-1 whitespace-pre-wrap text-muted-foreground">{analysis.opportunity}</p></div>}
+          {analysis.risk && <div><h4 className="font-bold text-amber-700 dark:text-amber-300">{t.analysis_detail.risk_title}</h4><p className="mt-1 whitespace-pre-wrap">{analysis.risk}</p></div>}
+        </div>
+      )}
+      <details className="group rounded-lg border border-border px-3 py-2.5" data-testid="adaptive-saved-analysis-disclosure">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+          {t.analysis_detail.adaptive_narrative_more}
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="mt-3 space-y-4 border-t border-border pt-3">
+          <div className="space-y-2">
+            <h4 className="font-bold">{t.analysis_detail.scenarios_section}</h4>
+            {scenarioAContent && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_a}: </strong>{scenarioAContent}</p>}
+            {scenarioBContent && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_b}: </strong>{scenarioBContent}</p>}
+            <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.scenario_c}: </strong>{scenarioCText(bias ?? "neutral", t)}</p>
+          </div>
+          {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
+            <div className="space-y-2">
+              {analysis.keyDriversTechnical && <p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_technical}: </strong>{analysis.keyDriversTechnical}</p>}
+              {analysis.keyDriversFundamental && <div><p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_fundamental}: </strong>{analysis.keyDriversFundamental}</p><CitationChips citations={analysis.fundamentalCitations} context={analysis.fundamentalContext} t={t} /></div>}
+              {analysis.marketContext && <div><p className="whitespace-pre-wrap"><strong>{t.analysis_detail.pro_factor_market_context}: </strong>{analysis.marketContext}</p><CitationChips citations={analysis.fundamentalCitations} context={analysis.fundamentalContext} t={t} /></div>}
+            </div>
+          )}
+          <div className="space-y-2">
+            <h4 className="font-bold">{t.analysis_detail.execution_insight_title}</h4>
+            <p><strong>{t.analysis_detail.execution_scenario_a_label}: </strong>{executionScenarioAText(bias ?? "neutral", t)}</p>
+            <p><strong>{t.analysis_detail.execution_scenario_b_label}: </strong>{t.analysis_detail.execution_scenario_b_template}</p>
+            <p><strong>{t.analysis_detail.execution_scenario_c_label}: </strong>{t.analysis_detail.execution_scenario_c_template}</p>
+          </div>
+        </div>
+      </details>
+    </section>
+  );
+  const liveIndicatorPanel = indicatorTimeframe ? (
+    <Card className="p-4 space-y-3" data-testid="card-indicators-section">
+      {hasAdaptive ? (
+        <h3 className="text-xs font-medium leading-snug text-muted-foreground break-words">
+          {t.analysis_detail.indicators_live_snapshot_label}
+        </h3>
+      ) : (
+        <div>
+          <h3 className="text-sm font-bold text-foreground">
+            {t.analysis_detail.indicators_section_title}
+          </h3>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+            {t.analysis_detail.indicators_section_note}
+          </p>
+        </div>
+      )}
+      <TechnicalIndicatorsPanel instrument={analysis.instrument} mode={isBeginnerMode ? "beginner" : "pro"} timeframe={indicatorTimeframe} />
+    </Card>
+  ) : null;
   // No-op wrapper when embedded elsewhere, so the host page's own <Layout>
   // (header/nav) isn't doubled up.
   const Wrap = embedded ? Fragment : Layout;
@@ -2108,6 +2378,12 @@ export default function AnalysisDetailPage({
                 size="md"
               />
             </div>
+            <p className="mt-1 text-xs text-muted-foreground" data-testid="analysis-created-at">
+              {t.analysis_detail.analyzed_prefix}{" "}
+              {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
+                locale: lang === "id" ? idLocale : undefined,
+              })}
+            </p>
           </div>
           {/* The "Analisis" nav tab + the header back button both land here
               (the last analysis) so reopening costs no AI tokens. Starting a
@@ -2130,24 +2406,17 @@ export default function AnalysisDetailPage({
             automatically starts a fresh analysis without leaving this page
             or re-selecting the instrument. The manual button remains as a
             retry fallback when the automatic request fails. */}
-        <Card className="p-3 space-y-2.5" data-testid="card-quick-timeframe">
-          <div>
-            <p className="text-xs font-semibold text-foreground">
-              {t.analysis_detail.quick_timeframe_title}
-            </p>
-            <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-              {t.analysis_detail.quick_timeframe_hint}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+        <Card className="space-y-2 p-3" data-testid="card-quick-timeframe">
+          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t.analysis_detail.quick_timeframe_title} data-testid="quick-timeframe-options">
             {QUICK_TIMEFRAMES.map((tf) => (
               <button
                 key={tf}
                 type="button"
                 onClick={() => handleQuickTimeframeSelect(tf)}
                 disabled={isRefreshing}
+                aria-pressed={quickTimeframe === tf}
                 className={cn(
-                  "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors disabled:opacity-50",
+                  "min-h-9 min-w-10 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50",
                   quickTimeframe === tf
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-muted/40 text-foreground border-border hover:bg-muted",
@@ -2157,27 +2426,23 @@ export default function AnalysisDetailPage({
                 {tf}
               </button>
             ))}
-            {isAdaptivePositionInstrument(analysis.instrument) && (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 shrink-0 gap-1.5 px-2.5 text-xs font-semibold text-primary"
-                  onClick={() => setRiskMapOpen(true)}
-                  disabled={isRefreshing}
-                  data-testid="button-detail-risk-map"
-                >
-                  <Activity className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t.risk_map.btn_compare}
-                </Button>
-                <LivePriceChip
-                  instrument={analysis.instrument}
-                  showLabel
-                  className="ml-auto h-8"
-                />
-              </>
+            {RISK_MAP_INSTRUMENTS.has(analysis.instrument) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 shrink-0 gap-1.5 px-2.5 text-xs font-semibold text-primary"
+                onClick={() => setRiskMapOpen(true)}
+                disabled={isRefreshing}
+                data-testid="button-detail-risk-map"
+              >
+                <Activity className="h-3.5 w-3.5" aria-hidden="true" />
+                {t.risk_map.btn_compare}
+              </Button>
             )}
           </div>
+          <p className="text-xs leading-snug text-muted-foreground">
+            {t.analysis_detail.quick_timeframe_hint}
+          </p>
           {quickTimeframeStatus === "error" && (
             <div
               className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[11px] text-destructive"
@@ -2203,7 +2468,7 @@ export default function AnalysisDetailPage({
           )}
         </Card>
 
-        {isAdaptivePositionInstrument(analysis.instrument) && (
+        {RISK_MAP_INSTRUMENTS.has(analysis.instrument) && (
           <TimeframeRiskDialog
             open={riskMapOpen}
             instrument={analysis.instrument as GetTimeframeRiskMapInstrument}
@@ -2297,11 +2562,12 @@ export default function AnalysisDetailPage({
           {confidenceReason && (
             <div className="bg-muted/40 rounded-md p-2.5 flex gap-2" data-testid="card-confidence-reason">
               <HelpCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">
                   {t.analysis_detail.confidence_reason_label}
                 </p>
-                <p className="text-xs text-foreground leading-relaxed">{confidenceReason}</p>
+                {/* Free-form AI rationale can contain a warning without predictable keywords. */}
+                <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap" data-testid="confidence-reason-safety">{confidenceReason}</p>
                 {/* Beginner mode: `confidenceReason` IS the whyReason text,
                     so this is exactly where the AI would mention the news /
                     event it leaned on. Inline-cite the matching cards here
@@ -2315,16 +2581,72 @@ export default function AnalysisDetailPage({
                     t={t}
                   />
                 )}
+                  <Dialog key={id}>
+                    <DialogTrigger asChild>
+                      <button type="button" className="mt-2 rounded text-xs font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" data-testid="confidence-reason-disclosure">
+                        {t.analysis_detail.confidence_reason_more}
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent
+                      closeLabel={t.analysis_detail.disclosure_collapse}
+                      className="grid max-h-[85dvh] w-[calc(100vw-2rem)] max-w-xl grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden rounded-xl p-4 sm:p-6"
+                      data-testid="confidence-reason-dialog"
+                    >
+                      <DialogHeader className="pr-7 text-left">
+                        <DialogTitle className="text-base leading-snug">{t.analysis_detail.confidence_reason_label}</DialogTitle>
+                        <DialogDescription>
+                          {t.analysis_detail.confidence_reason_context
+                            .replace("{instrument}", analysis.instrument)
+                            .replace("{timeframe}", analysis.timeframe)}
+                        </DialogDescription>
+                      </DialogHeader>
+                    <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1 text-sm leading-relaxed" data-testid="confidence-reason-details">
+                      <p className="whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-foreground">{confidenceReason}</p>
+                      {confidenceBasis && (
+                        <p><strong className="text-foreground">{isBeginnerMode
+                          ? t.analysis_detail.confidence_reason_basis
+                          : t.analysis_detail.confidence_reason_technical}:</strong>{" "}
+                          <span className="text-muted-foreground">{confidenceBasis}</span></p>
+                      )}
+                      {confidenceFundamentals && (
+                        <div>
+                          <p><strong className="text-foreground">{t.analysis_detail.confidence_reason_fundamental}:</strong>{" "}
+                            <span className="text-muted-foreground">{confidenceFundamentals}</span></p>
+                          <CitationChips
+                            citations={analysis.fundamentalCitations}
+                            context={analysis.fundamentalContext}
+                            t={t}
+                          />
+                        </div>
+                      )}
+                      {analysis.risk && (
+                        <p><strong className="text-foreground">{t.analysis_detail.confidence_reason_risk}:</strong>{" "}
+                          <span className="text-muted-foreground">{analysis.risk}</span></p>
+                      )}
+                      {invalidationItems.length > 0 && (
+                        <div>
+                          <p className="font-semibold text-foreground">{t.analysis_detail.confidence_reason_invalidation}:</p>
+                          <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
+                            {invalidationItems.slice(0, 3).map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row" data-testid="confidence-share-actions">
+                      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={copyConfidenceText} data-testid="confidence-copy-text">
+                        <Copy className="mr-2 h-4 w-4" />
+                        {t.analysis_detail.confidence_share_copy_text}
+                      </Button>
+                      <Button type="button" className="w-full sm:w-auto" onClick={copyConfidenceImage} data-testid="confidence-copy-image">
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        {t.analysis_detail.confidence_share_copy_image}
+                      </Button>
+                    </div>
+                    </DialogContent>
+                  </Dialog>
               </div>
             </div>
           )}
-
-          <div className="text-xs text-muted-foreground">
-            {t.analysis_detail.analyzed_prefix}{" "}
-            {format(new Date(analysis.createdAt), "d MMM yyyy, HH:mm", {
-              locale: lang === "id" ? idLocale : undefined,
-            })}
-          </div>
 
           {isExpired && (
             <Button
@@ -2358,6 +2680,7 @@ export default function AnalysisDetailPage({
              timeframe={analysis.timeframe}
              tradePlan={tradePlan}
              analysisCreatedAt={analysis.createdAt}
+             savedBias={bias ? biasLabel(bias, isBeginnerMode ? "beginner" : "pro", t) : t.analysis_detail.bias_unknown}
               liveQuote={liveQuoteSnapshot.quote}
               liveQuoteReceivedAt={liveQuoteSnapshot.dataUpdatedAt}
            />
@@ -2382,15 +2705,30 @@ export default function AnalysisDetailPage({
           </div>
         )}
 
+        {/* Saved indicator-tally snapshot belongs with the original analysis,
+            before Adaptive rather than among the current-market checks. */}
+        {analysis.techBuyCount != null &&
+          analysis.techSellCount != null &&
+          analysis.techNeutralCount != null && (
+            <MarketContextSummary
+              buy={analysis.techBuyCount}
+              sell={analysis.techSellCount}
+              neutral={analysis.techNeutralCount}
+              mode={isBeginnerMode ? "beginner" : "pro"}
+            />
+          )}
+
         {/* Deterministic, situation-aware scaling plan. It reads the saved
             analysis context but never changes Standard Plan levels or executes orders. */}
-        {tradePlan && isAdaptivePositionInstrument(analysis.instrument) && (
+        {tradePlan && hasAdaptive && (
           <AdaptivePositionPlan
             analysisId={analysis.id}
             instrument={analysis.instrument}
             tradePlan={tradePlan}
+            marketSnapshot={analysis.marketSnapshot}
             context={{
               timeframe: analysis.timeframe,
+              validUntil: analysis.validUntil,
               marketCondition: analysis.marketCondition,
               riskLevel: analysis.riskLevel,
               tradingBias: analysis.tradingBias,
@@ -2403,52 +2741,85 @@ export default function AnalysisDetailPage({
             }}
             lang={lang}
             copy={t.analysis_detail}
+            supportingDetails={savedAnalysisDetails}
+            invalidationCount={invalidationItems.length}
+            analyzedAt={confidenceShareData.analyzedAt}
+            analysisCreatedAt={analysis.createdAt}
+            shareSources={confidenceShareData.sources}
           />
         )}
-
-        {/* Price alerts — opt-in push notifications that fire the first
-            time live price touches one of the AI's entry / SL / TP levels.
-            Hidden unless the analysis has a trade plan AND the user has
-            already enabled push notifications (otherwise the toggle would
-            be a dead end). */}
-        {tradePlan && (
-          <AnalysisAlertsCard analysisId={analysis.id} t={t} />
-        )}
-
-        {/* Market Context Summary — same card the user saw on the Analyze tab,
-            rendered from the indicator-tally snapshot stored at analysis time. */}
-        {analysis.techBuyCount != null &&
-          analysis.techSellCount != null &&
-          analysis.techNeutralCount != null && (
-            <MarketContextSummary
-              buy={analysis.techBuyCount}
-              sell={analysis.techSellCount}
-              neutral={analysis.techNeutralCount}
-              mode={isBeginnerMode ? "beginner" : "pro"}
-            />
-          )}
-
-        {/* Live Technical Indicators panel — moved from the Analyze tab so
-            users get the full indicator picture in ONE place (the saved
-            analysis). Data is live (re-fetched from the upstream feed) so we
-            warn that it may differ from the snapshot the AI saw. */}
-        {indicatorTimeframe && (
-          <Card className="p-4 space-y-3" data-testid="card-indicators-section">
-            <div>
-              <h3 className="text-sm font-bold text-foreground">
-                {t.analysis_detail.indicators_section_title}
-              </h3>
-              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                {t.analysis_detail.indicators_section_note}
-              </p>
+        {!hasAdaptive && (
+          <Card className="overflow-hidden" data-testid="card-non-adaptive-analysis">
+            <div className="flex items-start gap-2 border-b border-border p-4">
+              <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-foreground">{t.analysis_detail.print_analysis_title}</h2>
+                <p className="mt-1 text-xs text-muted-foreground">{t.analysis_detail.print_snapshot_note}</p>
+              </div>
             </div>
-            <TechnicalIndicatorsPanel
-              instrument={analysis.instrument}
-              mode={isBeginnerMode ? "beginner" : "pro"}
-              timeframe={indicatorTimeframe}
-            />
+            <div className="p-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openNonAdaptiveDetails}
+                aria-label={invalidationItems.length > 0
+                  ? `${t.analysis_detail.adaptive_education_title}. ${t.analysis_detail.adaptive_invalidation_cue.replace("{count}", String(invalidationItems.length))}`
+                  : undefined}
+                data-testid="button-non-adaptive-explanation"
+                className="group h-auto min-h-12 w-full justify-between gap-2 rounded-lg border-primary/40 bg-primary/[0.05] px-3 py-3 text-left hover:border-primary/70 hover:bg-primary/[0.10] sm:w-auto sm:px-4"
+              >
+                <span className="min-w-0 text-base font-semibold leading-snug text-primary">{t.analysis_detail.adaptive_education_title}</span>
+                {invalidationItems.length > 0 && (
+                  <span className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/60 px-2 py-1 text-[11px] font-medium leading-none text-muted-foreground" aria-hidden="true">
+                    <span className="sm:hidden">{invalidationItems.length}</span>
+                    <span className="hidden sm:inline">{t.analysis_detail.adaptive_invalidation_cue.replace("{count}", String(invalidationItems.length))}</span>
+                  </span>
+                )}
+                <ChevronRight className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              </Button>
+            </div>
+            <Dialog open={nonAdaptiveDetailsOpen} onOpenChange={setNonAdaptiveDetailsOpen}>
+              <DialogContent
+                closeLabel={t.analysis_detail.disclosure_collapse}
+                className="grid max-h-[85dvh] w-[calc(100vw-2rem)] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden rounded-xl p-4 sm:p-6"
+                data-testid="non-adaptive-education-panel"
+              >
+                <DialogHeader className="pr-7 text-left">
+                  <DialogTitle>{t.analysis_detail.print_analysis_title}</DialogTitle>
+                  <DialogDescription>{t.analysis_detail.print_snapshot_note}</DialogDescription>
+                </DialogHeader>
+                <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1" data-testid="non-adaptive-education-content">
+                  <section className="space-y-2 rounded-lg border border-border p-3 text-xs" data-testid="non-adaptive-analysis-snapshot">
+                    <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.summary}</h3>
+                    <p className="text-muted-foreground">{analysis.instrument} · {analysis.timeframe} · {confidenceShareData.analyzedAt}</p>
+                    <p className="text-foreground">{t.analysis_detail.bias_title}: {bias ? biasLabel(bias, isBeginnerMode ? "beginner" : "pro", t) : t.analysis_detail.bias_unknown} · {t.analysis_detail.confidence}: {analysis.confidenceMin ?? "—"}% – {analysis.confidenceMax ?? "—"}%{rl ? ` · ${t.analysis_detail.risk_title}: ${rl.label}` : ""}</p>
+                    {confidenceReason && <p className="whitespace-pre-wrap text-muted-foreground">{confidenceReason}</p>}
+                  </section>
+                  <section className="space-y-2" data-testid="non-adaptive-analysis-chart">
+                    <h3 className="text-sm font-bold text-foreground">{t.analysis_detail.chart_share_title}</h3>
+                    {nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "ready" && nonAdaptiveChart.url && nonAdaptiveChart.description
+                      ? <img src={nonAdaptiveChart.url} alt={nonAdaptiveChart.description} className="w-full rounded-lg border border-border" />
+                      : <p role="status" className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                        {nonAdaptiveChart?.key === chartKey && nonAdaptiveChart.status === "loading"
+                          ? t.analysis_detail.print_chart_loading
+                          : t.analysis_detail.print_chart_unavailable}
+                      </p>}
+                    <p className="text-xs text-muted-foreground">{t.analysis_detail.print_chart_caption}</p>
+                  </section>
+                  {savedAnalysisDetails}
+                </div>
+                <div className="flex justify-end border-t border-border pt-3">
+                  <Button type="button" onClick={printNonAdaptiveDetails} data-testid="non-adaptive-print-details">
+                    <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
+                    {t.analysis_detail.adaptive_print_details}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </Card>
         )}
+        {/* This is a current-market check, not an input to the saved Adaptive plan. */}
+        {liveIndicatorPanel}
 
         {analysis.userInputContext && (
           <Card className="p-4 space-y-2" data-testid="card-user-notes">
@@ -2476,343 +2847,51 @@ export default function AnalysisDetailPage({
           </Card>
         )}
 
-        {/* HIGH PRIORITY: Invalidation conditions */}
-        {invalidationItems.length > 0 && (
-          <Card
-            className="overflow-hidden border-l-4 border-l-red-500 dark:border-l-red-400 bg-red-50/40 dark:bg-red-950/20"
-            data-testid="card-invalidation"
-          >
-            <Collapsible open={invalidationOpen} onOpenChange={setInvalidationOpen}>
-              <CollapsibleTrigger
-                className="w-full flex items-start gap-2.5 p-4 text-left transition-colors hover:bg-red-100/40 dark:hover:bg-red-950/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                data-testid="invalidation-trigger"
-                aria-label={`${invalidationOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.invalidation_title}`}
-              >
-                <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="text-sm font-bold text-red-700 dark:text-red-400">
-                      {t.analysis_detail.invalidation_title}
-                    </h3>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {t.analysis_detail.invalidation_subtitle}
-                    </p>
-                  </div>
-                  {invalidationOpen ? (
-                    <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  ) : (
-                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  )}
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="border-t border-red-200/60 dark:border-red-900/40">
-                <ul className="space-y-1.5 p-4 pt-3" data-testid="list-invalidation">
-                  {invalidationItems.map((item, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-foreground">
-                      <span className="text-red-500 mt-0.5">•</span>
-                      <span className="leading-snug">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
-        )}
+        <div className="sr-only" data-testid="risk-disclaimer-accessible">
+          <p data-testid="text-risk-disclaimer-short">{t.analysis_detail.risk_disclaimer_short}</p>
+          <p>{t.analysis_detail.disclaimer_full}</p>
+        </div>
 
-        {/* OPPORTUNITY vs RISK */}
-        {(analysis.opportunity || analysis.risk) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="grid-opp-risk">
-            {analysis.opportunity && (
-              <Card
-                className="overflow-hidden border-l-4 border-l-emerald-500 dark:border-l-emerald-400"
-                data-testid="card-opportunity"
-              >
-                <Collapsible open={opportunityOpen} onOpenChange={setOpportunityOpen}>
-                  <CollapsibleTrigger
-                    className="w-full flex items-center justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                    data-testid="opportunity-trigger"
-                    aria-label={`${opportunityOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.opportunity_title}`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                        {t.analysis_detail.opportunity_title}
-                      </h3>
-                    </div>
-                    {opportunityOpen ? (
-                      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    )}
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="border-t border-border">
-                    <p className="text-sm text-foreground leading-relaxed p-4">{analysis.opportunity}</p>
-                  </CollapsibleContent>
-                </Collapsible>
-              </Card>
-            )}
-            {analysis.risk && (
-              <Card
-                className="overflow-hidden border-l-4 border-l-amber-500 dark:border-l-amber-400"
-                data-testid="card-risk"
-              >
-                <Collapsible open={riskOpen} onOpenChange={setRiskOpen}>
-                  <CollapsibleTrigger
-                    className="w-full flex items-center justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                    data-testid="risk-trigger"
-                    aria-label={`${riskOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.risk_title}`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                      <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400">
-                        {t.analysis_detail.risk_title}
-                      </h3>
-                    </div>
-                    {riskOpen ? (
-                      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    )}
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="border-t border-border">
-                    <p className="text-sm text-foreground leading-relaxed p-4">{analysis.risk}</p>
-                  </CollapsibleContent>
-                </Collapsible>
-              </Card>
-            )}
-          </div>
-        )}
+        {/* Price alerts stay near the end of the analysis, before feedback.
+            The card handles push eligibility and leaves its toggle behavior unchanged. */}
+        {tradePlan && <AnalysisAlertsCard analysisId={analysis.id} t={t} />}
 
-        {/* SCENARIOS A / B / C */}
-        <Card className="overflow-hidden" data-testid="card-scenarios">
-          <Collapsible open={scenariosOpen} onOpenChange={setScenariosOpen}>
-            <CollapsibleTrigger
-              className="w-full flex items-center justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-              data-testid="scenarios-trigger"
-              aria-label={`${scenariosOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.scenarios_section}`}
-            >
-              <h2 className="text-base font-bold text-foreground">{t.analysis_detail.scenarios_section}</h2>
-              {scenariosOpen ? (
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              ) : (
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              )}
-            </CollapsibleTrigger>
-            <CollapsibleContent className="border-t border-border">
-              <div className="p-3 sm:p-4 space-y-2">
-                {scenarioAContent && (
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.scenario_a}
-                    content={scenarioAContent}
-                    open={openScenario === "a"}
-                    onOpenChange={(open) => setOpenScenario(open ? "a" : null)}
-                    testId="scenario-a-disclosure"
-                    t={t}
-                  />
+        <Card className="p-2.5 sm:p-3">
+          <fieldset className="min-w-0">
+            <legend className="sr-only">{t.analysis_detail.feedback_title}</legend>
+            <div className={cn("flex gap-2", (feedbackType || existingFeedback) && "mb-3")}>
+              <button
+                type="button"
+                onClick={() => setFeedbackType("useful")}
+                data-testid="button-feedback-useful"
+                aria-pressed={displayFeedbackType === "useful"}
+                className={cn(
+                  "flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-2 sm:text-sm",
+                  displayFeedbackType === "useful"
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-500 text-green-700 dark:text-green-400"
+                    : "border-border text-muted-foreground hover:border-green-400"
                 )}
-                {scenarioBContent && (
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.scenario_b}
-                    content={scenarioBContent}
-                    open={openScenario === "b"}
-                    onOpenChange={(open) => setOpenScenario(open ? "b" : null)}
-                    testId="scenario-b-disclosure"
-                    t={t}
-                  />
-                )}
-                <NarrativeDisclosure
-                  title={t.analysis_detail.scenario_c}
-                  content={scenarioCText(bias ?? "neutral", t)}
-                  open={openScenario === "c"}
-                  onOpenChange={(open) => setOpenScenario(open ? "c" : null)}
-                  testId="scenario-c-disclosure"
-                  t={t}
-                />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-
-        {/* PRO MODE: Technical + Fundamental + Market context */}
-        {!isBeginnerMode && (analysis.keyDriversTechnical || analysis.keyDriversFundamental || analysis.marketContext) && (
-          <Card className="overflow-hidden" data-testid="card-pro-details">
-            <Collapsible open={proDetailsOpen} onOpenChange={setProDetailsOpen}>
-              <CollapsibleTrigger
-                className="w-full flex items-start justify-between gap-2 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                data-testid="pro-details-trigger"
-                aria-label={`${proDetailsOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.narrative_details_title}`}
               >
-                <div>
-                  <h2 className="text-base font-bold text-foreground">{t.analysis_detail.narrative_details_title}</h2>
-                  <p className="text-[11px] leading-snug text-muted-foreground">
-                    {t.analysis_detail.narrative_details_intro}
-                  </p>
-                </div>
-                {proDetailsOpen ? (
-                  <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                ) : (
-                  <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <ThumbsUp className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {t.analysis_detail.feedback_useful}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedbackType("not_useful")}
+                data-testid="button-feedback-not-useful"
+                aria-pressed={displayFeedbackType === "not_useful"}
+                className={cn(
+                  "flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-2 sm:text-sm",
+                  displayFeedbackType === "not_useful"
+                    ? "bg-red-50 dark:bg-red-900/20 border-red-500 text-red-700 dark:text-red-400"
+                    : "border-border text-muted-foreground hover:border-red-400"
                 )}
-              </CollapsibleTrigger>
-              <CollapsibleContent className="border-t border-border">
-                <div className="p-3 sm:p-4 space-y-2">
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.pro_factor_technical}
-                    content={analysis.keyDriversTechnical}
-                    open={openProFactor === "technical"}
-                    onOpenChange={(open) => setOpenProFactor(open ? "technical" : null)}
-                    testId="pro-factor-technical"
-                    t={t}
-                  />
-                  {/* Inline source chips next to the AI's fundamental + market-
-                      context narrative (task #89) — duplicate the chip block
-                      under both because the AI tends to reference fundamental
-                      catalysts in either / both depending on the prompt. */}
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.pro_factor_fundamental}
-                    content={analysis.keyDriversFundamental}
-                    open={openProFactor === "fundamental"}
-                    onOpenChange={(open) => setOpenProFactor(open ? "fundamental" : null)}
-                    testId="pro-factor-fundamental"
-                    t={t}
-                    citations={
-                      <CitationChips
-                        citations={analysis.fundamentalCitations}
-                        context={analysis.fundamentalContext}
-                        t={t}
-                      />
-                    }
-                  />
-                  <NarrativeDisclosure
-                    title={t.analysis_detail.pro_factor_market_context}
-                    content={analysis.marketContext}
-                    open={openProFactor === "market"}
-                    onOpenChange={(open) => setOpenProFactor(open ? "market" : null)}
-                    testId="pro-factor-market-context"
-                    t={t}
-                    citations={
-                      <CitationChips
-                        citations={analysis.fundamentalCitations}
-                        context={analysis.fundamentalContext}
-                        t={t}
-                      />
-                    }
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
-        )}
-
-        {/* EXECUTION INSIGHT (Step 2) */}
-        <Card className="overflow-hidden" data-testid="card-execution-insight">
-          <Collapsible open={executionInsightOpen} onOpenChange={setExecutionInsightOpen}>
-            <CollapsibleTrigger
-              className="w-full flex items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-              data-testid="execution-insight-trigger"
-              aria-label={`${executionInsightOpen ? t.analysis_detail.disclosure_collapse : t.analysis_detail.disclosure_expand}: ${t.analysis_detail.execution_insight_title}`}
-            >
-              <div className="flex min-w-0 items-start gap-2">
-                {executionInsightOpen ? (
-                  <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                ) : (
-                  <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                )}
-                <div className="min-w-0">
-                  <p className="text-base font-bold text-foreground">
-                    {t.analysis_detail.execution_insight_title}
-                  </p>
-                  <p className="text-[11px] leading-snug text-muted-foreground">
-                    {t.analysis_detail.execution_insight_intro}
-                  </p>
-                </div>
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="border-t border-border">
-              <div className="p-4 space-y-3" data-testid="execution-insight-content">
-                <div className="space-y-3">
-                  <div data-testid="exec-scenario-a">
-                    <h4 className="text-xs font-semibold text-foreground mb-1">
-                      {t.analysis_detail.execution_scenario_a_label}
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {executionScenarioAText(bias ?? "neutral", t)}
-                    </p>
-                  </div>
-                  <div data-testid="exec-scenario-b">
-                    <h4 className="text-xs font-semibold text-foreground mb-1">
-                      {t.analysis_detail.execution_scenario_b_label}
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {t.analysis_detail.execution_scenario_b_template}
-                    </p>
-                  </div>
-                  <div data-testid="exec-scenario-c">
-                    <h4 className="text-xs font-semibold text-foreground mb-1">
-                      {t.analysis_detail.execution_scenario_c_label}
-                    </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {t.analysis_detail.execution_scenario_c_template}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-
-        <Card className="p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
-          <div className="flex gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-            <div className="space-y-1.5">
-              <p
-                className="text-xs font-bold text-amber-800 dark:text-amber-300 leading-relaxed"
-                data-testid="text-risk-disclaimer-short"
               >
-                {t.analysis_detail.risk_disclaimer_short}
-              </p>
-              <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                {t.analysis_detail.disclaimer_full}
-              </p>
+                <ThumbsDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {t.analysis_detail.feedback_not_useful}
+              </button>
             </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">
-            {existingFeedback || feedbackSubmitted
-              ? t.analysis_detail.feedback_your
-              : t.analysis_detail.feedback_title}
-          </h3>
-
-          <div className="flex gap-2 mb-3">
-            <button
-              onClick={() => setFeedbackType("useful")}
-              data-testid="button-feedback-useful"
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all",
-                displayFeedbackType === "useful"
-                  ? "bg-green-50 dark:bg-green-900/20 border-green-500 text-green-700 dark:text-green-400"
-                  : "border-border text-muted-foreground hover:border-green-400"
-              )}
-            >
-              <ThumbsUp className="w-4 h-4" />
-              {t.analysis_detail.feedback_useful}
-            </button>
-            <button
-              onClick={() => setFeedbackType("not_useful")}
-              data-testid="button-feedback-not-useful"
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all",
-                displayFeedbackType === "not_useful"
-                  ? "bg-red-50 dark:bg-red-900/20 border-red-500 text-red-700 dark:text-red-400"
-                  : "border-border text-muted-foreground hover:border-red-400"
-              )}
-            >
-              <ThumbsDown className="w-4 h-4" />
-              {t.analysis_detail.feedback_not_useful}
-            </button>
-          </div>
+          </fieldset>
 
           {(feedbackType || existingFeedback) && (
             <div className="space-y-3">

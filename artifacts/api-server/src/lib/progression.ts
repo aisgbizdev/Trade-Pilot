@@ -7,7 +7,7 @@ import { createNotification } from "./create-notification";
 import { withinQuietHours } from "./notification-guards";
 import { createHmac } from "node:crypto";
 
-export const PROGRESSION_RULE_VERSION = "104.1";
+export const PROGRESSION_RULE_VERSION = "104.2";
 export const PROGRESSION_SOURCES = [
   "quality_journal", "analysis_evaluation", "pre_analysis_checklist",
   "guide_completion", "discipline_streak", "risk_warning_wait",
@@ -37,10 +37,10 @@ export const ACHIEVEMENTS = [
 export const RANK_KEYS = RANKS.map((r) => r[0]);
 
 export function levelForXp(totalXp: number): { level: number; masteryLevel: number; nextXp: number; currentLevelXp: number } {
-  // 100 deliberately increasing levels; level n needs 100 + (n-1)*25 XP.
+  // Early milestones are attainable through a few ordinary discipline actions.
   let remaining = Math.max(0, totalXp), level = 1;
   while (level < 100) {
-    const needed = 100 + (level - 1) * 25;
+    const needed = 50 + (level - 1) * 20;
     if (remaining < needed) {
       const currentLevelXp = totalXp - remaining;
       return { level, masteryLevel: 0, currentLevelXp, nextXp: currentLevelXp + needed };
@@ -114,17 +114,38 @@ export async function awardProgression(input: {
   const dayBucket = localDay(occurredAt, frozenProfile?.timezone || initialTimezone);
   const result = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(104, ${input.userId})`);
-    const proof = await tx.insert(progressionProofs).values({
-      userId: input.userId, source: input.source, sourceEventId: input.sourceEventId,
-      qualityScore: input.qualityScore ?? 0, metadata: input.metadata ?? {}, occurredAt,
-    }).onConflictDoNothing().returning({ id: progressionProofs.id });
-    if (!proof[0]) return { awarded: false, xp: 0, reason: "duplicate" };
+    const proofKey = and(
+      eq(progressionProofs.userId, input.userId),
+      eq(progressionProofs.source, input.source),
+      eq(progressionProofs.sourceEventId, input.sourceEventId),
+    );
+    const [existingProof] = await tx.select({
+      id: progressionProofs.id,
+      decision: progressionProofs.decision,
+      rejectionReason: progressionProofs.rejectionReason,
+    }).from(progressionProofs).where(proofKey).limit(1);
+    if (existingProof && (existingProof.decision !== "rejected" || existingProof.rejectionReason !== "daily_cap")) {
+      return { awarded: false, xp: 0, reason: "duplicate" };
+    }
     const [usage] = await tx.select({ total: sql<number>`coalesce(sum(${xpLedger.xp}), 0)::int` }).from(xpLedger)
       .where(and(eq(xpLedger.userId, input.userId), eq(xpLedger.source, input.source), eq(xpLedger.dayBucket, dayBucket)));
     if (!withinDailySourceCap(Number(usage?.total ?? 0), input.source)) {
-      await tx.update(progressionProofs).set({ decision: "rejected", rejectionReason: "daily_cap" }).where(eq(progressionProofs.id, proof[0].id));
+      if (!existingProof) await tx.insert(progressionProofs).values({
+        userId: input.userId, source: input.source, sourceEventId: input.sourceEventId,
+        qualityScore: input.qualityScore ?? 0, metadata: input.metadata ?? {}, occurredAt,
+        decision: "rejected", rejectionReason: "daily_cap",
+      });
       return { awarded: false, xp: 0, reason: "daily_cap" };
     }
+    const proof = existingProof
+      ? await tx.update(progressionProofs).set({
+        decision: "accepted", rejectionReason: null, occurredAt,
+        qualityScore: input.qualityScore ?? 0, metadata: input.metadata ?? {},
+      }).where(eq(progressionProofs.id, existingProof.id)).returning({ id: progressionProofs.id })
+      : await tx.insert(progressionProofs).values({
+        userId: input.userId, source: input.source, sourceEventId: input.sourceEventId,
+        qualityScore: input.qualityScore ?? 0, metadata: input.metadata ?? {}, occurredAt,
+      }).returning({ id: progressionProofs.id });
     const ledger = await tx.insert(xpLedger).values({ userId: input.userId, source: input.source, sourceEventId: input.sourceEventId, proofId: proof[0].id, xp: rule.xp, dayBucket, ruleVersion: input.ruleVersion ?? PROGRESSION_RULE_VERSION, metadata: input.metadata ?? {} }).returning();
     const [prior] = await tx.select().from(progressionProfiles).where(eq(progressionProfiles.userId, input.userId)).limit(1);
     const [aggregate] = await tx.select({ total: sql<number>`coalesce(sum(${xpLedger.xp}), 0)::int` }).from(xpLedger).where(eq(xpLedger.userId, input.userId));
@@ -153,7 +174,10 @@ export async function awardProgression(input: {
       const inserted = await tx.insert(progressionAchievements).values({ userId: input.userId, key, sourceLedgerId: ledger[0]!.id }).onConflictDoNothing().returning({ key: progressionAchievements.key });
       if (inserted[0]) badges.push(key);
     }
-    return { awarded: true, xp: rule.xp, notice: { level: curve.level > (prior?.level ?? 1) ? curve.level : undefined, rank: rankKey !== (prior?.rankKey ?? "seedling") ? rankKey : undefined, badges } };
+    // Compare with the user's XP under the current curve, not their stored
+    // level from an older curve, so a rules rollout is not a new achievement.
+    const previousCurve = levelForXp(prior?.totalXp ?? 0);
+    return { awarded: true, xp: rule.xp, notice: { level: curve.level > previousCurve.level ? curve.level : undefined, rank: rankKey !== rankForLevel(previousCurve.level) ? rankKey : undefined, badges } };
   });
   const notice = "notice" in result ? result.notice : undefined;
   if (result.awarded && user.progressionNotificationsEnabled && notice && (notice.level || notice.rank || notice.badges.length)) {

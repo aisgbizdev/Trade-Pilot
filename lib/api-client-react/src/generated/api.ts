@@ -86,6 +86,9 @@ import type {
   GoogleReauthBody,
   GoogleReauthResponse,
   HealthStatus,
+  InstrumentRequestInput,
+  InstrumentRequestRanking,
+  InstrumentRequestReceipt,
   JournalEntry,
   JournalEntryList,
   JournalSentiment,
@@ -5844,6 +5847,192 @@ export function useGetTraderMirrorInsights<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getSubmitInstrumentRequestUrl = () => {
+  return `/api/instrument-requests`;
+};
+
+/**
+ * @summary Register interest in an unsupported instrument code without starting an analysis
+ */
+export const submitInstrumentRequest = async (
+  instrumentRequestInput: InstrumentRequestInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<InstrumentRequestReceipt> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<InstrumentRequestReceipt>(
+    getSubmitInstrumentRequestUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(instrumentRequestInput),
+    },
+  );
+};
+
+export const getSubmitInstrumentRequestMutationKey = () =>
+  ["submitInstrumentRequest"] as const;
+
+export const getSubmitInstrumentRequestMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitInstrumentRequest>>,
+    TError,
+    SubmitInstrumentRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitInstrumentRequest>>,
+  TError,
+  SubmitInstrumentRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSubmitInstrumentRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitInstrumentRequest>>,
+    SubmitInstrumentRequestMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitInstrumentRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitInstrumentRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitInstrumentRequest>>
+>;
+export type SubmitInstrumentRequestMutationBody =
+  BodyType<InstrumentRequestInput>;
+export type SubmitInstrumentRequestMutationError = ErrorType<void>;
+export type SubmitInstrumentRequestMutationVariables = {
+  data: BodyType<InstrumentRequestInput>;
+};
+
+/**
+ * @summary Register interest in an unsupported instrument code without starting an analysis
+ */
+export const useSubmitInstrumentRequest = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitInstrumentRequest>>,
+    TError,
+    SubmitInstrumentRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitInstrumentRequest>>,
+  TError,
+  SubmitInstrumentRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getSubmitInstrumentRequestMutationOptions(options));
+};
+
+export const getGetAdminInstrumentRequestsUrl = () => {
+  return `/api/admin/instrument-requests`;
+};
+
+/**
+ * @summary Full popularity-ranked list of requested codes
+ */
+export const getAdminInstrumentRequests = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<InstrumentRequestRanking> => {
+  return customFetch<InstrumentRequestRanking>(
+    getGetAdminInstrumentRequestsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAdminInstrumentRequestsQueryKey = () => {
+  return [`/api/admin/instrument-requests`] as const;
+};
+
+export const getGetAdminInstrumentRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminInstrumentRequests>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminInstrumentRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminInstrumentRequestsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminInstrumentRequests>>
+  > = ({ signal }) => getAdminInstrumentRequests({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminInstrumentRequests>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminInstrumentRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminInstrumentRequests>>
+>;
+export type GetAdminInstrumentRequestsQueryError = ErrorType<void>;
+
+/**
+ * @summary Full popularity-ranked list of requested codes
+ */
+
+export function useGetAdminInstrumentRequests<
+  TData = Awaited<ReturnType<typeof getAdminInstrumentRequests>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminInstrumentRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminInstrumentRequestsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getCreateAnalysisUrl = () => {
   return `/api/analyses`;
 };
@@ -6068,8 +6257,8 @@ export const getGetTimeframeRiskMapUrl = (
 };
 
 /**
- * Authenticated, read-only technical comparison for XAU/USD, BRENT, HSI,
- * and NIKKEI only. It uses the shared getIndicators cache/pipeline; it
+ * Authenticated, read-only technical comparison for all eight verified
+ * analysis instruments. It uses the shared getIndicators cache/pipeline; it
  * never creates an analysis, consumes quota, calls AI, or writes user
  * history. Missing or stale/insufficient data is explicitly reported and
  * is not a low-risk result.
