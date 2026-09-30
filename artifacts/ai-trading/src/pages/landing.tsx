@@ -43,7 +43,16 @@ export default function LandingPage() {
       <header className="relative z-10 border-b border-[#f1f0eb]/10">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-5 py-4 sm:px-8 lg:px-10">
           <BrandLogo variant="horizontal" className="h-8 w-auto sm:h-9" />
-          <LanguageToggle />
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-[#f1f0eb]/25 px-4 text-sm font-semibold text-[#f1f0eb] transition-colors hover:border-[#f1f0eb]/60 hover:bg-[#f1f0eb]/5"
+              data-testid="button-header-login"
+            >
+              {t.landing.login}
+            </Link>
+            <LanguageToggle />
+          </div>
         </div>
       </header>
 
