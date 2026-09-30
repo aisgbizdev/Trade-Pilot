@@ -234,7 +234,7 @@ describe("AnalyzePage: happy-path render", () => {
       // Quota chip resolves once the query settles — shows just the
       // remaining count (not remaining/limit) per the simplified chip.
       const chip = await screen.findByTestId("chip-quota");
-      expect(chip.textContent).toMatch(/^9\/month$/);
+      expect(chip.textContent).toMatch(/^9 free$/);
 
       const progression = await screen.findByTestId("button-dashboard-progression");
       expect(progression).toHaveTextContent(/Level 1/i);

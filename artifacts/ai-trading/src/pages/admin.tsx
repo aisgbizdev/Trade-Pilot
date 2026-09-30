@@ -1178,7 +1178,7 @@ function QuotaSettingsPanel() {
 
   return (
     <Card className="p-4 space-y-3" data-testid="card-quota-settings">
-      <h3 className="text-sm font-semibold text-foreground">Analysis Quota Settings (per month)</h3>
+      <h3 className="text-sm font-semibold text-foreground">Analysis Quota Settings (lifetime, free tier)</h3>
       {loading ? (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading...
@@ -1190,7 +1190,7 @@ function QuotaSettingsPanel() {
             min={1}
             value={daily}
             onChange={(e) => setDaily(e.target.value)}
-            placeholder="Per month"
+            placeholder="Lifetime free analyses"
             data-testid="input-quota-day"
           />
           <Button onClick={save} disabled={saving} data-testid="button-save-quota">

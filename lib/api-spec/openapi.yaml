@@ -5131,10 +5131,10 @@ components:
         daily:
           type: object
           description: >-
-            Named "daily" for historical/API-stability reasons, but the
-            window it counts is actually the current calendar month (WIB,
-            resets on the 1st) — see chat 2026-09-30 for why this wasn't
-            renamed alongside the behavior change.
+            Named "daily" for historical/API-stability reasons, but this is
+            actually a one-time lifetime free allowance — it never resets.
+            See chat 2026-09-30 for why this wasn't renamed alongside the
+            behavior change.
           properties:
             limit:
               type: integer
@@ -6269,8 +6269,9 @@ components:
           nullable: true
           description: >-
             Per-user analysis-quota override. Null = uses the global
-            default. Named "PerDay" for historical reasons — the window it
-            gates is the current calendar month (WIB), not 24 hours.
+            default. Named "PerDay" for historical reasons — this is
+            actually a one-time lifetime free allowance, not a recurring
+            window.
         segment:
           type: string
           enum: [free, paid, dev]

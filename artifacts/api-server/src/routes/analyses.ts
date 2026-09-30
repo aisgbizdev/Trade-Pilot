@@ -377,21 +377,12 @@ router.get("/analyses/quota", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
 
-  // Compute the quota-window cutoff (start of the current WIB calendar
-  // month — see QUOTA_WINDOW_START_SQL) in Postgres itself rather than as
-  // a JS `Date` param compared against `createdAt`, a `timestamp` column
-  // with no timezone. node-postgres serializes an outgoing `Date`
-  // parameter for a no-tz column using the API server process's OS
-  // timezone, while `createdAt` itself is written via Postgres-side
-  // `defaultNow()` (server session tz, GMT here) — on a non-UTC host
-  // those two clocks disagree. Keeping the whole comparison server-side
-  // sidesteps the mismatch entirely.
+  // Lifetime count — no time window at all (see chat 2026-09-30: the free
+  // quota is a one-time allowance, not a recurring monthly/daily one).
   const [usage] = await db
-    .select({
-      daily: sql<number>`sum(case when ${analyses.createdAt} >= ${QUOTA_WINDOW_START_SQL} then 1 else 0 end)`,
-    })
+    .select({ daily: count() })
     .from(analyses)
-    .where(and(eq(analyses.userId, req.userId!), sql`${analyses.createdAt} >= ${QUOTA_WINDOW_START_SQL}`));
+    .where(eq(analyses.userId, req.userId!));
 
   const dailyUsed = Number(usage?.daily ?? 0);
 
@@ -515,15 +506,16 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-// TEMPORARY-turned-permanent naming drift (see chat, 2026-09-30): the free
-// quota window changed from a rolling 24h "per day" to a calendar-month
-// window that resets on the 1st (WIB) — but the env var, this variable,
-// the DB column (users.customQuotaPerDay), and the API field names below
-// all still say "Day"/"daily" to avoid a schema migration and a breaking
-// API-shape rename (mobile client + generated types all read `daily`).
-// Read every "Day"/"daily" identifier from here down as "the current
-// quota window" now, not literally 24 hours. Default cut from 20 to 5 —
-// AI spend was ~$36/2 days, almost entirely free-tier usage.
+// Naming drift (see chat, 2026-09-30): the free quota is now a one-time
+// LIFETIME allowance (never resets), not a recurring daily/monthly one —
+// but the env var, this variable, the DB column (users.customQuotaPerDay),
+// and the API field names below all still say "Day"/"daily" to avoid a
+// schema migration and a breaking API-shape rename (mobile client +
+// generated types all read `daily`). Read every "Day"/"daily" identifier
+// from here down as "the free lifetime allowance" now, not a time window
+// at all. Default cut from 20/day to 5 lifetime — AI spend was ~$36/2
+// days, almost entirely free-tier usage; past this, a purchased credit is
+// required for every analysis, forever.
 let ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(process.env["ANALYSIS_QUOTA_PER_DAY"], 5);
 const ANALYSIS_LOCK_NAMESPACE = 4242;
 
@@ -533,26 +525,6 @@ export function getAnalysisQuotaConfig(): { perDay: number } {
 
 export function setAnalysisQuotaConfig(perDay: number): void {
   ANALYSIS_QUOTA_PER_DAY = parsePositiveInt(String(perDay), ANALYSIS_QUOTA_PER_DAY);
-}
-
-// Start of the current calendar month in WIB (Asia/Jakarta, UTC+7) —
-// matches the month-boundary convention topups.ts's revenue report
-// already uses. `createdAt` columns are plain `timestamp` (no tz) written
-// via Postgres `defaultNow()` in a GMT server session, i.e. their values
-// are already UTC wall-clock — shifting by +7h before truncating to the
-// month and then shifting back by -7h gives the UTC instant that
-// corresponds to WIB midnight on the 1st, without needing a real tz
-// conversion.
-const QUOTA_WINDOW_START_SQL = sql`date_trunc('month', now() + interval '7 hours') - interval '7 hours'`;
-
-// JS-side mirror of QUOTA_WINDOW_START_SQL's month math, used only for the
-// `Retry-After` header on a 429 (an approximation for the client's retry
-// backoff — the real reset boundary is whatever the SQL above computes).
-function secondsUntilNextQuotaWindow(): number {
-  const nowWib = new Date(Date.now() + 7 * 60 * 60 * 1000);
-  const nextMonthStartWib = Date.UTC(nowWib.getUTCFullYear(), nowWib.getUTCMonth() + 1, 1);
-  const nextMonthStartUtc = nextMonthStartWib - 7 * 60 * 60 * 1000;
-  return Math.max(1, Math.floor((nextMonthStartUtc - Date.now()) / 1000));
 }
 
 // Per-user quota, falling back to the global admin-configured default when
@@ -773,16 +745,14 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
       const acquired = (lockRow.rows?.[0] as { acquired?: boolean } | undefined)?.acquired === true;
       if (!acquired) return { kind: "busy" };
 
-      // See the identical comment on GET /analyses/quota above — the
-      // cutoff (start of the current WIB calendar month) is computed in
-      // Postgres rather than as a JS `Date` param, to avoid the
-      // client-OS-timezone-vs-server-session-tz mismatch.
+      // Lifetime count — see the identical comment on GET /analyses/quota
+      // above. Runs inside the xact-locked transaction (unlike the GET
+      // route's read-only check) so a burst of concurrent requests can't
+      // all read the same pre-increment count and all slip through.
       const [usage] = await tx
-        .select({
-          daily: sql<number>`sum(case when ${analyses.createdAt} >= ${QUOTA_WINDOW_START_SQL} then 1 else 0 end)`,
-        })
+        .select({ daily: count() })
         .from(analyses)
-        .where(and(eq(analyses.userId, userId), sql`${analyses.createdAt} >= ${QUOTA_WINDOW_START_SQL}`));
+        .where(eq(analyses.userId, userId));
 
       const dailyCount = Number(usage?.daily ?? 0);
 
@@ -866,8 +836,11 @@ router.post("/analyses", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
   if (outcome.kind === "day") {
-    res.status(429).set("Retry-After", String(secondsUntilNextQuotaWindow())).json({
-      error: `Batas analisis bulanan tercapai (${outcome.limit} analisis/bulan). Top up kredit untuk lanjut sekarang, atau coba lagi bulan depan.`,
+    // No Retry-After here — the free allowance is a one-time lifetime cap
+    // that never resets, so there's no future instant at which a retry
+    // would succeed on its own; only a purchased credit unblocks this.
+    res.status(429).json({
+      error: `Batas analisis gratis tercapai (${outcome.limit} analisis). Top up kredit untuk lanjut analisis.`,
       quota: { scope: "day", limit: outcome.limit, used: outcome.used },
     });
     return;

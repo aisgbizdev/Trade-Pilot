@@ -3160,7 +3160,7 @@ export const GetAnalysisQuotaResponse = zod.object({
       remaining: zod.number().int(),
     })
     .describe(
-      'Named \"daily\" for historical\/API-stability reasons, but the window it counts is actually the current calendar month (WIB, resets on the 1st) — see chat 2026-09-30 for why this wasn\'t renamed alongside the behavior change.',
+      'Named \"daily\" for historical\/API-stability reasons, but this is actually a one-time lifetime free allowance — it never resets. See chat 2026-09-30 for why this wasn\'t renamed alongside the behavior change.',
     ),
   credits: zod.object({
     balance: zod.number().int(),
@@ -4942,7 +4942,7 @@ export const GetAllUsersResponse = zod.object({
         .int()
         .nullable()
         .describe(
-          'Per-user analysis-quota override. Null = uses the global default. Named \"PerDay\" for historical reasons — the window it gates is the current calendar month (WIB), not 24 hours.',
+          'Per-user analysis-quota override. Null = uses the global default. Named \"PerDay\" for historical reasons — this is actually a one-time lifetime free allowance, not a recurring window.',
         ),
       segment: zod
         .enum(["free", "paid", "dev"])
