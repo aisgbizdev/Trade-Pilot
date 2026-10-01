@@ -309,6 +309,10 @@ export const users = pgTable("users", {
   // itself admin-configurable). A non-null value overrides just this one
   // user, independent of the global setting.
   customQuotaPerDay: integer("custom_quota_per_day"),
+  // Legacy columns still exist in development and production. Preserve their
+  // data until a separate, explicitly approved removal migration.
+  customQuotaPerHour: integer("custom_quota_per_hour"),
+  freeTimeframeSwitchesUsed: integer("free_timeframe_switches_used").notNull().default(0),
   // Store-readiness (P2-B4.1): three more push categories, following the
   // exact opt-out pattern as every other `push*` column above — false
   // suppresses OS push only, the in-app notification row still lands.
@@ -630,11 +634,16 @@ export const analyses = pgTable("analyses", {
 
 export const instrumentRequests = pgTable("instrument_requests", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull(),
   code: text("code").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastRequestedAt: timestamp("last_requested_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
+  userFk: foreignKey({
+    name: "instrument_requests_user_id_fkey",
+    columns: [t.userId],
+    foreignColumns: [users.id],
+  }).onDelete("cascade"),
   userCode: uniqueIndex("instrument_requests_user_code_unique").on(t.userId, t.code),
   codeIndex: index("instrument_requests_code_idx").on(t.code),
 }));

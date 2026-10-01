@@ -20,3 +20,9 @@ In a non-interactive shell, `drizzle-kit push --strict` can print a confirmation
 **Why:** Exit code zero only means schema introspection reached the prompt; it does not prove the development schema changed.
 
 **How to apply:** After any strict push, inspect the development schema directly and rerun strict push until it explicitly reports `No changes detected`.
+
+Preserve existing production foreign-key names explicitly in the schema source when adopting tables created with differently named constraints.
+
+**Why:** Drizzle's generated names can differ from existing constraint names even when the relationship is identical. A full development push can then introduce unrelated drop/recreate statements into Publish.
+
+**How to apply:** Compare constraint names and definitions before pushing; keep equivalent existing names so an additive feature does not modify unrelated relationships.
