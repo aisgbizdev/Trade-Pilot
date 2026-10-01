@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**changePassword**](AuthApi.md#changepassword) | **PATCH** /auth/password | Change own password
 [**changeSecurityQuestion**](AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
 [**completeTiktokSignup**](AuthApi.md#completetiktoksignup) | **POST** /auth/tiktok/complete-signup | Finish a brand-new TikTok sign-in by supplying an email
+[**createWebHandoff**](AuthApi.md#createwebhandoff) | **POST** /auth/web-handoff | Mint a one-time URL that signs the browser in as the current (Bearer-authenticated) user
 [**deleteAccount**](AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
 [**exchangeMobileAuthCode**](AuthApi.md#exchangemobileauthcode) | **POST** /auth/mobile/exchange | Exchange a one-time mobile OAuth code (+ PKCE verifier) for a TradePilot session
 [**getForgotPasswordQuestion**](AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
@@ -148,6 +149,53 @@ Name | Type | Description  | Notes
 ### Authorization
 
 No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createWebHandoff**
+> WebHandoffResponse createWebHandoff(webHandoffBody)
+
+Mint a one-time URL that signs the browser in as the current (Bearer-authenticated) user
+
+For a mobile app menu item that opens a browser to an authenticated page (e.g. Profil -> Kredit Analisis -> tradepilot.id/topup) without asking the user to log in again. Call this with the Bearer token from the active app session, then open the returned `url` in the system browser. The code is single-use and expires in `expiresIn` seconds (60s) — open the URL immediately. This does NOT end or otherwise affect the native app session that called it. 
+
+### Example
+```dart
+import 'package:trade_pilot_api_client/api.dart';
+// TODO Configure API key authorization: sessionCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('sessionCookie').apiKeyPrefix = 'Bearer';
+
+final api = TradePilotApiClient().getAuthApi();
+final WebHandoffBody webHandoffBody = ; // WebHandoffBody | 
+
+try {
+    final response = api.createWebHandoff(webHandoffBody);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthApi->createWebHandoff: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **webHandoffBody** | [**WebHandoffBody**](WebHandoffBody.md)|  | 
+
+### Return type
+
+[**WebHandoffResponse**](WebHandoffResponse.md)
+
+### Authorization
+
+[sessionCookie](../README.md#sessionCookie), [bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 

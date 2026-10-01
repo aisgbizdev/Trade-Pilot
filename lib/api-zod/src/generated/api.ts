@@ -1135,6 +1135,39 @@ export const ExchangeMobileAuthCodeResponse = zod.object({
 });
 
 /**
+ * For a mobile app menu item that opens a browser to an authenticated
+ * page (e.g. Profil -> Kredit Analisis -> tradepilot.id/topup) without
+ * asking the user to log in again. Call this with the Bearer token
+ * from the active app session, then open the returned `url` in the
+ * system browser. The code is single-use and expires in `expiresIn`
+ * seconds (60s) — open the URL immediately. This does NOT end or
+ * otherwise affect the native app session that called it.
+ * @summary Mint a one-time URL that signs the browser in as the current (Bearer-authenticated) user
+ */
+export const CreateWebHandoffBody = zod.object({
+  next: zod
+    .string()
+    .describe(
+      'Relative path to land on after the browser session is established. Must match an exact-match allowlist server-side (currently only \"\/topup\") — any other value, a full URL, or a protocol-relative \"\/\/host\" is rejected with 400.',
+    ),
+});
+
+export const CreateWebHandoffResponse = zod.object({
+  url: zod
+    .string()
+    .url()
+    .describe(
+      "Open this in the system browser. Consuming it sets the session_token cookie and redirects to `next`.",
+    ),
+  expiresIn: zod
+    .number()
+    .int()
+    .describe(
+      "Seconds until the code in `url` expires. Single-use regardless.",
+    ),
+});
+
+/**
  * @summary Logout user
  */
 export const LogoutResponse = zod.object({

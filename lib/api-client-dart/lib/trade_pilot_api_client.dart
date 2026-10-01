@@ -228,4 +228,6 @@ export 'package:trade_pilot_api_client/src/model/users_list.dart';
 export 'package:trade_pilot_api_client/src/model/verify_security_answer_body.dart';
 export 'package:trade_pilot_api_client/src/model/watchlist.dart';
 export 'package:trade_pilot_api_client/src/model/watchlist_item.dart';
+export 'package:trade_pilot_api_client/src/model/web_handoff_body.dart';
+export 'package:trade_pilot_api_client/src/model/web_handoff_response.dart';
 

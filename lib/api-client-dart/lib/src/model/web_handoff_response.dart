@@ -6,61 +6,54 @@
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'analysis_quota_daily.g.dart';
+part 'web_handoff_response.g.dart';
 
-/// Named \"daily\" for historical/API-stability reasons, but this is actually a one-time lifetime free allowance — it never resets. See chat 2026-09-30 for why this wasn't renamed alongside the behavior change.
+/// WebHandoffResponse
 ///
 /// Properties:
-/// * [limit] 
-/// * [used] 
-/// * [remaining] 
+/// * [url] - Open this in the system browser. Consuming it sets the session_token cookie and redirects to `next`.
+/// * [expiresIn] - Seconds until the code in `url` expires. Single-use regardless.
 @BuiltValue()
-abstract class AnalysisQuotaDaily implements Built<AnalysisQuotaDaily, AnalysisQuotaDailyBuilder> {
-  @BuiltValueField(wireName: r'limit')
-  int get limit;
+abstract class WebHandoffResponse implements Built<WebHandoffResponse, WebHandoffResponseBuilder> {
+  /// Open this in the system browser. Consuming it sets the session_token cookie and redirects to `next`.
+  @BuiltValueField(wireName: r'url')
+  String get url;
 
-  @BuiltValueField(wireName: r'used')
-  int get used;
+  /// Seconds until the code in `url` expires. Single-use regardless.
+  @BuiltValueField(wireName: r'expiresIn')
+  int get expiresIn;
 
-  @BuiltValueField(wireName: r'remaining')
-  int get remaining;
+  WebHandoffResponse._();
 
-  AnalysisQuotaDaily._();
-
-  factory AnalysisQuotaDaily([void updates(AnalysisQuotaDailyBuilder b)]) = _$AnalysisQuotaDaily;
+  factory WebHandoffResponse([void updates(WebHandoffResponseBuilder b)]) = _$WebHandoffResponse;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(AnalysisQuotaDailyBuilder b) => b;
+  static void _defaults(WebHandoffResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AnalysisQuotaDaily> get serializer => _$AnalysisQuotaDailySerializer();
+  static Serializer<WebHandoffResponse> get serializer => _$WebHandoffResponseSerializer();
 }
 
-class _$AnalysisQuotaDailySerializer implements PrimitiveSerializer<AnalysisQuotaDaily> {
+class _$WebHandoffResponseSerializer implements PrimitiveSerializer<WebHandoffResponse> {
   @override
-  final Iterable<Type> types = const [AnalysisQuotaDaily, _$AnalysisQuotaDaily];
+  final Iterable<Type> types = const [WebHandoffResponse, _$WebHandoffResponse];
 
   @override
-  final String wireName = r'AnalysisQuotaDaily';
+  final String wireName = r'WebHandoffResponse';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    AnalysisQuotaDaily object, {
+    WebHandoffResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'limit';
+    yield r'url';
     yield serializers.serialize(
-      object.limit,
-      specifiedType: const FullType(int),
+      object.url,
+      specifiedType: const FullType(String),
     );
-    yield r'used';
+    yield r'expiresIn';
     yield serializers.serialize(
-      object.used,
-      specifiedType: const FullType(int),
-    );
-    yield r'remaining';
-    yield serializers.serialize(
-      object.remaining,
+      object.expiresIn,
       specifiedType: const FullType(int),
     );
   }
@@ -68,7 +61,7 @@ class _$AnalysisQuotaDailySerializer implements PrimitiveSerializer<AnalysisQuot
   @override
   Object serialize(
     Serializers serializers,
-    AnalysisQuotaDaily object, {
+    WebHandoffResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -79,33 +72,26 @@ class _$AnalysisQuotaDailySerializer implements PrimitiveSerializer<AnalysisQuot
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required AnalysisQuotaDailyBuilder result,
+    required WebHandoffResponseBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'limit':
+        case r'url':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(int),
-          ) as int;
-          result.limit = valueDes;
+            specifiedType: const FullType(String),
+          ) as String;
+          result.url = valueDes;
           break;
-        case r'used':
+        case r'expiresIn':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(int),
           ) as int;
-          result.used = valueDes;
-          break;
-        case r'remaining':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
-          result.remaining = valueDes;
+          result.expiresIn = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -116,12 +102,12 @@ class _$AnalysisQuotaDailySerializer implements PrimitiveSerializer<AnalysisQuot
   }
 
   @override
-  AnalysisQuotaDaily deserialize(
+  WebHandoffResponse deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = AnalysisQuotaDailyBuilder();
+    final result = WebHandoffResponseBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

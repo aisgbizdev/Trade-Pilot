@@ -218,6 +218,8 @@ doc/VerifySecurityAnswerBody.md
 doc/Watchlist.md
 doc/WatchlistApi.md
 doc/WatchlistItem.md
+doc/WebHandoffBody.md
+doc/WebHandoffResponse.md
 lib/src/api.dart
 lib/src/api/admin_api.dart
 lib/src/api/analyses_api.dart
@@ -444,10 +446,10 @@ lib/src/model/users_list.dart
 lib/src/model/verify_security_answer_body.dart
 lib/src/model/watchlist.dart
 lib/src/model/watchlist_item.dart
+lib/src/model/web_handoff_body.dart
+lib/src/model/web_handoff_response.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/instrument_request_input_test.dart
-test/instrument_request_rank_test.dart
-test/instrument_request_ranking_test.dart
-test/instrument_request_receipt_test.dart
+test/web_handoff_body_test.dart
+test/web_handoff_response_test.dart

@@ -280,6 +280,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VerifySecurityAnswerBody.serializer)
       ..add(Watchlist.serializer)
       ..add(WatchlistItem.serializer)
+      ..add(WebHandoffBody.serializer)
+      ..add(WebHandoffResponse.serializer)
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(AdminFeedbackRow)]),
           () => ListBuilder<AdminFeedbackRow>())

@@ -522,7 +522,7 @@ No authorization required
 
 Compare deterministic technical risk across supported timeframes
 
-Authenticated, read-only technical comparison for all eight verified analysis instruments. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result.
+Authenticated, read-only technical comparison for all eight verified analysis instruments. It uses the shared getIndicators cache/pipeline; it never creates an analysis, consumes quota, calls AI, or writes user history. Missing or stale/insufficient data is explicitly reported and is not a low-risk result. 
 
 ### Example
 ```dart

@@ -14,7 +14,13 @@ import {
 import { eq, and, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth";
-import { createSingleSession, endSession } from "../lib/session";
+import { createSingleSession, createHandoffSession, endSession } from "../lib/session";
+import {
+  issueWebHandoffCode,
+  consumeWebHandoffCode,
+  isAllowedNextPath,
+  resolveWebHandoffOrigin,
+} from "../lib/web-handoff";
 import {
   forgotPasswordQuestionLimiter,
   forgotPasswordVerifyLimiter,
@@ -31,6 +37,8 @@ import {
   mobileOauthStartLimiter,
   mobileOauthExchangeLimiter,
   reauthLimiter,
+  webHandoffIssueLimiter,
+  webHandoffConsumeLimiter,
 } from "../middleware/rate-limit";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
@@ -1015,6 +1023,69 @@ router.post("/auth/mobile/exchange", mobileOauthExchangeLimiter, async (req, res
   void notifyLoginAlert(user.id);
 
   res.json({ token, user: serializeUser(user) });
+});
+
+// ---------------------------------------------------------------------------
+// Mobile-app-to-browser session handoff: the Flutter app is logged in via
+// Bearer token, but a browser opened from an in-app menu (e.g. Profil ->
+// Kredit Analisis -> tradepilot.id/topup) has no session_token cookie and
+// no way to get one short of asking the user to log in again. This mints a
+// one-time code the app bakes into a URL it opens in the system browser;
+// GET /auth/web-handoff/consume below trades that code for a real cookie
+// session. See lib/web-handoff.ts for the issue/consume logic.
+// ---------------------------------------------------------------------------
+const webHandoffSchema = z.object({ next: z.string() }).strict();
+
+router.post(
+  "/auth/web-handoff",
+  requireAuth,
+  webHandoffIssueLimiter,
+  async (req: AuthRequest, res) => {
+    const parsed = webHandoffSchema.safeParse(req.body);
+    if (!parsed.success || !isAllowedNextPath(parsed.data.next)) {
+      res.status(400).json({ error: "Tujuan tidak didukung." });
+      return;
+    }
+
+    const { code, expiresIn } = await issueWebHandoffCode(req.userId!, parsed.data.next);
+    res.status(201).json({
+      url: `${resolveWebHandoffOrigin()}/api/auth/web-handoff/consume?code=${code}`,
+      expiresIn,
+    });
+  },
+);
+
+router.get("/auth/web-handoff/consume", webHandoffConsumeLimiter, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
+
+  const rawCode = typeof req.query["code"] === "string" ? req.query["code"] : "";
+  const outcome = await consumeWebHandoffCode(rawCode);
+  if (!outcome.ok) {
+    res.redirect(302, "/login?error=handoff_expired");
+    return;
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.id, outcome.userId)).limit(1);
+  if (!user) {
+    // Account deleted between issuing and consuming the code — the code
+    // was already consumed above either way.
+    res.redirect(302, "/login?error=handoff_expired");
+    return;
+  }
+
+  const token = generateToken();
+  const expiresAt = getSessionExpiry(false);
+  await createHandoffSession(user.id, token, expiresAt);
+
+  res.cookie("session_token", token, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    expires: expiresAt,
+  });
+
+  res.redirect(302, outcome.next);
 });
 
 // ---------------------------------------------------------------------------

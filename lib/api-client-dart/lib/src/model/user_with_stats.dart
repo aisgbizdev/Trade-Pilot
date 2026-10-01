@@ -20,7 +20,7 @@ part 'user_with_stats.g.dart';
 /// * [analysisCount] 
 /// * [creditBalance] - Current purchased-credit balance (sum of credit_ledger for this user).
 /// * [tags] 
-/// * [customQuotaPerDay] - Per-user analysis-quota override. Null = uses the global default.
+/// * [customQuotaPerDay] - Per-user analysis-quota override. Null = uses the global default. Named \"PerDay\" for historical reasons — this is actually a one-time lifetime free allowance, not a recurring window.
 /// * [segment] - Cost/revenue/profit accounting segment (see GET /admin/stats' totalFreeUsers/totalPaidUsers/totalDevUsers). Mutually exclusive: \"dev\" (customQuotaPerDay set) wins over \"paid\" (a lifetime topup_approval credit_ledger entry) wins over \"free\".
 /// * [createdAt] 
 @BuiltValue()
@@ -52,7 +52,7 @@ abstract class UserWithStats implements Built<UserWithStats, UserWithStatsBuilde
   @BuiltValueField(wireName: r'tags')
   BuiltList<String> get tags;
 
-  /// Per-user analysis-quota override. Null = uses the global default.
+  /// Per-user analysis-quota override. Null = uses the global default. Named \"PerDay\" for historical reasons — this is actually a one-time lifetime free allowance, not a recurring window.
   @BuiltValueField(wireName: r'customQuotaPerDay')
   int get customQuotaPerDay;
 

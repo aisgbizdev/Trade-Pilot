@@ -164,6 +164,8 @@ import type {
   VerifySecurityAnswerBody,
   Watchlist,
   WatchlistItem,
+  WebHandoffBody,
+  WebHandoffResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -3381,6 +3383,116 @@ export const useExchangeMobileAuthCode = <
   TContext
 > => {
   return useMutation(getExchangeMobileAuthCodeMutationOptions(options));
+};
+
+export const getCreateWebHandoffUrl = () => {
+  return `/api/auth/web-handoff`;
+};
+
+/**
+ * For a mobile app menu item that opens a browser to an authenticated
+ * page (e.g. Profil -> Kredit Analisis -> tradepilot.id/topup) without
+ * asking the user to log in again. Call this with the Bearer token
+ * from the active app session, then open the returned `url` in the
+ * system browser. The code is single-use and expires in `expiresIn`
+ * seconds (60s) — open the URL immediately. This does NOT end or
+ * otherwise affect the native app session that called it.
+ * @summary Mint a one-time URL that signs the browser in as the current (Bearer-authenticated) user
+ */
+export const createWebHandoff = async (
+  webHandoffBody: WebHandoffBody,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<WebHandoffResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<WebHandoffResponse>(getCreateWebHandoffUrl(), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(webHandoffBody),
+  });
+};
+
+export const getCreateWebHandoffMutationKey = () =>
+  ["createWebHandoff"] as const;
+
+export const getCreateWebHandoffMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWebHandoff>>,
+    TError,
+    CreateWebHandoffMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWebHandoff>>,
+  TError,
+  CreateWebHandoffMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateWebHandoffMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWebHandoff>>,
+    CreateWebHandoffMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createWebHandoff(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWebHandoffMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWebHandoff>>
+>;
+export type CreateWebHandoffMutationBody = BodyType<WebHandoffBody>;
+export type CreateWebHandoffMutationError = ErrorType<ErrorResponse>;
+export type CreateWebHandoffMutationVariables = {
+  data: BodyType<WebHandoffBody>;
+};
+
+/**
+ * @summary Mint a one-time URL that signs the browser in as the current (Bearer-authenticated) user
+ */
+export const useCreateWebHandoff = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWebHandoff>>,
+    TError,
+    CreateWebHandoffMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createWebHandoff>>,
+  TError,
+  CreateWebHandoffMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateWebHandoffMutationOptions(options));
 };
 
 export const getLogoutUrl = () => {

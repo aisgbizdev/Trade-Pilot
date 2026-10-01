@@ -985,6 +985,57 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/web-handoff:
+    post:
+      operationId: createWebHandoff
+      tags: [auth]
+      summary: Mint a one-time URL that signs the browser in as the current (Bearer-authenticated) user
+      description: |
+        For a mobile app menu item that opens a browser to an authenticated
+        page (e.g. Profil -> Kredit Analisis -> tradepilot.id/topup) without
+        asking the user to log in again. Call this with the Bearer token
+        from the active app session, then open the returned `url` in the
+        system browser. The code is single-use and expires in `expiresIn`
+        seconds (60s) — open the URL immediately. This does NOT end or
+        otherwise affect the native app session that called it.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebHandoffBody"
+      responses:
+        "201":
+          description: Handoff URL minted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebHandoffResponse"
+        "400":
+          description: next is missing or not on the allowlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema: { type: integer }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /auth/logout:
     post:
       operationId: logout
@@ -4481,6 +4532,30 @@ components:
       required:
         - code
         - codeVerifier
+
+    WebHandoffBody:
+      type: object
+      properties:
+        next:
+          type: string
+          description: Relative path to land on after the browser session is established. Must match an exact-match allowlist server-side (currently only "/topup") — any other value, a full URL, or a protocol-relative "//host" is rejected with 400.
+          example: /topup
+      required:
+        - next
+
+    WebHandoffResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Open this in the system browser. Consuming it sets the session_token cookie and redirects to `next`.
+        expiresIn:
+          type: integer
+          description: Seconds until the code in `url` expires. Single-use regardless.
+      required:
+        - url
+        - expiresIn
 
     ChangeSecurityQuestionBody:
       type: object

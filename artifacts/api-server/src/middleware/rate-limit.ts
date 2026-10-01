@@ -358,6 +358,28 @@ export const dokuNotifyLimiter = buildLimiter({
   keyFn: (req) => clientIp(req),
 });
 
+// POST /auth/web-handoff — per-user (mounted after requireAuth), falling
+// back to per-IP for the rare case req.userId isn't set yet. Same budget
+// as reauthLimiter: a legit handoff happens once per menu tap.
+export const webHandoffIssueLimiter = buildLimiter({
+  windowMs: 60 * 1000,
+  max: 5,
+  keyFn: (req) => {
+    const id = (req as Request & { userId?: number }).userId;
+    return typeof id === "number" ? `user-${id}` : clientIp(req);
+  },
+  message: "Terlalu banyak percobaan. Coba lagi sebentar lagi. / Too many attempts. Try again shortly.",
+});
+
+// GET /auth/web-handoff/consume — per-IP; this endpoint is unauthenticated
+// (opened directly in the system browser) so there's no userId to key on.
+export const webHandoffConsumeLimiter = buildLimiter({
+  windowMs: 60 * 1000,
+  max: 20,
+  keyFn: (req) => clientIp(req),
+  message: "Terlalu banyak percobaan. Coba lagi sebentar lagi. / Too many attempts. Try again shortly.",
+});
+
 setInterval(() => {
   const now = Date.now();
   for (const limiter of [
@@ -376,6 +398,8 @@ setInterval(() => {
     trackEventLimiter,
     dokuCheckoutLimiter,
     dokuNotifyLimiter,
+    webHandoffIssueLimiter,
+    webHandoffConsumeLimiter,
   ]) {
     for (const [k, b] of limiter.store) {
       if (b.resetAt <= now) limiter.store.delete(k);

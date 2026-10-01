@@ -723,6 +723,18 @@ export interface MobileAuthExchangeBody {
   codeVerifier: string;
 }
 
+export interface WebHandoffBody {
+  /** Relative path to land on after the browser session is established. Must match an exact-match allowlist server-side (currently only "/topup") — any other value, a full URL, or a protocol-relative "//host" is rejected with 400. */
+  next: string;
+}
+
+export interface WebHandoffResponse {
+  /** Open this in the system browser. Consuming it sets the session_token cookie and redirects to `next`. */
+  url: string;
+  /** Seconds until the code in `url` expires. Single-use regardless. */
+  expiresIn: number;
+}
+
 export interface ChangeSecurityQuestionBody {
   currentPassword: string;
   securityQuestion: string;

@@ -211,6 +211,8 @@ import 'package:trade_pilot_api_client/src/model/users_list.dart';
 import 'package:trade_pilot_api_client/src/model/verify_security_answer_body.dart';
 import 'package:trade_pilot_api_client/src/model/watchlist.dart';
 import 'package:trade_pilot_api_client/src/model/watchlist_item.dart';
+import 'package:trade_pilot_api_client/src/model/web_handoff_body.dart';
+import 'package:trade_pilot_api_client/src/model/web_handoff_response.dart';
 
 part 'serializers.g.dart';
 
@@ -412,23 +414,13 @@ part 'serializers.g.dart';
   VerifySecurityAnswerBody,
   Watchlist,
   WatchlistItem,
+  WebHandoffBody,
+  WebHandoffResponse,
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(WatchlistItem)]),
-        () => ListBuilder<WatchlistItem>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FilterPreset)]),
         () => ListBuilder<FilterPreset>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OutboundClickStatsByPlacementInner)]),
-        () => ListBuilder<OutboundClickStatsByPlacementInner>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(StandardTradingRuleInstrument)]),
-        () => ListBuilder<StandardTradingRuleInstrument>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsTokenStatsBySegmentInner)]),
@@ -439,28 +431,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<TopupMonthSummary>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AnalyticsUsageStatsDeviceBreakdownInner)]),
-        () => ListBuilder<AnalyticsUsageStatsDeviceBreakdownInner>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(FundamentalCalendarEvent)]),
-        () => ListBuilder<FundamentalCalendarEvent>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(TimeframeRisk)]),
         () => ListBuilder<TimeframeRisk>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(Broadcast)]),
-        () => ListBuilder<Broadcast>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PersonalAnalyticsTopInstrumentsInner)]),
-        () => ListBuilder<PersonalAnalyticsTopInstrumentsInner>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ProgressionAchievement)]),
-        () => ListBuilder<ProgressionAchievement>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(UserWithStats)]),
@@ -469,22 +441,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsUsageStatsFeatureBreakdownInner)]),
         () => ListBuilder<AnalyticsUsageStatsFeatureBreakdownInner>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(TopupPackageOption)]),
-        () => ListBuilder<TopupPackageOption>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PerformanceBucket)]),
-        () => ListBuilder<PerformanceBucket>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(Analysis)]),
-        () => ListBuilder<Analysis>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AnalyticsTokenStatsByModelInner)]),
-        () => ListBuilder<AnalyticsTokenStatsByModelInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType(JsonObject)])]),
@@ -499,44 +455,12 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<TopupUserSummary>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AnalyticsUsageStatsCountryBreakdownInner)]),
-        () => ListBuilder<AnalyticsUsageStatsCountryBreakdownInner>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ProgressionLedgerEntry)]),
-        () => ListBuilder<ProgressionLedgerEntry>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(TopupRequestWithUser)]),
-        () => ListBuilder<TopupRequestWithUser>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AnalyticsTokenStatsDailyTokensInner)]),
-        () => ListBuilder<AnalyticsTokenStatsDailyTokensInner>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsTokenStatsByInstrumentInner)]),
         () => ListBuilder<AnalyticsTokenStatsByInstrumentInner>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AlertLevelRow)]),
-        () => ListBuilder<AlertLevelRow>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(MarketSnapshotCandle)]),
-        () => ListBuilder<MarketSnapshotCandle>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(TopupRequest)]),
         () => ListBuilder<TopupRequest>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AnalyticsUsageStatsDailyActivityInner)]),
-        () => ListBuilder<AnalyticsUsageStatsDailyActivityInner>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AnalyticsUsageStatsBrowserBreakdownInner)]),
-        () => ListBuilder<AnalyticsUsageStatsBrowserBreakdownInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(RecentInstrumentsInstrumentsInner)]),
@@ -549,18 +473,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(TraderMirrorHighlight)]),
         () => ListBuilder<TraderMirrorHighlight>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(DailySummaryAnalysis)]),
-        () => ListBuilder<DailySummaryAnalysis>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(Notification)]),
-        () => ListBuilder<Notification>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(JournalEntry)]),
-        () => ListBuilder<JournalEntry>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(InstrumentRequestRank)]),
@@ -579,6 +491,102 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<PersonalAnalyticsWeeklyDataInner>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalysisHistoryInstrumentStats)]),
+        () => ListBuilder<AnalysisHistoryInstrumentStats>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WatchlistItem)]),
+        () => ListBuilder<WatchlistItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OutboundClickStatsByPlacementInner)]),
+        () => ListBuilder<OutboundClickStatsByPlacementInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StandardTradingRuleInstrument)]),
+        () => ListBuilder<StandardTradingRuleInstrument>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsUsageStatsDeviceBreakdownInner)]),
+        () => ListBuilder<AnalyticsUsageStatsDeviceBreakdownInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FundamentalCalendarEvent)]),
+        () => ListBuilder<FundamentalCalendarEvent>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(Broadcast)]),
+        () => ListBuilder<Broadcast>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PersonalAnalyticsTopInstrumentsInner)]),
+        () => ListBuilder<PersonalAnalyticsTopInstrumentsInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProgressionAchievement)]),
+        () => ListBuilder<ProgressionAchievement>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TopupPackageOption)]),
+        () => ListBuilder<TopupPackageOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PerformanceBucket)]),
+        () => ListBuilder<PerformanceBucket>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(Analysis)]),
+        () => ListBuilder<Analysis>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsTokenStatsByModelInner)]),
+        () => ListBuilder<AnalyticsTokenStatsByModelInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsUsageStatsCountryBreakdownInner)]),
+        () => ListBuilder<AnalyticsUsageStatsCountryBreakdownInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProgressionLedgerEntry)]),
+        () => ListBuilder<ProgressionLedgerEntry>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TopupRequestWithUser)]),
+        () => ListBuilder<TopupRequestWithUser>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsTokenStatsDailyTokensInner)]),
+        () => ListBuilder<AnalyticsTokenStatsDailyTokensInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AlertLevelRow)]),
+        () => ListBuilder<AlertLevelRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(MarketSnapshotCandle)]),
+        () => ListBuilder<MarketSnapshotCandle>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsUsageStatsDailyActivityInner)]),
+        () => ListBuilder<AnalyticsUsageStatsDailyActivityInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsUsageStatsBrowserBreakdownInner)]),
+        () => ListBuilder<AnalyticsUsageStatsBrowserBreakdownInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DailySummaryAnalysis)]),
+        () => ListBuilder<DailySummaryAnalysis>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(Notification)]),
+        () => ListBuilder<Notification>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(JournalEntry)]),
+        () => ListBuilder<JournalEntry>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ProgressionAuditEntry)]),
         () => ListBuilder<ProgressionAuditEntry>(),
       )
@@ -589,10 +597,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FundamentalNewsItem)]),
         () => ListBuilder<FundamentalNewsItem>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AnalysisHistoryInstrumentStats)]),
-        () => ListBuilder<AnalysisHistoryInstrumentStats>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(String)]),

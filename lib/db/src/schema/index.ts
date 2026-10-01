@@ -517,6 +517,38 @@ export const mobileOauthTransactions = pgTable("mobile_oauth_transactions", {
   }).onDelete("cascade"),
 }));
 
+// Short-lived, single-use handoff from a logged-in mobile app session to
+// a browser tab, so tapping "Kredit Analisis" in Profil doesn't force a
+// second login. POST /auth/web-handoff (Bearer-authenticated) mints a row
+// here and hands the raw code back in a URL; GET /auth/web-handoff/consume
+// (no auth — opened in the system browser) looks it up by hash, atomically
+// claims it via `UPDATE ... WHERE used_at IS NULL AND expires_at > now()`
+// (same one-time-use idiom as mobileOauthTransactions/topups/reauth — see
+// lib/web-handoff.ts), and mints a *web* session for userId before
+// redirecting to `next`. 60s TTL — this is a same-moment handoff, not a
+// session of its own. Deliberately its own table rather than reusing
+// mobileOauthTransactions: that table's columns (provider, redirectUri,
+// PKCE challenge) are OAuth-specific and don't apply here.
+export const webHandoffCodes = pgTable("web_handoff_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  codeHash: text("code_hash").notNull().unique("web_handoff_codes_code_hash_key"),
+  // Relative path only, checked against an allowlist at issue time
+  // (see isAllowedNextPath in lib/web-handoff.ts) and never re-read from
+  // client input at consume time — the browser GET only ever reads this
+  // column, never a query parameter, so there is no open-redirect surface.
+  next: text("next").notNull(),
+  usedAt: timestamp("used_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userFk: foreignKey({
+    name: "web_handoff_codes_user_id_fkey",
+    columns: [t.userId],
+    foreignColumns: [users.id],
+  }).onDelete("cascade"),
+}));
+
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
   userId: integer("user_id")

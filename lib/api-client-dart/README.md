@@ -103,6 +103,7 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**changePassword**](doc/AuthApi.md#changepassword) | **PATCH** /auth/password | Change own password
 [*AuthApi*](doc/AuthApi.md) | [**changeSecurityQuestion**](doc/AuthApi.md#changesecurityquestion) | **PATCH** /auth/security-question | Change security question
 [*AuthApi*](doc/AuthApi.md) | [**completeTiktokSignup**](doc/AuthApi.md#completetiktoksignup) | **POST** /auth/tiktok/complete-signup | Finish a brand-new TikTok sign-in by supplying an email
+[*AuthApi*](doc/AuthApi.md) | [**createWebHandoff**](doc/AuthApi.md#createwebhandoff) | **POST** /auth/web-handoff | Mint a one-time URL that signs the browser in as the current (Bearer-authenticated) user
 [*AuthApi*](doc/AuthApi.md) | [**deleteAccount**](doc/AuthApi.md#deleteaccount) | **DELETE** /auth/account | Permanently delete the current user&#39;s own account
 [*AuthApi*](doc/AuthApi.md) | [**exchangeMobileAuthCode**](doc/AuthApi.md#exchangemobileauthcode) | **POST** /auth/mobile/exchange | Exchange a one-time mobile OAuth code (+ PKCE verifier) for a TradePilot session
 [*AuthApi*](doc/AuthApi.md) | [**getForgotPasswordQuestion**](doc/AuthApi.md#getforgotpasswordquestion) | **POST** /auth/forgot-password/question | Get security question for email
@@ -382,6 +383,8 @@ Class | Method | HTTP request | Description
  - [VerifySecurityAnswerBody](doc/VerifySecurityAnswerBody.md)
  - [Watchlist](doc/Watchlist.md)
  - [WatchlistItem](doc/WatchlistItem.md)
+ - [WebHandoffBody](doc/WebHandoffBody.md)
+ - [WebHandoffResponse](doc/WebHandoffResponse.md)
 
 
 ## Documentation For Authorization

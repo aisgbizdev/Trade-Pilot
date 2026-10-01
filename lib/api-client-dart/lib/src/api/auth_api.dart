@@ -33,6 +33,8 @@ import 'package:trade_pilot_api_client/src/model/tiktok_pending_signup_response.
 import 'package:trade_pilot_api_client/src/model/update_profile_body.dart';
 import 'package:trade_pilot_api_client/src/model/user.dart';
 import 'package:trade_pilot_api_client/src/model/verify_security_answer_body.dart';
+import 'package:trade_pilot_api_client/src/model/web_handoff_body.dart';
+import 'package:trade_pilot_api_client/src/model/web_handoff_response.dart';
 
 class AuthApi {
 
@@ -316,6 +318,112 @@ class AuthApi {
     }
 
     return Response<AuthResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Mint a one-time URL that signs the browser in as the current (Bearer-authenticated) user
+  /// For a mobile app menu item that opens a browser to an authenticated page (e.g. Profil -&gt; Kredit Analisis -&gt; tradepilot.id/topup) without asking the user to log in again. Call this with the Bearer token from the active app session, then open the returned &#x60;url&#x60; in the system browser. The code is single-use and expires in &#x60;expiresIn&#x60; seconds (60s) — open the URL immediately. This does NOT end or otherwise affect the native app session that called it. 
+  ///
+  /// Parameters:
+  /// * [webHandoffBody] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [WebHandoffResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<WebHandoffResponse>> createWebHandoff({ 
+    required WebHandoffBody webHandoffBody,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/web-handoff';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'sessionCookie',
+            'keyName': 'session_token',
+            'where': '',
+          },{
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(WebHandoffBody);
+      _bodyData = _serializers.serialize(webHandoffBody, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    WebHandoffResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(WebHandoffResponse),
+      ) as WebHandoffResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<WebHandoffResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

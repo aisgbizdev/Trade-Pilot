@@ -2,6 +2,10 @@
 // device/browser (password, Google, Apple, TikTok, or Facebook) signs out
 // every other device. Centralized here so every login/registration route
 // applies the same rule instead of each one deleting old sessions itself.
+// The one deliberate exception is the web-handoff flow (createHandoffSession
+// below): it mints a web session for a user already signed in natively
+// without touching that native session, since the whole point of the
+// handoff is to avoid disrupting the app session that requested it.
 //
 // Also owns the "web" 15-minute idle auto-logout: session validity/idle
 // resolution lives here (resolveSession), shared by requireAuth and
@@ -45,6 +49,30 @@ export async function createSingleSession(
     await tx.delete(sessions).where(eq(sessions.userId, userId));
     await tx.insert(sessions).values({ userId, token, expiresAt, platform });
     await logAuthEvent(tx, userId, "login", platform);
+  });
+}
+
+/**
+ * Mints a *web* session for a user who is already authenticated on
+ * another platform — used only by GET /auth/web-handoff/consume.
+ * Deliberately NOT createSingleSession: that deletes every session the
+ * user has regardless of platform, so calling it here would immediately
+ * log the user out of the native app session that requested this very
+ * handoff, defeating the feature. Instead this only clears the user's
+ * other *web* sessions (so a handoff doesn't pile up stray browser
+ * sessions) and leaves `native` sessions untouched. This is a deliberate,
+ * narrow exception to the single-session-per-account rule — product
+ * decision, see chat 2026-10-01.
+ */
+export async function createHandoffSession(
+  userId: number,
+  token: string,
+  expiresAt: Date,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(sessions).where(and(eq(sessions.userId, userId), eq(sessions.platform, "web")));
+    await tx.insert(sessions).values({ userId, token, expiresAt, platform: "web" });
+    await logAuthEvent(tx, userId, "login", "web");
   });
 }
 
