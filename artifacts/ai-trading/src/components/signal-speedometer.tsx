@@ -5,12 +5,15 @@ import { leanFromCounts, type MarketContextLean } from "./market-context-summary
 export type SpeedometerSize = "xs" | "sm" | "md";
 export type SpeedometerVariant = "bar" | "semicircle";
 
+// Saturated at both ends on purpose (deep blood-red → vivid green)
+// instead of the old pastel rose/mint — a glance at the extremes
+// should read as unambiguously bearish/bullish, not a soft tint.
 const GRADIENT_STOPS: ReadonlyArray<{ offset: string; color: string }> = [
-  { offset: "0%",   color: "#fda4af" },
-  { offset: "25%",  color: "#fdba74" },
-  { offset: "50%",  color: "#fde68a" },
-  { offset: "75%",  color: "#86efac" },
-  { offset: "100%", color: "#6ee7b7" },
+  { offset: "0%",   color: "#b91c1c" },
+  { offset: "25%",  color: "#f97316" },
+  { offset: "50%",  color: "#facc15" },
+  { offset: "75%",  color: "#4ade80" },
+  { offset: "100%", color: "#15803d" },
 ];
 const GRADIENT_CSS = `linear-gradient(to right, ${GRADIENT_STOPS.map((s) => `${s.color} ${s.offset}`).join(", ")})`;
 

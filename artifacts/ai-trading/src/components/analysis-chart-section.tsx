@@ -283,7 +283,7 @@ export function AnalysisChartSection({
       </div>
 
       {inlineUsesLevels ? (
-        <div className="h-[260px]">
+        <div className="h-[260px] md:h-[360px]">
           <AnalysisLevelsChart
             instrument={instrument}
             timeframe={timeframe}
@@ -307,6 +307,7 @@ export function AnalysisChartSection({
         <TradingViewSymbolOverview
           symbol={tvSymbol}
           displayName={instrument}
+          height={320}
           onLoadFailed={handleOverviewFail}
         />
       )}

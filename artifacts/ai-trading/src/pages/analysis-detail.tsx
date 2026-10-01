@@ -136,7 +136,7 @@ function TimeframeRiskDialog({
             {t.risk_map.title}
           </DialogTitle>
           <DialogDescription
-            className="flex items-start gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 p-2 text-xs leading-relaxed text-blue-700 dark:text-blue-400"
+            className="flex items-start gap-1.5 rounded-md border border-red-500/20 bg-red-500/10 p-2 text-xs leading-relaxed text-red-700 dark:text-red-400"
           >
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>{t.risk_map.desc}</span>
@@ -391,15 +391,12 @@ function BiasIndicator({ bias, mode, timeframe }: { bias: BiasKey; mode: string;
             </span>
           </div>
           <div
-            className="mt-1.5 flex items-start gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 p-1.5 text-[11px] leading-relaxed text-blue-700 dark:text-blue-400"
+            className="mt-1.5 flex items-start gap-1.5 rounded-md border border-red-500/20 bg-red-500/10 p-1.5 text-[11px] leading-relaxed text-red-700 dark:text-red-400"
             data-testid="text-bias-risk-disclaimer"
           >
             <Info className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
             <span>{t.analysis_detail.bias_risk_disclaimer}</span>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            {t.analysis_detail.bias_for_timeframe.replace("{timeframe}", timeframe)}
-          </p>
         </div>
       </div>
       <SignalSpeedometer
@@ -2536,7 +2533,7 @@ export default function AnalysisDetailPage({
                 {rl?.label}
               </p>
               <div
-                className="mt-1 flex items-start gap-1 rounded-md border border-blue-500/20 bg-blue-500/10 p-1.5 text-[9px] leading-snug text-blue-700 dark:text-blue-400 max-w-[10rem]"
+                className="mt-1 flex items-start gap-1 rounded-md border border-red-500/20 bg-red-500/10 p-1.5 text-[9px] leading-snug text-red-700 dark:text-red-400 max-w-[10rem]"
                 data-testid="text-risk-overall-note"
               >
                 <Info className="mt-0.5 h-2.5 w-2.5 shrink-0" aria-hidden="true" />
