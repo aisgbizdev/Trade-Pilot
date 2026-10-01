@@ -1310,7 +1310,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(buyCopy).toContain("TP1:");
     expect(buyCopy).toContain("TP2:");
     expect(buyCopy).toContain("Risk context:");
-    expect(buyCopy).toContain("This is not an automated order.");
+    expect(buyCopy).toContain("Not an automated order.");
     expect(buyCopy).not.toContain("Not included");
     expect(await screen.findByTestId("adaptive-copy-status")).toHaveTextContent("Copied");
 
@@ -1423,7 +1423,13 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(printHtml).toContain("A break below support invalidates the setup.");
     expect(printHtml).toContain("Price likely continues higher into resistance.");
     expect(printHtml).not.toContain("Invented headline");
-    expect(printHtml).toContain("not a profit guarantee or automatic order");
+    expect(printHtml).toContain("not a profit guarantee, and not an automatic order");
+    // Generic "how this feature works" sections stay in the in-app panel
+    // but are deliberately dropped from print — they don't change per
+    // analysis and were the main reason the report ran to 3+ pages.
+    expect(printHtml).not.toContain("Where this plan comes from");
+    expect(printHtml).not.toContain("Fixed account rules profile");
+    expect(printHtml).not.toContain("Risk style");
     fireEvent.click(screen.getByTestId("adaptive-print-details"));
     await waitFor(() => expect(previewDocument.write).toHaveBeenCalledTimes(2));
     expect(String(previewDocument.write.mock.calls[1]?.[0])).toContain('src="data:image/png;base64,UE5H"');
@@ -1449,7 +1455,7 @@ describe("AnalysisDetailPage: situation-aware position recommendation", () => {
     expect(guide).toContain("Adaptive scenario under review");
     expect(guide).toContain("Neither Buy nor Sell can be presented as ready yet.");
     expect(guide).not.toContain("BUY scenario for review");
-    expect(guide).toContain("not an instruction or invitation to take a particular position");
+    expect(guide).toContain("not a call to trade");
     expect(guide).toContain("A chart from this analysis time is unavailable");
     expect(guide).not.toContain('src="data:image/png;base64,');
   });

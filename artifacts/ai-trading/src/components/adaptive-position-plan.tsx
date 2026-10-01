@@ -1293,8 +1293,24 @@ function AdaptivePositionPlanContent({ analysisId, instrument, tradePlan, contex
   };
   const educationShareData = (): ConfidenceShareData => {
     if (!educationContentRef.current) throw new Error("Explanation is not open");
+    // Printed report keeps only analysis-specific content (reasoning,
+    // the plan itself, and concrete technical insights). Generic
+    // "how this feature works" sections — method/accordion, broker
+    // account & contract-tier boilerplate, risk-style explainer — stay
+    // in the in-app panel but are dropped from print; they don't
+    // change per analysis and were the main reason the report ran to
+    // 3+ pages without adding anything that builds confidence in this
+    // specific result. See chat 2026-10-01.
+    const PRINT_EXCLUDED_SECTION_TESTIDS = new Set([
+      "adaptive-plan-method",
+      "adaptive-broker-details",
+      "adaptive-risk-style-details",
+    ]);
     const sections: ConfidenceShareData["sections"] = Array.from(educationContentRef.current.children)
-      .filter((node) => node.tagName === "SECTION")
+      .filter((node) =>
+        node.tagName === "SECTION" &&
+        !PRINT_EXCLUDED_SECTION_TESTIDS.has(node.getAttribute("data-testid") ?? ""),
+      )
       .map((section) => {
         const blocks = Array.from(section.querySelectorAll("h4, p, li"))
           .filter((node) => (!node.closest("li") || node.tagName === "LI") &&

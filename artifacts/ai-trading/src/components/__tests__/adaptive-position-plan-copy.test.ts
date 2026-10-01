@@ -57,7 +57,7 @@ describe("Adaptive Plan copy text", () => {
     expect(text).toContain("TP1: 2,315");
     expect(text).toContain("TP2: 2,325");
     expect(text).toContain("Usable risk budget: $250");
-    expect(text).toContain("This is not an automated order.");
+    expect(text).toContain("Not an automated order.");
     expect(text).not.toContain("9,999");
     expect(text).not.toContain("9.9 lot");
   });
