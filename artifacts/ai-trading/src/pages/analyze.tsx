@@ -1163,22 +1163,39 @@ export default function AnalyzePage() {
                 </span>
               </button>
             )}
-            {canShowQuotaChip && dailyQuota && (
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
-                  dailyQuota.remaining === 0
-                    ? "bg-destructive/10 border-destructive/40 text-destructive"
-                    : dailyQuota.remaining <= 3
-                    ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
-                    : "bg-primary/10 border-primary/30 text-primary",
-                )}
-                data-testid="chip-quota"
-                title={`${t.analyze.quota_day}: ${dailyQuota.remaining}/${dailyQuota.limit}`}
-              >
-                {dailyQuota.remaining}{t.analyze.quota_day_short}
-              </span>
-            )}
+            {canShowQuotaChip && dailyQuota && (() => {
+              const creditBalance = quota?.credits?.balance ?? 0;
+              // Free quota is a one-time allowance consumed first; once it
+              // hits 0 the backend seamlessly falls back to paid credits
+              // (see routes/analyses.ts), so a user who topped up can still
+              // analyze — the chip must reflect that instead of showing an
+              // alarming "0 free" that implies they're fully blocked.
+              const usingCredits = dailyQuota.remaining === 0 && creditBalance > 0;
+              const blocked = dailyQuota.remaining === 0 && creditBalance <= 0;
+              const value = usingCredits ? creditBalance : dailyQuota.remaining;
+              const suffix = usingCredits ? t.analyze.quota_credit_short : t.analyze.quota_day_short;
+              const title = usingCredits
+                ? `${t.analyze.quota_credit}: ${creditBalance}`
+                : `${t.analyze.quota_day}: ${dailyQuota.remaining}/${dailyQuota.limit}`;
+              return (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold border",
+                    blocked
+                      ? "bg-destructive/10 border-destructive/40 text-destructive"
+                      : usingCredits
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : dailyQuota.remaining <= 3
+                      ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
+                      : "bg-primary/10 border-primary/30 text-primary",
+                  )}
+                  data-testid="chip-quota"
+                  title={title}
+                >
+                  {value}{suffix}
+                </span>
+              );
+            })()}
           </div>
         </div>
 

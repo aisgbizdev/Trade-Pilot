@@ -412,6 +412,8 @@ export const id: Translations = {
     quota_title: "Batas analisis tercapai",
     quota_day: "Sisa quota gratis",
     quota_day_short: " gratis",
+    quota_credit: "Sisa kredit",
+    quota_credit_short: " kredit",
     credit_consumed_title: "1 kredit terpakai, sisa: {n}",
     loading_price: "memuat...",
     signal_buy: "Beli",

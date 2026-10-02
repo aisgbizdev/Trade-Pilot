@@ -328,6 +328,67 @@ describe("AnalyzePage: empty / loading branches", () => {
     });
   });
 
+  it("falls back to the credit balance in the chip once the free quota is exhausted", async () => {
+    installFetchMock([
+      (url) => {
+        if (url.includes("/api/analyses/quota")) {
+          return jsonResponse({
+            unlimited: false,
+            daily: { remaining: 0, limit: 10 },
+            credits: { balance: 7 },
+          });
+        }
+        return null;
+      },
+      ...pageHandlers({}).slice(1),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("instrument-options");
+
+    // Free quota is 0 but credits are available — the chip must show the
+    // credit balance (not an alarming "0 free") since the backend
+    // transparently falls back to paid credits in this state.
+    const chip = await screen.findByTestId("chip-quota");
+    expect(chip.textContent).toMatch(/^7 credits$/);
+    expect(chip.className).not.toContain("destructive");
+  });
+
+  it("shows a blocked chip when both the free quota and credits are exhausted", async () => {
+    installFetchMock([
+      (url) => {
+        if (url.includes("/api/analyses/quota")) {
+          return jsonResponse({
+            unlimited: false,
+            daily: { remaining: 0, limit: 10 },
+            credits: { balance: 0 },
+          });
+        }
+        return null;
+      },
+      ...pageHandlers({}).slice(1),
+    ]);
+    const { Wrapper } = makeWrapper();
+
+    render(
+      <Wrapper>
+        <AnalyzePage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("instrument-options");
+
+    const chip = await screen.findByTestId("chip-quota");
+    expect(chip.textContent).toMatch(/^0 free$/);
+    expect(chip.className).toContain("destructive");
+  });
+
   it("hides the progression badge when summary data is unavailable", async () => {
     installFetchMock([
       (url) => {

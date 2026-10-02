@@ -410,6 +410,8 @@ export const en = {
     quota_title: "Analysis limit reached",
     quota_day: "Free remaining",
     quota_day_short: " free",
+    quota_credit: "Credits remaining",
+    quota_credit_short: " credits",
     credit_consumed_title: "1 credit used, remaining: {n}",
     loading_price: "loading...",
     signal_buy: "Buy",
