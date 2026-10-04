@@ -1343,39 +1343,34 @@ function AnalysisAlertsCard({
           <p>{alertError === "unavailable" ? t.analysis_detail.alerts_arm_error : t.analysis_detail.alerts_retry_error}</p>
         </div>
       )}
-      <div className="flex items-center gap-2 flex-wrap" data-testid="price-alerts-summary">
-        <span
-          className={cn(
-            "text-[10px] font-semibold px-2 py-1 rounded-full border",
-            enabled
-              ? "bg-primary/10 text-primary border-primary/30"
-              : "bg-muted text-muted-foreground border-border",
-          )}
-        >
-          {enabled ? t.analysis_detail.alerts_on : t.analysis_detail.alerts_off}
-        </span>
-        {enabled && (
-          <span className="text-[11px] text-muted-foreground">
-            {t.analysis_detail.alerts_armed_count.replace("{n}", String(armedCount))}
-          </span>
-        )}
-      </div>
-      {levels.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1" data-testid="price-alerts-levels">
-          {levels.map((row) => (
-            <div
-              key={`${row.level}-${row.side}`}
-              className="flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded border bg-card/50"
-              data-testid={`alert-row-${row.level}`}
-            >
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-semibold text-foreground">{levelLabel(row.level)}</span>
-                <span className="font-mono text-[11px] text-muted-foreground">@ {row.price}</span>
-              </div>
-              {rowStatusBadge(row)}
+      {enabled && (
+        <>
+          <div className="flex items-center gap-2 flex-wrap" data-testid="price-alerts-summary">
+            <span className="text-[10px] font-semibold px-2 py-1 rounded-full border bg-primary/10 text-primary border-primary/30">
+              {t.analysis_detail.alerts_on}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {t.analysis_detail.alerts_armed_count.replace("{n}", String(armedCount))}
+            </span>
+          </div>
+          {levels.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1" data-testid="price-alerts-levels">
+              {levels.map((row) => (
+                <div
+                  key={`${row.level}-${row.side}`}
+                  className="flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded border bg-card/50"
+                  data-testid={`alert-row-${row.level}`}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-semibold text-foreground">{levelLabel(row.level)}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground">@ {row.price}</span>
+                  </div>
+                  {rowStatusBadge(row)}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </Card>
   );

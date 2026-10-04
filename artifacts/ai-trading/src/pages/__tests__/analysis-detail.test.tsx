@@ -290,6 +290,49 @@ describe("AnalysisDetailPage: price alert guidance", () => {
     await waitFor(() => expect(mock.calls.filter((c) => c.method === "POST" && c.url.endsWith("/alerts"))).toHaveLength(2));
   });
 
+  it("hides the armed-count/level breakdown while alerts are off, and shows it once armed", async () => {
+    let armed = false;
+    installFetchMock([
+      getAnalysisHandler({ body: { ...ANALYSIS_PAYLOAD, tradePlan: TRADE_PLAN } }),
+      (url) => {
+        if (url.includes("/api/push/subscription-status")) return jsonResponse({ subscribed: true });
+        return null;
+      },
+      (url, init) => {
+        const method = (init?.method ?? "GET").toUpperCase();
+        if (!new RegExp(`/api/analyses/${ANALYSIS_ID}/alerts(?:\\?|$)`).test(url)) return null;
+        if (method === "POST") {
+          armed = true;
+          return jsonResponse({
+            enabled: true,
+            armedCount: 2,
+            levels: [{ level: "entry", side: "buy", price: 4140, triggeredAt: null, cancelledAt: null }],
+          }, 201);
+        }
+        return jsonResponse(
+          armed
+            ? { enabled: true, armedCount: 2, levels: [{ level: "entry", side: "buy", price: 4140, triggeredAt: null, cancelledAt: null }] }
+            : { enabled: false, armedCount: 0, levels: [] },
+        );
+      },
+    ], { strict: false });
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><AnalysisDetailPage params={{ id: String(ANALYSIS_ID) }} /></Wrapper>);
+    const card = await screen.findByTestId("card-price-alerts");
+
+    // Off by default — the summary badge and level rows add nothing
+    // useful when the user hasn't turned alerts on for this analysis.
+    await waitFor(() => expect(within(card).getByTestId("switch-price-alerts")).not.toBeDisabled());
+    expect(within(card).queryByTestId("price-alerts-summary")).not.toBeInTheDocument();
+    expect(within(card).queryByTestId("price-alerts-levels")).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByTestId("switch-price-alerts"));
+
+    expect(await within(card).findByTestId("price-alerts-summary")).toHaveTextContent(en.analysis_detail.alerts_on);
+    expect(within(card).getByTestId("price-alerts-levels")).toBeInTheDocument();
+    expect(within(card).getByTestId("alert-row-entry")).toBeInTheDocument();
+  });
+
   it("treats a failed network request as retryable rather than an unsupported instrument", async () => {
     const handler: FetchHandler = (url, init) =>
       url.endsWith(`/api/analyses/${ANALYSIS_ID}/alerts`) && init?.method === "POST"
