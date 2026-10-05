@@ -451,5 +451,3 @@ lib/src/model/web_handoff_response.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/web_handoff_body_test.dart
-test/web_handoff_response_test.dart

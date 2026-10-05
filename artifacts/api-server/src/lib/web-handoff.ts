@@ -18,7 +18,12 @@ const CODE_TTL_MS = 60 * 1000;
 // point. Deliberately exact equality, never a prefix/pattern match, so
 // `next` can never become an open redirect via a crafted
 // "/topup/../../evil" or similar.
-const ALLOWED_NEXT_PATHS = new Set<string>(["/topup"]);
+// "/topup?source=app" is the same /topup page, but tells it the browser
+// was opened from the app (not a normal desktop/mobile-web visit) — see
+// topup.tsx's useDokuReturnStatus, which only fires the
+// id.tradepilot.app:// return deep link when this is present. See
+// chat 2026-10-05.
+const ALLOWED_NEXT_PATHS = new Set<string>(["/topup", "/topup?source=app"]);
 
 export function isAllowedNextPath(next: unknown): next is string {
   return typeof next === "string" && ALLOWED_NEXT_PATHS.has(next);

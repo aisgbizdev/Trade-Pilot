@@ -90,7 +90,7 @@ router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (re
     res.status(400).json({ error: "Data top-up tidak valid" });
     return;
   }
-  const { amountRupiah, method } = parsed.data;
+  const { amountRupiah, method, source } = parsed.data;
   const pkg = findTopupPackage(amountRupiah);
   if (!pkg || !getDokuMethodsForPackage(pkg.amountRupiah).includes(method)) {
     res.status(400).json({
@@ -134,11 +134,16 @@ router.post("/topups/doku/checkout", requireAuth, dokuCheckoutLimiter, async (re
     .returning();
 
   try {
+    // Carried through to DOKU's own redirect so the /topup page, once the
+    // browser lands back on it, still knows this checkout started from the
+    // mobile app's web-handoff — that's what gates offering the
+    // id.tradepilot.app:// return deep link (see topup.tsx).
+    const sourceSuffix = source === "app" ? "&source=app" : "";
     const checkout = await createDokuCheckout({
       invoiceNumber,
       amountRupiah: totalChargeRupiah,
-      callbackUrl: `${publicBaseUrl}/topup?doku=success&id=${inserted!.id}`,
-      callbackUrlCancel: `${publicBaseUrl}/topup?doku=cancel&id=${inserted!.id}`,
+      callbackUrl: `${publicBaseUrl}/topup?doku=success&id=${inserted!.id}${sourceSuffix}`,
+      callbackUrlCancel: `${publicBaseUrl}/topup?doku=cancel&id=${inserted!.id}${sourceSuffix}`,
       paymentDueDateMinutes,
       paymentMethodTypes: getDokuPaymentMethodTypes(method),
     });

@@ -57,6 +57,12 @@ export function TopupFlow() {
   // QRIS) — the smallest package offers QRIS only and skips this dialog
   // entirely (see handleContinue).
   const [showMethodDialog, setShowMethodDialog] = useState(false);
+  // Captured once, synchronously, on first render — before the parent page's
+  // useDokuReturnStatus effect strips the query string on mount. Set when
+  // this page was opened via the mobile app's web-handoff (?source=app), so
+  // the checkout request can carry that through to DOKU's own callback URL
+  // (see topup.tsx's useDokuReturnStatus for the other end of this).
+  const [isFromApp] = useState(() => new URLSearchParams(window.location.search).get("source") === "app");
 
   const createDokuCheckout = useCreateDokuCheckout();
 
@@ -72,7 +78,11 @@ export function TopupFlow() {
     if (!selectedPackage) return;
     try {
       const result = await createDokuCheckout.mutateAsync({
-        data: { amountRupiah: selectedPackage.amountRupiah, method },
+        data: {
+          amountRupiah: selectedPackage.amountRupiah,
+          method,
+          ...(isFromApp ? { source: "app" as const } : {}),
+        },
       });
       setShowMethodDialog(false);
       window.location.href = result.paymentUrl;

@@ -2041,6 +2041,7 @@ export const en = {
     doku_status_cancelled: "Payment cancelled.",
     doku_status_failed: "Payment failed. Try again or contact support.",
     doku_resume_payment: "Resume payment →",
+    doku_return_to_app: "Back to the app",
     support_whatsapp_cta: "Having trouble? Contact support on WhatsApp",
     support_whatsapp_message: "Hi, I need help with a TradePilot.id credit top-up",
     history_title: "Top-up History",

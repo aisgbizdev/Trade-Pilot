@@ -14,6 +14,7 @@ part 'create_doku_checkout_body.g.dart';
 /// Properties:
 /// * [amountRupiah] - Must match one of the fixed packages at/above the DOKU-only threshold.
 /// * [method] - Which DOKU-hosted channel to restrict the checkout page to. \"va\" carries the flat admin fee on top of the package price; \"qris\" does not (DOKU's own QRIS cost isn't passed on to the customer).
+/// * [source_] - Set when this checkout was started from the /topup?source=app page (reached via the mobile app's web-handoff). Embedded into DOKU's callbackUrl/callbackUrlCancel so the page can tell it should offer the id.tradepilot.app:// return deep link once payment resolves. Omitted entirely for an ordinary web visit.
 @BuiltValue()
 abstract class CreateDokuCheckoutBody implements Built<CreateDokuCheckoutBody, CreateDokuCheckoutBodyBuilder> {
   /// Must match one of the fixed packages at/above the DOKU-only threshold.
@@ -24,6 +25,11 @@ abstract class CreateDokuCheckoutBody implements Built<CreateDokuCheckoutBody, C
   @BuiltValueField(wireName: r'method')
   CreateDokuCheckoutBodyMethodEnum get method;
   // enum methodEnum {  va,  qris,  };
+
+  /// Set when this checkout was started from the /topup?source=app page (reached via the mobile app's web-handoff). Embedded into DOKU's callbackUrl/callbackUrlCancel so the page can tell it should offer the id.tradepilot.app:// return deep link once payment resolves. Omitted entirely for an ordinary web visit.
+  @BuiltValueField(wireName: r'source')
+  CreateDokuCheckoutBodySource_Enum? get source_;
+  // enum source_Enum {  app,  };
 
   CreateDokuCheckoutBody._();
 
@@ -58,6 +64,13 @@ class _$CreateDokuCheckoutBodySerializer implements PrimitiveSerializer<CreateDo
       object.method,
       specifiedType: const FullType(CreateDokuCheckoutBodyMethodEnum),
     );
+    if (object.source_ != null) {
+      yield r'source';
+      yield serializers.serialize(
+        object.source_,
+        specifiedType: const FullType(CreateDokuCheckoutBodySource_Enum),
+      );
+    }
   }
 
   @override
@@ -94,6 +107,14 @@ class _$CreateDokuCheckoutBodySerializer implements PrimitiveSerializer<CreateDo
             specifiedType: const FullType(CreateDokuCheckoutBodyMethodEnum),
           ) as CreateDokuCheckoutBodyMethodEnum;
           result.method = valueDes;
+          break;
+        case r'source':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(CreateDokuCheckoutBodySource_Enum),
+          ) as CreateDokuCheckoutBodySource_Enum?;
+          if (valueDes == null) continue;
+          result.source_ = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -139,5 +160,19 @@ class CreateDokuCheckoutBodyMethodEnum extends EnumClass {
 
   static BuiltSet<CreateDokuCheckoutBodyMethodEnum> get values => _$createDokuCheckoutBodyMethodEnumValues;
   static CreateDokuCheckoutBodyMethodEnum valueOf(String name) => _$createDokuCheckoutBodyMethodEnumValueOf(name);
+}
+
+class CreateDokuCheckoutBodySource_Enum extends EnumClass {
+
+  /// Set when this checkout was started from the /topup?source=app page (reached via the mobile app's web-handoff). Embedded into DOKU's callbackUrl/callbackUrlCancel so the page can tell it should offer the id.tradepilot.app:// return deep link once payment resolves. Omitted entirely for an ordinary web visit.
+  @BuiltValueEnumConst(wireName: r'app')
+  static const CreateDokuCheckoutBodySource_Enum app = _$createDokuCheckoutBodySourceEnum_app;
+
+  static Serializer<CreateDokuCheckoutBodySource_Enum> get serializer => _$createDokuCheckoutBodySourceEnumSerializer;
+
+  const CreateDokuCheckoutBodySource_Enum._(String name): super(name);
+
+  static BuiltSet<CreateDokuCheckoutBodySource_Enum> get values => _$createDokuCheckoutBodySourceEnumValues;
+  static CreateDokuCheckoutBodySource_Enum valueOf(String name) => _$createDokuCheckoutBodySourceEnumValueOf(name);
 }
 

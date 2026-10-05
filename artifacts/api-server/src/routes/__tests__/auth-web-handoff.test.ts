@@ -125,6 +125,20 @@ describe("POST /auth/web-handoff", () => {
     expect(meRes.body.id).toBe(u.id);
   });
 
+  it("accepts the /topup?source=app variant for the mobile-app return flow", async () => {
+    const u = await createUser();
+    const issueRes = await request(app)
+      .post("/api/auth/web-handoff")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ next: "/topup?source=app" });
+    expect(issueRes.status).toBe(201);
+
+    const code = await extractCode(issueRes);
+    const consumeRes = await request(app).get("/api/auth/web-handoff/consume").query({ code });
+    expect(consumeRes.status).toBe(302);
+    expect(consumeRes.headers["location"]).toBe("/topup?source=app");
+  });
+
   it("leaves the native session that requested the handoff intact", async () => {
     const u = await createUser();
     const issueRes = await request(app)

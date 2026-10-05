@@ -261,6 +261,37 @@ describe("POST /topups/doku/checkout", () => {
     );
   });
 
+  it("source=app embeds &source=app into DOKU's success/cancel callback URLs; omitted otherwise", async () => {
+    const user = await createUser();
+    const fake = fakeCheckoutResult();
+    mockCreateCheckout.mockResolvedValueOnce(fake);
+
+    const res = await request(app)
+      .post("/api/topups/doku/checkout")
+      .set(...authHeader(user))
+      .send({ amountRupiah: PKG_20K.amountRupiah, method: "qris", source: "app" });
+    expect(res.status).toBe(201);
+    expect(mockCreateCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callbackUrl: expect.stringMatching(/\?doku=success&id=\d+&source=app$/),
+        callbackUrlCancel: expect.stringMatching(/\?doku=cancel&id=\d+&source=app$/),
+      }),
+    );
+
+    mockCreateCheckout.mockResolvedValueOnce(fakeCheckoutResult());
+    const plain = await request(app)
+      .post("/api/topups/doku/checkout")
+      .set(...authHeader(user))
+      .send({ amountRupiah: PKG_20K.amountRupiah, method: "qris" });
+    expect(plain.status).toBe(201);
+    expect(mockCreateCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callbackUrl: expect.stringMatching(/\?doku=success&id=\d+$/),
+        callbackUrlCancel: expect.stringMatching(/\?doku=cancel&id=\d+$/),
+      }),
+    );
+  });
+
   it("marks the request rejected and returns 502 when DOKU's API call fails", async () => {
     const user = await createUser();
     mockCreateCheckout.mockRejectedValueOnce(new Error("boom"));

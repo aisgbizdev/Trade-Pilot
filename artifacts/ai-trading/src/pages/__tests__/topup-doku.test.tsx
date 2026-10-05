@@ -200,6 +200,65 @@ describe("TopupPage — payment-method choice for a DOKU-tier package", () => {
     expect(screen.queryByTestId("dialog-payment-method")).not.toBeInTheDocument();
   });
 
+  it("forwards source=app to the checkout request when the page was opened via the mobile app handoff", async () => {
+    window.history.replaceState({}, "", "/topup?source=app");
+    let checkoutRequestBody: unknown = null;
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+        (url, init) => {
+          if (url.includes("/api/topups/doku/checkout") && (init?.method ?? "GET").toUpperCase() === "POST") {
+            checkoutRequestBody = JSON.parse(init!.body as string);
+            return jsonResponse(
+              { id: 45, paymentUrl: "https://sandbox.doku.com/checkout-link-v2/app-source", expiresAt: new Date().toISOString() },
+              201,
+            );
+          }
+          return null;
+        },
+      ],
+      { strict: false },
+    );
+
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        pathname: "/topup",
+        search: "?source=app",
+        origin: window.location.origin,
+        set href(v: string) {
+          hrefSetter(v);
+        },
+        get href() {
+          return "http://localhost/topup?source=app";
+        },
+      },
+    });
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("button-preset-5000"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("button-continue-topup"));
+    });
+
+    await waitFor(() => {
+      expect(hrefSetter).toHaveBeenCalledWith("https://sandbox.doku.com/checkout-link-v2/app-source");
+    });
+    expect(checkoutRequestBody).toEqual({ amountRupiah: 5000, method: "qris", source: "app" });
+  });
+
   it("the QRIS-only Rp5.000 package skips the method dialog and checks out with method=qris directly", async () => {
     let checkoutRequestBody: unknown = null;
     installFetchMock(
@@ -316,5 +375,125 @@ describe("TopupPage — DOKU return handling", () => {
       },
       { timeout: 5000 },
     );
+  });
+
+  it("?doku=success&source=app auto-fires the id.tradepilot.app:// return link once approved, and offers it as a fallback button", async () => {
+    window.history.replaceState({}, "", "/topup?doku=success&id=42&source=app");
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+        (url) => (url.includes("/api/topups/doku/42/status") ? jsonResponse({ id: 42, status: "approved" }) : null),
+      ],
+      { strict: false },
+    );
+
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        pathname: "/topup",
+        search: "?doku=success&id=42&source=app",
+        origin: window.location.origin,
+        set href(v: string) {
+          hrefSetter(v);
+        },
+        get href() {
+          return "http://localhost/topup";
+        },
+      },
+    });
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("card-doku-return-status");
+    await waitFor(() => {
+      expect(screen.getByTestId("card-doku-return-status")).toHaveTextContent(/berhasil|successful/i);
+    });
+    await waitFor(() => {
+      expect(hrefSetter).toHaveBeenCalledWith("id.tradepilot.app://topup/result?status=approved&id=42");
+    });
+    expect(screen.getByTestId("button-doku-return-to-app")).toHaveAttribute(
+      "href",
+      "id.tradepilot.app://topup/result?status=approved&id=42",
+    );
+  });
+
+  it("?doku=cancel&source=app fires the cancelled return link immediately, without waiting on any status poll", async () => {
+    window.history.replaceState({}, "", "/topup?doku=cancel&id=42&source=app");
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+      ],
+      { strict: false },
+    );
+
+    const hrefSetter = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        pathname: "/topup",
+        search: "?doku=cancel&id=42&source=app",
+        origin: window.location.origin,
+        set href(v: string) {
+          hrefSetter(v);
+        },
+        get href() {
+          return "http://localhost/topup";
+        },
+      },
+    });
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId("card-doku-return-status")).toHaveTextContent(/dibatalkan|cancelled/i);
+    await waitFor(() => {
+      expect(hrefSetter).toHaveBeenCalledWith("id.tradepilot.app://topup/result?status=cancelled&id=42");
+    });
+    expect(screen.getByTestId("button-doku-return-to-app")).toHaveAttribute(
+      "href",
+      "id.tradepilot.app://topup/result?status=cancelled&id=42",
+    );
+  });
+
+  it("never offers the app-return button for an ordinary (non-app) ?doku=success return", async () => {
+    window.history.replaceState({}, "", "/topup?doku=success&id=42");
+    installFetchMock(
+      [
+        (url) => (url.includes("/api/topups/config") ? jsonResponse(CONFIG_PAYLOAD) : null),
+        (url) => (url.includes("/api/topups/balance") ? jsonResponse({ balance: 0 }) : null),
+        (url) => (url.includes("/api/topups/mine") ? jsonResponse({ requests: [], total: 0, page: 1, limit: 20 }) : null),
+        (url) => (url.includes("/api/topups/doku/42/status") ? jsonResponse({ id: 42, status: "approved" }) : null),
+      ],
+      { strict: false },
+    );
+
+    const { Wrapper } = makeWrapper();
+    render(
+      <Wrapper>
+        <TopupPage />
+      </Wrapper>,
+    );
+
+    await screen.findByTestId("card-doku-return-status");
+    await waitFor(() => {
+      expect(screen.getByTestId("card-doku-return-status")).toHaveTextContent(/berhasil|successful/i);
+    });
+    expect(screen.queryByTestId("button-doku-return-to-app")).not.toBeInTheDocument();
   });
 });

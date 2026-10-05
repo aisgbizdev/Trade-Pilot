@@ -2043,6 +2043,7 @@ export const id: Translations = {
     doku_status_cancelled: "Pembayaran dibatalkan.",
     doku_status_failed: "Pembayaran gagal. Coba lagi atau hubungi support.",
     doku_resume_payment: "Lanjutkan pembayaran →",
+    doku_return_to_app: "Kembali ke aplikasi",
     support_whatsapp_cta: "Ada kendala? Hubungi CS via WhatsApp",
     support_whatsapp_message: "Halo, saya butuh bantuan terkait top up kredit TradePilot.id",
     history_title: "Riwayat Top Up",

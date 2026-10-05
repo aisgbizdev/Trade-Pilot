@@ -237,6 +237,12 @@ export const CreateDokuCheckoutBody = zod.object({
     .describe(
       'Which DOKU-hosted channel to restrict the checkout page to. \"va\" carries the flat admin fee on top of the package price; \"qris\" does not (DOKU\'s own QRIS cost isn\'t passed on to the customer).',
     ),
+  source: zod
+    .enum(["app"])
+    .optional()
+    .describe(
+      "Set when this checkout was started from the \/topup?source=app page (reached via the mobile app's web-handoff). Embedded into DOKU's callbackUrl\/callbackUrlCancel so the page can tell it should offer the id.tradepilot.app:\/\/ return deep link once payment resolves. Omitted entirely for an ordinary web visit.",
+    ),
 });
 
 export const CreateDokuCheckoutResponse = zod.object({

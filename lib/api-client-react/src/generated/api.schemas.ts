@@ -1423,11 +1423,23 @@ export const CreateDokuCheckoutBodyMethod = {
   qris: "qris",
 } as const;
 
+/**
+ * Set when this checkout was started from the /topup?source=app page (reached via the mobile app's web-handoff). Embedded into DOKU's callbackUrl/callbackUrlCancel so the page can tell it should offer the id.tradepilot.app:// return deep link once payment resolves. Omitted entirely for an ordinary web visit.
+ */
+export type CreateDokuCheckoutBodySource =
+  (typeof CreateDokuCheckoutBodySource)[keyof typeof CreateDokuCheckoutBodySource];
+
+export const CreateDokuCheckoutBodySource = {
+  app: "app",
+} as const;
+
 export interface CreateDokuCheckoutBody {
   /** Must match one of the fixed packages at/above the DOKU-only threshold. */
   amountRupiah: number;
   /** Which DOKU-hosted channel to restrict the checkout page to. "va" carries the flat admin fee on top of the package price; "qris" does not (DOKU's own QRIS cost isn't passed on to the customer). */
   method: CreateDokuCheckoutBodyMethod;
+  /** Set when this checkout was started from the /topup?source=app page (reached via the mobile app's web-handoff). Embedded into DOKU's callbackUrl/callbackUrlCancel so the page can tell it should offer the id.tradepilot.app:// return deep link once payment resolves. Omitted entirely for an ordinary web visit. */
+  source?: CreateDokuCheckoutBodySource;
 }
 
 export interface DokuCheckoutSession {
