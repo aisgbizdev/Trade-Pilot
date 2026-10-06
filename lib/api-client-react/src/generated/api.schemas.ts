@@ -1882,6 +1882,8 @@ export type OutboundClickBodyTarget =
 export const OutboundClickBodyTarget = {
   "sg-berjangka": "sg-berjangka",
   tiktok: "tiktok",
+  "app-store": "app-store",
+  "play-store": "play-store",
 } as const;
 
 /**

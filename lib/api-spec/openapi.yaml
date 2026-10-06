@@ -6208,7 +6208,7 @@ components:
         target:
           type: string
           description: Partner the click was directed to
-          enum: [sg-berjangka, tiktok]
+          enum: [sg-berjangka, tiktok, app-store, play-store]
         lang:
           type: string
           description: UI language at click time

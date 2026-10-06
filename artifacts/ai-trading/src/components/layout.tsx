@@ -26,6 +26,7 @@ import { SHOW_NEWSMAKER } from "@/lib/newsmaker-flag";
 import { LanguageToggle } from "./language-toggle";
 import { LiveClock } from "./live-clock";
 import { ContinuousTicker } from "./continuous-ticker";
+import { AppStoreBadges } from "./app-store-badges";
 
 const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/guide", "/profile", "/admin/dashboard"];
 
@@ -370,6 +371,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {t.legal.delete_account_link}
             </Link>
           </div>
+          <AppStoreBadges placement="layout-footer" size="compact" className="justify-center" />
           {SHOW_SPONSOR && (
             <p className="text-[10px] text-muted-foreground/70">
               {t.brand.sponsored_by}{" "}

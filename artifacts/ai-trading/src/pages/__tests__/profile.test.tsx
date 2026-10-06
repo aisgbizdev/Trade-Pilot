@@ -293,3 +293,24 @@ describe("ProfilePage: user actions", () => {
     expect(screen.getByTestId("button-go-topup")).toBeInTheDocument();
   });
 });
+
+describe("ProfilePage: app download CTA", () => {
+  it("shows the App Store / Play Store badges via the shared Layout footer", async () => {
+    installFetchMock(profileHandlers({}));
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><ProfilePage /></Wrapper>);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("text-display-name").textContent).toBe(TEST_USER.displayName);
+    });
+
+    expect(screen.getByTestId("link-download-app-store")).toHaveAttribute(
+      "href",
+      "https://apps.apple.com/id/app/tradepilot-id/id6807276937",
+    );
+    expect(screen.getByTestId("link-download-play-store")).toHaveAttribute(
+      "href",
+      "https://play.google.com/store/apps/details?id=id.tradepilot.app&pcampaignid=web_share",
+    );
+  });
+});

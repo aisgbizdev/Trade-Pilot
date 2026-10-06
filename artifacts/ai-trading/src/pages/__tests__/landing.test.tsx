@@ -84,3 +84,27 @@ describe("LandingPage market preview disclosure", () => {
     expect(toggle).toHaveTextContent("Hide Market Snapshot");
   });
 });
+
+describe("LandingPage: app download CTA", () => {
+  it("links to the real App Store and Play Store listings, in both the download section and the footer", () => {
+    installFetchMock([]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><LandingPage /></Wrapper>);
+
+    // Rendered twice on purpose — once in the dedicated download section,
+    // once again (compact) in the footer.
+    const appStoreLinks = screen.getAllByTestId("link-download-app-store");
+    const playStoreLinks = screen.getAllByTestId("link-download-play-store");
+    expect(appStoreLinks).toHaveLength(2);
+    expect(playStoreLinks).toHaveLength(2);
+    for (const link of appStoreLinks) {
+      expect(link).toHaveAttribute("href", "https://apps.apple.com/id/app/tradepilot-id/id6807276937");
+    }
+    for (const link of playStoreLinks) {
+      expect(link).toHaveAttribute(
+        "href",
+        "https://play.google.com/store/apps/details?id=id.tradepilot.app&pcampaignid=web_share",
+      );
+    }
+  });
+});

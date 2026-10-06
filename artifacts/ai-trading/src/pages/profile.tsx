@@ -667,6 +667,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Layout's own footer (every authenticated page) now carries the
+            App Store / Play Store badges — no need to duplicate them here. */}
+
         <div className="flex justify-start sm:justify-end pt-2">
           <Button
             variant="outline"

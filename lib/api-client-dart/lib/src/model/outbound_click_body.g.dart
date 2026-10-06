@@ -65,6 +65,10 @@ const OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnum_sgBerjangka =
     const OutboundClickBodyTargetEnum._('sgBerjangka');
 const OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnum_tiktok =
     const OutboundClickBodyTargetEnum._('tiktok');
+const OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnum_appStore =
+    const OutboundClickBodyTargetEnum._('appStore');
+const OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnum_playStore =
+    const OutboundClickBodyTargetEnum._('playStore');
 
 OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnumValueOf(String name) {
   switch (name) {
@@ -72,6 +76,10 @@ OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnumValueOf(String name) {
       return _$outboundClickBodyTargetEnum_sgBerjangka;
     case 'tiktok':
       return _$outboundClickBodyTargetEnum_tiktok;
+    case 'appStore':
+      return _$outboundClickBodyTargetEnum_appStore;
+    case 'playStore':
+      return _$outboundClickBodyTargetEnum_playStore;
     default:
       throw ArgumentError(name);
   }
@@ -82,6 +90,8 @@ final BuiltSet<OutboundClickBodyTargetEnum>
     BuiltSet<OutboundClickBodyTargetEnum>(const <OutboundClickBodyTargetEnum>[
   _$outboundClickBodyTargetEnum_sgBerjangka,
   _$outboundClickBodyTargetEnum_tiktok,
+  _$outboundClickBodyTargetEnum_appStore,
+  _$outboundClickBodyTargetEnum_playStore,
 ]);
 
 const OutboundClickBodyLangEnum _$outboundClickBodyLangEnum_en =
@@ -160,10 +170,14 @@ class _$OutboundClickBodyTargetEnumSerializer
   static const Map<String, Object> _toWire = const <String, Object>{
     'sgBerjangka': 'sg-berjangka',
     'tiktok': 'tiktok',
+    'appStore': 'app-store',
+    'playStore': 'play-store',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'sg-berjangka': 'sgBerjangka',
     'tiktok': 'tiktok',
+    'app-store': 'appStore',
+    'play-store': 'playStore',
   };
 
   @override

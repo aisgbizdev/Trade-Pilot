@@ -4,6 +4,7 @@ import { ArrowRight, ChevronDown, Lightbulb } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LandingProductPreview } from "@/components/landing-product-preview";
+import { AppStoreBadges } from "@/components/app-store-badges";
 import {
   Accordion,
   AccordionContent,
@@ -171,6 +172,16 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section className="border-t border-[#f1f0eb]/10 py-10 sm:py-14" aria-label={t.download_app.title} data-testid="section-download-app">
+          <div className="mx-auto max-w-2xl">
+            <h2 className="text-xl font-bold tracking-tight text-[#f1f0eb] sm:text-2xl">
+              {t.download_app.title}
+            </h2>
+            <p className="mt-1 text-sm text-[#f1f0eb]/55">{t.download_app.subtitle}</p>
+            <AppStoreBadges placement="landing-cta" className="mt-5" />
+          </div>
+        </section>
+
         <section className="border-t border-[#f1f0eb]/10 py-10 sm:py-14" aria-labelledby="landing-faq-title" data-testid="section-faq">
           <div className="mx-auto max-w-2xl">
             <h2 id="landing-faq-title" className="text-xl font-bold tracking-tight text-[#f1f0eb] sm:text-2xl">
@@ -217,6 +228,7 @@ export default function LandingPage() {
               <Link href="/delete-account" className="transition-colors hover:text-[#f1f0eb]" data-testid="link-footer-delete-account">{t.legal.delete_account_link}</Link>
             </nav>
           </div>
+          <AppStoreBadges placement="landing-footer" size="compact" />
           {(SHOW_SPONSOR || SHOW_NEWSMAKER) && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[#f1f0eb]/5 pt-2 text-[11px] text-[#f1f0eb]/35">
               {SHOW_SPONSOR && (

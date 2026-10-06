@@ -82,6 +82,14 @@ export const id: Translations = {
     clear_filters: "Hapus filter",
     embed_full_version: "Versi lengkap ↗",
   },
+  download_app: {
+    title: "Unduh aplikasi TradePilot.id",
+    subtitle: "Alert harga real-time dan akses lebih cepat, langsung dari HP kamu.",
+    app_store_eyebrow: "Download on the",
+    app_store_name: "App Store",
+    play_store_eyebrow: "GET IT ON",
+    play_store_name: "Google Play",
+  },
   nav: {
     dashboard: "Dashboard",
     analyze: "Analisis",

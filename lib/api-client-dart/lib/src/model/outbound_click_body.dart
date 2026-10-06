@@ -25,7 +25,7 @@ abstract class OutboundClickBody implements Built<OutboundClickBody, OutboundCli
   /// Partner the click was directed to
   @BuiltValueField(wireName: r'target')
   OutboundClickBodyTargetEnum get target;
-  // enum targetEnum {  sg-berjangka,  tiktok,  };
+  // enum targetEnum {  sg-berjangka,  tiktok,  app-store,  play-store,  };
 
   /// UI language at click time
   @BuiltValueField(wireName: r'lang')
@@ -186,6 +186,12 @@ class OutboundClickBodyTargetEnum extends EnumClass {
   /// Partner the click was directed to
   @BuiltValueEnumConst(wireName: r'tiktok')
   static const OutboundClickBodyTargetEnum tiktok = _$outboundClickBodyTargetEnum_tiktok;
+  /// Partner the click was directed to
+  @BuiltValueEnumConst(wireName: r'app-store')
+  static const OutboundClickBodyTargetEnum appStore = _$outboundClickBodyTargetEnum_appStore;
+  /// Partner the click was directed to
+  @BuiltValueEnumConst(wireName: r'play-store')
+  static const OutboundClickBodyTargetEnum playStore = _$outboundClickBodyTargetEnum_playStore;
 
   static Serializer<OutboundClickBodyTargetEnum> get serializer => _$outboundClickBodyTargetEnumSerializer;
 

@@ -80,6 +80,14 @@ export const en = {
     clear_filters: "Clear filters",
     embed_full_version: "Full version ↗",
   },
+  download_app: {
+    title: "Get the TradePilot.id app",
+    subtitle: "Real-time price alerts and faster access, right from your phone.",
+    app_store_eyebrow: "Download on the",
+    app_store_name: "App Store",
+    play_store_eyebrow: "GET IT ON",
+    play_store_name: "Google Play",
+  },
   nav: {
     dashboard: "Dashboard",
     analyze: "Analyze",
