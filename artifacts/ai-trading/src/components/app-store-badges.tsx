@@ -70,14 +70,14 @@ export function AppStoreBadges({
         onClick={() => trackOutbound(placement, "app-store")}
         className={cn(
           "inline-flex items-center rounded-xl border border-white/15 bg-black text-white transition-opacity hover:opacity-85",
-          compact ? "h-9 gap-1.5 px-2.5" : "h-12 gap-2.5 px-4",
+          compact ? "h-10 gap-2 px-3" : "h-12 gap-2.5 px-4",
         )}
         data-testid="link-download-app-store"
       >
-        <AppleGlyph className={cn("shrink-0", compact ? "h-4 w-4" : "h-6 w-6")} />
+        <AppleGlyph className={cn("shrink-0", compact ? "h-5 w-5" : "h-6 w-6")} />
         <span className="flex flex-col leading-tight">
           {!compact && <span className="text-[10px]">{t.download_app.app_store_eyebrow}</span>}
-          <span className={cn("font-semibold", compact ? "text-xs -mt-0" : "text-base -mt-0.5")}>
+          <span className={cn("font-semibold", compact ? "text-sm -mt-0" : "text-base -mt-0.5")}>
             {t.download_app.app_store_name}
           </span>
         </span>
@@ -89,14 +89,14 @@ export function AppStoreBadges({
         onClick={() => trackOutbound(placement, "play-store")}
         className={cn(
           "inline-flex items-center rounded-xl border border-white/15 bg-black text-white transition-opacity hover:opacity-85",
-          compact ? "h-9 gap-1.5 px-2.5" : "h-12 gap-2.5 px-4",
+          compact ? "h-10 gap-2 px-3" : "h-12 gap-2.5 px-4",
         )}
         data-testid="link-download-play-store"
       >
-        <GooglePlayGlyph className={cn("shrink-0", compact ? "h-4 w-4" : "h-6 w-6")} />
+        <GooglePlayGlyph className={cn("shrink-0", compact ? "h-5 w-5" : "h-6 w-6")} />
         <span className="flex flex-col leading-tight">
           {!compact && <span className="text-[10px] tracking-wide">{t.download_app.play_store_eyebrow}</span>}
-          <span className={cn("font-semibold", compact ? "text-xs -mt-0" : "text-base -mt-0.5")}>
+          <span className={cn("font-semibold", compact ? "text-sm -mt-0" : "text-base -mt-0.5")}>
             {t.download_app.play_store_name}
           </span>
         </span>

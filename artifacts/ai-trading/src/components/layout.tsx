@@ -335,6 +335,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
 
         <footer className="border-t border-border/50 px-3 sm:px-4 py-4 mt-6 text-center space-y-2">
+          <AppStoreBadges placement="layout-footer" size="compact" className="justify-center" />
           <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 leading-relaxed max-w-[280px] sm:max-w-none mx-auto">
             {t.landing.footer}
           </p>
@@ -371,7 +372,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {t.legal.delete_account_link}
             </Link>
           </div>
-          <AppStoreBadges placement="layout-footer" size="compact" className="justify-center" />
           {SHOW_SPONSOR && (
             <p className="text-[10px] text-muted-foreground/70">
               {t.brand.sponsored_by}{" "}
