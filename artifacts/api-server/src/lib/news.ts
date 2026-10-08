@@ -161,6 +161,12 @@ function relevanceScore(item: NewsItem, instrument: string): number {
 const NEWS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const NEWS_FRESH_TIER_MS = 3 * 24 * 60 * 60 * 1000;
 
+// Yahoo's guaranteed slot count in getRelevantNews — product decision
+// (see chat 2026-10-08): for the default maxItems=5 used by every real
+// analysis, this yields exactly 3 Newsmaker + 2 Yahoo when both sources
+// have enough relevant items.
+const NEWS_YAHOO_QUOTA = 2;
+
 function publishedAtMs(item: NewsItem): number {
   const t = new Date(item.publishedAt).getTime();
   return Number.isFinite(t) ? t : 0;
@@ -213,7 +219,10 @@ function rankTickerNews(items: NewsItem[], maxItems: number): NewsItem[] {
  * For multi-item lists, one slot is reserved for Yahoo when available and
  * every other slot is filled from Newsmaker. A one-item list still chooses
  * Newsmaker first. Yahoo-only is therefore an honest one-item fallback when
- * Newsmaker has no usable items.
+ * Newsmaker has no usable items. Deliberately does NOT backfill extra Yahoo
+ * items when Newsmaker is short — the ticker's one-Yahoo-slot rule is a
+ * fixed cap, not a quota to top up from (see selectWithSourceQuota below
+ * for the analysis-context path, which does backfill).
  */
 export function selectNewsmakerFirst(items: NewsItem[], maxItems: number): NewsItem[] {
   const limit = Math.max(1, Math.min(12, Math.floor(maxItems) || 1));
@@ -226,6 +235,46 @@ export function selectNewsmakerFirst(items: NewsItem[], maxItems: number): NewsI
   const primaryLimit = yahoo ? Math.max(0, limit - 1) : limit;
   const selected = new Set([...primary.slice(0, primaryLimit), ...(yahoo ? [yahoo] : [])]);
 
+  return items.filter((item) => selected.has(item)).slice(0, limit);
+}
+
+/**
+ * Reserve up to `yahooQuota` slots for Yahoo headlines within `maxItems`,
+ * filling every other slot from Newsmaker — then backfill from whichever
+ * source has leftover items if the other one comes up short, so a thin
+ * news day on one source doesn't shrink the total below what's actually
+ * available. The input is already ranked (relevance, then freshness), so
+ * this preserves that order within each source and in the final result.
+ * Used by getRelevantNews (the per-analysis fundamental context) — the
+ * ticker keeps its own simpler, non-backfilling selectNewsmakerFirst above.
+ *
+ * A one-item list always prefers Newsmaker, falling back to Yahoo only
+ * when Newsmaker has nothing usable — an honest one-item fallback, not a
+ * quota.
+ */
+function selectWithSourceQuota(items: NewsItem[], maxItems: number, yahooQuota: number): NewsItem[] {
+  const limit = Math.max(1, Math.min(12, Math.floor(maxItems) || 1));
+  const primary = items.filter((item) => item.source === NEWSMAKER_SOURCE);
+  const secondary = items.filter((item) => item.source === YAHOO_SOURCE);
+  if (limit === 1) {
+    return primary.length > 0 ? primary.slice(0, 1) : secondary.slice(0, 1);
+  }
+
+  const wantYahoo = Math.max(0, Math.min(yahooQuota, limit - 1));
+  let takeYahoo = Math.min(wantYahoo, secondary.length);
+  let takeNewsmaker = Math.min(limit - takeYahoo, primary.length);
+
+  const shortfall = limit - takeYahoo - takeNewsmaker;
+  if (shortfall > 0) {
+    const extraNewsmaker = Math.min(primary.length - takeNewsmaker, shortfall);
+    takeNewsmaker += extraNewsmaker;
+    const stillShort = shortfall - extraNewsmaker;
+    if (stillShort > 0) {
+      takeYahoo += Math.min(secondary.length - takeYahoo, stillShort);
+    }
+  }
+
+  const selected = new Set([...primary.slice(0, takeNewsmaker), ...secondary.slice(0, takeYahoo)]);
   return items.filter((item) => selected.has(item)).slice(0, limit);
 }
 
@@ -283,8 +332,10 @@ export async function getRelevantNews(
   });
 
   // Direct instrument coverage outranks broad macro context. Within
-  // each relevance level, prefer fresh items, then relevant Newsmaker
-  // coverage, then publication time.
+  // each relevance level, prefer fresh items, then publication time.
+  // Source no longer breaks ties here — selectWithSourceQuota below
+  // handles the Newsmaker/Yahoo mix explicitly instead, so this sort
+  // only has to express "how relevant and how fresh", not "which source".
   kept.sort((a, b) => {
     const at = publishedAtMs(a.item);
     const bt = publishedAtMs(b.item);
@@ -292,13 +343,15 @@ export async function getRelevantNews(
     const bTier = now - bt <= NEWS_FRESH_TIER_MS ? 0 : 1;
     if (a.score !== b.score) return b.score - a.score;
     if (aTier !== bTier) return aTier - bTier;
-    if (a.item.source !== b.item.source) {
-      return a.item.source === NEWSMAKER_SOURCE ? -1 : 1;
-    }
     return bt - at;
   });
 
-  return dedupeNews(kept.map((s) => s.item)).slice(0, maxItems);
+  // Fixed Yahoo quota (not proportional to maxItems) so the default
+  // 5-item analysis context lands on 3 Newsmaker + 2 Yahoo exactly, per
+  // product decision — see chat 2026-10-08. Previously Yahoo could get
+  // crowded out entirely whenever Newsmaker had ≥5 similarly-scored,
+  // similarly-fresh items, since the only tiebreak favored Newsmaker.
+  return selectWithSourceQuota(dedupeNews(kept.map((s) => s.item)), maxItems, NEWS_YAHOO_QUOTA);
 }
 
 /**

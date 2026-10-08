@@ -342,6 +342,88 @@ describe("selectNewsmakerFirst", () => {
   });
 });
 
+describe("getRelevantNews — Newsmaker/Yahoo mix", () => {
+  // Product decision (see chat 2026-10-08): the default 5-item analysis
+  // context should land on 3 Newsmaker + 2 Yahoo when both sources have
+  // enough relevant items, instead of letting Newsmaker crowd Yahoo out
+  // entirely via the old score/freshness-only tiebreak.
+  const recentISO = (hoursAgo = 2) =>
+    new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+
+  it("defaults to 3 Newsmaker + 2 Yahoo when both sources have 5+ relevant items", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse(
+        Array.from({ length: 5 }, (_, i) => ({
+          id: i + 1,
+          title: `Gold prices climb amid Fed caution ${i}`,
+          url: `https://newsmaker.id/gold-${i}`,
+          date: recentISO(i + 1),
+        })),
+      ),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue(
+      Array.from({ length: 5 }, (_, i) => ({
+        title: `Gold futures rise as dollar weakens ${i}`,
+        summary: "",
+        url: `https://finance.yahoo.com/gold-${i}`,
+        publishedAt: recentISO(i + 1),
+      })),
+    );
+
+    const items = await getRelevantNews("XAU/USD");
+    expect(items).toHaveLength(5);
+    expect(items.filter((i) => i.source === "Newsmaker.id")).toHaveLength(3);
+    expect(items.filter((i) => i.source === "Yahoo Finance")).toHaveLength(2);
+  });
+
+  it("backfills from Newsmaker when Yahoo has fewer relevant items than its 2-slot quota", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse(
+        Array.from({ length: 5 }, (_, i) => ({
+          id: i + 1,
+          title: `Gold prices climb amid Fed caution ${i}`,
+          url: `https://newsmaker.id/gold-${i}`,
+          date: recentISO(i + 1),
+        })),
+      ),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue([
+      {
+        title: "Gold futures rise as dollar weakens",
+        summary: "",
+        url: "https://finance.yahoo.com/gold-only",
+        publishedAt: recentISO(1),
+      },
+    ]);
+
+    const items = await getRelevantNews("XAU/USD");
+    expect(items).toHaveLength(5);
+    expect(items.filter((i) => i.source === "Newsmaker.id")).toHaveLength(4);
+    expect(items.filter((i) => i.source === "Yahoo Finance")).toHaveLength(1);
+  });
+
+  it("backfills from Yahoo when Newsmaker has fewer relevant items than its 3-slot quota", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      newsmakerResponse([
+        { id: 1, title: "Gold prices climb amid Fed caution", url: "https://newsmaker.id/gold-1", date: recentISO(1) },
+      ]),
+    ) as unknown as typeof fetch;
+    mockedYahoo.mockResolvedValue(
+      Array.from({ length: 5 }, (_, i) => ({
+        title: `Gold futures rise as dollar weakens ${i}`,
+        summary: "",
+        url: `https://finance.yahoo.com/gold-${i}`,
+        publishedAt: recentISO(i + 1),
+      })),
+    );
+
+    const items = await getRelevantNews("XAU/USD");
+    expect(items).toHaveLength(5);
+    expect(items.filter((i) => i.source === "Newsmaker.id")).toHaveLength(1);
+    expect(items.filter((i) => i.source === "Yahoo Finance")).toHaveLength(4);
+  });
+});
+
 describe("getRelevantNews — macro fallback", () => {
   it("includes a macro headline (FOMC) even when no instrument keyword matches", async () => {
     globalThis.fetch = vi.fn(async () =>
