@@ -27,6 +27,7 @@ import { LanguageToggle } from "./language-toggle";
 import { LiveClock } from "./live-clock";
 import { ContinuousTicker } from "./continuous-ticker";
 import { AppStoreBadges } from "./app-store-badges";
+import { WhatsAppSupportFab } from "./whatsapp-support-fab";
 
 const MAIN_NAV_PATHS = ["/analyze", "/journal", "/mirror", "/history", "/guide", "/profile", "/admin/dashboard"];
 
@@ -434,6 +435,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </nav>
+
+      <WhatsAppSupportFab placement="layout-footer" />
     </div>
   );
 }

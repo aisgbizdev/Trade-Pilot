@@ -453,4 +453,3 @@ lib/src/model/web_handoff_response.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
-test/topup_amount_breakdown_entry_test.dart

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
-import { TopupFlow, WhatsAppGlyph, buildWhatsAppSupportUrl } from "@/components/topup-flow";
+import { TopupFlow } from "@/components/topup-flow";
 import {
   useGetCreditBalance,
   getGetCreditBalanceQueryKey,
@@ -246,24 +246,6 @@ export default function TopupPage() {
         </div>
       </div>
 
-      {/* Floating WhatsApp shortcut — this page only. The small inline
-          links inside TopupFlow's proof-notice dialog weren't visible
-          enough on their own. */}
-      <a
-        href={buildWhatsAppSupportUrl(t.topup.support_whatsapp_message)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-black/25 transition-transform hover:scale-105 active:scale-95"
-        style={{
-          marginBottom: "env(safe-area-inset-bottom, 0px)",
-          marginRight: "env(safe-area-inset-right, 0px)",
-        }}
-        data-testid="button-whatsapp-fab"
-        aria-label={t.topup.support_whatsapp_cta}
-        title={t.topup.support_whatsapp_cta}
-      >
-        <WhatsAppGlyph className="h-7 w-7" />
-      </a>
     </Layout>
   );
 }

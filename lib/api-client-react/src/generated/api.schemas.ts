@@ -1894,6 +1894,7 @@ export const OutboundClickBodyTarget = {
   tiktok: "tiktok",
   "app-store": "app-store",
   "play-store": "play-store",
+  "whatsapp-support": "whatsapp-support",
 } as const;
 
 /**

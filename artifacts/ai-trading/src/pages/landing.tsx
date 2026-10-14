@@ -5,6 +5,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LandingProductPreview } from "@/components/landing-product-preview";
 import { AppStoreBadges } from "@/components/app-store-badges";
+import { WhatsAppSupportFab } from "@/components/whatsapp-support-fab";
 import {
   Accordion,
   AccordionContent,
@@ -251,6 +252,8 @@ export default function LandingPage() {
           )}
         </div>
       </footer>
+
+      <WhatsAppSupportFab placement="landing-footer" />
     </div>
   );
 }

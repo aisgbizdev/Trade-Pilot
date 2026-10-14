@@ -80,6 +80,10 @@ export const en = {
     clear_filters: "Clear filters",
     embed_full_version: "Full version ↗",
   },
+  support_chat: {
+    cta: "Need help? Chat with our support team on WhatsApp",
+    message: "Hi, I need help with TradePilot.id",
+  },
   download_app: {
     title: "Get the TradePilot.id app",
     subtitle: "Real-time price alerts and faster access, right from your phone.",

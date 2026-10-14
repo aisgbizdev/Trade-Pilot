@@ -4624,7 +4624,13 @@ export const RecordOutboundClickBody = zod.object({
     ])
     .describe("Stable slug describing where the link was clicked"),
   target: zod
-    .enum(["sg-berjangka", "tiktok", "app-store", "play-store"])
+    .enum([
+      "sg-berjangka",
+      "tiktok",
+      "app-store",
+      "play-store",
+      "whatsapp-support",
+    ])
     .describe("Partner the click was directed to"),
   lang: zod.enum(["en", "id"]).optional().describe("UI language at click time"),
 });

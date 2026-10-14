@@ -193,6 +193,10 @@ describe("DashboardPage: happy-path render", () => {
       "href",
       "/guide",
     );
+
+    // WhatsApp support FAB now shows on every Layout-wrapped page, not
+    // just /topup (chat 2026-10-14).
+    expect(screen.getByTestId("button-whatsapp-fab")).toBeInTheDocument();
   });
 });
 

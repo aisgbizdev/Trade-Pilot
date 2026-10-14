@@ -108,3 +108,15 @@ describe("LandingPage: app download CTA", () => {
     }
   });
 });
+
+describe("LandingPage: WhatsApp support FAB", () => {
+  it("shows a site-wide support link, not topup-specific wording", () => {
+    installFetchMock([]);
+    const { Wrapper } = makeWrapper();
+    render(<Wrapper><LandingPage /></Wrapper>);
+
+    const fab = screen.getByTestId("button-whatsapp-fab");
+    expect(fab).toHaveAttribute("href", expect.stringContaining("https://wa.me/6282310384866?text="));
+    expect(decodeURIComponent(fab.getAttribute("href") ?? "")).not.toContain("top up");
+  });
+});

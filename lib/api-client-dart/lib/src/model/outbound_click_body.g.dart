@@ -69,6 +69,9 @@ const OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnum_appStore =
     const OutboundClickBodyTargetEnum._('appStore');
 const OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnum_playStore =
     const OutboundClickBodyTargetEnum._('playStore');
+const OutboundClickBodyTargetEnum
+    _$outboundClickBodyTargetEnum_whatsappSupport =
+    const OutboundClickBodyTargetEnum._('whatsappSupport');
 
 OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnumValueOf(String name) {
   switch (name) {
@@ -80,6 +83,8 @@ OutboundClickBodyTargetEnum _$outboundClickBodyTargetEnumValueOf(String name) {
       return _$outboundClickBodyTargetEnum_appStore;
     case 'playStore':
       return _$outboundClickBodyTargetEnum_playStore;
+    case 'whatsappSupport':
+      return _$outboundClickBodyTargetEnum_whatsappSupport;
     default:
       throw ArgumentError(name);
   }
@@ -92,6 +97,7 @@ final BuiltSet<OutboundClickBodyTargetEnum>
   _$outboundClickBodyTargetEnum_tiktok,
   _$outboundClickBodyTargetEnum_appStore,
   _$outboundClickBodyTargetEnum_playStore,
+  _$outboundClickBodyTargetEnum_whatsappSupport,
 ]);
 
 const OutboundClickBodyLangEnum _$outboundClickBodyLangEnum_en =
@@ -172,12 +178,14 @@ class _$OutboundClickBodyTargetEnumSerializer
     'tiktok': 'tiktok',
     'appStore': 'app-store',
     'playStore': 'play-store',
+    'whatsappSupport': 'whatsapp-support',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'sg-berjangka': 'sgBerjangka',
     'tiktok': 'tiktok',
     'app-store': 'appStore',
     'play-store': 'playStore',
+    'whatsapp-support': 'whatsappSupport',
   };
 
   @override

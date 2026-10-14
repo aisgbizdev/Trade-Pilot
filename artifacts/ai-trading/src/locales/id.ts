@@ -82,6 +82,10 @@ export const id: Translations = {
     clear_filters: "Hapus filter",
     embed_full_version: "Versi lengkap ↗",
   },
+  support_chat: {
+    cta: "Butuh bantuan? Chat CS kami di WhatsApp",
+    message: "Halo, saya butuh bantuan terkait TradePilot.id",
+  },
   download_app: {
     title: "Unduh aplikasi TradePilot.id",
     subtitle: "Alert harga real-time dan akses lebih cepat, langsung dari HP kamu.",
