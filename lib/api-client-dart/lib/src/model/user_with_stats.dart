@@ -19,6 +19,7 @@ part 'user_with_stats.g.dart';
 /// * [selectedMode] 
 /// * [analysisCount] 
 /// * [creditBalance] - Current purchased-credit balance (sum of credit_ledger for this user).
+/// * [topupCount] - Count of this user's approved, non-deleted top-up requests (credit_topup_requests where status = approved and deletedAt is null) — how many times they've actually topped up, not pending/rejected/reversed attempts.
 /// * [tags] 
 /// * [customQuotaPerDay] - Per-user analysis-quota override. Null = uses the global default. Named \"PerDay\" for historical reasons — this is actually a one-time lifetime free allowance, not a recurring window.
 /// * [segment] - Cost/revenue/profit accounting segment (see GET /admin/stats' totalFreeUsers/totalPaidUsers/totalDevUsers). Mutually exclusive: \"dev\" (customQuotaPerDay set) wins over \"paid\" (a lifetime topup_approval credit_ledger entry) wins over \"free\".
@@ -48,6 +49,10 @@ abstract class UserWithStats implements Built<UserWithStats, UserWithStatsBuilde
   /// Current purchased-credit balance (sum of credit_ledger for this user).
   @BuiltValueField(wireName: r'creditBalance')
   int get creditBalance;
+
+  /// Count of this user's approved, non-deleted top-up requests (credit_topup_requests where status = approved and deletedAt is null) — how many times they've actually topped up, not pending/rejected/reversed attempts.
+  @BuiltValueField(wireName: r'topupCount')
+  int get topupCount;
 
   @BuiltValueField(wireName: r'tags')
   BuiltList<String> get tags;
@@ -120,6 +125,11 @@ class _$UserWithStatsSerializer implements PrimitiveSerializer<UserWithStats> {
     yield r'creditBalance';
     yield serializers.serialize(
       object.creditBalance,
+      specifiedType: const FullType(int),
+    );
+    yield r'topupCount';
+    yield serializers.serialize(
+      object.topupCount,
       specifiedType: const FullType(int),
     );
     yield r'tags';
@@ -213,6 +223,13 @@ class _$UserWithStatsSerializer implements PrimitiveSerializer<UserWithStats> {
             specifiedType: const FullType(int),
           ) as int;
           result.creditBalance = valueDes;
+          break;
+        case r'topupCount':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.topupCount = valueDes;
           break;
         case r'tags':
           final valueDes = serializers.deserialize(

@@ -1482,6 +1482,14 @@ export interface TopupRequestWithUserList {
   limit: number;
 }
 
+/**
+ * How many of a user's approved top-ups were for a given amount, e.g. { amountRupiah: 5000, count: 1 } + { amountRupiah: 20000, count: 2 } reads as "5.000 1x, 20.000 2x".
+ */
+export interface TopupAmountBreakdownEntry {
+  amountRupiah: number;
+  count: number;
+}
+
 export interface TopupUserSummary {
   userId: number;
   userEmail: string;
@@ -1490,6 +1498,8 @@ export interface TopupUserSummary {
   totalCreditsGranted: number;
   requestCount: number;
   lastApprovedAt: string | null;
+  /** Ascending by amountRupiah. */
+  amountBreakdown: TopupAmountBreakdownEntry[];
 }
 
 export interface TopupMonthSummary {
@@ -2085,6 +2095,8 @@ export interface UserWithStats {
   analysisCount: number;
   /** Current purchased-credit balance (sum of credit_ledger for this user). */
   creditBalance: number;
+  /** Count of this user's approved, non-deleted top-up requests (credit_topup_requests where status = approved and deletedAt is null) — how many times they've actually topped up, not pending/rejected/reversed attempts. */
+  topupCount: number;
   tags: string[];
   /** Per-user analysis-quota override. Null = uses the global default. Named "PerDay" for historical reasons — this is actually a one-time lifetime free allowance, not a recurring window. */
   customQuotaPerDay: number | null;

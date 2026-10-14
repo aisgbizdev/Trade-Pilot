@@ -273,6 +273,11 @@ function AdminUsersContent() {
                         "{count}",
                         String((u as { analysisCount?: number }).analysisCount ?? 0),
                       )}
+                      {" · "}
+                      {t.admin.users_topup_count.replace(
+                        "{count}",
+                        String((u as { topupCount?: number }).topupCount ?? 0),
+                      )}
                       {(u as { createdAt?: string }).createdAt
                         ? ` · ${t.admin.users_registered_on.replace(
                             "{date}",

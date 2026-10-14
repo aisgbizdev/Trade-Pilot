@@ -5590,6 +5590,21 @@ components:
           type: integer
       required: [requests, total, page, limit]
 
+    TopupAmountBreakdownEntry:
+      type: object
+      description: >-
+        How many of a user's approved top-ups were for a given amount,
+        e.g. { amountRupiah: 5000, count: 1 } + { amountRupiah: 20000,
+        count: 2 } reads as "5.000 1x, 20.000 2x".
+      properties:
+        amountRupiah:
+          type: integer
+        count:
+          type: integer
+      required:
+        - amountRupiah
+        - count
+
     TopupUserSummary:
       type: object
       properties:
@@ -5609,6 +5624,11 @@ components:
           type: string
           format: date-time
           nullable: true
+        amountBreakdown:
+          type: array
+          description: Ascending by amountRupiah.
+          items:
+            $ref: "#/components/schemas/TopupAmountBreakdownEntry"
       required:
         - userId
         - userEmail
@@ -5617,6 +5637,7 @@ components:
         - totalCreditsGranted
         - requestCount
         - lastApprovedAt
+        - amountBreakdown
 
     TopupMonthSummary:
       type: object
@@ -6462,6 +6483,13 @@ components:
         creditBalance:
           type: integer
           description: Current purchased-credit balance (sum of credit_ledger for this user).
+        topupCount:
+          type: integer
+          description: >-
+            Count of this user's approved, non-deleted top-up requests
+            (credit_topup_requests where status = approved and deletedAt
+            is null) — how many times they've actually topped up, not
+            pending/rejected/reversed attempts.
         tags:
           type: array
           items:
@@ -6493,6 +6521,7 @@ components:
         - selectedMode
         - analysisCount
         - creditBalance
+        - topupCount
         - tags
         - customQuotaPerDay
         - segment

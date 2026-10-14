@@ -11,9 +11,10 @@ import {
   analyticsEvents,
   aiTokenUsage,
   creditBalances,
+  creditTopupRequests,
   authEvents,
 } from "@workspace/db/schema";
-import { eq, and, count, sum, desc, sql, ilike, or, inArray, gte, lte } from "drizzle-orm";
+import { eq, and, count, sum, desc, sql, ilike, or, inArray, gte, lte, isNull } from "drizzle-orm";
 import {
   requireAdmin,
   requireSuperAdmin,
@@ -817,10 +818,36 @@ router.get("/superadmin/users", requireSuperAdmin, async (req: AuthRequest, res)
     tagsByUser.set(r.userId, arr);
   }
 
+  // Same "separate query + merge in memory" shape as tags above — a
+  // direct leftJoin on credit_topup_requests here would fan out against
+  // the analyses leftJoin already in baseQuery (a user with N analyses
+  // and M topups would get analysisCount inflated to N*M), so this stays
+  // its own query instead of folding into the grouped one.
+  const topupCountRows = userIds.length
+    ? await db
+        .select({ userId: creditTopupRequests.userId, count: count(creditTopupRequests.id) })
+        .from(creditTopupRequests)
+        .where(
+          and(
+            inArray(creditTopupRequests.userId, userIds),
+            eq(creditTopupRequests.status, "approved"),
+            isNull(creditTopupRequests.deletedAt),
+          ),
+        )
+        .groupBy(creditTopupRequests.userId)
+    : [];
+  const topupCountByUser = new Map<number, number>(
+    topupCountRows.map((r) => [r.userId, Number(r.count)]),
+  );
+
   const [total] = await db.select({ count: count(users.id) }).from(users).where(filterClause);
 
   res.json({
-    users: rows.map((u) => ({ ...u, tags: tagsByUser.get(u.id) ?? [] })),
+    users: rows.map((u) => ({
+      ...u,
+      tags: tagsByUser.get(u.id) ?? [],
+      topupCount: topupCountByUser.get(u.id) ?? 0,
+    })),
     total: Number(total.count),
     page,
     limit,

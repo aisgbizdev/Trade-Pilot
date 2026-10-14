@@ -196,6 +196,7 @@ export 'package:trade_pilot_api_client/src/model/timeframe_risk.dart';
 export 'package:trade_pilot_api_client/src/model/timeframe_risk_map.dart';
 export 'package:trade_pilot_api_client/src/model/timeframe_risk_map_overall.dart';
 export 'package:trade_pilot_api_client/src/model/timeframe_risk_metrics.dart';
+export 'package:trade_pilot_api_client/src/model/topup_amount_breakdown_entry.dart';
 export 'package:trade_pilot_api_client/src/model/topup_config.dart';
 export 'package:trade_pilot_api_client/src/model/topup_month_summary.dart';
 export 'package:trade_pilot_api_client/src/model/topup_package_option.dart';

@@ -1719,6 +1719,7 @@ export const id: Translations = {
     users_active: "Aktif",
     users_inactive: "Inaktif",
     users_analyses_count: "{count} analisis",
+    users_topup_count: "{count}x topup",
     users_credit_balance_label: "Sisa Kredit",
     users_registered_on: "Daftar {date}",
     user_create_success: "User berhasil dibuat",

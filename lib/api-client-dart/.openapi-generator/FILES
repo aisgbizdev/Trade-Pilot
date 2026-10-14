@@ -180,6 +180,7 @@ doc/TimeframeRisk.md
 doc/TimeframeRiskMap.md
 doc/TimeframeRiskMapOverall.md
 doc/TimeframeRiskMetrics.md
+doc/TopupAmountBreakdownEntry.md
 doc/TopupConfig.md
 doc/TopupMonthSummary.md
 doc/TopupPackageOption.md
@@ -414,6 +415,7 @@ lib/src/model/timeframe_risk.dart
 lib/src/model/timeframe_risk_map.dart
 lib/src/model/timeframe_risk_map_overall.dart
 lib/src/model/timeframe_risk_metrics.dart
+lib/src/model/topup_amount_breakdown_entry.dart
 lib/src/model/topup_config.dart
 lib/src/model/topup_month_summary.dart
 lib/src/model/topup_package_option.dart
@@ -451,3 +453,4 @@ lib/src/model/web_handoff_response.dart
 lib/src/serializers.dart
 lib/trade_pilot_api_client.dart
 pubspec.yaml
+test/topup_amount_breakdown_entry_test.dart

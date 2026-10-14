@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **selectedMode** | **String** |  | 
 **analysisCount** | **int** |  | 
 **creditBalance** | **int** | Current purchased-credit balance (sum of credit_ledger for this user). | 
+**topupCount** | **int** | Count of this user's approved, non-deleted top-up requests (credit_topup_requests where status = approved and deletedAt is null) — how many times they've actually topped up, not pending/rejected/reversed attempts. | 
 **tags** | **BuiltList&lt;String&gt;** |  | 
 **customQuotaPerDay** | **int** | Per-user analysis-quota override. Null = uses the global default. Named \"PerDay\" for historical reasons — this is actually a one-time lifetime free allowance, not a recurring window. | 
 **segment** | **String** | Cost/revenue/profit accounting segment (see GET /admin/stats' totalFreeUsers/totalPaidUsers/totalDevUsers). Mutually exclusive: \"dev\" (customQuotaPerDay set) wins over \"paid\" (a lifetime topup_approval credit_ledger entry) wins over \"free\". | 

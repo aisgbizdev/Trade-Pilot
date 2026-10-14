@@ -199,6 +199,8 @@ class _$UserWithStats extends UserWithStats {
   @override
   final int creditBalance;
   @override
+  final int topupCount;
+  @override
   final BuiltList<String> tags;
   @override
   final int customQuotaPerDay;
@@ -218,6 +220,7 @@ class _$UserWithStats extends UserWithStats {
       required this.selectedMode,
       required this.analysisCount,
       required this.creditBalance,
+      required this.topupCount,
       required this.tags,
       required this.customQuotaPerDay,
       required this.segment,
@@ -241,6 +244,7 @@ class _$UserWithStats extends UserWithStats {
         selectedMode == other.selectedMode &&
         analysisCount == other.analysisCount &&
         creditBalance == other.creditBalance &&
+        topupCount == other.topupCount &&
         tags == other.tags &&
         customQuotaPerDay == other.customQuotaPerDay &&
         segment == other.segment &&
@@ -257,6 +261,7 @@ class _$UserWithStats extends UserWithStats {
     _$hash = $jc(_$hash, selectedMode.hashCode);
     _$hash = $jc(_$hash, analysisCount.hashCode);
     _$hash = $jc(_$hash, creditBalance.hashCode);
+    _$hash = $jc(_$hash, topupCount.hashCode);
     _$hash = $jc(_$hash, tags.hashCode);
     _$hash = $jc(_$hash, customQuotaPerDay.hashCode);
     _$hash = $jc(_$hash, segment.hashCode);
@@ -275,6 +280,7 @@ class _$UserWithStats extends UserWithStats {
           ..add('selectedMode', selectedMode)
           ..add('analysisCount', analysisCount)
           ..add('creditBalance', creditBalance)
+          ..add('topupCount', topupCount)
           ..add('tags', tags)
           ..add('customQuotaPerDay', customQuotaPerDay)
           ..add('segment', segment)
@@ -318,6 +324,10 @@ class UserWithStatsBuilder
   set creditBalance(int? creditBalance) =>
       _$this._creditBalance = creditBalance;
 
+  int? _topupCount;
+  int? get topupCount => _$this._topupCount;
+  set topupCount(int? topupCount) => _$this._topupCount = topupCount;
+
   ListBuilder<String>? _tags;
   ListBuilder<String> get tags => _$this._tags ??= ListBuilder<String>();
   set tags(ListBuilder<String>? tags) => _$this._tags = tags;
@@ -349,6 +359,7 @@ class UserWithStatsBuilder
       _selectedMode = $v.selectedMode;
       _analysisCount = $v.analysisCount;
       _creditBalance = $v.creditBalance;
+      _topupCount = $v.topupCount;
       _tags = $v.tags.toBuilder();
       _customQuotaPerDay = $v.customQuotaPerDay;
       _segment = $v.segment;
@@ -390,6 +401,8 @@ class UserWithStatsBuilder
                 analysisCount, r'UserWithStats', 'analysisCount'),
             creditBalance: BuiltValueNullFieldError.checkNotNull(
                 creditBalance, r'UserWithStats', 'creditBalance'),
+            topupCount: BuiltValueNullFieldError.checkNotNull(
+                topupCount, r'UserWithStats', 'topupCount'),
             tags: tags.build(),
             customQuotaPerDay: BuiltValueNullFieldError.checkNotNull(
                 customQuotaPerDay, r'UserWithStats', 'customQuotaPerDay'),

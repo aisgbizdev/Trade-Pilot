@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
+import 'package:trade_pilot_api_client/src/model/topup_amount_breakdown_entry.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -18,6 +20,7 @@ part 'topup_user_summary.g.dart';
 /// * [totalCreditsGranted] 
 /// * [requestCount] 
 /// * [lastApprovedAt] 
+/// * [amountBreakdown] - Ascending by amountRupiah.
 @BuiltValue()
 abstract class TopupUserSummary implements Built<TopupUserSummary, TopupUserSummaryBuilder> {
   @BuiltValueField(wireName: r'userId')
@@ -40,6 +43,10 @@ abstract class TopupUserSummary implements Built<TopupUserSummary, TopupUserSumm
 
   @BuiltValueField(wireName: r'lastApprovedAt')
   DateTime get lastApprovedAt;
+
+  /// Ascending by amountRupiah.
+  @BuiltValueField(wireName: r'amountBreakdown')
+  BuiltList<TopupAmountBreakdownEntry> get amountBreakdown;
 
   TopupUserSummary._();
 
@@ -98,6 +105,11 @@ class _$TopupUserSummarySerializer implements PrimitiveSerializer<TopupUserSumma
     yield serializers.serialize(
       object.lastApprovedAt,
       specifiedType: const FullType(DateTime),
+    );
+    yield r'amountBreakdown';
+    yield serializers.serialize(
+      object.amountBreakdown,
+      specifiedType: const FullType(BuiltList, [FullType(TopupAmountBreakdownEntry)]),
     );
   }
 
@@ -170,6 +182,13 @@ class _$TopupUserSummarySerializer implements PrimitiveSerializer<TopupUserSumma
             specifiedType: const FullType(DateTime),
           ) as DateTime;
           result.lastApprovedAt = valueDes;
+          break;
+        case r'amountBreakdown':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(TopupAmountBreakdownEntry)]),
+          ) as BuiltList<TopupAmountBreakdownEntry>;
+          result.amountBreakdown.replace(valueDes);
           break;
         default:
           unhandled.add(key);

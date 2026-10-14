@@ -179,6 +179,7 @@ import 'package:trade_pilot_api_client/src/model/timeframe_risk.dart';
 import 'package:trade_pilot_api_client/src/model/timeframe_risk_map.dart';
 import 'package:trade_pilot_api_client/src/model/timeframe_risk_map_overall.dart';
 import 'package:trade_pilot_api_client/src/model/timeframe_risk_metrics.dart';
+import 'package:trade_pilot_api_client/src/model/topup_amount_breakdown_entry.dart';
 import 'package:trade_pilot_api_client/src/model/topup_config.dart';
 import 'package:trade_pilot_api_client/src/model/topup_month_summary.dart';
 import 'package:trade_pilot_api_client/src/model/topup_package_option.dart';
@@ -382,6 +383,7 @@ part 'serializers.g.dart';
   TimeframeRiskMap,
   TimeframeRiskMapOverall,
   TimeframeRiskMetrics,
+  TopupAmountBreakdownEntry,
   TopupConfig,
   TopupMonthSummary,
   TopupPackageOption,
@@ -605,6 +607,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FundamentalDriftCitation)]),
         () => ListBuilder<FundamentalDriftCitation>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TopupAmountBreakdownEntry)]),
+        () => ListBuilder<TopupAmountBreakdownEntry>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AdminFeedbackRow)]),

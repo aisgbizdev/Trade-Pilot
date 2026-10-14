@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **totalCreditsGranted** | **int** |  | 
 **requestCount** | **int** |  | 
 **lastApprovedAt** | [**DateTime**](DateTime.md) |  | 
+**amountBreakdown** | [**BuiltList&lt;TopupAmountBreakdownEntry&gt;**](TopupAmountBreakdownEntry.md) | Ascending by amountRupiah. | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

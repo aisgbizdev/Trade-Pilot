@@ -233,6 +233,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(TimeframeRiskRiskCategoryEnum.serializer)
       ..add(TimeframeRiskStatusEnum.serializer)
       ..add(TimeframeRiskTimeframeEnum.serializer)
+      ..add(TopupAmountBreakdownEntry.serializer)
       ..add(TopupConfig.serializer)
       ..add(TopupMonthSummary.serializer)
       ..add(TopupPackageOption.serializer)
@@ -486,6 +487,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(TimeframeRisk)]),
           () => ListBuilder<TimeframeRisk>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(TopupAmountBreakdownEntry)]),
+          () => ListBuilder<TopupAmountBreakdownEntry>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(TopupPackageOption)]),
           () => ListBuilder<TopupPackageOption>())

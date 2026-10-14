@@ -37,6 +37,10 @@ const SUMMARY_PAYLOAD = {
       totalCreditsGranted: 40,
       requestCount: 2,
       lastApprovedAt: new Date().toISOString(),
+      amountBreakdown: [
+        { amountRupiah: 2000, count: 1 },
+        { amountRupiah: 8000, count: 1 },
+      ],
     },
     {
       userId: 2,
@@ -46,6 +50,7 @@ const SUMMARY_PAYLOAD = {
       totalCreditsGranted: 20,
       requestCount: 1,
       lastApprovedAt: new Date().toISOString(),
+      amountBreakdown: [{ amountRupiah: 5000, count: 1 }],
     },
   ],
 };
@@ -140,6 +145,12 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByTestId("stat-topup-total-credits")).toHaveTextContent("60");
     expect(screen.getByTestId("row-topup-summary-1")).toBeInTheDocument();
     expect(screen.getByTestId("row-topup-summary-2")).toBeInTheDocument();
+
+    // Alice topped up at two different amounts — shows the per-amount
+    // breakdown. Bob has only one distinct amount, which would just
+    // restate the total/request-count already shown, so no breakdown line.
+    expect(screen.getByTestId("text-topup-breakdown-1")).toHaveTextContent("Rp2.000 1x, Rp8.000 1x");
+    expect(screen.queryByTestId("text-topup-breakdown-2")).not.toBeInTheDocument();
   });
 
   it("filters the top-up breakdown by search term", async () => {

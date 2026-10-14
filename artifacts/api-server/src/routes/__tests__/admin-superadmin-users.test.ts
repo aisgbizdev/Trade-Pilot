@@ -10,6 +10,7 @@ import {
   users,
   sessions,
   notifications,
+  creditTopupRequests,
 } from "@workspace/db/schema";
 import { applyCreditLedgerEntry } from "../../lib/credits";
 
@@ -413,6 +414,38 @@ describe("GET /superadmin/users search and pagination", () => {
       .set(...authHeader(superAdmin));
     const foundNoCredit = res2.body.users.find((u: { id: number }) => u.id === searchByName.id);
     expect(foundNoCredit.creditBalance).toBe(0);
+  });
+
+  it("counts only approved, non-deleted top-ups — not pending/rejected/deleted ones", async () => {
+    const baseRow = {
+      userId: searchByEmail.id,
+      amountRupiah: 100_000,
+      creditsRequested: 10,
+      conversionRateSnapshot: 10_000,
+      paymentProvider: "manual" as const,
+    };
+    await db.insert(creditTopupRequests).values([
+      { ...baseRow, status: "approved" },
+      { ...baseRow, status: "approved" },
+      { ...baseRow, status: "pending" },
+      { ...baseRow, status: "rejected" },
+      { ...baseRow, status: "approved", deletedAt: new Date() },
+    ]);
+
+    const res = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: `needle-email-${RUN_ID}` })
+      .set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+    const found = res.body.users.find((u: { id: number }) => u.id === searchByEmail.id);
+    expect(found.topupCount).toBe(2);
+
+    const resNoTopup = await request(app)
+      .get("/api/superadmin/users")
+      .query({ search: `Needle Display ${RUN_ID}` })
+      .set(...authHeader(superAdmin));
+    const foundNoTopup = resNoTopup.body.users.find((u: { id: number }) => u.id === searchByName.id);
+    expect(foundNoTopup.topupCount).toBe(0);
   });
 });
 

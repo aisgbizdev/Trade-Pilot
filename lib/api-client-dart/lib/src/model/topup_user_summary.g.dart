@@ -21,6 +21,8 @@ class _$TopupUserSummary extends TopupUserSummary {
   final int requestCount;
   @override
   final DateTime lastApprovedAt;
+  @override
+  final BuiltList<TopupAmountBreakdownEntry> amountBreakdown;
 
   factory _$TopupUserSummary(
           [void Function(TopupUserSummaryBuilder)? updates]) =>
@@ -33,7 +35,8 @@ class _$TopupUserSummary extends TopupUserSummary {
       required this.totalAmountRupiah,
       required this.totalCreditsGranted,
       required this.requestCount,
-      required this.lastApprovedAt})
+      required this.lastApprovedAt,
+      required this.amountBreakdown})
       : super._();
   @override
   TopupUserSummary rebuild(void Function(TopupUserSummaryBuilder) updates) =>
@@ -53,7 +56,8 @@ class _$TopupUserSummary extends TopupUserSummary {
         totalAmountRupiah == other.totalAmountRupiah &&
         totalCreditsGranted == other.totalCreditsGranted &&
         requestCount == other.requestCount &&
-        lastApprovedAt == other.lastApprovedAt;
+        lastApprovedAt == other.lastApprovedAt &&
+        amountBreakdown == other.amountBreakdown;
   }
 
   @override
@@ -66,6 +70,7 @@ class _$TopupUserSummary extends TopupUserSummary {
     _$hash = $jc(_$hash, totalCreditsGranted.hashCode);
     _$hash = $jc(_$hash, requestCount.hashCode);
     _$hash = $jc(_$hash, lastApprovedAt.hashCode);
+    _$hash = $jc(_$hash, amountBreakdown.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -79,7 +84,8 @@ class _$TopupUserSummary extends TopupUserSummary {
           ..add('totalAmountRupiah', totalAmountRupiah)
           ..add('totalCreditsGranted', totalCreditsGranted)
           ..add('requestCount', requestCount)
-          ..add('lastApprovedAt', lastApprovedAt))
+          ..add('lastApprovedAt', lastApprovedAt)
+          ..add('amountBreakdown', amountBreakdown))
         .toString();
   }
 }
@@ -120,6 +126,13 @@ class TopupUserSummaryBuilder
   set lastApprovedAt(DateTime? lastApprovedAt) =>
       _$this._lastApprovedAt = lastApprovedAt;
 
+  ListBuilder<TopupAmountBreakdownEntry>? _amountBreakdown;
+  ListBuilder<TopupAmountBreakdownEntry> get amountBreakdown =>
+      _$this._amountBreakdown ??= ListBuilder<TopupAmountBreakdownEntry>();
+  set amountBreakdown(
+          ListBuilder<TopupAmountBreakdownEntry>? amountBreakdown) =>
+      _$this._amountBreakdown = amountBreakdown;
+
   TopupUserSummaryBuilder() {
     TopupUserSummary._defaults(this);
   }
@@ -134,6 +147,7 @@ class TopupUserSummaryBuilder
       _totalCreditsGranted = $v.totalCreditsGranted;
       _requestCount = $v.requestCount;
       _lastApprovedAt = $v.lastApprovedAt;
+      _amountBreakdown = $v.amountBreakdown.toBuilder();
       _$v = null;
     }
     return this;
@@ -153,23 +167,39 @@ class TopupUserSummaryBuilder
   TopupUserSummary build() => _build();
 
   _$TopupUserSummary _build() {
-    final _$result = _$v ??
-        _$TopupUserSummary._(
-          userId: BuiltValueNullFieldError.checkNotNull(
-              userId, r'TopupUserSummary', 'userId'),
-          userEmail: BuiltValueNullFieldError.checkNotNull(
-              userEmail, r'TopupUserSummary', 'userEmail'),
-          userDisplayName: BuiltValueNullFieldError.checkNotNull(
-              userDisplayName, r'TopupUserSummary', 'userDisplayName'),
-          totalAmountRupiah: BuiltValueNullFieldError.checkNotNull(
-              totalAmountRupiah, r'TopupUserSummary', 'totalAmountRupiah'),
-          totalCreditsGranted: BuiltValueNullFieldError.checkNotNull(
-              totalCreditsGranted, r'TopupUserSummary', 'totalCreditsGranted'),
-          requestCount: BuiltValueNullFieldError.checkNotNull(
-              requestCount, r'TopupUserSummary', 'requestCount'),
-          lastApprovedAt: BuiltValueNullFieldError.checkNotNull(
-              lastApprovedAt, r'TopupUserSummary', 'lastApprovedAt'),
-        );
+    _$TopupUserSummary _$result;
+    try {
+      _$result = _$v ??
+          _$TopupUserSummary._(
+            userId: BuiltValueNullFieldError.checkNotNull(
+                userId, r'TopupUserSummary', 'userId'),
+            userEmail: BuiltValueNullFieldError.checkNotNull(
+                userEmail, r'TopupUserSummary', 'userEmail'),
+            userDisplayName: BuiltValueNullFieldError.checkNotNull(
+                userDisplayName, r'TopupUserSummary', 'userDisplayName'),
+            totalAmountRupiah: BuiltValueNullFieldError.checkNotNull(
+                totalAmountRupiah, r'TopupUserSummary', 'totalAmountRupiah'),
+            totalCreditsGranted: BuiltValueNullFieldError.checkNotNull(
+                totalCreditsGranted,
+                r'TopupUserSummary',
+                'totalCreditsGranted'),
+            requestCount: BuiltValueNullFieldError.checkNotNull(
+                requestCount, r'TopupUserSummary', 'requestCount'),
+            lastApprovedAt: BuiltValueNullFieldError.checkNotNull(
+                lastApprovedAt, r'TopupUserSummary', 'lastApprovedAt'),
+            amountBreakdown: amountBreakdown.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'amountBreakdown';
+        amountBreakdown.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'TopupUserSummary', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

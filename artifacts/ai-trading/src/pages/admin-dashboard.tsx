@@ -178,7 +178,16 @@ function TopupsSummarySection() {
                     <div className="font-medium text-foreground">{row.userDisplayName}</div>
                     <div className="text-xs text-muted-foreground">{row.userEmail}</div>
                   </td>
-                  <td className="py-2 pr-2">Rp{row.totalAmountRupiah.toLocaleString("id-ID")}</td>
+                  <td className="py-2 pr-2">
+                    <div>Rp{row.totalAmountRupiah.toLocaleString("id-ID")}</div>
+                    {row.amountBreakdown.length > 1 && (
+                      <div className="text-xs text-muted-foreground" data-testid={`text-topup-breakdown-${row.userId}`}>
+                        {row.amountBreakdown
+                          .map((entry) => `Rp${entry.amountRupiah.toLocaleString("id-ID")} ${entry.count}x`)
+                          .join(", ")}
+                      </div>
+                    )}
+                  </td>
                   <td className="py-2 pr-2">{row.totalCreditsGranted}</td>
                   <td className="py-2 pr-2">{row.requestCount}</td>
                   <td className="py-2 pr-2 text-xs text-muted-foreground">

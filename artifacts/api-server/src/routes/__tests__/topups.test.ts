@@ -409,6 +409,11 @@ describe("GET /admin/topups/summary", () => {
       requestCount: 2,
     });
     expect(bobRow.lastApprovedAt).not.toBeNull();
+    // Two distinct amounts, one approval each — ascending by amountRupiah.
+    expect(bobRow.amountBreakdown).toEqual([
+      { amountRupiah: PKG_5K.amountRupiah, count: 1 },
+      { amountRupiah: PKG_20K.amountRupiah, count: 1 },
+    ]);
 
     const otherRow = res.body.byUser.find((r: { userId: number }) => r.userId === other.id);
     expect(otherRow).toMatchObject({
@@ -416,6 +421,7 @@ describe("GET /admin/topups/summary", () => {
       totalCreditsGranted: PKG_40K.credits,
       requestCount: 1,
     });
+    expect(otherRow.amountBreakdown).toEqual([{ amountRupiah: PKG_40K.amountRupiah, count: 1 }]);
 
     // Totals include at least this test's approved rows (other tests in this
     // file/suite may also contribute approved rows to the shared totals, so
@@ -436,6 +442,29 @@ describe("GET /admin/topups/summary", () => {
     expect(monthRow.totalAmountRupiah).toBeGreaterThanOrEqual(minTotalAmount);
     expect(monthRow.totalCreditsGranted).toBeGreaterThanOrEqual(minTotalCredits);
     expect(monthRow.requestCount).toBeGreaterThanOrEqual(3);
+  });
+
+  it("groups repeat top-ups at the same amount into one breakdown entry with count > 1", async () => {
+    const dana = await createUser("user");
+    async function approve(amountRupiah: number, creditsGranted: number) {
+      const id = await insertPendingTopup(dana, amountRupiah, creditsGranted);
+      await request(app)
+        .patch(`/api/admin/topups/${id}/status`)
+        .set(...authHeader(superAdmin))
+        .send({ status: "approved" });
+    }
+    await approve(PKG_5K.amountRupiah, PKG_5K.credits);
+    await approve(PKG_20K.amountRupiah, PKG_20K.credits);
+    await approve(PKG_20K.amountRupiah, PKG_20K.credits);
+
+    const res = await request(app).get("/api/admin/topups/summary").set(...authHeader(superAdmin));
+    expect(res.status).toBe(200);
+    const danaRow = res.body.byUser.find((r: { userId: number }) => r.userId === dana.id);
+    expect(danaRow.requestCount).toBe(3);
+    expect(danaRow.amountBreakdown).toEqual([
+      { amountRupiah: PKG_5K.amountRupiah, count: 1 },
+      { amountRupiah: PKG_20K.amountRupiah, count: 2 },
+    ]);
   });
 
   it("excludes a user with only a pending or rejected request from byUser", async () => {

@@ -491,6 +491,18 @@ export const GetTopupSummaryResponse = zod.object({
       totalCreditsGranted: zod.number().int(),
       requestCount: zod.number().int(),
       lastApprovedAt: zod.coerce.date().nullable(),
+      amountBreakdown: zod
+        .array(
+          zod
+            .object({
+              amountRupiah: zod.number().int(),
+              count: zod.number().int(),
+            })
+            .describe(
+              'How many of a user\'s approved top-ups were for a given amount, e.g. { amountRupiah: 5000, count: 1 } + { amountRupiah: 20000, count: 2 } reads as \"5.000 1x, 20.000 2x\".',
+            ),
+        )
+        .describe("Ascending by amountRupiah."),
     }),
   ),
   byMonth: zod
@@ -5209,6 +5221,12 @@ export const GetAllUsersResponse = zod.object({
         .int()
         .describe(
           "Current purchased-credit balance (sum of credit_ledger for this user).",
+        ),
+      topupCount: zod
+        .number()
+        .int()
+        .describe(
+          "Count of this user's approved, non-deleted top-up requests (credit_topup_requests where status = approved and deletedAt is null) — how many times they've actually topped up, not pending\/rejected\/reversed attempts.",
         ),
       tags: zod.array(zod.string()),
       customQuotaPerDay: zod

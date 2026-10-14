@@ -351,6 +351,7 @@ Class | Method | HTTP request | Description
  - [TimeframeRiskMap](doc/TimeframeRiskMap.md)
  - [TimeframeRiskMapOverall](doc/TimeframeRiskMapOverall.md)
  - [TimeframeRiskMetrics](doc/TimeframeRiskMetrics.md)
+ - [TopupAmountBreakdownEntry](doc/TopupAmountBreakdownEntry.md)
  - [TopupConfig](doc/TopupConfig.md)
  - [TopupMonthSummary](doc/TopupMonthSummary.md)
  - [TopupPackageOption](doc/TopupPackageOption.md)

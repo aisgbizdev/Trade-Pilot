@@ -1717,6 +1717,7 @@ export const en = {
     users_active: "Active",
     users_inactive: "Inactive",
     users_analyses_count: "{count} analyses",
+    users_topup_count: "{count} top-ups",
     users_credit_balance_label: "Credit Balance",
     users_registered_on: "Registered {date}",
     user_create_success: "User created successfully",

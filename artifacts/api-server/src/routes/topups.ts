@@ -356,6 +356,29 @@ router.get("/admin/topups/summary", requireSuperAdmin, async (_req: AuthRequest,
     .groupBy(creditTopupRequests.userId, users.email, users.displayName)
     .orderBy(desc(sum(creditTopupRequests.amountRupiah)));
 
+  // Per-amount breakdown (e.g. "5.000 1x, 20.000 2x" per user) — same
+  // "separate query + merge in memory" shape as topupCount on
+  // /superadmin/users: folding this into byUserRaw's groupBy would need
+  // grouping by amountRupiah too, which would split one user's row into
+  // several (one per distinct amount) instead of the single summary row
+  // the table wants.
+  const amountBreakdownRaw = await db
+    .select({
+      userId: creditTopupRequests.userId,
+      amountRupiah: creditTopupRequests.amountRupiah,
+      count: count(creditTopupRequests.id),
+    })
+    .from(creditTopupRequests)
+    .where(approved)
+    .groupBy(creditTopupRequests.userId, creditTopupRequests.amountRupiah)
+    .orderBy(creditTopupRequests.userId, creditTopupRequests.amountRupiah);
+  const amountBreakdownByUser = new Map<number, { amountRupiah: number; count: number }[]>();
+  for (const r of amountBreakdownRaw) {
+    const arr = amountBreakdownByUser.get(r.userId) ?? [];
+    arr.push({ amountRupiah: r.amountRupiah, count: Number(r.count) });
+    amountBreakdownByUser.set(r.userId, arr);
+  }
+
   // Monthly report (laporan bulanan): same "approved" rows, grouped by the
   // calendar month they were approved in (not requested/created in — a
   // top-up's revenue belongs to the month it actually landed). WIB
@@ -388,6 +411,7 @@ router.get("/admin/topups/summary", requireSuperAdmin, async (_req: AuthRequest,
       totalCreditsGranted: Number(r.totalCreditsGranted ?? 0),
       requestCount: Number(r.requestCount ?? 0),
       lastApprovedAt: r.lastApprovedAt,
+      amountBreakdown: amountBreakdownByUser.get(r.userId) ?? [],
     })),
     byMonth: byMonthRaw.map((r) => ({
       month: r.month,
