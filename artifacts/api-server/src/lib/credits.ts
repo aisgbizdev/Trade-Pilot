@@ -17,15 +17,18 @@ export interface TopupPackage {
 // (Rp1.000/credit); Rp20k/40k/80k share the same flat Rp800/credit rate —
 // deliberately no volume discount above the entry tier, unlike the old
 // tiering, since a bigger discount at scale is what eroded margin before:
-//   Rp5.000  -> 5 credits   (Rp1.000/credit)
+//   Rp10.000 -> 10 credits  (Rp1.000/credit)
 //   Rp20.000 -> 25 credits  (Rp800/credit)
 //   Rp40.000 -> 50 credits  (Rp800/credit)
 //   Rp80.000 -> 100 credits (Rp800/credit)
+// Entry tier bumped from Rp5.000/5 credits to Rp10.000/10 credits (see
+// chat 2026-10-14) — same Rp1.000/credit rate, just a bigger smallest
+// package; this was a test/trial adjustment, not a new margin analysis.
 // POST /topups only accepts an amount that matches one of these exactly —
 // there is no free-text/custom amount and no longer a runtime-adjustable
 // rate (see the removed PATCH /admin/topups/config and TopupRateEditor).
 const TOPUP_PACKAGES: readonly TopupPackage[] = [
-  { amountRupiah: 5_000, credits: 5 },
+  { amountRupiah: 10_000, credits: 10 },
   { amountRupiah: 20_000, credits: 25 },
   { amountRupiah: 40_000, credits: 50 },
   { amountRupiah: 80_000, credits: 100 },
@@ -51,7 +54,7 @@ export type DokuCheckoutMethod = "va" | "qris";
 // admin fee doesn't make sense relative to such a small top-up, and QRIS
 // is free either way.
 const DOKU_METHODS_BY_AMOUNT: Record<number, readonly DokuCheckoutMethod[]> = {
-  5_000: ["qris"],
+  10_000: ["qris"],
   20_000: ["va", "qris"],
   40_000: ["va", "qris"],
   80_000: ["va", "qris"],
